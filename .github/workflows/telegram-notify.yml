@@ -1,0 +1,30 @@
+name: Telegram Notify
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Message to send"
+        required: true
+        default: "HDEC Executive Radar test message"
+  schedule:
+    - cron: "0 23 * * *" # UTC 23:00 = KST 08:00
+
+jobs:
+  send-telegram:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send Telegram message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          MESSAGE: ${{ github.event.inputs.message || 'HDEC Executive Radar scheduled test' }}
+        run: |
+          python3 scripts/send_telegram.py
