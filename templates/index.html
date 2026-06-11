@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDEC Executive Radar — Today Signals</title>
+<style>
+  /* Executive signal desk — Day-1 polish (1회). 애니메이션·외부 폰트·차트 없음 */
+  :root {
+    --paper: #f3f1ec; --panel: #ffffff; --ink: #161b24; --sub: #3d4654;
+    --muted: #757d89; --hairline: #e3e0d8; --hairline-2: #d4d0c5;
+    --desk: #11161f; --desk-ink: #e8e4da; --desk-muted: #8d94a1;
+    --action: #d99e2b; --action-ink: #221a06;
+    --signal: #b03326; --signal-bg: #f9ece9;
+    --daily: #1d4f8c; --daily-bg: #e9eff7;
+    --weekly: #5a6372; --weekly-bg: #edeff1;
+    --excluded: #9aa1ab; --excluded-bg: #f3f3f2;
+    --serif: Georgia, "Times New Roman", "Noto Serif KR", serif;
+    --sans: "Pretendard", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+
+  /* ---- 헤더: 시그널 데스크 ---- */
+  header { background: var(--desk); color: var(--desk-ink); padding: 18px 28px 16px;
+           display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;
+           border-bottom: 3px solid var(--action); }
+  .brand .overline { font-size: 10px; letter-spacing: .28em; color: var(--desk-muted);
+                     margin-bottom: 4px; }
+  .brand h1 { font-family: var(--serif); font-size: 22px; font-weight: 600;
+              letter-spacing: .02em; margin: 0; }
+  .desk-meta { display: flex; gap: 10px; align-items: center; font-size: 11px;
+               color: var(--desk-muted); letter-spacing: .12em; }
+  .mode-chip { border: 1px solid #39414e; border-radius: 3px; padding: 3px 8px;
+               color: var(--action); letter-spacing: .18em; font-size: 10px; }
+  #run-btn { margin-left: auto; background: var(--action); color: var(--action-ink);
+             border: 0; border-radius: 4px; padding: 10px 22px; font-size: 13px;
+             font-weight: 700; letter-spacing: .06em; cursor: pointer; }
+  #run-btn:hover { background: #e5ad3f; }
+  #run-btn:disabled { opacity: .45; cursor: wait; }
+  #run-stats { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+  .stat { border: 1px solid #2a313d; border-radius: 3px; padding: 4px 10px;
+          font-size: 11px; color: var(--desk-muted); letter-spacing: .04em; }
+  .stat b { color: var(--desk-ink); margin-left: 6px; font-variant-numeric: tabular-nums; }
+
+  /* ---- 상태 배너 ---- */
+  #status-banner { margin: 18px 28px 0; padding: 12px 18px; border-radius: 4px;
+                   font-size: 13px; display: none; border: 1px solid var(--hairline-2);
+                   background: var(--panel); border-left-width: 4px; }
+  #status-banner.empty   { display: block; border-left-color: var(--weekly); }
+  #status-banner.loading { display: block; border-left-color: var(--action);
+                           background: #fdf7ea; }
+  #status-banner.error   { display: block; border-left-color: var(--signal);
+                           background: var(--signal-bg); }
+  #status-banner.nocandidates { display: block; border-left-color: var(--daily);
+                                background: var(--daily-bg); }
+
+  /* ---- 레이아웃 ---- */
+  main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+         gap: 20px; padding: 20px 28px; align-items: start; }
+  section.box { background: var(--panel); border: 1px solid var(--hairline-2);
+                border-radius: 6px; overflow: hidden; }
+  .box h2 { font-size: 14px; margin: 0; padding: 14px 18px 12px;
+            border-bottom: 1px solid var(--hairline); display: flex;
+            align-items: baseline; gap: 10px; }
+  .box h2 .ovl { font-size: 9px; letter-spacing: .26em; color: var(--muted);
+                 font-weight: 600; }
+  .box h2 .count { color: var(--muted); font-weight: 400; font-size: 12px;
+                   margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  /* ---- 카드 ---- */
+  #candidate-list, #article-list { padding: 10px 12px 12px; }
+  .card { border: 1px solid var(--hairline); border-left: 3px solid var(--excluded);
+          border-radius: 4px; padding: 14px 16px; margin: 8px 0; cursor: pointer;
+          background: var(--panel); }
+  .card:hover { border-color: var(--sub); border-left-width: 3px; }
+  .card.active { outline: 2px solid var(--ink); outline-offset: -1px; }
+  .card.grade-instant { border-left-color: var(--signal); }
+  .card.grade-daily { border-left-color: var(--daily); }
+  .card.grade-weekly { border-left-color: var(--weekly); }
+  .card.grade-excluded { border-left-color: var(--hairline-2); }
+  .card .title { font-size: 14.5px; font-weight: 650; line-height: 1.45;
+                 margin-bottom: 7px; letter-spacing: -.01em; }
+  #candidate-section { border-top: 3px solid var(--signal); margin-bottom: 20px; }
+  #candidate-section h2 .ovl { color: var(--signal); }
+  #candidate-list { counter-reset: rank; }
+  #candidate-list .card { counter-increment: rank; }
+  #candidate-list .card .title::before {
+    content: counter(rank, decimal-leading-zero); font-family: var(--serif);
+    color: var(--signal); margin-right: 10px; font-size: 13px; }
+  .meta { font-size: 11.5px; color: var(--muted); display: flex; gap: 10px;
+          flex-wrap: wrap; }
+  .badges { display: flex; gap: 8px; margin: 8px 0 0; flex-wrap: wrap;
+            align-items: center; }
+  .badge { font-size: 10.5px; padding: 2px 9px; border-radius: 3px;
+           letter-spacing: .02em; font-weight: 600; }
+  .badge::before { content: "●"; font-size: 7px; vertical-align: 1.5px;
+                   margin-right: 5px; }
+  .badge.grade-instant { background: var(--signal-bg); color: var(--signal); }
+  .badge.grade-daily { background: var(--daily-bg); color: var(--daily); }
+  .badge.grade-weekly { background: var(--weekly-bg); color: var(--weekly); }
+  .badge.grade-excluded { background: var(--excluded-bg); color: var(--excluded); }
+  .badge.origin { background: transparent; border: 1px solid var(--hairline-2);
+                  color: var(--muted); font-weight: 500; }
+  .badge.origin::before { content: none; }
+  .score { font-family: var(--serif); font-weight: 700; font-size: 17px;
+           font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .score i { font-style: normal; font-size: 10.5px; color: var(--muted);
+             font-family: var(--sans); margin-left: 2px; }
+  .conf { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row-extra { font-size: 12px; color: var(--sub); margin-top: 8px; }
+  .reason { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.55;
+            border-top: 1px dashed var(--hairline); padding-top: 7px; }
+  .actions { margin-top: 11px; display: flex; gap: 8px; align-items: center; }
+  .send-btn { background: var(--ink); color: #fff; border: 0; border-radius: 3px;
+              padding: 7px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+              letter-spacing: .04em; }
+  .send-btn:hover { background: #2a3140; }
+  .send-btn:disabled { background: var(--excluded-bg); color: var(--excluded);
+                       cursor: default; }
+  details.fb { position: relative; }
+  details.fb summary { list-style: none; cursor: pointer; font-size: 12px;
+                       border: 1px solid var(--hairline-2); border-radius: 3px;
+                       padding: 7px 14px; background: var(--panel); color: var(--sub); }
+  details.fb summary::-webkit-details-marker { display: none; }
+  details.fb[open] summary { border-color: var(--ink); color: var(--ink); }
+  .fb-menu { position: absolute; z-index: 10; margin-top: 4px; background: var(--panel);
+             border: 1px solid var(--hairline-2); border-radius: 4px; padding: 6px;
+             display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; width: 380px;
+             box-shadow: 0 10px 24px rgba(17, 22, 31, .14); }
+  .fb-menu button { font-size: 11.5px; border: 1px solid var(--hairline);
+                    background: var(--panel); border-radius: 3px; padding: 7px 4px;
+                    cursor: pointer; color: var(--sub); }
+  .fb-menu button:hover { border-color: var(--ink); color: var(--ink);
+                          background: var(--paper); }
+
+  /* ---- Detail ---- */
+  #detail-panel { position: sticky; top: 16px; }
+  #detail-empty { padding: 28px 18px; color: var(--muted); font-size: 13px; }
+  #detail-body { padding: 18px; display: none; font-size: 13px;
+                 max-height: 78vh; overflow-y: auto; }
+  #detail-body h3 { font-family: var(--serif); font-size: 16.5px; line-height: 1.5;
+                    margin: 0 0 8px; font-weight: 650; }
+  #detail-body a { color: var(--daily); }
+  .kv { margin: 13px 0; }
+  .kv .k { font-size: 9.5px; color: var(--muted); letter-spacing: .22em;
+           margin-bottom: 4px; font-weight: 700; }
+  .kv ul { margin: 4px 0 0 18px; padding: 0; }
+  .kv li { margin: 3px 0; line-height: 1.55; }
+  table.breakdown { width: 100%; border-collapse: collapse; font-size: 12px;
+                    margin-top: 4px; }
+  table.breakdown td { border-top: 1px solid var(--hairline); padding: 5px 6px; }
+  table.breakdown tr:last-child td { border-top: 2px solid var(--ink);
+                                     font-weight: 700; }
+  table.breakdown td:last-child { text-align: right;
+                                  font-variant-numeric: tabular-nums; }
+  pre.digest { background: var(--paper); border: 1px solid var(--hairline);
+               border-left: 3px solid var(--action); border-radius: 4px;
+               padding: 14px; white-space: pre-wrap; font-size: 12px;
+               line-height: 1.7; font-family: inherit; }
+
+  /* ---- Notification Log ---- */
+  #log-section { margin: 0 28px 28px; }
+  table.logs { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.logs th, table.logs td { text-align: left; padding: 9px 14px;
+                                 border-top: 1px solid var(--hairline); }
+  table.logs th { color: var(--muted); font-weight: 600; border-top: 0;
+                  font-size: 10px; letter-spacing: .14em; }
+  table.logs td:first-child { font-variant-numeric: tabular-nums;
+                              color: var(--sub); white-space: nowrap; }
+  #log-empty { padding: 18px; color: var(--muted); font-size: 12px; }
+
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+           background: var(--desk); color: var(--desk-ink); padding: 11px 20px;
+           border-radius: 4px; font-size: 13px; display: none; z-index: 99;
+           border-left: 3px solid var(--action); }
+
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; }
+    #detail-panel { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="overline">AI &amp; MACRO SENSING DESK</div>
+    <h1>HDEC Executive Radar</h1>
+  </div>
+  <div class="desk-meta">
+    <span id="desk-date"></span>
+    <span class="mode-chip">MOCK MODE</span>
+  </div>
+  <button id="run-btn" onclick="runSensing()">Run Sensing</button>
+  <div id="run-stats"></div>
+</header>
+
+<div id="status-banner"></div>
+
+<main>
+  <div>
+    <section class="box" id="candidate-section" style="display:none;">
+      <h2><span class="ovl">PRIORITY</span>즉시 알림 후보 <span class="count" id="candidate-count"></span></h2>
+      <div id="candidate-list"></div>
+    </section>
+    <section class="box">
+      <h2><span class="ovl">TODAY SIGNALS</span>전체 신호 <span class="count" id="article-count"></span></h2>
+      <div id="article-list"></div>
+    </section>
+  </div>
+  <section class="box" id="detail-panel">
+    <h2><span class="ovl">DOSSIER</span>Article Detail</h2>
+    <div id="detail-empty">기사를 선택하면 상세 분석이 표시됩니다.</div>
+    <div id="detail-body"></div>
+  </section>
+</main>
+
+<section class="box" id="log-section">
+  <h2><span class="ovl">DISPATCH</span>Notification Log</h2>
+  <div id="log-empty">아직 발송된 알림이 없습니다. (운영자 Send 클릭 시에만 발송됩니다)</div>
+  <table class="logs" id="log-table" style="display:none;">
+    <thead><tr><th>발송 시각</th><th>기사 제목</th><th>CHANNEL</th><th>상태</th><th>미리보기</th></tr></thead>
+    <tbody id="log-rows"></tbody>
+  </table>
+</section>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const FEEDBACK_BUTTONS = [
+  ["positive", "좋음"], ["irrelevant", "불필요"], ["instant_alert", "즉시알림급"],
+  ["weekly_report", "주간보고급"], ["boost_topic", "이 주제 강화"],
+  ["exclude_source", "이 언론사 제외"], ["exclude_keyword", "이 키워드 제외"],
+  ["classify_competitor", "경쟁사 동향으로 분류"], ["classify_macro", "거시경제로 분류"],
+];
+const GRADE_CLASS = {
+  "즉시 알림 후보": "grade-instant", "일간 요약": "grade-daily",
+  "주간 리포트 후보": "grade-weekly", "제외": "grade-excluded",
+};
+const state = { articles: [], logs: [], selectedId: null, lastRun: null };
+
+function esc(value) {
+  const div = document.createElement("div");
+  div.textContent = value == null ? "" : String(value);
+  return div.innerHTML;
+}
+function fmtTime(iso) { return iso ? iso.replace("T", " ").slice(0, 16) : "-"; }
+function toast(message) {
+  const el = document.getElementById("toast");
+  el.textContent = message;
+  el.style.display = "block";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.style.display = "none"; }, 2400);
+}
+async function api(path, options) {
+  const res = await fetch(path, options);
+  if (!res.ok) {
+    let detail = "HTTP " + res.status;
+    try { detail = (await res.json()).detail || detail; } catch (e) { /* keep */ }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+/* ----- 상태 표시 (Empty / Loading / Success / Error / No Candidates) ----- */
+function setStatus(kind, message) {
+  const el = document.getElementById("status-banner");
+  el.className = kind || "";
+  el.textContent = message || "";
+  if (!kind) el.style.display = "none";
+}
+function applyDataStatus() {
+  const candidates = state.articles.filter(a => a.alert_grade === "즉시 알림 후보");
+  if (state.articles.length === 0) {
+    setStatus("empty", "아직 수집된 신호가 없습니다 — Run Sensing을 실행하세요.");
+  } else if (candidates.length === 0) {
+    setStatus("nocandidates",
+      "No Candidates — 4.5점 이상 즉시 알림 후보가 없습니다. 일간 요약 후보를 검토하세요.");
+  } else {
+    setStatus(null);
+  }
+}
+
+/* ----- 데이터 로드 ----- */
+async function loadArticles() {
+  const data = await api("/api/articles");
+  state.articles = data.articles;
+  state.logs = data.notification_logs;
+  renderAll();
+  applyDataStatus();
+}
+async function runSensing() {
+  const btn = document.getElementById("run-btn");
+  btn.disabled = true;
+  setStatus("loading", "Sensing 실행 중… mock 기사 로드 → dedup → scoring → insight");
+  try {
+    state.lastRun = await api("/api/sense/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "mock" }),
+    });
+    renderRunStats();
+    await loadArticles();
+    const c = state.lastRun.alert_candidates;
+    toast(`Sensing 완료 — 즉시 알림 후보 ${c}건`);
+  } catch (err) {
+    setStatus("error", "Error — sensing 실패: " + err.message +
+      " (mock 모드 기준이므로 서버 상태 확인 후 재시도하세요)");
+  } finally {
+    btn.disabled = false;
+  }
+}
+function renderRunStats() {
+  const r = state.lastRun;
+  const el = document.getElementById("run-stats");
+  if (!r) { el.innerHTML = ""; return; }
+  el.innerHTML = [
+    ["collected", r.collected], ["deduplicated", r.deduplicated], ["scored", r.scored],
+    ["alert candidates", r.alert_candidates], ["mode", r.mode],
+  ].map(([k, v]) => `<span class="stat">${esc(k)}<b>${esc(v)}</b></span>`).join("");
+}
+
+/* ----- 목록 렌더 ----- */
+function cardHtml(a) {
+  const grade = a.alert_grade || "미채점";
+  const gradeClass = GRADE_CLASS[grade] || "grade-excluded";
+  const units = Array.isArray(a.affected_units) ? a.affected_units.join(" / ") : "-";
+  const score = a.final_score == null ? "-" : Number(a.final_score).toFixed(2);
+  const conf = a.confidence == null ? "-" : Number(a.confidence).toFixed(2);
+  const sent = state.logs.some(l => l.article_id === a.id && l.send_status === "sent");
+  return `
+  <div class="card ${gradeClass}${a.id === state.selectedId ? " active" : ""}" data-id="${esc(a.id)}" onclick="selectArticle('${esc(a.id)}')">
+    <div class="title">${esc(a.title)}</div>
+    <div class="meta">
+      <span>${esc(a.source || "-")}</span><span>${esc(fmtTime(a.published_at))}</span>
+    </div>
+    <div class="badges">
+      <span class="badge origin">${esc(a.signal_origin || "-")}</span>
+      <span class="badge ${gradeClass}">${esc(grade)}</span>
+      <span class="score">${score}<i>/ 5</i></span>
+      <span class="conf">confidence ${conf}</span>
+    </div>
+    <div class="row-extra">영향 부문: ${esc(units)} · ${esc(a.opportunity_or_risk || "관찰")}</div>
+    <div class="reason">${esc(a.scoring_reason || "")}</div>
+    <div class="actions" onclick="event.stopPropagation()">
+      <button class="send-btn" ${sent ? "disabled" : ""}
+              onclick="sendNotification('${esc(a.id)}', this)">${sent ? "발송됨" : "Send"}</button>
+      <details class="fb">
+        <summary>Feedback</summary>
+        <div class="fb-menu">
+          ${FEEDBACK_BUTTONS.map(([type, label]) =>
+            `<button onclick="sendFeedback('${esc(a.id)}','${type}',this)">${esc(label)}</button>`
+          ).join("")}
+        </div>
+      </details>
+    </div>
+  </div>`;
+}
+function renderAll() {
+  const candidates = state.articles.filter(a => a.alert_grade === "즉시 알림 후보");
+  const candidateSection = document.getElementById("candidate-section");
+  candidateSection.style.display = candidates.length ? "" : "none";
+  document.getElementById("candidate-count").textContent = `${candidates.length}건 (최대 3건)`;
+  document.getElementById("candidate-list").innerHTML = candidates.map(cardHtml).join("");
+  document.getElementById("article-count").textContent = `${state.articles.length}건`;
+  document.getElementById("article-list").innerHTML =
+    state.articles.length ? state.articles.map(cardHtml).join("")
+                          : `<div id="detail-empty">표시할 기사가 없습니다.</div>`;
+  renderLogs();
+}
+
+/* ----- Detail ----- */
+async function selectArticle(articleId) {
+  state.selectedId = articleId;
+  renderAll();
+  const empty = document.getElementById("detail-empty");
+  const body = document.getElementById("detail-body");
+  empty.style.display = "none";
+  body.style.display = "block";
+  body.innerHTML = "불러오는 중…";
+  try {
+    const d = await api("/api/articles/" + encodeURIComponent(articleId));
+    body.innerHTML = detailHtml(d);
+  } catch (err) {
+    body.innerHTML = `<div class="reason">상세 로드 실패: ${esc(err.message)}</div>`;
+  }
+}
+function detailHtml(d) {
+  const a = d.article, s = d.score || {}, i = d.insight || {};
+  const dims = [
+    ["현대건설 관련성", s.hdec_relevance], ["임원 중요도", s.executive_importance],
+    ["사업기회", s.business_opportunity], ["리스크", s.risk_potential],
+    ["긴급도", s.urgency], ["출처 신뢰도", s.source_reliability],
+    ["반복 트렌드", s.trend_repeat], ["경쟁사 관련성", s.competitor_relevance],
+    ["거시경제 영향", s.macro_impact], ["rule bonus", s.rule_bonus],
+    ["rule penalty", s.rule_penalty != null ? -s.rule_penalty : null],
+    ["final score", s.final_score],
+  ];
+  const list = (items) => Array.isArray(items) && items.length
+    ? `<ul>${items.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "-";
+  return `
+    <h3>${esc(a.title)}</h3>
+    <div class="meta">
+      <span>${esc(a.source || "-")}</span><span>${esc(fmtTime(a.published_at))}</span>
+      <span class="badge origin">${esc(a.signal_origin || "-")}</span>
+    </div>
+    <div class="kv"><a href="${esc(a.url)}" target="_blank" rel="noopener">원문 보기 ↗</a></div>
+    <div class="badges">
+      <span class="badge ${GRADE_CLASS[s.alert_grade] || "grade-excluded"}">${esc(s.alert_grade || "미채점")}</span>
+      <span class="score">${s.final_score != null ? Number(s.final_score).toFixed(2) : "-"}<i>/ 5</i></span>
+      <span class="conf">confidence ${s.confidence != null ? Number(s.confidence).toFixed(2) : "-"}</span>
+    </div>
+    <div class="kv"><div class="k">3줄 요약</div>${list(i.summary_3lines)}</div>
+    <div class="kv"><div class="k">현대건설 관점</div>${esc(i.hdec_implication || "-")}</div>
+    <div class="kv"><div class="k">영향 부문 · 기회/리스크</div>
+      ${esc(Array.isArray(i.affected_units) ? i.affected_units.join(" / ") : "-")} · ${esc(i.opportunity_or_risk || "-")}</div>
+    <div class="kv"><div class="k">점수 BREAKDOWN</div>
+      <table class="breakdown">${dims.map(([k, v]) =>
+        `<tr><td>${esc(k)}</td><td>${v == null ? "-" : Number(v).toFixed(2)}</td></tr>`).join("")}
+      </table></div>
+    <div class="kv"><div class="k">SCORING REASON</div>${esc(s.scoring_reason || "-")}</div>
+    <div class="kv"><div class="k">EVIDENCE BASIS</div>${esc(Array.isArray(s.evidence_basis) ? s.evidence_basis.join(", ") : "-")}</div>
+    <div class="kv"><div class="k">WHY NOT HIGHER</div>${esc(s.why_not_higher || "-")}</div>
+    <div class="kv"><div class="k">WHY NOT LOWER</div>${esc(s.why_not_lower || "-")}</div>
+    <div class="kv"><div class="k">EXECUTIVE CHECKPOINTS</div>${list(i.executive_checkpoints)}</div>
+    <div class="kv"><div class="k">권장 액션</div>${esc(i.recommended_action || "-")}</div>
+    <div class="kv"><div class="k">DIGEST PREVIEW</div><pre class="digest">${esc(i.digest_message || "-")}</pre></div>`;
+}
+
+/* ----- Send / Feedback ----- */
+async function sendNotification(articleId, btn) {
+  btn.disabled = true;
+  try {
+    await api(`/api/articles/${encodeURIComponent(articleId)}/notify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "mock", operator_id: "operator" }),
+    });
+    toast("운영자 승인 발송 완료 (mock)");
+    await loadArticles();
+  } catch (err) {
+    btn.disabled = false;
+    toast("발송 실패: " + err.message);
+  }
+}
+async function sendFeedback(articleId, feedbackType, btn) {
+  btn.closest("details").removeAttribute("open");
+  try {
+    await api(`/api/articles/${encodeURIComponent(articleId)}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feedback_type: feedbackType, feedback_value: null, operator_id: "operator" }),
+    });
+    toast("피드백 저장: " + feedbackType);
+  } catch (err) {
+    toast("피드백 실패: " + err.message);
+  }
+}
+
+/* ----- Notification Log ----- */
+function renderLogs() {
+  const table = document.getElementById("log-table");
+  const emptyEl = document.getElementById("log-empty");
+  if (!state.logs.length) {
+    table.style.display = "none";
+    emptyEl.style.display = "";
+    return;
+  }
+  emptyEl.style.display = "none";
+  table.style.display = "";
+  document.getElementById("log-rows").innerHTML = state.logs.map(l => `
+    <tr>
+      <td>${esc(fmtTime(l.sent_at))}</td>
+      <td>${esc(l.article_title || "(테스트 발송)")}</td>
+      <td>${esc(l.channel)}</td>
+      <td>${esc(l.send_status)}</td>
+      <td>${esc(l.message_preview)}</td>
+    </tr>`).join("");
+}
+
+/* ----- 초기 로드 ----- */
+(async function init() {
+  const dateEl = document.getElementById("desk-date");
+  if (dateEl) dateEl.textContent = new Date().toISOString().slice(0, 10);
+  setStatus("loading", "데이터 확인 중…");
+  try {
+    await loadArticles();
+  } catch (err) {
+    setStatus("error", "Error — 서버에 연결할 수 없습니다: " + err.message +
+      " (백엔드 실행 후 새로고침하세요. mock 모드는 외부 연결이 필요 없습니다)");
+  }
+})();
+</script>
+</body>
+</html>

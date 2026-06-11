@@ -1,0 +1,452 @@
+[
+  {
+    "id": "mock_001",
+    "title": "AI 데이터센터 전력수요 급증, 원전·송배전 인프라 투자 확대",
+    "source": "연합뉴스",
+    "published_at": "2026-06-11T09:00:00+09:00",
+    "url": "https://example.com/mock-001",
+    "snippet": "AI 데이터센터 확산으로 전력수요가 급증하면서 원전, SMR, 송배전 인프라 투자가 확대되고 있다. 정부와 전력업계는 데이터센터 밀집 지역의 전력망 보강과 신규 발전원 확보를 위해 EPC 발주를 늘리는 방안을 검토 중이다. 건설업계는 데이터센터 시공과 전력 인프라 수주 기회가 동시에 열릴 것으로 전망한다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 데이터센터 전력",
+      "source_url": "https://example.com/mock-001",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_001"
+    }
+  },
+  {
+    "id": "mock_002",
+    "title": "현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정",
+    "source": "한국경제",
+    "published_at": "2026-06-11T08:30:00+09:00",
+    "url": "https://example.com/mock-002",
+    "snippet": "현대건설이 사우디아라비아 네옴시티의 AI 데이터센터 EPC 프로젝트 우선협상대상자로 선정됐다. 계약 규모는 수조원대로 추정되며 데이터센터 전력 인프라와 냉각 설비 시공을 포함한다. 중동 플랜트 수주 확대 흐름 속에서 해외 데이터센터 EPC 시장 진출의 교두보가 될 것이라는 평가가 나온다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "현대건설 데이터센터",
+      "source_url": "https://example.com/mock-002",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_002"
+    }
+  },
+  {
+    "id": "mock_003",
+    "title": "MS·아마존, SMR 전력 구매 계약 확대… AI 데이터센터 전력 확보 경쟁",
+    "source": "매일경제",
+    "published_at": "2026-06-10T18:20:00+09:00",
+    "url": "https://example.com/mock-003",
+    "snippet": "글로벌 빅테크가 AI 데이터센터 전력수요를 감당하기 위해 SMR(소형모듈원자로) 전력 구매 계약을 잇따라 체결하고 있다. 원전 업계는 데이터센터 연계형 SMR 건설 발주가 본격화될 것으로 보고 있으며, 국내 건설·플랜트 업계의 참여 기회도 거론된다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "SMR 데이터센터",
+      "source_url": "https://example.com/mock-003",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_003"
+    }
+  },
+  {
+    "id": "mock_004",
+    "title": "정부, 전력망 특별법 시행령 확정… 데이터센터 송배전 투자 22조원",
+    "source": "서울경제",
+    "published_at": "2026-06-10T10:00:00+09:00",
+    "url": "https://example.com/mock-004",
+    "snippet": "정부가 전력망 확충 특별법 시행령을 확정하고 AI 데이터센터 밀집 지역의 송배전망 투자에 22조원을 투입한다고 발표했다. 변전소 신설과 초고압 송전선로 건설이 핵심으로, 에너지 인프라 건설 발주가 큰 폭으로 늘어날 전망이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 전력수요 원전",
+      "source_url": "https://example.com/mock-004",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_004"
+    }
+  },
+  {
+    "id": "mock_005",
+    "title": "글로벌 데이터센터 EPC 발주 사상 최대… 전력·냉각 시공 능력이 수주 좌우",
+    "source": "전자신문",
+    "published_at": "2026-06-11T07:10:00+09:00",
+    "url": "https://example.com/mock-005",
+    "snippet": "올해 글로벌 데이터센터 EPC 발주 규모가 사상 최대치를 기록할 전망이다. AI 서버 고밀도화로 전력 공급과 냉각 설비 시공 능력이 수주 경쟁력의 핵심으로 떠올랐으며, 발주처들은 송배전망 연계 역량까지 갖춘 시공사를 선호하고 있다. 대형 건설사들은 데이터센터 전담 조직을 확대하며 해외 발주처와의 협상에 나서고 있다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "데이터센터 EPC",
+      "source_url": "https://example.com/mock-005",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_005"
+    }
+  },
+  {
+    "id": "mock_006",
+    "title": "원/달러 환율 1,480원 돌파… 해외건설 수주 원가 부담 가중",
+    "source": "한국경제",
+    "published_at": "2026-06-10T16:40:00+09:00",
+    "url": "https://example.com/mock-006",
+    "snippet": "원/달러 환율이 1,480원을 돌파하며 해외건설 프로젝트의 원가 부담이 커지고 있다. 자재 수입 비용 상승과 함께 중동 플랜트 현장의 환헤지 전략이 변수로 떠올랐다. 다만 달러 결제 수주 물량은 환차익 효과도 기대된다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "환율 해외건설",
+      "source_url": "https://example.com/mock-006",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_006"
+    }
+  },
+  {
+    "id": "mock_007",
+    "title": "국제유가 배럴당 95달러 돌파… 중동 발주처 플랜트 투자 재개 움직임",
+    "source": "연합뉴스",
+    "published_at": "2026-06-10T14:00:00+09:00",
+    "url": "https://example.com/mock-007",
+    "snippet": "국제유가가 배럴당 95달러를 돌파하면서 사우디 등 중동 산유국의 재정 여력이 개선되고 있다. 미뤄졌던 석유화학·LNG 플랜트 발주가 재개될 조짐을 보이며, 국내 EPC 업계의 하반기 해외수주 기대감이 커졌다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "중동 플랜트 유가",
+      "source_url": "https://example.com/mock-007",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_007"
+    }
+  },
+  {
+    "id": "mock_008",
+    "title": "철강·시멘트 가격 동반 상승… 건설 원가 압박 3분기까지 지속 전망",
+    "source": "매일경제",
+    "published_at": "2026-06-09T11:30:00+09:00",
+    "url": "https://example.com/mock-008",
+    "snippet": "철강과 시멘트 가격이 동반 상승하며 건설업계 원가 압박이 커지고 있다. 원자재 수급 불안이 3분기까지 이어질 것으로 전망되면서 주요 건설 현장의 공사비 재산정 요구가 늘고 있다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "철강 시멘트 원자재 건설",
+      "source_url": "https://example.com/mock-008",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_008"
+    }
+  },
+  {
+    "id": "mock_009",
+    "title": "FOMC 금리 동결 시사… 건설 프로젝트 파이낸싱 숨통 트이나",
+    "source": "조선비즈",
+    "published_at": "2026-06-11T06:50:00+09:00",
+    "url": "https://example.com/mock-009",
+    "snippet": "미 연준이 FOMC에서 금리 동결을 시사하면서 글로벌 인프라 투자 심리가 개선되고 있다. 고금리로 지연됐던 대형 건설 프로젝트 파이낸싱이 재개될 수 있다는 기대가 나온다. 국내 부동산 PF 시장에 미칠 영향도 주목된다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "FOMC 금리 건설",
+      "source_url": "https://example.com/mock-009",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_009"
+    }
+  },
+  {
+    "id": "mock_010",
+    "title": "글로벌 공급망 재편 가속… 원자재 확보 경쟁에 플랜트 자재 조달 비상",
+    "source": "서울경제",
+    "published_at": "2026-06-09T09:20:00+09:00",
+    "url": "https://example.com/mock-010",
+    "snippet": "글로벌 공급망 재편이 가속화되며 핵심 원자재 확보 경쟁이 치열해지고 있다. 해외 플랜트 현장의 자재 조달 일정에 차질 우려가 제기되면서 장기 공급 계약 체결과 조달처 다변화가 업계 과제로 떠올랐다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "철강 시멘트 원자재 건설",
+      "source_url": "https://example.com/mock-010",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_010"
+    }
+  },
+  {
+    "id": "mock_011",
+    "title": "AI 여행 플래너 앱, 출시 한 달 만에 가입자 100만 돌파",
+    "source": "Mock News",
+    "published_at": "2026-06-10T12:00:00+09:00",
+    "url": "https://example.com/mock-011",
+    "snippet": "생성형 AI 기반 여행 일정 추천 앱이 출시 한 달 만에 가입자 100만명을 넘었다. 이용자 취향을 학습해 숙소와 맛집을 자동 추천하는 기능이 인기를 끌었다. 운영사는 연내 해외 시장 진출을 계획하고 있다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 데이터센터 전력",
+      "source_url": "https://example.com/mock-011",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_011"
+    }
+  },
+  {
+    "id": "mock_012",
+    "title": "생성형 AI 챗봇 구독 서비스 요금제 개편… 무료 이용자 기능 제한",
+    "source": "Mock News",
+    "published_at": "2026-06-09T15:00:00+09:00",
+    "url": "https://example.com/mock-012",
+    "snippet": "주요 생성형 AI 챗봇 업체들이 구독 요금제를 개편하면서 무료 이용자의 기능을 제한하기 시작했다. 일반 소비자 대상 서비스의 수익화 경쟁이 본격화되는 모습이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 데이터센터 전력",
+      "source_url": "https://example.com/mock-012",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_012"
+    }
+  },
+  {
+    "id": "mock_013",
+    "title": "AI 영어회화 튜터 서비스, 초중등 교육 시장 공략 나선다",
+    "source": "디지털데일리",
+    "published_at": "2026-06-09T13:40:00+09:00",
+    "url": "https://example.com/mock-013",
+    "snippet": "AI 영어회화 튜터 스타트업이 초중등 교육 시장을 겨냥한 신규 서비스를 공개했다. 학습자 발음을 교정하고 맞춤형 회화 커리큘럼을 제공하는 것이 특징이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "건설 AI 스마트건설",
+      "source_url": "https://example.com/mock-013",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_013"
+    }
+  },
+  {
+    "id": "mock_014",
+    "title": "AI 테마주 일제히 급등… 증권가 수혜주 옥석 가리기 분주",
+    "source": "Mock News",
+    "published_at": "2026-06-11T10:10:00+09:00",
+    "url": "https://example.com/mock-014",
+    "snippet": "AI 반도체와 소프트웨어 관련 테마주가 일제히 급등하며 증권가에서 수혜주 찾기가 분주하다. 전문가들은 실적이 뒷받침되지 않는 종목의 단기 급등 추격 매수를 주의해야 한다고 조언했다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 데이터센터 전력",
+      "source_url": "https://example.com/mock-014",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_014"
+    }
+  },
+  {
+    "id": "mock_015",
+    "title": "요즘 뜨는 AI 사진 보정 앱 5가지 직접 써본 후기",
+    "source": "테크리뷰 블로그",
+    "published_at": "2026-06-09T20:00:00+09:00",
+    "url": "https://example.com/mock-015",
+    "snippet": "최근 인기를 끌고 있는 AI 사진 보정 앱 다섯 가지를 직접 사용해 보고 장단점을 정리했다. 인물 보정 품질과 무료 제공 범위에서 앱별 차이가 컸다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "건설 AI 스마트건설",
+      "source_url": "https://example.com/mock-015",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_015"
+    }
+  },
+  {
+    "id": "mock_016",
+    "title": "삼성물산, AI 시공 관리 플랫폼 전 현장 확대… 스마트건설 투자 2배로",
+    "source": "한국경제",
+    "published_at": "2026-06-10T09:40:00+09:00",
+    "url": "https://example.com/mock-016",
+    "snippet": "삼성물산이 AI 기반 시공 관리 플랫폼을 전 현장으로 확대하고 스마트건설 투자를 두 배로 늘린다. 공정 지연 예측과 자재 관리 자동화로 원가 절감 효과를 검증했다는 설명이다. 경쟁 건설사들의 AI 도입 경쟁이 가속화될 전망이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "삼성물산 AI 건설",
+      "source_url": "https://example.com/mock-016",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_016"
+    }
+  },
+  {
+    "id": "mock_017",
+    "title": "GS건설, 건설로봇·BIM 통합한 스마트건설 체계 구축",
+    "source": "전자신문",
+    "published_at": "2026-06-09T17:00:00+09:00",
+    "url": "https://example.com/mock-017",
+    "snippet": "GS건설이 건설로봇과 BIM을 통합한 스마트건설 운영 체계를 구축했다. 위험 작업의 로봇 대체와 설계-시공 데이터 연동이 핵심이며, 내년부터 주요 현장에 순차 적용한다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "GS건설 스마트건설",
+      "source_url": "https://example.com/mock-017",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_017"
+    }
+  },
+  {
+    "id": "mock_018",
+    "title": "DL이앤씨, 수도권 데이터센터 신축 공사 수주… 비주택 포트폴리오 강화",
+    "source": "매일경제",
+    "published_at": "2026-06-10T11:20:00+09:00",
+    "url": "https://example.com/mock-018",
+    "snippet": "DL이앤씨가 수도권 데이터센터 신축 공사를 수주하며 비주택 부문 포트폴리오를 강화했다. 데이터센터 시공 실적을 앞세워 후속 발주 입찰에도 적극 참여한다는 계획이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "DL이앤씨 데이터센터",
+      "source_url": "https://example.com/mock-018",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_018"
+    }
+  },
+  {
+    "id": "mock_019",
+    "title": "AI 데이터센터 전력수요 급증에 원전·송배전 투자 확대",
+    "source": "뉴스픽 재전송",
+    "published_at": "2026-06-11T09:05:00+09:00",
+    "url": "https://example.com/mock-001",
+    "snippet": "AI 데이터센터 확산으로 전력수요가 급증하면서 원전과 송배전 인프라 투자가 확대되고 있다. 전력망 보강과 신규 발전원 확보를 위한 EPC 발주 확대가 검토되고 있다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 데이터센터 전력",
+      "source_url": "https://example.com/mock-001",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_019"
+    }
+  },
+  {
+    "id": "mock_020",
+    "title": "[단독] 현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정!",
+    "source": "Mock News",
+    "published_at": "2026-06-11T08:45:00+09:00",
+    "url": "https://example.com/mock-020",
+    "snippet": "현대건설이 사우디 네옴시티 AI 데이터센터 EPC 프로젝트의 우선협상대상자로 선정된 것으로 확인됐다. 데이터센터 전력 인프라와 냉각 설비 시공이 포함된 수조원대 프로젝트다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "현대건설 데이터센터",
+      "source_url": "https://example.com/mock-020",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_020"
+    }
+  },
+  {
+    "id": "mock_021",
+    "title": "건설현장 AI 영상인식 안전관리 의무화 추진… 중대재해 감축 목표",
+    "source": "연합뉴스",
+    "published_at": "2026-06-10T08:50:00+09:00",
+    "url": "https://example.com/mock-021",
+    "snippet": "정부가 건설현장 AI 영상인식 안전관리 시스템 도입 의무화를 추진한다. 중대재해 사고를 줄이기 위해 위험 작업 구간 자동 감지와 실시간 경보 체계를 표준화하는 것이 핵심이다. 대형 건설사의 스마트 안전 투자가 확대될 전망이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "건설 AI 스마트건설",
+      "source_url": "https://example.com/mock-021",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_021"
+    }
+  },
+  {
+    "id": "mock_022",
+    "title": "상반기 건설업 중대재해 22% 증가… 고용부, 대형 건설사 특별감독 착수",
+    "source": "머니투데이",
+    "published_at": "2026-06-11T09:30:00+09:00",
+    "url": "https://example.com/mock-022",
+    "snippet": "올해 상반기 건설업 중대재해가 전년 동기 대비 22% 증가했다. 고용노동부는 사망사고가 발생한 대형 건설사를 대상으로 특별감독에 착수했으며, 처벌 강화와 함께 안전관리 체계 전반의 점검을 예고했다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "건설 AI 스마트건설",
+      "source_url": "https://example.com/mock-022",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_022"
+    }
+  },
+  {
+    "id": "mock_023",
+    "title": "5월 전국 주택 착공 물량 전년 대비 18% 감소",
+    "source": "연합뉴스",
+    "published_at": "2026-06-09T10:00:00+09:00",
+    "url": "https://example.com/mock-023",
+    "snippet": "5월 전국 주택 착공 물량이 전년 같은 달보다 18% 감소했다. 분양 경기 위축과 공사비 상승이 겹치며 주택 부문 신규 착공이 위축되는 흐름이 이어지고 있다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "철강 시멘트 원자재 건설",
+      "source_url": "https://example.com/mock-023",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_023"
+    }
+  },
+  {
+    "id": "mock_024",
+    "title": "정부, 하반기 SOC 예산 조기 집행… 인프라 건설투자 확대",
+    "source": "서울경제",
+    "published_at": "2026-06-10T13:10:00+09:00",
+    "url": "https://example.com/mock-024",
+    "snippet": "정부가 하반기 SOC 예산을 조기 집행해 인프라 건설투자를 확대한다고 밝혔다. 도로·철도 등 교통 인프라와 노후 기반시설 정비 사업이 우선 대상이며, 건설 경기 보완 효과가 기대된다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "FOMC 금리 건설",
+      "source_url": "https://example.com/mock-024",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_024"
+    }
+  },
+  {
+    "id": "mock_025",
+    "title": "해외건설 수주 상반기 200억달러 육박… 중동 비중 60%",
+    "source": "한국경제",
+    "published_at": "2026-06-11T08:00:00+09:00",
+    "url": "https://example.com/mock-025",
+    "snippet": "올해 상반기 해외건설 수주액이 200억달러에 육박했다. 사우디 등 중동 지역 플랜트 수주가 전체의 60%를 차지했으며, 하반기에는 대형 인프라 입찰 결과가 변수로 꼽힌다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "환율 해외건설",
+      "source_url": "https://example.com/mock-025",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_025"
+    }
+  },
+  {
+    "id": "mock_026",
+    "title": "체코 신규 원전 2호기 본계약 체결… 팀코리아 유럽 수주 확대",
+    "source": "연합뉴스",
+    "published_at": "2026-06-10T07:30:00+09:00",
+    "url": "https://example.com/mock-026",
+    "snippet": "팀코리아가 체코 신규 원전 2호기 본계약을 체결하며 유럽 원전 수주를 확대했다. 후속으로 폴란드와 네덜란드 원전 입찰이 예정돼 있어 국내 원전 시공 업계의 동반 진출 기대감이 커지고 있다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "원전 수주 SMR",
+      "source_url": "https://example.com/mock-026",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_026"
+    }
+  },
+  {
+    "id": "mock_027",
+    "title": "정부, AI 인프라 고도화에 5년간 30조 투입… 에너지·전력망 패키지 지원",
+    "source": "전자신문",
+    "published_at": "2026-06-11T07:40:00+09:00",
+    "url": "https://example.com/mock-027",
+    "snippet": "정부가 AI 인프라 고도화에 5년간 30조원을 투입하는 로드맵을 발표했다. 컴퓨팅 인프라와 함께 에너지·전력망 보강을 패키지로 지원하는 것이 특징으로, 관련 기반시설 구축 사업이 본격화될 전망이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "AI 전력수요 원전",
+      "source_url": "https://example.com/mock-027",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_027"
+    }
+  },
+  {
+    "id": "mock_028",
+    "title": "달러 강세 장기화 조짐… 중동 플랜트 발주환경과 해외 원가에 영향",
+    "source": "조선비즈",
+    "published_at": "2026-06-09T16:10:00+09:00",
+    "url": "https://example.com/mock-028",
+    "snippet": "달러 강세가 장기화될 조짐을 보이면서 중동 플랜트 발주환경과 해외 사업 원가 구조에 영향이 예상된다. 산유국 재정에는 우호적이지만 신흥국 발주처의 자금 조달 부담은 커질 수 있다는 분석이다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "중동 플랜트 유가",
+      "source_url": "https://example.com/mock-028",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_028"
+    }
+  },
+  {
+    "id": "mock_029",
+    "title": "북미 빅테크, 동남아 데이터센터에 12조원 투자… 전력 확보가 최대 변수",
+    "source": "매일경제",
+    "published_at": "2026-06-10T15:30:00+09:00",
+    "url": "https://example.com/mock-029",
+    "snippet": "북미 빅테크 기업들이 동남아시아 데이터센터에 12조원 규모 투자를 발표했다. AI 수요 급증으로 현지 전력 확보와 안정적 공급 계약이 프로젝트 성패의 최대 변수로 꼽힌다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "데이터센터 EPC",
+      "source_url": "https://example.com/mock-029",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_029"
+    }
+  },
+  {
+    "id": "mock_030",
+    "title": "AI 쇼핑 추천 서비스, 패션 플랫폼 전반으로 확산",
+    "source": "Mock News",
+    "published_at": "2026-06-09T14:20:00+09:00",
+    "url": "https://example.com/mock-030",
+    "snippet": "패션 플랫폼들이 AI 쇼핑 추천 서비스를 잇따라 도입하고 있다. 이용자 구매 이력을 분석해 취향에 맞는 상품을 제안하는 방식으로, 소비자 체류 시간을 늘리는 효과가 보고됐다.",
+    "source_metadata": {
+      "provider": "mock",
+      "query": "건설 AI 스마트건설",
+      "source_url": "https://example.com/mock-030",
+      "collected_at": "2026-06-11T10:00:00+09:00",
+      "provider_response_id": "mock_030"
+    }
+  }
+]
