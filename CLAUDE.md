@@ -55,6 +55,7 @@ Run Sensing → mock_articles.json 로드 → dedup → SQLite 저장
 | Insight | `app/insight.py` | template 기반 mock insight, digest_message 생성, article_insights 저장 호출 | 점수 계산, alert_grade 재계산(중복 저장 금지) |
 | Notification | `app/notification.py` | Send 처리, mock/console 발송, notification_logs 저장 호출 | 점수/insight 생성, 자동 발송 트리거 |
 | Feedback | `app/feedback.py` | feedback row 저장 | scoring 가중치 변경 (Day-2 영역) |
+| Briefing | `app/briefing.py` | (P0-B2) 저장된 score/insight를 **읽기만** 하여 executive brief 파생: 현황판 집계, one-liner 조립, 테마/카테고리 랭킹, spread 추정 | 점수/등급 재계산, insight 재생성, DB 쓰기, 발송, 네트워크 |
 | API | `app/main.py` | FastAPI 라우팅과 요청/응답 변환만. 각 도메인 함수를 **호출만** 한다 | 도메인 로직 inline 구현 |
 | UI | `templates/index.html` | Today Signals 화면, Detail 패널, 5개 상태, fetch 호출 | 점수 계산 로직 복제, webhook URL 등 비밀값 |
 | Data | `data/*.json` | mock 기사 30개, topics seed | 본문/full_text 포함 금지 |

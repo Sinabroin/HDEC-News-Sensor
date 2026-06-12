@@ -1,12 +1,12 @@
-"""P0-B1 — Telegram mock daily digest 빌더.
+"""P0-B1/P0-B2 — Telegram mock daily digest 빌더.
 
-기존 P0-A 도메인(collector → scoring → insight)을 임시 SQLite DB 위에서 그대로
-재사용해 임원용 한국어 다이제스트 메시지를 만든다.
+P0-B2부터 다이제스트 데이터는 scripts/build_executive_brief.py(공유 briefing
+레이어)에서 가져오고, 이 파일은 Telegram용 한국어 텍스트 조립만 담당한다.
 
 - 네트워크 호출 0건, 비밀값 접근 0건 (Telegram 발송은 send_telegram.py 소관).
-- 저장소의 radar.db는 절대 건드리지 않는다 — 매 실행마다 tmp 디렉터리의
+- 저장소의 radar.db는 절대 건드리지 않는다 — brief 빌더가 tmp 디렉터리의
   일회용 DB에 mock 파이프라인을 새로 돌린다.
-- APP_MODE=mock 고정: collector.run("mock")만 호출한다.
+- APP_MODE=mock 고정.
 
 사용법:
     python3 scripts/build_telegram_digest.py            # 메시지 출력
@@ -16,42 +16,23 @@
 
 import argparse
 import json
-import os
 import sys
-import tempfile
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-KST = timezone(timedelta(hours=9))
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 
 HEADER = "HDEC Executive Radar"
-TOP_N = 3
 # 메시지 길이 예산. send_telegram.py의 MAX_MESSAGE_LEN보다 항상 작거나 같아야 한다
-# (verify_telegram_digest.py가 이 관계를 검사한다).
+# (verify_telegram_digest.py / verify_executive_brief.py가 이 관계를 검사한다).
 MESSAGE_BUDGET = 3000
 TITLE_MAX = 70
 REASON_MAX = 90
-
-# 프로세스당 1회만 부트스트랩한다 — app.config가 import 시점에 DB_PATH를 읽으므로
-# 임시 DB 경로는 app 모듈 import 전에 환경변수로 고정해야 한다.
-_RUNTIME = None
-
-
-def _bootstrap():
-    global _RUNTIME
-    if _RUNTIME is None:
-        tmp = tempfile.TemporaryDirectory(prefix="hdec_digest_")
-        os.environ["DB_PATH"] = os.path.join(tmp.name, "digest_mock.db")
-        os.environ.setdefault("APP_MODE", "mock")
-        if str(REPO_ROOT) not in sys.path:
-            sys.path.insert(0, str(REPO_ROOT))
-        from app import collector, db, insight, scoring
-
-        modules = {"collector": collector, "db": db,
-                   "insight": insight, "scoring": scoring}
-        _RUNTIME = (modules, tmp)
-    return _RUNTIME[0]
+DIGEST_THEMES_MAX = 5
+DIGEST_CATEGORIES_MAX = 5
 
 
 def _clip(text: str, limit: int) -> str:
@@ -59,98 +40,103 @@ def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def _select_top_rows(rows: list[dict], instant_grade: str) -> list[dict]:
-    """즉시 알림 후보(점수순) 우선, 부족하면 나머지에서 점수순으로 채운다."""
-    scored = [r for r in rows if r.get("final_score") is not None]
-    instant = sorted((r for r in scored if r.get("alert_grade") == instant_grade),
-                     key=lambda r: r["final_score"], reverse=True)
-    rest = sorted((r for r in scored if r.get("alert_grade") != instant_grade),
-                  key=lambda r: r["final_score"], reverse=True)
-    return (instant + rest)[:TOP_N]
-
-
-def _signal_entry(rank: int, row: dict, detail: dict | None) -> dict:
-    insight_row = (detail or {}).get("insight") or {}
-    reason = (insight_row.get("hdec_implication") or "").strip()
-    try:
-        topics = json.loads(row.get("topic_candidates") or "[]")
-    except ValueError:
-        topics = []
+def _digest_signal(entry: dict) -> dict:
+    """brief의 시그널 entry를 다이제스트 JSON 호환 형태로 변환한다."""
     return {
-        "rank": rank,
-        "article_id": row["id"],
-        "title": row["title"],
-        "source": row.get("source") or "출처 미상",
-        "topic": topics[0] if topics else None,
-        "final_score": row.get("final_score"),
-        "alert_grade": row.get("alert_grade"),
-        "confidence": row.get("confidence"),
-        "reason": reason,
-        "url": row.get("url"),
+        "rank": entry["rank"],
+        "article_id": entry["article_id"],
+        "title": entry["title"],
+        "source": entry["source"],
+        "topic": entry.get("topic"),
+        "category_label": entry.get("category_label"),
+        "final_score": entry.get("final_score"),
+        "alert_grade": entry.get("alert_grade"),
+        "confidence": entry.get("confidence"),
+        "reason": entry.get("implication") or "",
+        "spread_label": (entry.get("spread") or {}).get("label", "단독 신호"),
+        "url": entry.get("url"),
     }
 
 
 def build_digest_data() -> dict:
-    """임시 DB에서 mock 파이프라인을 돌리고 다이제스트 구조체를 반환한다."""
-    m = _bootstrap()
-    m["db"].init_db()
-    collect_stats = m["collector"].run("mock")
-    score_stats = m["scoring"].score_all()
-    m["insight"].generate_all()
-
-    rows = m["db"].fetch_articles_with_scores()
-    top_rows = _select_top_rows(rows, m["scoring"].GRADE_INSTANT)
-    signals = [
-        _signal_entry(rank, row, m["db"].fetch_article_detail(row["id"]))
-        for rank, row in enumerate(top_rows, start=1)
-    ]
-
-    now = datetime.now(KST)
+    """공유 brief 레이어에서 다이제스트 구조체를 만든다."""
+    brief = build_brief_via_mock_pipeline()
+    signals = [_digest_signal(e) for e in brief["top_immediate_signals"]]
     return {
         "header": HEADER,
-        "mode": "mock",
-        "date_kst": now.strftime("%Y-%m-%d"),
-        "generated_at": now.isoformat(timespec="seconds"),
+        "mode": brief["mode"],
+        "date_kst": brief["date_kst"],
+        "generated_at": brief["generated_at"],
+        "executive_one_liner": brief["executive_one_liner"],
+        "status_board": brief["status_board"],
         "top_signals": signals,
-        "counts": {
-            "collected": collect_stats["collected"],
-            "deduplicated": collect_stats["deduplicated"],
-            "inserted": collect_stats["inserted"],
-            "scored": score_stats["scored"],
-            "alert_candidates": score_stats["alert_candidates"],
-        },
+        "theme_rankings": brief["theme_rankings"][:DIGEST_THEMES_MAX],
+        "category_counts": brief["category_counts"],
+        "macro_snapshot": brief["macro_snapshot"],
+        "operator_note": brief["operator_note"],
+        "counts": brief["pipeline_counts"] or {},
     }
 
 
 def format_digest_message(data: dict) -> str:
     """다이제스트 구조체를 Telegram용 한국어 plain text로 변환한다."""
-    counts = data["counts"]
     lines = [
-        f"📡 {data['header']} — 일일 다이제스트",
+        f"📡 {data['header']} — Executive Daily Brief",
         f"{data['date_kst']} (KST) · 모드: {data['mode']}",
         "",
-        f"오늘의 Top {len(data['top_signals'])} 시그널",
+        "[오늘의 Executive Signal]",
+        data["executive_one_liner"],
+        "",
+        "[데일리 현황판]",
+        " · ".join(f"{b['label']} {b['value']}" for b in data["status_board"]),
     ]
-    for signal in data["top_signals"]:
-        meta = [signal["source"]]
-        if signal["topic"]:
-            meta.append(signal["topic"])
-        if signal["final_score"] is not None:
-            meta.append(f"{signal['final_score']:.2f}점")
-        if signal["alert_grade"]:
-            meta.append(f"[{signal['alert_grade']}]")
-        if signal["confidence"] is not None:
-            meta.append(f"신뢰도 {signal['confidence']:.2f}")
-        lines.append("")
-        lines.append(f"{signal['rank']}. {_clip(signal['title'], TITLE_MAX)}")
+
+    signals = data["top_signals"]
+    all_instant = bool(signals) and all(
+        s.get("alert_grade") == "즉시 알림 후보" for s in signals)
+    section = "즉시 알림 후보" if all_instant else "주요 신호"
+    lines += ["", f"[{section} Top {len(signals)}]"]
+    for s in signals:
+        meta = [s["source"]]
+        if s.get("category_label"):
+            meta.append(s["category_label"])
+        if s.get("final_score") is not None:
+            meta.append(f"{s['final_score']:.2f}점")
+        if s.get("confidence") is not None:
+            meta.append(f"신뢰도 {s['confidence']:.2f}")
+        lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
         lines.append("   " + " · ".join(meta))
-        if signal["reason"]:
-            lines.append(f"   → {_clip(signal['reason'], REASON_MAX)}")
+        if s["reason"]:
+            lines.append(f"   → {_clip(s['reason'], REASON_MAX)}")
+        lines.append(f"   ↳ {s['spread_label']}")
+
+    themes = data["theme_rankings"]
+    if themes:
+        lines += ["", f"[주요 테마 Top {len(themes)}]"]
+        for t in themes:
+            lines.append(f"{t['rank']}. {t['theme']} — {t['count']}건"
+                         f" · 강도 {t['weighted_strength']}")
+
+    categories = data["category_counts"]
+    if categories:
+        shown = categories[:DIGEST_CATEGORIES_MAX]
+        rest = len(categories) - len(shown)
+        summary = " · ".join(f"{c['label']} {c['count']}" for c in shown)
+        if rest > 0:
+            summary += f" · 외 {rest}개 분류"
+        lines += ["", "[카테고리 요약]", summary]
+
+    macro = data.get("macro_snapshot")
+    if macro and macro.get("indicators"):
+        lines += ["", "[Macro Snapshot — mock 고정값]"]
+        lines.append(" · ".join(
+            f"{i['label']} {i['value']}{i.get('unit', '')}"
+            for i in macro["indicators"]))
+
     lines += [
         "",
-        (f"수집 {counts['collected']} · 신규 저장 {counts['inserted']}"
-         f" · 즉시 알림 후보 {counts['alert_candidates']}"),
         "※ mock 모드 다이제스트 — 외부 뉴스 API 호출 없이 로컬 mock 데이터로 생성됨.",
+        "※ 관련 신호 수는 토픽 중복 기반 추정치입니다.",
     ]
     message = "\n".join(lines)
     if len(message) > MESSAGE_BUDGET:

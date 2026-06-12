@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from app import collector, config, db, feedback, insight, notification, scoring
+from app import briefing, collector, config, db, feedback, insight, notification, scoring
 
 ALERT_GRADE_ALIASES = {
     "instant_candidate": "즉시 알림 후보",
@@ -168,6 +168,12 @@ def notify_test(body: NotifyTestRequest | None = None):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return {"sent": True, "notification": row}
+
+
+@app.get("/api/brief")
+def get_brief():
+    # P0-B2: 현재 DB 상태 기반 executive brief (파생 데이터 — DB 쓰기 없음)
+    return briefing.build_brief()
 
 
 @app.get("/api/settings/topics")

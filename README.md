@@ -107,6 +107,7 @@ app/scoring.py       Scoring — rule-based 9항목 + 가점/감점 + alert_grad
 app/insight.py       Insight — template mock insight + digest (alert_grade 저장 안 함)
 app/notification.py  Notification — 운영자 Send 시에만 mock 발송
 app/feedback.py      Feedback — feedback row 저장만 (가중치 변경 없음)
+app/briefing.py      Briefing — (P0-B2) 저장된 score/insight 읽기 전용 executive brief 파생
 app/schema.sql       6개 테이블 (articles, article_scores, article_insights,
                      feedback, keyword_rules, notification_logs)
 app/config.py        .env 로더 (APP_MODE 기본 mock)
@@ -155,7 +156,53 @@ python3 scripts/verify_telegram_digest.py
 - **수동**: Actions → **Telegram Notify** → Run workflow.
   `message` 입력을 비워 두면 mock daily digest를, 입력하면 그 메시지를 발송한다.
 - **스케줄**: 매일 UTC 23:00 (KST 08:00)에 digest 자동 발송 (`cron: "0 23 * * *"`).
-- 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`를 먼저 실행해
-  회귀가 있으면 발송 자체를 차단한다.
+- 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`와
+  `scripts/verify_executive_brief.py`를 먼저 실행해 회귀가 있으면 발송 자체를 차단한다.
 - 성공 로그 기대값: `Telegram delivery summary: delivered=N, failed=0`
   (token·chat id는 로그에 출력되지 않는다).
+
+## 11. Executive Brief Layer (P0-B2)
+
+벤치마크(일간 건설 브리프)에서 착안한 **임원용 브리핑 레이어**.
+다만 포지셔닝은 다르다 — 벤치마크가 *광범위 뉴스 수집형 일일 브리프*라면,
+이 제품은 *선별된 임원 시그널 레이더*다. 기사 목록을 늘리는 대신
+이미 채점된 신호를 집계·종합해 "오늘 무엇이 중요한가"를 한 화면/한 메시지로 줄인다.
+
+`app/briefing.py`가 저장된 score/insight를 **읽기만** 해서 파생 데이터를 만든다
+(점수 재계산·DB 쓰기 없음):
+
+- **데일리 현황판** — 감지 신호 / 즉시 알림 후보 / 일간 요약 / 주간 리포트 후보 / 제외·참고
+- **오늘의 Executive Signal** — 기회·리스크를 종합한 1~2문장 한국어 one-liner
+  (제목 이어붙이기가 아니라 카테고리 표현 사전으로 조립)
+- **신규 이슈 Top 5** / **즉시 알림 후보 Top 3** (각 신호에 spread 지표 포함)
+- **주요 테마 Top 5** — topic 후보를 점수 가중으로 랭킹
+- **카테고리 요약** — insight 카테고리 분포 (즉시 후보 수 표시)
+- **Macro Snapshot** — `data/mock_macro_snapshot.json`의 **정적 mock 지표** (실시간 아님)
+
+### 로컬 실행 (네트워크·비밀값 불필요)
+
+```bash
+# 사람용 brief 텍스트 (발송 없음)
+python3 scripts/build_executive_brief.py --dry-run
+
+# 기계 검증용 JSON
+python3 scripts/build_executive_brief.py --json
+
+# 도메인 회귀 검증 (RESULT: PASS / exit 0 이 통과 조건)
+python3 scripts/verify_executive_brief.py
+```
+
+### 소비처
+
+- **대시보드**: `GET /api/brief` — Run Sensing 후 상단 EXECUTIVE BRIEF 패널에 표시.
+  수집 전(빈 DB)에는 패널이 숨겨진다.
+- **Telegram**: `scripts/build_telegram_digest.py`가 같은 brief 데이터로
+  다이제스트를 조립한다. Actions → **Telegram Notify** → Run workflow에서
+  `message`를 비워 두면 이 brief 기반 다이제스트가 발송된다 (§10과 동일 경로).
+
+### mock 모드 한계
+
+- 신호가 mock 30건 고정이라 brief 내용이 결정적이다 (Top 3 = mock_001/002/003).
+- **spread 지표는 추정치다** — topic 후보가 겹치는 신호 수 기반 휴리스틱이며,
+  동일 사건 클러스터링이 아니다. dedup으로 제거된 중복 기사는 집계되지 않는다.
+- macro 지표는 데모용 고정값이며 외부 시세 API를 호출하지 않는다.

@@ -28,6 +28,7 @@ jobs:
       - name: Verify digest pipeline (no network, no secrets)
         run: |
           python3 scripts/verify_telegram_digest.py
+          python3 scripts/verify_executive_brief.py
 
       - name: Send Telegram message
         env:

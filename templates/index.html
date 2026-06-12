@@ -55,6 +55,42 @@
   #status-banner.nocandidates { display: block; border-left-color: var(--daily);
                                 background: var(--daily-bg); }
 
+  /* ---- Executive Brief (P0-B2) ---- */
+  #brief-section { margin: 18px 28px 0; border-top: 3px solid var(--action); }
+  #brief-body { padding: 16px 18px 18px; }
+  #brief-oneliner { font-family: var(--serif); font-size: 16.5px; line-height: 1.65;
+                    margin: 0 0 14px; letter-spacing: -.005em; }
+  #brief-board { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .board-chip { border: 1px solid var(--hairline-2); border-radius: 4px;
+                padding: 8px 14px; font-size: 11.5px; color: var(--muted);
+                background: var(--paper); min-width: 96px; }
+  .board-chip b { display: block; font-family: var(--serif); font-size: 19px;
+                  color: var(--ink); margin-top: 2px;
+                  font-variant-numeric: tabular-nums; }
+  .board-chip.immediate { border-color: var(--signal); background: var(--signal-bg); }
+  .board-chip.immediate b { color: var(--signal); }
+  .brief-grid { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 20px; }
+  .brief-col h3 { font-size: 10px; letter-spacing: .22em; color: var(--muted);
+                  margin: 0 0 8px; font-weight: 700; }
+  .brief-col ol { margin: 0; padding: 0 0 0 18px; }
+  .brief-col li { font-size: 12.5px; margin: 7px 0; line-height: 1.5; }
+  #brief-issues li { cursor: pointer; }
+  #brief-issues li:hover .t { text-decoration: underline; }
+  #brief-issues .sub, .theme-sub { font-size: 11px; color: var(--muted); }
+  .theme-bar { height: 4px; background: var(--paper); border-radius: 2px;
+               margin-top: 3px; overflow: hidden; }
+  .theme-bar i { display: block; height: 100%; background: var(--action); }
+  #brief-categories { margin: 0; padding: 0; list-style: none; font-size: 12px; }
+  #brief-categories li { display: flex; justify-content: space-between;
+                         padding: 4px 0; border-bottom: 1px dashed var(--hairline); }
+  #brief-categories .imm { color: var(--signal); font-weight: 700; }
+  #brief-macro { margin-top: 12px; font-size: 11.5px; color: var(--sub);
+                 border-top: 1px solid var(--hairline); padding-top: 9px;
+                 line-height: 1.7; }
+  #brief-macro .up { color: var(--signal); }
+  #brief-macro .down { color: var(--daily); }
+  #brief-note { margin-top: 12px; }
+
   /* ---- 레이아웃 ---- */
   main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
          gap: 20px; padding: 20px 28px; align-items: start; }
@@ -178,6 +214,7 @@
   @media (max-width: 980px) {
     main { grid-template-columns: 1fr; }
     #detail-panel { position: static; }
+    .brief-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -197,6 +234,22 @@
 </header>
 
 <div id="status-banner"></div>
+
+<section class="box" id="brief-section" style="display:none;">
+  <h2><span class="ovl">EXECUTIVE BRIEF</span>오늘의 Executive Signal
+      <span class="count" id="brief-generated"></span></h2>
+  <div id="brief-body">
+    <p id="brief-oneliner"></p>
+    <div id="brief-board"></div>
+    <div class="brief-grid">
+      <div class="brief-col"><h3>신규 이슈 TOP 5</h3><ol id="brief-issues"></ol></div>
+      <div class="brief-col"><h3>주요 테마</h3><ol id="brief-themes"></ol></div>
+      <div class="brief-col"><h3>카테고리 요약</h3><ul id="brief-categories"></ul>
+        <div id="brief-macro"></div></div>
+    </div>
+    <div id="brief-note" class="reason"></div>
+  </div>
+</section>
 
 <main>
   <div>
@@ -283,6 +336,54 @@ function applyDataStatus() {
   }
 }
 
+/* ----- Executive Brief (P0-B2) ----- */
+async function loadBrief() {
+  const section = document.getElementById("brief-section");
+  try {
+    renderBrief(await api("/api/brief"));
+  } catch (err) {
+    section.style.display = "none"; // brief는 보조 패널 — 실패해도 본 화면을 막지 않는다
+  }
+}
+function renderBrief(b) {
+  const section = document.getElementById("brief-section");
+  if (!b || !b.total_articles) { section.style.display = "none"; return; }
+  section.style.display = "";
+  document.getElementById("brief-generated").textContent =
+    `${b.date_kst} · ${b.mode} 기준`;
+  document.getElementById("brief-oneliner").textContent = b.executive_one_liner || "";
+  document.getElementById("brief-board").innerHTML = (b.status_board || []).map(s =>
+    `<div class="board-chip${s.key === "immediate" ? " immediate" : ""}">` +
+    `${esc(s.label)}<b>${esc(s.value)}</b></div>`).join("");
+  document.getElementById("brief-issues").innerHTML = (b.top_new_issues || []).map(i => {
+    const score = i.final_score == null ? "-" : Number(i.final_score).toFixed(2);
+    const spread = (i.spread && i.spread.label) || "단독 신호";
+    return `<li onclick="selectArticle('${esc(i.article_id)}')">` +
+      `<span class="t">${esc(i.title)}</span><br>` +
+      `<span class="sub">${esc(i.category_label || "-")} · ${score}점 · ${esc(spread)}</span></li>`;
+  }).join("");
+  const themes = b.theme_rankings || [];
+  const maxWeight = Math.max(1, ...themes.map(t => t.weighted_strength || 0));
+  document.getElementById("brief-themes").innerHTML = themes.map(t =>
+    `<li>${esc(t.theme)} <span class="theme-sub">${esc(t.count)}건 · 강도 ${esc(t.weighted_strength)}</span>` +
+    `<div class="theme-bar"><i style="width:${Math.round(100 * (t.weighted_strength || 0) / maxWeight)}%"></i></div></li>`
+  ).join("");
+  document.getElementById("brief-categories").innerHTML = (b.category_counts || []).map(c =>
+    `<li><span>${esc(c.label)}</span><span>${esc(c.count)}` +
+    `${c.immediate ? ` <span class="imm">●${esc(c.immediate)}</span>` : ""}</span></li>`
+  ).join("");
+  const m = b.macro_snapshot;
+  document.getElementById("brief-macro").innerHTML =
+    (m && Array.isArray(m.indicators) && m.indicators.length)
+      ? `<b>MACRO · mock 고정값</b><br>` + m.indicators.map(i => {
+          const arrow = i.direction === "up" ? ' <span class="up">▲</span>'
+                      : i.direction === "down" ? ' <span class="down">▼</span>' : "";
+          return `${esc(i.label)} ${esc(i.value)}${esc(i.unit || "")}${arrow}`;
+        }).join(" · ")
+      : "";
+  document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "");
+}
+
 /* ----- 데이터 로드 ----- */
 async function loadArticles() {
   const data = await api("/api/articles");
@@ -303,6 +404,7 @@ async function runSensing() {
     });
     renderRunStats();
     await loadArticles();
+    await loadBrief();
     const c = state.lastRun.alert_candidates;
     toast(`Sensing 완료 — 즉시 알림 후보 ${c}건`);
   } catch (err) {
@@ -487,6 +589,7 @@ function renderLogs() {
   setStatus("loading", "데이터 확인 중…");
   try {
     await loadArticles();
+    await loadBrief();
   } catch (err) {
     setStatus("error", "Error — 서버에 연결할 수 없습니다: " + err.message +
       " (백엔드 실행 후 새로고침하세요. mock 모드는 외부 연결이 필요 없습니다)");

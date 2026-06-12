@@ -1,0 +1,13 @@
+{
+  "as_of": "2026-06-11",
+  "basis": "mock-static",
+  "note": "데모용 고정 mock 지표 — 실시간 시세가 아니며 외부 API를 호출하지 않는다.",
+  "indicators": [
+    { "key": "usdkrw", "label": "USD/KRW", "value": 1480.5, "unit": "원", "direction": "up" },
+    { "key": "wti", "label": "WTI", "value": 95.4, "unit": "달러", "direction": "up" },
+    { "key": "kospi", "label": "KOSPI", "value": 2864.7, "unit": "pt", "direction": "flat" },
+    { "key": "vix", "label": "VIX", "value": 17.2, "unit": "pt", "direction": "down" },
+    { "key": "us10y", "label": "미 국채 10Y", "value": 4.18, "unit": "%", "direction": "flat" },
+    { "key": "kr10y", "label": "국고채 10Y", "value": 3.42, "unit": "%", "direction": "up" }
+  ]
+}
