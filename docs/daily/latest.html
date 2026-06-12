@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDEC Executive Radar — Executive Daily Brief</title>
+<style>
+:root{--navy:#0e2a47;--navy2:#163b61;--green:#19b27b;--green-dark:#0e7d57;
+--red:#d64545;--amber:#e8a23d;--ink:#22313f;--muted:#64748b;
+--bg:#f2f5f8;--card:#ffffff;--line:#e2e8f0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--ink);line-height:1.55;-webkit-text-size-adjust:100%;
+font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Segoe UI",system-ui,sans-serif;}
+.page{max-width:860px;margin:0 auto;padding:14px 14px 36px;}
+.hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 62%,var(--green-dark) 135%);
+color:#fff;border-radius:14px;padding:20px 20px 18px;margin-bottom:14px;}
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.brand{font-size:13px;letter-spacing:.4px;opacity:.92;font-weight:600;}
+.mode-chip{font-size:11px;border:1px solid rgba(255,255,255,.45);border-radius:999px;
+padding:2px 10px;text-transform:uppercase;letter-spacing:.8px;}
+.hero h1{font-size:24px;margin-top:10px;letter-spacing:-.3px;}
+.hero-sub{font-size:13px;opacity:.85;margin-top:4px;}
+section{margin-bottom:14px;}
+h2{font-size:14px;color:var(--navy);letter-spacing:.2px;margin-bottom:8px;}
+h2 .tag{font-size:11px;color:var(--muted);font-weight:500;margin-left:6px;}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:10px 8px;text-align:center;}
+.metric .num{font-size:22px;font-weight:700;color:var(--navy);}
+.metric .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+.metric.immediate{border-color:var(--red);background:#fdf1f1;}
+.metric.immediate .num{color:var(--red);}
+.oneliner{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--green);
+border-radius:12px;padding:13px 16px;}
+.oneliner h2{margin-bottom:6px;}
+.oneliner p{font-size:15px;font-weight:600;}
+.signal-card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);
+border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.signal-card.kind-opp{border-left-color:var(--green);}
+.signal-card.kind-both{border-left-color:var(--amber);}
+.signal-card.kind-watch{border-left-color:var(--muted);}
+.signal-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.rank{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-weight:700;}
+.badge{font-size:11px;border-radius:999px;padding:2px 9px;font-weight:600;}
+.badge.grade{background:#fdecec;color:var(--red);border:1px solid #f3c2c2;}
+.badge.grade.normal{background:#eef2f7;color:var(--muted);border:1px solid var(--line);}
+.badge.kind-opp{background:#e9f7f0;color:var(--green-dark);border:1px solid #bfe6d4;}
+.badge.kind-risk{background:#fdecec;color:var(--red);border:1px solid #f3c2c2;}
+.badge.kind-both{background:#fdf3e3;color:#a36b14;border:1px solid #eed5a8;}
+.badge.kind-watch{background:#eef2f7;color:var(--muted);border:1px solid var(--line);}
+.signal-card h3{font-size:15px;margin:8px 0 4px;letter-spacing:-.2px;}
+.meta{font-size:12px;color:var(--muted);}
+.why,.act{font-size:13px;margin-top:6px;}
+.why strong,.act strong{color:var(--navy);font-size:12px;margin-right:6px;}
+.spread{font-size:12px;color:var(--muted);margin-top:6px;}
+.spread .hint{font-size:11px;}
+.extra{background:var(--card);border:1px dashed var(--line);border-radius:12px;
+padding:10px 14px;font-size:13px;}
+.extra li{list-style:none;padding:3px 0;}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+.theme-row{font-size:13px;margin-bottom:9px;}
+.theme-row:last-child{margin-bottom:0;}
+.theme-name{display:flex;justify-content:space-between;gap:8px;}
+.theme-name .cnt{color:var(--muted);font-size:12px;white-space:nowrap;}
+.theme-bar{height:6px;border-radius:4px;background:#e8eef4;margin-top:3px;overflow:hidden;}
+.theme-bar span{display:block;height:100%;border-radius:4px;
+background:linear-gradient(90deg,var(--green),var(--navy2));}
+.cat-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;
+border-bottom:1px dashed var(--line);}
+.cat-row:last-child{border-bottom:none;}
+.cat-imm{color:var(--red);font-weight:600;font-size:12px;white-space:nowrap;}
+.macro-strip{display:flex;flex-wrap:wrap;gap:8px;}
+.macro-chip{background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:8px 12px;font-size:12px;min-width:96px;flex:1;}
+.macro-chip .v{font-size:15px;font-weight:700;color:var(--navy);display:block;}
+.dir-up{color:var(--red);}
+.dir-down{color:#2563c9;}
+.dir-flat{color:var(--muted);}
+.note{font-size:12px;color:#6b5d33;background:#fbf7ec;border:1px solid #eee3c2;
+border-radius:12px;padding:10px 14px;}
+footer{font-size:11px;color:var(--muted);text-align:center;margin-top:18px;}
+@media(min-width:760px){.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.duo section{margin-bottom:0;}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+<div class="hero-top">
+<span class="brand">📡 HDEC Executive Radar</span>
+<span class="mode-chip">mock</span>
+</div>
+<h1>Executive Daily Brief</h1>
+<p class="hero-sub">2026-06-12 (KST) · 임원용 시그널 레이더 일일 브리프</p>
+</header>
+<section class="board" aria-label="데일리 현황판">
+<div class="metric"><div class="num">28</div><div class="lbl">오늘 감지 신호</div></div>
+<div class="metric immediate"><div class="num">3</div><div class="lbl">즉시 알림 후보</div></div>
+<div class="metric"><div class="num">4</div><div class="lbl">일간 요약</div></div>
+<div class="metric"><div class="num">14</div><div class="lbl">주간 리포트 후보</div></div>
+<div class="metric"><div class="num">7</div><div class="lbl">제외/참고</div></div>
+</section>
+<section class="oneliner">
+<h2>오늘의 Executive Signal</h2>
+<p>AI 데이터센터·전력 인프라 투자와 건설현장 중대재해·안전 규제가 동시에 부각되며, 중장기 에너지 인프라 수주 기회와 단기 평판·수주 자격 리스크가 함께 감지됩니다.</p>
+</section>
+<section class="signals">
+<h2>즉시 알림 후보 Top 3</h2>
+<article class="signal-card kind-opp">
+<div class="signal-head">
+<span class="rank">1</span>
+<span class="badge grade">즉시 알림 후보</span>
+<span class="badge kind-opp">기회</span>
+</div>
+<h3>AI 데이터센터 전력수요 급증, 원전·송배전 인프라 투자 확대</h3>
+<p class="meta">연합뉴스 · AI 데이터센터·전력 인프라 · 5.00점 · 신뢰도 0.90</p>
+<p class="why"><strong>왜 중요한가</strong>데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p>
+<p class="act"><strong>권장 워치 액션</strong>중장기 에너지 인프라 수주 관점의 후속 신호·발주 일정 확인</p>
+<p class="spread">↳ 관련 신호 7건 · 출처 5곳 <span class="hint">(토픽 중복 기반 추정)</span></p>
+</article>
+<article class="signal-card kind-opp">
+<div class="signal-head">
+<span class="rank">2</span>
+<span class="badge grade">즉시 알림 후보</span>
+<span class="badge kind-opp">기회</span>
+</div>
+<h3>현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정</h3>
+<p class="meta">한국경제 · 현대건설 직접 관련 · 5.00점 · 신뢰도 0.90</p>
+<p class="why"><strong>왜 중요한가</strong>현대건설이 직접 언급된 기사로, 수주 경쟁력과 시장 포지션에 즉각적인 영향 가능성이 있다.</p>
+<p class="act"><strong>권장 워치 액션</strong>수주 경쟁력·시장 포지션 강화 관점의 후속 신호·발주 일정 확인</p>
+<p class="spread">↳ 관련 신호 10건 · 출처 5곳 <span class="hint">(토픽 중복 기반 추정)</span></p>
+</article>
+<article class="signal-card kind-opp">
+<div class="signal-head">
+<span class="rank">3</span>
+<span class="badge grade">즉시 알림 후보</span>
+<span class="badge kind-opp">기회</span>
+</div>
+<h3>MS·아마존, SMR 전력 구매 계약 확대… AI 데이터센터 전력 확보 경쟁</h3>
+<p class="meta">매일경제 · AI 데이터센터·전력 인프라 · 5.00점 · 신뢰도 0.90</p>
+<p class="why"><strong>왜 중요한가</strong>데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p>
+<p class="act"><strong>권장 워치 액션</strong>중장기 에너지 인프라 수주 관점의 후속 신호·발주 일정 확인</p>
+<p class="spread">↳ 관련 신호 7건 · 출처 5곳 <span class="hint">(토픽 중복 기반 추정)</span></p>
+</article>
+<div class="extra"><h2>추가 관찰 이슈</h2><ul>
+<li>· 정부, 전력망 특별법 시행령 확정… 데이터센터 송배전 투자 22조원 — AI 데이터센터·전력 인프라 · 5.00점</li>
+<li>· 글로벌 데이터센터 EPC 발주 사상 최대… 전력·냉각 시공 능력이 수주 좌우 — AI 데이터센터·전력 인프라 · 4.53점</li>
+</ul></div>
+</section>
+<div class="duo">
+<section class="panel"><h2>주요 테마 <span class="tag">점수 가중 랭킹</span></h2>
+<div class="theme-row"><div class="theme-name"><span>1. AI 데이터센터 전력</span><span class="cnt">7건 · 강도 30.9</span></div><div class="theme-bar"><span style="width:100%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>2. SMR 데이터센터</span><span class="cnt">7건 · 강도 30.3</span></div><div class="theme-bar"><span style="width:98%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>3. 건설 AI 스마트건설</span><span class="cnt">6건 · 강도 22.5</span></div><div class="theme-bar"><span style="width:73%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>4. LNG 플랜트 중동</span><span class="cnt">4건 · 강도 13.3</span></div><div class="theme-bar"><span style="width:43%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>5. 중동 플랜트 유가</span><span class="cnt">4건 · 강도 13.3</span></div><div class="theme-bar"><span style="width:43%"></span></div></div>
+</section>
+<section class="panel"><h2>카테고리 요약</h2>
+<div class="cat-row"><span>AI 데이터센터·전력 인프라</span><span>8건 <span class="cat-imm">● 즉시 2</span></span></div>
+<div class="cat-row"><span>건설산업 일반</span><span>7건 </span></div>
+<div class="cat-row"><span>중동·해외 수주 환경</span><span>5건 </span></div>
+<div class="cat-row"><span>경쟁 건설사 동향</span><span>2건 </span></div>
+<div class="cat-row"><span>거시경제 변수</span><span>2건 </span></div>
+<div class="cat-row"><span>건설현장 안전·중대재해</span><span>2건 </span></div>
+<div class="cat-row"><span>정부 정책·인프라 투자</span><span>1건 </span></div>
+<div class="cat-row"><span>현대건설 직접 관련</span><span>1건 <span class="cat-imm">● 즉시 1</span></span></div>
+</section></div>
+<section><h2>Macro Snapshot <span class="tag">mock 고정값 — 실시간 아님</span></h2>
+<div class="macro-strip">
+<div class="macro-chip">USD/KRW<span class="v">1480.5원 <span class="dir-up">▲</span></span></div>
+<div class="macro-chip">WTI<span class="v">95.4달러 <span class="dir-up">▲</span></span></div>
+<div class="macro-chip">KOSPI<span class="v">2864.7pt <span class="dir-flat">―</span></span></div>
+<div class="macro-chip">VIX<span class="v">17.2pt <span class="dir-down">▼</span></span></div>
+<div class="macro-chip">미 국채 10Y<span class="v">4.18% <span class="dir-flat">―</span></span></div>
+<div class="macro-chip">국고채 10Y<span class="v">3.42% <span class="dir-up">▲</span></span></div>
+</div></section>
+<section class="note">
+※ mock 모드 자동 생성 brief — 운영자 검토 후 활용. 관련 신호 수치는 토픽 중복 기반 추정(동일 사건 클러스터링 아님)이며, macro 지표는 데모용 고정 mock 값이다.<br>
+※ 본 페이지는 데모용 mock 데이터로 생성된 정적 리포트입니다 — 실시간 뉴스·시세가 아니며, 공개 호스팅에는 mock/데모 데이터만 게시합니다.
+</section>
+<footer>생성 2026-06-12T16:54:56+09:00 · HDEC Executive Radar · APP_MODE=mock · 정적 스냅샷</footer>
+</div>
+</body>
+</html>

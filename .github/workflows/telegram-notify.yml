@@ -29,6 +29,13 @@ jobs:
         run: |
           python3 scripts/verify_telegram_digest.py
           python3 scripts/verify_executive_brief.py
+          python3 scripts/verify_static_report.py
+
+      # 발송 전 생성 확인용 — 게시는 commit된 docs/daily/latest.html을 통해서만 한다
+      # (자동 commit/publish 없음, GitHub Pages 설정은 수동 — docs/daily/README.md).
+      - name: Build static report (workspace check only)
+        run: |
+          python3 scripts/build_static_report.py --output docs/daily/latest.html
 
       - name: Send Telegram message
         env:
@@ -36,5 +43,8 @@ jobs:
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           # 빈 값이면 send_telegram.py가 mock daily digest를 생성해 발송한다.
           MESSAGE: ${{ github.event.inputs.message || '' }}
+          # 설정돼 있으면 "오늘 브리프 보기" inline 버튼이 붙는다. 없으면 텍스트 전용
+          # 발송이며 워크플로는 실패하지 않는다 (vars 우선, 없으면 secrets).
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
         run: |
           python3 scripts/send_telegram.py

@@ -3,8 +3,13 @@
 MESSAGE env가 비어 있지 않으면 그 메시지를, 비어 있으면
 scripts/build_telegram_digest.py로 mock daily digest를 생성해 발송한다.
 
-비밀값(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS)은 어떤 경우에도 출력하지 않는다 —
-출력은 메시지 출처/길이와 발송 집계뿐이다 (rules.md §4).
+REPORT_URL env가 설정돼 있으면 메시지에 "오늘 브리프 보기" inline URL 버튼을
+붙인다 (정적 리포트 페이지 — P0-B5). 없으면 기존 텍스트 전용 발송 그대로이며
+실패하지 않는다.
+
+비밀값(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS)과 REPORT_URL 값은 어떤 경우에도
+출력하지 않는다 — 출력은 메시지 출처/길이, 링크 버튼 사용 여부(true/false),
+발송 집계뿐이다 (rules.md §4).
 """
 
 import json
@@ -17,6 +22,9 @@ import urllib.request
 # build_telegram_digest.MESSAGE_BUDGET(3000)보다 항상 크거나 같아야 한다
 # (verify_telegram_digest.py가 이 관계를 검사한다).
 MAX_MESSAGE_LEN = 3500
+
+# 정적 리포트로 연결되는 inline 버튼 라벨 (REPORT_URL이 있을 때만 사용)
+BUTTON_TEXT = "오늘 브리프 보기"
 
 
 def fail(message: str) -> None:
@@ -35,6 +43,33 @@ def resolve_message() -> tuple[str, str]:
     return build_digest_message(), "mock-digest"
 
 
+def resolve_report_url() -> str:
+    """REPORT_URL env에서 리포트 링크를 읽는다. 비어 있거나 http(s)가 아니면
+    빈 문자열을 반환해 텍스트 전용 발송으로 동작한다 (실패하지 않는다)."""
+    value = os.environ.get("REPORT_URL", "").strip()
+    if not value:
+        return ""
+    if not value.lower().startswith(("https://", "http://")):
+        print("WARN: REPORT_URL format not recognized — report link disabled",
+              file=sys.stderr)
+        return ""
+    return value
+
+
+def build_payload(chat_id: str, message: str, report_url: str) -> dict:
+    """sendMessage payload. report_url이 있으면 inline URL 버튼을 붙인다."""
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "disable_web_page_preview": "true",
+    }
+    if report_url:
+        payload["reply_markup"] = json.dumps(
+            {"inline_keyboard": [[{"text": BUTTON_TEXT, "url": report_url}]]},
+            ensure_ascii=False)
+    return payload
+
+
 def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_ids_raw = os.environ.get("TELEGRAM_CHAT_IDS", "").strip()
@@ -49,9 +84,11 @@ def main() -> None:
         fail("No valid chat ids found")
 
     message, message_source = resolve_message()
+    report_url = resolve_report_url()
     if len(message) > MAX_MESSAGE_LEN:
         message = message[: MAX_MESSAGE_LEN - 3] + "..."
     print(f"Message source: {message_source} ({len(message)} chars)")
+    print(f"Report link enabled: {'true' if report_url else 'false'}")
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
@@ -59,12 +96,7 @@ def main() -> None:
     failed = 0
 
     for chat_id in chat_ids:
-        payload = {
-            "chat_id": chat_id,
-            "text": message,
-            "disable_web_page_preview": "true",
-        }
-
+        payload = build_payload(chat_id, message, report_url)
         data = urllib.parse.urlencode(payload).encode("utf-8")
         request = urllib.request.Request(url, data=data, method="POST")
 

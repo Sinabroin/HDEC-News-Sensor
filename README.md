@@ -156,8 +156,9 @@ python3 scripts/verify_telegram_digest.py
 - **수동**: Actions → **Telegram Notify** → Run workflow.
   `message` 입력을 비워 두면 mock daily digest를, 입력하면 그 메시지를 발송한다.
 - **스케줄**: 매일 UTC 23:00 (KST 08:00)에 digest 자동 발송 (`cron: "0 23 * * *"`).
-- 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`와
-  `scripts/verify_executive_brief.py`를 먼저 실행해 회귀가 있으면 발송 자체를 차단한다.
+- 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`,
+  `scripts/verify_executive_brief.py`, `scripts/verify_static_report.py`를
+  먼저 실행해 회귀가 있으면 발송 자체를 차단한다.
 - 성공 로그 기대값: `Telegram delivery summary: delivered=N, failed=0`
   (token·chat id는 로그에 출력되지 않는다).
 
@@ -206,3 +207,54 @@ python3 scripts/verify_executive_brief.py
 - **spread 지표는 추정치다** — topic 후보가 겹치는 신호 수 기반 휴리스틱이며,
   동일 사건 클러스터링이 아니다. dedup으로 제거된 중복 기사는 집계되지 않는다.
 - macro 지표는 데모용 고정값이며 외부 시세 API를 호출하지 않는다.
+
+## 12. Static Report Page + Telegram Link Card (P0-B5)
+
+Telegram은 **짧은 알림 진입점**, 시각적 일일 브리프는 **정적 HTML 리포트 페이지**가
+담당한다. 다이제스트 메시지에 "**오늘 브리프 보기**" inline 버튼이 붙고,
+버튼이 게시된 `docs/daily/latest.html`로 연결된다.
+
+리포트 페이지는 §11의 brief 데이터를 그대로 렌더링한 **standalone HTML**이다 —
+외부 CDN/스크립트/폰트 참조 0건, 한국어, 모바일 우선 카드 레이아웃
+(현황판 / 오늘의 Executive Signal / Top 3 시그널 카드(배지·왜 중요한가·권장 워치
+액션·spread) / 주요 테마 / 카테고리 요약 / Macro Snapshot / mock 고지).
+
+### 로컬 실행 (네트워크·비밀값 불필요)
+
+```bash
+# 리포트 생성 → docs/daily/latest.html
+python3 scripts/build_static_report.py --output docs/daily/latest.html
+
+# 요약/기계 검증
+python3 scripts/build_static_report.py --dry-run
+python3 scripts/build_static_report.py --json
+
+# 도메인 회귀 검증 (RESULT: PASS / exit 0 이 통과 조건)
+python3 scripts/verify_static_report.py
+```
+
+로컬에서 열기: `explorer.exe "$(wslpath -w docs/daily/latest.html)"` (WSL) 또는
+`python3 -m http.server 8088 --directory docs` → http://localhost:8088/daily/latest.html
+
+### Telegram 워크플로 동작 (REPORT_URL)
+
+- 워크플로는 발송 전에 3개 verifier와 리포트 생성이 깨지지 않는지 확인한다
+  (자동 commit/publish는 하지 않는다).
+- repo **Variables**(권장) 또는 Secrets에 `REPORT_URL`이 있으면 메시지에
+  "오늘 브리프 보기" 버튼이 붙는다. 로그에는 URL 값 대신
+  `Report link enabled: true/false`만 출력된다.
+- `REPORT_URL`이 없으면 기존 **텍스트 전용** 다이제스트를 발송하며 실패하지 않는다.
+
+### GitHub Pages 수동 설정 (자동화하지 않음)
+
+Settings → **Pages** → Source: **Deploy from a branch** → Branch: **main** /
+Folder: **/docs** → 게시 주소 예: `https://<owner>.github.io/<repo>/daily/latest.html`
+→ 이 주소를 `REPORT_URL` Variable로 등록. 상세 절차는 `docs/daily/README.md`.
+
+### 보안 주의
+
+- 무료 플랜의 GitHub Pages는 **공개**다 — 현재 출력은 mock/데모 데이터라 게시해도
+  안전하지만, **실제 내부 뉴스·민감 신호 데이터는 공개 Pages에 게시하지 않는다**.
+  실데이터 단계에서는 사내/비공개 호스팅을 사용한다.
+- 리포트 HTML에는 비밀값·토큰·chat id가 포함되지 않는다
+  (`verify_static_report.py`가 외부 리소스 0건과 함께 기계 검사한다).
