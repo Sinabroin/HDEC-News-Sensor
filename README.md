@@ -122,4 +122,40 @@ templates/index.html     Today Signals 단일 화면 (Vanilla JS)
 - Insight: template 기반 mock (LLM 미사용).
 - P0-B(RSS / Naver / OpenAI / Teams / Re-score)는 **구현하지 않았다** —
   P0-A 안정성을 우선했고, mock 경로를 깨뜨리지 않기 위해 Day-1 범위에서 보류.
+  (예외: P0-B1 Telegram mock daily digest — §10. 외부 뉴스 API 없이 mock 데이터만 사용.)
 - 원문 본문은 어떤 형태로도 저장하지 않는다 (snippet 최대 500자).
+
+## 10. Telegram Mock Daily Digest (P0-B1)
+
+GitHub Actions가 mock 데이터 기반 임원용 일일 다이제스트(Top 3 시그널)를
+Telegram으로 발송한다. **외부 뉴스 API는 호출하지 않는다** — 기존 P0-A 파이프라인
+(collector → scoring → insight)을 임시 SQLite DB 위에서 재사용하며, 저장소의
+`radar.db`는 건드리지 않는다.
+
+### 필요한 GitHub repository secrets (이름만 — 값은 어디에도 기록 금지)
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_IDS` (콤마 구분 복수 가능)
+
+### 로컬 dry-run (네트워크·비밀값 불필요)
+
+```bash
+# 다이제스트 메시지 생성 (발송 없음)
+python3 scripts/build_telegram_digest.py --dry-run
+
+# 기계 검증용 JSON 출력
+python3 scripts/build_telegram_digest.py --json
+
+# 도메인 회귀 검증 (RESULT: PASS / exit 0 이 통과 조건)
+python3 scripts/verify_telegram_digest.py
+```
+
+### GitHub Actions 실행
+
+- **수동**: Actions → **Telegram Notify** → Run workflow.
+  `message` 입력을 비워 두면 mock daily digest를, 입력하면 그 메시지를 발송한다.
+- **스케줄**: 매일 UTC 23:00 (KST 08:00)에 digest 자동 발송 (`cron: "0 23 * * *"`).
+- 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`를 먼저 실행해
+  회귀가 있으면 발송 자체를 차단한다.
+- 성공 로그 기대값: `Telegram delivery summary: delivered=N, failed=0`
+  (token·chat id는 로그에 출력되지 않는다).
