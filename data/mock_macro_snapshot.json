@@ -1,8 +1,10 @@
 {
+  "mode": "mock_static",
+  "source": "demo_mock",
+  "updated_at": "2026-06-11T09:00:00+09:00",
   "as_of": "2026-06-11",
-  "basis": "mock-static",
-  "note": "데모용 고정 mock 지표 — 실시간 시세가 아니며 외부 API를 호출하지 않는다.",
-  "indicators": [
+  "disclaimer": "데모용 mock 고정값 — 현재 시장값이 아니며, 외부 시세 API를 호출하지 않는다. 표시 레이어는 이 수치를 시세처럼 렌더링하지 않는다 (수치 비표시 또는 mock 명시 라벨링 필수).",
+  "values": [
     { "key": "usdkrw", "label": "USD/KRW", "value": 1480.5, "unit": "원", "direction": "up" },
     { "key": "wti", "label": "WTI", "value": 95.4, "unit": "달러", "direction": "up" },
     { "key": "kospi", "label": "KOSPI", "value": 2864.7, "unit": "pt", "direction": "flat" },

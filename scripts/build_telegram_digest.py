@@ -51,6 +51,7 @@ def _digest_signal(entry: dict) -> dict:
         "category_label": entry.get("category_label"),
         "final_score": entry.get("final_score"),
         "alert_grade": entry.get("alert_grade"),
+        "action_label": entry.get("action_label"),
         "confidence": entry.get("confidence"),
         "reason": entry.get("implication") or "",
         "spread_label": (entry.get("spread") or {}).get("label", "단독 신호"),
@@ -65,6 +66,9 @@ def build_digest_data() -> dict:
     return {
         "header": HEADER,
         "mode": brief["mode"],
+        "news_data_mode": brief.get("news_data_mode", "mock"),
+        "macro_data_mode": brief.get("macro_data_mode", "unavailable"),
+        "data_warning": brief.get("data_warning", ""),
         "date_kst": brief["date_kst"],
         "generated_at": brief["generated_at"],
         "executive_one_liner": brief["executive_one_liner"],
@@ -82,7 +86,7 @@ def format_digest_message(data: dict) -> str:
     """다이제스트 구조체를 Telegram용 한국어 plain text로 변환한다."""
     lines = [
         f"📡 {data['header']} — Executive Daily Brief",
-        f"{data['date_kst']} (KST) · 모드: {data['mode']}",
+        f"{data['date_kst']} (KST) · mock 데이터 기반 · 뉴스/시장지표 미연동",
         "",
         "[오늘의 Executive Signal]",
         data["executive_one_liner"],
@@ -102,6 +106,8 @@ def format_digest_message(data: dict) -> str:
             meta.append(s["category_label"])
         if s.get("final_score") is not None:
             meta.append(f"{s['final_score']:.2f}점")
+        if s.get("action_label"):
+            meta.append(s["action_label"])
         if s.get("confidence") is not None:
             meta.append(f"신뢰도 {s['confidence']:.2f}")
         lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
@@ -126,12 +132,18 @@ def format_digest_message(data: dict) -> str:
             summary += f" · 외 {rest}개 분류"
         lines += ["", "[카테고리 요약]", summary]
 
-    macro = data.get("macro_snapshot")
-    if macro and macro.get("indicators"):
-        lines += ["", "[Macro Snapshot — mock 고정값]"]
+    # Macro Snapshot — live 데이터가 아닌 한 수치를 넣지 않는다 (P0-B6).
+    # mock 고정값을 시세처럼 보낼 수 없다: 미연동 상태만 알리고 상세는 리포트로.
+    macro = data.get("macro_snapshot") or {}
+    macro_mode = macro.get("macro_data_mode") or data.get("macro_data_mode")
+    if macro_mode == "live" and macro.get("values"):
+        lines += ["", f"[Macro Snapshot — {macro.get('source')} · 기준 {macro.get('updated_at')}]"]
         lines.append(" · ".join(
-            f"{i['label']} {i['value']}{i.get('unit', '')}"
-            for i in macro["indicators"]))
+            f"{v['label']} {v['value']}{v.get('unit', '')}"
+            for v in macro["values"]))
+    else:
+        lines += ["", "[Macro Snapshot]",
+                  "실시간 시장지표 미연동 — 현재값 아님 · 데이터 출처는 '오늘 브리프 보기' 리포트에서 확인"]
 
     lines += [
         "",

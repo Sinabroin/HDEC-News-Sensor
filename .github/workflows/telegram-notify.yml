@@ -29,7 +29,9 @@ jobs:
         run: |
           python3 scripts/verify_telegram_digest.py
           python3 scripts/verify_executive_brief.py
+          python3 scripts/verify_executive_brief_quality.py
           python3 scripts/verify_static_report.py
+          python3 scripts/verify_data_source_honesty.py
 
       # 발송 전 생성 확인용 — 게시는 commit된 docs/daily/latest.html을 통해서만 한다
       # (자동 commit/publish 없음, GitHub Pages 설정은 수동 — docs/daily/README.md).

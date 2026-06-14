@@ -40,7 +40,13 @@ REQUIRED_BRIEF_KEYS = [
     "status_board", "executive_one_liner", "top_immediate_signals",
     "top_new_issues", "theme_rankings", "category_counts",
     "spread_method", "operator_note",
+    # P0-B6 데이터 출처 provenance
+    "news_data_mode", "macro_data_mode", "macro_source",
+    "macro_updated_at", "macro_is_stale", "data_warning",
 ]
+
+# mock macro 고정값 중 점수/강도와 충돌할 수 없는 식별용 수치 (4자리)
+DISTINCTIVE_MACRO_VALUES = ("1480.5", "2864.7")
 
 # 금지어 — rules.md §1/§3 + P0-B 스프린트 금지 목록 (조각으로 조립)
 BANNED_TERMS = ["".join(parts) for parts in [
@@ -163,13 +169,19 @@ def check_macro_snapshot() -> None:
     except ValueError as exc:
         check("macro snapshot JSON 파싱", False, str(exc))
         return
-    check("macro snapshot이 mock/static으로 명시됨",
-          "mock" in (str(data.get("basis", "")) + str(data.get("note", ""))).lower())
-    indicators = data.get("indicators") or []
-    check("macro indicators에 label/value 존재",
-          bool(indicators) and all(
-              i.get("label") and i.get("value") is not None for i in indicators),
-          f"{len(indicators)}개")
+    check("macro snapshot mode == mock_static (P0-B6 스키마)",
+          data.get("mode") == "mock_static", str(data.get("mode")))
+    check("macro snapshot source == demo_mock",
+          data.get("source") == "demo_mock", str(data.get("source")))
+    check("macro snapshot에 updated_at 존재", bool(data.get("updated_at")))
+    disclaimer = str(data.get("disclaimer") or "")
+    check("macro snapshot disclaimer가 mock·현재 시장값 아님을 명시",
+          "mock" in disclaimer.lower() and "현재 시장값" in disclaimer)
+    values = data.get("values") or []
+    check("macro values에 label/value 존재",
+          bool(values) and all(
+              v.get("label") and v.get("value") is not None for v in values),
+          f"{len(values)}개")
 
 
 def check_code_tree_banned() -> None:
@@ -273,6 +285,21 @@ def check_brief_json() -> dict | None:
           isinstance(brief.get("total_articles"), int)
           and brief["total_articles"] > 0,
           str(brief.get("total_articles")))
+
+    # P0-B6 — live macro 연동 전에는 mock_static/unavailable만 허용한다.
+    check("brief news_data_mode == mock", brief.get("news_data_mode") == "mock")
+    macro_mode = brief.get("macro_data_mode")
+    check("brief macro_data_mode가 mock_static|unavailable (live 미구현)",
+          macro_mode in ("mock_static", "unavailable"), str(macro_mode))
+    if macro_mode == "mock_static":
+        check("brief macro_source == demo_mock",
+              brief.get("macro_source") == "demo_mock")
+        check("brief macro_is_stale == true (mock은 항상 stale)",
+              brief.get("macro_is_stale") is True)
+        check("brief macro_updated_at 존재", bool(brief.get("macro_updated_at")))
+    warning = str(brief.get("data_warning") or "")
+    check("brief data_warning이 mock/미연동을 명시",
+          "mock" in warning.lower() and "미연동" in warning, warning[:60])
     return brief
 
 
@@ -346,6 +373,10 @@ def check_digest() -> None:
         check("digest에 mock 모드 표기 포함", "mock" in message.lower())
         check(f"digest 길이 {len(message.rstrip())} <= {MESSAGE_BUDGET_MAX}",
               len(message.rstrip()) <= MESSAGE_BUDGET_MAX)
+        # P0-B6 — mock macro 고정값을 시세처럼 발송하지 않는다
+        leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in message]
+        check("digest에 mock macro 고정값 수치 없음", not leaked, ", ".join(leaked))
+        check("digest에 '시장지표 미연동' 안내 포함", "시장지표 미연동" in message)
 
     proc = run_script(DIGEST_BUILDER, "--json")
     if not check("digest --json 동작", proc.returncode == 0,

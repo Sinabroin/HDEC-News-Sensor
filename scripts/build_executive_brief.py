@@ -67,7 +67,7 @@ def format_brief_text(brief: dict) -> str:
     """--dry-run용 사람 읽기 좋은 한국어 brief 텍스트."""
     lines = [
         f"== {brief['header']} — Executive Brief ==",
-        f"{brief['date_kst']} (KST) · 모드: {brief['mode']}",
+        f"{brief['date_kst']} (KST) · mock 데이터 기반 · 뉴스/시장지표 미연동",
         "",
         "[데일리 현황판]",
         " · ".join(f"{b['label']} {b['value']}" for b in brief["status_board"]),
@@ -81,6 +81,7 @@ def format_brief_text(brief: dict) -> str:
         lines.append(f"{s['rank']}. {s['title']}")
         lines.append(f"   {s['source']} · {s['category_label']}"
                      f" · {_fmt_score(s['final_score'])}점 · {s['alert_grade']}"
+                     f" · {s.get('action_label', '모니터링')}"
                      f" · 신뢰도 {_fmt_score(s['confidence'])}")
         if s["implication"]:
             lines.append(f"   → {s['implication']}")
@@ -97,13 +98,19 @@ def format_brief_text(brief: dict) -> str:
     lines += ["", "[카테고리 요약]"]
     lines.append(" · ".join(f"{c['label']} {c['count']}"
                             for c in brief["category_counts"]))
-    macro = brief.get("macro_snapshot")
-    if macro:
-        lines += ["", f"[Macro Snapshot — {macro.get('basis', 'mock-static')}]"]
+    # Macro Snapshot — live가 아닌 한 수치를 표시하지 않는다 (P0-B6 데이터 정직성).
+    macro = brief.get("macro_snapshot") or {}
+    macro_mode = macro.get("macro_data_mode") or brief.get("macro_data_mode")
+    lines += ["", "[Macro Snapshot]"]
+    if macro_mode == "live" and macro.get("values"):
+        lines.append(f"출처 {macro.get('source')} · 기준 {macro.get('updated_at')}")
         lines.append(" · ".join(
-            f"{i['label']} {i['value']}{i.get('unit', '')}"
-            for i in macro.get("indicators", [])))
-    lines += ["", f"※ {brief['operator_note']}"]
+            f"{v['label']} {v['value']}{v.get('unit', '')}"
+            for v in macro["values"]))
+    else:
+        labels = " · ".join(v["label"] for v in macro.get("values") or []) or "지표 없음"
+        lines.append(f"실시간 시장지표 미연동 ({macro_mode}) — 수치 비표시: {labels}")
+    lines += ["", f"※ {brief['operator_note']}", f"※ {brief.get('data_warning', '')}"]
     return "\n".join(lines)
 
 

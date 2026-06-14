@@ -36,8 +36,13 @@ TELEGRAM_API_HOST = "https://api.telegram.org"
 HTML_MARKERS = [
     "HDEC Executive Radar", "Executive Daily Brief", "오늘의 Executive Signal",
     "즉시 알림 후보", "주요 테마", "카테고리 요약", "권장 워치 액션",
-    'lang="ko"', "viewport",
+    'lang="ko"', "viewport", "Pretendard",
 ]
+
+# mock macro 고정값 중 점수/강도와 충돌할 수 없는 식별용 수치 (4자리)
+DISTINCTIVE_MACRO_VALUES = ("1480.5", "2864.7")
+
+PAGES_INDEX = ROOT / "docs" / "index.html"
 
 # 금지어 — rules.md §1/§3 + P0-B 스프린트 금지 목록 (조각으로 조립)
 BANNED_TERMS = ["".join(parts) for parts in [
@@ -278,6 +283,22 @@ def _check_html_content(html: str, label: str) -> None:
     check(f"{label}: mock 표기 포함", "mock" in html.lower())
     check(f"{label}: spread 추정 라벨 포함", "추정" in html)
 
+    # P0-B6 — mock macro 고정값을 시세처럼 렌더링하지 않는다
+    macro_match = re.search(r'<section aria-label="Macro Snapshot".*?</section>',
+                            html, re.S)
+    macro_sec = macro_match.group(0) if macro_match else ""
+    check(f"{label}: Macro Snapshot 섹션 존재", bool(macro_sec))
+    if macro_sec and 'macro-cell live' not in macro_sec:
+        check(f"{label}: macro 미연동 placeholder 표시", "미연동" in macro_sec)
+        decimals = re.findall(r"\d+\.\d+", re.sub(r"<style.*?</style>", "",
+                                                  macro_sec, flags=re.S))
+        check(f"{label}: macro 섹션에 수치 없음 (live 아님)", not decimals,
+              ", ".join(decimals))
+    check(f"{label}: macro 경고(현재 시장값 아님) 포함",
+          bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
+    leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
+    check(f"{label}: mock macro 고정값 수치 미노출", not leaked, ", ".join(leaked))
+
     lowered = html.lower()
     check(f"{label}: 외부 리소스 없음 (http/https URL 0건)",
           "http://" not in lowered and "https://" not in lowered)
@@ -308,6 +329,21 @@ def check_committed_report() -> None:
         return
     _check_html_content(COMMITTED_REPORT.read_text(encoding="utf-8"), "커밋 HTML")
     check("docs/.nojekyll 존재 (Pages에서 Jekyll 비활성)", NOJEKYLL.exists())
+
+
+def check_pages_root() -> None:
+    """Pages 루트(/) 404 방지 — docs/index.html 랜딩 페이지 (P0-FINAL-MVP)."""
+    if not check("docs/index.html 존재 (Pages 루트 진입점)", PAGES_INDEX.exists()):
+        return
+    html = PAGES_INDEX.read_text(encoding="utf-8")
+    lowered = html.lower()
+    check("랜딩: 최신 리포트 상대 링크 존재", 'href="./daily/latest.html"' in html)
+    check("랜딩: mock/데모 고지 포함", "mock" in lowered and "데모" in html)
+    check("랜딩: 외부 리소스 없음 (http/https URL 0건)",
+          "http://" not in lowered and "https://" not in lowered)
+    check("랜딩: <script> 없음", "<script" not in lowered)
+    check("랜딩: telegram/webhook 문자열 없음",
+          "telegram" not in lowered and "webhook" not in lowered)
 
 
 # ---------- sender 동작 검사 (네트워크/비밀값 없음) ----------
@@ -420,6 +456,7 @@ def main() -> int:
     check_report_json()
     check_report_output()
     check_committed_report()
+    check_pages_root()
 
     check_sender_paths()
     check_report_url_paths()

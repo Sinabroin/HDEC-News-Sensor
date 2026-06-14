@@ -89,6 +89,7 @@
                  line-height: 1.7; }
   #brief-macro .up { color: var(--signal); }
   #brief-macro .down { color: var(--daily); }
+  #brief-macro .macro-warn { color: var(--muted); font-size: 10.5px; }
   #brief-note { margin-top: 12px; }
 
   /* ---- 레이아웃 ---- */
@@ -360,7 +361,8 @@ function renderBrief(b) {
     const spread = (i.spread && i.spread.label) || "단독 신호";
     return `<li onclick="selectArticle('${esc(i.article_id)}')">` +
       `<span class="t">${esc(i.title)}</span><br>` +
-      `<span class="sub">${esc(i.category_label || "-")} · ${score}점 · ${esc(spread)}</span></li>`;
+      `<span class="sub">${esc(i.category_label || "-")} · ${score}점` +
+      ` · ${esc(i.action_label || "모니터링")} · ${esc(spread)}</span></li>`;
   }).join("");
   const themes = b.theme_rankings || [];
   const maxWeight = Math.max(1, ...themes.map(t => t.weighted_strength || 0));
@@ -372,15 +374,27 @@ function renderBrief(b) {
     `<li><span>${esc(c.label)}</span><span>${esc(c.count)}` +
     `${c.immediate ? ` <span class="imm">●${esc(c.immediate)}</span>` : ""}</span></li>`
   ).join("");
-  const m = b.macro_snapshot;
-  document.getElementById("brief-macro").innerHTML =
-    (m && Array.isArray(m.indicators) && m.indicators.length)
-      ? `<b>MACRO · mock 고정값</b><br>` + m.indicators.map(i => {
-          const arrow = i.direction === "up" ? ' <span class="up">▲</span>'
-                      : i.direction === "down" ? ' <span class="down">▼</span>' : "";
-          return `${esc(i.label)} ${esc(i.value)}${esc(i.unit || "")}${arrow}`;
-        }).join(" · ")
-      : "";
+  /* Macro — live가 아닌 한 수치를 렌더링하지 않는다 (P0-B6 데이터 정직성) */
+  const m = b.macro_snapshot || {};
+  const macroMode = b.macro_data_mode || m.macro_data_mode || "unavailable";
+  const macroVals = Array.isArray(m.values) ? m.values : [];
+  let macroHtml;
+  if (macroMode === "live" && macroVals.length) {
+    macroHtml = `<b>MACRO SNAPSHOT · ${esc(m.source || "live")} · 기준 ${esc(m.updated_at || "-")}</b><br>` +
+      macroVals.map(v => {
+        const arrow = v.direction === "up" ? ' <span class="up">▲</span>'
+                    : v.direction === "down" ? ' <span class="down">▼</span>' : "";
+        return `${esc(v.label)} ${esc(v.value)}${esc(v.unit || "")}${arrow}`;
+      }).join(" · ");
+  } else {
+    const labels = macroVals.length ? macroVals.map(v => v.label)
+      : ["USD/KRW", "WTI", "KOSPI", "VIX", "미 국채 10Y", "국고채 10Y"];
+    macroHtml = `<b>MACRO SNAPSHOT · 시장지표 미연동 (${esc(macroMode)})</b><br>` +
+      labels.map(l => `${esc(l)} 미연동`).join(" · ") +
+      `<br><span class="macro-warn">${esc(b.data_warning ||
+        "mock 고정값은 현재 시장값이 아니므로 수치를 표시하지 않습니다.")}</span>`;
+  }
+  document.getElementById("brief-macro").innerHTML = macroHtml;
   document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "");
 }
 

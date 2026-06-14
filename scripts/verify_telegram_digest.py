@@ -21,10 +21,15 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "scripts" / "build_telegram_digest.py"
 SENDER = ROOT / "scripts" / "send_telegram.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
+MACRO_SNAPSHOT = ROOT / "data" / "mock_macro_snapshot.json"
 
 HEADER_TEXT = "HDEC Executive Radar"
 EXPECTED_SIGNALS = 3
 MESSAGE_BUDGET_MAX = 3000
+
+# mock macro 고정값 중 점수/강도와 절대 충돌하지 않는 식별용 수치
+# (점수는 0~5, 테마 강도는 합산 최대 ~140이라 4자리 값은 등장할 수 없다)
+DISTINCTIVE_MACRO_VALUES = ("1480.5", "2864.7")
 
 # 금지어 — rules.md §1/§3 + P0-B1 스프린트 금지 목록 (조각으로 조립)
 BANNED_TERMS = ["".join(parts) for parts in [
@@ -97,6 +102,23 @@ def check_dry_run() -> str:
     return proc.stdout if ok else ""
 
 
+def _macro_file_mode() -> str:
+    try:
+        data = json.loads(MACRO_SNAPSHOT.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return "unavailable"
+    return str(data.get("mode") or "unavailable")
+
+
+def _macro_section(message: str) -> str:
+    """digest에서 [Macro Snapshot ...] 섹션 텍스트만 잘라낸다."""
+    idx = message.find("[Macro Snapshot")
+    if idx < 0:
+        return ""
+    end = message.find("\n\n", idx)
+    return message[idx:end if end > 0 else len(message)]
+
+
 def check_message_text(message: str) -> None:
     if not message:
         check("digest 메시지 검사", False, "dry-run 출력이 비어 있어 생략")
@@ -108,6 +130,19 @@ def check_message_text(message: str) -> None:
     check("digest에 금지어 없음", not hits, ", ".join(hits))
     check(f"digest 길이 {len(message)} <= {MESSAGE_BUDGET_MAX}",
           len(message) <= MESSAGE_BUDGET_MAX)
+
+    # P0-B6 — mock macro 고정값을 시세처럼 발송하지 않는다
+    check("digest 헤더에 데이터 출처 표기 (mock 데이터 기반/미연동)",
+          "mock 데이터 기반" in message or "뉴스/시장지표 미연동" in message)
+    leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in message]
+    check("digest에 mock macro 고정값 수치 없음", not leaked, ", ".join(leaked))
+    section = _macro_section(message)
+    check("digest에 [Macro Snapshot] 섹션 존재", bool(section))
+    if section and _macro_file_mode() != "live":
+        check("macro 섹션에 '미연동' 안내 포함", "미연동" in section)
+        decimals = re.findall(r"\d+\.\d+", section)
+        check("macro 섹션에 수치 없음 (live 아님)", not decimals,
+              ", ".join(decimals))
 
 
 def check_json_mode() -> None:

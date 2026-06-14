@@ -1,4 +1,4 @@
-"""P0-B5 — 정적 Executive Daily Brief HTML 리포트 빌더.
+"""P0-B5/P0-B6 — 정적 Executive Daily Brief HTML 리포트 빌더.
 
 공유 briefing 레이어(scripts/build_executive_brief.py)의 brief 구조체를
 단일 정적 HTML 페이지로 렌더링한다. Telegram 다이제스트의 "오늘 브리프 보기"
@@ -8,6 +8,8 @@
 - 저장소의 radar.db는 절대 건드리지 않는다 — brief 빌더가 임시 DB를 쓴다.
 - 본문 전문을 싣지 않는다 — 제목/카테고리/점수/시사점 등 파생 요약만 렌더링한다.
 - 공개 호스팅(GitHub Pages 등)에는 mock/데모 데이터만 게시한다 (docs/daily/README.md).
+- 데이터 정직성(P0-B6): macro_data_mode가 live가 아닌 한 시장지표 수치를
+  렌더링하지 않는다 — 미연동 placeholder와 경고 문구만 표시한다.
 
 사용법:
     python3 scripts/build_static_report.py --dry-run                        # 요약 출력 (쓰기 없음)
@@ -30,6 +32,7 @@ from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 REPORT_TITLE = "HDEC Executive Radar — Executive Daily Brief"
 DEFAULT_OUTPUT = "docs/daily/latest.html"
 
+# 기회/리스크는 채도 높은 배지 대신 텍스트 라벨 색으로만 구분한다 (executive memo 톤)
 KIND_CLASS = {
     "기회": "kind-opp",
     "리스크": "kind-risk",
@@ -37,87 +40,119 @@ KIND_CLASS = {
     "관찰": "kind-watch",
 }
 
+# live macro 전용 — mock/unavailable 상태에서는 수치·방향 자체를 렌더링하지 않는다
 DIRECTION_ARROW = {"up": ("▲", "dir-up"), "down": ("▼", "dir-down")}
 
-# 외부 리소스 0건 원칙: 시스템 폰트 스택만 사용하고 <script>/<link>를 일절 쓰지 않는다.
+# macro 미연동 placeholder에 쓸 기본 지표 라벨 (snapshot이 비어 있을 때)
+DEFAULT_MACRO_LABELS = ["USD/KRW", "WTI", "KOSPI", "VIX", "미 국채 10Y", "국고채 10Y"]
+
+# 외부 리소스 0건 원칙: 로컬 폰트 스택(Pretendard 우선)만 선언하고
+# <script>/<link>/@import/url()을 일절 쓰지 않는다.
 _CSS = """
-:root{--navy:#0e2a47;--navy2:#163b61;--green:#19b27b;--green-dark:#0e7d57;
---red:#d64545;--amber:#e8a23d;--ink:#22313f;--muted:#64748b;
---bg:#f2f5f8;--card:#ffffff;--line:#e2e8f0;}
+:root{
+  --paper:#f6f4ee;--paper-2:#fdfcf9;--ink:#22262e;--ink-soft:#494e58;
+  --muted:#807a6d;--navy:#152740;--accent:#176a4c;--signal:#9a3b2e;
+  --hairline:#ddd8cb;--hairline-2:#c8c2b2;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--ink);line-height:1.55;-webkit-text-size-adjust:100%;
-font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Segoe UI",system-ui,sans-serif;}
-.page{max-width:860px;margin:0 auto;padding:14px 14px 36px;}
-.hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 62%,var(--green-dark) 135%);
-color:#fff;border-radius:14px;padding:20px 20px 18px;margin-bottom:14px;}
-.hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.brand{font-size:13px;letter-spacing:.4px;opacity:.92;font-weight:600;}
-.mode-chip{font-size:11px;border:1px solid rgba(255,255,255,.45);border-radius:999px;
-padding:2px 10px;text-transform:uppercase;letter-spacing:.8px;}
-.hero h1{font-size:24px;margin-top:10px;letter-spacing:-.3px;}
-.hero-sub{font-size:13px;opacity:.85;margin-top:4px;}
-section{margin-bottom:14px;}
-h2{font-size:14px;color:var(--navy);letter-spacing:.2px;margin-bottom:8px;}
-h2 .tag{font-size:11px;color:var(--muted);font-weight:500;margin-left:6px;}
-.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;}
-.metric{background:var(--card);border:1px solid var(--line);border-radius:12px;
-padding:10px 8px;text-align:center;}
-.metric .num{font-size:22px;font-weight:700;color:var(--navy);}
-.metric .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
-.metric.immediate{border-color:var(--red);background:#fdf1f1;}
-.metric.immediate .num{color:var(--red);}
-.oneliner{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--green);
-border-radius:12px;padding:13px 16px;}
-.oneliner h2{margin-bottom:6px;}
-.oneliner p{font-size:15px;font-weight:600;}
-.signal-card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);
-border-radius:12px;padding:12px 14px;margin-bottom:10px;}
-.signal-card.kind-opp{border-left-color:var(--green);}
-.signal-card.kind-both{border-left-color:var(--amber);}
-.signal-card.kind-watch{border-left-color:var(--muted);}
-.signal-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.rank{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
-border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-weight:700;}
-.badge{font-size:11px;border-radius:999px;padding:2px 9px;font-weight:600;}
-.badge.grade{background:#fdecec;color:var(--red);border:1px solid #f3c2c2;}
-.badge.grade.normal{background:#eef2f7;color:var(--muted);border:1px solid var(--line);}
-.badge.kind-opp{background:#e9f7f0;color:var(--green-dark);border:1px solid #bfe6d4;}
-.badge.kind-risk{background:#fdecec;color:var(--red);border:1px solid #f3c2c2;}
-.badge.kind-both{background:#fdf3e3;color:#a36b14;border:1px solid #eed5a8;}
-.badge.kind-watch{background:#eef2f7;color:var(--muted);border:1px solid var(--line);}
-.signal-card h3{font-size:15px;margin:8px 0 4px;letter-spacing:-.2px;}
-.meta{font-size:12px;color:var(--muted);}
-.why,.act{font-size:13px;margin-top:6px;}
-.why strong,.act strong{color:var(--navy);font-size:12px;margin-right:6px;}
-.spread{font-size:12px;color:var(--muted);margin-top:6px;}
-.spread .hint{font-size:11px;}
-.extra{background:var(--card);border:1px dashed var(--line);border-radius:12px;
-padding:10px 14px;font-size:13px;}
-.extra li{list-style:none;padding:3px 0;}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
-.theme-row{font-size:13px;margin-bottom:9px;}
-.theme-row:last-child{margin-bottom:0;}
-.theme-name{display:flex;justify-content:space-between;gap:8px;}
-.theme-name .cnt{color:var(--muted);font-size:12px;white-space:nowrap;}
-.theme-bar{height:6px;border-radius:4px;background:#e8eef4;margin-top:3px;overflow:hidden;}
-.theme-bar span{display:block;height:100%;border-radius:4px;
-background:linear-gradient(90deg,var(--green),var(--navy2));}
-.cat-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;
-border-bottom:1px dashed var(--line);}
-.cat-row:last-child{border-bottom:none;}
-.cat-imm{color:var(--red);font-weight:600;font-size:12px;white-space:nowrap;}
-.macro-strip{display:flex;flex-wrap:wrap;gap:8px;}
-.macro-chip{background:var(--card);border:1px solid var(--line);border-radius:10px;
-padding:8px 12px;font-size:12px;min-width:96px;flex:1;}
-.macro-chip .v{font-size:15px;font-weight:700;color:var(--navy);display:block;}
-.dir-up{color:var(--red);}
-.dir-down{color:#2563c9;}
-.dir-flat{color:var(--muted);}
-.note{font-size:12px;color:#6b5d33;background:#fbf7ec;border:1px solid #eee3c2;
-border-radius:12px;padding:10px 14px;}
-footer{font-size:11px;color:var(--muted);text-align:center;margin-top:18px;}
-@media(min-width:760px){.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.duo section{margin-bottom:0;}}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:var(--paper);color:var(--ink);font-size:14px;line-height:1.6;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif;
+  border-top:4px solid var(--navy);
+  background-image:linear-gradient(180deg,rgba(21,39,64,.05),rgba(21,39,64,0) 240px);
+}
+.page{max-width:760px;margin:0 auto;padding:26px 20px 44px;}
+.num{font-variant-numeric:tabular-nums;}
+
+/* ---- masthead ---- */
+.masthead{border-bottom:2px solid var(--ink);padding-bottom:16px;position:relative;}
+.masthead::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:1px;background:var(--hairline-2);}
+.mast-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.brand{font-size:11px;letter-spacing:.34em;font-weight:700;color:var(--navy);text-transform:uppercase;}
+.mode-pill{font-size:10px;letter-spacing:.18em;font-weight:600;color:var(--muted);
+  border:1px solid var(--hairline-2);border-radius:2px;padding:3px 9px;white-space:nowrap;}
+.masthead h1{font-size:30px;letter-spacing:-.5px;font-weight:750;color:var(--ink);margin-top:14px;line-height:1.2;}
+.dateline{font-size:12.5px;color:var(--ink-soft);margin-top:6px;}
+.provenance{font-size:11.5px;color:var(--muted);margin-top:3px;}
+
+/* ---- 현황판 ---- */
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:22px 0 6px;}
+.board .item{border-top:1px solid var(--hairline-2);padding-top:9px;}
+.board .n{font-size:24px;font-weight:750;color:var(--navy);letter-spacing:-.5px;}
+.board .item.immediate .n{color:var(--signal);}
+.board .l{font-size:10.5px;color:var(--muted);margin-top:1px;letter-spacing:.04em;}
+@media(max-width:540px){.board{grid-template-columns:repeat(3,1fr);row-gap:16px;}}
+
+/* ---- 오늘의 Executive Signal ---- */
+.oneliner{background:var(--navy);color:#f2efe6;border-left:3px solid var(--accent);
+  padding:18px 20px 17px;margin:18px 0 8px;border-radius:2px;}
+.oneliner .ovl{font-size:10px;letter-spacing:.3em;font-weight:700;color:rgba(242,239,230,.62);display:block;text-transform:uppercase;}
+.oneliner p{font-size:17.5px;line-height:1.62;font-weight:600;margin-top:8px;letter-spacing:-.2px;}
+
+/* ---- 섹션 헤딩 ---- */
+section{margin-top:26px;}
+.sec-h{display:flex;align-items:baseline;gap:10px;font-size:12.5px;font-weight:750;
+  letter-spacing:.07em;color:var(--ink);}
+.sec-h .tag{font-size:10.5px;color:var(--muted);font-weight:500;letter-spacing:.02em;white-space:nowrap;}
+.sec-h::after{content:"";flex:1;height:1px;background:var(--hairline-2);transform:translateY(-3px);}
+
+/* ---- 시그널 ---- */
+.sig{display:grid;grid-template-columns:36px 1fr;gap:0 4px;padding:15px 0 14px;
+  border-bottom:1px solid var(--hairline);}
+.sig:last-of-type{border-bottom:none;}
+.sig .idx{font-size:15px;font-weight:750;color:var(--accent);letter-spacing:.04em;padding-top:2px;}
+.sig .labels{font-size:10.5px;letter-spacing:.12em;font-weight:700;color:var(--ink-soft);}
+.sig .labels .sep{color:var(--hairline-2);margin:0 6px;font-weight:400;}
+.kind-opp{color:var(--accent);}
+.kind-risk{color:var(--signal);}
+.kind-both{color:var(--signal);}
+.kind-watch{color:var(--muted);}
+.sig h3{font-size:16px;font-weight:680;letter-spacing:-.25px;line-height:1.45;margin-top:5px;}
+.sig .meta{font-size:11.5px;color:var(--muted);margin-top:4px;}
+.sig .why,.sig .act{font-size:13px;color:var(--ink-soft);margin-top:7px;line-height:1.58;}
+.sig .why strong,.sig .act strong{display:block;font-size:10.5px;letter-spacing:.14em;
+  color:var(--navy);font-weight:750;margin-bottom:1px;}
+.sig .spread{font-size:11px;color:var(--muted);margin-top:7px;}
+
+/* ---- 추가 관찰 이슈 ---- */
+.extra{margin-top:4px;padding:11px 0 0;border-top:1px dashed var(--hairline-2);}
+.extra .sec-sub{font-size:10.5px;letter-spacing:.14em;font-weight:750;color:var(--muted);margin-bottom:5px;}
+.extra ul{list-style:none;}
+.extra li{font-size:12.5px;color:var(--ink-soft);padding:3px 0;}
+.extra li .cnt{color:var(--muted);}
+
+/* ---- 테마 / 카테고리 ---- */
+.duo{display:grid;grid-template-columns:1fr;gap:0 34px;}
+@media(min-width:660px){.duo{grid-template-columns:1.1fr 1fr;}.duo section{margin-top:26px;}}
+.theme-row{margin-top:11px;}
+.theme-name{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;font-weight:600;}
+.theme-name .cnt{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;}
+.theme-bar{height:3px;background:var(--hairline);margin-top:5px;}
+.theme-bar span{display:block;height:100%;background:var(--accent);}
+.cat-row{display:flex;align-items:baseline;gap:8px;font-size:13px;padding:6.5px 0;}
+.cat-row .lead{flex:1;border-bottom:1px dotted var(--hairline-2);transform:translateY(-3px);}
+.cat-row .cnt{font-weight:650;color:var(--ink);}
+.cat-row .imm{font-size:10.5px;color:var(--signal);font-weight:700;letter-spacing:.06em;margin-left:5px;}
+
+/* ---- Macro Snapshot ---- */
+.macro-note{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.6;}
+.macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+@media(max-width:540px){.macro-grid{grid-template-columns:repeat(2,1fr);}}
+.macro-cell{border:1px dashed var(--hairline-2);border-radius:2px;padding:8px 11px;}
+.macro-cell .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.05em;}
+.macro-cell .val{font-size:13px;font-weight:650;color:var(--muted);margin-top:1px;}
+.macro-cell.live{border-style:solid;background:var(--paper-2);}
+.macro-cell.live .val{color:var(--ink);}
+.macro-src{font-size:11px;color:var(--muted);margin-top:8px;}
+.dir-up{color:var(--signal);}
+.dir-down{color:var(--navy);}
+
+/* ---- 고지 / footer ---- */
+.notes{border-top:1px solid var(--hairline-2);margin-top:30px;padding-top:13px;}
+.notes p{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:3px;}
+footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;color:var(--muted);}
+@media(min-width:700px){.page{padding:38px 40px 56px;}}
 """
 
 
@@ -145,25 +180,23 @@ def _watch_action(entry: dict) -> str:
     return "후속 신호 관찰 후 관련 부문 참고 공유"
 
 
-def _render_signal_card(entry: dict) -> str:
+def _render_signal(index: int, entry: dict) -> str:
     kind = entry.get("opportunity_or_risk") or "관찰"
     kind_class = KIND_CLASS.get(kind, "kind-watch")
-    grade = entry.get("alert_grade") or "미채점"
-    grade_class = "grade" if grade == "즉시 알림 후보" else "grade normal"
+    action = entry.get("action_label") or "모니터링"
     meta = " · ".join([
         escape(entry.get("source") or "출처 미상"),
         escape(entry.get("category_label") or "건설산업 일반"),
-        f"{_fmt(entry.get('final_score'))}점",
-        f"신뢰도 {_fmt(entry.get('confidence'))}",
+        f'<span class="num">{_fmt(entry.get("final_score"))}점</span>',
+        f'<span class="num">신뢰도 {_fmt(entry.get("confidence"))}</span>',
     ])
     spread = entry.get("spread") or {}
     parts = [
-        f'<article class="signal-card {kind_class}">',
-        '<div class="signal-head">',
-        f'<span class="rank">{entry.get("rank", "-")}</span>',
-        f'<span class="badge {grade_class}">{escape(grade)}</span>',
-        f'<span class="badge {kind_class}">{escape(kind)}</span>',
-        '</div>',
+        '<article class="sig">',
+        f'<span class="idx num">{index:02d}</span>',
+        '<div>',
+        f'<p class="labels">{escape(action)}<span class="sep">/</span>'
+        f'<span class="{kind_class}">{escape(kind)}</span></p>',
         f'<h3>{escape(entry.get("title") or "")}</h3>',
         f'<p class="meta">{meta}</p>',
     ]
@@ -173,34 +206,71 @@ def _render_signal_card(entry: dict) -> str:
     parts.append('<p class="act"><strong>권장 워치 액션</strong>'
                  f'{escape(_watch_action(entry))}</p>')
     parts.append(f'<p class="spread">↳ {escape(spread.get("label", "단독 신호"))} '
-                 '<span class="hint">(토픽 중복 기반 추정)</span></p>')
-    parts.append('</article>')
+                 '(토픽 중복 기반 추정)</p>')
+    parts.append('</div></article>')
     return "\n".join(parts)
+
+
+def _render_macro_section(brief: dict) -> list[str]:
+    """Macro Snapshot 섹션 — live가 아닌 한 수치를 렌더링하지 않는다 (P0-B6)."""
+    macro = brief.get("macro_snapshot") or {}
+    mode = macro.get("macro_data_mode") or brief.get("macro_data_mode") or "unavailable"
+    values = macro.get("values") or []
+
+    body = ['<section aria-label="Macro Snapshot">']
+    if mode == "live" and values:
+        body.append('<h2 class="sec-h">MACRO SNAPSHOT'
+                    f'<span class="tag">출처 {escape(str(macro.get("source") or ""))}'
+                    f' · 기준 {escape(str(macro.get("updated_at") or ""))}</span></h2>')
+        body.append('<div class="macro-grid">')
+        for v in values:
+            arrow, dir_class = DIRECTION_ARROW.get(v.get("direction"), ("", ""))
+            arrow_html = f' <span class="{dir_class}">{arrow}</span>' if arrow else ""
+            body.append(f'<div class="macro-cell live"><div class="lbl">{escape(v["label"])}</div>'
+                        f'<div class="val num">{escape(str(v["value"]))}{escape(v.get("unit", ""))}'
+                        f'{arrow_html}</div></div>')
+        body.append('</div>')
+        body.append(f'<p class="macro-src">{escape(str(macro.get("disclaimer") or ""))}</p>')
+    else:
+        labels = [v.get("label") for v in values if v.get("label")] or DEFAULT_MACRO_LABELS
+        body.append('<h2 class="sec-h">MACRO SNAPSHOT'
+                    f'<span class="tag">시장지표 미연동 · {escape(mode)}</span></h2>')
+        body.append('<p class="macro-note">시장지표는 아직 실시간 연동 전입니다 — 현재 표시값은 '
+                    '제공하지 않으며, 데모용 mock 고정값은 현재 시장값이 아니므로 수치를 표시하지 '
+                    '않습니다.</p>')
+        body.append('<div class="macro-grid">')
+        for label in labels:
+            body.append(f'<div class="macro-cell"><div class="lbl">{escape(label)}</div>'
+                        '<div class="val">미연동</div></div>')
+        body.append('</div>')
+    body.append('</section>')
+    return body
 
 
 def render_report_html(brief: dict) -> tuple[str, list[str]]:
     """brief 구조체를 standalone HTML로 렌더링한다. (html, 포함된 섹션 키) 반환."""
     sections = ["hero", "status_board", "one_liner"]
     body = [
-        '<header class="hero">',
-        '<div class="hero-top">',
-        f'<span class="brand">📡 {escape(brief["header"])}</span>',
-        f'<span class="mode-chip">{escape(brief["mode"])}</span>',
+        '<header class="masthead">',
+        '<div class="mast-row">',
+        '<span class="brand">HDEC Executive Radar</span>',
+        f'<span class="mode-pill">{escape(brief["mode"]).upper()} DATA · 데모</span>',
         '</div>',
         '<h1>Executive Daily Brief</h1>',
-        f'<p class="hero-sub">{escape(brief["date_kst"])} (KST) · 임원용 시그널 레이더 일일 브리프</p>',
+        f'<p class="dateline num">{escape(brief["date_kst"])} (KST) · 임원용 시그널 레이더 일일 브리프</p>',
+        '<p class="provenance">뉴스: mock 데이터 · 시장지표: 실시간 미연동 — 본 리포트는 데모용 자동 생성 스냅샷입니다</p>',
         '</header>',
         '<section class="board" aria-label="데일리 현황판">',
     ]
     for item in brief["status_board"]:
-        cls = "metric immediate" if item.get("key") == "immediate" else "metric"
-        body.append(f'<div class="{cls}"><div class="num">{item["value"]}</div>'
-                    f'<div class="lbl">{escape(item["label"])}</div></div>')
+        cls = "item immediate" if item.get("key") == "immediate" else "item"
+        body.append(f'<div class="{cls}"><div class="n num">{item["value"]}</div>'
+                    f'<div class="l">{escape(item["label"])}</div></div>')
     body.append('</section>')
 
     body += [
         '<section class="oneliner">',
-        '<h2>오늘의 Executive Signal</h2>',
+        '<span class="ovl">오늘의 Executive Signal</span>',
         f'<p>{escape(brief["executive_one_liner"])}</p>',
         '</section>',
     ]
@@ -209,78 +279,74 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     all_instant = bool(signals) and all(
         s.get("alert_grade") == "즉시 알림 후보" for s in signals)
     heading = "즉시 알림 후보" if all_instant else "주요 신호"
-    body.append('<section class="signals">')
-    body.append(f'<h2>{heading} Top {len(signals)}</h2>')
+    body.append('<section aria-label="주요 시그널">')
+    body.append(f'<h2 class="sec-h">{heading} TOP {len(signals)}'
+                '<span class="tag">점수순 · 운영자 검토 전 자동 선별</span></h2>')
     if signals:
         sections.append("top_signals")
-        body += [_render_signal_card(s) for s in signals]
+        body += [_render_signal(i, s) for i, s in enumerate(signals, start=1)]
     else:
-        body.append('<div class="extra">오늘 감지된 신호가 없습니다 — '
-                    'mock 파이프라인 실행 결과를 확인하세요.</div>')
+        body.append('<p class="macro-note">오늘 감지된 신호가 없습니다 — '
+                    'mock 파이프라인 실행 결과를 확인하세요.</p>')
 
     immediate_ids = {s.get("article_id") for s in signals}
     extras = [i for i in (brief.get("top_new_issues") or [])
               if i.get("article_id") not in immediate_ids]
     if extras:
         sections.append("extra_issues")
-        body.append('<div class="extra"><h2>추가 관찰 이슈</h2><ul>')
+        body.append('<div class="extra"><p class="sec-sub">추가 관찰 이슈</p><ul>')
         for issue in extras:
-            body.append(f'<li>· {escape(issue.get("title") or "")} — '
-                        f'{escape(issue.get("category_label") or "")}'
-                        f' · {_fmt(issue.get("final_score"))}점</li>')
+            body.append(f'<li>· {escape(issue.get("title") or "")} '
+                        f'<span class="cnt">— {escape(issue.get("category_label") or "")}'
+                        f' · <span class="num">{_fmt(issue.get("final_score"))}점</span>'
+                        f' · {escape(issue.get("action_label") or "모니터링")}</span></li>')
         body.append('</ul></div>')
     body.append('</section>')
 
     body.append('<div class="duo">')
     themes = brief.get("theme_rankings") or []
-    body.append('<section class="panel"><h2>주요 테마 <span class="tag">점수 가중 랭킹</span></h2>')
+    body.append('<section aria-label="주요 테마"><h2 class="sec-h">주요 테마'
+                '<span class="tag">점수 가중 랭킹</span></h2>')
     if themes:
         sections.append("themes")
         max_weight = max(t["weighted_strength"] for t in themes) or 1
         for t in themes:
-            pct = max(8, round(t["weighted_strength"] / max_weight * 100))
+            pct = max(7, round(t["weighted_strength"] / max_weight * 100))
             body.append(
                 '<div class="theme-row"><div class="theme-name">'
                 f'<span>{t["rank"]}. {escape(t["theme"])}</span>'
-                f'<span class="cnt">{t["count"]}건 · 강도 {t["weighted_strength"]}</span>'
+                f'<span class="cnt num">{t["count"]}건 · 강도 {t["weighted_strength"]}</span>'
                 f'</div><div class="theme-bar"><span style="width:{pct}%"></span></div></div>')
     else:
-        body.append('<p class="meta">집계된 테마가 없습니다.</p>')
+        body.append('<p class="macro-note">집계된 테마가 없습니다.</p>')
     body.append('</section>')
 
     categories = brief.get("category_counts") or []
-    body.append('<section class="panel"><h2>카테고리 요약</h2>')
+    body.append('<section aria-label="카테고리 요약"><h2 class="sec-h">카테고리 요약</h2>')
     if categories:
         sections.append("categories")
         for c in categories:
-            imm = (f'<span class="cat-imm">● 즉시 {c["immediate"]}</span>'
+            imm = (f'<span class="imm">즉시 {c["immediate"]}</span>'
                    if c.get("immediate") else '')
             body.append(f'<div class="cat-row"><span>{escape(c["label"])}</span>'
-                        f'<span>{c["count"]}건 {imm}</span></div>')
+                        f'<span class="lead"></span>'
+                        f'<span class="cnt num">{c["count"]}건</span>{imm}</div>')
     else:
-        body.append('<p class="meta">집계된 카테고리가 없습니다.</p>')
+        body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p>')
     body.append('</section></div>')
 
-    macro = brief.get("macro_snapshot")
-    if macro and macro.get("indicators"):
-        sections.append("macro")
-        body.append('<section><h2>Macro Snapshot <span class="tag">mock 고정값 — 실시간 아님</span></h2>')
-        body.append('<div class="macro-strip">')
-        for ind in macro["indicators"]:
-            arrow, dir_class = DIRECTION_ARROW.get(ind.get("direction"), ("―", "dir-flat"))
-            body.append(f'<div class="macro-chip">{escape(ind["label"])}'
-                        f'<span class="v">{escape(str(ind["value"]))}{escape(ind.get("unit", ""))} '
-                        f'<span class="{dir_class}">{arrow}</span></span></div>')
-        body.append('</div></section>')
+    sections.append("macro")
+    body += _render_macro_section(brief)
 
     sections += ["notes", "footer"]
     body += [
-        '<section class="note">',
-        f'※ {escape(brief["operator_note"])}<br>',
-        '※ 본 페이지는 데모용 mock 데이터로 생성된 정적 리포트입니다 — 실시간 뉴스·시세가 아니며, '
-        '공개 호스팅에는 mock/데모 데이터만 게시합니다.',
-        '</section>',
-        f'<footer>생성 {escape(brief["generated_at"])} · {escape(brief["header"])}'
+        '<div class="notes">',
+        f'<p>※ {escape(brief["operator_note"])}</p>',
+        f'<p>※ {escape(brief.get("data_warning") or "")}</p>',
+        '<p>※ 본 페이지는 데모용 mock 데이터로 생성된 정적 리포트입니다 — 실시간 뉴스·시세가 아니며, '
+        '공개 호스팅에는 mock/데모 데이터만 게시합니다.</p>',
+        '</div>',
+        f'<footer class="num">생성 {escape(brief["generated_at"])} · {escape(brief["header"])}'
         f' · APP_MODE={escape(brief["mode"])} · 정적 스냅샷</footer>',
     ]
 
@@ -309,6 +375,10 @@ def report_metadata(brief: dict, html: str, sections: list[str]) -> dict:
     return {
         "report_title": REPORT_TITLE,
         "mode": brief["mode"],
+        "news_data_mode": brief.get("news_data_mode"),
+        "macro_data_mode": brief.get("macro_data_mode"),
+        "macro_source": brief.get("macro_source"),
+        "macro_updated_at": brief.get("macro_updated_at"),
         "date_kst": brief["date_kst"],
         "generated_at": brief["generated_at"],
         "html_chars": len(html),
@@ -316,7 +386,7 @@ def report_metadata(brief: dict, html: str, sections: list[str]) -> dict:
         "signal_count": len(brief.get("top_immediate_signals") or []),
         "theme_count": len(brief.get("theme_rankings") or []),
         "category_count": len(brief.get("category_counts") or []),
-        "macro_included": bool(brief.get("macro_snapshot")),
+        "macro_included": "macro" in sections,
         "executive_one_liner": brief["executive_one_liner"],
         "default_output": DEFAULT_OUTPUT,
         "counts": brief.get("pipeline_counts") or {},
@@ -328,7 +398,7 @@ def format_summary_text(brief: dict, html: str, sections: list[str]) -> str:
     signals = brief.get("top_immediate_signals") or []
     lines = [
         f"== {REPORT_TITLE} (정적 리포트) ==",
-        f"{brief['date_kst']} (KST) · 모드: {brief['mode']}",
+        f"{brief['date_kst']} (KST) · mock 데이터 기반 · 시장지표 미연동",
         "",
         "[오늘의 Executive Signal]",
         brief["executive_one_liner"],
@@ -338,7 +408,7 @@ def format_summary_text(brief: dict, html: str, sections: list[str]) -> str:
         + (": " + " / ".join(s["title"] for s in signals) if signals else ""),
         f"[테마 {len(brief.get('theme_rankings') or [])}건 · "
         f"카테고리 {len(brief.get('category_counts') or [])}건 · "
-        f"macro {'포함' if brief.get('macro_snapshot') else '없음'}]",
+        f"macro {brief.get('macro_data_mode')} (수치 비표시)]",
         f"[HTML 크기] {len(html)}자 · 외부 CDN/스크립트 0건",
         f"[기본 출력 경로] {DEFAULT_OUTPUT}",
     ]

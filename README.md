@@ -108,12 +108,17 @@ app/insight.py       Insight — template mock insight + digest (alert_grade 저
 app/notification.py  Notification — 운영자 Send 시에만 mock 발송
 app/feedback.py      Feedback — feedback row 저장만 (가중치 변경 없음)
 app/briefing.py      Briefing — (P0-B2) 저장된 score/insight 읽기 전용 executive brief 파생
+app/macro_snapshot.py  Macro — (P0-B6) macro 데이터 출처 판별 (mock_static/unavailable,
+                     live 미구현 시 가짜 fallback 금지)
 app/schema.sql       6개 테이블 (articles, article_scores, article_insights,
                      feedback, keyword_rules, notification_logs)
 app/config.py        .env 로더 (APP_MODE 기본 mock)
 data/mock_articles.json  mock 기사 30건 (dedup 후 28건 유지)
+data/mock_macro_snapshot.json  데모용 mock macro 고정값 (mode=mock_static — 수치는 표시 안 함)
 data/topics.json         키워드 seed 15건 (keyword_rules로 seed, 읽기 전용)
 templates/index.html     Today Signals 단일 화면 (Vanilla JS)
+docs/index.html          GitHub Pages 루트 랜딩 (최신 브리프 링크)
+docs/daily/latest.html   커밋된 정적 Executive Daily Brief 스냅샷
 ```
 
 ## 9. Day-1 범위 메모
@@ -157,7 +162,8 @@ python3 scripts/verify_telegram_digest.py
   `message` 입력을 비워 두면 mock daily digest를, 입력하면 그 메시지를 발송한다.
 - **스케줄**: 매일 UTC 23:00 (KST 08:00)에 digest 자동 발송 (`cron: "0 23 * * *"`).
 - 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`,
-  `scripts/verify_executive_brief.py`, `scripts/verify_static_report.py`를
+  `scripts/verify_executive_brief.py`, `scripts/verify_executive_brief_quality.py`,
+  `scripts/verify_static_report.py`, `scripts/verify_data_source_honesty.py`를
   먼저 실행해 회귀가 있으면 발송 자체를 차단한다.
 - 성공 로그 기대값: `Telegram delivery summary: delivered=N, failed=0`
   (token·chat id는 로그에 출력되지 않는다).
@@ -178,7 +184,9 @@ python3 scripts/verify_telegram_digest.py
 - **신규 이슈 Top 5** / **즉시 알림 후보 Top 3** (각 신호에 spread 지표 포함)
 - **주요 테마 Top 5** — topic 후보를 점수 가중으로 랭킹
 - **카테고리 요약** — insight 카테고리 분포 (즉시 후보 수 표시)
-- **Macro Snapshot** — `data/mock_macro_snapshot.json`의 **정적 mock 지표** (실시간 아님)
+- **Macro Snapshot** — 시장지표 **미연동** 상태 표시 (P0-B6).
+  `data/mock_macro_snapshot.json`은 데모용 mock 고정값 fixture일 뿐이며,
+  live 연동 전까지 어떤 표시 레이어에도 수치를 노출하지 않는다
 
 ### 로컬 실행 (네트워크·비밀값 불필요)
 
@@ -204,9 +212,11 @@ python3 scripts/verify_executive_brief.py
 ### mock 모드 한계
 
 - 신호가 mock 30건 고정이라 brief 내용이 결정적이다 (Top 3 = mock_001/002/003).
+  단, 점수의 신선도 감점이 날짜에 따라 작동하므로 일간/주간 분포는 조금씩 변할 수 있다.
 - **spread 지표는 추정치다** — topic 후보가 겹치는 신호 수 기반 휴리스틱이며,
   동일 사건 클러스터링이 아니다. dedup으로 제거된 중복 기사는 집계되지 않는다.
-- macro 지표는 데모용 고정값이며 외부 시세 API를 호출하지 않는다.
+  라벨도 보수적으로 "토픽상 관련 추정 신호 n건"으로 표기한다.
+- macro 지표는 **표시하지 않는다** — §13 Data Source Honesty 참조.
 
 ## 12. Static Report Page + Telegram Link Card (P0-B5)
 
@@ -215,9 +225,14 @@ Telegram은 **짧은 알림 진입점**, 시각적 일일 브리프는 **정적 
 버튼이 게시된 `docs/daily/latest.html`로 연결된다.
 
 리포트 페이지는 §11의 brief 데이터를 그대로 렌더링한 **standalone HTML**이다 —
-외부 CDN/스크립트/폰트 참조 0건, 한국어, 모바일 우선 카드 레이아웃
-(현황판 / 오늘의 Executive Signal / Top 3 시그널 카드(배지·왜 중요한가·권장 워치
-액션·spread) / 주요 테마 / 카테고리 요약 / Macro Snapshot / mock 고지).
+외부 CDN/스크립트/폰트 참조 0건(Pretendard 우선 로컬 폰트 스택), 한국어,
+executive memo 톤의 모바일 우선 레이아웃
+(현황판 / 오늘의 Executive Signal / Top 3 시그널(액션 라벨·왜 중요한가·권장 워치
+액션·spread) / 추가 관찰 이슈 / 주요 테마 / 카테고리 요약 /
+Macro Snapshot 미연동 placeholder / mock·데이터 출처 고지).
+
+Pages 루트에는 `docs/index.html` 랜딩 페이지가 있어 `/`로 들어와도
+최신 브리프(`./daily/latest.html`)로 이동할 수 있다 (404 방지).
 
 ### 로컬 실행 (네트워크·비밀값 불필요)
 
@@ -238,12 +253,21 @@ python3 scripts/verify_static_report.py
 
 ### Telegram 워크플로 동작 (REPORT_URL)
 
-- 워크플로는 발송 전에 3개 verifier와 리포트 생성이 깨지지 않는지 확인한다
+- 워크플로는 발송 전에 5개 verifier와 리포트 생성이 깨지지 않는지 확인한다
   (자동 commit/publish는 하지 않는다).
 - repo **Variables**(권장) 또는 Secrets에 `REPORT_URL`이 있으면 메시지에
   "오늘 브리프 보기" 버튼이 붙는다. 로그에는 URL 값 대신
   `Report link enabled: true/false`만 출력된다.
 - `REPORT_URL`이 없으면 기존 **텍스트 전용** 다이제스트를 발송하며 실패하지 않는다.
+
+**REPORT_URL 등록 절차 (1회 수동 설정):**
+
+1. GitHub 저장소 → **Settings** → **Secrets and variables** → **Actions**
+2. **Variables** 탭 → **New repository variable**
+3. Name: `REPORT_URL`
+4. Value: `https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/daily/latest.html`
+   (Pages 게시 주소 — 커스텀 도메인 기준. 기본 도메인이면
+   `https://<owner>.github.io/<repo>/daily/latest.html`)
 
 ### GitHub Pages 수동 설정 (자동화하지 않음)
 
@@ -258,3 +282,35 @@ Folder: **/docs** → 게시 주소 예: `https://<owner>.github.io/<repo>/daily
   실데이터 단계에서는 사내/비공개 호스팅을 사용한다.
 - 리포트 HTML에는 비밀값·토큰·chat id가 포함되지 않는다
   (`verify_static_report.py`가 외부 리소스 0건과 함께 기계 검사한다).
+
+## 13. Data Source Honesty (P0-B6)
+
+mock 데이터가 실제 조사/실시간 데이터로 오인되는 것을 구조적으로 막는 규칙.
+`scripts/verify_data_source_honesty.py`가 전부 기계 검사하며, 워크플로가
+발송 전에 실행해 위반 시 발송을 차단한다.
+
+- **뉴스 데이터는 mock이다** — 외부 뉴스 ingestion이 구현되기 전까지
+  `news_data_mode`는 항상 `mock`이다.
+- **macro 데이터는 mock_static 또는 unavailable이다** — live 시세 연동이
+  구현되기 전까지 `macro_data_mode`는 `live`가 될 수 없다.
+- **Telegram/정적 리포트/대시보드는 mock 고정값을 현재 시장값처럼 표시하지
+  않는다** — live가 아닌 한 수치 자체를 렌더링하지 않고
+  "시장지표 미연동" placeholder만 표시한다.
+- **시장지표 문맥에서 "실시간/현재/최신/live" 표현은 부정(미연동·아님 등)과
+  함께일 때만 허용**된다 — verifier가 라인 단위로 검사한다.
+- **미래의 live macro 연동은 `source`와 `updated_at`을 반드시 제공**해야 하며,
+  `app/macro_snapshot.py`의 `get_macro_snapshot()` 경계를 통해서만 들어온다.
+- **live 조회가 실패하면 `unavailable`로 강등**한다 — 가짜 숫자/이전 mock
+  값으로 silent fallback 하지 않는다.
+
+brief JSON에는 데이터 출처 provenance 필드가 항상 포함된다:
+`news_data_mode` / `macro_data_mode` / `macro_source` / `macro_updated_at` /
+`macro_is_stale` / `data_warning`.
+
+```bash
+# 데이터 정직성 회귀 검증 (RESULT: PASS / exit 0 이 통과 조건)
+python3 scripts/verify_data_source_honesty.py
+
+# 시그널 품질 규칙(액션 라벨·보수적 spread 표현·이슈 다양성) 검증
+python3 scripts/verify_executive_brief_quality.py
+```

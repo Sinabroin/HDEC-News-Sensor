@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDEC Executive Radar</title>
+<style>
+:root{
+  --paper:#f6f4ee;--ink:#22262e;--ink-soft:#494e58;--muted:#807a6d;
+  --navy:#152740;--accent:#176a4c;--hairline:#ddd8cb;--hairline-2:#c8c2b2;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:var(--paper);color:var(--ink);line-height:1.6;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif;
+  border-top:4px solid var(--navy);
+  background-image:linear-gradient(180deg,rgba(21,39,64,.05),rgba(21,39,64,0) 240px);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 20px;
+}
+.card{max-width:560px;width:100%;}
+.brand{font-size:11px;letter-spacing:.34em;font-weight:700;color:var(--navy);text-transform:uppercase;}
+.head{border-bottom:2px solid var(--ink);padding-bottom:16px;position:relative;}
+.head::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:1px;background:var(--hairline-2);}
+h1{font-size:28px;letter-spacing:-.5px;font-weight:750;margin-top:12px;line-height:1.25;}
+.sub{font-size:13px;color:var(--ink-soft);margin-top:6px;}
+.body{margin-top:22px;}
+.body p{font-size:13.5px;color:var(--ink-soft);}
+.cta{display:block;background:var(--navy);color:#f2efe6;text-decoration:none;text-align:center;
+  font-size:15px;font-weight:650;letter-spacing:-.2px;padding:15px 18px;margin-top:20px;
+  border-left:3px solid var(--accent);border-radius:2px;}
+.cta .arrow{opacity:.7;margin-left:6px;}
+.caution{margin-top:18px;border-top:1px solid var(--hairline-2);padding-top:12px;}
+.caution p{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:3px;}
+footer{margin-top:22px;text-align:center;font-size:10px;letter-spacing:.18em;color:var(--muted);}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="head">
+    <span class="brand">HDEC Executive Radar</span>
+    <h1>Executive Daily Brief</h1>
+    <p class="sub">임원용 시그널 레이더 — AI·거시경제·건설산업 뉴스 센싱 데모</p>
+  </div>
+  <div class="body">
+    <p>매일 생성되는 Executive Daily Brief 정적 스냅샷을 아래에서 확인할 수 있습니다.</p>
+    <a class="cta" href="./daily/latest.html">최신 Executive Daily Brief 보기<span class="arrow">→</span></a>
+  </div>
+  <div class="caution">
+    <p>※ 본 페이지와 리포트는 데모용 mock 데이터로 생성됩니다 — 실시간 뉴스·시세가 아닙니다.</p>
+    <p>※ 시장지표(macro)는 실시간 미연동 상태이며, mock 고정값 수치는 표시하지 않습니다.</p>
+  </div>
+  <footer>HDEC EXECUTIVE RADAR · MOCK MODE · STATIC SNAPSHOT</footer>
+</main>
+</body>
+</html>
