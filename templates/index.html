@@ -92,6 +92,33 @@
   #brief-macro .macro-warn { color: var(--muted); font-size: 10.5px; }
   #brief-note { margin-top: 12px; }
 
+  /* ---- 카테고리별 근거 기사 (P0-C1.7 드릴다운) ---- */
+  #cat-section { margin-top: 20px; border-top: 3px solid var(--daily); }
+  #cat-body { padding: 12px 16px 14px; }
+  #cat-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cat-chip { border: 1px solid var(--hairline-2); border-radius: 14px;
+              background: var(--paper); padding: 5px 12px; font-size: 11.5px;
+              color: var(--sub); cursor: pointer; font-family: var(--sans);
+              letter-spacing: .01em; }
+  .cat-chip:hover { border-color: var(--sub); }
+  .cat-chip.active { background: var(--desk); color: var(--desk-ink);
+                     border-color: var(--desk); }
+  .cat-chip b { font-variant-numeric: tabular-nums; margin-left: 3px; }
+  .cat-chip .imm { color: var(--signal); font-weight: 700; margin-left: 4px; }
+  .cat-chip.active .imm { color: var(--action); }
+  .cat-art { border-top: 1px dashed var(--hairline); padding: 10px 0; cursor: pointer; }
+  .cat-art:first-child { border-top: none; }
+  .cat-art:hover .cat-art-title { text-decoration: underline; }
+  .cat-art-head { display: flex; justify-content: space-between; align-items: baseline;
+                  gap: 12px; }
+  .cat-art-title { font-size: 13.5px; font-weight: 620; line-height: 1.45; }
+  .cat-art-sc { font-size: 11px; font-weight: 700; color: var(--daily);
+                white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cat-art .meta { margin-top: 5px; }
+  .cat-art .meta a { color: var(--daily); text-decoration: none; }
+  .cat-art-why { font-size: 11.5px; color: var(--sub); margin-top: 5px; line-height: 1.5; }
+  .cat-more { font-size: 11px; color: var(--muted); margin-top: 10px; }
+
   /* ---- 레이아웃 ---- */
   main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
          gap: 20px; padding: 20px 28px; align-items: start; }
@@ -291,6 +318,15 @@
       <h2><span class="ovl">TODAY SIGNALS</span>전체 신호 <span class="count" id="article-count"></span></h2>
       <div id="article-list"></div>
     </section>
+    <section class="box" id="cat-section" style="display:none;">
+      <h2><span class="ovl">EVIDENCE BY CATEGORY</span>카테고리별 근거 기사
+          <span class="count" id="cat-count"></span></h2>
+      <div id="cat-body">
+        <div id="cat-chips"></div>
+        <div id="cat-articles"></div>
+        <p class="caption" id="cat-note"></p>
+      </div>
+    </section>
   </div>
   <section class="box" id="detail-panel">
     <h2><span class="ovl">DOSSIER</span>Article Detail</h2>
@@ -322,7 +358,8 @@ const GRADE_CLASS = {
   "즉시 알림 후보": "grade-instant", "일간 요약": "grade-daily",
   "주간 리포트 후보": "grade-weekly", "제외": "grade-excluded",
 };
-const state = { articles: [], logs: [], selectedId: null, lastRun: null };
+const state = { articles: [], logs: [], selectedId: null, lastRun: null,
+                catSections: [], activeCat: null };
 
 function esc(value) {
   const div = document.createElement("div");
@@ -415,7 +452,11 @@ async function loadBrief() {
 }
 function renderBrief(b) {
   const section = document.getElementById("brief-section");
-  if (!b || !b.total_articles) { section.style.display = "none"; return; }
+  if (!b || !b.total_articles) {
+    section.style.display = "none";
+    document.getElementById("cat-section").style.display = "none";
+    return;
+  }
   section.style.display = "";
   document.getElementById("brief-generated").textContent =
     `${b.date_kst} · ${b.mode} 기준`;
@@ -468,6 +509,63 @@ function renderBrief(b) {
   document.getElementById("brief-macro").innerHTML = macroHtml;
   document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "")
     + (b.source_quality_note ? "  ·  " + b.source_quality_note : "");
+  renderCategorySection(b);
+}
+
+/* ----- 카테고리별 근거 기사 (P0-C1.7): 칩으로 카테고리 선택 → 근거 기사 인라인 표시 ----- */
+function renderCategorySection(b) {
+  const section = document.getElementById("cat-section");
+  const sections = b.category_sections || [];
+  if (!sections.length) { section.style.display = "none"; return; }
+  section.style.display = "";
+  state.catSections = sections;
+  if (!state.activeCat || !sections.some(s => s.category_key === state.activeCat)) {
+    state.activeCat = sections[0].category_key;
+  }
+  document.getElementById("cat-count").textContent = `${sections.length}개 분류`;
+  document.getElementById("cat-note").textContent = b.category_drilldown_note || "";
+  renderCategoryChips();
+  renderCategoryArticles();
+}
+function renderCategoryChips() {
+  document.getElementById("cat-chips").innerHTML = (state.catSections || []).map(s =>
+    `<button class="cat-chip${s.category_key === state.activeCat ? " active" : ""}" ` +
+    `onclick="selectCategory('${esc(s.category_key)}')">` +
+    `${esc(s.category_label)} <b>${esc(s.total_count)}</b>` +
+    `${s.instant_count ? ` <span class="imm">즉시 ${esc(s.instant_count)}</span>` : ""}` +
+    `</button>`).join("");
+}
+function renderCategoryArticles() {
+  const wrap = document.getElementById("cat-articles");
+  const sec = (state.catSections || []).find(s => s.category_key === state.activeCat);
+  if (!sec) { wrap.innerHTML = ""; return; }
+  const arts = sec.top_articles || [];
+  let html = arts.map(a => {
+    const grade = a.alert_grade || "미채점";
+    const gradeClass = GRADE_CLASS[grade] || "grade-excluded";
+    const link = a.url
+      ? ` <a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" ` +
+        `onclick="event.stopPropagation()">원문 ↗</a>` : "";
+    const why = a.why_it_matters
+      ? `<div class="cat-art-why">${esc(a.why_it_matters)}</div>` : "";
+    return `<div class="cat-art" onclick="selectArticle('${esc(a.article_id)}')">` +
+      `<div class="cat-art-head"><span class="cat-art-title">${esc(a.title)}</span>` +
+      `<span class="cat-art-sc">중요도 ${score5(a.final_score)} / 5.0</span></div>` +
+      `<div class="meta"><span>${esc(a.source || "-")}</span>${srcQualityChip(a)}` +
+      `<span>${esc(fmtTime(a.published_at))}</span>` +
+      `<span class="badge ${gradeClass}">${esc(grade)}</span>${link}</div>${why}</div>`;
+  }).join("");
+  if (!arts.length) {
+    html = `<div class="caption">표시 가능한 뉴스 출처 근거가 없습니다 ` +
+      `(블로그·카페 등 비-뉴스 출처만 수집됨).</div>`;
+  }
+  if (sec.note) html += `<div class="cat-more">${esc(sec.note)}</div>`;
+  wrap.innerHTML = html;
+}
+function selectCategory(key) {
+  state.activeCat = key;
+  renderCategoryChips();
+  renderCategoryArticles();
 }
 
 /* ----- 데이터 로드 ----- */

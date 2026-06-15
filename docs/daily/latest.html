@@ -114,6 +114,36 @@ section{margin-top:26px;}
 .cat-row .cnt{font-weight:650;color:var(--ink);}
 .cat-row .imm{font-size:10.5px;color:var(--signal);font-weight:700;letter-spacing:.06em;margin-left:5px;}
 
+/* ---- 카테고리별 근거 기사 (드릴다운, JS 없이 <details>만) ---- */
+.cd-note{font-size:11px;color:var(--muted);margin:9px 0 4px;line-height:1.55;}
+details.cat-drill{border-bottom:1px solid var(--hairline);}
+details.cat-drill:first-of-type{border-top:1px solid var(--hairline-2);}
+details.cat-drill>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;
+  gap:9px;padding:11px 2px;}
+details.cat-drill>summary::-webkit-details-marker{display:none;}
+details.cat-drill>summary::before{content:"▸";color:var(--muted);font-size:10px;
+  flex:0 0 9px;transform:translateY(-1px);}
+details.cat-drill[open]>summary::before{content:"▾";}
+.cd-label{font-size:13.5px;font-weight:680;color:var(--ink);}
+.cd-count{color:var(--ink);font-size:12px;font-weight:650;white-space:nowrap;}
+.cd-imm{color:var(--signal);font-size:10px;font-weight:750;letter-spacing:.04em;white-space:nowrap;}
+.cd-flex{flex:1;}
+.cd-body{padding:1px 0 13px 17px;}
+.cd-art{padding:9px 0;border-top:1px dashed var(--hairline);}
+.cd-art:first-child{border-top:none;}
+.cd-art-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+.cd-title{font-size:13.5px;font-weight:600;line-height:1.46;}
+.cd-title a{color:inherit;text-decoration:none;border-bottom:1px solid var(--hairline-2);}
+.cd-title a:hover{border-bottom-color:var(--accent);}
+.cd-sc{font-size:11px;font-weight:750;color:var(--navy);white-space:nowrap;}
+.cd-meta{font-size:11px;color:var(--muted);margin-top:3px;}
+.cd-meta .srcq{font-weight:700;}
+.cd-meta .srcq.trust{color:var(--accent);}
+.cd-meta .srcq.low{color:var(--signal);}
+.cd-why{font-size:11.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
+.cd-more{font-size:11px;color:var(--muted);margin-top:9px;}
+.cd-empty{font-size:11.5px;color:var(--muted);padding:6px 0;}
+
 /* ---- Macro Snapshot ---- */
 .macro-note{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.6;}
 .macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
@@ -146,20 +176,32 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <p class="provenance">뉴스: 공개 RSS 수집 · 시장지표: 미연동</p>
 </header>
 <section class="board" aria-label="데일리 현황판">
-<div class="item"><div class="n num">37</div><div class="l">오늘 감지 신호</div></div>
+<div class="item"><div class="n num">37</div><div class="l">수집·분석 기사</div></div>
 <div class="item immediate"><div class="n num">0</div><div class="l">즉시 알림 후보</div></div>
-<div class="item"><div class="n num">0</div><div class="l">일간 요약</div></div>
-<div class="item"><div class="n num">11</div><div class="l">주간 리포트 후보</div></div>
-<div class="item"><div class="n num">26</div><div class="l">제외/참고</div></div>
+<div class="item"><div class="n num">1</div><div class="l">일간 요약</div></div>
+<div class="item"><div class="n num">12</div><div class="l">주간 리포트 후보</div></div>
+<div class="item"><div class="n num">24</div><div class="l">참고/제외</div></div>
 </section>
 <section class="oneliner">
 <span class="ovl">오늘의 Executive Signal</span>
 <p>중동·해외 발주 환경 변화와 건설현장 중대재해·안전 규제가 동시에 부각되며, 해외 발주 확대 기회와 단기 평판·수주 자격 리스크가 함께 감지됩니다.</p>
 </section>
 <section aria-label="주요 시그널">
-<h2 class="sec-h">주요 신호 TOP 3<span class="tag">점수순 · 운영자 검토 전 자동 선별</span></h2>
+<h2 class="sec-h">주요 관찰 신호 TOP 3<span class="tag">점수순 · 운영자 검토 전 자동 선별</span></h2>
+<p class="cd-note">즉시 확인급 신호 없음 — 아래는 주간 모니터링 후보 중심입니다 (중요도가 낮아도 숨기지 않고 표시합니다).</p>
 <article class="sig">
 <span class="idx num">01</span>
+<div>
+<p class="labels">검토 필요<span class="sep">/</span><span class="kind-watch">관찰</span></p>
+<h3><a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5EUkIyRVI4VzVyYTJSTWp4aEd2SmJWRGFNSXNON1lhNmJaSk16RzdlVXJnNTBrU1ZLTTJ6d1ljLWZVX1F2SVY1eU90Q0dMaEJQc1d1NkRwRjdDaUYyQ0lPcTZmMXVTcHFxdldrb2M4anQ?oc=5" target="_blank" rel="noopener noreferrer">특별법 시행 앞둔 AI 데이터센터…건설사, 전력망·냉각 설루션 경쟁</a> ↗</h3>
+<p class="meta">오피니언뉴스 · AI 데이터센터·전력 인프라 · <span class="num">판정 신뢰도 80%</span></p>
+<div class="score-meter"><div class="score-head"><span class="score-num num">중요도 4.0 / 5.0</span><span class="band">검토 필요</span></div><div class="meter"><span style="width:80%"></span></div></div><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:86%"></i></span><span class="cv num">4.3</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:30%"></i></span><span class="cv num">1.5</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div>
+<p class="why"><strong>왜 중요한가</strong>데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p>
+<p class="act"><strong>권장 워치 액션</strong>후속 신호 관찰 후 관련 부문 참고 공유</p>
+<p class="spread">↳ 유사 주제 기사 15건 · 출처 16곳 <span class="hint">(유사 주제 기사는 참고 묶음 추정)</span> · <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5EUkIyRVI4VzVyYTJSTWp4aEd2SmJWRGFNSXNON1lhNmJaSk16RzdlVXJnNTBrU1ZLTTJ6d1ljLWZVX1F2SVY1eU90Q0dMaEJQc1d1NkRwRjdDaUYyQ0lPcTZmMXVTcHFxdldrb2M4anQ?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+</div></article>
+<article class="sig">
+<span class="idx num">02</span>
 <div>
 <p class="labels">주간 보고 후보<span class="sep">/</span><span class="kind-watch">관찰</span></p>
 <h3><a href="https://news.google.com/rss/articles/CBMic0FVX3lxTE9iSE5BZlpSM3pNVFBFWXpNSkhyUG9pbloxMUdWenlZVVdQSzJWcEFiRGo0ak5KeWRJNlItOVFWT3Z2ZzdkOUlJU3hnZ2lEZ1FqWkNXSlJYSHpLQzQtRmRIR0d2Wl9oV0E2NzM5OFFBQWVpWW8?oc=5" target="_blank" rel="noopener noreferrer">[기획] 현대건설, 도시정비 12조·데이터센터 양 축 강화</a> ↗</h3>
@@ -170,7 +212,7 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <p class="spread">↳ 유사 주제 기사 12건 · 출처 13곳 <span class="hint">(유사 주제 기사는 참고 묶음 추정)</span> · <a href="https://news.google.com/rss/articles/CBMic0FVX3lxTE9iSE5BZlpSM3pNVFBFWXpNSkhyUG9pbloxMUdWenlZVVdQSzJWcEFiRGo0ak5KeWRJNlItOVFWT3Z2ZzdkOUlJU3hnZ2lEZ1FqWkNXSlJYSHpLQzQtRmRIR0d2Wl9oV0E2NzM5OFFBQWVpWW8?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
-<span class="idx num">02</span>
+<span class="idx num">03</span>
 <div>
 <p class="labels">주간 보고 후보<span class="sep">/</span><span class="kind-opp">기회</span></p>
 <h3><a href="https://news.google.com/rss/articles/CBMie0FVX3lxTE9Xdk9QcTNyRmY5MnBoMHpHTkU2S2JGVXNtTTZqVzR6TnQzckJidXBYVnNUOTlPY2NxVnJSV3BISGhOMWh0cmZOVkc1cXl4TGJFaTJvTFViT1lBN084MUVyMXU0QmlzUkl0X1QxSGtYSFpDNFd6bC1xWUJyWdIBgAFBVV95cUxNT2RHdDVXNWxUeDN0ZldMVldrd05RbzdRUDZ0QlBFcmhObm9TQWRWb2xCZmNUbmx4R2NPWXFlbmtaTTVEZHJSTExPamxjaThINWN4RTB4LV92bnl4WEttakhvSWdfaEFaMnZDbHN2RjhseTNpUEtnTlVaS2FFb1hacA?oc=5" target="_blank" rel="noopener noreferrer">중동 휴전에 해외 건설수주 볕들까 … 100조 전쟁 복구 시장 기대감</a> ↗</h3>
@@ -180,29 +222,18 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <p class="act"><strong>권장 워치 액션</strong>해외 발주 확대 관점의 후속 신호·발주 일정 확인</p>
 <p class="spread">↳ 단독 신호 <span class="hint">(유사 주제 기사는 참고 묶음 추정)</span> · <a href="https://news.google.com/rss/articles/CBMie0FVX3lxTE9Xdk9QcTNyRmY5MnBoMHpHTkU2S2JGVXNtTTZqVzR6TnQzckJidXBYVnNUOTlPY2NxVnJSV3BISGhOMWh0cmZOVkc1cXl4TGJFaTJvTFViT1lBN084MUVyMXU0QmlzUkl0X1QxSGtYSFpDNFd6bC1xWUJyWdIBgAFBVV95cUxNT2RHdDVXNWxUeDN0ZldMVldrd05RbzdRUDZ0QlBFcmhObm9TQWRWb2xCZmNUbmx4R2NPWXFlbmtaTTVEZHJSTExPamxjaThINWN4RTB4LV92bnl4WEttakhvSWdfaEFaMnZDbHN2RjhseTNpUEtnTlVaS2FFb1hacA?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
-<article class="sig">
-<span class="idx num">03</span>
-<div>
-<p class="labels">주간 보고 후보<span class="sep">/</span><span class="kind-watch">관찰</span></p>
-<h3><a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE83OGpFQWRHTVJ2RWU0WGFhVHd4ZGJnT001LTlXUmp4THJyek9GbHluRk1lQzBLNkt4T1NvMjM1NnRsRWg2U0VNRnFkN2YxM295MkRBVVZEcUZsNTVPQ0FrNURieF9KaVFfRk5EOUVB0gFwQVVfeXFMT3lFdFFFMzdFeHhUZHM1MkpwYTlfa0dHeVVja1ZsZUZEX0JiQXo0LWcyUHhFTWJMcldZTVZOUlVaX1pTU3dOVWpYYmRQWFhqVjdNME1jSWZpUEh5bVRuV0x6Ykd1OVhmdF9ZeFROT3FkUA?oc=5" target="_blank" rel="noopener noreferrer">AI·로봇으로 건설현장 안전 혁신 - 국토부, ‘2026 스마트건설 챌린지’ 개최</a> ↗</h3>
-<p class="meta">한국도시환경헤럴드 · 건설현장 안전·중대재해 · <span class="num">판정 신뢰도 65%</span></p>
-<div class="score-meter"><div class="score-head"><span class="score-num num">중요도 2.2 / 5.0</span><span class="band">주간 모니터링</span></div><div class="meter"><span style="width:45%"></span></div></div><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:42%"></i></span><span class="cv num">2.1</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:36%"></i></span><span class="cv num">1.8</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div>
-<p class="why"><strong>왜 중요한가</strong>현장 안전·중대재해 규제 환경 변화로 안전관리 체계, 입찰 자격, 평판 리스크에 영향 가능성이 있다.</p>
-<p class="act"><strong>권장 워치 액션</strong>후속 신호 관찰 후 관련 부문 참고 공유</p>
-<p class="spread">↳ 유사 주제 기사 5건 · 출처 6곳 <span class="hint">(유사 주제 기사는 참고 묶음 추정)</span> · <a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE83OGpFQWRHTVJ2RWU0WGFhVHd4ZGJnT001LTlXUmp4THJyek9GbHluRk1lQzBLNkt4T1NvMjM1NnRsRWg2U0VNRnFkN2YxM295MkRBVVZEcUZsNTVPQ0FrNURieF9KaVFfRk5EOUVB0gFwQVVfeXFMT3lFdFFFMzdFeHhUZHM1MkpwYTlfa0dHeVVja1ZsZUZEX0JiQXo0LWcyUHhFTWJMcldZTVZOUlVaX1pTU3dOVWpYYmRQWFhqVjdNME1jSWZpUEh5bVRuV0x6Ykd1OVhmdF9ZeFROT3FkUA?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
 <div class="extra"><p class="sec-sub">추가 관찰 이슈</p><ul>
+<li>· <a href="https://news.google.com/rss/articles/CBMiakFVX3lxTE9GNjh3aXc5Z2FnMzJKMzdHMmpqNm54UmdOdUhVQkliTGpxdDZFdzRlUGw3XzRBR2NMNnRaRFNqZ3ZldlA2UUZIQ19ZRzBLUTNhaHBnNHR6UzViaUZEWXIyUEh4Q1l6Z25ieWfSAW9BVV95cUxQRjM4X2Q4d0x1RU9aenJRWXcxSWx6OUJKa1MyQXMxWVlEY3BSNEV5bVNfOUZ5amV1Um8yWnZkUWRBZmw1SjZNY3N2WWhVZlVqSHVtaVRNSVp3LXZURDJYaFI2RXE2a1NIVkgyUDAwN1U?oc=5" target="_blank" rel="noopener noreferrer">&quot;AI·로봇으로 더 안전한 건설현장&quot;…스마트건설 챌린지 개최 - 머니투데이</a> ↗ <span class="cnt">— 건설현장 안전·중대재해 · <span class="num">중요도 2.4/5.0</span> · 주간 보고 후보</span></li>
 <li>· <a href="https://news.google.com/rss/articles/CBMiYEFVX3lxTFBuWkVYT2sxYTByNGZrMXBkS09KcVhUTWE0ajZTUFBGUmk0bVVLTEJlZlVNUnJzOVBSSFBIbTZwSnRXb0VlWm9Sek1BWDRpQ1lXelp5ZDRlWUVkRVBqT3JPRdIBeEFVX3lxTE9XNnhESzZfd2UtNkZ3TnlFSDlHWHM4SHBCSVloMldzMTZjN2FNT2hhLW43bFd2Z2Y1TG9yQW5EcWZwbW1WbGZCTkNkTHpUVW9LaTR6UWs4N2x1WG1lLVlSNVV3ejVabmpMYVZOejktTEZsa0ZTUXRySQ?oc=5" target="_blank" rel="noopener noreferrer">&quot;AI·데이터센터 전력 수요 잡는다&quot;…효성중공업, 美 초고압 전력망 공략 강화</a> ↗ <span class="cnt">— AI 데이터센터·전력 인프라 · <span class="num">중요도 2.2/5.0</span> · 주간 보고 후보</span></li>
-<li>· <a href="https://news.google.com/rss/articles/CBMieEFVX3lxTE1Xb2FUV1JCRmoxa1hKTEREb09zVENRQl9SeEZzVDAwcGxEbzhZMk1udTd4RlF4RUNydWV5Zk9heTdNOW1jY29TdGN3QUl1QWFQZERNaklwWFJwbHJramxYVFE3ZHk2WHRESmRSZ0E1TkFURUl3RWo4OA?oc=5" target="_blank" rel="noopener noreferrer">&quot;플랜트 복구 물밑 협상 중&quot;…중동 시장 다시 열린다</a> ↗ <span class="cnt">— 중동·해외 수주 환경 · <span class="num">중요도 2.2/5.0</span> · 주간 보고 후보</span></li>
 </ul></div>
 </section>
 <div class="duo">
 <section aria-label="주요 테마"><h2 class="sec-h">주요 테마<span class="tag">상대 강도 · 100=최상위 테마</span></h2>
-<div class="theme-row"><div class="theme-name"><span>1. SMR 데이터센터</span><span class="cnt num">5건 · 상대 강도 100</span></div><div class="theme-bar"><span style="width:100%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>2. 현대건설 데이터센터</span><span class="cnt num">5건 · 상대 강도 100</span></div><div class="theme-bar"><span style="width:100%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>3. AI 데이터센터 전력</span><span class="cnt num">4건 · 상대 강도 72</span></div><div class="theme-bar"><span style="width:72%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>4. LNG 플랜트 중동</span><span class="cnt num">2건 · 상대 강도 41</span></div><div class="theme-bar"><span style="width:41%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>5. 중동 플랜트 유가</span><span class="cnt num">2건 · 상대 강도 41</span></div><div class="theme-bar"><span style="width:41%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>1. SMR 데이터센터</span><span class="cnt num">6건 · 상대 강도 100</span></div><div class="theme-bar"><span style="width:100%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>2. AI 데이터센터 전력</span><span class="cnt num">5건 · 상대 강도 81</span></div><div class="theme-bar"><span style="width:81%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>3. 현대건설 데이터센터</span><span class="cnt num">5건 · 상대 강도 72</span></div><div class="theme-bar"><span style="width:72%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>4. 건설 AI 스마트건설</span><span class="cnt num">2건 · 상대 강도 44</span></div><div class="theme-bar"><span style="width:44%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>5. LNG 플랜트 중동</span><span class="cnt num">2건 · 상대 강도 30</span></div><div class="theme-bar"><span style="width:30%"></span></div></div>
 <p class="caption">상대 강도는 가장 강한 테마를 100으로 둔 상대 지표입니다 (관련 기사 수와 중요도 점수를 합산한 내부 정렬 값 기준).</p>
 </section>
 <section aria-label="카테고리 요약"><h2 class="sec-h">카테고리 요약</h2>
@@ -211,10 +242,72 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <div class="cat-row"><span>건설현장 안전·중대재해</span><span class="lead"></span><span class="cnt num">5건</span></div>
 <div class="cat-row"><span>현대건설 직접 관련</span><span class="lead"></span><span class="cnt num">4건</span></div>
 <div class="cat-row"><span>거시경제 변수</span><span class="lead"></span><span class="cnt num">4건</span></div>
+<div class="cat-row"><span>스마트건설 기술</span><span class="lead"></span><span class="cnt num">3건</span></div>
 <div class="cat-row"><span>건설산업 일반</span><span class="lead"></span><span class="cnt num">2건</span></div>
-<div class="cat-row"><span>스마트건설 기술</span><span class="lead"></span><span class="cnt num">2건</span></div>
-<div class="cat-row"><span>정부 정책·인프라 투자</span><span class="lead"></span><span class="cnt num">1건</span></div>
 </section></div>
+<section aria-label="카테고리별 근거 기사">
+<h2 class="sec-h">카테고리별 근거 기사<span class="tag">수집·분석 37건 · 펼쳐서 근거 확인</span></h2>
+<p class="cd-note">카테고리별 근거 기사는 수집된 기사의 제목·출처·링크·중요도 기준 근거 목록입니다 (본문 전문은 저장하지 않습니다). 블로그·카페 등 비-뉴스 출처는 근거 목록에서 제외하며, 카테고리 총건수에는 포함해 감사 가능하게 둡니다.</p>
+<details class="cat-drill" open>
+<summary><span class="cd-label">AI 데이터센터·전력 인프라</span><span class="cd-count num">13건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5EUkIyRVI4VzVyYTJSTWp4aEd2SmJWRGFNSXNON1lhNmJaSk16RzdlVXJnNTBrU1ZLTTJ6d1ljLWZVX1F2SVY1eU90Q0dMaEJQc1d1NkRwRjdDaUYyQ0lPcTZmMXVTcHFxdldrb2M4anQ?oc=5" target="_blank" rel="noopener noreferrer">특별법 시행 앞둔 AI 데이터센터…건설사, 전력망·냉각 설루션 경쟁 ↗</a></span><span class="cd-sc num">중요도 4.0 / 5.0</span></div><p class="cd-meta">오피니언뉴스 · <span class="num">2026-06-15</span> · 검토 필요</p><p class="cd-why">데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiYEFVX3lxTFBuWkVYT2sxYTByNGZrMXBkS09KcVhUTWE0ajZTUFBGUmk0bVVLTEJlZlVNUnJzOVBSSFBIbTZwSnRXb0VlWm9Sek1BWDRpQ1lXelp5ZDRlWUVkRVBqT3JPRdIBeEFVX3lxTE9XNnhESzZfd2UtNkZ3TnlFSDlHWHM4SHBCSVloMldzMTZjN2FNT2hhLW43bFd2Z2Y1TG9yQW5EcWZwbW1WbGZCTkNkTHpUVW9LaTR6UWs4N2x1WG1lLVlSNVV3ejVabmpMYVZOejktTEZsa0ZTUXRySQ?oc=5" target="_blank" rel="noopener noreferrer">&quot;AI·데이터센터 전력 수요 잡는다&quot;…효성중공업, 美 초고압 전력망 공략 강화 ↗</a></span><span class="cd-sc num">중요도 2.2 / 5.0</span></div><p class="cd-meta">뉴시스 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-14</span> · 주간 보고 후보</p><p class="cd-why">데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiZEFVX3lxTFBqd0JHZkx3V0hYX1FYRld5b2ZDc0FlRDhESThDR3FPVUtyQWRBU25XMmJLNDZqd0Z5a2E2UmJHd0U3Sm5vcnlnX1NGTFlYR1dzTG1MeFFvVUdNRC1qUm4tSGpTRHI?oc=5" target="_blank" rel="noopener noreferrer">AI 데이터센터 전력난, 10GWh ESS가 받친다 ↗</a></span><span class="cd-sc num">중요도 2.1 / 5.0</span></div><p class="cd-meta">에너지안전신문 · <span class="num">2026-06-14</span> · 주간 보고 후보</p><p class="cd-why">데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiigFBVV95cUxOdzZOWXA4cm03bkRLeUtsdW5oSDJlTjV4RW5oTFF2blJ2amdOOUk0SURzUDBraXR5VjFuZ3c0aDlKUmZhcXRlR3kwX05xVHNxU3BiRVFSYWhNVGpqRFFXcUNoQ3VPYXZTbnFZejN2amJsbndIY3BwaEpBQVRnbUZxZ0tRZEtmSDhSQ1E?oc=5" target="_blank" rel="noopener noreferrer">국내 건설사, 해외 수주 경쟁력 확인…&quot;원전 수주 한방 기대&quot; ↗</a></span><span class="cd-sc num">중요도 2.1 / 5.0</span></div><p class="cd-meta">글로벌이코노믹 · <span class="num">2026-06-10</span> · 주간 보고 후보</p><p class="cd-why">데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiVkFVX3lxTE9sRGtXb1lFbEt1Nm9zSmpCNHNtTno4SFltYzlWb1BrTlI3ZFZxMUc2eXVYaTBsY2lDVkItd2pQbXpvZXlORGlyOHNGUUJzRlhSTDBpbnhR?oc=5" target="_blank" rel="noopener noreferrer">틸론, 서울·제주서 대규모 전력 확보...&quot;AI 데이터센터 추진 탄력&quot; ↗</a></span><span class="cd-sc num">중요도 1.7 / 5.0</span></div><p class="cd-meta">지디넷코리아 · <span class="num">2026-06-14</span> · 주간 보고 후보</p><p class="cd-why">데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE5lNXI2N3JRTGhwQ0JTeGpkWUw3UHdUTkdBZDc4Q1FMVEdFbVZ2S2pMcFRtR1BlUWFXbjdqbjVzNVZoa1p1S0RENTlwMkoxSFdWWHlnSDZ0Z0h5a28?oc=5" target="_blank" rel="noopener noreferrer">‘전력 먹는 하마’ 데이터센터 갈등 세계 각국으로 확산 [기후신호등] ↗</a></span><span class="cd-sc num">중요도 1.5 / 5.0</span></div><p class="cd-meta">에너지경제신문 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-13</span> · 주간 보고 후보</p><p class="cd-why">데이터센터 EPC, 원전/SMR, 송배전 등 에너지 인프라 사업 기회와 직결될 수 있는 신호다.</p></article>
+<p class="cd-more">외 7건</p>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">중동·해외 수주 환경</span><span class="cd-count num">6건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMie0FVX3lxTE9Xdk9QcTNyRmY5MnBoMHpHTkU2S2JGVXNtTTZqVzR6TnQzckJidXBYVnNUOTlPY2NxVnJSV3BISGhOMWh0cmZOVkc1cXl4TGJFaTJvTFViT1lBN084MUVyMXU0QmlzUkl0X1QxSGtYSFpDNFd6bC1xWUJyWdIBgAFBVV95cUxNT2RHdDVXNWxUeDN0ZldMVldrd05RbzdRUDZ0QlBFcmhObm9TQWRWb2xCZmNUbmx4R2NPWXFlbmtaTTVEZHJSTExPamxjaThINWN4RTB4LV92bnl4WEttakhvSWdfaEFaMnZDbHN2RjhseTNpUEtnTlVaS2FFb1hacA?oc=5" target="_blank" rel="noopener noreferrer">중동 휴전에 해외 건설수주 볕들까 … 100조 전쟁 복구 시장 기대감 ↗</a></span><span class="cd-sc num">중요도 2.4 / 5.0</span></div><p class="cd-meta">뉴데일리 · <span class="num">2026-06-15</span> · 주간 보고 후보</p><p class="cd-why">중동·해외 발주 환경 변화로 해외수주 전략과 프로젝트 원가 관리에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMieEFVX3lxTE1Xb2FUV1JCRmoxa1hKTEREb09zVENRQl9SeEZzVDAwcGxEbzhZMk1udTd4RlF4RUNydWV5Zk9heTdNOW1jY29TdGN3QUl1QWFQZERNaklwWFJwbHJramxYVFE3ZHk2WHRESmRSZ0E1TkFURUl3RWo4OA?oc=5" target="_blank" rel="noopener noreferrer">&quot;플랜트 복구 물밑 협상 중&quot;…중동 시장 다시 열린다 ↗</a></span><span class="cd-sc num">중요도 2.2 / 5.0</span></div><p class="cd-meta">네이트 · <span class="num">2026-06-15</span> · 주간 보고 후보</p><p class="cd-why">중동·해외 발주 환경 변화로 해외수주 전략과 프로젝트 원가 관리에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE9KcWFGc1cyZU02T2FoWEdFb2RwS0U3OGZ0Q0pybWZfNjVPVG9sc2NkT19jYVQweWFhX1FrTnY2OUdEc2VKN2RQTTM2ZDE5SXNBRFN5XzQ4aXJKNk9vMWJTR09vUQ?oc=5" target="_blank" rel="noopener noreferrer">중동 재건 수혜 기대…삼성E&amp;A, 플랜트·LNG 기술력으로 수주 확대 ↗</a></span><span class="cd-sc num">중요도 2.1 / 5.0</span></div><p class="cd-meta">더테크 · <span class="num">2026-04-06</span> · 주간 보고 후보</p><p class="cd-why">중동·해외 발주 환경 변화로 해외수주 전략과 프로젝트 원가 관리에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE8wM0hBa3ZlVGZMLWRlUTRkRElrb0Z4U3hrandwNFBQd0pmT001N1k4N3VhazlnNWZNN3pyTjUwVU9KOWhkUHlEYmc2ZVlxajYtMERYNVpUVWhGYUk?oc=5" target="_blank" rel="noopener noreferrer">미·이란 종전 수순에 건설업계 기대감…중동 수주 재개 주목 ↗</a></span><span class="cd-sc num">중요도 1.9 / 5.0</span></div><p class="cd-meta">뉴스1 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-15</span> · 주간 보고 후보</p><p class="cd-why">중동·해외 발주 환경 변화로 해외수주 전략과 프로젝트 원가 관리에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMigwFBVV95cUxOSnl3a1FtU3dZN29yb3ItYy10V3c1Vmh5bFF4RW5WMXFPVGp2UTlBdUFTVWZJbG81VnVNYVNOczJ3RmloejM1Q3BmM1RZQXRveFR1ZkN3Q0t6b0l4dS1QeUNSQmpSUUxvRTVxLXJJU0FFajJLVG56Z2kzWUVyaGtTd1lLQQ?oc=5" target="_blank" rel="noopener noreferrer">&#x27;기회의 땅&#x27; 중동에서 탈출 고민에 빠진 건설사들 ↗</a></span><span class="cd-sc num">중요도 1.2 / 5.0</span></div><p class="cd-meta">인베스트조선 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-03-23</span> · 모니터링</p><p class="cd-why">중동·해외 발주 환경 변화로 해외수주 전략과 프로젝트 원가 관리에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiYkFVX3lxTE9xMkxSUkdKRXVROU04Skp2X3ZkWkt6aFJ3enhXOEtBdHUwMENXcHpPZTFBZzRfTVNMTUF5QnozNzZpb2p5OHIzUEloNWg4MnB6V1h2eC10OGI1dXdUWVBncmpR?oc=5" target="_blank" rel="noopener noreferrer">[버핏 리포트] 삼성E&amp;A, 사우디·UAE 가스전 잭팟…중동발 수주 기대 - 키움 ↗</a></span><span class="cd-sc num">중요도 1.1 / 5.0</span></div><p class="cd-meta">버핏연구소 · <span class="num">2026-06-09</span> · 모니터링</p><p class="cd-why">중동·해외 발주 환경 변화로 해외수주 전략과 프로젝트 원가 관리에 영향을 줄 수 있다.</p></article>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">건설현장 안전·중대재해</span><span class="cd-count num">5건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiakFVX3lxTE9GNjh3aXc5Z2FnMzJKMzdHMmpqNm54UmdOdUhVQkliTGpxdDZFdzRlUGw3XzRBR2NMNnRaRFNqZ3ZldlA2UUZIQ19ZRzBLUTNhaHBnNHR6UzViaUZEWXIyUEh4Q1l6Z25ieWfSAW9BVV95cUxQRjM4X2Q4d0x1RU9aenJRWXcxSWx6OUJKa1MyQXMxWVlEY3BSNEV5bVNfOUZ5amV1Um8yWnZkUWRBZmw1SjZNY3N2WWhVZlVqSHVtaVRNSVp3LXZURDJYaFI2RXE2a1NIVkgyUDAwN1U?oc=5" target="_blank" rel="noopener noreferrer">&quot;AI·로봇으로 더 안전한 건설현장&quot;…스마트건설 챌린지 개최 - 머니투데이 ↗</a></span><span class="cd-sc num">중요도 2.4 / 5.0</span></div><p class="cd-meta">머니투데이 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-15</span> · 주간 보고 후보</p><p class="cd-why">현장 안전·중대재해 규제 환경 변화로 안전관리 체계, 입찰 자격, 평판 리스크에 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE9iQi03YVZ3Z08zRHhnbG1lM3lDT0hJR1RnZUViR0Z1eUpYUjVhcXoxNW5TM0xBOG1ja2wtQUs1LWFNd296bTFkUExNbUhuckpsbWFZczJOYlF4c2gwdVYwNE8yMA?oc=5" target="_blank" rel="noopener noreferrer">중대재해처벌법 4년째인데…건설현장 사망사고는 여전 ↗</a></span><span class="cd-sc num">중요도 1.6 / 5.0</span></div><p class="cd-meta">쿠키뉴스 · <span class="num">2026-06-12</span> · 주간 보고 후보</p><p class="cd-why">현장 안전·중대재해 규제 환경 변화로 안전관리 체계, 입찰 자격, 평판 리스크에 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiXkFVX3lxTFBfVEZYZndsWXlTSzJjRjVXVUt2WHo0WkZNRFZqOHlxNEk3UVBLTVIteWxHZk9nSVhRV2dSV0F4dFdxYkg4TWtiMUNtZzd1UE5pSzVBZm5famhwX1NqZFE?oc=5" target="_blank" rel="noopener noreferrer">군산시 건설공사 중대재해 예방 교육 실시 ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">한국방송뉴스 · <span class="num">2026-06-09</span> · 모니터링</p><p class="cd-why">현장 안전·중대재해 규제 환경 변화로 안전관리 체계, 입찰 자격, 평판 리스크에 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMic0FVX3lxTE9xZ05HcDJEaU83VzRaNDZCVWRocjhHcGExZUcyNmVsb3J6NmNIVGpWSUpYLVZUVkhpcUJoZDBUOHZjLTh6UnhNOGExWFBMek56ekZOTWNJaGp2T3FyNGhJZV9vcDFDTlNwdnZHZF9RMTRwQkk?oc=5" target="_blank" rel="noopener noreferrer">[기고] 건설업 중대재해 예방하려면 행정조직 바뀌어야 ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">대한경제 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-11</span> · 모니터링</p><p class="cd-why">현장 안전·중대재해 규제 환경 변화로 안전관리 체계, 입찰 자격, 평판 리스크에 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBvbXo2RWk4dU04TWw4bUNoTnE4U3BUZWZXeVY5aUhHRmRHWTJuMVZxSTlIbFdCenFZTDFjRmQ5elRBSndHU1g5RzlTOEtzTHM?oc=5" target="_blank" rel="noopener noreferrer">[중대재해법 4년①] &quot;사망자 주는데&quot;⋯잇따른 사고가 드러낸 건설현장 안전 민낯 ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">v.daum.net · <span class="num">2026-05-28</span> · 모니터링</p><p class="cd-why">현장 안전·중대재해 규제 환경 변화로 안전관리 체계, 입찰 자격, 평판 리스크에 영향 가능성이 있다.</p></article>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">현대건설 직접 관련</span><span class="cd-count num">4건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMic0FVX3lxTE9iSE5BZlpSM3pNVFBFWXpNSkhyUG9pbloxMUdWenlZVVdQSzJWcEFiRGo0ak5KeWRJNlItOVFWT3Z2ZzdkOUlJU3hnZ2lEZ1FqWkNXSlJYSHpLQzQtRmRIR0d2Wl9oV0E2NzM5OFFBQWVpWW8?oc=5" target="_blank" rel="noopener noreferrer">[기획] 현대건설, 도시정비 12조·데이터센터 양 축 강화 ↗</a></span><span class="cd-sc num">중요도 2.8 / 5.0</span></div><p class="cd-meta">오늘경제 · <span class="num">2026-05-25</span> · 주간 보고 후보</p><p class="cd-why">현대건설이 직접 언급된 기사로, 수주 경쟁력과 시장 포지션에 즉각적인 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiYkFVX3lxTE9RUEJYN25LaFBDUjUzWWZDN1VFYktzbXA3clJlYjZTR2laU09YRW1JanF6d0E5Nm9yVGJSX3BMRjBWYVlMUFhhbVR4aDVfem9ldVVmVTZKRTB3YlpiMG9Qbld3?oc=5" target="_blank" rel="noopener noreferrer">영동대로 철근 누락에 현대건설 벌점 2.316점…공공수주 부담 커지나 ↗</a></span><span class="cd-sc num">중요도 2.7 / 5.0</span></div><p class="cd-meta">이코노미스트 · <span class="num">2026-06-12</span> · 모니터링</p><p class="cd-why">현대건설이 직접 언급된 기사로, 수주 경쟁력과 시장 포지션에 즉각적인 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiVEFVX3lxTFBPbDcxSldFZDBNUlYwWWk4LVJVaXlsVi1qVmZDaFhLWC1VYVFNekNEcWN5aUdwX0pUa2ZVMFNpYWZPMV9IU01faU1qY09LeEV1c0htUQ?oc=5" target="_blank" rel="noopener noreferrer">[단독] 서울시, 현대건설에 벌점 사전통보…분양·수주 영향권 ↗</a></span><span class="cd-sc num">중요도 2.7 / 5.0</span></div><p class="cd-meta">v.daum.net · <span class="num">2026-06-12</span> · 모니터링</p><p class="cd-why">현대건설이 직접 언급된 기사로, 수주 경쟁력과 시장 포지션에 즉각적인 영향 가능성이 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiqgJBVV95cUxQT0o1c1hlcVBJUGZMc1FEQTlvUUdHVVRscHNuRHowbEV6SHpNbUdFMjFNNkpyTFNTd2RERElSYUd6UGp1NXNHN0FNenlnTGJSYVlVZkYtMC1hZ1F0UUxjbHFYQmhKTVNLam1MVDRwSnNmdXdrTFNlZFA0Qjk5TTB6WG54S1NsUzBRQkZ6Q040QjlaUE9xZF9xeTVKOGZOdDZtZ3p1M0hoeVlzcVdIWWZQMnk0dE9IZTdsN2RqWDRfRzZjNnlPTWdlWDUzc2Z4SGFsX095OTF5WEFUNm5nRFEyT2haZTd1cmFGUGJFM2lxVXZHV2c4R1hac29jZDNHZF9KX1AzTHpIenprWHpDaFNBTFVYRFhiNHhHcXRacWVBU21LNDBlUmZpTFpR?oc=5" target="_blank" rel="noopener noreferrer">’30년 현장 전문가’의 역설…’경질론’ 직면한 이한우 현대건설 대표 ↗</a></span><span class="cd-sc num">중요도 2.6 / 5.0</span></div><p class="cd-meta">뉴스필드 · <span class="num">2026-06-15</span> · 모니터링</p><p class="cd-why">현대건설이 직접 언급된 기사로, 수주 경쟁력과 시장 포지션에 즉각적인 영향 가능성이 있다.</p></article>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">거시경제 변수</span><span class="cd-count num">4건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiYEFVX3lxTFBUOVpxemZWaVJtaTRuY3BwRnVfU05rWEh0NEctNUZ3WHN2bVRNNHJtaWJhVW1oWjVYSXBXM184OTk1aUQtVE5RM3FrZ3RxdmV3WGpxVFdoQks2NlFFVVVZddIBeEFVX3lxTE1uWXlTOFZKWjlqNnVITG5NRTJxMFo0ZllkNmJJQTgyb0lSeDFJZjJmOUM2UE4yU0FqU1ptbGJvUnF5c19HdUQ1ZGtDczVBWks3dTVMZGZEeFJPb0J4SXR5cVVQMTBWQUtmRjVHQUk4TDBjT2YtY3pYNg?oc=5" target="_blank" rel="noopener noreferrer">공사비·환율·유가 &#x27;삼중고&#x27;…분양가 상승 압력 키운다 ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">뉴시스 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-05-29</span> · 모니터링</p><p class="cd-why">환율·금리·원자재 등 거시 변수 변화로 해외수주 원가와 프로젝트 파이낸싱 여건에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMickFVX3lxTE9uQzlDVV8wQlp6WFNGMVMxOUF4TkhRWFpYQl93UXkxMGRWdVdVUGpRSnd6VHlHdFYzeHZFV1lxLTEwNlFxbXE5X2hXR1hoczNtdTlNQlB3ZjVMQ1lLV2c4TG56VFUwSnBudHdobmZpT3lYUQ?oc=5" target="_blank" rel="noopener noreferrer">&#x27;고환율 시대&#x27; 생존 법칙…건설업계 &#x27;원가율&#x27; 개선 총력 ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">오피니언뉴스 · <span class="num">2025-12-04</span> · 모니터링</p><p class="cd-why">환율·금리·원자재 등 거시 변수 변화로 해외수주 원가와 프로젝트 파이낸싱 여건에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiV0FVX3lxTE5ZMS1pWmdSQmhjdmNWWlhOeEk0X2M1MHpsVjF1MVh6dGZYUW9TcTlXOUVoS01aU1ZST05qQVU3VEhhbFpkNW9WT2ZYV2JzbTJSbk1pYk43MNIBhgJBVV95cUxQb29saHZ0UzMtRXRPZ2hWNERnMWpSb0swS2VuMjB0T3poV3M4cktzdE5Cc3BJVnM4andKX2FTMWJUNWVoQmdNMFQ5LUxtSnBJbDE5UXVjWVB3am9UVW9CYUVQNEY4ZEpHLW5PSHBBa1dTZGVHUUJyblo2WmxhcURPU290VGxaLU4xc0JCMldMTmtaUm1sVTY0M0tPOXIyZEFKNzVreUhfNUFvWkYxRUUyeDIxQzhWQnJ0dXRBWWw5Wk83WHREN3FfMndUa1pSRzhzT2k1YTR1dHBGYjYxMHJVMW92MHdjTkNpRGxRR1FDNjV6N2VMenpzNnFjbUdycVNpVGo5Sy1R?oc=5" target="_blank" rel="noopener noreferrer">환율 1500원대 ‘뉴노멀’…중소 건설사 생존 시험대 ↗</a></span><span class="cd-sc num">중요도 1.2 / 5.0</span></div><p class="cd-meta">데일리안 · <span class="num">2026-06-11</span> · 모니터링</p><p class="cd-why">환율·금리·원자재 등 거시 변수 변화로 해외수주 원가와 프로젝트 파이낸싱 여건에 영향을 줄 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE52MG5abUdXMEZaMHRONmJtdVBCRmIwWTVCMWhad2NTUXJZWW9ZMmljNWhENVFvNXZxTHZUcVdiMjh6c004dno0VDlYSGp1MmJKRkJDZGlFTnZaSVJBb2dVRE5WdVIyM21uSlNRNmRhT0FKVXFY?oc=5" target="_blank" rel="noopener noreferrer">수요 반토막에도 자재가격 ‘요지부동’…건설현장 高환율의 역습 ↗</a></span><span class="cd-sc num">중요도 1.2 / 5.0</span></div><p class="cd-meta">대한경제 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2025-11-21</span> · 모니터링</p><p class="cd-why">환율·금리·원자재 등 거시 변수 변화로 해외수주 원가와 프로젝트 파이낸싱 여건에 영향을 줄 수 있다.</p></article>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">스마트건설 기술</span><span class="cd-count num">3건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiZkFVX3lxTE03U0tmTUZpRkNJQWI2SkZVQl9XWVliSjdNTTAwZkRuQU9fTG53R0Z5QkZkSkdtS0RqT0VBM1RXRGV2UHVBV0ZhaUZBWTFkOVY2emxGRnFnSkFaMjY5dFN1N2RuM0loUQ?oc=5" target="_blank" rel="noopener noreferrer">전북대, ‘AI 건설 로봇 혁신센터’ 설립 다자간 업무협약… 스마트건설 생태계 지역 확장 박차 ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">한국대학신문 · <span class="num">2026-06-12</span> · 모니터링</p><p class="cd-why">스마트건설 기술 확산 흐름으로, 생산성·안전 분야 기술 도입 검토와 연결될 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMigAFBVV95cUxNdG84dVNTcjd6U1A2aDJ6ZUtyYlNiNHBsdUJkcU9QV0ZMUzRfZXVyNTZXRW5COXlvbWZaTERJdGJ1SnNFZVF4LXE3a2RIaTNUcHBFNjhPQzhhM0haTTFGTXotN3R6S1hqMEUtOV9BbzlRaktGb1BKSUdMX3V4eTY5dA?oc=5" target="_blank" rel="noopener noreferrer">AI·로봇으로 건설현장 바꾼다…국토부, 스마트건설 챌린지 개최 ↗</a></span><span class="cd-sc num">중요도 0.9 / 5.0</span></div><p class="cd-meta">이데일리 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-14</span> · 모니터링</p><p class="cd-why">스마트건설 기술 확산 흐름으로, 생산성·안전 분야 기술 도입 검토와 연결될 수 있다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE9YMFRiZ0pLdUV3bDRsS3JWeExtY25ZMWs0VmlfWkg0dnJ2aVV0X1pkd1o0YVRxODZ3OEc0NDVyV2hDRDBtM2pTQVpVWmF1RWl1VVVMXzhUOWdXbks4NjRYa2U2ZnJvZjhy?oc=5" target="_blank" rel="noopener noreferrer">국토부, AI·로봇 등 스마트건설 챌린지 개최 ↗</a></span><span class="cd-sc num">중요도 0.9 / 5.0</span></div><p class="cd-meta">한국주택경제신문 · <span class="num">2026-06-15</span> · 모니터링</p><p class="cd-why">스마트건설 기술 확산 흐름으로, 생산성·안전 분야 기술 도입 검토와 연결될 수 있다.</p></article>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">건설산업 일반</span><span class="cd-count num">2건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiVkFVX3lxTE9MSUVuVVRzeUU2ZXVnaXhtZ0FKaW5DLUh0M0tWOXNkWEZqQWZxSkNsOFJ1UTZYZmllME9Ra0VlZGQ2cTNmZTZVWFYtVHNnSWxFY0tacFN3?oc=5" target="_blank" rel="noopener noreferrer">[건설플러스] 동부건설, 올해 수주 1조원 초과…‘균형 포트폴리오’ 두각 外 ↗</a></span><span class="cd-sc num">중요도 0.8 / 5.0</span></div><p class="cd-meta">DealSite경제TV · <span class="num">2026-06-12</span> · 모니터링</p><p class="cd-why">현대건설 사업과의 직접 연관성은 낮아 참고 수준의 모니터링 대상이다.</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiUkFVX3lxTE0yU2pnZlhjMmxkbWdvYUU0bXdTcFhrYkRnS2UzU0hUNjJVMGdwSjBVUkZkY3ZlWHd6VDhMUDV0RW1yTm53a2xNcEZvRFM5eFJpNkE?oc=5" target="_blank" rel="noopener noreferrer">[미·이란 종전] 건설업 &#x27;재건 특수&#x27; 기대감…대이란 제재가 변수 ↗</a></span><span class="cd-sc num">중요도 0.7 / 5.0</span></div><p class="cd-meta">매일경제 마켓 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-15</span> · 모니터링</p><p class="cd-why">현대건설 사업과의 직접 연관성은 낮아 참고 수준의 모니터링 대상이다.</p></article>
+</div></details>
+</section>
 <section aria-label="Macro Snapshot">
 <h2 class="sec-h">MACRO SNAPSHOT<span class="tag">시장지표 미연동</span></h2>
 <p class="macro-note">시장지표는 아직 실시간 연동 전입니다 — 현재 시장값이 아니므로 수치를 표시하지 않습니다.</p>
@@ -232,7 +325,7 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <p>※ 유사 주제 기사는 제목·토픽 기준의 참고 묶음(추정)이며, 동일 사건 클러스터 확정값은 아닙니다.</p>
 <p>※ 출처 품질 필터: 블로그·카페·커뮤니티성 결과는 제외하거나 낮은 우선순위로 처리합니다. 출처 품질은 사실 보증이 아니라 랭킹/필터 가드레일입니다.</p>
 </div>
-<footer class="num">생성 2026-06-15T14:54:44+09:00 · HDEC Executive Radar</footer>
+<footer class="num">생성 2026-06-15T16:06:26+09:00 · HDEC Executive Radar</footer>
 </div>
 </body>
 </html>

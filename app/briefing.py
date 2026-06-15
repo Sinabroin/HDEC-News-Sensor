@@ -22,6 +22,8 @@ HEADER = "HDEC Executive Radar"
 TOP_IMMEDIATE = 3
 TOP_ISSUES = 5
 TOP_THEMES = 5
+# 카테고리 드릴다운에서 카테고리당 노출할 근거 기사 상한 (모바일 가독성 · 나머지는 '외 n건')
+TOP_CATEGORY_ARTICLES = 6
 
 # spread 한계 고지: 토픽 후보 집합이 겹치는 신호 수 기반의 보수적 추정이다.
 # (동일 사건 클러스터링이 아니며, dedup으로 제거된 중복 기사는 집계되지 않는다)
@@ -46,6 +48,12 @@ THEME_STRENGTH_NOTE = (
 SOURCE_QUALITY_NOTE = (
     "출처 품질 필터: 블로그·카페·커뮤니티성 결과는 제외하거나 낮은 우선순위로 "
     "처리합니다. 출처 품질은 사실 보증이 아니라 랭킹/필터 가드레일입니다."
+)
+# 카테고리 드릴다운 고지 — UI·리포트가 그대로 노출하는 단일 소스 (P0-C1.7)
+CATEGORY_DRILLDOWN_NOTE = (
+    "카테고리별 근거 기사는 수집된 기사의 제목·출처·링크·중요도 기준 근거 목록입니다 "
+    "(본문 전문은 저장하지 않습니다). 블로그·카페 등 비-뉴스 출처는 근거 목록에서 제외하며, "
+    "카테고리 총건수에는 포함해 감사 가능하게 둡니다."
 )
 
 # 저장된 implication 텍스트 → insight 카테고리 키 역매핑 (탐지 로직 중복 방지)
@@ -221,6 +229,97 @@ def _is_excluded_quality(row: dict) -> bool:
     """블로그/카페/커뮤니티성 출처인지 — Top 3/Top 5 노출에서 배제할지 판정 (P0-C1.6)."""
     return source_quality.classify(
         row.get("source"), row.get("title"))["source_quality"] == "excluded"
+
+
+def _has_http_url(url) -> bool:
+    return bool(url) and str(url).startswith(("http://", "https://"))
+
+
+def _category_article_entry(row: dict, category_key: str, implication: str) -> dict:
+    """카테고리 드릴다운용 근거 기사 항목 — 표시 전용 파생값 (P0-C1.7).
+
+    저장된 article/score 값을 그대로 옮길 뿐 점수·등급을 재계산하지 않는다.
+    제목/출처/링크/시각/중요도만 담는다 — 본문 전문은 절대 싣지 않는다 (rules.md §3).
+    """
+    quality = source_quality.classify(row.get("source"), row.get("title"))
+    url = row.get("url")
+    return {
+        "article_id": row["id"],
+        "title": row["title"],
+        "source": row.get("source") or "출처 미상",
+        "source_quality": quality["source_quality"],
+        "source_quality_label": quality["source_quality_label"],
+        "published_at": row.get("published_at"),
+        "url": url,
+        "has_original_link": _has_http_url(url),
+        "final_score": row.get("final_score"),
+        "score_band": score_band(row.get("final_score")),
+        "alert_grade": row.get("alert_grade"),
+        "action_label": ACTION_LABEL_BY_GRADE.get(row.get("alert_grade"), "모니터링"),
+        "category": category_key,
+        "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
+        "why_it_matters": implication,
+    }
+
+
+def _build_category_sections(scored_rows: list[dict], categories: dict[str, str],
+                             implications: dict[str, str]) -> list[dict]:
+    """카테고리별 근거 기사 섹션을 만든다 — 집계/정렬만 (점수·등급 재계산 없음, P0-C1.7).
+
+    설계 원칙:
+    - total_count는 채점된 전 기사 기준이라 카테고리 요약 카운트와 정확히 일치한다
+      (수집 총량을 카테고리별로 감사 가능하게 한다).
+    - top_articles는 블로그/카페/커뮤니티성(excluded) 출처를 제외한 '뉴스 근거'만 노출한다
+      — 임원용 근거 목록에 비-뉴스 결과가 섞이지 않게 하는 가드레일(P0-C1.6과 동일 정책).
+    - 표시 한도(TOP_CATEGORY_ARTICLES)를 넘는 분량과 비-뉴스 제외분은 '외 n건'으로 정직히 표기한다.
+    """
+    grouped: dict[str, list[dict]] = {}
+    for row in scored_rows:
+        grouped.setdefault(categories.get(row["id"], "general"), []).append(row)
+
+    sections = []
+    for cat_key, rows in grouped.items():
+        total = len(rows)
+        instant = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_INSTANT)
+        daily = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_DAILY)
+        weekly = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_WEEKLY)
+        excluded = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_EXCLUDED)
+
+        # 근거 목록 풀: excluded 품질(블로그/카페/커뮤니티)은 빼고 점수순으로 정렬한다.
+        evidence = sorted(
+            (r for r in rows if not _is_excluded_quality(r)),
+            key=lambda r: (-(r.get("final_score") or 0), r["id"]))
+        top = [_category_article_entry(r, cat_key, implications.get(r["id"], ""))
+               for r in evidence[:TOP_CATEGORY_ARTICLES]]
+        sources = {(r.get("source") or "출처 미상") for r in evidence}
+
+        shown = len(top)
+        remaining = total - shown          # '외 n건' (표시 한도 초과분 + 비-뉴스 제외분)
+        weak = total - len(evidence)       # 근거 목록에서 빠진 비-뉴스(블로그/카페 등) 수
+        note_parts = []
+        if remaining > 0:
+            note_parts.append(f"외 {remaining}건")
+        if weak > 0:
+            note_parts.append(f"블로그·카페 등 비-뉴스 출처 {weak}건은 근거 목록에서 제외")
+        sections.append({
+            "category_key": cat_key,
+            "category_label": insight.CATEGORY_PHRASE.get(cat_key, "건설산업 일반"),
+            "total_count": total,
+            "all_articles_count": total,
+            "evidence_count": len(evidence),
+            "shown_count": shown,
+            "remaining_count": remaining,
+            "weak_count": weak,
+            "instant_count": instant,
+            "daily_count": daily,
+            "weekly_count": weekly,
+            "excluded_count": excluded,
+            "source_count": len(sources),
+            "top_articles": top,
+            "note": " · ".join(note_parts),
+        })
+    sections.sort(key=lambda s: (-s["total_count"], s["category_key"]))
+    return sections
 
 
 def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int) -> list[dict]:
@@ -419,6 +518,10 @@ def build_brief(pipeline_counts: dict | None = None,
                                 key=lambda kv: (-kv[1]["count"], kv[0]))
     ]
 
+    # 카테고리별 근거 기사 드릴다운 (P0-C1.7) — 채점된 전 기사를 카테고리로 묶어
+    # 수집 총량을 카테고리별로 감사 가능하게 한다 (점수·등급 재계산 없음, DB 쓰기 없음).
+    category_sections = _build_category_sections(scored, categories, implications)
+
     top_theme = theme_rankings[0]["theme"] if theme_rankings else None
     one_liner = _compose_one_liner(signal_rows, categories, immediate_count, top_theme)
 
@@ -454,22 +557,24 @@ def build_brief(pipeline_counts: dict | None = None,
         "weekly_count": weekly_count,
         "excluded_count": excluded_count,
         "status_board": [
-            {"key": "detected", "label": "오늘 감지 신호", "value": len(rows)},
+            {"key": "detected", "label": "수집·분석 기사", "value": len(rows)},
             {"key": "immediate", "label": scoring.GRADE_INSTANT, "value": immediate_count},
             {"key": "daily", "label": scoring.GRADE_DAILY, "value": daily_count},
             {"key": "weekly", "label": scoring.GRADE_WEEKLY, "value": weekly_count},
-            {"key": "excluded", "label": "제외/참고", "value": excluded_count},
+            {"key": "excluded", "label": "참고/제외", "value": excluded_count},
         ],
         "executive_one_liner": one_liner,
         "top_immediate_signals": top_immediate,
         "top_new_issues": top_issues,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
+        "category_sections": category_sections,
         "macro_snapshot": macro,
         "spread_method": SPREAD_METHOD,
         "spread_note": SPREAD_NOTE,
         "theme_strength_note": THEME_STRENGTH_NOTE,
         "source_quality_note": SOURCE_QUALITY_NOTE,
+        "category_drilldown_note": CATEGORY_DRILLDOWN_NOTE,
         "operator_note": OPERATOR_NOTE,
         "pipeline_counts": pipeline_counts,
     }

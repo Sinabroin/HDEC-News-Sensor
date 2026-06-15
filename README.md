@@ -439,7 +439,46 @@ NEWS_MODE=live python3 scripts/build_static_report.py --output /tmp/hdec_live_qu
 > 패턴에 추가해야 잡힌다. Google News 리다이렉트 URL은 MVP에서 그대로 허용하며
 > (발행사 해석은 불안정·불필요한 위험), 발행사 명확화는 RSS가 주는 출처명 노출로 대신한다.
 
-## 16. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 16. Category Drilldown & Evidence Explorer (P0-C1.7)
+
+리포트가 "Top 3 요약 + 카테고리 건수"만 보여주던 단계에서, **수집·분석된 30여 건을
+카테고리별로 펼쳐 근거를 직접 감사**할 수 있는 임원용 evidence brief로 확장했다.
+이제 "AI 데이터센터·전력 인프라 13건"이 **어떤 기사들로 구성됐는지** 클릭해 확인할 수 있다.
+
+- **수집 총량을 카테고리별로 감사할 수 있다.** brief의 `category_sections`는 채점된 전 기사를
+  카테고리로 묶으며, 각 섹션의 `total_count` 합계는 카테고리 요약 카운트 합계와 정확히 일치한다.
+- **카테고리 기사 목록은 '근거 목록'이지 본문 아카이브가 아니다.** 각 항목은 제목·출처·출처 품질·
+  발행 시각·**중요도(/5.0)**·등급·원문 링크·시사점(왜 중요한가)만 담는다.
+- **본문 전문은 저장하지 않는다.** `category_sections` 항목에 `snippet`/본문 계열 필드는 없으며,
+  rules.md §3(본문 전문 미저장) 계약을 그대로 따른다 — RSS가 준 메타데이터만 파생 요약한다.
+- **비-뉴스 출처는 근거 목록에서 제외하되 건수에는 포함한다.** 블로그·카페·커뮤니티성(excluded)
+  출처는 근거 목록(`top_articles`)에 노출하지 않지만 카테고리 총건수에는 남겨 "외 n건"으로
+  정직하게 표기한다 (P0-C1.6 Top-3 가드와 동일 정책).
+- **표시 레이어:**
+  - 정적 리포트 — "카테고리별 근거 기사" 섹션을 **네이티브 `<details>`/`<summary>`**로 렌더
+    (외부 JS/CDN 0건). 원문 링크는 새 탭 + `rel="noopener noreferrer"`.
+  - 대시보드 — Today Signals 아래 "카테고리별 근거 기사" 섹션. 카테고리 칩을 누르면 해당
+    카테고리의 근거 기사가 인라인으로 표시되고, 기사를 누르면 기존 상세 패널이 열린다.
+  - Telegram — 드릴다운을 넣지 않고 "원문·점수·카테고리별 근거 기사는 리포트에서 확인" 한 줄로만
+    가리킨다 (다이제스트는 간결 유지).
+- **용어 정리(Phase 5):** `오늘 감지 신호`→`수집·분석 기사`, `제외/참고`→`참고/제외`,
+  즉시 확인급이 없는 날의 헤딩은 `주요 관찰 신호` + "즉시 확인급 신호 없음" 안내(낮은 점수도
+  숨기지 않고 이유를 설명).
+- **시장지표는 여전히 미연동이다.** 거시 지표 실시간 연동은 다음 스프린트(§17 P0-C2)다.
+
+```bash
+# 카테고리 드릴다운 회귀 검증 (네트워크 없이 결정적 — RESULT: PASS / exit 0)
+python3 scripts/verify_category_drilldown.py
+
+# 실제 공개 RSS로 카테고리 드릴다운 리포트 생성 (네트워크 필요, 비밀값 불필요)
+NEWS_MODE=live python3 scripts/build_static_report.py --output /tmp/hdec_live_category_report.html
+```
+
+> 한계: 카테고리당 노출 근거 기사는 상위 6건(`TOP_CATEGORY_ARTICLES`)이며 나머지는 "외 n건"으로
+> 집계만 한다. 카테고리 분류는 저장된 insight implication의 역매핑이라 새 카테고리는 정책에
+> 추가해야 잡힌다. 카테고리 필터는 단일 선택(칩)이며 다중 필터/검색은 범위 밖이다.
+
+## 17. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

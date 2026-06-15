@@ -107,7 +107,7 @@ def format_digest_message(data: dict) -> str:
     all_instant = bool(signals) and all(
         s.get("alert_grade") == "즉시 알림 후보" for s in signals)
     has_instant = any(s.get("alert_grade") == "즉시 알림 후보" for s in signals)
-    section = "즉시 알림 후보" if all_instant else "주요 신호"
+    section = "즉시 알림 후보" if all_instant else "주요 관찰 신호"
     lines += ["", f"[{section} Top {len(signals)}]"]
     for s in signals:
         lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
@@ -152,7 +152,8 @@ def format_digest_message(data: dict) -> str:
         lines += ["", "[Macro Snapshot]",
                   "시장지표 미연동 — 현재 시장값 아님 · 상세는 '오늘 브리프 보기' 리포트에서 확인"]
 
-    lines += ["", "※ 유사 주제 기사 수는 추정값입니다 · 원문/점수 상세는 리포트에서 확인하세요."]
+    lines += ["", "※ 유사 주제 기사 수는 추정값입니다 · 원문·점수·카테고리별 근거 기사는 "
+              "'오늘 브리프 보기' 리포트에서 확인하세요."]
     message = "\n".join(lines)
     if len(message) > MESSAGE_BUDGET:
         message = message[: MESSAGE_BUDGET - 1] + "…"

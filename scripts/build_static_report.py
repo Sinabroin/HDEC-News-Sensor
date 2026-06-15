@@ -158,6 +158,36 @@ section{margin-top:26px;}
 .cat-row .cnt{font-weight:650;color:var(--ink);}
 .cat-row .imm{font-size:10.5px;color:var(--signal);font-weight:700;letter-spacing:.06em;margin-left:5px;}
 
+/* ---- 카테고리별 근거 기사 (드릴다운, JS 없이 <details>만) ---- */
+.cd-note{font-size:11px;color:var(--muted);margin:9px 0 4px;line-height:1.55;}
+details.cat-drill{border-bottom:1px solid var(--hairline);}
+details.cat-drill:first-of-type{border-top:1px solid var(--hairline-2);}
+details.cat-drill>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;
+  gap:9px;padding:11px 2px;}
+details.cat-drill>summary::-webkit-details-marker{display:none;}
+details.cat-drill>summary::before{content:"▸";color:var(--muted);font-size:10px;
+  flex:0 0 9px;transform:translateY(-1px);}
+details.cat-drill[open]>summary::before{content:"▾";}
+.cd-label{font-size:13.5px;font-weight:680;color:var(--ink);}
+.cd-count{color:var(--ink);font-size:12px;font-weight:650;white-space:nowrap;}
+.cd-imm{color:var(--signal);font-size:10px;font-weight:750;letter-spacing:.04em;white-space:nowrap;}
+.cd-flex{flex:1;}
+.cd-body{padding:1px 0 13px 17px;}
+.cd-art{padding:9px 0;border-top:1px dashed var(--hairline);}
+.cd-art:first-child{border-top:none;}
+.cd-art-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+.cd-title{font-size:13.5px;font-weight:600;line-height:1.46;}
+.cd-title a{color:inherit;text-decoration:none;border-bottom:1px solid var(--hairline-2);}
+.cd-title a:hover{border-bottom-color:var(--accent);}
+.cd-sc{font-size:11px;font-weight:750;color:var(--navy);white-space:nowrap;}
+.cd-meta{font-size:11px;color:var(--muted);margin-top:3px;}
+.cd-meta .srcq{font-weight:700;}
+.cd-meta .srcq.trust{color:var(--accent);}
+.cd-meta .srcq.low{color:var(--signal);}
+.cd-why{font-size:11.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
+.cd-more{font-size:11px;color:var(--muted);margin-top:9px;}
+.cd-empty{font-size:11.5px;color:var(--muted);padding:6px 0;}
+
 /* ---- Macro Snapshot ---- */
 .macro-note{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.6;}
 .macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
@@ -304,6 +334,77 @@ def _render_signal(index: int, entry: dict) -> str:
     return "\n".join(parts)
 
 
+def _fmt_date(value) -> str:
+    """published_at에서 날짜(YYYY-MM-DD)만 추려 근거 목록을 간결하게 표기한다."""
+    text = str(value or "")
+    return text[:10] if len(text) >= 10 else (text or "-")
+
+
+def _render_category_article(art: dict) -> str:
+    """카테고리 드릴다운 한 줄 — 제목(원문 링크)/중요도/출처/품질/시각/액션 + 시사점."""
+    url = art.get("url") or ""
+    title = art.get("title") or ""
+    title_html = (_source_link(url, f"{title} ↗") if _is_http(url) else escape(title))
+    meta = [escape(art.get("source") or "출처 미상")]
+    sq = art.get("source_quality")
+    if sq in ("trusted", "low"):
+        cls = "srcq trust" if sq == "trusted" else "srcq low"
+        meta.append(f'<span class="{cls}">{escape(art.get("source_quality_label") or "")}</span>')
+    meta.append(f'<span class="num">{escape(_fmt_date(art.get("published_at")))}</span>')
+    meta.append(escape(art.get("action_label") or "모니터링"))
+    parts = [
+        '<article class="cd-art">',
+        '<div class="cd-art-head">',
+        f'<span class="cd-title">{title_html}</span>',
+        f'<span class="cd-sc num">중요도 {_fmt5(art.get("final_score"))} / 5.0</span>',
+        '</div>',
+        f'<p class="cd-meta">{" · ".join(meta)}</p>',
+    ]
+    if art.get("why_it_matters"):
+        parts.append(f'<p class="cd-why">{escape(art["why_it_matters"])}</p>')
+    parts.append('</article>')
+    return "".join(parts)
+
+
+def _render_category_drilldown(brief: dict) -> list[str]:
+    """카테고리별 근거 기사 섹션 — 네이티브 <details>/<summary>만 사용 (JS·CDN 0건).
+
+    수집·분석된 기사를 카테고리별로 펼쳐 근거(제목·출처·중요도·원문 링크)를 감사할 수
+    있게 한다. 본문 전문은 싣지 않는다 (brief 파생 요약만 렌더링).
+    """
+    sections = brief.get("category_sections") or []
+    total = sum(s.get("total_count", 0) for s in sections)
+    body = ['<section aria-label="카테고리별 근거 기사">',
+            '<h2 class="sec-h">카테고리별 근거 기사'
+            f'<span class="tag">수집·분석 {total}건 · 펼쳐서 근거 확인</span></h2>']
+    if not sections:
+        body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p></section>')
+        return body
+    body.append(f'<p class="cd-note">{escape(brief.get("category_drilldown_note") or "")}</p>')
+    for i, sec in enumerate(sections):
+        open_attr = " open" if i == 0 else ""  # 최상위 카테고리는 기본 펼침 (발견성)
+        imm = (f'<span class="cd-imm">즉시 {sec["instant_count"]}</span>'
+               if sec.get("instant_count") else "")
+        body.append(f'<details class="cat-drill"{open_attr}>')
+        body.append(
+            '<summary>'
+            f'<span class="cd-label">{escape(sec.get("category_label") or "")}</span>'
+            f'<span class="cd-count num">{sec.get("total_count", 0)}건</span>'
+            f'{imm}<span class="cd-flex"></span></summary>')
+        body.append('<div class="cd-body">')
+        arts = sec.get("top_articles") or []
+        if arts:
+            body += [_render_category_article(a) for a in arts]
+        else:
+            body.append('<p class="cd-empty">표시 가능한 뉴스 출처 근거가 없습니다 '
+                        '(블로그·카페 등 비-뉴스 출처만 수집됨).</p>')
+        if sec.get("note"):
+            body.append(f'<p class="cd-more">{escape(sec["note"])}</p>')
+        body.append('</div></details>')
+    body.append('</section>')
+    return body
+
+
 def _render_macro_section(brief: dict) -> list[str]:
     """Macro Snapshot 섹션 — live가 아닌 한 수치를 렌더링하지 않는다 (P0-B6)."""
     macro = brief.get("macro_snapshot") or {}
@@ -368,12 +469,18 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     ]
 
     signals = brief.get("top_immediate_signals") or []
+    immediate_count = brief.get("immediate_count", 0)
     all_instant = bool(signals) and all(
         s.get("alert_grade") == "즉시 알림 후보" for s in signals)
-    heading = "즉시 알림 후보" if all_instant else "주요 신호"
+    # 즉시 확인급이 전부일 때만 '즉시 알림 후보', 아니면 '주요 관찰 신호'(주간 모니터링 톤).
+    heading = "즉시 알림 후보" if all_instant else "주요 관찰 신호"
     body.append('<section aria-label="주요 시그널">')
     body.append(f'<h2 class="sec-h">{heading} TOP {len(signals)}'
                 '<span class="tag">점수순 · 운영자 검토 전 자동 선별</span></h2>')
+    if signals and not immediate_count:
+        # 즉시 확인급(신뢰 출처 4.5+)이 없는 날 — 낮은 점수를 숨기지 않고 이유를 명시한다.
+        body.append('<p class="cd-note">즉시 확인급 신호 없음 — 아래는 주간 모니터링 '
+                    '후보 중심입니다 (중요도가 낮아도 숨기지 않고 표시합니다).</p>')
     if signals:
         sections.append("top_signals")
         body += [_render_signal(i, s) for i, s in enumerate(signals, start=1)]
@@ -430,6 +537,10 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p>')
     body.append('</section></div>')
 
+    if brief.get("category_sections"):
+        sections.append("category_drilldown")
+    body += _render_category_drilldown(brief)
+
     sections.append("macro")
     body += _render_macro_section(brief)
 
@@ -479,6 +590,7 @@ def report_metadata(brief: dict, html: str, sections: list[str]) -> dict:
         "signal_count": len(brief.get("top_immediate_signals") or []),
         "theme_count": len(brief.get("theme_rankings") or []),
         "category_count": len(brief.get("category_counts") or []),
+        "category_section_count": len(brief.get("category_sections") or []),
         "macro_included": "macro" in sections,
         "executive_one_liner": brief["executive_one_liner"],
         "default_output": DEFAULT_OUTPUT,
