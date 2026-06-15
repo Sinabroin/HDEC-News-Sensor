@@ -1,7 +1,12 @@
-"""Collector 도메인 — mock 기사 로드, 정규화, dedup, 저장 호출.
+"""Collector 도메인 — 기사 로드, 정규화, dedup, 저장 호출.
 
-P0-A 데이터 소스는 data/mock_articles.json 단 하나다 (rules.md §2).
-이 파일은 네트워크 라이브러리를 import하지 않으며, 점수 계산·insight·알림을 하지 않는다.
+NEWS_MODE=mock(기본)은 data/mock_articles.json 단 하나만 읽는다 (rules.md §2 — mock은
+네트워크 0건). NEWS_MODE=live(운영자가 명시적으로 설정한 경우만)는 app/live_collector.py가
+공개 RSS에서 가져온 raw dict를 정규화한다.
+
+이 파일은 네트워크 라이브러리를 모듈 레벨에서 import하지 않는다 (rules.md §10 D3). live
+경로일 때만 live_collector를 지연 import한다. 점수 계산·insight·알림은 하지 않는다.
+정규화/dedup/저장 파이프라인은 mock·live가 완전히 동일하게 공유한다.
 """
 
 import hashlib
@@ -56,7 +61,8 @@ def _match_topic_candidates(title: str, snippet: str, queries: list[str]) -> lis
     return matched[:3]
 
 
-def _to_article_row(raw: dict, queries: list[str], collected_at: str) -> dict:
+def _to_article_row(raw: dict, queries: list[str], collected_at: str,
+                    signal_origin: str = "Mock") -> dict:
     title = (raw.get("title") or "").strip()
     snippet = (raw.get("snippet") or "")[:SNIPPET_MAX_LEN]
     metadata = raw.get("source_metadata") or {}
@@ -74,7 +80,7 @@ def _to_article_row(raw: dict, queries: list[str], collected_at: str) -> dict:
         "topic_candidates": json.dumps(
             _match_topic_candidates(title, snippet, queries), ensure_ascii=False
         ),
-        "signal_origin": "Mock",
+        "signal_origin": signal_origin,
         "source_metadata_json": json.dumps(safe_metadata, ensure_ascii=False),
         "status": "collected",
     }
@@ -94,20 +100,13 @@ def _dedup(rows: list[dict]) -> list[dict]:
     return kept
 
 
-def run(mode: str = "mock") -> dict:
-    """mock 기사 로드 → 정규화 → dedup(배치+DB) → articles 저장.
-
-    P0-A에는 mock 경로만 존재한다. 다른 mode는 명시적으로 거부해
-    어떤 경로로도 외부 호출이 생기지 않게 한다.
-    """
-    if mode != "mock":
-        raise ValueError("Day-1 P0-A는 APP_MODE=mock만 지원한다 (rules.md §2)")
-
-    raw_articles = _load_mock_articles()
+def _ingest(raw_articles: list[dict], signal_origin: str) -> tuple[int, int, int]:
+    """raw 기사들을 정규화 → dedup(배치+DB) → articles 저장. (collected, deduped, inserted)."""
     queries = _load_topic_queries()
     collected_at = db.now_iso()
 
-    rows = [_to_article_row(raw, queries, collected_at) for raw in raw_articles]
+    rows = [_to_article_row(raw, queries, collected_at, signal_origin)
+            for raw in raw_articles]
     deduped = _dedup(rows)
 
     existing_titles = db.get_existing_normalized_titles()
@@ -117,10 +116,59 @@ def run(mode: str = "mock") -> dict:
             continue
         if db.insert_article(row):
             inserted += 1
+    return len(rows), len(deduped), inserted
 
+
+def _run_mock(fallback: bool = False, attempted: str = "mock") -> dict:
+    """mock 기사 파이프라인. fallback=True면 live 실패 후 대체된 것임을 표기한다."""
+    collected, deduped, inserted = _ingest(_load_mock_articles(), "Mock")
     return {
-        "collected": len(rows),
-        "deduplicated": len(deduped),
+        "collected": collected,
+        "deduplicated": deduped,
         "inserted": inserted,
+        "news_data_mode": "mock",
+        "news_source": "mock_fallback" if fallback else "mock",
+        "attempted_mode": attempted,
+        "fallback_used": fallback,
+    }
+
+
+def _run_live() -> dict:
+    """공개 RSS 수집 파이프라인. 0건이면 live를 주장하지 않고 mock으로 fallback한다.
+
+    네트워크 import는 이 함수 안에서만 일어난다 (rules.md §10 D3 — collector 모듈
+    레벨 네트워크 import 금지). live가 실패하면 가짜 live 값을 만들지 않고
+    mock fallback을 명시 라벨과 함께 반환한다 ("live 주장 금지").
+    """
+    from app import live_collector
+
+    try:
+        raw_articles = live_collector.fetch_all()
+    except Exception:  # noqa: BLE001 — 네트워크/파싱 오류는 fallback으로 흡수
+        raw_articles = []
+
+    if not raw_articles:
+        return _run_mock(fallback=True, attempted="live")
+
+    collected, deduped, inserted = _ingest(raw_articles, "Live RSS")
+    return {
+        "collected": collected,
+        "deduplicated": deduped,
+        "inserted": inserted,
+        "news_data_mode": "live",
+        "news_source": live_collector.SOURCE_LABEL,
+        "attempted_mode": "live",
         "fallback_used": False,
     }
+
+
+def run(mode: str = "mock") -> dict:
+    """기사 수집 진입점. NEWS_MODE에 따라 mock/live 경로를 고른다.
+
+    NEWS_MODE=mock(기본)은 네트워크 0건이며 data/mock_articles.json만 읽는다.
+    NEWS_MODE=live는 공개 RSS를 시도하고, 실패하면 mock으로 fallback한다 (가짜 live 금지).
+    `mode` 인자는 API 하위호환을 위해 유지하지만 분기는 config.NEWS_MODE가 결정한다.
+    """
+    if config.NEWS_MODE == "live":
+        return _run_live()
+    return _run_mock()

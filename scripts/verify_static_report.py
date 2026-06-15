@@ -32,11 +32,12 @@ OPTIONAL_VERIFIERS = ["verify_issue_clusters.py", "verify_executive_brief_qualit
 BUTTON_TEXT = "오늘 브리프 보기"
 TELEGRAM_API_HOST = "https://api.telegram.org"
 
-# HTML에 반드시 존재해야 하는 표시 요소
+# HTML에 반드시 존재해야 하는 표시 요소 (P0-C1: 점수 미터/상대 강도/원문 링크 포함)
 HTML_MARKERS = [
     "HDEC Executive Radar", "Executive Daily Brief", "오늘의 Executive Signal",
     "즉시 알림 후보", "주요 테마", "카테고리 요약", "권장 워치 액션",
     'lang="ko"', "viewport", "Pretendard",
+    "중요도", "상대 강도", 'class="meter"', "유사 주제 기사", "원문 보기",
 ]
 
 # mock macro 고정값 중 점수/강도와 충돌할 수 없는 식별용 수치 (4자리)
@@ -277,6 +278,46 @@ def check_report_json() -> None:
           meta.get("default_output") == "docs/daily/latest.html")
 
 
+def _url_policy_violations(html: str) -> list[str]:
+    """P0-C1 URL 정책: 기사 원문 링크(href)만 허용, 그 외 외부 리소스는 금지.
+
+    href 속성값을 제거한 뒤 남는 http/https는 외부 script/CSS/이미지/iframe/CDN/fetch로
+    간주해 위반으로 잡는다. 외부 리소스 태그·@import·url(http)·src=http도 금지한다.
+    """
+    issues = []
+    stripped = re.sub(r'href="[^"]*"', 'href=""', html)
+    stripped = re.sub(r"href='[^']*'", "href=''", stripped)
+    low = stripped.lower()
+    if "http://" in low or "https://" in low:
+        idx = low.find("https://")
+        if idx < 0:
+            idx = low.find("http://")
+        issues.append("href 외 http(s): …"
+                      + stripped[max(0, idx - 24):idx + 30].replace("\n", " "))
+    for tag in ("<script", "<iframe", "<img", "<link ", "<link>", "<object", "<embed"):
+        if tag in html.lower():
+            issues.append(f"외부 리소스 태그: {tag}")
+    for token in ("@import", "url(http", "src=http", 'src="http', "src='http"):
+        if token in html.lower():
+            issues.append(f"외부 참조: {token}")
+    return issues
+
+
+def _external_anchor_safety(html: str) -> list[str]:
+    """http(s) href 앵커가 target=_blank + rel=noopener noreferrer를 갖는지 검사."""
+    bad = []
+    for m in re.finditer(r"<a\b[^>]*>", html):
+        tag = m.group(0)
+        href = re.search(r'href="([^"]*)"', tag)
+        if not href or not href.group(1).lower().startswith(("http://", "https://")):
+            continue
+        if 'target="_blank"' not in tag:
+            bad.append("target 누락: " + tag[:70])
+        if "noopener" not in tag or "noreferrer" not in tag:
+            bad.append("rel noopener noreferrer 누락: " + tag[:70])
+    return bad
+
+
 def _check_html_content(html: str, label: str) -> None:
     for marker in HTML_MARKERS:
         check(f"{label}: '{marker}' 포함", marker in html)
@@ -300,10 +341,13 @@ def _check_html_content(html: str, label: str) -> None:
     check(f"{label}: mock macro 고정값 수치 미노출", not leaked, ", ".join(leaked))
 
     lowered = html.lower()
-    check(f"{label}: 외부 리소스 없음 (http/https URL 0건)",
-          "http://" not in lowered and "https://" not in lowered)
-    check(f"{label}: <script> 없음 (정적 페이지)", "<script" not in lowered)
-    check(f"{label}: @import 없음", "@import" not in lowered)
+    # P0-C1: 기사 원문 링크(href)는 허용, 그 외 외부 리소스(script/css/img/iframe/cdn)는 금지.
+    url_issues = _url_policy_violations(html)
+    check(f"{label}: 기사 링크(href) 외 외부 리소스 없음", not url_issues,
+          "; ".join(url_issues[:3]))
+    anchor_issues = _external_anchor_safety(html)
+    check(f"{label}: 외부 링크는 새 탭 + noopener noreferrer", not anchor_issues,
+          "; ".join(anchor_issues[:3]))
     check(f"{label}: telegram/webhook 문자열 없음",
           "telegram" not in lowered and "webhook" not in lowered)
 

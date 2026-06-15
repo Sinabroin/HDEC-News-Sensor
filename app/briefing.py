@@ -27,23 +27,21 @@ TOP_THEMES = 5
 # (동일 사건 클러스터링이 아니며, dedup으로 제거된 중복 기사는 집계되지 않는다)
 SPREAD_METHOD = "topic-overlap heuristic — 동일 토픽 후보를 공유하는 신호 수 기반 추정"
 
+# 운영자/표시 레이어용 짧은 고지 한 줄 (개발자용 장문 면책 대신). "추정" 표현 유지.
 OPERATOR_NOTE = (
-    "mock 모드 자동 생성 brief — 운영자 검토 후 활용. "
-    "관련 신호 수치는 토픽 중복 기반 추정(동일 사건 클러스터링 아님)이며, "
-    "시장지표(macro)는 실시간 미연동 상태라 mock 고정값 수치를 표시하지 않는다."
+    "운영자 검토용 자동 생성 브리프입니다. 유사 주제 기사 수는 제목·토픽 기준 "
+    "추정값이며 동일 사건 클러스터 확정값이 아닙니다."
 )
 
-# 데이터 출처 경고 — macro_data_mode별 문구 (표시 레이어가 그대로 노출한다)
-DATA_WARNING_BY_MACRO_MODE = {
-    macro_snapshot.MODE_MOCK_STATIC: (
-        "뉴스 신호는 mock 데이터이며, 시장지표는 실시간 미연동(mock_static) 상태입니다 — "
-        "mock 고정값은 현재 시장값이 아니므로 수치를 표시하지 않습니다."
-    ),
-    macro_snapshot.MODE_UNAVAILABLE: (
-        "뉴스 신호는 mock 데이터이며, 시장지표는 미연동(unavailable) 상태입니다 — "
-        "사용할 수 있는 macro 데이터가 없습니다."
-    ),
-}
+# 용어 캡션 — UI·리포트가 그대로 노출하는 단일 소스 (혼란스러운 지표 설명)
+SPREAD_NOTE = (
+    "유사 주제 기사는 제목·토픽 기준의 참고 묶음(추정)이며, "
+    "동일 사건 클러스터 확정값은 아닙니다."
+)
+THEME_STRENGTH_NOTE = (
+    "상대 강도는 가장 강한 테마를 100으로 둔 상대 지표입니다 "
+    "(관련 기사 수와 중요도 점수를 합산한 내부 정렬 값 기준)."
+)
 
 # 저장된 implication 텍스트 → insight 카테고리 키 역매핑 (탐지 로직 중복 방지)
 _CATEGORY_BY_IMPLICATION = {
@@ -96,6 +94,48 @@ ACTION_LABEL_BY_GRADE = {
     scoring.GRADE_EXCLUDED: "모니터링",
 }
 
+# 점수대 라벨 — final_score(0~5) 기준 직관 버킷 (점수 축 표현, 등급 재계산 아님)
+SCORE_BANDS = [
+    (4.5, "즉시 확인"),
+    (3.5, "검토 필요"),
+    (2.0, "주간 모니터링"),
+    (0.0, "참고/제외"),
+]
+
+# 카드/리포트에 노출할 점수 구성요소 6종 (article_scores 9항목 중 핵심) — 표시 전용
+SCORE_COMPONENT_KEYS = [
+    ("hdec_relevance", "현대건설 관련성"),
+    ("business_opportunity", "사업기회"),
+    ("risk_potential", "리스크/규제"),
+    ("urgency", "긴급도"),
+    ("source_reliability", "출처 신뢰도"),
+    ("trend_repeat", "반복/확산 신호"),
+]
+
+
+def score_band(final_score) -> str:
+    """final_score(0~5)를 직관 버킷 라벨로 — 표시 전용 (등급 판정과 별개의 점수 축)."""
+    s = final_score or 0
+    for threshold, label in SCORE_BANDS:
+        if s >= threshold:
+            return label
+    return "참고/제외"
+
+
+def _score_components(score: dict | None) -> list[dict]:
+    """저장된 점수에서 표시용 구성요소 6종을 0~5 값으로 뽑는다 (재계산 없음)."""
+    score = score or {}
+    return [{"key": k, "label": label, "value": score.get(k)}
+            for k, label in SCORE_COMPONENT_KEYS if score.get(k) is not None]
+
+
+def _derive_news_mode(rows: list[dict]) -> str:
+    """저장된 기사 signal_origin으로 실제 뉴스 출처 모드를 판별한다 (DB가 단일 진실)."""
+    for row in rows:
+        if "live" in (row.get("signal_origin") or "").lower():
+            return "live"
+    return "mock"
+
 
 def _josa(word: str, with_batchim: str, without: str) -> str:
     """받침 유무에 따른 조사 선택. 한글이 아니면 without을 쓴다."""
@@ -130,8 +170,8 @@ def _build_spreads(scored_rows: list[dict]) -> dict[str, dict]:
         sources = {source_by_id[row["id"]]} | {source_by_id[rid] for rid in related}
         related_count = len(related)
         source_count = len(sources)
-        # 보수적 표현: "n개 매체 보도" 같은 확정 표현 금지 (추정치임을 항상 명시)
-        label = (f"토픽상 관련 추정 신호 {related_count}건 · 출처 {source_count}곳"
+        # 보수적 표현: "n개 매체 보도"·"확산" 같은 확정 표현 금지 (참고 묶음 추정치).
+        label = (f"유사 주제 기사 {related_count}건 · 출처 {source_count}곳"
                  if related_count else "단독 신호")
         spreads[row["id"]] = {
             "related_count": related_count,
@@ -142,7 +182,7 @@ def _build_spreads(scored_rows: list[dict]) -> dict[str, dict]:
 
 
 def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
-                  spread: dict) -> dict:
+                  spread: dict, score: dict | None = None) -> dict:
     topics = _parse_topics(row)
     return {
         "rank": rank,
@@ -153,6 +193,8 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "category": category_key,
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
         "final_score": row.get("final_score"),
+        "score_band": score_band(row.get("final_score")),
+        "score_components": _score_components(score),
         "alert_grade": row.get("alert_grade"),
         "action_label": ACTION_LABEL_BY_GRADE.get(row.get("alert_grade"), "모니터링"),
         "confidence": row.get("confidence"),
@@ -249,18 +291,23 @@ def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
             f"즉시 알림 후보는 {immediate_count}건입니다.")
 
 
-def _data_warning(macro: dict) -> str:
-    """macro provenance에 맞는 데이터 출처 경고 문구."""
-    mode = macro.get("macro_data_mode")
-    if mode == macro_snapshot.MODE_LIVE:
-        return (f"뉴스 신호는 mock 데이터입니다. 시장지표는 {macro.get('source')}"
-                f" 기준 {macro.get('updated_at')} 데이터입니다.")
-    return DATA_WARNING_BY_MACRO_MODE.get(
-        mode, DATA_WARNING_BY_MACRO_MODE[macro_snapshot.MODE_UNAVAILABLE])
+def _data_warning(news_mode: str, fallback_used: bool) -> str:
+    """뉴스 수집 모드에 맞는 한 줄 데이터 출처 고지 (시장지표는 P0-C1까지 항상 미연동)."""
+    if news_mode == "live":
+        return "뉴스: 공개 RSS 수집 · 시장지표: 미연동"
+    if fallback_used:
+        return "뉴스: live 수집 실패로 데모(mock) 데이터 대체 · 시장지표: 미연동"
+    return "뉴스: 데모(mock) 데이터 · 시장지표: 미연동"
 
 
-def build_brief(pipeline_counts: dict | None = None) -> dict:
-    """현재 DB 상태로부터 executive brief 구조체를 만든다 (DB 쓰기 없음)."""
+def build_brief(pipeline_counts: dict | None = None,
+                news_provenance: dict | None = None) -> dict:
+    """현재 DB 상태로부터 executive brief 구조체를 만든다 (DB 쓰기 없음).
+
+    news_provenance(선택)는 collector.run()이 돌려준 출처 정보 — fallback 여부 등
+    DB만으로는 알 수 없는 런타임 상태를 정직하게 담기 위해 쓴다. news_data_mode 자체는
+    저장된 기사 signal_origin에서 파생하므로 provenance 없이도 정확하다.
+    """
     rows = db.fetch_articles_with_scores()
     scored = [r for r in rows if r.get("final_score") is not None]
     scored.sort(key=lambda r: (-(r["final_score"]), r["id"]))
@@ -284,6 +331,8 @@ def build_brief(pipeline_counts: dict | None = None) -> dict:
         rid: ((d or {}).get("insight") or {}).get("hdec_implication") or ""
         for rid, d in details.items()
     }
+    # 점수 구성요소(9항목)는 detail의 score row에만 있다 — 표시용으로 묶어둔다.
+    scores_by_id = {rid: ((d or {}).get("score") or {}) for rid, d in details.items()}
 
     spreads = _build_spreads(scored)
 
@@ -297,13 +346,13 @@ def build_brief(pipeline_counts: dict | None = None) -> dict:
         instant_rows = _diverse_top(signal_rows, categories, TOP_IMMEDIATE)
     top_immediate = [
         _signal_entry(i, r, categories[r["id"]], implications[r["id"]],
-                      spreads[r["id"]])
+                      spreads[r["id"]], scores_by_id.get(r["id"]))
         for i, r in enumerate(instant_rows, start=1)
     ]
 
     top_issues = [
         _signal_entry(i, r, categories[r["id"]], implications[r["id"]],
-                      spreads[r["id"]])
+                      spreads[r["id"]], scores_by_id.get(r["id"]))
         for i, r in enumerate(
             _diverse_top(signal_rows, categories, TOP_ISSUES), start=1)
     ]
@@ -325,6 +374,11 @@ def build_brief(pipeline_counts: dict | None = None) -> dict:
                    key=lambda kv: (-kv[1]["weight"], -kv[1]["count"], kv[0]))[:TOP_THEMES],
             start=1)
     ]
+    # 상대 강도(0~100) — "강도 30.7" 같은 단위 불명 표현 대신 가장 강한 테마=100 기준.
+    if theme_rankings:
+        max_weight = max(t["weighted_strength"] for t in theme_rankings) or 1
+        for t in theme_rankings:
+            t["relative_strength"] = max(1, round(t["weighted_strength"] / max_weight * 100))
 
     # 카테고리 요약: 전 채점 기사 기준 (제외 포함 — 분포 전체를 보여준다)
     category_stats = {}
@@ -347,17 +401,26 @@ def build_brief(pipeline_counts: dict | None = None) -> dict:
     # macro snapshot + 데이터 출처 provenance (P0-B6 — mock을 live로 오인하지 않게)
     macro = macro_snapshot.get_macro_snapshot(config.APP_MODE)
 
+    # 뉴스 출처 모드는 저장된 기사 signal_origin에서 파생한다 (DB가 단일 진실).
+    # provenance가 주어지면 fallback 여부 등 런타임 상태를 추가로 반영한다.
+    news_mode = _derive_news_mode(rows)
+    prov = news_provenance or {}
+    news_fallback_used = bool(prov.get("fallback_used"))
+    news_source = prov.get("news_source") or (
+        "live_rss" if news_mode == "live" else "mock")
+
     now = datetime.now(KST)
     return {
         "header": HEADER,
-        "mode": "mock",
-        # 뉴스 데이터는 외부 ingestion 구현 전까지 항상 mock이다 (collector mock 전용).
-        "news_data_mode": "mock",
+        "mode": config.APP_MODE,
+        "news_data_mode": news_mode,
+        "news_source": news_source,
+        "news_fallback_used": news_fallback_used,
         "macro_data_mode": macro["macro_data_mode"],
         "macro_source": macro.get("source"),
         "macro_updated_at": macro.get("updated_at"),
         "macro_is_stale": macro.get("is_stale", True),
-        "data_warning": _data_warning(macro),
+        "data_warning": _data_warning(news_mode, news_fallback_used),
         "date_kst": now.strftime("%Y-%m-%d"),
         "generated_at": now.isoformat(timespec="seconds"),
         "total_articles": len(rows),
@@ -380,6 +443,8 @@ def build_brief(pipeline_counts: dict | None = None) -> dict:
         "category_counts": category_counts,
         "macro_snapshot": macro,
         "spread_method": SPREAD_METHOD,
+        "spread_note": SPREAD_NOTE,
+        "theme_strength_note": THEME_STRENGTH_NOTE,
         "operator_note": OPERATOR_NOTE,
         "pipeline_counts": pipeline_counts,
     }

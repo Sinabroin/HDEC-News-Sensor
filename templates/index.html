@@ -145,6 +145,28 @@
   .score i { font-style: normal; font-size: 10.5px; color: var(--muted);
              font-family: var(--sans); margin-left: 2px; }
   .conf { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* ---- 중요도 미터 + 점수 구성요소 (P0-C1 점수 시각화) ---- */
+  .score-meter { margin: 9px 0 2px; }
+  .score-head { display: flex; justify-content: space-between; align-items: baseline;
+                font-size: 12px; }
+  .score-head .score-num { font-weight: 700; color: var(--ink);
+                           font-variant-numeric: tabular-nums; }
+  .score-head .band { font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+                      color: var(--daily); }
+  .meter { height: 6px; background: var(--paper); border: 1px solid var(--hairline);
+           border-radius: 3px; margin-top: 4px; overflow: hidden; }
+  .meter > span { display: block; height: 100%; background: var(--action); }
+  .card.grade-instant .meter > span { background: var(--signal); }
+  .comps { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 10px 0; }
+  .comp { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--sub); }
+  .comp .cl { flex: 0 0 82px; color: var(--muted); }
+  .comp .cbar { flex: 1; height: 4px; background: var(--paper); border-radius: 2px;
+                overflow: hidden; border: 1px solid var(--hairline); }
+  .comp .cbar i { display: block; height: 100%; background: var(--daily); }
+  .comp .cv { flex: 0 0 24px; text-align: right; font-weight: 650; color: var(--ink);
+              font-variant-numeric: tabular-nums; }
+  .caption { font-size: 10.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  @media (max-width: 560px) { .comps { grid-template-columns: 1fr; } }
   .row-extra { font-size: 12px; color: var(--sub); margin-top: 8px; }
   .reason { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.55;
             border-top: 1px dashed var(--hairline); padding-top: 7px; }
@@ -228,7 +250,7 @@
   </div>
   <div class="desk-meta">
     <span id="desk-date"></span>
-    <span class="mode-chip">MOCK MODE</span>
+    <span class="mode-chip" id="mode-chip">데모 데이터</span>
   </div>
   <button id="run-btn" onclick="runSensing()">Run Sensing</button>
   <div id="run-stats"></div>
@@ -243,8 +265,10 @@
     <p id="brief-oneliner"></p>
     <div id="brief-board"></div>
     <div class="brief-grid">
-      <div class="brief-col"><h3>신규 이슈 TOP 5</h3><ol id="brief-issues"></ol></div>
-      <div class="brief-col"><h3>주요 테마</h3><ol id="brief-themes"></ol></div>
+      <div class="brief-col"><h3>신규 이슈 TOP 5</h3><ol id="brief-issues"></ol>
+        <p class="caption" id="brief-issues-note"></p></div>
+      <div class="brief-col"><h3>주요 테마</h3><ol id="brief-themes"></ol>
+        <p class="caption" id="brief-themes-note"></p></div>
       <div class="brief-col"><h3>카테고리 요약</h3><ul id="brief-categories"></ul>
         <div id="brief-macro"></div></div>
     </div>
@@ -301,6 +325,38 @@ function esc(value) {
   return div.innerHTML;
 }
 function fmtTime(iso) { return iso ? iso.replace("T", " ").slice(0, 16) : "-"; }
+/* ---- 점수 표시 헬퍼 (P0-C1: 분모 명시 /5, 점수대 라벨, 구성요소 막대) ---- */
+function scoreBand(s) {
+  s = Number(s);
+  if (isNaN(s)) return "-";
+  if (s >= 4.5) return "즉시 확인";
+  if (s >= 3.5) return "검토 필요";
+  if (s >= 2.0) return "주간 모니터링";
+  return "참고/제외";
+}
+function score5(s) { return s == null || s === "" ? "-" : Number(s).toFixed(1); }
+function scorePct(s) {
+  const n = Number(s);
+  return isNaN(n) ? 0 : Math.max(0, Math.min(100, Math.round(n / 5 * 100)));
+}
+function confPct(v) { return v == null ? "-" : Math.round(Number(v) * 100) + "%"; }
+const COMP_KEYS = [
+  ["현대건설 관련성", "hdec_relevance"], ["사업기회", "business_opportunity"],
+  ["리스크/규제", "risk_potential"], ["긴급도", "urgency"],
+  ["출처 신뢰도", "source_reliability"], ["반복/확산 신호", "trend_repeat"],
+];
+function scoreMeter(s, band) {
+  return `<div class="score-meter"><div class="score-head">` +
+    `<span class="score-num">중요도 ${score5(s)} / 5.0</span>` +
+    `<span class="band">${esc(band || scoreBand(s))}</span></div>` +
+    `<div class="meter"><span style="width:${scorePct(s)}%"></span></div></div>`;
+}
+function compBars(s) {
+  return `<div class="comps">` + COMP_KEYS.map(([label, key]) =>
+    `<div class="comp"><span class="cl">${esc(label)}</span>` +
+    `<span class="cbar"><i style="width:${scorePct(s[key])}%"></i></span>` +
+    `<span class="cv">${score5(s[key])}</span></div>`).join("") + `</div>`;
+}
 function toast(message) {
   const el = document.getElementById("toast");
   el.textContent = message;
@@ -357,19 +413,24 @@ function renderBrief(b) {
     `<div class="board-chip${s.key === "immediate" ? " immediate" : ""}">` +
     `${esc(s.label)}<b>${esc(s.value)}</b></div>`).join("");
   document.getElementById("brief-issues").innerHTML = (b.top_new_issues || []).map(i => {
-    const score = i.final_score == null ? "-" : Number(i.final_score).toFixed(2);
+    const band = i.score_band || scoreBand(i.final_score);
     const spread = (i.spread && i.spread.label) || "단독 신호";
     return `<li onclick="selectArticle('${esc(i.article_id)}')">` +
       `<span class="t">${esc(i.title)}</span><br>` +
-      `<span class="sub">${esc(i.category_label || "-")} · ${score}점` +
-      ` · ${esc(i.action_label || "모니터링")} · ${esc(spread)}</span></li>`;
+      `<span class="sub">${esc(i.category_label || "-")} · 중요도 ${score5(i.final_score)}/5.0` +
+      ` · ${esc(band)} · ${esc(spread)}</span></li>`;
   }).join("");
   const themes = b.theme_rankings || [];
-  const maxWeight = Math.max(1, ...themes.map(t => t.weighted_strength || 0));
-  document.getElementById("brief-themes").innerHTML = themes.map(t =>
-    `<li>${esc(t.theme)} <span class="theme-sub">${esc(t.count)}건 · 강도 ${esc(t.weighted_strength)}</span>` +
-    `<div class="theme-bar"><i style="width:${Math.round(100 * (t.weighted_strength || 0) / maxWeight)}%"></i></div></li>`
-  ).join("");
+  document.getElementById("brief-themes").innerHTML = themes.map(t => {
+    const rel = t.relative_strength == null ? 1 : t.relative_strength;
+    return `<li>${esc(t.theme)} <span class="theme-sub">${esc(t.count)}건 · 상대 강도 ${esc(rel)}</span>` +
+      `<div class="theme-bar"><i style="width:${Math.max(5, rel)}%"></i></div></li>`;
+  }).join("");
+  document.getElementById("brief-issues-note").textContent = b.spread_note || "";
+  document.getElementById("brief-themes-note").textContent = b.theme_strength_note || "";
+  const modeChip = document.getElementById("mode-chip");
+  if (modeChip) modeChip.textContent = (b.news_data_mode === "live")
+    ? "LIVE · 공개 RSS" : "데모 데이터";
   document.getElementById("brief-categories").innerHTML = (b.category_counts || []).map(c =>
     `<li><span>${esc(c.label)}</span><span>${esc(c.count)}` +
     `${c.immediate ? ` <span class="imm">●${esc(c.immediate)}</span>` : ""}</span></li>`
@@ -389,10 +450,9 @@ function renderBrief(b) {
   } else {
     const labels = macroVals.length ? macroVals.map(v => v.label)
       : ["USD/KRW", "WTI", "KOSPI", "VIX", "미 국채 10Y", "국고채 10Y"];
-    macroHtml = `<b>MACRO SNAPSHOT · 시장지표 미연동 (${esc(macroMode)})</b><br>` +
+    macroHtml = `<b>MACRO SNAPSHOT · 시장지표 미연동</b><br>` +
       labels.map(l => `${esc(l)} 미연동`).join(" · ") +
-      `<br><span class="macro-warn">${esc(b.data_warning ||
-        "mock 고정값은 현재 시장값이 아니므로 수치를 표시하지 않습니다.")}</span>`;
+      `<br><span class="macro-warn">현재 시장값이 아니므로 수치를 표시하지 않습니다 (실시간 연동 전).</span>`;
   }
   document.getElementById("brief-macro").innerHTML = macroHtml;
   document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "");
@@ -443,8 +503,6 @@ function cardHtml(a) {
   const grade = a.alert_grade || "미채점";
   const gradeClass = GRADE_CLASS[grade] || "grade-excluded";
   const units = Array.isArray(a.affected_units) ? a.affected_units.join(" / ") : "-";
-  const score = a.final_score == null ? "-" : Number(a.final_score).toFixed(2);
-  const conf = a.confidence == null ? "-" : Number(a.confidence).toFixed(2);
   const sent = state.logs.some(l => l.article_id === a.id && l.send_status === "sent");
   return `
   <div class="card ${gradeClass}${a.id === state.selectedId ? " active" : ""}" data-id="${esc(a.id)}" onclick="selectArticle('${esc(a.id)}')">
@@ -455,9 +513,8 @@ function cardHtml(a) {
     <div class="badges">
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
       <span class="badge ${gradeClass}">${esc(grade)}</span>
-      <span class="score">${score}<i>/ 5</i></span>
-      <span class="conf">confidence ${conf}</span>
     </div>
+    ${scoreMeter(a.final_score, scoreBand(a.final_score))}
     <div class="row-extra">영향 부문: ${esc(units)} · ${esc(a.opportunity_or_risk || "관찰")}</div>
     <div class="reason">${esc(a.scoring_reason || "")}</div>
     <div class="actions" onclick="event.stopPropagation()">
@@ -522,17 +579,18 @@ function detailHtml(d) {
       <span>${esc(a.source || "-")}</span><span>${esc(fmtTime(a.published_at))}</span>
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
     </div>
-    <div class="kv"><a href="${esc(a.url)}" target="_blank" rel="noopener">원문 보기 ↗</a></div>
+    <div class="kv"><a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></div>
     <div class="badges">
       <span class="badge ${GRADE_CLASS[s.alert_grade] || "grade-excluded"}">${esc(s.alert_grade || "미채점")}</span>
-      <span class="score">${s.final_score != null ? Number(s.final_score).toFixed(2) : "-"}<i>/ 5</i></span>
-      <span class="conf">confidence ${s.confidence != null ? Number(s.confidence).toFixed(2) : "-"}</span>
     </div>
+    ${scoreMeter(s.final_score, scoreBand(s.final_score))}
+    ${s.hdec_relevance != null ? compBars(s) : ""}
+    <div class="kv"><div class="k">판정 신뢰도</div>${confPct(s.confidence)}</div>
     <div class="kv"><div class="k">3줄 요약</div>${list(i.summary_3lines)}</div>
     <div class="kv"><div class="k">현대건설 관점</div>${esc(i.hdec_implication || "-")}</div>
     <div class="kv"><div class="k">영향 부문 · 기회/리스크</div>
       ${esc(Array.isArray(i.affected_units) ? i.affected_units.join(" / ") : "-")} · ${esc(i.opportunity_or_risk || "-")}</div>
-    <div class="kv"><div class="k">점수 BREAKDOWN</div>
+    <div class="kv"><div class="k">점수 BREAKDOWN (9개 항목 가중합 0~5)</div>
       <table class="breakdown">${dims.map(([k, v]) =>
         `<tr><td>${esc(k)}</td><td>${v == null ? "-" : Number(v).toFixed(2)}</td></tr>`).join("")}
       </table></div>

@@ -33,3 +33,9 @@ _load_dotenv(BASE_DIR / ".env")
 # Day-1 기본값은 mock이다. 어떤 설정 실수가 있어도 mock으로 떨어진다.
 APP_MODE = (os.environ.get("APP_MODE") or "mock").strip().lower() or "mock"
 DB_PATH = os.environ.get("DB_PATH") or str(BASE_DIR / "radar.db")
+
+# P0-C1 — 뉴스 수집 모드. 기본값 mock은 네트워크 호출이 0건이며 어떤 비밀값도
+# 필요 없다 (rules.md §2의 "mock = 외부 호출 금지" 안전성을 그대로 유지한다).
+# NEWS_MODE=live를 운영자가 명시적으로 설정했을 때만 app/live_collector.py가
+# 공개 RSS를 시도한다. 어떤 값으로 잘못 설정해도 mock으로 떨어진다.
+NEWS_MODE = (os.environ.get("NEWS_MODE") or "mock").strip().lower() or "mock"

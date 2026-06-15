@@ -114,6 +114,26 @@ section{margin-top:26px;}
 .sig .why strong,.sig .act strong{display:block;font-size:10.5px;letter-spacing:.14em;
   color:var(--navy);font-weight:750;margin-bottom:1px;}
 .sig .spread{font-size:11px;color:var(--muted);margin-top:7px;}
+.sig h3 a{color:inherit;text-decoration:none;border-bottom:1px solid var(--hairline-2);}
+.sig h3 a:hover{border-bottom-color:var(--accent);}
+.sig .spread a,.extra a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--hairline-2);}
+.sig .spread .hint{color:var(--muted);}
+
+/* ---- 중요도 미터 + 점수 구성요소 ---- */
+.score-meter{margin-top:9px;}
+.score-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;}
+.score-head .score-num{font-weight:750;color:var(--navy);}
+.score-head .band{font-size:10.5px;font-weight:750;letter-spacing:.04em;color:var(--accent);}
+.meter{height:6px;background:var(--hairline);border-radius:3px;margin-top:4px;overflow:hidden;}
+.meter>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--navy));}
+.comps{display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;margin-top:9px;}
+.comp{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--ink-soft);}
+.comp .cl{flex:0 0 80px;color:var(--muted);}
+.comp .cbar{flex:1;height:3px;background:var(--hairline);border-radius:2px;overflow:hidden;}
+.comp .cbar i{display:block;height:100%;background:var(--accent);}
+.comp .cv{flex:0 0 22px;text-align:right;font-weight:650;color:var(--ink);}
+.caption{font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.55;}
+@media(max-width:540px){.comps{grid-template-columns:1fr;}}
 
 /* ---- 추가 관찰 이슈 ---- */
 .extra{margin-top:4px;padding:11px 0 0;border-top:1px dashed var(--hairline-2);}
@@ -160,6 +180,41 @@ def _fmt(value) -> str:
     return "-" if value is None else f"{value:.2f}"
 
 
+def _fmt5(value) -> str:
+    """중요도 표시 — 분모 명시(X.X / 5.0)의 분자."""
+    return "-" if value is None else f"{value:.1f}"
+
+
+def _pct(value) -> str:
+    """판정 신뢰도 — 0~1 값을 백분율 문자열로."""
+    return "-" if value is None else f"{round(value * 100)}%"
+
+
+def _score_pct(value) -> int:
+    """점수(0~5)를 미터 막대 너비(0~100%)로."""
+    try:
+        return max(0, min(100, round(float(value) / 5 * 100)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _is_http(url: str) -> bool:
+    return bool(url) and url.startswith(("http://", "https://"))
+
+
+def _mode_pill(brief: dict) -> str:
+    """masthead 배지 — 개발자용 'MOCK DATA' 대신 뉴스 모드 기준 간결 라벨."""
+    return "LIVE · 공개 RSS" if brief.get("news_data_mode") == "live" else "데모 데이터"
+
+
+def _source_link(url: str, label: str) -> str:
+    """원문 링크 앵커 — 새 탭 + noopener noreferrer. URL이 없으면 빈 문자열."""
+    if not _is_http(url):
+        return ""
+    return (f'<a href="{escape(url)}" target="_blank" rel="noopener noreferrer">'
+            f'{escape(label)}</a>')
+
+
 def _watch_action(entry: dict) -> str:
     """권장 워치 액션 문구 — briefing 도메인의 표현 사전을 재사용한다 (표현 전용).
 
@@ -180,15 +235,42 @@ def _watch_action(entry: dict) -> str:
     return "후속 신호 관찰 후 관련 부문 참고 공유"
 
 
+def _render_score_meter(entry: dict) -> str:
+    """중요도 미터(분모 명시) + 점수대 라벨 + 6개 구성요소 막대."""
+    score = entry.get("final_score")
+    band = entry.get("score_band") or "-"
+    parts = [
+        '<div class="score-meter">',
+        '<div class="score-head">'
+        f'<span class="score-num num">중요도 {_fmt5(score)} / 5.0</span>'
+        f'<span class="band">{escape(band)}</span></div>',
+        f'<div class="meter"><span style="width:{_score_pct(score)}%"></span></div>',
+        '</div>',
+    ]
+    comps = entry.get("score_components") or []
+    if comps:
+        parts.append('<div class="comps">')
+        for c in comps:
+            parts.append(
+                f'<div class="comp"><span class="cl">{escape(c["label"])}</span>'
+                f'<span class="cbar"><i style="width:{_score_pct(c.get("value"))}%"></i></span>'
+                f'<span class="cv num">{_fmt5(c.get("value"))}</span></div>')
+        parts.append('</div>')
+    return "".join(parts)
+
+
 def _render_signal(index: int, entry: dict) -> str:
     kind = entry.get("opportunity_or_risk") or "관찰"
     kind_class = KIND_CLASS.get(kind, "kind-watch")
     action = entry.get("action_label") or "모니터링"
+    url = entry.get("url") or ""
+    title = escape(entry.get("title") or "")
+    title_html = (f'{_source_link(url, entry.get("title") or "")} ↗'
+                  if _is_http(url) else title)
     meta = " · ".join([
         escape(entry.get("source") or "출처 미상"),
         escape(entry.get("category_label") or "건설산업 일반"),
-        f'<span class="num">{_fmt(entry.get("final_score"))}점</span>',
-        f'<span class="num">신뢰도 {_fmt(entry.get("confidence"))}</span>',
+        f'<span class="num">판정 신뢰도 {_pct(entry.get("confidence"))}</span>',
     ])
     spread = entry.get("spread") or {}
     parts = [
@@ -197,16 +279,19 @@ def _render_signal(index: int, entry: dict) -> str:
         '<div>',
         f'<p class="labels">{escape(action)}<span class="sep">/</span>'
         f'<span class="{kind_class}">{escape(kind)}</span></p>',
-        f'<h3>{escape(entry.get("title") or "")}</h3>',
+        f'<h3>{title_html}</h3>',
         f'<p class="meta">{meta}</p>',
+        _render_score_meter(entry),
     ]
     if entry.get("implication"):
         parts.append('<p class="why"><strong>왜 중요한가</strong>'
                      f'{escape(entry["implication"])}</p>')
     parts.append('<p class="act"><strong>권장 워치 액션</strong>'
                  f'{escape(_watch_action(entry))}</p>')
+    src = _source_link(url, "원문 보기 ↗")
+    src_html = f' · {src}' if src else ""
     parts.append(f'<p class="spread">↳ {escape(spread.get("label", "단독 신호"))} '
-                 '(토픽 중복 기반 추정)</p>')
+                 f'<span class="hint">(유사 주제 기사는 참고 묶음 추정)</span>{src_html}</p>')
     parts.append('</div></article>')
     return "\n".join(parts)
 
@@ -234,10 +319,9 @@ def _render_macro_section(brief: dict) -> list[str]:
     else:
         labels = [v.get("label") for v in values if v.get("label")] or DEFAULT_MACRO_LABELS
         body.append('<h2 class="sec-h">MACRO SNAPSHOT'
-                    f'<span class="tag">시장지표 미연동 · {escape(mode)}</span></h2>')
-        body.append('<p class="macro-note">시장지표는 아직 실시간 연동 전입니다 — 현재 표시값은 '
-                    '제공하지 않으며, 데모용 mock 고정값은 현재 시장값이 아니므로 수치를 표시하지 '
-                    '않습니다.</p>')
+                    '<span class="tag">시장지표 미연동</span></h2>')
+        body.append('<p class="macro-note">시장지표는 아직 실시간 연동 전입니다 — '
+                    '현재 시장값이 아니므로 수치를 표시하지 않습니다.</p>')
         body.append('<div class="macro-grid">')
         for label in labels:
             body.append(f'<div class="macro-cell"><div class="lbl">{escape(label)}</div>'
@@ -254,11 +338,11 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         '<header class="masthead">',
         '<div class="mast-row">',
         '<span class="brand">HDEC Executive Radar</span>',
-        f'<span class="mode-pill">{escape(brief["mode"]).upper()} DATA · 데모</span>',
+        f'<span class="mode-pill">{escape(_mode_pill(brief))}</span>',
         '</div>',
         '<h1>Executive Daily Brief</h1>',
         f'<p class="dateline num">{escape(brief["date_kst"])} (KST) · 임원용 시그널 레이더 일일 브리프</p>',
-        '<p class="provenance">뉴스: mock 데이터 · 시장지표: 실시간 미연동 — 본 리포트는 데모용 자동 생성 스냅샷입니다</p>',
+        f'<p class="provenance">{escape(brief.get("data_warning") or "")}</p>',
         '</header>',
         '<section class="board" aria-label="데일리 현황판">',
     ]
@@ -296,9 +380,12 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         sections.append("extra_issues")
         body.append('<div class="extra"><p class="sec-sub">추가 관찰 이슈</p><ul>')
         for issue in extras:
-            body.append(f'<li>· {escape(issue.get("title") or "")} '
+            url = issue.get("url") or ""
+            title_html = (f'{_source_link(url, issue.get("title") or "")} ↗'
+                          if _is_http(url) else escape(issue.get("title") or ""))
+            body.append(f'<li>· {title_html} '
                         f'<span class="cnt">— {escape(issue.get("category_label") or "")}'
-                        f' · <span class="num">{_fmt(issue.get("final_score"))}점</span>'
+                        f' · <span class="num">중요도 {_fmt5(issue.get("final_score"))}/5.0</span>'
                         f' · {escape(issue.get("action_label") or "모니터링")}</span></li>')
         body.append('</ul></div>')
     body.append('</section>')
@@ -306,17 +393,17 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     body.append('<div class="duo">')
     themes = brief.get("theme_rankings") or []
     body.append('<section aria-label="주요 테마"><h2 class="sec-h">주요 테마'
-                '<span class="tag">점수 가중 랭킹</span></h2>')
+                '<span class="tag">상대 강도 · 100=최상위 테마</span></h2>')
     if themes:
         sections.append("themes")
-        max_weight = max(t["weighted_strength"] for t in themes) or 1
         for t in themes:
-            pct = max(7, round(t["weighted_strength"] / max_weight * 100))
+            rel = t.get("relative_strength") or 1
             body.append(
                 '<div class="theme-row"><div class="theme-name">'
                 f'<span>{t["rank"]}. {escape(t["theme"])}</span>'
-                f'<span class="cnt num">{t["count"]}건 · 강도 {t["weighted_strength"]}</span>'
-                f'</div><div class="theme-bar"><span style="width:{pct}%"></span></div></div>')
+                f'<span class="cnt num">{t["count"]}건 · 상대 강도 {rel}</span>'
+                f'</div><div class="theme-bar"><span style="width:{max(7, rel)}%"></span></div></div>')
+        body.append(f'<p class="caption">{escape(brief.get("theme_strength_note") or "")}</p>')
     else:
         body.append('<p class="macro-note">집계된 테마가 없습니다.</p>')
     body.append('</section>')
@@ -342,12 +429,9 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     body += [
         '<div class="notes">',
         f'<p>※ {escape(brief["operator_note"])}</p>',
-        f'<p>※ {escape(brief.get("data_warning") or "")}</p>',
-        '<p>※ 본 페이지는 데모용 mock 데이터로 생성된 정적 리포트입니다 — 실시간 뉴스·시세가 아니며, '
-        '공개 호스팅에는 mock/데모 데이터만 게시합니다.</p>',
+        f'<p>※ {escape(brief.get("spread_note") or "")}</p>',
         '</div>',
-        f'<footer class="num">생성 {escape(brief["generated_at"])} · {escape(brief["header"])}'
-        f' · APP_MODE={escape(brief["mode"])} · 정적 스냅샷</footer>',
+        f'<footer class="num">생성 {escape(brief["generated_at"])} · {escape(brief["header"])}</footer>',
     ]
 
     html = "\n".join([

@@ -44,30 +44,53 @@ def _bootstrap():
 
 
 def build_brief_via_mock_pipeline() -> dict:
-    """임시 DB에서 mock 파이프라인을 돌리고 brief 구조체를 반환한다."""
+    """임시 DB에서 파이프라인을 돌리고 brief 구조체를 반환한다.
+
+    수집 경로는 collector가 NEWS_MODE에 따라 고른다 (mock 기본 / live 공개 RSS).
+    출처/대체 여부(provenance)를 build_brief에 넘겨 live·mock·fallback을 정직하게 표기한다.
+    """
     m = _bootstrap()
     m["db"].init_db()
     collect_stats = m["collector"].run("mock")
     score_stats = m["scoring"].score_all()
     m["insight"].generate_all()
-    return m["briefing"].build_brief(pipeline_counts={
-        "collected": collect_stats["collected"],
-        "deduplicated": collect_stats["deduplicated"],
-        "inserted": collect_stats["inserted"],
-        "scored": score_stats["scored"],
-        "alert_candidates": score_stats["alert_candidates"],
-    })
+    return m["briefing"].build_brief(
+        pipeline_counts={
+            "collected": collect_stats["collected"],
+            "deduplicated": collect_stats["deduplicated"],
+            "inserted": collect_stats["inserted"],
+            "scored": score_stats["scored"],
+            "alert_candidates": score_stats["alert_candidates"],
+        },
+        news_provenance={
+            "news_source": collect_stats.get("news_source"),
+            "fallback_used": collect_stats.get("fallback_used"),
+            "attempted_mode": collect_stats.get("attempted_mode"),
+        },
+    )
 
 
 def _fmt_score(value) -> str:
     return "-" if value is None else f"{value:.2f}"
 
 
+def _fmt5(value) -> str:
+    """중요도 표시 — 분모를 명시한 X.X/5.0 형식의 분자."""
+    return "-" if value is None else f"{value:.1f}"
+
+
+def _pct(value) -> str:
+    """판정 신뢰도 — 0~1 값을 백분율로."""
+    return "-" if value is None else f"{round(value * 100)}%"
+
+
 def format_brief_text(brief: dict) -> str:
     """--dry-run용 사람 읽기 좋은 한국어 brief 텍스트."""
+    news_mode = brief.get("news_data_mode", "mock")
+    source_line = "공개 RSS 수집" if news_mode == "live" else "데모(mock) 데이터"
     lines = [
         f"== {brief['header']} — Executive Brief ==",
-        f"{brief['date_kst']} (KST) · mock 데이터 기반 · 뉴스/시장지표 미연동",
+        f"{brief['date_kst']} (KST) · 뉴스 {source_line} · 시장지표 미연동",
         "",
         "[데일리 현황판]",
         " · ".join(f"{b['label']} {b['value']}" for b in brief["status_board"]),
@@ -80,21 +103,26 @@ def format_brief_text(brief: dict) -> str:
     for s in brief["top_immediate_signals"]:
         lines.append(f"{s['rank']}. {s['title']}")
         lines.append(f"   {s['source']} · {s['category_label']}"
-                     f" · {_fmt_score(s['final_score'])}점 · {s['alert_grade']}"
-                     f" · {s.get('action_label', '모니터링')}"
-                     f" · 신뢰도 {_fmt_score(s['confidence'])}")
+                     f" · 중요도 {_fmt5(s['final_score'])}/5.0 ({s.get('score_band', '-')})"
+                     f" · 판정 신뢰도 {_pct(s['confidence'])}")
+        comps = s.get("score_components") or []
+        if comps:
+            lines.append("   " + " · ".join(
+                f"{c['label']} {_fmt5(c['value'])}" for c in comps))
         if s["implication"]:
             lines.append(f"   → {s['implication']}")
         lines.append(f"   ↳ {s['spread']['label']}")
     lines += ["", f"[신규 이슈 Top {len(brief['top_new_issues'])}]"]
     for s in brief["top_new_issues"]:
         lines.append(f"{s['rank']}. {s['title']}"
-                     f" — {s['category_label']} · {_fmt_score(s['final_score'])}점"
+                     f" — {s['category_label']} · 중요도 {_fmt5(s['final_score'])}/5.0"
                      f" · {s['spread']['label']}")
     lines += ["", "[주요 테마]"]
     for t in brief["theme_rankings"]:
         lines.append(f"{t['rank']}. {t['theme']} — {t['count']}건"
-                     f" · 강도 {t['weighted_strength']}")
+                     f" · 상대 강도 {t.get('relative_strength', '-')}")
+    if brief.get("theme_strength_note"):
+        lines.append(f"   ※ {brief['theme_strength_note']}")
     lines += ["", "[카테고리 요약]"]
     lines.append(" · ".join(f"{c['label']} {c['count']}"
                             for c in brief["category_counts"]))
@@ -109,8 +137,10 @@ def format_brief_text(brief: dict) -> str:
             for v in macro["values"]))
     else:
         labels = " · ".join(v["label"] for v in macro.get("values") or []) or "지표 없음"
-        lines.append(f"실시간 시장지표 미연동 ({macro_mode}) — 수치 비표시: {labels}")
-    lines += ["", f"※ {brief['operator_note']}", f"※ {brief.get('data_warning', '')}"]
+        lines.append("시장지표 미연동 — 현재 시장값이 아니므로 수치를 표시하지 "
+                     f"않습니다: {labels}")
+    lines += ["", f"※ {brief['operator_note']}", f"※ {brief.get('data_warning', '')}",
+              f"※ {brief.get('spread_note', '')}"]
     return "\n".join(lines)
 
 

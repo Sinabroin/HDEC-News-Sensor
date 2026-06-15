@@ -22,7 +22,8 @@ BRIEF_BUILDER = ROOT / "scripts" / "build_executive_brief.py"
 DIGEST_BUILDER = ROOT / "scripts" / "build_telegram_digest.py"
 
 ALLOWED_ACTION_LABELS = {"즉시 확인", "검토 필요", "주간 보고 후보", "모니터링"}
-SPREAD_LABEL_RE = re.compile(r"^(단독 신호|토픽상 관련 추정 신호 \d+건 · 출처 \d+곳)$")
+# P0-C1: spread 라벨을 직관적 표현으로 변경 ("유사 주제 기사 n건 · 출처 m곳").
+SPREAD_LABEL_RE = re.compile(r"^(단독 신호|유사 주제 기사 \d+건 · 출처 \d+곳)$")
 OVERCLAIM_RE = re.compile(r"\d+\s*개?\s*매체(가|에서)?\s*보도")
 
 _failures = []

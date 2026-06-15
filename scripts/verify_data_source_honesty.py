@@ -224,11 +224,14 @@ def check_brief_provenance() -> None:
     except ValueError as exc:
         check("brief --json 파싱", False, str(exc))
         return
-    required = ("news_data_mode", "macro_data_mode", "macro_source",
+    required = ("news_data_mode", "news_source", "news_fallback_used",
+                "macro_data_mode", "macro_source",
                 "macro_updated_at", "macro_is_stale", "data_warning")
     missing = [k for k in required if k not in brief]
     check("brief에 provenance 필드 전부 존재", not missing, "; ".join(missing))
     check("brief news_data_mode == mock", brief.get("news_data_mode") == "mock")
+    check("brief news_fallback_used == false (mock 정상 경로)",
+          brief.get("news_fallback_used") is False)
     check("brief macro_data_mode ∈ {mock_static, unavailable} (live 미구현)",
           brief.get("macro_data_mode") in ("mock_static", "unavailable"),
           str(brief.get("macro_data_mode")))
@@ -354,6 +357,22 @@ def check_dashboard_template() -> None:
     check("대시보드: macro 고정값 하드코딩 없음", not leaked, ", ".join(leaked))
 
 
+def check_no_dev_wording() -> None:
+    """사용자 화면에서 개발자/내부 용어 제거 확인 (P0-C1 Phase 4).
+
+    '정적 스냅샷'·'mock_static' 같은 원시 모드/디버그 표현이 임원용 화면에 노출되면
+    안 된다 (technical README에서만 허용). 시장지표는 '시장지표 미연동'으로 표기한다.
+    """
+    targets = [(COMMITTED_REPORT, "리포트"), (PAGES_INDEX, "랜딩"), (TEMPLATE, "대시보드")]
+    for path, label in targets:
+        if not path.exists():
+            check(f"{label} 파일 존재", False)
+            continue
+        html = path.read_text(encoding="utf-8")
+        check(f"{label}: 사용자 화면에 '정적 스냅샷' 표현 없음", "정적 스냅샷" not in html)
+        check(f"{label}: 'mock_static' 원시 모드 노출 없음", "mock_static" not in html)
+
+
 def check_readme() -> None:
     text = README.read_text(encoding="utf-8")
     check("README에 'Data Source Honesty' 섹션 존재", "Data Source Honesty" in text)
@@ -442,6 +461,7 @@ def main() -> int:
     check_macro_file()
     check_macro_module()
     check_dashboard_template()
+    check_no_dev_wording()
     check_readme()
     check_workflow()
     check_code_tree_banned()

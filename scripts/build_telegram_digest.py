@@ -50,6 +50,7 @@ def _digest_signal(entry: dict) -> dict:
         "topic": entry.get("topic"),
         "category_label": entry.get("category_label"),
         "final_score": entry.get("final_score"),
+        "score_band": entry.get("score_band"),
         "alert_grade": entry.get("alert_grade"),
         "action_label": entry.get("action_label"),
         "confidence": entry.get("confidence"),
@@ -83,10 +84,17 @@ def build_digest_data() -> dict:
 
 
 def format_digest_message(data: dict) -> str:
-    """다이제스트 구조체를 Telegram용 한국어 plain text로 변환한다."""
+    """다이제스트 구조체를 Telegram용 한국어 plain text로 변환한다.
+
+    P0-C1: 임원용으로 간결하게 — 제목/날짜/모드, 한 줄 시그널, 현황판 한 줄,
+    Top 3 짧은 제목, 시장지표 미연동 한 줄, 추정 안내 한 줄. 원문 URL·장문 점수
+    설명·반복 면책은 넣지 않고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
+    """
+    news_mode = data.get("news_data_mode", "mock")
+    source_line = "공개 RSS 수집" if news_mode == "live" else "mock 데이터 기반"
     lines = [
         f"📡 {data['header']} — Executive Daily Brief",
-        f"{data['date_kst']} (KST) · mock 데이터 기반 · 뉴스/시장지표 미연동",
+        f"{data['date_kst']} (KST) · 뉴스 {source_line} · 시장지표 미연동",
         "",
         "[오늘의 Executive Signal]",
         data["executive_one_liner"],
@@ -101,27 +109,19 @@ def format_digest_message(data: dict) -> str:
     section = "즉시 알림 후보" if all_instant else "주요 신호"
     lines += ["", f"[{section} Top {len(signals)}]"]
     for s in signals:
-        meta = [s["source"]]
-        if s.get("category_label"):
-            meta.append(s["category_label"])
+        lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
+        meta = []
         if s.get("final_score") is not None:
-            meta.append(f"{s['final_score']:.2f}점")
+            meta.append(f"중요도 {s['final_score']:.1f}/5")
         if s.get("action_label"):
             meta.append(s["action_label"])
-        if s.get("confidence") is not None:
-            meta.append(f"신뢰도 {s['confidence']:.2f}")
-        lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
-        lines.append("   " + " · ".join(meta))
-        if s["reason"]:
-            lines.append(f"   → {_clip(s['reason'], REASON_MAX)}")
-        lines.append(f"   ↳ {s['spread_label']}")
+        if meta:
+            lines.append("   " + " · ".join(meta))
 
-    themes = data["theme_rankings"]
+    themes = data["theme_rankings"][:3]
     if themes:
-        lines += ["", f"[주요 테마 Top {len(themes)}]"]
-        for t in themes:
-            lines.append(f"{t['rank']}. {t['theme']} — {t['count']}건"
-                         f" · 강도 {t['weighted_strength']}")
+        lines += ["", "[주요 테마] " + " · ".join(
+            f"{t['theme']} {t.get('relative_strength', '')}".strip() for t in themes)]
 
     categories = data["category_counts"]
     if categories:
@@ -130,7 +130,7 @@ def format_digest_message(data: dict) -> str:
         summary = " · ".join(f"{c['label']} {c['count']}" for c in shown)
         if rest > 0:
             summary += f" · 외 {rest}개 분류"
-        lines += ["", "[카테고리 요약]", summary]
+        lines += ["", "[카테고리 요약] " + summary]
 
     # Macro Snapshot — live 데이터가 아닌 한 수치를 넣지 않는다 (P0-B6).
     # mock 고정값을 시세처럼 보낼 수 없다: 미연동 상태만 알리고 상세는 리포트로.
@@ -143,13 +143,9 @@ def format_digest_message(data: dict) -> str:
             for v in macro["values"]))
     else:
         lines += ["", "[Macro Snapshot]",
-                  "실시간 시장지표 미연동 — 현재값 아님 · 데이터 출처는 '오늘 브리프 보기' 리포트에서 확인"]
+                  "시장지표 미연동 — 현재 시장값 아님 · 상세는 '오늘 브리프 보기' 리포트에서 확인"]
 
-    lines += [
-        "",
-        "※ mock 모드 다이제스트 — 외부 뉴스 API 호출 없이 로컬 mock 데이터로 생성됨.",
-        "※ 관련 신호 수는 토픽 중복 기반 추정치입니다.",
-    ]
+    lines += ["", "※ 유사 주제 기사 수는 추정값입니다 · 원문/점수 상세는 리포트에서 확인하세요."]
     message = "\n".join(lines)
     if len(message) > MESSAGE_BUDGET:
         message = message[: MESSAGE_BUDGET - 1] + "…"
