@@ -119,6 +119,21 @@
   .cat-art-why { font-size: 11.5px; color: var(--sub); margin-top: 5px; line-height: 1.5; }
   .cat-more { font-size: 11px; color: var(--muted); margin-top: 10px; }
 
+  /* ---- 현황판 버킷 설명 + 참고/제외 감사 (P0-C1.8) ---- */
+  .legend { font-size: 10.5px; color: var(--muted); line-height: 1.7; margin: 0 0 14px;
+            border-left: 2px solid var(--hairline-2); padding-left: 10px; }
+  .legend b { color: var(--sub); font-weight: 700; }
+  .audit-drill { margin-top: 14px; border-top: 1px solid var(--hairline); padding-top: 4px; }
+  .audit-drill > summary { list-style: none; cursor: pointer; font-size: 12px;
+                           font-weight: 650; color: var(--sub); padding: 8px 0; }
+  .audit-drill > summary::-webkit-details-marker { display: none; }
+  .audit-drill > summary::before { content: "▸ "; color: var(--muted); }
+  .audit-drill[open] > summary::before { content: "▾ "; }
+  .audit-sub { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink);
+               margin: 10px 0 4px; }
+  .audit-sub b { color: var(--daily); margin-left: 4px; }
+  .audit-divider { border-top: 1px dashed var(--hairline-2); margin: 12px 0; }
+
   /* ---- 레이아웃 ---- */
   main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
          gap: 20px; padding: 20px 28px; align-items: start; }
@@ -296,6 +311,7 @@
   <div id="brief-body">
     <p id="brief-oneliner"></p>
     <div id="brief-board"></div>
+    <p class="legend" id="brief-legend"></p>
     <div class="brief-grid">
       <div class="brief-col"><h3>신규 이슈 TOP 5</h3><ol id="brief-issues"></ol>
         <p class="caption" id="brief-issues-note"></p></div>
@@ -325,6 +341,10 @@
         <div id="cat-chips"></div>
         <div id="cat-articles"></div>
         <p class="caption" id="cat-note"></p>
+        <details class="audit-drill" id="audit-area" style="display:none;">
+          <summary>참고/제외 보기 · 출처 품질 제외 결과</summary>
+          <div id="audit-body"></div>
+        </details>
       </div>
     </section>
   </div>
@@ -355,7 +375,7 @@ const FEEDBACK_BUTTONS = [
   ["classify_competitor", "경쟁사 동향으로 분류"], ["classify_macro", "거시경제로 분류"],
 ];
 const GRADE_CLASS = {
-  "즉시 알림 후보": "grade-instant", "일간 요약": "grade-daily",
+  "즉시 알림 후보": "grade-instant", "검토 필요": "grade-daily",
   "주간 리포트 후보": "grade-weekly", "제외": "grade-excluded",
 };
 const state = { articles: [], logs: [], selectedId: null, lastRun: null,
@@ -435,7 +455,7 @@ function applyDataStatus() {
     setStatus("empty", "아직 수집된 신호가 없습니다 — Run Sensing을 실행하세요.");
   } else if (candidates.length === 0) {
     setStatus("nocandidates",
-      "No Candidates — 4.5점 이상 즉시 알림 후보가 없습니다. 일간 요약 후보를 검토하세요.");
+      "No Candidates — 4.5점 이상 즉시 알림 후보가 없습니다. 검토 필요 후보를 확인하세요.");
   } else {
     setStatus(null);
   }
@@ -464,6 +484,11 @@ function renderBrief(b) {
   document.getElementById("brief-board").innerHTML = (b.status_board || []).map(s =>
     `<div class="board-chip${s.key === "immediate" ? " immediate" : ""}">` +
     `${esc(s.label)}<b>${esc(s.value)}</b></div>`).join("");
+  const legend = b.status_board_legend || [];
+  document.getElementById("brief-legend").innerHTML = legend.length
+    ? "현황판 기준 — " + legend.map(x =>
+        `<b>${esc(x.label)}</b> ${esc(x.meaning)}`).join("　·　")
+    : "";
   document.getElementById("brief-issues").innerHTML = (b.top_new_issues || []).map(i => {
     const band = i.score_band || scoreBand(i.final_score);
     const spread = (i.spread && i.spread.label) || "단독 신호";
@@ -519,13 +544,16 @@ function renderCategorySection(b) {
   if (!sections.length) { section.style.display = "none"; return; }
   section.style.display = "";
   state.catSections = sections;
-  if (!state.activeCat || !sections.some(s => s.category_key === state.activeCat)) {
-    state.activeCat = sections[0].category_key;
+  // 자동 선택하지 않는다 — 펼쳐진 카테고리처럼 보이지 않게 한다 (P0-C1.8).
+  // 이전 선택이 사라진 경우에만 해제하고, 기본은 '선택 안 함'으로 둔다.
+  if (state.activeCat && !sections.some(s => s.category_key === state.activeCat)) {
+    state.activeCat = null;
   }
   document.getElementById("cat-count").textContent = `${sections.length}개 분류`;
   document.getElementById("cat-note").textContent = b.category_drilldown_note || "";
   renderCategoryChips();
   renderCategoryArticles();
+  renderAuditArea(b);
 }
 function renderCategoryChips() {
   document.getElementById("cat-chips").innerHTML = (state.catSections || []).map(s =>
@@ -537,6 +565,10 @@ function renderCategoryChips() {
 }
 function renderCategoryArticles() {
   const wrap = document.getElementById("cat-articles");
+  if (!state.activeCat) {  // 기본 상태 — 카테고리 미선택 시 안내만 표시 (자동 펼침 없음)
+    wrap.innerHTML = `<div class="caption">카테고리를 선택하면 근거 기사가 표시됩니다.</div>`;
+    return;
+  }
   const sec = (state.catSections || []).find(s => s.category_key === state.activeCat);
   if (!sec) { wrap.innerHTML = ""; return; }
   const arts = sec.top_articles || [];
@@ -566,6 +598,44 @@ function selectCategory(key) {
   state.activeCat = key;
   renderCategoryChips();
   renderCategoryArticles();
+}
+
+/* ----- 참고/제외 · 출처 품질 감사 (P0-C1.8): 카운트만 보이던 버킷을 들여다본다 ----- */
+function auditItemHtml(a, sourceFiltered) {
+  const link = a.url
+    ? ` <a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" ` +
+      `onclick="event.stopPropagation()">원문 ↗</a>` : "";
+  const label = sourceFiltered
+    ? `<span class="srcq low">${esc(a.audit_label || "비뉴스성/낮은 신뢰 출처")}</span>`
+    : srcQualityChip(a);
+  const score = a.final_score != null
+    ? `중요도 ${score5(a.final_score)} / 5.0` : "수집 단계 제외 · 미채점";
+  const reason = a.why_it_matters || a.source_quality_reason || "";
+  const why = reason ? `<div class="cat-art-why">${esc(reason)}</div>` : "";
+  const cat = a.category_label ? `<span>${esc(a.category_label)}</span>` : "";
+  return `<div class="cat-art">` +
+    `<div class="cat-art-head"><span class="cat-art-title">${esc(a.title)}</span>` +
+    `<span class="cat-art-sc">${esc(score)}</span></div>` +
+    `<div class="meta"><span>${esc(a.source || "-")}</span>${label}${cat}${link}</div>${why}</div>`;
+}
+function renderAuditArea(b) {
+  const area = document.getElementById("audit-area");
+  const body = document.getElementById("audit-body");
+  if (!area || !body) return;
+  const review = b.review_excluded_evidence || {};
+  const filtered = b.source_filtered_evidence || {};
+  const rItems = review.items || [], fItems = filtered.items || [];
+  if (!rItems.length && !fItems.length) { area.style.display = "none"; return; }
+  area.style.display = "";
+  const block = (title, note, items, sourceFiltered, total) =>
+    `<div class="audit-sub">${esc(title)} <b>${esc(total != null ? total : items.length)}건</b></div>` +
+    (note ? `<div class="caption">${esc(note)}</div>` : "") +
+    (items.length ? items.map(a => auditItemHtml(a, sourceFiltered)).join("")
+                  : `<div class="caption">표시할 항목이 없습니다.</div>`);
+  body.innerHTML =
+    block("참고/제외 기사", review.note, rItems, false, review.total_count) +
+    `<div class="audit-divider"></div>` +
+    block("출처 품질 제외 결과", filtered.note, fItems, true, filtered.total_count);
 }
 
 /* ----- 데이터 로드 ----- */

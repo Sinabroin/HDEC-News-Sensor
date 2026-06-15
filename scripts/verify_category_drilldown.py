@@ -37,6 +37,13 @@ WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 RADAR_DB = ROOT / "radar.db"
 
 DRILLDOWN_TITLE = "카테고리별 근거 기사"
+# P0-C1.8 — 드릴다운 기본 접힘 + 참고/제외·출처 품질 감사 + 용어 명확화
+HELPER_TEXT = "카테고리를 펼쳐"
+REVIEW_EXCLUDED_TITLE = "참고/제외 기사"
+SOURCE_FILTERED_TITLE = "출처 품질 제외"
+SOURCE_FILTERED_LABEL = "비뉴스성/낮은 신뢰 출처"
+OLD_DAILY_LABEL = "일간 요약"   # 사용자 노출 표면에서 사라져야 하는 옛 라벨
+NEW_DAILY_LABEL = "검토 필요"   # 명확화된 새 라벨
 
 # 함께 돌리는 기존 verifier (회귀 게이트) — 출처 품질 Top 3 가드/워크플로/리포트 안전성/
 # brief·digest·quality 체인을 전이적으로 덮는다. WSL에서 파이프라인을 여러 번 돌리므로 넉넉히.
@@ -199,15 +206,73 @@ def check_brief_category_sections(brief: dict) -> None:
 
 
 def check_brief_no_body_fields(brief: dict) -> None:
-    blob = json.dumps(brief.get("category_sections") or [],
+    # 드릴다운 + 참고/제외 + 출처 품질 제외 구조를 한 번에 스캔 (P0-C1.8)
+    blob = json.dumps([brief.get("category_sections") or [],
+                       brief.get("review_excluded_evidence") or {},
+                       brief.get("source_filtered_evidence") or {}],
                       ensure_ascii=False).lower()
     hits = [t for t in BANNED_TERMS if t in blob]
-    check("category_sections에 본문 전문 필드명 0건", not hits, ", ".join(hits))
-    # 근거 항목은 요약/링크만 — snippet(본문 절단) 같은 본문성 키도 싣지 않는다
-    check("category_sections 항목에 snippet/본문 키 없음", "snippet" not in blob)
+    check("드릴다운/감사 구조에 본문 전문 필드명 0건", not hits, ", ".join(hits))
+    # 근거/감사 항목은 요약/링크만 — snippet(본문 절단) 같은 본문성 키도 싣지 않는다
+    check("드릴다운/감사 항목에 snippet/본문 키 없음", "snippet" not in blob)
+
+
+def check_brief_audit_evidence(brief: dict) -> None:
+    """참고/제외(낮은 관련성 뉴스) + 출처 품질 제외(비뉴스성 출처) 감사 구조 — P0-C1.8.
+
+    두 기준을 분리해 노출하는지, 항목 필드가 완비됐는지, Top 노출 가드가 유지되는지 본다.
+    """
+    review = brief.get("review_excluded_evidence")
+    filtered = brief.get("source_filtered_evidence")
+    if not check("brief에 review_excluded_evidence(dict) 존재", isinstance(review, dict)):
+        return
+    if not check("brief에 source_filtered_evidence(dict) 존재", isinstance(filtered, dict)):
+        return
+
+    # 참고/제외 항목: 정상 뉴스 — 제목/출처/중요도/URL(있을 때)
+    r_items = review.get("items") or []
+    need = {"title", "source", "final_score", "url", "category_label"}
+    bad = [a.get("title") for a in r_items if not need <= set(a.keys())]
+    check("참고/제외 항목 필드(title/source/score/url/category) 완비", not bad,
+          "; ".join(str(b) for b in bad[:3]))
+    check("참고/제외 항목 제목/출처 비어 있지 않음",
+          all((a.get("title") or "").strip() and (a.get("source") or "").strip()
+              for a in r_items))
+    check("참고/제외 항목 중요도(final_score) 존재 (채점된 정상 뉴스)",
+          all(a.get("final_score") is not None for a in r_items))
+    bad_url = [a.get("title") for a in r_items
+               if a.get("url") and not str(a["url"]).startswith(("http://", "https://"))]
+    check("참고/제외 항목 URL은 있으면 http(s)", not bad_url,
+          "; ".join(str(b) for b in bad_url[:3]))
+    # 핵심 분리: 참고/제외(정상 뉴스)에 출처 품질 excluded가 섞이지 않는다 (두 기준 비혼동)
+    leaked = [a.get("source") for a in r_items if a.get("source_quality") == "excluded"]
+    check("참고/제외 목록에 출처 품질 excluded 미혼입 (두 기준 분리)", not leaked,
+          "; ".join(str(s) for s in leaked[:3]))
+
+    # 출처 품질 제외 항목: '비뉴스성/낮은 신뢰 출처' 라벨을 명시
+    f_items = filtered.get("items") or []
+    check("출처 품질 제외 항목 audit_label == 비뉴스성/낮은 신뢰 출처",
+          all(a.get("audit_label") == SOURCE_FILTERED_LABEL for a in f_items),
+          f"{[a.get('audit_label') for a in f_items][:3]}")
+    check("출처 품질 제외 항목 제목/출처 존재",
+          all((a.get("title") or "").strip() and (a.get("source") or "").strip()
+              for a in f_items))
+
+    # Top 노출 가드 재확인: 즉시/신규 시그널에 출처 품질 excluded 미노출
+    sigs = (brief.get("top_immediate_signals") or []) + (brief.get("top_new_issues") or [])
+    leaked_top = [s.get("source") for s in sigs if s.get("source_quality") == "excluded"]
+    check("Top 시그널에 출처 품질 excluded 미노출 (Top 3 가드)", not leaked_top,
+          "; ".join(str(s) for s in leaked_top[:3]))
 
 
 # ---------- 정적 리포트 드릴다운 ----------
+
+def _audit_section(html: str) -> str:
+    """정적 리포트의 '참고/제외 · 출처 품질 감사' 섹션만 추려낸다 (라벨 격리 검사용)."""
+    m = re.search(r'<section aria-label="참고/제외 및 출처 품질 감사">.*?</section>',
+                  html, re.S)
+    return m.group(0) if m else ""
+
 
 def _anchor_safety_issues(html: str) -> list[str]:
     bad = []
@@ -238,6 +303,31 @@ def check_static_report_mock() -> None:
     check("리포트 드릴다운에 카테고리 기사 줄(cd-art) 1건 이상", "cd-art" in html)
     check("리포트 드릴다운에 중요도 표기 (/ 5.0) 포함",
           "중요도" in html and "/ 5.0" in html)
+
+    # P0-C1.8 (1): 카테고리 드릴다운 기본 접힘 + 펼침 안내 문구
+    check("드릴다운 헬퍼 안내 문구 존재 (펼쳐서 확인 유도)", HELPER_TEXT in html)
+    check("카테고리 details에 open 속성 기본값 없음 (모두 접힘)",
+          not re.search(r'<details class="cat-drill"\s+open', html))
+    check("리포트 전체에 열린 <details ... open> 0건 (자동 펼침 없음)",
+          not re.search(r"<details[^>]*\bopen\b", html))
+    check("닫힌 cat-drill details 존재 (details/summary 유지)",
+          '<details class="cat-drill">' in html)
+
+    # P0-C1.8 (2): 참고/제외 기사 + 출처 품질 제외 감사 섹션
+    check(f"리포트에 '{REVIEW_EXCLUDED_TITLE}' 섹션 존재", REVIEW_EXCLUDED_TITLE in html)
+    check(f"리포트에 '{SOURCE_FILTERED_TITLE}' 감사 문구 존재", SOURCE_FILTERED_TITLE in html)
+    check("리포트에 '비뉴스성/낮은 신뢰 출처' 라벨/안내 존재", SOURCE_FILTERED_LABEL in html)
+    # 출처 품질 제외 라벨은 audit 섹션 안에만 — Top 3/드릴다운 본문에 새지 않는다
+    audit = _audit_section(html)
+    check("'비뉴스성/낮은 신뢰 출처' 라벨이 audit 섹션 안에만 존재 (Top 3 비혼입)",
+          html.count(SOURCE_FILTERED_LABEL) == audit.count(SOURCE_FILTERED_LABEL)
+          and audit.count(SOURCE_FILTERED_LABEL) >= 1,
+          f"html={html.count(SOURCE_FILTERED_LABEL)} audit={audit.count(SOURCE_FILTERED_LABEL)}")
+
+    # P0-C1.8 (3): 용어 명확화 — 옛 라벨 제거, 새 라벨 노출
+    check(f"리포트에 옛 라벨 '{OLD_DAILY_LABEL}' 없음 (용어 명확화)",
+          OLD_DAILY_LABEL not in html)
+    check(f"리포트 현황판/감사에 새 라벨 '{NEW_DAILY_LABEL}' 노출", NEW_DAILY_LABEL in html)
 
     # 원문 링크(href) 안전성 — 새 탭 + noopener noreferrer
     anchors = [m.group(0) for m in re.finditer(r"<a\b[^>]*>", html)
@@ -289,6 +379,14 @@ def check_static_report_live_optional() -> None:
     check("LIVE: 실제 기사 href(http) 1건 이상", bool(http_hrefs), f"{len(http_hrefs)}건")
     check("LIVE: 드릴다운 링크가 새 탭 + noopener noreferrer",
           not _anchor_safety_issues(html))
+    # P0-C1.8: live 리포트도 감사 섹션 + 용어 명확화 유지
+    check("LIVE: 참고/제외·출처 품질 감사 섹션 존재",
+          REVIEW_EXCLUDED_TITLE in html and SOURCE_FILTERED_TITLE in html)
+    check("LIVE: 옛 라벨 '일간 요약' 없음", OLD_DAILY_LABEL not in html)
+    audit = _audit_section(html)
+    if SOURCE_FILTERED_LABEL in html:  # 제외 항목이 표시되면 audit 섹션 안에만 (Top 3 비혼입)
+        check("LIVE: 출처 품질 제외 라벨이 audit 섹션 안에만 존재",
+              html.count(SOURCE_FILTERED_LABEL) == audit.count(SOURCE_FILTERED_LABEL))
 
 
 # ---------- 대시보드 / Telegram ----------
@@ -307,6 +405,20 @@ def check_dashboard() -> None:
           'alert_grade === "즉시 알림 후보"' in html
           or "alert_grade === '즉시 알림 후보'" in html)
 
+    # P0-C1.8 (4): 카테고리 자동 선택 제거 + 참고/제외 감사 + 용어 명확화
+    check("대시보드가 카테고리를 자동 선택하지 않음 (sections[0] 자동 지정 없음)",
+          "state.activeCat = sections[0]" not in html)
+    check("대시보드 카테고리 미선택 안내 문구 존재",
+          "카테고리를 선택하면 근거 기사가 표시됩니다" in html)
+    check("대시보드에 참고/제외 감사 영역 존재 (renderAuditArea + audit-area)",
+          "renderAuditArea" in html and 'id="audit-area"' in html)
+    check("대시보드가 참고/제외·출처 품질 감사 데이터를 소비",
+          "review_excluded_evidence" in html and "source_filtered_evidence" in html)
+    check("대시보드에 현황판 버킷 설명(status_board_legend) 노출",
+          "status_board_legend" in html and 'id="brief-legend"' in html)
+    check(f"대시보드에 옛 라벨 '{OLD_DAILY_LABEL}' 없음", OLD_DAILY_LABEL not in html)
+    check(f"대시보드에 새 라벨 '{NEW_DAILY_LABEL}' 노출", NEW_DAILY_LABEL in html)
+
 
 def check_telegram_brief_mention() -> None:
     proc = run_script(DIGEST_BUILDER)
@@ -321,6 +433,11 @@ def check_telegram_brief_mention() -> None:
           msg.count(DRILLDOWN_TITLE) == 1, f"{msg.count(DRILLDOWN_TITLE)}회")
     check("digest에 HTML details/summary 마크업 없음 (plain text 유지)",
           "<details" not in msg and "<summary" not in msg)
+    # P0-C1.8: Telegram 용어 명확화 + 참고/제외 간결 안내
+    check(f"digest에 옛 라벨 '{OLD_DAILY_LABEL}' 없음", OLD_DAILY_LABEL not in msg)
+    check(f"digest 현황판에 새 라벨 '{NEW_DAILY_LABEL}' 노출", NEW_DAILY_LABEL in msg)
+    check("digest가 참고/제외 기사를 간결히 가리킴 (1회)",
+          "참고/제외" in msg and msg.count("참고/제외 기사") <= 1)
 
 
 # ---------- 워크플로 게시 경로 ----------
@@ -381,6 +498,7 @@ def main() -> int:
     if brief:
         check_brief_category_sections(brief)
         check_brief_no_body_fields(brief)
+        check_brief_audit_evidence(brief)
 
     check_static_report_mock()
     check_static_report_live_optional()

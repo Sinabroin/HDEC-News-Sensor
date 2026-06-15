@@ -142,10 +142,14 @@ def _run_live() -> dict:
     """
     from app import live_collector
 
+    # 출처 품질로 수집 단계에서 제외된 비뉴스성 항목을 감사용으로 함께 받는다 (P0-C1.8).
+    # 본문 없이 title/source/url/published_at 메타데이터만 담긴다.
+    source_filtered: list[dict] = []
     try:
-        raw_articles = live_collector.fetch_all()
+        raw_articles = live_collector.fetch_all(filtered_out=source_filtered)
     except Exception:  # noqa: BLE001 — 네트워크/파싱 오류는 fallback으로 흡수
         raw_articles = []
+        source_filtered = []
 
     if not raw_articles:
         return _run_mock(fallback=True, attempted="live")
@@ -159,6 +163,7 @@ def _run_live() -> dict:
         "news_source": live_collector.SOURCE_LABEL,
         "attempted_mode": "live",
         "fallback_used": False,
+        "source_filtered": source_filtered,
     }
 
 

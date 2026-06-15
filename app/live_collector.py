@@ -96,8 +96,13 @@ def _fetch(url: str, timeout: int) -> str:
 
 
 def _parse_items(xml_text: str, query: str, collected_at: str,
-                 max_items: int) -> list[dict]:
-    """RSS 2.0 <item>에서 메타데이터만 추출한다 (본문 전문 없음)."""
+                 max_items: int, filtered_sink: list | None = None) -> list[dict]:
+    """RSS 2.0 <item>에서 메타데이터만 추출한다 (본문 전문 없음).
+
+    filtered_sink가 주어지면 출처 품질로 '제외된' 비뉴스성 항목의 메타데이터
+    (title/source/url/published_at — 본문 없음)를 거기에 담는다 (P0-C1.8 감사 투명성).
+    X(엑스)/금지 소스는 어떤 경우에도 sink에 담지 않는다 (rules.md §1).
+    """
     import xml.etree.ElementTree as ET
 
     try:
@@ -131,6 +136,14 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
         # 수집 단계에서 제외한다 — 임원용 신호에 비-뉴스 결과가 섞이지 않게 한다.
         # raw dict에는 품질 필드를 부착하지 않는다 (허용 키 계약 유지) — 제외 판정에만 쓴다.
         if source_quality.is_excluded(source, title):
+            if filtered_sink is not None:
+                # 감사 투명성용 메타데이터만 — 본문/snippet은 담지 않는다 (rules.md §3).
+                filtered_sink.append({
+                    "title": title,
+                    "source": source,
+                    "url": link,
+                    "published_at": _to_iso(item.findtext("pubDate") or "") or collected_at,
+                })
             continue
 
         snippet = _strip_html(item.findtext("description") or "")[:SNIPPET_MAX_LEN]
@@ -157,11 +170,15 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
     return rows
 
 
-def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None) -> list[dict]:
+def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
+              filtered_out: list | None = None) -> list[dict]:
     """설정된 모든 query에 대해 공개 RSS를 수집해 raw dict 리스트를 반환한다.
 
     네트워크/파싱 실패는 해당 query만 건너뛰고 계속한다 (가짜 값 생성 금지).
     수집 결과가 0건이면 빈 리스트를 반환하고, fallback 판단은 collector가 한다.
+
+    filtered_out 리스트가 주어지면 출처 품질로 제외된 비뉴스성 항목의 메타데이터를
+    URL 기준으로 dedup해 담는다 (P0-C1.8 감사 — 임원이 무엇이 걸러졌는지 볼 수 있게).
     """
     cfg = _load_sources(sources_path)
     queries = [q for q in (cfg.get("queries") or []) if isinstance(q, str) and q.strip()]
@@ -173,6 +190,7 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None) -> list[dict]:
     collected_at = datetime.now(KST).isoformat(timespec="seconds")
 
     seen_urls, results = set(), []
+    filtered_urls = set()
     for query in queries:
         if len(results) >= max_total:
             break
@@ -181,11 +199,20 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None) -> list[dict]:
             xml_text = _fetch(url, timeout)
         except Exception:  # noqa: BLE001 — 네트워크/HTTP 오류는 query 단위로 무시
             continue
-        for row in _parse_items(xml_text, query, collected_at, max_per_query):
+        sink = [] if filtered_out is not None else None
+        for row in _parse_items(xml_text, query, collected_at, max_per_query, sink):
             if row["url"] in seen_urls:
                 continue
             seen_urls.add(row["url"])
             results.append(row)
             if len(results) >= max_total:
                 break
+        if sink:  # 제외 항목을 URL 기준 dedup해 누적 (수집된 기사와 겹치면 제외)
+            for item in sink:
+                u = item.get("url")
+                if not u or u in filtered_urls or u in seen_urls:
+                    continue
+                filtered_urls.add(u)
+                if len(filtered_out) < max_total:
+                    filtered_out.append(item)
     return results

@@ -20,7 +20,7 @@ from app import (
 
 ALERT_GRADE_ALIASES = {
     "instant_candidate": "즉시 알림 후보",
-    "daily": "일간 요약",
+    "daily": "검토 필요",
     "weekly": "주간 리포트 후보",
     "excluded": "제외",
 }

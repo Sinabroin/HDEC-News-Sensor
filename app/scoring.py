@@ -73,7 +73,7 @@ TIER1_SOURCES = {"연합뉴스", "한국경제", "매일경제", "서울경제",
 TIER2_SOURCES = {"Mock News", "디지털데일리"}
 
 GRADE_INSTANT = "즉시 알림 후보"
-GRADE_DAILY = "일간 요약"
+GRADE_DAILY = "검토 필요"
 GRADE_WEEKLY = "주간 리포트 후보"
 GRADE_EXCLUDED = "제외"
 
@@ -456,14 +456,14 @@ def _score_article(article: dict, ctx: dict) -> dict:
 
 
 def _apply_candidate_cap(rows: list[dict]) -> list[dict]:
-    """즉시 알림 후보는 1회 sensing당 최대 3건. 초과분은 점수순으로 일간 요약 전환."""
+    """즉시 알림 후보는 1회 sensing당 최대 3건. 초과분은 점수순으로 검토 필요 등급 전환."""
     instant = [r for r in rows if r["alert_grade"] == GRADE_INSTANT]
     instant.sort(key=lambda r: r["final_score"], reverse=True)
     for row in instant[MAX_INSTANT_CANDIDATES:]:
         row["alert_grade"] = GRADE_DAILY
         row["why_not_higher"] = (
             f"점수 {row['final_score']}점으로 즉시 알림 기준(4.5)을 충족했으나 "
-            f"당회 즉시 알림 정원({MAX_INSTANT_CANDIDATES}건) 초과로 일간 요약 전환; "
+            f"당회 즉시 알림 정원({MAX_INSTANT_CANDIDATES}건) 초과로 검토 필요 등급 전환; "
         ) + row["why_not_higher"]
     return rows
 

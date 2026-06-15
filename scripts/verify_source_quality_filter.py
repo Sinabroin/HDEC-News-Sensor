@@ -249,7 +249,11 @@ def _run_live_sim() -> dict | None:
         "scoring.score_all(); insight.generate_all()\n"
         "b=briefing.build_brief()\n"
         "from build_static_report import render_report_html\n"
+        "import re as _re\n"
         "html,_=render_report_html(b)\n"
+        "m=_re.search(r'<section aria-label=\"참고/제외 및 출처 품질 감사\">.*?</section>', html, _re.S)\n"
+        "audit=m.group(0) if m else ''\n"
+        "outside=html.replace(audit,'') if audit else html\n"
         "rows={r['id']:r for r in db.fetch_articles_with_scores()}\n"
         "tops=b['top_immediate_signals']+b['top_new_issues']\n"
         "def f(i):\n"
@@ -259,7 +263,8 @@ def _run_live_sim() -> dict | None:
         " 'blog':f('live_b1'),'cafe':f('live_c1'),'trusted':f('live_t1'),\n"
         " 'top':[{'source':s.get('source'),'sq':s.get('source_quality')} for s in tops],\n"
         " 'top_has_quality':all('source_quality' in s for s in tops) if tops else False,\n"
-        " 'report_has_blog':'테크블로그' in html,'report_has_cafe':'부동산 카페' in html}\n"
+        " 'report_has_blog':'테크블로그' in outside,'report_has_cafe':'부동산 카페' in outside,\n"
+        " 'audit_has_blog':'테크블로그' in audit,'audit_has_cafe':'부동산 카페' in audit}\n"
         "print(json.dumps(out, ensure_ascii=False))\n"
     )
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True,
@@ -297,9 +302,13 @@ def check_live_filter(sim: dict | None) -> None:
     check("Top 시그널의 source_quality가 전부 excluded 아님",
           all(t.get("sq") != "excluded" for t in top), str(top))
     check("Top 시그널 entry에 source_quality 필드 존재", sim.get("top_has_quality"))
-    check("정적 리포트 Top에 블로그/카페 출처 미노출",
+    check("정적 리포트 Top/드릴다운(감사 섹션 외)에 블로그/카페 출처 미노출",
           not sim.get("report_has_blog") and not sim.get("report_has_cafe"),
           f"blog={sim.get('report_has_blog')} cafe={sim.get('report_has_cafe')}")
+    # P0-C1.8: 제외된 비뉴스성 출처는 '출처 품질 제외' 감사 섹션에서만 투명하게 노출한다
+    check("출처 품질 제외 audit 섹션에 블로그/카페 노출 (감사 투명성)",
+          sim.get("audit_has_blog") and sim.get("audit_has_cafe"),
+          f"audit_blog={sim.get('audit_has_blog')} audit_cafe={sim.get('audit_has_cafe')}")
 
 
 # ---------- mock 경로 무결성 + brief 품질 필드 ----------

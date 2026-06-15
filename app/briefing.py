@@ -56,6 +56,29 @@ CATEGORY_DRILLDOWN_NOTE = (
     "카테고리 총건수에는 포함해 감사 가능하게 둡니다."
 )
 
+# 참고/제외 · 출처 품질 감사 (P0-C1.8) — 두 기준을 섞지 않는다(낮은 관련성 ≠ 출처 품질).
+# 모바일 가독성을 위해 표시 상한을 두고 나머지는 '외 n건'으로 정직히 표기한다.
+TOP_REVIEW_EXCLUDED = 12
+TOP_SOURCE_FILTERED = 12
+SOURCE_FILTERED_LABEL = "비뉴스성/낮은 신뢰 출처"
+REVIEW_EXCLUDED_NOTE = (
+    "참고/제외 기사: 정상 뉴스 출처이지만 현대건설 관련성·우선순위가 낮아 참고/제외로 "
+    "분류된 기사입니다. 낮은 관련성·우선순위 판단이며 출처 품질 문제와는 다릅니다."
+)
+SOURCE_FILTERED_NOTE = (
+    "출처 품질 제외: 블로그·카페·커뮤니티 등 비뉴스성/낮은 신뢰 출처로, 임원용 Top 3와 "
+    "근거 목록에서 제외됩니다. 감사 투명성을 위해서만 별도로 표시합니다."
+)
+
+# 현황판 버킷 의미 설명 — UI·리포트가 그대로 노출하는 단일 소스 (P0-C1.8 용어 명확화).
+# label은 scoring 등급 상수를 그대로 써서 표시 라벨과 항상 일치시킨다(이중 관리 금지).
+STATUS_BOARD_LEGEND = [
+    {"label": scoring.GRADE_INSTANT, "meaning": "중요도 4.5 이상 — 운영자 즉시 확인 후보"},
+    {"label": scoring.GRADE_DAILY, "meaning": "중요도 3.5~4.4 — 일간 검토 후보"},
+    {"label": scoring.GRADE_WEEKLY, "meaning": "전략·반복 트렌드 — 주간 모니터링 대상"},
+    {"label": "참고/제외", "meaning": "낮은 관련성 또는 제외 판단"},
+]
+
 # 저장된 implication 텍스트 → insight 카테고리 키 역매핑 (탐지 로직 중복 방지)
 _CATEGORY_BY_IMPLICATION = {
     text: key for key, text in insight.IMPLICATION_TEMPLATES.items()
@@ -322,6 +345,103 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
     return sections
 
 
+def _build_review_excluded(scored_rows: list[dict], categories: dict[str, str],
+                           implications: dict[str, str]) -> dict:
+    """참고/제외 등급(제외) 중 '정상 뉴스 출처'만 모은다 — 낮은 관련성/우선순위 뉴스 (P0-C1.8).
+
+    출처 품질 제외(블로그/카페 등)는 여기서 빼고 별도 audit 섹션으로 보낸다.
+    낮은 관련성 ≠ 출처 품질 문제 — 두 기준을 한 묶음으로 섞지 않는다.
+    저장된 값만 옮긴다(점수·등급 재계산 없음). 본문 전문은 싣지 않는다.
+    """
+    rows = sorted(
+        (r for r in scored_rows
+         if r.get("alert_grade") == scoring.GRADE_EXCLUDED and not _is_excluded_quality(r)),
+        key=lambda r: (-(r.get("final_score") or 0), r["id"]))
+    items = [_category_article_entry(r, categories.get(r["id"], "general"),
+                                     implications.get(r["id"], ""))
+             for r in rows[:TOP_REVIEW_EXCLUDED]]
+    return {
+        "items": items,
+        "total_count": len(rows),
+        "shown_count": len(items),
+        "remaining_count": max(0, len(rows) - len(items)),
+        "note": REVIEW_EXCLUDED_NOTE,
+    }
+
+
+def _source_filtered_entry_from_provenance(item: dict) -> dict:
+    """collector가 수집 단계에서 버린 비뉴스성 출처 항목(title/source/url)을 audit 항목으로.
+
+    이 항목은 채점·저장되지 않았으므로 중요도/카테고리가 없다(점수 None). 본문 전문 없음.
+    """
+    source = item.get("source") or "출처 미상"
+    quality = source_quality.classify(source, item.get("title"))
+    url = item.get("url")
+    return {
+        "article_id": None,
+        "title": item.get("title") or "",
+        "source": source,
+        "source_quality": quality["source_quality"],
+        "source_quality_label": SOURCE_FILTERED_LABEL,
+        "source_quality_reason": quality["source_quality_reason"],
+        "published_at": item.get("published_at"),
+        "url": url,
+        "has_original_link": _has_http_url(url),
+        "final_score": None,
+        "score_band": None,
+        "alert_grade": None,
+        "action_label": "출처 품질 제외",
+        "category": None,
+        "category_label": None,
+        "why_it_matters": "",
+        "audit_label": SOURCE_FILTERED_LABEL,
+        "origin": "filtered_at_collection",
+    }
+
+
+def _build_source_filtered(scored_rows: list[dict], categories: dict[str, str],
+                           implications: dict[str, str],
+                           provenance: dict | None) -> dict:
+    """출처 품질 제외(블로그/카페/커뮤니티) 감사 목록 (P0-C1.8).
+
+    live 수집에서 비뉴스성 출처는 수집 단계(live_collector)에서 버려져 DB에 없으므로,
+    collector provenance(source_filtered: title/source/url)로 surface한다. 드물게 DB에
+    excluded 품질 행이 있으면(mock 등) 함께 합친다. 본문 전문은 싣지 않는다.
+    """
+    stored = sorted((r for r in scored_rows if _is_excluded_quality(r)),
+                    key=lambda r: (-(r.get("final_score") or 0), r["id"]))
+    items = []
+    seen = set()
+    for r in stored:
+        entry = _category_article_entry(r, categories.get(r["id"], "general"),
+                                        implications.get(r["id"], ""))
+        entry["source_quality_label"] = SOURCE_FILTERED_LABEL
+        entry["source_quality_reason"] = source_quality.classify(
+            r.get("source"), r.get("title"))["source_quality_reason"]
+        entry["audit_label"] = SOURCE_FILTERED_LABEL
+        entry["origin"] = "stored"
+        items.append(entry)
+        seen.add((entry["source"], entry["title"]))
+
+    for it in ((provenance or {}).get("source_filtered") or []):
+        key = (it.get("source") or "출처 미상", it.get("title") or "")
+        if not key[1] or key in seen:
+            continue
+        seen.add(key)
+        items.append(_source_filtered_entry_from_provenance(it))
+
+    total = len(items)
+    shown = items[:TOP_SOURCE_FILTERED]
+    return {
+        "items": shown,
+        "total_count": total,
+        "shown_count": len(shown),
+        "remaining_count": max(0, total - len(shown)),
+        "audit_label": SOURCE_FILTERED_LABEL,
+        "note": SOURCE_FILTERED_NOTE,
+    }
+
+
 def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int) -> list[dict]:
     """점수순 후보에서 카테고리가 몰리지 않게 limit개를 고른다.
 
@@ -536,6 +656,11 @@ def build_brief(pipeline_counts: dict | None = None,
     news_source = prov.get("news_source") or (
         "live_rss" if news_mode == "live" else "mock")
 
+    # 참고/제외 · 출처 품질 감사 (P0-C1.8) — 카운트만 보이던 버킷을 감사 가능하게 한다.
+    # 두 기준을 분리한다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
+    review_excluded = _build_review_excluded(scored, categories, implications)
+    source_filtered = _build_source_filtered(scored, categories, implications, prov)
+
     now = datetime.now(KST)
     return {
         "header": HEADER,
@@ -569,7 +694,10 @@ def build_brief(pipeline_counts: dict | None = None,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
         "category_sections": category_sections,
+        "review_excluded_evidence": review_excluded,
+        "source_filtered_evidence": source_filtered,
         "macro_snapshot": macro,
+        "status_board_legend": STATUS_BOARD_LEGEND,
         "spread_method": SPREAD_METHOD,
         "spread_note": SPREAD_NOTE,
         "theme_strength_note": THEME_STRENGTH_NOTE,

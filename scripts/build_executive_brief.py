@@ -66,6 +66,7 @@ def build_brief_via_mock_pipeline() -> dict:
             "news_source": collect_stats.get("news_source"),
             "fallback_used": collect_stats.get("fallback_used"),
             "attempted_mode": collect_stats.get("attempted_mode"),
+            "source_filtered": collect_stats.get("source_filtered"),
         },
     )
 

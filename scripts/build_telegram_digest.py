@@ -153,7 +153,7 @@ def format_digest_message(data: dict) -> str:
                   "시장지표 미연동 — 현재 시장값 아님 · 상세는 '오늘 브리프 보기' 리포트에서 확인"]
 
     lines += ["", "※ 유사 주제 기사 수는 추정값입니다 · 원문·점수·카테고리별 근거 기사는 "
-              "'오늘 브리프 보기' 리포트에서 확인하세요."]
+              "'오늘 브리프 보기' 리포트에서 확인하세요. 참고/제외 기사도 리포트 하단에서 확인 가능."]
     message = "\n".join(lines)
     if len(message) > MESSAGE_BUDGET:
         message = message[: MESSAGE_BUDGET - 1] + "…"

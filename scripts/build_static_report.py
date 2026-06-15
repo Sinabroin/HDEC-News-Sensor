@@ -376,16 +376,18 @@ def _render_category_drilldown(brief: dict) -> list[str]:
     total = sum(s.get("total_count", 0) for s in sections)
     body = ['<section aria-label="카테고리별 근거 기사">',
             '<h2 class="sec-h">카테고리별 근거 기사'
-            f'<span class="tag">수집·분석 {total}건 · 펼쳐서 근거 확인</span></h2>']
+            f'<span class="tag">수집·분석 {total}건 · 모든 분류 기본 접힘</span></h2>']
     if not sections:
         body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p></section>')
         return body
+    # 모든 카테고리는 기본 접힘 — 운영자가 필요한 분류만 펼쳐 근거를 확인한다 (자동 펼침 없음).
+    body.append('<p class="cd-note">카테고리를 펼쳐 근거 기사를 확인하세요. '
+                '(모든 분류는 기본 접힘 상태입니다.)</p>')
     body.append(f'<p class="cd-note">{escape(brief.get("category_drilldown_note") or "")}</p>')
-    for i, sec in enumerate(sections):
-        open_attr = " open" if i == 0 else ""  # 최상위 카테고리는 기본 펼침 (발견성)
+    for sec in sections:
         imm = (f'<span class="cd-imm">즉시 {sec["instant_count"]}</span>'
                if sec.get("instant_count") else "")
-        body.append(f'<details class="cat-drill"{open_attr}>')
+        body.append('<details class="cat-drill">')
         body.append(
             '<summary>'
             f'<span class="cd-label">{escape(sec.get("category_label") or "")}</span>'
@@ -401,6 +403,95 @@ def _render_category_drilldown(brief: dict) -> list[str]:
         if sec.get("note"):
             body.append(f'<p class="cd-more">{escape(sec["note"])}</p>')
         body.append('</div></details>')
+    body.append('</section>')
+    return body
+
+
+def _render_audit_article(art: dict) -> str:
+    """참고/제외·출처 품질 감사 항목 한 줄 — 제목/출처/중요도(또는 미채점)/사유 + 원문 링크.
+
+    출처 품질 제외 항목은 '비뉴스성/낮은 신뢰 출처' 라벨을 항목마다 명시한다.
+    수집 단계 제외(미채점) 항목은 중요도 대신 상태를 표기한다. 본문 전문은 싣지 않는다.
+    """
+    url = art.get("url") or ""
+    title = art.get("title") or ""
+    title_html = (_source_link(url, f"{title} ↗") if _is_http(url) else escape(title))
+    meta = [escape(art.get("source") or "출처 미상")]
+    audit_label = art.get("audit_label")
+    if audit_label:  # 출처 품질 제외 — 비뉴스성/낮은 신뢰 출처임을 항목마다 명시
+        meta.append(f'<span class="srcq low">{escape(audit_label)}</span>')
+    else:
+        sq = art.get("source_quality")
+        if sq in ("trusted", "low"):
+            cls = "srcq trust" if sq == "trusted" else "srcq low"
+            meta.append(f'<span class="{cls}">{escape(art.get("source_quality_label") or "")}</span>')
+    if art.get("category_label"):
+        meta.append(escape(art["category_label"]))
+    if art.get("published_at"):
+        meta.append(f'<span class="num">{escape(_fmt_date(art.get("published_at")))}</span>')
+    score = art.get("final_score")
+    score_html = (f'중요도 {_fmt5(score)} / 5.0' if score is not None
+                  else '수집 단계 제외 · 미채점')
+    reason = art.get("why_it_matters") or art.get("source_quality_reason")
+    parts = [
+        '<article class="cd-art">',
+        '<div class="cd-art-head">',
+        f'<span class="cd-title">{title_html}</span>',
+        f'<span class="cd-sc num">{score_html}</span>',
+        '</div>',
+        f'<p class="cd-meta">{" · ".join(meta)}</p>',
+    ]
+    if reason:
+        parts.append(f'<p class="cd-why">{escape(reason)}</p>')
+    parts.append('</article>')
+    return "".join(parts)
+
+
+def _render_audit_details(label: str, bucket: dict, empty_text: str) -> list[str]:
+    """감사용 <details> 한 묶음 (기본 접힘) — 헤더 카운트 + 안내 + 항목 + '외 n건'."""
+    items = bucket.get("items") or []
+    total = bucket.get("total_count", len(items))
+    body = ['<details class="cat-drill">',
+            '<summary>'
+            f'<span class="cd-label">{escape(label)}</span>'
+            f'<span class="cd-count num">{total}건</span>'
+            '<span class="cd-flex"></span></summary>',
+            '<div class="cd-body">']
+    if bucket.get("note"):
+        body.append(f'<p class="cd-more">{escape(bucket["note"])}</p>')
+    if items:
+        body += [_render_audit_article(a) for a in items]
+    else:
+        body.append(f'<p class="cd-empty">{escape(empty_text)}</p>')
+    remaining = bucket.get("remaining_count", 0)
+    if remaining:
+        body.append(f'<p class="cd-more">외 {remaining}건</p>')
+    body.append('</div></details>')
+    return body
+
+
+def _render_audit_sections(brief: dict) -> list[str]:
+    """참고/제외 기사 + 출처 품질 제외 결과 (감사 전용, 둘 다 기본 접힘) — P0-C1.8.
+
+    두 기준을 분리해 보여준다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
+    카운트만 보이던 버킷을 운영자가 직접 들여다볼 수 있게 한다.
+    """
+    review = brief.get("review_excluded_evidence") or {}
+    filtered = brief.get("source_filtered_evidence") or {}
+    body = [
+        '<section aria-label="참고/제외 및 출처 품질 감사">',
+        '<h2 class="sec-h">참고/제외 · 출처 품질 감사'
+        '<span class="tag">낮은 우선순위·비뉴스 출처 점검 · 기본 접힘</span></h2>',
+        '<p class="cd-note">참고/제외 기사는 정상 뉴스이지만 관련성·우선순위가 낮은 기사이고, '
+        '출처 품질 제외는 블로그·카페 등 비뉴스성 출처입니다 — 서로 다른 기준으로 분리해 표시합니다.</p>',
+    ]
+    body += _render_audit_details(
+        "참고/제외 기사", review,
+        "참고/제외로 분류된 뉴스 기사가 없습니다.")
+    body += _render_audit_details(
+        "출처 품질 제외 결과", filtered,
+        "출처 품질로 제외된 비뉴스성 출처 결과가 없습니다 "
+        "(또는 수집 단계에서 제외되어 표시할 항목이 없습니다).")
     body.append('</section>')
     return body
 
@@ -541,12 +632,18 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         sections.append("category_drilldown")
     body += _render_category_drilldown(brief)
 
+    sections.append("audit_evidence")
+    body += _render_audit_sections(brief)
+
     sections.append("macro")
     body += _render_macro_section(brief)
 
     sections += ["notes", "footer"]
+    legend = brief.get("status_board_legend") or []
+    legend_text = " · ".join(f"{x['label']}: {x['meaning']}" for x in legend)
     body += [
         '<div class="notes">',
+        f'<p>※ 현황판 기준 — {escape(legend_text)}</p>' if legend_text else "",
         f'<p>※ {escape(brief["operator_note"])}</p>',
         f'<p>※ {escape(brief.get("spread_note") or "")}</p>',
         f'<p>※ {escape(brief.get("source_quality_note") or "")}</p>',
