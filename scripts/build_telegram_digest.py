@@ -106,6 +106,7 @@ def format_digest_message(data: dict) -> str:
     signals = data["top_signals"]
     all_instant = bool(signals) and all(
         s.get("alert_grade") == "즉시 알림 후보" for s in signals)
+    has_instant = any(s.get("alert_grade") == "즉시 알림 후보" for s in signals)
     section = "즉시 알림 후보" if all_instant else "주요 신호"
     lines += ["", f"[{section} Top {len(signals)}]"]
     for s in signals:
@@ -117,6 +118,12 @@ def format_digest_message(data: dict) -> str:
             meta.append(s["action_label"])
         if meta:
             lines.append("   " + " · ".join(meta))
+
+    # live 수집일에 즉시 확인급(신뢰 출처 4.5+) 신호가 없으면 — 약한 출처(블로그·재전송 등)를
+    # 임원 알림으로 띄우지 않고, 주간 모니터링 후보 중심임을 명확히 한다 (P0-C1.6).
+    # mock 데모는 즉시 후보가 항상 있어 이 줄이 추가되지 않는다 (다이제스트 길이 불변).
+    if news_mode == "live" and not has_instant:
+        lines += ["", "오늘은 즉시 확인급 신호 없음 · 주간 모니터링 후보 중심"]
 
     themes = data["theme_rankings"][:3]
     if themes:

@@ -126,7 +126,12 @@
     content: counter(rank, decimal-leading-zero); font-family: var(--serif);
     color: var(--signal); margin-right: 10px; font-size: 13px; }
   .meta { font-size: 11.5px; color: var(--muted); display: flex; gap: 10px;
-          flex-wrap: wrap; }
+          flex-wrap: wrap; align-items: center; }
+  /* ---- 출처 품질 칩 (P0-C1.6): 신뢰/낮은 신뢰도일 때만 노출, 일반 출처는 생략 ---- */
+  .srcq { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 3px;
+          letter-spacing: .02em; }
+  .srcq.trusted { color: var(--daily); background: var(--daily-bg); }
+  .srcq.low { color: var(--signal); background: var(--signal-bg); }
   .badges { display: flex; gap: 8px; margin: 8px 0 0; flex-wrap: wrap;
             align-items: center; }
   .badge { font-size: 10.5px; padding: 2px 9px; border-radius: 3px;
@@ -340,6 +345,12 @@ function scorePct(s) {
   return isNaN(n) ? 0 : Math.max(0, Math.min(100, Math.round(n / 5 * 100)));
 }
 function confPct(v) { return v == null ? "-" : Math.round(Number(v) * 100) + "%"; }
+/* 출처 품질 칩 — 신뢰/낮은 신뢰도일 때만 노출 (일반 출처는 어수선함을 피해 생략) */
+function srcQualityChip(a) {
+  const q = a.source_quality;
+  if (q !== "trusted" && q !== "low") return "";
+  return `<span class="srcq ${esc(q)}">${esc(a.source_quality_label || "")}</span>`;
+}
 const COMP_KEYS = [
   ["현대건설 관련성", "hdec_relevance"], ["사업기회", "business_opportunity"],
   ["리스크/규제", "risk_potential"], ["긴급도", "urgency"],
@@ -416,7 +427,7 @@ function renderBrief(b) {
     const band = i.score_band || scoreBand(i.final_score);
     const spread = (i.spread && i.spread.label) || "단독 신호";
     return `<li onclick="selectArticle('${esc(i.article_id)}')">` +
-      `<span class="t">${esc(i.title)}</span><br>` +
+      `<span class="t">${esc(i.title)}</span> ${srcQualityChip(i)}<br>` +
       `<span class="sub">${esc(i.category_label || "-")} · 중요도 ${score5(i.final_score)}/5.0` +
       ` · ${esc(band)} · ${esc(spread)}</span></li>`;
   }).join("");
@@ -455,7 +466,8 @@ function renderBrief(b) {
       `<br><span class="macro-warn">현재 시장값이 아니므로 수치를 표시하지 않습니다 (실시간 연동 전).</span>`;
   }
   document.getElementById("brief-macro").innerHTML = macroHtml;
-  document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "");
+  document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "")
+    + (b.source_quality_note ? "  ·  " + b.source_quality_note : "");
 }
 
 /* ----- 데이터 로드 ----- */
@@ -508,7 +520,7 @@ function cardHtml(a) {
   <div class="card ${gradeClass}${a.id === state.selectedId ? " active" : ""}" data-id="${esc(a.id)}" onclick="selectArticle('${esc(a.id)}')">
     <div class="title">${esc(a.title)}</div>
     <div class="meta">
-      <span>${esc(a.source || "-")}</span><span>${esc(fmtTime(a.published_at))}</span>
+      <span>${esc(a.source || "-")}</span>${srcQualityChip(a)}<span>${esc(fmtTime(a.published_at))}</span>
     </div>
     <div class="badges">
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
@@ -576,7 +588,7 @@ function detailHtml(d) {
   return `
     <h3>${esc(a.title)}</h3>
     <div class="meta">
-      <span>${esc(a.source || "-")}</span><span>${esc(fmtTime(a.published_at))}</span>
+      <span>${esc(a.source || "-")}</span>${srcQualityChip(a)}<span>${esc(fmtTime(a.published_at))}</span>
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
     </div>
     <div class="kv"><a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></div>

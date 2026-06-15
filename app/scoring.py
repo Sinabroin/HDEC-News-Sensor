@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime, timedelta
 
-from app import db
+from app import db, source_quality
 
 MODEL_NAME = "rule-based-v1"
 
@@ -388,6 +388,7 @@ def _score_article(article: dict, ctx: dict) -> dict:
     g = ctx["hits_by_id"][article["id"]]
     fresh = _is_fresh(article.get("published_at"))
     tier = _source_tier(article.get("source"))
+    quality = source_quality.classify(article.get("source"), article.get("title"))
 
     dims = {
         "hdec_relevance": _hdec_relevance(g),
@@ -409,6 +410,15 @@ def _score_article(article: dict, ctx: dict) -> dict:
     weighted = sum(dims[k] * WEIGHTS[k] for k in WEIGHTS)
     final_score = round(clamp(weighted + rule_bonus - rule_penalty, 0.0, 5.0), 2)
 
+    # 출처 품질 캡 (P0-C1.6): 블로그/카페/커뮤니티(excluded)·재전송/후기성(low) 출처는
+    # 즉시 알림 임계(4.5) 위로 올라가지 못하게 점수를 상한 처리한다 (Top 3 비-뉴스 차단).
+    # trusted/neutral은 cap=None이라 영향이 없고, 캡보다 낮은 점수도 그대로 둔다 —
+    # 정상 뉴스 점수와 mock 데모 숫자는 바뀌지 않는다 (캡은 점수를 낮추기만 한다).
+    cap = source_quality.cap_for(quality["source_quality"])
+    quality_capped = cap is not None and final_score > cap
+    if quality_capped:
+        final_score = round(cap, 2)
+
     matched_groups = sum(1 for v in g.values() if v)
     confidence = round(clamp(0.45 + 0.05 * min(matched_groups, 8)
                              + (0.08 if tier >= 4.5 else 0.0)
@@ -419,6 +429,13 @@ def _score_article(article: dict, ctx: dict) -> dict:
         evidence.append("source")
     if fresh:
         evidence.append("published_at")
+
+    why_not_higher = _build_why_not_higher(g, dims, final_score)
+    if quality_capped:
+        why_not_higher = (
+            f"출처 품질이 낮아({quality['source_quality_label']}) 상위 노출을 제한 — "
+            f"중요도를 {final_score}점으로 상한 처리함; "
+        ) + why_not_higher
 
     return {
         "id": f"score_{article['id']}",
@@ -431,7 +448,7 @@ def _score_article(article: dict, ctx: dict) -> dict:
         "confidence": confidence,
         "scoring_reason": _build_reason(g, bonuses, penalties),
         "evidence_basis": json.dumps(evidence, ensure_ascii=False),
-        "why_not_higher": _build_why_not_higher(g, dims, final_score),
+        "why_not_higher": why_not_higher,
         "why_not_lower": _build_why_not_lower(g, dims, bonuses, final_score),
         "model_name": MODEL_NAME,
         "created_at": db.now_iso(),

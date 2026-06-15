@@ -13,7 +13,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from app import briefing, collector, config, db, feedback, insight, notification, scoring
+from app import (
+    briefing, collector, config, db, feedback, insight, notification, scoring,
+    source_quality,
+)
 
 ALERT_GRADE_ALIASES = {
     "instant_candidate": "즉시 알림 후보",
@@ -80,6 +83,21 @@ def _parse_json_fields(row: dict | None) -> dict | None:
     return parsed
 
 
+def _attach_source_quality(row: dict | None) -> dict | None:
+    """응답 변환: 저장된 source/title을 출처 품질로 분류해 표시용 라벨을 덧붙인다.
+
+    점수/등급을 바꾸지 않는다 — UI 카드의 출처 품질 칩(신뢰/일반/낮은 신뢰도)용
+    파생 필드일 뿐이다. 분류 로직은 source_quality 도메인이 단일 소유한다.
+    """
+    if not row:
+        return row
+    q = source_quality.classify(row.get("source"), row.get("title"))
+    row["source_quality"] = q["source_quality"]
+    row["source_quality_label"] = q["source_quality_label"]
+    row["source_type"] = q["source_type"]
+    return row
+
+
 @app.get("/")
 def index_page():
     index_path = config.TEMPLATES_DIR / "index.html"
@@ -112,7 +130,8 @@ def sense_run(body: SenseRunRequest | None = None):
 @app.get("/api/articles")
 def list_articles(min_score: float | None = None, alert_grade: str | None = None):
     grade = ALERT_GRADE_ALIASES.get(alert_grade, alert_grade) if alert_grade else None
-    rows = [_parse_json_fields(r) for r in db.fetch_articles_with_scores(min_score, grade)]
+    rows = [_attach_source_quality(_parse_json_fields(r))
+            for r in db.fetch_articles_with_scores(min_score, grade)]
     candidates = [r for r in rows if r.get("alert_grade") == "즉시 알림 후보"]
     return {
         "articles": rows,
@@ -130,7 +149,7 @@ def article_detail(article_id: str):
     if detail is None:
         raise HTTPException(status_code=404, detail=f"기사를 찾을 수 없음: {article_id}")
     return {
-        "article": _parse_json_fields(detail["article"]),
+        "article": _attach_source_quality(_parse_json_fields(detail["article"])),
         "score": _parse_json_fields(detail["score"]),
         "insight": _parse_json_fields(detail["insight"]),
     }

@@ -1,0 +1,86 @@
+{
+  "version": "p0-c1.6",
+  "description": "공개 RSS(예: Google News) 결과의 출처 품질 정책. 블로그·카페·커뮤니티성 출처를 제외하거나 낮은 우선순위로 처리해 임원용 Top 3에 들어가지 않게 한다. 출처 품질은 사실 보증이 아니라 랭킹/필터 가드레일이다.",
+  "source_type_label": {
+    "news": "언론 보도",
+    "institution": "공공/기관",
+    "blog": "블로그",
+    "cafe": "카페",
+    "community": "커뮤니티",
+    "video": "동영상",
+    "aggregator": "재전송/집계",
+    "unknown": "미상"
+  },
+  "quality_label": {
+    "trusted": "신뢰 출처",
+    "neutral": "일반 출처",
+    "low": "낮은 신뢰도",
+    "excluded": "낮은 신뢰도"
+  },
+  "excluded_source_patterns": [
+    "네이버 블로그", "naver blog", "블로그", "blog",
+    "네이버 카페", "naver cafe", "카페", "cafe",
+    "tistory", "티스토리", "브런치", "brunch", "velog",
+    "youtube", "유튜브", "틱톡", "tiktok",
+    "커뮤니티", "community",
+    "디시", "디시인사이드", "dcinside",
+    "클리앙", "clien", "인스티즈", "instiz",
+    "뽐뿌", "ppomppu", "에펨코리아", "fmkorea",
+    "보배드림", "루리웹", "ruliweb", "더쿠", "theqoo", "네이트판"
+  ],
+  "excluded_title_patterns": [
+    "블로그", "카페", "브이로그", "vlog"
+  ],
+  "downrank_title_patterns": [
+    "후기", "추천템", "추천 ", " 추천", "내돈내산", "협찬", "광고", "할인", "쿠폰",
+    "이벤트 안내", "무료나눔", "무료 나눔", "공구 ", "최저가", "직접 써본", "솔직 리뷰"
+  ],
+  "low_trust_source_patterns": [
+    "재전송", "뉴스픽", "newspic", "보도자료", "press release",
+    "홍보", "마케팅", "광고", "sponsored", "애드", "pr와이어", "prwire"
+  ],
+  "trusted_source_patterns": [
+    "연합뉴스", "연합인포맥스", "한국경제", "매일경제", "서울경제", "조선비즈",
+    "머니투데이", "이데일리", "비즈워치", "대한경제", "건설경제", "아시아경제",
+    "파이낸셜뉴스", "전자신문", "zdnet", "zdnet korea", "에너지경제", "전기신문",
+    "뉴시스", "뉴스1", "news1", "ytn", "kbs", "mbc", "sbs",
+    "조선일보", "중앙일보", "동아일보", "한겨레", "경향신문", "국민일보",
+    "세계일보", "문화일보", "서울신문", "헤럴드경제", "디지털타임스",
+    "한국일보", "매경", "연합", "인베스트조선", "더벨", "thebell"
+  ],
+  "institution_source_patterns": [
+    "국토교통부", "산업통상자원부", "고용노동부", "기획재정부", "환경부",
+    "과학기술정보통신부", "행정안전부", "대통령실",
+    "한국전력", "한전", "전력거래소", "한국수력원자력", "한국가스공사",
+    "한국토지주택공사", "국가철도공단", "한국도로공사", "조달청",
+    "보도참고자료", "정책브리핑", "korea.kr"
+  ],
+  "source_type_hints": {
+    "blog": ["블로그", "blog", "tistory", "티스토리", "브런치", "brunch", "velog"],
+    "cafe": ["카페", "cafe"],
+    "video": ["youtube", "유튜브", "틱톡", "tiktok", "브이로그", "vlog"],
+    "community": [
+      "커뮤니티", "community", "디시", "dcinside", "클리앙", "clien",
+      "인스티즈", "instiz", "뽐뿌", "ppomppu", "에펨코리아", "fmkorea",
+      "보배드림", "루리웹", "ruliweb", "더쿠", "theqoo", "네이트판"
+    ],
+    "aggregator": ["재전송", "뉴스픽", "newspic", "보도자료", "press release", "홍보", "마케팅", "sponsored"],
+    "institution": [
+      "국토교통부", "산업통상자원부", "고용노동부", "기획재정부", "환경부",
+      "과학기술정보통신부", "행정안전부", "대통령실", "한국전력", "한전",
+      "전력거래소", "한국수력원자력", "한국가스공사", "한국토지주택공사",
+      "국가철도공단", "한국도로공사", "조달청", "정책브리핑"
+    ]
+  },
+  "score_cap": {
+    "excluded": 1.0,
+    "low": 3.4
+  },
+  "rules": {
+    "top3_excludes_excluded": true,
+    "unknown_is_neutral": true,
+    "trusted_sources_ignore_title_patterns": true,
+    "instant_threshold": 4.5
+  },
+  "operator_note": "출처 품질 필터: 블로그·카페·커뮤니티성 결과는 제외하거나 낮은 우선순위로 처리합니다. 출처 품질은 사실 보증이 아니라 랭킹/필터 가드레일입니다."
+}

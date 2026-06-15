@@ -392,7 +392,54 @@ python3 scripts/verify_score_explanation_ui.py
 - **시장지표(macro)는 아직 미연동**이다. 가짜 USD/KRW·KOSPI·WTI·VIX 수치를 절대
   표시하지 않고 "시장지표 미연동"만 노출한다 (§13).
 
-## 15. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 15. Source Quality Filter (P0-C1.6)
+
+공개 RSS(Google News 등)는 언론 보도뿐 아니라 **네이버 블로그·카페, 티스토리,
+유튜브, 커뮤니티(디시·클리앙 등), 재전송/홍보성 결과**를 섞어 돌려준다.
+임원용 리포트에 이런 비-뉴스 결과가 Top 3로 올라오지 않도록 출처 품질 가드레일을 둔다.
+
+- **공개 RSS에는 블로그·커뮤니티가 섞일 수 있다.** 이는 출처의 특성이지 버그가 아니다.
+- **임원용 리포트는 낮은 품질 출처를 제외하거나 캡한다.** 블로그/카페/커뮤니티/
+  티스토리/유튜브성 출처는 `live` 수집 단계에서 제외되고, 그래도 들어온 경우
+  점수를 즉시 알림 임계(4.5) 아래로 캡해 상위 노출을 막는다.
+- **Top 3 주요 신호는 블로그·카페·커뮤니티를 피한다.** 신뢰 매체/공공기관 출처가
+  우선되고, 알 수 없는 출처는 자동 차단하지 않고 중립으로 둔다.
+- **출처 품질은 사실 보증이 아니라 랭킹/필터 가드레일이다.** 출처가 신뢰 매체라는 것이
+  기사 내용의 진위를 보장하지는 않는다 — 어떤 결과를 임원에게 먼저 보여줄지 정하는 신호다.
+
+### 정책 위치와 분류
+
+- **정책 데이터**: `data/source_quality_rules.json` (제외/신뢰/공공기관/재전송 패턴 + 점수 캡).
+- **분류 도메인**: `app/source_quality.py` — `(source, title)`만 보는 순수 함수.
+  결과: `source_quality ∈ {trusted, neutral, low, excluded}`,
+  `source_type ∈ {news, institution, blog, cafe, community, video, aggregator, unknown}`.
+- **적용 지점** (단일 분류 함수를 각 도메인이 호출):
+  - `app/live_collector.py` — `excluded` 출처를 수집 단계에서 제외 (raw dict엔 품질 필드 미부착).
+  - `app/scoring.py` — `excluded`→1.0, `low`→3.4로 점수 캡 (즉시 알림 임계 4.5 미만 보장).
+  - `app/briefing.py` — 시그널에 출처 품질 라벨(신뢰/일반/낮은 신뢰도) 부착 + Top 3에서 `excluded` 배제.
+  - 정적 리포트/대시보드 — 신뢰·낮은 신뢰도일 때만 작은 라벨 노출(일반 출처는 생략) + 하단 고지.
+  - Telegram — `live` 수집일에 즉시 확인급(신뢰 출처) 신호가 없으면 약한 출처를 임원
+    알림으로 띄우지 않고 "오늘은 즉시 확인급 신호 없음 · 주간 모니터링 후보 중심"으로 표기.
+
+### mock 영향 없음
+
+mock 데모 숫자(감지 28 / 즉시 3 / 일간 4 / 주간 14 / 제외 7 · 다이제스트 747자)는
+그대로 유지된다 — 캡은 점수를 낮추기만 하고, mock의 낮은 품질 항목은 이미 0.0/제외라
+캡이 동작하지 않기 때문이다. live 약한-출처 안내도 `live` 모드에서만 붙는다.
+
+```bash
+# 출처 품질 필터 회귀 검증 (네트워크 없이 결정적 — RESULT: PASS / exit 0)
+python3 scripts/verify_source_quality_filter.py
+
+# 실제 공개 RSS로 품질 필터 적용된 리포트 생성 (네트워크 필요)
+NEWS_MODE=live python3 scripts/build_static_report.py --output /tmp/hdec_live_quality_report.html
+```
+
+> 한계: 출처 분류는 출처/제목 패턴 휴리스틱이라 새로운 블로그/커뮤니티 도메인은
+> 패턴에 추가해야 잡힌다. Google News 리다이렉트 URL은 MVP에서 그대로 허용하며
+> (발행사 해석은 불안정·불필요한 위험), 발행사 명확화는 RSS가 주는 출처명 노출로 대신한다.
+
+## 16. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

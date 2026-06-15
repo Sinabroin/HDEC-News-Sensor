@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config
+from app import config, source_quality
 
 KST = timezone(timedelta(hours=9))
 
@@ -126,6 +126,12 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
 
         if _is_forbidden(link, source):
             continue  # X(엑스) 등 금지 소스는 수집하지 않는다
+
+        # 출처 품질 가드 (P0-C1.6): 블로그/카페/커뮤니티/티스토리/유튜브성 출처는
+        # 수집 단계에서 제외한다 — 임원용 신호에 비-뉴스 결과가 섞이지 않게 한다.
+        # raw dict에는 품질 필드를 부착하지 않는다 (허용 키 계약 유지) — 제외 판정에만 쓴다.
+        if source_quality.is_excluded(source, title):
+            continue
 
         snippet = _strip_html(item.findtext("description") or "")[:SNIPPET_MAX_LEN]
         published_at = _to_iso(item.findtext("pubDate") or "") or collected_at

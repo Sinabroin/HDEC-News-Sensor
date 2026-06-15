@@ -116,6 +116,9 @@ section{margin-top:26px;}
 .sig .spread{font-size:11px;color:var(--muted);margin-top:7px;}
 .sig h3 a{color:inherit;text-decoration:none;border-bottom:1px solid var(--hairline-2);}
 .sig h3 a:hover{border-bottom-color:var(--accent);}
+.sig .srcq{font-weight:700;letter-spacing:.02em;}
+.sig .srcq.trust{color:var(--accent);}
+.sig .srcq.low{color:var(--signal);}
 .sig .spread a,.extra a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--hairline-2);}
 .sig .spread .hint{color:var(--muted);}
 
@@ -267,11 +270,16 @@ def _render_signal(index: int, entry: dict) -> str:
     title = escape(entry.get("title") or "")
     title_html = (f'{_source_link(url, entry.get("title") or "")} ↗'
                   if _is_http(url) else title)
-    meta = " · ".join([
-        escape(entry.get("source") or "출처 미상"),
-        escape(entry.get("category_label") or "건설산업 일반"),
-        f'<span class="num">판정 신뢰도 {_pct(entry.get("confidence"))}</span>',
-    ])
+    meta_parts = [escape(entry.get("source") or "출처 미상")]
+    # 출처 품질 라벨 — 어수선함을 피해 신뢰/낮은 신뢰도일 때만 노출 (일반 출처는 생략).
+    sq = entry.get("source_quality")
+    if sq in ("trusted", "low"):
+        cls = "srcq trust" if sq == "trusted" else "srcq low"
+        meta_parts.append(
+            f'<span class="{cls}">{escape(entry.get("source_quality_label") or "")}</span>')
+    meta_parts.append(escape(entry.get("category_label") or "건설산업 일반"))
+    meta_parts.append(f'<span class="num">판정 신뢰도 {_pct(entry.get("confidence"))}</span>')
+    meta = " · ".join(meta_parts)
     spread = entry.get("spread") or {}
     parts = [
         '<article class="sig">',
@@ -430,6 +438,7 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         '<div class="notes">',
         f'<p>※ {escape(brief["operator_note"])}</p>',
         f'<p>※ {escape(brief.get("spread_note") or "")}</p>',
+        f'<p>※ {escape(brief.get("source_quality_note") or "")}</p>',
         '</div>',
         f'<footer class="num">생성 {escape(brief["generated_at"])} · {escape(brief["header"])}</footer>',
     ]

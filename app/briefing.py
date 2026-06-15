@@ -14,7 +14,7 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from app import config, db, insight, macro_snapshot, scoring
+from app import config, db, insight, macro_snapshot, scoring, source_quality
 
 KST = timezone(timedelta(hours=9))
 
@@ -41,6 +41,11 @@ SPREAD_NOTE = (
 THEME_STRENGTH_NOTE = (
     "상대 강도는 가장 강한 테마를 100으로 둔 상대 지표입니다 "
     "(관련 기사 수와 중요도 점수를 합산한 내부 정렬 값 기준)."
+)
+# 출처 품질 고지 — UI·리포트가 그대로 노출하는 단일 소스 (P0-C1.6)
+SOURCE_QUALITY_NOTE = (
+    "출처 품질 필터: 블로그·카페·커뮤니티성 결과는 제외하거나 낮은 우선순위로 "
+    "처리합니다. 출처 품질은 사실 보증이 아니라 랭킹/필터 가드레일입니다."
 )
 
 # 저장된 implication 텍스트 → insight 카테고리 키 역매핑 (탐지 로직 중복 방지)
@@ -184,11 +189,18 @@ def _build_spreads(scored_rows: list[dict]) -> dict[str, dict]:
 def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
                   spread: dict, score: dict | None = None) -> dict:
     topics = _parse_topics(row)
+    # 출처 품질 라벨 (P0-C1.6) — 표시 전용 파생값. 저장된 source/title을 분류만 한다
+    # (점수/등급 재계산 아님). 신뢰 출처/일반 출처/낮은 신뢰도를 UI·리포트가 노출한다.
+    quality = source_quality.classify(row.get("source"), row.get("title"))
     return {
         "rank": rank,
         "article_id": row["id"],
         "title": row["title"],
         "source": row.get("source") or "출처 미상",
+        "source_quality": quality["source_quality"],
+        "source_quality_label": quality["source_quality_label"],
+        "source_quality_reason": quality["source_quality_reason"],
+        "source_type": quality["source_type"],
         "topic": topics[0] if topics else None,
         "category": category_key,
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
@@ -203,6 +215,12 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "spread": spread,
         "url": row.get("url"),
     }
+
+
+def _is_excluded_quality(row: dict) -> bool:
+    """블로그/카페/커뮤니티성 출처인지 — Top 3/Top 5 노출에서 배제할지 판정 (P0-C1.6)."""
+    return source_quality.classify(
+        row.get("source"), row.get("title"))["source_quality"] == "excluded"
 
 
 def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int) -> list[dict]:
@@ -336,14 +354,20 @@ def build_brief(pipeline_counts: dict | None = None,
 
     spreads = _build_spreads(scored)
 
+    # Top 3/Top 5 노출 대상에서 excluded 출처(블로그/카페/커뮤니티성)는 배제한다
+    # (P0-C1.6). excluded는 scoring 캡으로 이미 제외 등급이라 signal_rows에 거의 없지만,
+    # 표시 직전 한 번 더 거른다 — "Top 3에 비-뉴스 금지"를 구조적으로 보장한다.
+    # mock 데모는 excluded 출처가 신호에 없어 display_rows == signal_rows로 동일하다.
+    display_rows = [r for r in signal_rows if not _is_excluded_quality(r)]
+
     # 즉시 알림 후보 우선, 비면 상위 신호로 보충 (entry의 alert_grade가 실제 등급).
     # 후보가 표시 한도보다 많을 때만 카테고리 다양성 선택이 동작한다 —
     # 등급 판정 자체는 바꾸지 않고, 어떤 후보를 보여줄지만 고른다.
-    instant_pool = [r for r in scored
+    instant_pool = [r for r in display_rows
                     if r.get("alert_grade") == scoring.GRADE_INSTANT]
     instant_rows = _diverse_top(instant_pool, categories, TOP_IMMEDIATE)
     if not instant_rows:
-        instant_rows = _diverse_top(signal_rows, categories, TOP_IMMEDIATE)
+        instant_rows = _diverse_top(display_rows, categories, TOP_IMMEDIATE)
     top_immediate = [
         _signal_entry(i, r, categories[r["id"]], implications[r["id"]],
                       spreads[r["id"]], scores_by_id.get(r["id"]))
@@ -354,7 +378,7 @@ def build_brief(pipeline_counts: dict | None = None,
         _signal_entry(i, r, categories[r["id"]], implications[r["id"]],
                       spreads[r["id"]], scores_by_id.get(r["id"]))
         for i, r in enumerate(
-            _diverse_top(signal_rows, categories, TOP_ISSUES), start=1)
+            _diverse_top(display_rows, categories, TOP_ISSUES), start=1)
     ]
 
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계
@@ -445,6 +469,7 @@ def build_brief(pipeline_counts: dict | None = None,
         "spread_method": SPREAD_METHOD,
         "spread_note": SPREAD_NOTE,
         "theme_strength_note": THEME_STRENGTH_NOTE,
+        "source_quality_note": SOURCE_QUALITY_NOTE,
         "operator_note": OPERATOR_NOTE,
         "pipeline_counts": pipeline_counts,
     }
