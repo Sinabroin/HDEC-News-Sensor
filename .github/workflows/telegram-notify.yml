@@ -4,13 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       message:
-        description: "Custom message (leave empty to send the mock daily digest)"
+        description: "Custom message (leave empty to publish + send the live daily digest)"
         required: false
         default: ""
   schedule:
-    - cron: "0 23 * * *" # UTC 23:00 = KST 08:00 — mock daily digest
+    - cron: "0 23 * * *" # UTC 23:00 = KST 08:00 — live daily report publish + digest
+
+# 빈 메시지(예약/수동) 경로에서 live RSS 리포트를 main에 auto-commit하기 위해 필요.
+permissions:
+  contents: write
 
 env:
+  # 검증/파이프라인 기본은 항상 mock 안전 모드 (네트워크/비밀값 0건).
+  # live 수집은 게시/발송 step에서만 NEWS_MODE=live로 명시 활성화한다.
   APP_MODE: mock
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -25,7 +31,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Verify digest pipeline (no secrets)
+      # 발송 전 게이트 — 전부 mock 안전 모드로 돈다 (NEWS_MODE 미설정 → mock).
+      # verify_live_news_ingestion.py는 네트워크가 있으면 실제 공개 RSS 수집을
+      # 시도하고, 없으면 SKIP한다 (가짜 성공 주장 안 함).
+      - name: Verify pipeline (mock-safe, no secrets)
         run: |
           python3 scripts/verify_telegram_digest.py
           python3 scripts/verify_executive_brief.py
@@ -34,21 +43,89 @@ jobs:
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_score_explanation_ui.py
           python3 scripts/verify_live_news_ingestion.py
+          python3 scripts/verify_live_publish_path.py
 
-      # 발송 전 생성 확인용 — 게시는 commit된 docs/daily/latest.html을 통해서만 한다
-      # (자동 commit/publish 없음, GitHub Pages 설정은 수동 — docs/daily/README.md).
-      - name: Build static report (workspace check only)
+      # 빈 메시지면 live 게시 경로, 커스텀 메시지면 그대로 전달 경로.
+      # 입력은 env로만 받아 shell 주입을 막는다.
+      - name: Determine publish mode
+        id: mode
+        env:
+          MESSAGE: ${{ github.event.inputs.message || '' }}
         run: |
-          python3 scripts/build_static_report.py --output docs/daily/latest.html
+          if [ -z "$MESSAGE" ]; then
+            echo "live_publish=true" >> "$GITHUB_OUTPUT"
+            echo "Publish mode: live daily report + digest (empty message)"
+          else
+            echo "live_publish=false" >> "$GITHUB_OUTPUT"
+            echo "Publish mode: custom message passthrough"
+          fi
 
-      - name: Send Telegram message
+      # NEWS_MODE=live로 리포트를 생성한다. build_static_report.py가 출력하는
+      # news_data_mode로 live 수집 성공 여부(live_ok)를 판별한다 — 단일 빌드 = 단일 수집.
+      # 실패(=mock fallback)면 작업 트리를 복원해 가짜 live 게시를 차단한다.
+      - name: Build live daily report
+        id: report
+        if: steps.mode.outputs.live_publish == 'true'
+        env:
+          NEWS_MODE: live
+        run: |
+          OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html)"
+          echo "$OUT"
+          if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
+            echo "live_ok=true" >> "$GITHUB_OUTPUT"
+            echo "NEWS_MODE=live · live RSS collected > 0 · live report generated"
+          else
+            echo "live_ok=false" >> "$GITHUB_OUTPUT"
+            echo "NEWS_MODE=live · live collection failed/empty · fell back to mock · NOT publishing as live"
+            git checkout -- docs/daily/latest.html || true
+          fi
+
+      # live 성공 시에만 변경분을 main에 commit (변경 없으면 skip — 실패 안 함).
+      - name: Commit live daily report
+        if: steps.report.outputs.live_ok == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs/daily/latest.html; then
+            echo "live report unchanged — no diff, skip commit"
+          else
+            git add docs/daily/latest.html
+            git commit -m "chore: update live daily report"
+            git push
+            echo "live report committed and pushed"
+          fi
+
+      # 경로 1a: live 게시 성공 → NEWS_MODE=live 다이제스트 발송 (버튼은 REPORT_URL).
+      - name: Send live daily digest
+        if: steps.report.outputs.live_ok == 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
-          # 빈 값이면 send_telegram.py가 mock daily digest를 생성해 발송한다.
-          MESSAGE: ${{ github.event.inputs.message || '' }}
-          # 설정돼 있으면 "오늘 브리프 보기" inline 버튼이 붙는다. 없으면 텍스트 전용
-          # 발송이며 워크플로는 실패하지 않는다 (vars 우선, 없으면 secrets).
+          NEWS_MODE: live
+          # 설정돼 있으면 "오늘 브리프 보기" inline 버튼이 붙는다 (vars 우선, 없으면 secrets).
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/send_telegram.py
+
+      # 경로 1b: live 수집 실패 → mock(데모)으로 정직 라벨된 fallback 다이제스트 발송.
+      # NEWS_MODE를 켜지 않으므로 digest는 스스로 "mock 데이터 기반"으로 표기한다.
+      - name: Send fallback daily digest
+        if: steps.mode.outputs.live_publish == 'true' && steps.report.outputs.live_ok != 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/send_telegram.py
+
+      # 경로 2: 커스텀 메시지 — live를 강제하지 않고 입력 메시지를 그대로 발송한다.
+      # MESSAGE가 비어있지 않으면 send_telegram.py가 그 메시지를 보낸다 (REPORT_URL 버튼 유지).
+      - name: Send custom message
+        if: steps.mode.outputs.live_publish == 'false'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          MESSAGE: ${{ github.event.inputs.message }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
         run: |
           python3 scripts/send_telegram.py

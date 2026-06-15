@@ -32,12 +32,20 @@ OPTIONAL_VERIFIERS = ["verify_issue_clusters.py", "verify_executive_brief_qualit
 BUTTON_TEXT = "오늘 브리프 보기"
 TELEGRAM_API_HOST = "https://api.telegram.org"
 
-# HTML에 반드시 존재해야 하는 표시 요소 (P0-C1: 점수 미터/상대 강도/원문 링크 포함)
-HTML_MARKERS = [
+# 모드/신호 유무와 무관하게 항상 존재하는 구조 마커 (mock·live 공통).
+# "즉시 알림 후보"는 현황판 라벨, "상대 강도"는 테마 헤딩, "유사 주제 기사"는
+# 하단 고지(spread_note)로 항상 렌더된다.
+CORE_HTML_MARKERS = [
     "HDEC Executive Radar", "Executive Daily Brief", "오늘의 Executive Signal",
-    "즉시 알림 후보", "주요 테마", "카테고리 요약", "권장 워치 액션",
+    "즉시 알림 후보", "주요 테마", "카테고리 요약",
     'lang="ko"', "viewport", "Pretendard",
-    "중요도", "상대 강도", 'class="meter"', "유사 주제 기사", "원문 보기",
+    "상대 강도", "유사 주제 기사",
+]
+# 시그널 카드가 렌더된 경우에만 존재하는 마커 (P0-C1 점수 미터/원문 링크).
+# fresh mock 빌드는 결정적으로 항상 카드가 있으므로 늘 요구하고, 게시된 live
+# 리포트는 신호가 0건인 날에도 게이트가 막히지 않게 카드 존재 시에만 요구한다.
+SIGNAL_HTML_MARKERS = [
+    "권장 워치 액션", "중요도", 'class="meter"', "원문 보기",
 ]
 
 # mock macro 고정값 중 점수/강도와 충돌할 수 없는 식별용 수치 (4자리)
@@ -318,10 +326,37 @@ def _external_anchor_safety(html: str) -> list[str]:
     return bad
 
 
-def _check_html_content(html: str, label: str) -> None:
-    for marker in HTML_MARKERS:
+def _is_live_report(html: str) -> bool:
+    """게시된 리포트가 live(공개 RSS) 모드인지 — data_warning/모드 배지로 판별한다.
+
+    live 리포트의 data_warning은 '뉴스: 공개 RSS 수집 · 시장지표: 미연동',
+    모드 배지는 'LIVE · 공개 RSS'다. mock/fallback 리포트에는 둘 다 없다.
+    """
+    return "공개 RSS 수집" in html or "LIVE · 공개 RSS" in html
+
+
+def _check_html_content(html: str, label: str, committed: bool = False) -> None:
+    live = _is_live_report(html)
+
+    for marker in CORE_HTML_MARKERS:
         check(f"{label}: '{marker}' 포함", marker in html)
-    check(f"{label}: mock 표기 포함", "mock" in html.lower())
+    # 시그널 카드 마커: fresh 빌드는 항상 요구. committed 리포트는 신호 카드가
+    # 실제 렌더된 경우에만 요구한다 (신호 0건 live day에도 게이트가 막히지 않게).
+    if (not committed) or ('class="sig"' in html):
+        for marker in SIGNAL_HTML_MARKERS:
+            check(f"{label}: '{marker}' 포함", marker in html)
+    else:
+        check(f"{label}: 신호 0건 안내 표시", "감지된 신호가 없습니다" in html)
+
+    # 데이터 출처 정직성 — live면 '공개 RSS 수집' 표기 + mock 배지/placeholder 금지,
+    # mock이면 mock/데모 표기 (mock을 live로, live를 mock으로 오인하지 않게).
+    if live:
+        check(f"{label}: live 출처 표기 (공개 RSS 수집)", "공개 RSS 수집" in html)
+        check(f"{label}: live 리포트에 '데모 데이터' 배지 없음", "데모 데이터" not in html)
+        check(f"{label}: live 리포트에 mock placeholder 도메인 없음",
+              "example.com" not in html)
+    else:
+        check(f"{label}: mock 표기 포함", "mock" in html.lower())
     check(f"{label}: spread 추정 라벨 포함", "추정" in html)
 
     # P0-B6 — mock macro 고정값을 시세처럼 렌더링하지 않는다
@@ -371,7 +406,10 @@ def check_committed_report() -> None:
     if not check("docs/daily/latest.html 존재 (게시 대상 스냅샷)",
                  COMMITTED_REPORT.exists()):
         return
-    _check_html_content(COMMITTED_REPORT.read_text(encoding="utf-8"), "커밋 HTML")
+    # 게시된 리포트는 mock 스냅샷이거나 (워크플로 auto-publish 후) live 리포트일 수
+    # 있다 — committed=True로 모드 인지 검사한다.
+    _check_html_content(COMMITTED_REPORT.read_text(encoding="utf-8"), "커밋 HTML",
+                        committed=True)
     check("docs/.nojekyll 존재 (Pages에서 Jekyll 비활성)", NOJEKYLL.exists())
 
 

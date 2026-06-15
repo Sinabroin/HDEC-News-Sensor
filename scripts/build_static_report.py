@@ -523,7 +523,10 @@ def main(argv: list[str] | None = None) -> int:
         out_path = Path(args.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(html, encoding="utf-8")
-        print(f"report written: {out_path} ({len(html)} chars)")
+        # news_data_mode를 함께 출력한다 — CI가 단일 빌드(=단일 RSS 수집) 결과만으로
+        # live/mock을 판별해 게시 여부를 정한다 (비밀값 아님, 출력 안전).
+        print(f"report written: {out_path} ({len(html)} chars) "
+              f"news_data_mode={brief.get('news_data_mode')}")
         return 0
 
     print(format_summary_text(brief, html, sections))

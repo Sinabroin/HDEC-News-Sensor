@@ -258,10 +258,16 @@ python3 scripts/verify_static_report.py
 로컬에서 열기: `explorer.exe "$(wslpath -w docs/daily/latest.html)"` (WSL) 또는
 `python3 -m http.server 8088 --directory docs` → http://localhost:8088/daily/latest.html
 
-### Telegram 워크플로 동작 (REPORT_URL)
+### Telegram 워크플로 동작 (REPORT_URL · live 게시)
 
-- 워크플로는 발송 전에 5개 verifier와 리포트 생성이 깨지지 않는지 확인한다
-  (자동 commit/publish는 하지 않는다).
+- 워크플로는 발송 전에 모든 verifier(P0-B1/B2/B5/B6 + P0-C1 + P0-C1.5 `verify_live_publish_path.py`)와
+  리포트 생성이 깨지지 않는지 mock 안전 모드로 확인한다.
+- **빈 메시지/예약 실행 (P0-C1.5 자동 게시)**: `NEWS_MODE=live`로 `docs/daily/latest.html`을
+  생성하고, **live 수집이 성공한 경우에만** `github-actions[bot]`이 main에
+  `chore: update live daily report`로 auto-commit·push한 뒤 `NEWS_MODE=live` 다이제스트를
+  발송한다. live 수집이 실패하면 가짜 live를 게시하지 않고(작업 트리 복원) mock(데모)
+  라벨된 fallback 다이제스트를 발송한다. 자동 commit을 위해 `permissions: contents: write`가 필요하다.
+- **커스텀 메시지 실행**: 입력 메시지를 그대로 발송하며 live를 강제하지 않는다.
 - repo **Variables**(권장) 또는 Secrets에 `REPORT_URL`이 있으면 메시지에
   "오늘 브리프 보기" 버튼이 붙는다. 로그에는 URL 값 대신
   `Report link enabled: true/false`만 출력된다.
@@ -276,7 +282,9 @@ python3 scripts/verify_static_report.py
    (Pages 게시 주소 — 커스텀 도메인 기준. 기본 도메인이면
    `https://<owner>.github.io/<repo>/daily/latest.html`)
 
-### GitHub Pages 수동 설정 (자동화하지 않음)
+### GitHub Pages 설정 (브랜치 게시 — 소스 설정만 1회 수동)
+
+리포트 **commit/publish는 워크플로가 자동화**하지만(P0-C1.5), Pages **소스 설정**은 1회 수동이다:
 
 Settings → **Pages** → Source: **Deploy from a branch** → Branch: **main** /
 Folder: **/docs** → 게시 주소 예: `https://<owner>.github.io/<repo>/daily/latest.html`
@@ -284,11 +292,12 @@ Folder: **/docs** → 게시 주소 예: `https://<owner>.github.io/<repo>/daily
 
 ### 보안 주의
 
-- 무료 플랜의 GitHub Pages는 **공개**다 — 현재 출력은 mock/데모 데이터라 게시해도
-  안전하지만, **실제 내부 뉴스·민감 신호 데이터는 공개 Pages에 게시하지 않는다**.
-  실데이터 단계에서는 사내/비공개 호스팅을 사용한다.
-- 리포트 HTML에는 비밀값·토큰·chat id가 포함되지 않는다
-  (`verify_static_report.py`가 외부 리소스 0건과 함께 기계 검사한다).
+- 무료 플랜의 GitHub Pages는 **공개**다 — 게시 대상은 mock 데모 데이터 또는
+  **공개 RSS 뉴스의 제목·요약·원문 URL과 public-safe 점수 언어**뿐이다.
+  **비공개 유료 본문·내부 민감 신호·운영자 메모는 공개 Pages에 게시하지 않는다**.
+  그런 데이터 단계에서는 사내/비공개 호스팅을 사용한다.
+- 리포트 HTML에는 비밀값·토큰·chat id·본문 전문이 포함되지 않는다
+  (`verify_static_report.py`가 mock·live 모드 모두, 외부 리소스 0건과 함께 기계 검사한다).
 
 ## 13. Data Source Honesty (P0-B6)
 
@@ -350,11 +359,17 @@ NEWS_MODE=live python3 scripts/build_static_report.py --output docs/daily/latest
 
 # 수집 경로 회귀 검증 (네트워크 없으면 SKIP, 가짜 성공 주장 안 함)
 python3 scripts/verify_live_news_ingestion.py
+
+# live 게시 경로 회귀 검증 (워크플로 auto-commit/발송 정직성 — P0-C1.5)
+python3 scripts/verify_live_publish_path.py
 ```
 
-> 공개 GitHub Pages에 게시하는 `docs/daily/latest.html`은 **기본 mock 스냅샷**으로
-> 커밋한다 (재현 가능·검증 가능). 실뉴스 리포트는 운영자가 `NEWS_MODE=live`로
-> 직접 생성한다. 공개 게시에는 공개 뉴스 제목/요약/URL과 public-safe 점수 언어만 싣는다.
+> 공개 GitHub Pages에 게시하는 `docs/daily/latest.html`은 저장소에 **mock 스냅샷**으로
+> 커밋돼 있고(재현 가능·검증 가능), **Telegram Notify 워크플로의 빈 메시지/예약 실행이
+> `NEWS_MODE=live`로 실뉴스 리포트를 생성해 live 수집 성공 시 자동으로 commit·게시한다**
+> (P0-C1.5 — `git log`의 `chore: update live daily report`). 운영자가 로컬에서
+> `NEWS_MODE=live`로 직접 생성해 commit해도 된다. 공개 게시에는 공개 뉴스
+> 제목/요약/URL과 public-safe 점수 언어만 싣는다.
 
 ### 14.2 점수 표시 척도 (직관화)
 
