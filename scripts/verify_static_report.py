@@ -33,19 +33,20 @@ BUTTON_TEXT = "오늘 브리프 보기"
 TELEGRAM_API_HOST = "https://api.telegram.org"
 
 # 모드/신호 유무와 무관하게 항상 존재하는 구조 마커 (mock·live 공통).
-# "즉시 알림 후보"는 현황판 라벨, "상대 강도"는 테마 헤딩, "유사 주제 기사"는
-# 하단 고지(spread_note)로 항상 렌더된다.
+# "즉시 알림 후보"는 현황판 라벨, "주요 테마/카테고리 요약"은 전체 근거 서랍,
+# AI 레이더/리스크·규제/거시경제/전체 근거는 P0-C1.9 IA 상단 목차로 항상 렌더된다.
 CORE_HTML_MARKERS = [
     "HDEC Executive Radar", "Executive Daily Brief", "오늘의 Executive Signal",
     "즉시 알림 후보", "주요 테마", "카테고리 요약",
     'lang="ko"', "viewport", "Pretendard",
-    "상대 강도", "유사 주제 기사",
+    "AI 레이더", "리스크·규제", "거시경제", "전체 근거", "테마 비중",
 ]
 # 시그널 카드가 렌더된 경우에만 존재하는 마커 (P0-C1 점수 미터/원문 링크).
 # fresh mock 빌드는 결정적으로 항상 카드가 있으므로 늘 요구하고, 게시된 live
 # 리포트는 신호가 0건인 날에도 게이트가 막히지 않게 카드 존재 시에만 요구한다.
+# P0-C1.9: '권장 워치 액션' 제거, '중요도'는 점수 아코디언 summary로 유지.
 SIGNAL_HTML_MARKERS = [
-    "권장 워치 액션", "중요도", 'class="meter"', "원문 보기",
+    "중요도", 'class="meter"', "원문 보기",
 ]
 
 # mock macro 고정값 중 점수/강도와 충돌할 수 없는 식별용 수치 (4자리)
@@ -279,6 +280,7 @@ def check_report_json() -> None:
           isinstance(meta.get("signal_count"), int)
           and 1 <= meta["signal_count"] <= 3, str(meta.get("signal_count")))
     required_sections = {"hero", "status_board", "one_liner", "top_signals",
+                         "ai_radar", "macro", "evidence",
                          "themes", "categories", "notes", "footer"}
     missing = required_sections - set(meta.get("sections") or [])
     check("report JSON 필수 섹션 전부 포함", not missing, "; ".join(sorted(missing)))

@@ -32,14 +32,6 @@ from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 REPORT_TITLE = "HDEC Executive Radar — Executive Daily Brief"
 DEFAULT_OUTPUT = "docs/daily/latest.html"
 
-# 기회/리스크는 채도 높은 배지 대신 텍스트 라벨 색으로만 구분한다 (executive memo 톤)
-KIND_CLASS = {
-    "기회": "kind-opp",
-    "리스크": "kind-risk",
-    "기회+리스크": "kind-both",
-    "관찰": "kind-watch",
-}
-
 # live macro 전용 — mock/unavailable 상태에서는 수치·방향 자체를 렌더링하지 않는다
 DIRECTION_ARROW = {"up": ("▲", "dir-up"), "down": ("▼", "dir-down")}
 
@@ -201,6 +193,48 @@ details.cat-drill[open]>summary::before{content:"▾";}
 .dir-up{color:var(--signal);}
 .dir-down{color:var(--navy);}
 
+/* ---- P0-C1.9 상단 내비게이션 (목차 버튼) ---- */
+.topnav{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0 4px;}
+.topnav a{font-size:11.5px;font-weight:650;letter-spacing:.02em;color:var(--navy);
+  text-decoration:none;border:1px solid var(--hairline-2);border-radius:14px;
+  padding:5px 13px;background:var(--paper-2);white-space:nowrap;}
+.topnav a:hover{border-color:var(--accent);color:var(--accent);}
+.topnav a.primary{background:var(--navy);color:#f2efe6;border-color:var(--navy);}
+
+/* ---- P0-C1.9 레이더 섹션 ---- */
+section.radar{margin-top:24px;scroll-margin-top:12px;}
+section.radar.lead .sec-h{font-size:14px;}
+.radar-empty{font-size:12px;color:var(--muted);padding:8px 0 2px;}
+/* collapsed radar drawers (macro / evidence): native details with no open attribute */
+details.radar-section{margin-top:24px;border-top:1px solid var(--hairline-2);scroll-margin-top:12px;}
+details.radar-section>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;
+  gap:10px;padding:13px 2px 4px;}
+details.radar-section>summary::-webkit-details-marker{display:none;}
+details.radar-section>summary::before{content:"▸";color:var(--muted);font-size:11px;
+  flex:0 0 10px;transform:translateY(-1px);}
+details.radar-section[open]>summary::before{content:"▾";}
+details.radar-section>summary .rs-h{font-size:13px;font-weight:750;letter-spacing:.06em;color:var(--ink);}
+details.radar-section>summary .rs-tag{font-size:10.5px;color:var(--muted);font-weight:500;}
+details.radar-section>.rs-body{padding:4px 0 6px;}
+
+/* ---- P0-C1.9 리스크 칩 + 리스크 우선도 ---- */
+.risk-chip{display:inline-block;font-size:10px;font-weight:750;letter-spacing:.04em;
+  color:var(--signal);border:1px solid var(--signal);border-radius:3px;padding:1px 7px;margin-right:7px;}
+.risk-pri{margin-top:9px;}
+.risk-pri .rp-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;}
+.risk-pri .rp-num{font-weight:750;color:var(--signal);}
+.risk-pri .rp-lbl{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--signal);}
+.risk-pri .meter>span{background:linear-gradient(90deg,var(--signal),var(--navy));}
+
+/* ---- P0-C1.9 중요도 아코디언 (구성요소 기본 접힘) ---- */
+details.score-acc{margin-top:9px;}
+details.score-acc>summary{list-style:none;cursor:pointer;}
+details.score-acc>summary::-webkit-details-marker{display:none;}
+details.score-acc>summary .score-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;}
+details.score-acc>summary .more{font-size:10px;color:var(--muted);letter-spacing:.02em;}
+details.score-acc[open]>summary .more::after{content:" 접기";}
+details.score-acc:not([open])>summary .more::after{content:" 펼치기";}
+
 /* ---- 고지 / footer ---- */
 .notes{border-top:1px solid var(--hairline-2);margin-top:30px;padding-top:13px;}
 .notes p{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:3px;}
@@ -248,58 +282,60 @@ def _source_link(url: str, label: str) -> str:
             f'{escape(label)}</a>')
 
 
-def _watch_action(entry: dict) -> str:
-    """권장 워치 액션 문구 — briefing 도메인의 표현 사전을 재사용한다 (표현 전용).
-
-    build_brief_via_mock_pipeline()이 app 모듈을 bootstrap한 뒤에만 호출된다.
-    """
-    from app import briefing
-
-    cat = entry.get("category") or "general"
-    kind = entry.get("opportunity_or_risk") or "관찰"
-    opp = briefing.OPP_ASPECT_BY_CATEGORY.get(cat, "신규 사업")
-    risk = briefing.RISK_ASPECT_BY_CATEGORY.get(cat, "운영")
-    if kind == "기회+리스크":
-        return f"{opp} 기회와 {risk} 리스크 양면 점검"
-    if kind == "기회":
-        return f"{opp} 관점의 후속 신호·발주 일정 확인"
-    if kind == "리스크":
-        return f"{risk} 영향 점검 및 대응 상태 확인"
-    return "후속 신호 관찰 후 관련 부문 참고 공유"
-
-
 def _render_score_meter(entry: dict) -> str:
-    """중요도 미터(분모 명시) + 점수대 라벨 + 6개 구성요소 막대."""
+    """중요도(분모 명시) + 미터 — 6개 구성요소는 <details>로 기본 접힘 (P0-C1.9).
+
+    카드는 중요도 점수 + 컴팩트 미터만 보여주고, '중요도' summary를 펼치면 구성요소
+    막대가 나타난다 (JS 없이 네이티브 details/summary, open 속성 없음).
+    """
     score = entry.get("final_score")
     band = entry.get("score_band") or "-"
-    parts = [
-        '<div class="score-meter">',
-        '<div class="score-head">'
-        f'<span class="score-num num">중요도 {_fmt5(score)} / 5.0</span>'
-        f'<span class="band">{escape(band)}</span></div>',
-        f'<div class="meter"><span style="width:{_score_pct(score)}%"></span></div>',
-        '</div>',
-    ]
     comps = entry.get("score_components") or []
+    head = (
+        '<summary>'
+        '<span class="score-head">'
+        f'<span class="score-num num">중요도 {_fmt5(score)} / 5.0</span>'
+        f'<span class="band">{escape(band)}</span>'
+        '<span class="more"></span></span>'
+        f'<span class="meter"><span style="width:{_score_pct(score)}%"></span></span>'
+        '</summary>'
+    )
+    body = []
     if comps:
-        parts.append('<div class="comps">')
+        body.append('<div class="comps">')
         for c in comps:
-            parts.append(
+            body.append(
                 f'<div class="comp"><span class="cl">{escape(c["label"])}</span>'
                 f'<span class="cbar"><i style="width:{_score_pct(c.get("value"))}%"></i></span>'
                 f'<span class="cv num">{_fmt5(c.get("value"))}</span></div>')
-        parts.append('</div>')
-    return "".join(parts)
+        body.append('</div>')
+    return f'<details class="score-acc">{head}{"".join(body)}</details>'
 
 
-def _render_signal(index: int, entry: dict) -> str:
-    kind = entry.get("opportunity_or_risk") or "관찰"
-    kind_class = KIND_CLASS.get(kind, "kind-watch")
-    action = entry.get("action_label") or "모니터링"
+def _render_risk_priority(entry: dict) -> str:
+    """리스크 우선도 미터 — 종합 중요도가 낮아도 중대재해·규제를 전면에 둔다 (P0-C1.9)."""
+    pri = entry.get("risk_priority_score")
+    if pri is None:
+        return ""
+    label = entry.get("risk_radar_label") or "리스크"
+    return (
+        '<div class="risk-pri"><div class="rp-head">'
+        f'<span class="rp-num num">리스크 우선도 {_fmt5(pri)} / 5.0</span>'
+        f'<span class="rp-lbl">{escape(label)}</span></div>'
+        f'<div class="meter"><span style="width:{_score_pct(pri)}%"></span></div></div>'
+    )
+
+
+def _render_signal(index: int, entry: dict, risk_mode: bool = False) -> str:
     url = entry.get("url") or ""
     title = escape(entry.get("title") or "")
     title_html = (f'{_source_link(url, entry.get("title") or "")} ↗'
                   if _is_http(url) else title)
+    # 라벨 줄: 등급 액션 라벨만 (기회/관찰 같은 노이즈 라벨 제거). 리스크는 사유 칩 추가.
+    labels = []
+    if risk_mode and entry.get("risk_radar_label"):
+        labels.append(f'<span class="risk-chip">{escape(entry["risk_radar_label"])}</span>')
+    labels.append(escape(entry.get("action_label") or "모니터링"))
     meta_parts = [escape(entry.get("source") or "출처 미상")]
     # 출처 품질 라벨 — 어수선함을 피해 신뢰/낮은 신뢰도일 때만 노출 (일반 출처는 생략).
     sq = entry.get("source_quality")
@@ -308,30 +344,41 @@ def _render_signal(index: int, entry: dict) -> str:
         meta_parts.append(
             f'<span class="{cls}">{escape(entry.get("source_quality_label") or "")}</span>')
     meta_parts.append(escape(entry.get("category_label") or "건설산업 일반"))
+    if entry.get("published_at"):
+        meta_parts.append(f'<span class="num">{escape(_fmt_date(entry.get("published_at")))}</span>')
     meta_parts.append(f'<span class="num">판정 신뢰도 {_pct(entry.get("confidence"))}</span>')
     meta = " · ".join(meta_parts)
     spread = entry.get("spread") or {}
+    reason = entry.get("one_line_reason") or entry.get("implication") or ""
     parts = [
         '<article class="sig">',
         f'<span class="idx num">{index:02d}</span>',
         '<div>',
-        f'<p class="labels">{escape(action)}<span class="sep">/</span>'
-        f'<span class="{kind_class}">{escape(kind)}</span></p>',
+        f'<p class="labels">{"".join(labels)}</p>',
         f'<h3>{title_html}</h3>',
         f'<p class="meta">{meta}</p>',
-        _render_score_meter(entry),
     ]
-    if entry.get("implication"):
+    if risk_mode:
+        parts.append(_render_risk_priority(entry))
+    parts.append(_render_score_meter(entry))
+    if reason:
         parts.append('<p class="why"><strong>왜 중요한가</strong>'
-                     f'{escape(entry["implication"])}</p>')
-    parts.append('<p class="act"><strong>권장 워치 액션</strong>'
-                 f'{escape(_watch_action(entry))}</p>')
+                     f'{escape(reason)}</p>')
     src = _source_link(url, "원문 보기 ↗")
     src_html = f' · {src}' if src else ""
-    parts.append(f'<p class="spread">↳ {escape(spread.get("label", "단독 신호"))} '
-                 f'<span class="hint">(유사 주제 기사는 참고 묶음 추정)</span>{src_html}</p>')
+    parts.append(f'<p class="spread">↳ {escape(spread.get("label", "단독 신호"))}'
+                 f'{src_html}</p>')
     parts.append('</div></article>')
     return "\n".join(parts)
+
+
+def _render_radar_signals(signals: list, risk_mode: bool = False,
+                          empty_text: str = "") -> list[str]:
+    """레이더 섹션 본문 — 시그널 카드 묶음 또는 빈 안내."""
+    if signals:
+        return [_render_signal(i, s, risk_mode=risk_mode)
+                for i, s in enumerate(signals, start=1)]
+    return [f'<p class="radar-empty">{escape(empty_text)}</p>']
 
 
 def _fmt_date(value) -> str:
@@ -519,9 +566,10 @@ def _render_macro_section(brief: dict) -> list[str]:
     else:
         labels = [v.get("label") for v in values if v.get("label")] or DEFAULT_MACRO_LABELS
         body.append('<h2 class="sec-h">MACRO SNAPSHOT'
-                    '<span class="tag">시장지표 미연동</span></h2>')
-        body.append('<p class="macro-note">시장지표는 아직 실시간 연동 전입니다 — '
-                    '현재 시장값이 아니므로 수치를 표시하지 않습니다.</p>')
+                    '<span class="tag">시장지표 준비 중</span></h2>')
+        body.append('<p class="macro-note">시장지표는 다음 단계에서 연동 예정입니다 (준비 중) — '
+                    '현재 시장값이 아니므로 수치를 표시하지 않습니다. '
+                    '<span class="num">[미연동]</span></p>')
         body.append('<div class="macro-grid">')
         for label in labels:
             body.append(f'<div class="macro-cell"><div class="lbl">{escape(label)}</div>'
@@ -531,9 +579,82 @@ def _render_macro_section(brief: dict) -> list[str]:
     return body
 
 
+TOPNAV_ITEMS = [
+    ("#ai-radar", "AI 레이더", True),
+    ("#risk-radar", "리스크·규제", False),
+    ("#biz-radar", "수주·해외", False),
+    ("#macro", "거시경제", False),
+    ("#evidence", "전체 근거", False),
+]
+
+
+def _render_topnav() -> str:
+    """상단 목차 버튼 — 섹션 앵커로 점프 (AI 레이더 강조, JS 없음)."""
+    links = []
+    for href, label, primary in TOPNAV_ITEMS:
+        cls = ' class="primary"' if primary else ""
+        links.append(f'<a href="{href}"{cls}>{escape(label)}</a>')
+    return f'<nav class="topnav" aria-label="섹션 바로가기">{"".join(links)}</nav>'
+
+
+def _render_visible_radar(section_id: str, heading: str, tag: str,
+                          signals: list, lead: bool = False,
+                          risk_mode: bool = False, empty: str = "") -> list[str]:
+    """항상 보이는 레이더 섹션(AI/리스크·규제/수주·해외) — <section>로 첫 화면에 노출."""
+    cls = "radar lead" if lead else "radar"
+    out = [f'<section id="{section_id}" class="{cls}" aria-label="{escape(heading)}">',
+           f'<h2 class="sec-h">{escape(heading)}'
+           f'<span class="tag">{escape(tag)}</span></h2>']
+    out += _render_radar_signals(signals, risk_mode=risk_mode, empty_text=empty)
+    out.append('</section>')
+    return out
+
+
+def _render_themes_block(brief: dict) -> list[str]:
+    """주요 테마 — '상대 강도' 대신 '관련 기사 n건' + 테마 비중 막대 (P0-C1.9)."""
+    themes = brief.get("theme_rankings") or []
+    out = ['<section aria-label="주요 테마"><h2 class="sec-h">주요 테마'
+           '<span class="tag">테마 비중 · 100=최상위 테마</span></h2>']
+    if themes:
+        for t in themes:
+            rel = t.get("relative_strength") or 1
+            out.append(
+                '<div class="theme-row"><div class="theme-name">'
+                f'<span>{t["rank"]}. {escape(t["theme"])}</span>'
+                f'<span class="cnt num">관련 기사 {t["count"]}건</span>'
+                f'</div><div class="theme-bar"><span style="width:{max(7, rel)}%"></span></div></div>')
+        out.append(f'<p class="caption">{escape(brief.get("theme_strength_note") or "")}</p>')
+    else:
+        out.append('<p class="macro-note">집계된 테마가 없습니다.</p>')
+    out.append('</section>')
+    return out
+
+
+def _render_categories_block(brief: dict) -> list[str]:
+    categories = brief.get("category_counts") or []
+    out = ['<section aria-label="카테고리 요약"><h2 class="sec-h">카테고리 요약</h2>']
+    if categories:
+        for c in categories:
+            imm = (f'<span class="imm">즉시 {c["immediate"]}</span>'
+                   if c.get("immediate") else '')
+            out.append(f'<div class="cat-row"><span>{escape(c["label"])}</span>'
+                       f'<span class="lead"></span>'
+                       f'<span class="cnt num">{c["count"]}건</span>{imm}</div>')
+    else:
+        out.append('<p class="macro-note">집계된 카테고리가 없습니다.</p>')
+    out.append('</section>')
+    return out
+
+
 def render_report_html(brief: dict) -> tuple[str, list[str]]:
-    """brief 구조체를 standalone HTML로 렌더링한다. (html, 포함된 섹션 키) 반환."""
+    """brief 구조체를 standalone HTML로 렌더링한다. (html, 포함된 섹션 키) 반환.
+
+    IA (P0-C1.9): 헤더 → 현황판 → Executive Signal → 상단 목차 →
+    AI 레이더(주력) → 리스크·규제 레이더 → 수주·해외 신호 →
+    [접힘] 거시경제 → [접힘] 전체 근거(테마·카테고리·근거·참고/제외 감사).
+    """
     sections = ["hero", "status_board", "one_liner"]
+    # 헤더 — 노이즈 출처/시장지표 표기는 제거하고 footer로 내린다 (Phase 6).
     body = [
         '<header class="masthead">',
         '<div class="mast-row">',
@@ -542,7 +663,6 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         '</div>',
         '<h1>Executive Daily Brief</h1>',
         f'<p class="dateline num">{escape(brief["date_kst"])} (KST) · 임원용 시그널 레이더 일일 브리프</p>',
-        f'<p class="provenance">{escape(brief.get("data_warning") or "")}</p>',
         '</header>',
         '<section class="board" aria-label="데일리 현황판">',
     ]
@@ -557,86 +677,65 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         '<span class="ovl">오늘의 Executive Signal</span>',
         f'<p>{escape(brief["executive_one_liner"])}</p>',
         '</section>',
+        _render_topnav(),
     ]
 
-    signals = brief.get("top_immediate_signals") or []
-    immediate_count = brief.get("immediate_count", 0)
-    all_instant = bool(signals) and all(
-        s.get("alert_grade") == "즉시 알림 후보" for s in signals)
-    # 즉시 확인급이 전부일 때만 '즉시 알림 후보', 아니면 '주요 관찰 신호'(주간 모니터링 톤).
-    heading = "즉시 알림 후보" if all_instant else "주요 관찰 신호"
-    body.append('<section aria-label="주요 시그널">')
-    body.append(f'<h2 class="sec-h">{heading} TOP {len(signals)}'
-                '<span class="tag">점수순 · 운영자 검토 전 자동 선별</span></h2>')
-    if signals and not immediate_count:
-        # 즉시 확인급(신뢰 출처 4.5+)이 없는 날 — 낮은 점수를 숨기지 않고 이유를 명시한다.
-        body.append('<p class="cd-note">즉시 확인급 신호 없음 — 아래는 주간 모니터링 '
-                    '후보 중심입니다 (중요도가 낮아도 숨기지 않고 표시합니다).</p>')
-    if signals:
-        sections.append("top_signals")
-        body += [_render_signal(i, s) for i, s in enumerate(signals, start=1)]
-    else:
-        body.append('<p class="macro-note">오늘 감지된 신호가 없습니다 — '
-                    'mock 파이프라인 실행 결과를 확인하세요.</p>')
+    # 1) AI 레이더 — 주력 섹션 (Executive Signal 직후 첫 신호 섹션)
+    ai_sigs = brief.get("ai_radar_signals") or []
+    body += _render_visible_radar(
+        "ai-radar", "AI 레이더 주요 신호",
+        "AI 데이터센터·전력·SMR·스마트건설 · 점수순", ai_sigs, lead=True,
+        empty="오늘 AI 인프라·건설 AI 신호가 감지되지 않았습니다.")
+    if ai_sigs:
+        sections.append("ai_radar")
+        sections.append("top_signals")  # 메타데이터 backward-compat 별칭
 
-    immediate_ids = {s.get("article_id") for s in signals}
-    extras = [i for i in (brief.get("top_new_issues") or [])
-              if i.get("article_id") not in immediate_ids]
-    if extras:
-        sections.append("extra_issues")
-        body.append('<div class="extra"><p class="sec-sub">추가 관찰 이슈</p><ul>')
-        for issue in extras:
-            url = issue.get("url") or ""
-            title_html = (f'{_source_link(url, issue.get("title") or "")} ↗'
-                          if _is_http(url) else escape(issue.get("title") or ""))
-            body.append(f'<li>· {title_html} '
-                        f'<span class="cnt">— {escape(issue.get("category_label") or "")}'
-                        f' · <span class="num">중요도 {_fmt5(issue.get("final_score"))}/5.0</span>'
-                        f' · {escape(issue.get("action_label") or "모니터링")}</span></li>')
-        body.append('</ul></div>')
-    body.append('</section>')
+    # 2) 리스크·규제 레이더 — 중요도가 낮아도 중대재해·규제를 분명히 노출
+    risk_sigs = brief.get("risk_regulation_signals") or []
+    body += _render_visible_radar(
+        "risk-radar", "리스크·규제 레이더",
+        "중대재해·안전·규제 · 리스크 우선도순", risk_sigs, risk_mode=True,
+        empty="오늘 두드러진 안전·규제 리스크 신호가 없습니다.")
+    if risk_sigs:
+        sections.append("risk_radar")
 
-    body.append('<div class="duo">')
-    themes = brief.get("theme_rankings") or []
-    body.append('<section aria-label="주요 테마"><h2 class="sec-h">주요 테마'
-                '<span class="tag">상대 강도 · 100=최상위 테마</span></h2>')
-    if themes:
-        sections.append("themes")
-        for t in themes:
-            rel = t.get("relative_strength") or 1
-            body.append(
-                '<div class="theme-row"><div class="theme-name">'
-                f'<span>{t["rank"]}. {escape(t["theme"])}</span>'
-                f'<span class="cnt num">{t["count"]}건 · 상대 강도 {rel}</span>'
-                f'</div><div class="theme-bar"><span style="width:{max(7, rel)}%"></span></div></div>')
-        body.append(f'<p class="caption">{escape(brief.get("theme_strength_note") or "")}</p>')
-    else:
-        body.append('<p class="macro-note">집계된 테마가 없습니다.</p>')
-    body.append('</section>')
+    # 3) 수주·해외 신호
+    biz_sigs = brief.get("business_signals") or []
+    body += _render_visible_radar(
+        "biz-radar", "수주·해외 신호",
+        "수주·발주·해외·플랜트 · 점수순", biz_sigs,
+        empty="오늘 두드러진 수주·해외 사업 신호가 없습니다.")
+    if biz_sigs:
+        sections.append("business_radar")
 
-    categories = brief.get("category_counts") or []
-    body.append('<section aria-label="카테고리 요약"><h2 class="sec-h">카테고리 요약</h2>')
-    if categories:
-        sections.append("categories")
-        for c in categories:
-            imm = (f'<span class="imm">즉시 {c["immediate"]}</span>'
-                   if c.get("immediate") else '')
-            body.append(f'<div class="cat-row"><span>{escape(c["label"])}</span>'
-                        f'<span class="lead"></span>'
-                        f'<span class="cnt num">{c["count"]}건</span>{imm}</div>')
-    else:
-        body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p>')
-    body.append('</section></div>')
+    # 4) 거시경제 — 기본 접힘 (<details>, open 없음). 첫 화면을 점유하지 않는다.
+    sections.append("macro")
+    macro_sigs = brief.get("macro_economy_signals") or []
+    body.append('<details id="macro" class="radar-section macro-section">')
+    body.append('<summary><span class="rs-h">거시경제</span>'
+                '<span class="rs-tag">FX·금리·원자재 등 · 기본 접힘</span></summary>')
+    body.append('<div class="rs-body">')
+    body += _render_radar_signals(
+        macro_sigs, empty_text="거시경제 단독 신호 없음 — 아래 시장지표 상태 참고")
+    body += _render_macro_section(brief)  # <section aria-label="Macro Snapshot"> 중첩 유지
+    body.append('</div></details>')
 
+    # 5) 전체 근거 — 기본 접힘. 테마/카테고리/근거 기사/참고·제외 감사를 한 서랍에.
+    sections += ["themes", "categories", "evidence"]
     if brief.get("category_sections"):
         sections.append("category_drilldown")
-    body += _render_category_drilldown(brief)
-
     sections.append("audit_evidence")
+    body.append('<details id="evidence" class="radar-section evidence-section">')
+    body.append('<summary><span class="rs-h">전체 근거</span>'
+                '<span class="rs-tag">테마·카테고리·근거 기사·참고/제외 감사 · 기본 접힘</span></summary>')
+    body.append('<div class="rs-body">')
+    body.append('<div class="duo">')
+    body += _render_themes_block(brief)
+    body += _render_categories_block(brief)
+    body.append('</div>')
+    body += _render_category_drilldown(brief)
     body += _render_audit_sections(brief)
-
-    sections.append("macro")
-    body += _render_macro_section(brief)
+    body.append('</div></details>')
 
     sections += ["notes", "footer"]
     legend = brief.get("status_board_legend") or []
@@ -647,6 +746,8 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         f'<p>※ {escape(brief["operator_note"])}</p>',
         f'<p>※ {escape(brief.get("spread_note") or "")}</p>',
         f'<p>※ {escape(brief.get("source_quality_note") or "")}</p>',
+        # 데이터 출처/시장지표 상태 — 헤더에서 내려온 작은 footer 고지 (정직성 유지).
+        f'<p>※ 데이터 출처 — {escape(brief.get("data_warning") or "")}</p>',
         '</div>',
         f'<footer class="num">생성 {escape(brief["generated_at"])} · {escape(brief["header"])}</footer>',
     ]
@@ -685,6 +786,10 @@ def report_metadata(brief: dict, html: str, sections: list[str]) -> dict:
         "html_chars": len(html),
         "sections": sections,
         "signal_count": len(brief.get("top_immediate_signals") or []),
+        "ai_radar_count": len(brief.get("ai_radar_signals") or []),
+        "risk_radar_count": len(brief.get("risk_regulation_signals") or []),
+        "business_radar_count": len(brief.get("business_signals") or []),
+        "macro_radar_count": len(brief.get("macro_economy_signals") or []),
         "theme_count": len(brief.get("theme_rankings") or []),
         "category_count": len(brief.get("category_counts") or []),
         "category_section_count": len(brief.get("category_sections") or []),

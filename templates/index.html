@@ -92,6 +92,37 @@
   #brief-macro .macro-warn { color: var(--muted); font-size: 10.5px; }
   #brief-note { margin-top: 12px; }
 
+  /* ---- P0-C1.9 레이더 탭 (AI 기본 선택) + 섹션별 신호 카드 ---- */
+  #radar-tabs { display: flex; gap: 7px; flex-wrap: wrap; margin: 2px 0 12px; }
+  .radar-tab { border: 1px solid var(--hairline-2); border-radius: 16px;
+               background: var(--paper); padding: 6px 14px; font-size: 12px;
+               color: var(--sub); cursor: pointer; font-family: var(--sans);
+               font-weight: 600; letter-spacing: .01em; }
+  .radar-tab:hover { border-color: var(--sub); }
+  .radar-tab.active { background: var(--desk); color: var(--desk-ink);
+                      border-color: var(--desk); }
+  .radar-tab .rt-n { color: var(--muted); font-weight: 500; margin-left: 5px;
+                     font-variant-numeric: tabular-nums; }
+  .radar-tab.active .rt-n { color: var(--action); }
+  #radar-signals { display: grid; gap: 9px; margin-bottom: 16px; }
+  .radar-card { border: 1px solid var(--hairline); border-left: 3px solid var(--daily);
+                border-radius: 5px; padding: 12px 14px; cursor: pointer;
+                background: var(--panel); }
+  .radar-card:hover { border-color: var(--sub); }
+  .radar-card.risk { border-left-color: var(--signal); }
+  .radar-card .rc-title { font-size: 13.5px; font-weight: 640; line-height: 1.45;
+                          margin-bottom: 5px; }
+  .radar-card .rc-meta { font-size: 11px; color: var(--muted); display: flex;
+                         gap: 8px; flex-wrap: wrap; align-items: center; }
+  .radar-card .rc-reason { font-size: 11.5px; color: var(--sub); margin-top: 6px;
+                           line-height: 1.5; }
+  .radar-card .risk-chip { font-size: 10px; font-weight: 700; color: var(--signal);
+                           border: 1px solid var(--signal); border-radius: 3px;
+                           padding: 1px 6px; letter-spacing: .02em; }
+  .radar-card .rc-pri { font-size: 11px; color: var(--signal); font-weight: 700;
+                        margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .radar-empty-msg { font-size: 12px; color: var(--muted); padding: 8px 2px; }
+
   /* ---- 카테고리별 근거 기사 (P0-C1.7 드릴다운) ---- */
   #cat-section { margin-top: 20px; border-top: 3px solid var(--daily); }
   #cat-body { padding: 12px 16px 14px; }
@@ -312,6 +343,8 @@
     <p id="brief-oneliner"></p>
     <div id="brief-board"></div>
     <p class="legend" id="brief-legend"></p>
+    <div id="radar-tabs" role="tablist" aria-label="레이더 섹션"></div>
+    <div id="radar-signals"></div>
     <div class="brief-grid">
       <div class="brief-col"><h3>신규 이슈 TOP 5</h3><ol id="brief-issues"></ol>
         <p class="caption" id="brief-issues-note"></p></div>
@@ -379,7 +412,15 @@ const GRADE_CLASS = {
   "주간 리포트 후보": "grade-weekly", "제외": "grade-excluded",
 };
 const state = { articles: [], logs: [], selectedId: null, lastRun: null,
-                catSections: [], activeCat: null };
+                catSections: [], activeCat: null, brief: null, activeRadar: "ai" };
+/* P0-C1.9 레이더 탭 — 기본 선택은 AI (거시경제가 첫 화면을 점유하지 않게 한다) */
+const RADAR_TABS = [
+  ["ai", "AI", "ai_radar_signals"],
+  ["risk", "리스크·규제", "risk_regulation_signals"],
+  ["biz", "수주·해외", "business_signals"],
+  ["macro", "거시경제", "macro_economy_signals"],
+  ["all", "전체", "top_new_issues"],
+];
 
 function esc(value) {
   const div = document.createElement("div");
@@ -478,6 +519,7 @@ function renderBrief(b) {
     return;
   }
   section.style.display = "";
+  state.brief = b;
   document.getElementById("brief-generated").textContent =
     `${b.date_kst} · ${b.mode} 기준`;
   document.getElementById("brief-oneliner").textContent = b.executive_one_liner || "";
@@ -500,7 +542,7 @@ function renderBrief(b) {
   const themes = b.theme_rankings || [];
   document.getElementById("brief-themes").innerHTML = themes.map(t => {
     const rel = t.relative_strength == null ? 1 : t.relative_strength;
-    return `<li>${esc(t.theme)} <span class="theme-sub">${esc(t.count)}건 · 상대 강도 ${esc(rel)}</span>` +
+    return `<li>${esc(t.theme)} <span class="theme-sub">관련 기사 ${esc(t.count)}건 · 테마 비중 ${esc(rel)}</span>` +
       `<div class="theme-bar"><i style="width:${Math.max(5, rel)}%"></i></div></li>`;
   }).join("");
   document.getElementById("brief-issues-note").textContent = b.spread_note || "";
@@ -534,7 +576,52 @@ function renderBrief(b) {
   document.getElementById("brief-macro").innerHTML = macroHtml;
   document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "")
     + (b.source_quality_note ? "  ·  " + b.source_quality_note : "");
+  renderRadarTabs();
+  renderRadarSignals();
   renderCategorySection(b);
+}
+
+/* ----- P0-C1.9 레이더 탭/신호 (AI 기본, 거시경제는 첫 화면 비주력) ----- */
+function radarCount(key) { return ((state.brief || {})[key] || []).length; }
+function renderRadarTabs() {
+  const el = document.getElementById("radar-tabs");
+  if (!el) return;
+  el.innerHTML = RADAR_TABS.map(([id, label, key]) =>
+    `<button class="radar-tab${id === state.activeRadar ? " active" : ""}" ` +
+    `role="tab" aria-selected="${id === state.activeRadar}" ` +
+    `onclick="selectRadar('${id}')">${esc(label)}` +
+    `<span class="rt-n">${esc(radarCount(key))}</span></button>`).join("");
+}
+function selectRadar(id) {
+  state.activeRadar = id;
+  renderRadarTabs();
+  renderRadarSignals();
+}
+function radarCardHtml(s, isRisk) {
+  const cat = s.category_label ? `<span>${esc(s.category_label)}</span>` : "";
+  const date = s.published_at ? `<span>${esc(fmtTime(s.published_at))}</span>` : "";
+  const chip = (isRisk && s.risk_radar_label)
+    ? `<span class="risk-chip">${esc(s.risk_radar_label)}</span>` : "";
+  const pri = (isRisk && s.risk_priority_score != null)
+    ? `<div class="rc-pri">리스크 우선도 ${score5(s.risk_priority_score)} / 5.0</div>` : "";
+  const reason = s.one_line_reason || s.implication || "";
+  const why = reason ? `<div class="rc-reason">${esc(reason)}</div>` : "";
+  return `<div class="radar-card${isRisk ? " risk" : ""}" ` +
+    `onclick="selectArticle('${esc(s.article_id)}')">` +
+    `<div class="rc-title">${esc(s.title)}</div>` +
+    `<div class="rc-meta">${chip}<span>${esc(s.source || "-")}</span>${srcQualityChip(s)}` +
+    `${date}${cat}<span>중요도 ${score5(s.final_score)} / 5.0</span></div>` +
+    `${pri}${why}</div>`;
+}
+function renderRadarSignals() {
+  const el = document.getElementById("radar-signals");
+  if (!el) return;
+  const tab = RADAR_TABS.find(t => t[0] === state.activeRadar) || RADAR_TABS[0];
+  const isRisk = tab[0] === "risk";
+  const items = (state.brief || {})[tab[2]] || [];
+  el.innerHTML = items.length
+    ? items.map(s => radarCardHtml(s, isRisk)).join("")
+    : `<div class="radar-empty-msg">해당 레이더에 표시할 신호가 없습니다.</div>`;
 }
 
 /* ----- 카테고리별 근거 기사 (P0-C1.7): 칩으로 카테고리 선택 → 근거 기사 인라인 표시 ----- */
@@ -695,7 +782,7 @@ function cardHtml(a) {
       <span class="badge ${gradeClass}">${esc(grade)}</span>
     </div>
     ${scoreMeter(a.final_score, scoreBand(a.final_score))}
-    <div class="row-extra">영향 부문: ${esc(units)} · ${esc(a.opportunity_or_risk || "관찰")}</div>
+    <div class="row-extra">영향 부문: ${esc(units)}</div>
     <div class="reason">${esc(a.scoring_reason || "")}</div>
     <div class="actions" onclick="event.stopPropagation()">
       <button class="send-btn" ${sent ? "disabled" : ""}

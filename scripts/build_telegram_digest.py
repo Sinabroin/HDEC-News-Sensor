@@ -49,21 +49,28 @@ def _digest_signal(entry: dict) -> dict:
         "source": entry["source"],
         "topic": entry.get("topic"),
         "category_label": entry.get("category_label"),
+        "radar_section": entry.get("radar_section"),
         "final_score": entry.get("final_score"),
         "score_band": entry.get("score_band"),
         "alert_grade": entry.get("alert_grade"),
         "action_label": entry.get("action_label"),
         "confidence": entry.get("confidence"),
-        "reason": entry.get("implication") or "",
+        "reason": entry.get("one_line_reason") or entry.get("implication") or "",
+        "risk_priority_score": entry.get("risk_priority_score"),
+        "risk_radar_label": entry.get("risk_radar_label"),
         "spread_label": (entry.get("spread") or {}).get("label", "단독 신호"),
         "url": entry.get("url"),
     }
 
 
 def build_digest_data() -> dict:
-    """공유 brief 레이어에서 다이제스트 구조체를 만든다."""
+    """공유 brief 레이어에서 다이제스트 구조체를 만든다 (P0-C1.9: AI-first)."""
     brief = build_brief_via_mock_pipeline()
-    signals = [_digest_signal(e) for e in brief["top_immediate_signals"]]
+    # AI 레이더 신호를 우선 노출하고, 없으면 즉시 알림 후보로 대체한다 (항상 1~3건).
+    ai = brief.get("ai_radar_signals") or []
+    base = ai or brief.get("top_immediate_signals") or []
+    signals = [_digest_signal(e) for e in base[:3]]
+    risk = [_digest_signal(e) for e in (brief.get("risk_regulation_signals") or [])[:2]]
     return {
         "header": HEADER,
         "mode": brief["mode"],
@@ -75,6 +82,8 @@ def build_digest_data() -> dict:
         "executive_one_liner": brief["executive_one_liner"],
         "status_board": brief["status_board"],
         "top_signals": signals,
+        "ai_first": bool(ai),
+        "risk_signals": risk,
         "theme_rankings": brief["theme_rankings"][:DIGEST_THEMES_MAX],
         "category_counts": brief["category_counts"],
         "macro_snapshot": brief["macro_snapshot"],
@@ -92,9 +101,10 @@ def format_digest_message(data: dict) -> str:
     """
     news_mode = data.get("news_data_mode", "mock")
     source_line = "공개 RSS 수집" if news_mode == "live" else "mock 데이터 기반"
+    # 헤더에서 '시장지표 미연동' 노이즈를 빼고(하단 Macro 섹션에서만 정직 표기), 출처만 표기.
     lines = [
         f"📡 {data['header']} — Executive Daily Brief",
-        f"{data['date_kst']} (KST) · 뉴스 {source_line} · 시장지표 미연동",
+        f"{data['date_kst']} (KST) · 뉴스 {source_line}",
         "",
         "[오늘의 Executive Signal]",
         data["executive_one_liner"],
@@ -103,11 +113,10 @@ def format_digest_message(data: dict) -> str:
         " · ".join(f"{b['label']} {b['value']}" for b in data["status_board"]),
     ]
 
+    # AI-first: AI 레이더 신호를 가장 먼저 보여준다 (거시경제보다 앞).
     signals = data["top_signals"]
-    all_instant = bool(signals) and all(
-        s.get("alert_grade") == "즉시 알림 후보" for s in signals)
     has_instant = any(s.get("alert_grade") == "즉시 알림 후보" for s in signals)
-    section = "즉시 알림 후보" if all_instant else "주요 관찰 신호"
+    section = "AI 레이더" if data.get("ai_first") else "주요 신호"
     lines += ["", f"[{section} Top {len(signals)}]"]
     for s in signals:
         lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
@@ -125,10 +134,17 @@ def format_digest_message(data: dict) -> str:
     if news_mode == "live" and not has_instant:
         lines += ["", "오늘은 즉시 확인급 신호 없음 · 주간 모니터링 후보 중심"]
 
+    # 리스크·규제 한 줄 — 있으면 거시경제보다 먼저, 중대재해·규제를 분명히 가리킨다.
+    risk = data.get("risk_signals") or []
+    if risk:
+        top = risk[0]
+        chip = top.get("risk_radar_label") or "리스크"
+        lines += ["", f"[리스크·규제] {chip}: {_clip(top['title'], TITLE_MAX)}"]
+
     themes = data["theme_rankings"][:3]
     if themes:
         lines += ["", "[주요 테마] " + " · ".join(
-            f"{t['theme']} {t.get('relative_strength', '')}".strip() for t in themes)]
+            f"{t['theme']} {t.get('count', '')}건".strip() for t in themes)]
 
     categories = data["category_counts"]
     if categories:
@@ -139,7 +155,7 @@ def format_digest_message(data: dict) -> str:
             summary += f" · 외 {rest}개 분류"
         lines += ["", "[카테고리 요약] " + summary]
 
-    # Macro Snapshot — live 데이터가 아닌 한 수치를 넣지 않는다 (P0-B6).
+    # Macro Snapshot — AI/리스크 뒤에 둔다. live가 아닌 한 수치를 넣지 않는다 (P0-B6).
     # mock 고정값을 시세처럼 보낼 수 없다: 미연동 상태만 알리고 상세는 리포트로.
     macro = data.get("macro_snapshot") or {}
     macro_mode = macro.get("macro_data_mode") or data.get("macro_data_mode")
@@ -150,10 +166,9 @@ def format_digest_message(data: dict) -> str:
             for v in macro["values"]))
     else:
         lines += ["", "[Macro Snapshot]",
-                  "시장지표 미연동 — 현재 시장값 아님 · 상세는 '오늘 브리프 보기' 리포트에서 확인"]
+                  "시장지표 미연동 · 거시경제 신호는 리포트에서 확인"]
 
-    lines += ["", "※ 유사 주제 기사 수는 추정값입니다 · 원문·점수·카테고리별 근거 기사는 "
-              "'오늘 브리프 보기' 리포트에서 확인하세요. 참고/제외 기사도 리포트 하단에서 확인 가능."]
+    lines += ["", "※ 원문·점수·카테고리별 근거 기사는 '오늘 브리프 보기' 리포트에서 확인"]
     message = "\n".join(lines)
     if len(message) > MESSAGE_BUDGET:
         message = message[: MESSAGE_BUDGET - 1] + "…"

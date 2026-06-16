@@ -22,8 +22,8 @@ BRIEF_BUILDER = ROOT / "scripts" / "build_executive_brief.py"
 DIGEST_BUILDER = ROOT / "scripts" / "build_telegram_digest.py"
 
 ALLOWED_ACTION_LABELS = {"즉시 확인", "검토 필요", "주간 보고 후보", "모니터링"}
-# P0-C1: spread 라벨을 직관적 표현으로 변경 ("유사 주제 기사 n건 · 출처 m곳").
-SPREAD_LABEL_RE = re.compile(r"^(단독 신호|유사 주제 기사 \d+건 · 출처 \d+곳)$")
+# P0-C1.9: spread 라벨을 임원 친화적 표현으로 변경 ("관련 기사 n건 · 출처 m곳").
+SPREAD_LABEL_RE = re.compile(r"^(단독 신호|관련 기사 \d+건 · 출처 \d+곳)$")
 OVERCLAIM_RE = re.compile(r"\d+\s*개?\s*매체(가|에서)?\s*보도")
 
 _failures = []
@@ -109,7 +109,9 @@ def check_digest_quality() -> None:
     over = OVERCLAIM_RE.findall(message)
     check("digest에 'n개 매체 보도' 확정 표현 없음", not over,
           "; ".join(str(o) for o in over[:3]))
-    check("digest spread 표현이 추정 표기 유지", "추정" in message)
+    # P0-C1.9: digest는 임원용으로 간결화 — spread '추정' 안내를 본문에서 제거하고
+    # 상세/근거는 리포트로 위임한다. AI-first 구성에서 노이즈 라벨을 줄인다.
+    check("digest가 상세·근거를 리포트로 위임 (리포트 언급)", "리포트" in message)
 
 
 def main() -> int:

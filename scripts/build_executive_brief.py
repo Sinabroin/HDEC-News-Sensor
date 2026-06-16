@@ -120,8 +120,8 @@ def format_brief_text(brief: dict) -> str:
                      f" · {s['spread']['label']}")
     lines += ["", "[주요 테마]"]
     for t in brief["theme_rankings"]:
-        lines.append(f"{t['rank']}. {t['theme']} — {t['count']}건"
-                     f" · 상대 강도 {t.get('relative_strength', '-')}")
+        lines.append(f"{t['rank']}. {t['theme']} — 관련 기사 {t['count']}건"
+                     f" · 테마 비중 {t.get('relative_strength', '-')}")
     if brief.get("theme_strength_note"):
         lines.append(f"   ※ {brief['theme_strength_note']}")
     lines += ["", "[카테고리 요약]"]

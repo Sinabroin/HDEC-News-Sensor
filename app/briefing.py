@@ -14,7 +14,7 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from app import config, db, insight, macro_snapshot, scoring, source_quality
+from app import config, db, insight, macro_snapshot, radar, scoring, source_quality
 
 KST = timezone(timedelta(hours=9))
 
@@ -22,6 +22,8 @@ HEADER = "HDEC Executive Radar"
 TOP_IMMEDIATE = 3
 TOP_ISSUES = 5
 TOP_THEMES = 5
+# P0-C1.9: 섹션별 레이더(AI/리스크·규제/수주·해외/거시경제)당 노출 신호 상한
+TOP_RADAR = 5
 # 카테고리 드릴다운에서 카테고리당 노출할 근거 기사 상한 (모바일 가독성 · 나머지는 '외 n건')
 TOP_CATEGORY_ARTICLES = 6
 
@@ -30,18 +32,20 @@ TOP_CATEGORY_ARTICLES = 6
 SPREAD_METHOD = "topic-overlap heuristic — 동일 토픽 후보를 공유하는 신호 수 기반 추정"
 
 # 운영자/표시 레이어용 짧은 고지 한 줄 (개발자용 장문 면책 대신). "추정" 표현 유지.
+# P0-C1.9: '유사 주제 기사' → '관련 기사'로 임원 친화적 표현 통일.
 OPERATOR_NOTE = (
-    "운영자 검토용 자동 생성 브리프입니다. 유사 주제 기사 수는 제목·토픽 기준 "
+    "운영자 검토용 자동 생성 브리프입니다. 관련 기사 수는 제목·주제 기준 "
     "추정값이며 동일 사건 클러스터 확정값이 아닙니다."
 )
 
 # 용어 캡션 — UI·리포트가 그대로 노출하는 단일 소스 (혼란스러운 지표 설명)
+# P0-C1.9: 노이즈 표현('참고 묶음 추정')을 제거하고 '제목·주제 기준 자동 묶음'으로 정리.
 SPREAD_NOTE = (
-    "유사 주제 기사는 제목·토픽 기준의 참고 묶음(추정)이며, "
+    "관련 기사 수는 제목·주제 기준 자동 묶음 추정값이며, "
     "동일 사건 클러스터 확정값은 아닙니다."
 )
 THEME_STRENGTH_NOTE = (
-    "상대 강도는 가장 강한 테마를 100으로 둔 상대 지표입니다 "
+    "테마 비중은 가장 큰 테마를 100으로 둔 상대값입니다 "
     "(관련 기사 수와 중요도 점수를 합산한 내부 정렬 값 기준)."
 )
 # 출처 품질 고지 — UI·리포트가 그대로 노출하는 단일 소스 (P0-C1.6)
@@ -206,8 +210,9 @@ def _build_spreads(scored_rows: list[dict]) -> dict[str, dict]:
         sources = {source_by_id[row["id"]]} | {source_by_id[rid] for rid in related}
         related_count = len(related)
         source_count = len(sources)
-        # 보수적 표현: "n개 매체 보도"·"확산" 같은 확정 표현 금지 (참고 묶음 추정치).
-        label = (f"유사 주제 기사 {related_count}건 · 출처 {source_count}곳"
+        # 보수적 표현: "n개 매체 보도"·"확산" 같은 확정 표현 금지 (자동 묶음 추정치).
+        # P0-C1.9: '유사 주제 기사' → '관련 기사'로 임원 친화적 표현 통일.
+        label = (f"관련 기사 {related_count}건 · 출처 {source_count}곳"
                  if related_count else "단독 신호")
         spreads[row["id"]] = {
             "related_count": related_count,
@@ -218,16 +223,18 @@ def _build_spreads(scored_rows: list[dict]) -> dict[str, dict]:
 
 
 def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
-                  spread: dict, score: dict | None = None) -> dict:
+                  spread: dict, score: dict | None = None,
+                  section: str | None = None) -> dict:
     topics = _parse_topics(row)
     # 출처 품질 라벨 (P0-C1.6) — 표시 전용 파생값. 저장된 source/title을 분류만 한다
     # (점수/등급 재계산 아님). 신뢰 출처/일반 출처/낮은 신뢰도를 UI·리포트가 노출한다.
     quality = source_quality.classify(row.get("source"), row.get("title"))
-    return {
+    entry = {
         "rank": rank,
         "article_id": row["id"],
         "title": row["title"],
         "source": row.get("source") or "출처 미상",
+        "published_at": row.get("published_at"),
         "source_quality": quality["source_quality"],
         "source_quality_label": quality["source_quality_label"],
         "source_quality_reason": quality["source_quality_reason"],
@@ -235,6 +242,9 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "topic": topics[0] if topics else None,
         "category": category_key,
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
+        # P0-C1.9: 임원 IA 레이더 섹션 (ai/risk_regulation/business_overseas/macro_economy/other)
+        "radar_section": section,
+        "radar_label": radar.RADAR_LABELS.get(section) if section else None,
         "final_score": row.get("final_score"),
         "score_band": score_band(row.get("final_score")),
         "score_components": _score_components(score),
@@ -243,9 +253,16 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "confidence": row.get("confidence"),
         "opportunity_or_risk": row.get("opportunity_or_risk") or "관찰",
         "implication": implication,
+        "one_line_reason": implication,
         "spread": spread,
         "url": row.get("url"),
     }
+    # 리스크·규제 신호는 risk_priority(중요도가 낮아도 상단 노출)·사유·라벨을 부착한다.
+    if section == radar.RISK:
+        rf = radar.risk_fields(row, score)
+        entry.update(rf)
+        entry["one_line_reason"] = rf["risk_reason"]
+    return entry
 
 
 def _is_excluded_quality(row: dict) -> bool:
@@ -573,11 +590,23 @@ def build_brief(pipeline_counts: dict | None = None,
 
     spreads = _build_spreads(scored)
 
+    # 레이더 섹션 분류 (P0-C1.9, 표시 전용 파생값) — 채점된 전 기사를
+    # ai/risk_regulation/business_overseas/macro_economy/other 중 하나로 나눈다.
+    row_by_id = {r["id"]: r for r in scored}
+    radar_sections = {rid: radar.classify_section(row, categories[rid])
+                      for rid, row in row_by_id.items()}
+
     # Top 3/Top 5 노출 대상에서 excluded 출처(블로그/카페/커뮤니티성)는 배제한다
     # (P0-C1.6). excluded는 scoring 캡으로 이미 제외 등급이라 signal_rows에 거의 없지만,
     # 표시 직전 한 번 더 거른다 — "Top 3에 비-뉴스 금지"를 구조적으로 보장한다.
     # mock 데모는 excluded 출처가 신호에 없어 display_rows == signal_rows로 동일하다.
     display_rows = [r for r in signal_rows if not _is_excluded_quality(r)]
+
+    def _entry(rank, row):
+        return _signal_entry(rank, row, categories[row["id"]],
+                             implications[row["id"]], spreads[row["id"]],
+                             scores_by_id.get(row["id"]),
+                             section=radar_sections[row["id"]])
 
     # 즉시 알림 후보 우선, 비면 상위 신호로 보충 (entry의 alert_grade가 실제 등급).
     # 후보가 표시 한도보다 많을 때만 카테고리 다양성 선택이 동작한다 —
@@ -587,15 +616,32 @@ def build_brief(pipeline_counts: dict | None = None,
     instant_rows = _diverse_top(instant_pool, categories, TOP_IMMEDIATE)
     if not instant_rows:
         instant_rows = _diverse_top(display_rows, categories, TOP_IMMEDIATE)
-    top_immediate = [
-        _signal_entry(i, r, categories[r["id"]], implications[r["id"]],
-                      spreads[r["id"]], scores_by_id.get(r["id"]))
-        for i, r in enumerate(instant_rows, start=1)
-    ]
+    top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
+
+    # ---- 섹션별 레이더 신호 (P0-C1.9) ----
+    # AI/수주·해외/거시는 display_rows(제외 등급·비뉴스 제외)에서 점수순으로 뽑는다.
+    # 리스크·규제는 broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
+    # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다.
+    def _radar_group(section_key, limit=TOP_RADAR):
+        rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
+        rows.sort(key=lambda r: (-(r.get("final_score") or 0), r["id"]))
+        return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
+
+    ai_radar_signals = _radar_group(radar.AI)
+    business_signals = _radar_group(radar.BUSINESS)
+    macro_economy_signals = _radar_group(radar.MACRO)
+
+    risk_pool = [r for r in scored
+                 if radar_sections[r["id"]] == radar.RISK
+                 and not _is_excluded_quality(r)]
+    risk_pool.sort(key=lambda r: (
+        -radar.risk_fields(r, scores_by_id.get(r["id"]))["risk_priority_score"],
+        -(r.get("final_score") or 0), r["id"]))
+    risk_regulation_signals = [
+        _entry(i, r) for i, r in enumerate(risk_pool[:TOP_RADAR], start=1)]
 
     top_issues = [
-        _signal_entry(i, r, categories[r["id"]], implications[r["id"]],
-                      spreads[r["id"]], scores_by_id.get(r["id"]))
+        _entry(i, r)
         for i, r in enumerate(
             _diverse_top(display_rows, categories, TOP_ISSUES), start=1)
     ]
@@ -691,6 +737,12 @@ def build_brief(pipeline_counts: dict | None = None,
         "executive_one_liner": one_liner,
         "top_immediate_signals": top_immediate,
         "top_new_issues": top_issues,
+        # P0-C1.9 섹션별 레이더 — 리포트/대시보드/Telegram이 AI-first IA로 소비한다.
+        "ai_radar_signals": ai_radar_signals,
+        "risk_regulation_signals": risk_regulation_signals,
+        "business_signals": business_signals,
+        "macro_economy_signals": macro_economy_signals,
+        "radar_labels": radar.RADAR_LABELS,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
         "category_sections": category_sections,
