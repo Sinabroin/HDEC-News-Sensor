@@ -34,12 +34,12 @@ TELEGRAM_API_HOST = "https://api.telegram.org"
 
 # 모드/신호 유무와 무관하게 항상 존재하는 구조 마커 (mock·live 공통).
 # "즉시 알림 후보"는 현황판 라벨, "주요 테마/카테고리 요약"은 전체 근거 서랍,
-# AI 레이더/리스크·규제/거시경제/전체 근거는 P0-C1.9 IA 상단 목차로 항상 렌더된다.
+# AI 관련/리스크·규제/거시경제/전체 근거는 P0-C1.9~10 IA 상단 목차로 항상 렌더된다.
 CORE_HTML_MARKERS = [
     "HDEC Executive Radar", "Executive Daily Brief", "오늘의 Executive Signal",
     "즉시 알림 후보", "주요 테마", "카테고리 요약",
     'lang="ko"', "viewport", "Pretendard",
-    "AI 레이더", "리스크·규제", "거시경제", "전체 근거", "테마 비중",
+    "AI 관련", "리스크·규제", "거시경제", "전체 근거", "테마 비중",
 ]
 # 시그널 카드가 렌더된 경우에만 존재하는 마커 (P0-C1 점수 미터/원문 링크).
 # fresh mock 빌드는 결정적으로 항상 카드가 있으므로 늘 요구하고, 게시된 live
@@ -150,10 +150,15 @@ def check_sender_source() -> None:
     check("sender에 reply_markup/inline_keyboard 버튼 지원 존재",
           "reply_markup" in src and "inline_keyboard" in src)
     check(f"sender 버튼 텍스트 '{BUTTON_TEXT}' 존재", BUTTON_TEXT in src)
+    # P0-C1.10: 1:1 봇 진입 버튼 '개인 질의하기' deep link 지원
+    check("sender에 '개인 질의하기' 1:1 봇 버튼 지원 존재",
+          "개인 질의하기" in src and "ask_today" in src)
 
+    # URL 리터럴은 Telegram API 호스트 또는 t.me deep link prefix만 허용한다.
     urls = re.findall(r"https?://[^\s\"'}]+", src)
-    foreign = [u for u in urls if not u.startswith(TELEGRAM_API_HOST)]
-    check("sender의 URL 리터럴은 Telegram API 호스트뿐", not foreign,
+    foreign = [u for u in urls
+               if not u.startswith((TELEGRAM_API_HOST, "https://t.me/"))]
+    check("sender의 URL 리터럴은 Telegram API/t.me 호스트뿐", not foreign,
           "; ".join(foreign))
 
     leaks = []
@@ -329,12 +334,12 @@ def _external_anchor_safety(html: str) -> list[str]:
 
 
 def _is_live_report(html: str) -> bool:
-    """게시된 리포트가 live(공개 RSS) 모드인지 — data_warning/모드 배지로 판별한다.
+    """게시된 리포트가 live 모드인지 — 보이지 않는 모드 마커로 판별한다 (P0-C1.10).
 
-    live 리포트의 data_warning은 '뉴스: 공개 RSS 수집 · 시장지표: 미연동',
-    모드 배지는 'LIVE · 공개 RSS'다. mock/fallback 리포트에는 둘 다 없다.
+    리포트 본문 상단에 <!--news-data-mode:live--> / <!--news-data-mode:mock--> 마커가
+    있다. 임원 화면엔 'LIVE'·'공개 RSS' 기술 용어를 노출하지 않으므로 마커로 판별한다.
     """
-    return "공개 RSS 수집" in html or "LIVE · 공개 RSS" in html
+    return "news-data-mode:live" in html
 
 
 def _check_html_content(html: str, label: str, committed: bool = False) -> None:
@@ -350,15 +355,18 @@ def _check_html_content(html: str, label: str, committed: bool = False) -> None:
     else:
         check(f"{label}: 신호 0건 안내 표시", "감지된 신호가 없습니다" in html)
 
-    # 데이터 출처 정직성 — live면 '공개 RSS 수집' 표기 + mock 배지/placeholder 금지,
+    # 데이터 출처 정직성 — live면 중립 '자동 수집' 표기 + mock 배지/placeholder 금지,
     # mock이면 mock/데모 표기 (mock을 live로, live를 mock으로 오인하지 않게).
     if live:
-        check(f"{label}: live 출처 표기 (공개 RSS 수집)", "공개 RSS 수집" in html)
+        check(f"{label}: live 출처 표기 (자동 수집)", "자동 수집" in html)
         check(f"{label}: live 리포트에 '데모 데이터' 배지 없음", "데모 데이터" not in html)
         check(f"{label}: live 리포트에 mock placeholder 도메인 없음",
               "example.com" not in html)
     else:
-        check(f"{label}: mock 표기 포함", "mock" in html.lower())
+        check(f"{label}: mock/데모 표기 포함", "데모" in html or "mock" in html.lower())
+    # P0-C1.10: 임원 화면에 'LIVE'·'공개 RSS' 기술 표기를 노출하지 않는다 (live·mock 공통).
+    check(f"{label}: 사용자 화면에 'LIVE' 배지 없음", "LIVE" not in html)
+    check(f"{label}: 사용자 화면에 '공개 RSS' 표기 없음", "공개 RSS" not in html)
     check(f"{label}: spread 추정 라벨 포함", "추정" in html)
 
     # P0-B6 — mock macro 고정값을 시세처럼 렌더링하지 않는다

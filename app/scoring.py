@@ -74,7 +74,9 @@ TIER2_SOURCES = {"Mock News", "디지털데일리"}
 
 GRADE_INSTANT = "즉시 알림 후보"
 GRADE_DAILY = "검토 필요"
-GRADE_WEEKLY = "주간 리포트 후보"
+# P0-C1.10: 임원은 리포트 독자(작성자 아님) — '주간 리포트/보고 후보'(작성 지시처럼 읽힘)를
+# '추적 필요'(긴급하진 않지만 계속 봐야 하는 신호)로 변경. 공개 등급: 즉시 확인/검토 필요/추적 필요/참고.
+GRADE_WEEKLY = "추적 필요"
 GRADE_EXCLUDED = "제외"
 
 INSTANT_THRESHOLD = 4.5

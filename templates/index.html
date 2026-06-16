@@ -343,6 +343,7 @@
     <p id="brief-oneliner"></p>
     <div id="brief-board"></div>
     <p class="legend" id="brief-legend"></p>
+    <h3 id="radar-heading">AI 관련</h3>
     <div id="radar-tabs" role="tablist" aria-label="레이더 섹션"></div>
     <div id="radar-signals"></div>
     <div class="brief-grid">
@@ -403,13 +404,13 @@
 "use strict";
 const FEEDBACK_BUTTONS = [
   ["positive", "좋음"], ["irrelevant", "불필요"], ["instant_alert", "즉시알림급"],
-  ["weekly_report", "주간보고급"], ["boost_topic", "이 주제 강화"],
+  ["weekly_report", "추적 필요"], ["boost_topic", "이 주제 강화"],
   ["exclude_source", "이 언론사 제외"], ["exclude_keyword", "이 키워드 제외"],
   ["classify_competitor", "경쟁사 동향으로 분류"], ["classify_macro", "거시경제로 분류"],
 ];
 const GRADE_CLASS = {
   "즉시 알림 후보": "grade-instant", "검토 필요": "grade-daily",
-  "주간 리포트 후보": "grade-weekly", "제외": "grade-excluded",
+  "추적 필요": "grade-weekly", "제외": "grade-excluded",
 };
 const state = { articles: [], logs: [], selectedId: null, lastRun: null,
                 catSections: [], activeCat: null, brief: null, activeRadar: "ai" };
@@ -434,7 +435,7 @@ function scoreBand(s) {
   if (isNaN(s)) return "-";
   if (s >= 4.5) return "즉시 확인";
   if (s >= 3.5) return "검토 필요";
-  if (s >= 2.0) return "주간 모니터링";
+  if (s >= 2.0) return "추적 필요";
   return "참고/제외";
 }
 function score5(s) { return s == null || s === "" ? "-" : Number(s).toFixed(1); }
@@ -617,6 +618,9 @@ function renderRadarSignals() {
   const el = document.getElementById("radar-signals");
   if (!el) return;
   const tab = RADAR_TABS.find(t => t[0] === state.activeRadar) || RADAR_TABS[0];
+  const heading = document.getElementById("radar-heading");
+  /* AI 탭은 '버튼은 AI / 섹션 제목은 AI 관련'으로 표기 (Phase 11) */
+  if (heading) heading.textContent = tab[0] === "ai" ? "AI 관련" : tab[1];
   const isRisk = tab[0] === "risk";
   const items = (state.brief || {})[tab[2]] || [];
   el.innerHTML = items.length

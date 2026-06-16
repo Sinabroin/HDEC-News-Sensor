@@ -79,7 +79,7 @@ SOURCE_FILTERED_NOTE = (
 STATUS_BOARD_LEGEND = [
     {"label": scoring.GRADE_INSTANT, "meaning": "중요도 4.5 이상 — 운영자 즉시 확인 후보"},
     {"label": scoring.GRADE_DAILY, "meaning": "중요도 3.5~4.4 — 일간 검토 후보"},
-    {"label": scoring.GRADE_WEEKLY, "meaning": "전략·반복 트렌드 — 주간 모니터링 대상"},
+    {"label": scoring.GRADE_WEEKLY, "meaning": "전략·반복 트렌드 — 지속 추적 대상"},
     {"label": "참고/제외", "meaning": "낮은 관련성 또는 제외 판단"},
 ]
 
@@ -130,7 +130,7 @@ RISK_ASPECT_BY_CATEGORY = {
 ACTION_LABEL_BY_GRADE = {
     scoring.GRADE_INSTANT: "즉시 확인",
     scoring.GRADE_DAILY: "검토 필요",
-    scoring.GRADE_WEEKLY: "주간 보고 후보",
+    scoring.GRADE_WEEKLY: "추적 필요",
     scoring.GRADE_EXCLUDED: "모니터링",
 }
 
@@ -138,7 +138,7 @@ ACTION_LABEL_BY_GRADE = {
 SCORE_BANDS = [
     (4.5, "즉시 확인"),
     (3.5, "검토 필요"),
-    (2.0, "주간 모니터링"),
+    (2.0, "추적 필요"),
     (0.0, "참고/제외"),
 ]
 
@@ -494,7 +494,7 @@ def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
     제목을 이어붙이지 않는다 — 카테고리별 표현 사전으로만 문장을 만든다.
     """
     if not signal_rows:
-        return "오늘 감지된 신호가 없습니다. Run Sensing을 실행해 mock 신호를 수집하세요."
+        return "오늘 감지된 신호 없음 — Run Sensing으로 mock 신호 수집"
 
     def first_match(kinds: tuple[str, ...], skip_id: str | None = None,
                     skip_category: str | None = None):
@@ -518,37 +518,40 @@ def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
         risk = first_match(("리스크",), skip_id=opp["id"] if opp else None)
     risk_cat = categories.get(risk["id"], "general") if risk else None
 
+    # P0-C1.10: 임원 메모 스타일 — 종결어미 없이 명사형 구절로 조립 (제목 이어붙이기 아님).
     if opp and risk:
         a = SUBJECT_BY_CATEGORY.get(opp_cat, SUBJECT_BY_CATEGORY["general"])
         b = SUBJECT_BY_CATEGORY.get(risk_cat, SUBJECT_BY_CATEGORY["general"])
         return (
-            f"{a}{_josa(a, '과', '와')} {b}{_josa(b, '이', '가')} 동시에 부각되며, "
-            f"{OPP_ASPECT_BY_CATEGORY.get(opp_cat, '신규 사업')} 기회와 "
-            f"{RISK_ASPECT_BY_CATEGORY.get(risk_cat, '운영')} 리스크가 함께 감지됩니다."
+            f"{a}{_josa(a, '과', '와')} {b} 동시 부각 — "
+            f"{OPP_ASPECT_BY_CATEGORY.get(opp_cat, '신규 사업')} 기회·"
+            f"{RISK_ASPECT_BY_CATEGORY.get(risk_cat, '운영')} 리스크 병존"
         )
     if opp:
         a = SUBJECT_BY_CATEGORY.get(opp_cat, SUBJECT_BY_CATEGORY["general"])
         return (
-            f"{a} 중심의 신호가 우세하며, "
-            f"{OPP_ASPECT_BY_CATEGORY.get(opp_cat, '신규 사업')} 기회가 부각됩니다. "
-            f"뚜렷한 리스크 신호는 제한적입니다."
+            f"{a} 중심 — {OPP_ASPECT_BY_CATEGORY.get(opp_cat, '신규 사업')} 기회 부각, "
+            f"뚜렷한 리스크 신호 제한적"
         )
     if risk:
         b = SUBJECT_BY_CATEGORY.get(risk_cat, SUBJECT_BY_CATEGORY["general"])
         return (
-            f"{b} 관련 신호가 두드러져 "
-            f"{RISK_ASPECT_BY_CATEGORY.get(risk_cat, '운영')} 리스크 점검이 필요합니다. "
-            f"뚜렷한 기회 신호는 제한적입니다."
+            f"{b} 부각 — {RISK_ASPECT_BY_CATEGORY.get(risk_cat, '운영')} 리스크 점검 우선, "
+            f"뚜렷한 기회 신호 제한적"
         )
     theme = top_theme or "건설·에너지"
-    return (f"즉시 공유가 필요한 신호 없이 {theme} 중심의 관찰 신호만 감지되었습니다. "
-            f"즉시 알림 후보는 {immediate_count}건입니다.")
+    return (f"즉시 공유 신호 없음 — {theme} 중심 관찰, "
+            f"즉시 알림 후보 {immediate_count}건")
 
 
 def _data_warning(news_mode: str, fallback_used: bool) -> str:
-    """뉴스 수집 모드에 맞는 한 줄 데이터 출처 고지 (시장지표는 P0-C1까지 항상 미연동)."""
+    """뉴스 수집 모드에 맞는 한 줄 데이터 출처 고지 (시장지표는 P0-C1까지 항상 미연동).
+
+    P0-C1.10: 임원 화면에 'LIVE'·'공개 RSS' 같은 기술 용어를 노출하지 않는다 —
+    live는 중립적 '자동 수집'으로 표기한다 (내부 news_data_mode/JSON은 그대로 유지).
+    """
     if news_mode == "live":
-        return "뉴스: 공개 RSS 수집 · 시장지표: 미연동"
+        return "뉴스: 자동 수집 · 시장지표: 미연동"
     if fallback_used:
         return "뉴스: live 수집 실패로 데모(mock) 데이터 대체 · 시장지표: 미연동"
     return "뉴스: 데모(mock) 데이터 · 시장지표: 미연동"

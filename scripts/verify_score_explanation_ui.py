@@ -26,7 +26,7 @@ BRIEF_BUILDER = ROOT / "scripts" / "build_executive_brief.py"
 TEMPLATE = ROOT / "templates" / "index.html"
 RADAR_DB = ROOT / "radar.db"
 
-ALLOWED_BANDS = {"즉시 확인", "검토 필요", "주간 모니터링", "참고/제외"}
+ALLOWED_BANDS = {"즉시 확인", "검토 필요", "추적 필요", "참고/제외"}
 COMPONENT_LABELS = ["현대건설 관련성", "사업기회", "리스크/규제", "긴급도",
                     "출처 신뢰도", "반복/확산 신호"]
 

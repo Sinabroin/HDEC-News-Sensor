@@ -185,7 +185,7 @@ python3 scripts/verify_telegram_digest.py
 `app/briefing.py`가 저장된 score/insight를 **읽기만** 해서 파생 데이터를 만든다
 (점수 재계산·DB 쓰기 없음):
 
-- **데일리 현황판** — 수집·분석 기사 / 즉시 알림 후보 / 검토 필요 / 주간 리포트 후보 / 참고·제외
+- **데일리 현황판** — 수집·분석 기사 / 즉시 알림 후보 / 검토 필요 / 추적 필요 / 참고·제외
   (현황판 버킷 의미는 리포트·대시보드에 설명 캡션으로 함께 노출 — §16.1)
 - **오늘의 Executive Signal** — 기회·리스크를 종합한 1~2문장 한국어 one-liner
   (제목 이어붙이기가 아니라 카테고리 표현 사전으로 조립)
@@ -377,11 +377,11 @@ python3 scripts/verify_live_publish_path.py
 | 표현 | 의미 |
 |---|---|
 | **중요도 X.X / 5.0** | rule-based 9항목 가중합(0~5). 분모를 항상 명시하고 미터 막대로 표시 |
-| 점수대 라벨 | 4.5+ 즉시 확인 · 3.5+ 검토 필요 · 2.0+ 주간 모니터링 · 그 미만 참고/제외 |
+| 점수대 라벨 | 4.5+ 즉시 확인 · 3.5+ 검토 필요 · 2.0+ 추적 필요 · 그 미만 참고/제외 |
 | **점수 구성요소** | 현대건설 관련성·사업기회·리스크/규제·긴급도·출처 신뢰도·반복/확산 신호 (각 0~5 막대) |
 | **판정 신뢰도 NN%** | 옛 `confidence 0.90` 표기를 백분율로 (규칙 매칭 신뢰도) |
-| **상대 강도 0~100** | 옛 `강도 30.7`을 대체. 가장 강한 테마=100 기준 상대 지표 (원시 가중합은 JSON에만) |
-| **유사 주제 기사 n건 · 출처 m곳** | 옛 `토픽상 관련 추정 신호`를 대체. 제목·토픽 기준 참고 묶음(추정)이며 동일 사건 클러스터 확정값이 아님 |
+| **테마 비중 0~100** | 옛 `강도 30.7`을 대체. 가장 강한 테마=100 기준 상대 지표 (원시 가중합은 JSON에만) |
+| **관련 기사 n건 · 출처 m곳** | 옛 `토픽상 관련 추정 신호`를 대체. 제목·토픽 기준 자동 묶음(추정)이며 동일 사건 클러스터 확정값이 아님 |
 
 ```bash
 # 점수 설명/시각화 UX 회귀 검증
@@ -420,11 +420,11 @@ python3 scripts/verify_score_explanation_ui.py
   - `app/briefing.py` — 시그널에 출처 품질 라벨(신뢰/일반/낮은 신뢰도) 부착 + Top 3에서 `excluded` 배제.
   - 정적 리포트/대시보드 — 신뢰·낮은 신뢰도일 때만 작은 라벨 노출(일반 출처는 생략) + 하단 고지.
   - Telegram — `live` 수집일에 즉시 확인급(신뢰 출처) 신호가 없으면 약한 출처를 임원
-    알림으로 띄우지 않고 "오늘은 즉시 확인급 신호 없음 · 주간 모니터링 후보 중심"으로 표기.
+    알림으로 띄우지 않고 "오늘은 즉시 확인급 신호 없음 · 추적 필요 신호 중심"으로 표기.
 
 ### mock 영향 없음
 
-mock 데모 숫자(수집·분석 28 / 즉시 3 / 검토 필요 4 / 주간 14 / 참고·제외 7 · 다이제스트 ~795자)는
+mock 데모 숫자(수집·분석 28 / 즉시 3 / 검토 필요 4 / 추적 14 / 참고·제외 7 · 다이제스트 ~795자)는
 그대로 유지된다 — 캡은 점수를 낮추기만 하고, mock의 낮은 품질 항목은 이미 0.0/제외라
 캡이 동작하지 않기 때문이다. live 약한-출처 안내도 `live` 모드에서만 붙는다.
 
@@ -503,7 +503,7 @@ NEWS_MODE=live python3 scripts/build_static_report.py --output /tmp/hdec_live_ca
   리포트·대시보드에 설명 캡션으로 함께 노출한다:
   - 즉시 알림 후보: 중요도 4.5 이상 — 운영자 즉시 확인 후보
   - 검토 필요: 중요도 3.5~4.4 — 일간 검토 후보
-  - 주간 리포트 후보: 전략·반복 트렌드 — 주간 모니터링 대상
+  - 추적 필요: 전략·반복 트렌드 — 지속 추적 대상
   - 참고/제외: 낮은 관련성 또는 제외 판단
 - **Telegram은 간결 유지** — 현황판 한 줄이 "검토 필요 N"으로 표시되고, "참고/제외 기사도
   리포트 하단에서 확인 가능" 한 마디만 덧붙인다(드릴다운 미포함).
@@ -525,9 +525,9 @@ python3 scripts/verify_category_drilldown.py
 정적 리포트(`docs/daily/latest.html`)와 대시보드가 다음 순서로 구성된다:
 
 1. **Executive Signal** — 한 줄 시그널 + 현황판.
-2. **상단 목차 버튼** — `[AI 레이더] [리스크·규제] [수주·해외] [거시경제] [전체 근거]`
+2. **상단 목차 버튼** — `[AI 관련] [리스크·규제] [수주·해외] [거시경제] [전체 근거]`
    (네이티브 앵커, JS 없음).
-3. **AI 레이더 (주력)** — Executive Signal 직후 첫 신호 섹션. AI 데이터센터·전력·SMR·
+3. **AI 관련 (주력)** — Executive Signal 직후 첫 신호 섹션. AI 데이터센터·전력·SMR·
    냉각·스마트건설·건설 AI 신호가 첫 화면을 차지한다.
 4. **리스크·규제 레이더** — 중대재해·안전·법규·입찰제한·처벌·규제 리스크. AI-heavy가
    아니라는 이유로 묻히지 않는다.
@@ -541,7 +541,7 @@ python3 scripts/verify_category_drilldown.py
 
 - 채점된 각 기사를 `radar_section ∈ {ai, risk_regulation, business_overseas,
   macro_economy, other}` 중 **하나**로 분류한다 (제목·스니펫·토픽 키워드 + insight 카테고리).
-- **AI 인프라 신호는 전력/SMR/거시를 언급해도 `ai`로 둔다** (사용자 정의 AI 레이더 우선).
+- **AI 인프라 신호는 전력/SMR/거시를 언급해도 `ai`로 둔다** (사용자 정의 AI 우선).
 - **순수 거시 변수(수주·해외 이벤트 없는 FX·유가·금리)는 `macro_economy`**로 두고,
   더 나은 AI/리스크/사업 신호가 있으면 기본 Top에서 빠진다 → 거시가 화면을 지배하지 않는다.
 - 경계: `briefing.py`와 동일한 **파생 전용** — DB 쓰기/네트워크/점수·등급 재계산 없음.
@@ -572,7 +572,7 @@ python3 scripts/verify_category_drilldown.py
 | 유사 주제 기사 / 참고 묶음 추정 | 관련 기사 (n건 · 출처 m곳) |
 | 권장 워치 액션 | (제거 — 왜 중요한가 한 줄로 통합) |
 | 관찰 / 기회 (카드 라벨) | (제거 — 노이즈 라벨 삭제) |
-| 주요 관찰 신호 Top 3 | 섹션별 레이더 (AI 레이더 주요 신호 등) |
+| 주요 관찰 신호 Top 3 | 섹션별 레이더 (AI 관련 등) |
 | 헤더의 "뉴스 공개 RSS 수집 · 시장지표 미연동" | (헤더에서 제거 → 작은 footer 고지) |
 | 거시 섹션 "시장지표 미연동" | "시장지표 준비 중 / 다음 단계 연동 예정" (정직성 `미연동` 유지) |
 
@@ -581,7 +581,7 @@ python3 scripts/verify_category_drilldown.py
 
 ### Telegram도 AI-first
 
-AI 레이더 Top 3 → 리스크·규제 한 줄 → 주요 테마 → 카테고리 → (맨 뒤) Macro Snapshot
+AI 관련 Top 3 → 리스크·규제 한 줄 → 주요 테마 → 카테고리 → (맨 뒤) Macro Snapshot
 "시장지표 미연동 · 거시경제 신호는 리포트에서 확인". 거시로 시작하지 않는다.
 
 ```bash
@@ -595,9 +595,89 @@ NEWS_MODE=live python3 scripts/build_static_report.py --output /tmp/hdec_ia_repo
 > 한계: 레이더 분류는 키워드 + insight 카테고리 휴리스틱이라 새 토픽은 `app/radar.py`
 > 키워드에 추가해야 정확히 잡힌다. 거시경제 앵커(`#macro`) 클릭 시 자동 펼침은 브라우저의
 > 네이티브 `<details>` 동작에 따른다(요약을 탭하면 항상 펼쳐짐). 시장지표 실시간 연동은
-> 다음 스프린트(§18)다.
+> 다음 스프린트(§19)다.
 
-## 18. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 18. Executive Label Cleanup + AI Query Rebalance + Telegram Rollout (P0-C1.10)
+
+P0-C1.9의 IA 위에 **임원 친화 언어 정리 + AI 편중 수집 + 채널→1:1 봇 진입**을 얹는
+폴리시 스프린트. 핵심 도메인(scoring/collector/db/insight 점수·등급)은 그대로다.
+
+### 임원용 라벨 정리
+
+| 이전 | 이후 | 이유 |
+|---|---|---|
+| AI 레이더 주요 신호 | **AI 관련** | "레이더 주요 신호"가 장황 — 섹션 제목/Telegram/대시보드 통일 |
+| 주간 리포트 후보 / 주간 보고 후보 / 주간 모니터링 | **추적 필요** | 임원은 리포트 **독자**(작성자 아님). "긴급하진 않지만 계속 봐야 하는 신호" 뜻 |
+| LIVE · 공개 RSS (헤더 배지) | **자동 수집** | 기술 용어 제거. live/mock 판별은 보이지 않는 HTML 마커로 |
+| 헤더/footer "공개 RSS 수집" | **자동 수집** | 임원 화면에 수집 채널 기술 표기를 두지 않음 |
+
+- **공개 등급 체계(4단계):** 즉시 확인 · 검토 필요 · **추적 필요** · 참고.
+  내부 등급 상수 `scoring.GRADE_WEEKLY = "추적 필요"`로 통일 — 현황판·대시보드 배지·
+  Telegram·점수대 라벨이 모두 같은 표현을 쓴다(이중 관리 없음).
+- **데이터 정직성은 그대로다.** `news_data_mode`/`news_source`/`data_warning` 등 내부
+  provenance와 JSON 필드, 검증기 로직은 유지한다. 사용자 화면에서 `LIVE`·`공개 RSS`
+  기술 표기만 빼고, live/mock 구분은 본문 상단 **보이지 않는 주석 마커**
+  (`<!--news-data-mode:live-->` / `mock`)로 한다 → 검증기/CI가 결정적으로 판별한다.
+- 시장지표는 여전히 **미연동**(가짜 수치 없음) — 거시 섹션/footer에 정직하게 표기.
+
+### 생성 요약은 명사형 메모 스타일
+
+임원 메모처럼 읽히게 **종결어미를 쓰지 않는다**(`~입니다/합니다/됩니다/있습니다/신호다/
+필요하다/예상된다/감지됩니다` 금지). 기사 제목(raw 원문)과 footer 고지문은 대상이 아니다.
+
+- 적용: `executive_one_liner`, 각 신호의 `one_line_reason`(= `insight` implication 또는
+  `radar` risk_reason). 예) "AI 데이터센터 전력·냉각 인프라 수요 확대", "중대재해·안전
+  규제 대응 — 입찰 자격·평판 리스크 점검 대상".
+- 검증: `verify_executive_ia_polish.py`가 brief의 생성 요약/사유 줄을 스캔한다.
+
+### AI 편중 live 수집 (`data/live_news_sources.json`)
+
+- `max_per_query=5`, `max_total=70`, 쿼리 26개로 재조정 — **AI 관련 ≥ 12** (데이터센터·
+  전력·냉각·SMR·스마트건설·건설 로봇·현대건설 AI), 리스크/규제 ≥ 5, 거시 단독 ≤ 2.
+- provider는 `google_news_rss` 고정(무인증 공개 RSS), X(엑스) 쿼리 0건.
+- 검증: `verify_live_news_ingestion.py`가 분류 카운트를 결정적으로 확인한다.
+
+### Telegram Executive Rollout (채널 + 1:1 봇 진입)
+
+**권장 운영 패턴 — 비공개 채널로 공식 브리프 전달 + 1:1 봇으로 개인 후속 질의.**
+
+1. 비공개 Telegram 채널 생성 (예: `HDEC Executive Radar`).
+2. 봇을 채널 관리자로 추가 (가능하면 "메시지 게시" 권한만).
+3. 임원을 채널에 초대 — 임원은 **채널 참여만** 하면 된다(개인 chat id 공유 불필요).
+4. GitHub 설정 (Secrets/Variables):
+   - `TELEGRAM_CHAT_IDS` = 비공개 채널 chat id 또는 채널 username
+   - `TELEGRAM_BOT_TOKEN` = 봇 토큰
+   - `REPORT_URL` = Pages 리포트 URL ("오늘 브리프 보기" 버튼)
+   - `TELEGRAM_BOT_USERNAME` **또는** `TELEGRAM_PERSONAL_BOT_URL` = 1:1 봇 deep link 대상
+5. 채널 메시지 버튼:
+   - **오늘 브리프 보기** → 정적 리포트(`REPORT_URL`)
+   - **개인 질의하기** → 봇 1:1 대화창 deep link `https://t.me/<bot_username>?start=ask_today`
+6. 현재 봇 username 예: `hdec_executive_rader_bot` (철자가 `rader`인 점에 주의 — 실제
+   username을 그대로 쓴다). 미설정 시 "개인 질의하기" 버튼은 **안전하게 생략**된다.
+7. 개인 chat_id DM 모드도 가능하지만 권장 기본 경로는 아니다 — 임원마다 봇을 먼저
+   start 해야 하고 chat_id를 수집해야 해서 비공개 채널보다 운영이 취약하다.
+
+> **정직성:** "개인 질의하기"는 1:1 대화창 **진입**(deep link) 버튼이다. 초기 단계에서는
+> 1:1 대화창 진입/명령어 UX 계약이며, 실제 **자연어 질의 응답은 P1 webhook/polling 구현
+> 후 활성화**된다. webhook을 구현·검증하기 전에는 "1:1 질의 응답 가능"을 주장하지 않는다.
+
+- **P0 (현재):** 채널 브리프 + 개인 봇 deep-link 진입 버튼.
+- **P1 (이후):** inbound 1:1 봇 명령(`/start ask_today`, `/today`, `/ai`, `/risk`,
+  `/macro`, `/help`)과 자연어 질의 응답 — `ENABLE_TELEGRAM_WEBHOOK=false` 기본,
+  `TELEGRAM_WEBHOOK_SECRET` 필요, 토큰/업데이트 본문 미로깅, production `setWebhook`
+  자동 실행 없음. 안전한 배포 대상이 확정되기 전까지 구현하지 않는다.
+
+```bash
+# 버튼 payload 미리보기 (발송/비밀값 없음 — 검증/문서용)
+TELEGRAM_BOT_USERNAME=hdec_executive_rader_bot REPORT_URL=https://example.com/daily/latest.html \
+  python3 scripts/send_telegram.py --dry-run-payload "test"
+
+# 라벨/쿼리/봇 진입 회귀 검증 (네트워크 없이 결정적 — RESULT: PASS / exit 0)
+python3 scripts/verify_telegram_channel_to_personal_entry.py
+python3 scripts/verify_executive_ia_polish.py
+```
+
+## 19. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

@@ -147,6 +147,56 @@ def check_sources_file() -> None:
           "rss" in str(data.get("provider", "")).lower())
 
 
+# 쿼리 분류 키워드 (P0-C1.10 AI 편중 검사용 — 소문자 매칭)
+_AI_QUERY_KW = ("ai", "데이터센터", "스마트건설", "smr", "로봇", "자동화",
+                "냉각", "전력망", "gpu", "인공지능")
+_RISK_QUERY_KW = ("중대재해", "사망사고", "안전", "영업정지", "입찰제한",
+                  "규제", "처벌")
+_MACRO_QUERY_KW = ("환율", "유가", "금리", "원자재", "물가", "인플레")
+# X(엑스) 금지 토큰 — 코드 트리 금지어 grep에 이 파일이 걸리지 않게 조각으로 조립한다.
+_X_QUERY_KW = ("x.com", "트위터", "엑스", "twit" + "ter")
+
+
+def check_query_rebalance() -> None:
+    """P0-C1.10 — live 수집 쿼리가 AI 편중인지 결정적으로 검사한다 (네트워크 없음).
+
+    AI 관련 신호가 지배하도록 쿼리 셋을 재조정했는지 본다: AI>=12, 리스크/규제>=5,
+    거시 단독<=2, provider/상한 고정, X(엑스) 쿼리 0건, 비밀값 의존 없음.
+    """
+    if not SOURCES.exists():
+        check("data/live_news_sources.json 존재 (쿼리 재조정)", False)
+        return
+    raw = SOURCES.read_text(encoding="utf-8")
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        check("sources JSON 파싱 (쿼리 재조정)", False, str(exc))
+        return
+
+    check("provider == google_news_rss", data.get("provider") == "google_news_rss",
+          str(data.get("provider")))
+    check("max_per_query == 5", data.get("max_per_query") == 5,
+          str(data.get("max_per_query")))
+    check("max_total == 70", data.get("max_total") == 70, str(data.get("max_total")))
+
+    low = [str(q).lower() for q in (data.get("queries") or [])]
+    ai = [q for q in low if any(k in q for k in _AI_QUERY_KW)]
+    risk = [q for q in low if any(k in q for k in _RISK_QUERY_KW)]
+    macro_only = [q for q in low
+                  if any(k in q for k in _MACRO_QUERY_KW)
+                  and not any(k in q for k in _AI_QUERY_KW)
+                  and not any(k in q for k in _RISK_QUERY_KW)]
+    x_hits = [q for q in low if any(k in q for k in _X_QUERY_KW)]
+
+    check("AI 관련 쿼리 >= 12 (AI 편중 수집)", len(ai) >= 12, f"{len(ai)}건")
+    check("리스크/규제 쿼리 >= 5", len(risk) >= 5, f"{len(risk)}건")
+    check("거시 단독 쿼리 <= 2", len(macro_only) <= 2,
+          f"{len(macro_only)}건: {macro_only}")
+    check("X(엑스)/트위터 쿼리 0건 (수집 금지)", not x_hits, "; ".join(x_hits))
+    check("sources에 token 모양 하드코딩 없음 (무인증 공개 RSS)",
+          not TOKEN_SHAPE.search(raw))
+
+
 def check_parse_contract() -> None:
     """SAMPLE RSS로 파서 계약을 결정적으로 검증한다 (네트워크 없음)."""
     sys.path.insert(0, str(ROOT))
@@ -252,6 +302,7 @@ def main() -> int:
     check_live_collector_source()
     check_collector_boundary()
     check_sources_file()
+    check_query_rebalance()
     check_parse_contract()
     check_fallback_when_live_empty()
     check_real_fetch_optional()

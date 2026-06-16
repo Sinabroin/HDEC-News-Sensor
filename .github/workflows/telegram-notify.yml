@@ -44,6 +44,8 @@ jobs:
           python3 scripts/verify_score_explanation_ui.py
           python3 scripts/verify_live_news_ingestion.py
           python3 scripts/verify_live_publish_path.py
+          python3 scripts/verify_executive_ia_polish.py
+          python3 scripts/verify_telegram_channel_to_personal_entry.py
 
       # 빈 메시지면 live 게시 경로, 커스텀 메시지면 그대로 전달 경로.
       # 입력은 env로만 받아 shell 주입을 막는다.
@@ -104,6 +106,8 @@ jobs:
           NEWS_MODE: live
           # 설정돼 있으면 "오늘 브리프 보기" inline 버튼이 붙는다 (vars 우선, 없으면 secrets).
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
+          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
         run: |
           python3 scripts/send_telegram.py
 
@@ -115,6 +119,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
+          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
         run: |
           python3 scripts/send_telegram.py
 
@@ -127,5 +133,7 @@ jobs:
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           MESSAGE: ${{ github.event.inputs.message }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
+          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
         run: |
           python3 scripts/send_telegram.py

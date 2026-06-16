@@ -88,7 +88,7 @@ def _pct(value) -> str:
 def format_brief_text(brief: dict) -> str:
     """--dry-run용 사람 읽기 좋은 한국어 brief 텍스트."""
     news_mode = brief.get("news_data_mode", "mock")
-    source_line = "공개 RSS 수집" if news_mode == "live" else "데모(mock) 데이터"
+    source_line = "자동 수집" if news_mode == "live" else "데모(mock) 데이터"
     lines = [
         f"== {brief['header']} — Executive Brief ==",
         f"{brief['date_kst']} (KST) · 뉴스 {source_line} · 시장지표 미연동",

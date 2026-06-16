@@ -315,12 +315,15 @@ def _check_report_html(html: str, label: str) -> None:
     check(f"{label}: '현재 시장값 아님' 경고 포함",
           bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
     # 게시 리포트는 mock 스냅샷이거나 (워크플로 auto-publish 후) live 리포트일 수 있다.
-    # live면 '공개 RSS 수집' 표기를 요구하고 mock 배지를 금지한다. 아니면 mock 표기 요구.
-    if "공개 RSS 수집" in html or "LIVE · 공개 RSS" in html:
-        check(f"{label}: live 출처 표기 (공개 RSS 수집)", "공개 RSS 수집" in html)
+    # P0-C1.10: live/mock은 보이지 않는 모드 마커로 판별한다 ('LIVE'·'공개 RSS' 노출 금지).
+    # live면 중립 '자동 수집' 표기 + mock 배지 금지, 아니면 mock/데모 표기를 요구한다.
+    if "news-data-mode:live" in html:
+        check(f"{label}: live 출처 표기 (자동 수집)", "자동 수집" in html)
         check(f"{label}: live 리포트에 '데모 데이터' 배지 없음", "데모 데이터" not in html)
     else:
-        check(f"{label}: mock 표기 포함", "mock" in html.lower())
+        check(f"{label}: mock/데모 표기 포함", "데모" in html or "mock" in html.lower())
+    check(f"{label}: 'LIVE'·'공개 RSS' 기술 표기 없음 (임원 화면)",
+          "LIVE" not in html and "공개 RSS" not in html)
     leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
     check(f"{label}: mock macro 고정값 수치 미노출", not leaked, ", ".join(leaked))
     bad = claim_violations(_visible_text(html))

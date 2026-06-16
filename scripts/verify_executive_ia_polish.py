@@ -49,7 +49,11 @@ NOISE_TERMS = ["상대 강도", "유사 주제 기사", "참고 묶음", "권장
 # 리스크 키워드 (리스크·규제 레이더 surface 검사용).
 RISK_KEYWORDS = ["중대재해", "안전", "사망", "산재", "처벌", "규제", "감독",
                  "영업정지", "입찰제한", "시행령", "국토부", "고용"]
-NAV_LABELS = ["AI 레이더", "리스크·규제", "수주·해외", "거시경제", "전체 근거"]
+NAV_LABELS = ["AI 관련", "리스크·규제", "수주·해외", "거시경제", "전체 근거"]
+# P0-C1.10: 임원 메모 스타일 — 생성된 요약/사유 줄에 없어야 하는 종결어미.
+# (기사 제목·footer 고지문은 검사 대상이 아니다 — 생성 요약/사유 줄만 본다.)
+BANNED_ENDINGS = ["입니다", "합니다", "됩니다", "있습니다", "신호다",
+                  "필요하다", "예상된다", "감지됩니다"]
 
 _failures = []
 
@@ -124,8 +128,8 @@ def check_report_ia() -> None:
     check("AI 레이더가 거시경제보다 앞 (ai < macro)", 0 <= ai_i < macro_i)
     check("섹션 순서 ai < risk < biz < macro < evidence",
           0 <= ai_i < risk_i < biz_i < macro_i < ev_i)
-    check("본문에서 'AI 레이더'가 '거시경제'보다 먼저",
-          "AI 레이더" in body and body.index("AI 레이더") < body.index("거시경제"))
+    check("본문에서 'AI 관련'이 '거시경제'보다 먼저",
+          "AI 관련" in body and body.index("AI 관련") < body.index("거시경제"))
 
     # 거시경제 = 기본 접힘 <details ...macro-section>, open 없음
     macro_det = re.search(r'<details id="macro"[^>]*>', html)
@@ -173,8 +177,9 @@ def check_report_ia() -> None:
 
     # 옛 일반 '주요 신호 Top 3' 헤딩이 섹션별 레이더로 대체됨
     check("옛 '주요 관찰 신호' 헤딩 없음", "주요 관찰 신호" not in html)
-    check("섹션별 레이더 헤딩으로 대체 (AI 레이더 주요 신호)",
-          "AI 레이더 주요 신호" in html)
+    # P0-C1.10: AI 섹션 라벨은 'AI 관련' (옛 'AI 레이더 주요 신호' 제거)
+    check("AI 섹션 헤딩이 'AI 관련'으로 표기", "AI 관련" in html)
+    check("옛 'AI 레이더 주요 신호' 헤딩 없음", "AI 레이더 주요 신호" not in html)
 
     # 거시경제 honesty 유지 (Macro Snapshot 섹션 + 미연동)
     check("거시경제 안에 시장지표 미연동 표기 유지 (정직성)", "미연동" in html)
@@ -244,13 +249,13 @@ def check_digest_ai_first() -> None:
                  (proc.stderr or "").strip()[-200:]):
         return
     msg = proc.stdout or ""
-    check("digest에 'AI 레이더' 섹션 존재", "AI 레이더" in msg)
+    check("digest에 'AI 관련' 섹션 존재", "AI 관련" in msg)
     macro_pos = msg.find("[Macro Snapshot")
     si_pos = msg.find("시장지표 미연동")
-    ai_pos = msg.find("AI 레이더")
-    check("digest: AI 레이더가 Macro Snapshot보다 먼저",
+    ai_pos = msg.find("AI 관련")
+    check("digest: AI 관련이 Macro Snapshot보다 먼저",
           ai_pos >= 0 and (macro_pos < 0 or ai_pos < macro_pos))
-    check("digest: AI 레이더가 시장지표 미연동보다 먼저",
+    check("digest: AI 관련이 시장지표 미연동보다 먼저",
           ai_pos >= 0 and (si_pos < 0 or ai_pos < si_pos))
     for term in ["상대 강도", "유사 주제", "권장 워치 액션", "주요 관찰 신호"]:
         check(f"digest에 노이즈 용어 '{term}' 없음", term not in msg)
@@ -271,6 +276,41 @@ def check_dashboard_tabs() -> None:
     check("대시보드에 옛 '상대 강도' 표현 없음", "상대 강도" not in html)
 
 
+def check_noun_phrase_style() -> None:
+    """P0-C1.10 — 생성된 임원 요약/사유 줄이 명사형 메모 스타일인지 검사한다.
+
+    executive_one_liner와 각 레이더/시그널 그룹의 one_line_reason을 본다 — 정적 리포트의
+    '왜 중요한가' 줄과 Telegram one-liner가 모두 이 값에서 파생된다. 기사 제목(raw 원문)과
+    footer 고지문은 검사하지 않는다 (생성 요약/사유 줄만 대상)."""
+    proc = run_script(BRIEF_BUILDER, "--json")
+    if not check("noun-phrase: brief --json 동작", proc.returncode == 0,
+                 (proc.stderr or "").strip()[-200:]):
+        return
+    try:
+        brief = json.loads(proc.stdout)
+    except ValueError as exc:
+        check("noun-phrase: brief --json 파싱", False, str(exc))
+        return
+
+    lines = []
+    one = (brief.get("executive_one_liner") or "").strip()
+    if one:
+        lines.append(("executive_one_liner", one))
+    groups = ["ai_radar_signals", "risk_regulation_signals", "business_signals",
+              "macro_economy_signals", "top_immediate_signals", "top_new_issues"]
+    for g in groups:
+        for s in (brief.get(g) or []):
+            r = (s.get("one_line_reason") or "").strip()
+            if r:
+                lines.append((g, r))
+
+    check("noun-phrase: 생성 요약/사유 줄 존재", bool(lines), f"{len(lines)}줄")
+    bad = [f"{src}:{txt[:28]}" for src, txt in lines
+           for end in BANNED_ENDINGS if end in txt]
+    check("생성 요약/사유 줄에 금지 종결어미 없음 (명사형 메모 스타일)",
+          not bad, "; ".join(bad[:4]))
+
+
 def main() -> int:
     print(f"== verify_executive_ia_polish @ {ROOT} ==")
     db_before = _db_state()
@@ -279,6 +319,7 @@ def main() -> int:
     check_brief_radar()
     check_digest_ai_first()
     check_dashboard_tabs()
+    check_noun_phrase_style()
 
     check("repo의 radar.db가 검증 중 변경/생성되지 않음 (temp DB 격리)",
           _db_state() == db_before)

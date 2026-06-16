@@ -354,8 +354,8 @@ def check_mock_digest_intact() -> None:
     proc2 = subprocess.run([sys.executable, str(DIGEST_BUILDER)],
                            capture_output=True, text=True,
                            env=_clean_env(), cwd=ROOT, timeout=300)
-    check("mock digest에 live 전용 '주간 모니터링 후보 중심' 안내 미포함",
-          "주간 모니터링 후보 중심" not in (proc2.stdout or ""))
+    check("mock digest에 live 전용 '추적 필요 신호 중심' 안내 미포함",
+          "추적 필요 신호 중심" not in (proc2.stdout or ""))
 
 
 # ---------- 대시보드 / 리포트 표시 ----------

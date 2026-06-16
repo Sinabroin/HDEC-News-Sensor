@@ -224,7 +224,7 @@ def check_live_failure_not_mislabeled() -> None:
         "brief = build_brief_via_mock_pipeline()\n"
         "html, _ = render_report_html(brief)\n"
         "print(json.dumps({'mode': brief['news_data_mode'], 'pill': _mode_pill(brief),\n"
-        " 'live_badge': 'LIVE · 공개 RSS' in html, 'fallback': brief.get('news_fallback_used')}))\n"
+        " 'live_badge': 'news-data-mode:live' in html, 'fallback': brief.get('news_fallback_used')}))\n"
     )
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True,
                           text=True, cwd=ROOT, timeout=180)
@@ -240,7 +240,7 @@ def check_live_failure_not_mislabeled() -> None:
         return
     check("live 실패 → news_data_mode=mock (live 주장 안 함)",
           res.get("mode") == "mock", str(res))
-    check("live 실패 → 리포트 모드 배지가 'LIVE · 공개 RSS' 아님",
+    check("live 실패 → 리포트 모드 마커가 live가 아님 (news-data-mode:live 없음)",
           res.get("live_badge") is False)
     check("live 실패 → 모드 배지 '데모 데이터'", res.get("pill") == "데모 데이터",
           str(res.get("pill")))
@@ -291,16 +291,20 @@ def check_live_build_optional() -> None:
         html = out.read_text(encoding="utf-8")
         if "news_data_mode=live" not in (proc.stdout or ""):
             skip("live 수집 0건/네트워크 차단 → mock fallback — SKIP, 가짜 live 주장 안 함")
-            # fallback 리포트라도 live를 사칭하지 않는지 최소 확인
-            check("fallback 빌드는 'LIVE · 공개 RSS' 배지를 달지 않음",
-                  "LIVE · 공개 RSS" not in html)
+            # fallback 리포트라도 live를 사칭하지 않는지 최소 확인 (모드 마커가 live가 아님)
+            check("fallback 빌드는 live 모드 마커를 달지 않음",
+                  "news-data-mode:live" not in html)
             return
 
         print("[LIVE] news_data_mode=live 리포트 생성됨")
         check("LIVE: news_data_mode=live 리포트 생성", True)
-        check("LIVE: live 출처 표기 (공개 RSS 수집)", "공개 RSS 수집" in html)
+        check("LIVE: live 모드 마커 존재 (news-data-mode:live)",
+              "news-data-mode:live" in html)
+        check("LIVE: live 출처 표기 (자동 수집)", "자동 수집" in html)
         check("LIVE: '데모 데이터' 배지 없음 (live를 mock으로 표기 안 함)",
               "데모 데이터" not in html)
+        check("LIVE: 'LIVE'·'공개 RSS' 기술 표기 없음 (임원 화면)",
+              "LIVE" not in html and "공개 RSS" not in html)
 
         hrefs = _href_values(html)
         http_hrefs = [h for h in hrefs if h.lower().startswith(("http://", "https://"))]

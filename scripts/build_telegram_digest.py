@@ -100,7 +100,7 @@ def format_digest_message(data: dict) -> str:
     설명·반복 면책은 넣지 않고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
     """
     news_mode = data.get("news_data_mode", "mock")
-    source_line = "공개 RSS 수집" if news_mode == "live" else "mock 데이터 기반"
+    source_line = "자동 수집" if news_mode == "live" else "mock 데이터 기반"
     # 헤더에서 '시장지표 미연동' 노이즈를 빼고(하단 Macro 섹션에서만 정직 표기), 출처만 표기.
     lines = [
         f"📡 {data['header']} — Executive Daily Brief",
@@ -113,10 +113,10 @@ def format_digest_message(data: dict) -> str:
         " · ".join(f"{b['label']} {b['value']}" for b in data["status_board"]),
     ]
 
-    # AI-first: AI 레이더 신호를 가장 먼저 보여준다 (거시경제보다 앞).
+    # AI-first: AI 관련 신호를 가장 먼저 보여준다 (거시경제보다 앞).
     signals = data["top_signals"]
     has_instant = any(s.get("alert_grade") == "즉시 알림 후보" for s in signals)
-    section = "AI 레이더" if data.get("ai_first") else "주요 신호"
+    section = "AI 관련" if data.get("ai_first") else "주요 신호"
     lines += ["", f"[{section} Top {len(signals)}]"]
     for s in signals:
         lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
@@ -132,7 +132,7 @@ def format_digest_message(data: dict) -> str:
     # 임원 알림으로 띄우지 않고, 주간 모니터링 후보 중심임을 명확히 한다 (P0-C1.6).
     # mock 데모는 즉시 후보가 항상 있어 이 줄이 추가되지 않는다 (다이제스트 길이 불변).
     if news_mode == "live" and not has_instant:
-        lines += ["", "오늘은 즉시 확인급 신호 없음 · 주간 모니터링 후보 중심"]
+        lines += ["", "오늘은 즉시 확인급 신호 없음 · 추적 필요 신호 중심"]
 
     # 리스크·규제 한 줄 — 있으면 거시경제보다 먼저, 중대재해·규제를 분명히 가리킨다.
     risk = data.get("risk_signals") or []

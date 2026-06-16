@@ -1,7 +1,7 @@
 """P0-FINAL-MVP 검증기 — executive 시그널 품질 규칙 회귀 검사.
 
 검사 항목 (전부 결정적 — 네트워크/비밀값 없음):
-- 모든 시그널 entry에 표준 액션 라벨(즉시 확인/검토 필요/주간 보고 후보/모니터링)이 있다.
+- 모든 시그널 entry에 표준 액션 라벨(즉시 확인/검토 필요/추적 필요/모니터링)이 있다.
 - spread 라벨이 보수적 표현("토픽상 관련 추정 신호 n건 · 출처 m곳" 또는 "단독 신호")이다.
 - "n개 매체 보도" 같은 확정 표현이 brief/digest에 없다 (lesson: spread-score-overclaiming).
 - 신규 이슈 Top 5가 단일 카테고리로 도배되지 않는다 (전체 카테고리가 2개 이상일 때).
@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BRIEF_BUILDER = ROOT / "scripts" / "build_executive_brief.py"
 DIGEST_BUILDER = ROOT / "scripts" / "build_telegram_digest.py"
 
-ALLOWED_ACTION_LABELS = {"즉시 확인", "검토 필요", "주간 보고 후보", "모니터링"}
+ALLOWED_ACTION_LABELS = {"즉시 확인", "검토 필요", "추적 필요", "모니터링"}
 # P0-C1.9: spread 라벨을 임원 친화적 표현으로 변경 ("관련 기사 n건 · 출처 m곳").
 SPREAD_LABEL_RE = re.compile(r"^(단독 신호|관련 기사 \d+건 · 출처 \d+곳)$")
 OVERCLAIM_RE = re.compile(r"\d+\s*개?\s*매체(가|에서)?\s*보도")

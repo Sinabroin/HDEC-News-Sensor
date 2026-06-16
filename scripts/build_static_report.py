@@ -270,8 +270,12 @@ def _is_http(url: str) -> bool:
 
 
 def _mode_pill(brief: dict) -> str:
-    """masthead 배지 — 개발자용 'MOCK DATA' 대신 뉴스 모드 기준 간결 라벨."""
-    return "LIVE · 공개 RSS" if brief.get("news_data_mode") == "live" else "데모 데이터"
+    """masthead 배지 — 'LIVE'·'공개 RSS' 같은 기술 용어 없이 (P0-C1.10).
+
+    live는 중립적 '자동 수집', mock/fallback은 '데모 데이터'로 표기한다.
+    live/mock 기계 판별은 본문 상단의 보이지 않는 마커(news-data-mode)로 한다.
+    """
+    return "자동 수집" if brief.get("news_data_mode") == "live" else "데모 데이터"
 
 
 def _source_link(url: str, label: str) -> str:
@@ -580,7 +584,7 @@ def _render_macro_section(brief: dict) -> list[str]:
 
 
 TOPNAV_ITEMS = [
-    ("#ai-radar", "AI 레이더", True),
+    ("#ai-radar", "AI 관련", True),
     ("#risk-radar", "리스크·규제", False),
     ("#biz-radar", "수주·해외", False),
     ("#macro", "거시경제", False),
@@ -589,7 +593,7 @@ TOPNAV_ITEMS = [
 
 
 def _render_topnav() -> str:
-    """상단 목차 버튼 — 섹션 앵커로 점프 (AI 레이더 강조, JS 없음)."""
+    """상단 목차 버튼 — 섹션 앵커로 점프 (AI 관련 강조, JS 없음)."""
     links = []
     for href, label, primary in TOPNAV_ITEMS:
         cls = ' class="primary"' if primary else ""
@@ -649,8 +653,8 @@ def _render_categories_block(brief: dict) -> list[str]:
 def render_report_html(brief: dict) -> tuple[str, list[str]]:
     """brief 구조체를 standalone HTML로 렌더링한다. (html, 포함된 섹션 키) 반환.
 
-    IA (P0-C1.9): 헤더 → 현황판 → Executive Signal → 상단 목차 →
-    AI 레이더(주력) → 리스크·규제 레이더 → 수주·해외 신호 →
+    IA (P0-C1.9~10): 헤더 → 현황판 → Executive Signal → 상단 목차 →
+    AI 관련(주력) → 리스크·규제 → 수주·해외 →
     [접힘] 거시경제 → [접힘] 전체 근거(테마·카테고리·근거·참고/제외 감사).
     """
     sections = ["hero", "status_board", "one_liner"]
@@ -680,31 +684,31 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         _render_topnav(),
     ]
 
-    # 1) AI 레이더 — 주력 섹션 (Executive Signal 직후 첫 신호 섹션)
+    # 1) AI 관련 — 주력 섹션 (Executive Signal 직후 첫 신호 섹션)
     ai_sigs = brief.get("ai_radar_signals") or []
     body += _render_visible_radar(
-        "ai-radar", "AI 레이더 주요 신호",
+        "ai-radar", "AI 관련",
         "AI 데이터센터·전력·SMR·스마트건설 · 점수순", ai_sigs, lead=True,
-        empty="오늘 AI 인프라·건설 AI 신호가 감지되지 않았습니다.")
+        empty="오늘 AI 인프라·건설 AI 신호 없음")
     if ai_sigs:
         sections.append("ai_radar")
         sections.append("top_signals")  # 메타데이터 backward-compat 별칭
 
-    # 2) 리스크·규제 레이더 — 중요도가 낮아도 중대재해·규제를 분명히 노출
+    # 2) 리스크·규제 — 중요도가 낮아도 중대재해·규제를 분명히 노출
     risk_sigs = brief.get("risk_regulation_signals") or []
     body += _render_visible_radar(
-        "risk-radar", "리스크·규제 레이더",
+        "risk-radar", "리스크·규제",
         "중대재해·안전·규제 · 리스크 우선도순", risk_sigs, risk_mode=True,
-        empty="오늘 두드러진 안전·규제 리스크 신호가 없습니다.")
+        empty="오늘 두드러진 안전·규제 리스크 신호 없음")
     if risk_sigs:
         sections.append("risk_radar")
 
-    # 3) 수주·해외 신호
+    # 3) 수주·해외
     biz_sigs = brief.get("business_signals") or []
     body += _render_visible_radar(
-        "biz-radar", "수주·해외 신호",
+        "biz-radar", "수주·해외",
         "수주·발주·해외·플랜트 · 점수순", biz_sigs,
-        empty="오늘 두드러진 수주·해외 사업 신호가 없습니다.")
+        empty="오늘 두드러진 수주·해외 사업 신호 없음")
     if biz_sigs:
         sections.append("business_radar")
 
@@ -762,6 +766,9 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         f'<style>{_CSS}</style>',
         '</head>',
         '<body>',
+        # 보이지 않는 데이터 모드 마커 — 검증기/CI가 live·mock을 결정적으로 판별한다
+        # (HTML 주석이라 임원 화면엔 안 보이고, 'LIVE'/'공개 RSS' 노출 없이 정직성 유지).
+        f'<!--news-data-mode:{escape(brief.get("news_data_mode") or "mock")}-->',
         '<div class="page">',
         *body,
         '</div>',
