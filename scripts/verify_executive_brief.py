@@ -367,9 +367,12 @@ def check_digest() -> None:
           "" if ok else (proc.stderr or "").strip()[-300:])
     if ok:
         message = proc.stdout
-        for label in (HEADER_TEXT, ONE_LINER_LABEL, "즉시 알림 후보", "주요 테마",
-                      "카테고리"):
+        for label in (HEADER_TEXT, ONE_LINER_LABEL, "즉시 알림 후보", "카테고리"):
             check(f"digest에 '{label}' 포함", label in message)
+        # P0-C1.13 — [주요 테마]는 Telegram에서 제거(부풀어 보이는 '40건' 카운트 = 임원용
+        # 노이즈). 테마 정보는 리포트/대시보드에 유지된다 (verify_static_report가 검사).
+        check("digest에 '[주요 테마]' 없음 (P0-C1.13 노이즈 제거)",
+              "[주요 테마]" not in message)
         check("digest에 mock 모드 표기 포함", "mock" in message.lower())
         check(f"digest 길이 {len(message.rstrip())} <= {MESSAGE_BUDGET_MAX}",
               len(message.rstrip()) <= MESSAGE_BUDGET_MAX)

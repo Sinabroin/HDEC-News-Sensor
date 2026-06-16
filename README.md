@@ -807,7 +807,59 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py \
 라이브 Google News RSS는 주기적 쿼리/출처 튜닝이 계속 필요하다 — 이 레이어는 제품을
 현대건설 임원 의사결정 지원에 더 가깝게 옮길 뿐 라이브 피드의 완벽을 주장하지 않는다.
 
-## 21. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 21. Executive Telegram & Section Routing Polish (P0-C1.13)
+
+§20의 의사결정 레이어 위에서, Telegram 다이제스트가 'AI 뉴스 요약'이 아니라 **현대건설
+임원 의사결정 브리프**로 보이게 라우팅·표현을 다듬는다. 변경은 Telegram 도메인
+(`build_telegram_digest.py`)과 `decision_relevance` 라우팅에 한정한다(스코어/등급/외부 API
+불변, stock-hype·리스크 게이트 불변).
+
+### 현대건설 직접 — implication 그룹핑
+
+- `[현대건설 직접]`을 헤드라인 5줄 나열이 아니라 **리스크/전략/운영/(기술·조직)/재무**
+  implication별로 묶어 **≤3줄** 메모형으로 보여준다(`_hdec_grouped_bullets`,
+  `hdec_bucket` 1:1 매핑). 한 줄에 대표 제목 최대 2건.
+- 벌점·전략(도시정비·DC·SMR)·운영(AI 하도급·계약)이 동시에 있으면 세 implication이 모두
+  대표된다. 신호가 하나면 한 줄.
+
+### 재무·자금조달 라우팅 (AI 오분류 교정)
+
+- `전환사채/회사채/금리/유동성/PF/자금조달/투자자/신용등급` 등 → **재무·자금조달**로 본다.
+  현대건설 + 재무는 primary `현대건설 직접 영향` + secondary `거시경제`, 사유 '자금조달·금리
+  환경'. **AI Top에 넣지 않는다**(투자자/현대건설 언급만으로 AI 금지).
+- 단, 명시적 AI/데이터센터/SMR/EPC/수주 전략 맥락이 함께 있으면 AI/전략으로 둔다.
+- 분류 입력은 **raw 제목+스니펫만** — 생성된 `topic_candidates`(캔드 토픽 '현대건설
+  데이터센터'를 느슨하게 매칭)는 재무 기사를 DC로 오인시키므로 제외한다.
+
+### AI Top·수주·해외 — 공급사 후순위 + 발주 우선
+
+- 부품·전선 공급사 단독(가온전선·솔루엠·성광벤드 등, `is_supplier_only`)은 더 강한
+  AI/EPC/현대건설 신호가 있으면 **AI Top에서 뒤로** 정렬한다. 공급사는 경쟁사·공급망/수주·해외
+  보조로 남는다(임원 AI Top을 공급사가 차지하지 않게).
+- Telegram에 `[수주·해외]` 블록(≤2줄)을 추가 — 발주/EPC/프로젝트를 공급사 단독보다 먼저.
+  현대건설 직접에 이미 나온 주체는 키 선점으로 중복 제외.
+
+### 노이즈/중복 정리
+
+- `[주요 테마]`를 Telegram에서 **제거**(부풀어 보이는 '40건' 카운트 = 임원용 노이즈).
+  테마는 리포트/대시보드/감사 헬퍼에 유지된다.
+- `[AI 관련 Top 3]`(리포트형) → `[AI 관련]`(간결).
+- 현대건설 벌점이 `[현대건설 직접]`에 이미 나오면 `[리스크·규제]`는 **헤드라인을 반복하지
+  않고** 다음 리스크 또는 '직접 영향 항목 참고' 포인터로 대체한다.
+- 감사 헬퍼에 'AI 후보인데 재무·자금조달 신호(AI→재무 라우팅 점검)' 섹션 추가.
+
+### mock 영향 없음 / 검증
+
+- mock 데모 숫자 불변: **28 / 21 / 3 / 4 / 14 / 7**(라우팅은 섹션 멤버십만 바꾸고 등급을
+  재계산하지 않는다).
+- `scripts/verify_executive_telegram_polish.py`(fixture, temp DB 시뮬) + 기존 14개 = **15/15 PASS**.
+
+```bash
+python3 scripts/verify_executive_telegram_polish.py   # 결정적 회귀 (RESULT: PASS)
+NEWS_MODE=live python3 scripts/build_telegram_digest.py --dry-run   # 라이브 다이제스트 확인
+```
+
+## 22. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

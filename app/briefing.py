@@ -274,6 +274,12 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         entry["executive_label"] = decision["executive_label"]
         entry["secondary_sections"] = decision["secondary_executive_sections"]
         entry["secondary_labels"] = decision["secondary_labels"]
+        # P0-C1.13: Telegram이 현대건설 직접 그룹핑·공급사 후순위·재무 라우팅을 재계산 없이
+        # 쓰도록 분류 결과를 그대로 전달한다 (decision_relevance가 단일 소유, 표시 가드레일).
+        entry["hdec_bucket"] = decision.get("hdec_bucket")
+        entry["is_competitor"] = decision.get("is_competitor")
+        entry["is_finance"] = decision.get("is_finance")
+        entry["supplier_only"] = decision.get("supplier_only")
     # 리스크·규제 신호는 risk_priority(중요도가 낮아도 상단 노출)·사유·라벨을 부착한다.
     if section == radar.RISK:
         rf = radar.risk_fields(row, score)

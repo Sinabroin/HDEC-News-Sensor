@@ -104,6 +104,9 @@ def _suspicious_section(brief: dict) -> list[str]:
     risk_kw = getattr(radar, "RISK_ACTION_STRONG", [])
     stockhype, aggregator, hdec_excluded = [], [], []
     risk_kw_not_risk, risk_no_action, decision_excluded = [], [], []
+    ai_finance_misroute = []
+    fin_tokens = getattr(decision_relevance, "FINANCE_TOKENS", [])
+    fin_ctx = getattr(decision_relevance, "FINANCE_STRATEGY_CTX", [])
     for r in rows:
         title = r.get("title") or ""
         source = r.get("source") or ""
@@ -128,6 +131,14 @@ def _suspicious_section(brief: dict) -> list[str]:
             decision_excluded.append(
                 (title, source, dr["decision_relevance_tier"],
                  dr["executive_label"]))
+        # AI 후보인데 raw 제목이 재무·자금조달 신호(전환사채/금리 등)면 — AI가 아니라 재무로
+        # 라우팅돼야 할 후보 점검 (P0-C1.13). decision_relevance가 이미 AI에서 빼지만,
+        # 명시적 전략 맥락이 없는 finance가 AI 레이더에 남았는지 감사로 한 번 더 본다.
+        low = title.lower()
+        if (section == radar.AI and any(t in low for t in fin_tokens)
+                and not any(t in low for t in fin_ctx)):
+            ai_finance_misroute.append(
+                (title, source, dr["primary_executive_section"]))
 
     def _block(title, items, header, fmt):
         out = [f"### {title} ({len(items)}건)", ""]
@@ -166,6 +177,10 @@ def _suspicious_section(brief: dict) -> list[str]:
         "| 제목 | 출처 | 의사결정 티어 | 섹션 |",
         lambda it: f"| {_cell(it[0])} | {_cell(it[1], 22)} | {_cell(it[2], 8)} "
                    f"| {_cell(it[3], 14)} |")
+    lines += _block(
+        "AI 후보인데 재무·자금조달 신호 (AI→재무 라우팅 점검)", ai_finance_misroute,
+        "| 제목 | 출처 | 의사결정 섹션 |",
+        lambda it: f"| {_cell(it[0])} | {_cell(it[1], 22)} | {_cell(it[2], 16)} |")
     return lines
 
 

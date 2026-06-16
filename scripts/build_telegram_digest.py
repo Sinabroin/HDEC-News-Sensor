@@ -59,6 +59,11 @@ def _digest_signal(entry: dict) -> dict:
         "risk_priority_score": entry.get("risk_priority_score"),
         "risk_radar_label": entry.get("risk_radar_label"),
         "spread_label": (entry.get("spread") or {}).get("label", "단독 신호"),
+        # P0-C1.13: 현대건설 직접 그룹핑·공급사 후순위·재무 라우팅용 분류 메타 (재계산 없음).
+        "hdec_bucket": entry.get("hdec_bucket"),
+        "executive_section": entry.get("executive_section"),
+        "supplier_only": bool(entry.get("supplier_only")),
+        "is_finance": bool(entry.get("is_finance")),
         "url": entry.get("url"),
     }
 
@@ -95,6 +100,45 @@ def _pick_diverse(entries: list, limit: int, seen: set) -> list:
     return out
 
 
+# 현대건설 직접 영향 Telegram 그룹 (P0-C1.13) — hdec_bucket → 임원 메모 라벨 (1:1 매핑).
+# 1 리스크 · 2 전략(수주·DC·SMR·뉴에너지) · 3 운영(AI·하도급·계약) · 4 기술·조직(R&D) ·
+# 5 재무(자금조달) · 6 기타. 우선순위 순으로 최대 3줄만 노출한다 (장문 헤드라인 나열 방지).
+_HDEC_THEME_ORDER = [(1, "리스크"), (2, "전략"), (3, "운영"),
+                     (4, "기술·조직"), (5, "재무"), (6, "기타")]
+HDEC_BULLET_MAX = 3        # 현대건설 직접 블록 최대 줄 수
+HDEC_GROUP_TITLE_MAX = 46  # 그룹 줄 안 제목 클립 (메모 가독성)
+
+
+def _hdec_grouped_bullets(signals: list) -> tuple[list, set]:
+    """현대건설 직접 신호를 implication(버킷)별로 묶어 임원 메모형 bullet ≤3줄로 만든다.
+
+    같은 그룹은 한 줄에 대표 제목 최대 2건을 ' / '로 잇는다 (다섯 줄 헤드라인 나열이 아니라
+    리스크/전략/운영처럼 묶어 보여준다). 노출한 신호의 article_id 집합을 함께 돌려줘
+    [리스크·규제]가 같은 헤드라인을 반복하지 않게 한다 (중복 방지)."""
+    groups: dict = {}
+    for s in signals:
+        bucket = s.get("hdec_bucket") or 6
+        groups.setdefault(bucket, []).append(s)
+    bullets, shown_ids = [], set()
+    for bucket, label in _HDEC_THEME_ORDER:
+        items = groups.get(bucket)
+        if not items:
+            continue
+        titles, used = [], []
+        for s in items[:2]:                     # 그룹당 대표 최대 2건
+            clipped = _clip(s.get("title", ""), HDEC_GROUP_TITLE_MAX)
+            if clipped:
+                titles.append(clipped)
+                used.append(s.get("article_id"))
+        if not titles:
+            continue
+        bullets.append(f"· {label}: " + " / ".join(titles))
+        shown_ids.update(used)
+        if len(bullets) >= HDEC_BULLET_MAX:
+            break
+    return bullets, shown_ids
+
+
 def build_digest_data() -> dict:
     """공유 brief 레이어에서 다이제스트 구조체를 만든다 (P0-C1.12: 현대건설 직접 우선).
 
@@ -107,11 +151,22 @@ def build_digest_data() -> dict:
     risk = brief.get("risk_regulation_signals") or []
 
     seen: set = set()
-    hdec_top = _pick_diverse(hdec, 2, seen)            # 현대건설 직접 (키 선점)
+    # 현대건설 직접 — 그룹핑용으로 전체(briefing 캡 최대 5건)를 넘긴다. 모두 현대건설 주체라
+    # 회사 키(co:현대건설)를 선점해, 같은 주체가 AI/수주·해외 Top을 다시 차지하지 않게 한다.
+    hdec_list = hdec[:5]
+    for e in hdec_list:
+        seen.add(_entity_key(e))
+    # AI 관련 — 부품·전선 공급사 단독(가온전선 등) 신호는 뒤로 정렬해, 더 강한 AI/EPC/현대건설
+    # 신호가 있으면 AI Top을 공급사가 차지하지 않게 한다 (P0-C1.13). 동률은 기존 점수순 유지.
     ai_base = ai or brief.get("top_immediate_signals") or []
-    ai_top = _pick_diverse(ai_base, 3, seen)           # AI 관련 (현대건설 중복 제외)
-    biz_top = _pick_diverse(biz, 1, seen)              # 수주·해외 (앞 섹션과 중복 제외)
-    risk_top = _pick_diverse(risk, 1, set())           # 리스크·규제 (별도 — 항상 노출)
+    ai_sorted = sorted(ai_base, key=lambda e: 1 if e.get("supplier_only") else 0)
+    ai_top = _pick_diverse(ai_sorted, 3, seen)         # AI 관련 (현대건설/공급사 후순위)
+    # 수주·해외 — 발주/EPC/프로젝트 신호를 공급사 단독보다 먼저. 최대 2줄, 앞 섹션과 중복 제외.
+    biz_sorted = sorted(biz, key=lambda e: 1 if e.get("supplier_only") else 0)
+    biz_top = _pick_diverse(biz_sorted, 2, seen)
+    # 리스크·규제 — 별도 풀(항상 노출). 최상위가 현대건설 직접에 이미 나오면 다음 리스크로
+    # 대체할 수 있게 2건까지 확보한다 (헤드라인 중복 회피는 format 단계에서).
+    risk_top = _pick_diverse(risk, 2, set())
     return {
         "header": HEADER,
         "mode": brief["mode"],
@@ -122,7 +177,7 @@ def build_digest_data() -> dict:
         "generated_at": brief["generated_at"],
         "executive_one_liner": brief["executive_one_liner"],
         "status_board": brief["status_board"],
-        "hdec_signals": [_digest_signal(e) for e in hdec_top],
+        "hdec_signals": [_digest_signal(e) for e in hdec_list],
         "top_signals": [_digest_signal(e) for e in ai_top],
         "ai_first": bool(ai),
         "biz_signals": [_digest_signal(e) for e in biz_top],
@@ -159,20 +214,21 @@ def format_digest_message(data: dict) -> str:
         " · ".join(f"{b['label']} {b['value']}" for b in data["status_board"]),
     ]
 
-    # 현대건설 직접 영향 — 임원 의사결정 최상위. 있으면 AI보다 먼저 한 블록으로 노출한다.
+    # 현대건설 직접 영향 — 임원 의사결정 최상위. 있으면 AI보다 먼저, implication(리스크/전략/
+    # 운영/재무)별로 묶어 ≤3줄 메모형으로 노출한다 (장문 헤드라인 5줄 나열이 아니라).
     hdec = data.get("hdec_signals") or []
+    hdec_shown_ids: set = set()
     if hdec:
-        lines += ["", "[현대건설 직접]"]
-        for h in hdec:
-            chip = h.get("risk_radar_label")
-            prefix = f"{chip} · " if chip else ""
-            lines.append(f"· {prefix}{_clip(h['title'], TITLE_MAX)}")
+        hdec_bullets, hdec_shown_ids = _hdec_grouped_bullets(hdec)
+        if hdec_bullets:
+            lines += ["", "[현대건설 직접]"] + hdec_bullets
 
     # AI 관련 신호 (현대건설 직접 다음). 같은 회사 도배는 build_digest_data에서 dedup됨.
     signals = data["top_signals"]
     has_instant = any(s.get("alert_grade") == "즉시 알림 후보" for s in signals)
+    # P0-C1.13: 임원용으로 간결하게 — '[AI 관련 Top 3]'(리포트형) 대신 '[AI 관련]'.
     section = "AI 관련" if data.get("ai_first") else "주요 신호"
-    lines += ["", f"[{section} Top {len(signals)}]"]
+    lines += ["", f"[{section}]"]
     for rank, s in enumerate(signals, start=1):
         lines.append(f"{rank}. {_clip(s['title'], TITLE_MAX)}")
         meta = []
@@ -189,22 +245,29 @@ def format_digest_message(data: dict) -> str:
     if news_mode == "live" and not has_instant:
         lines += ["", "오늘은 즉시 확인급 신호 없음 · 추적 필요 신호 중심"]
 
-    # 수주·해외 한 줄 — 발주 환경(중동·재건·EPC·DC) 신호를 분명히 가리킨다.
+    # 수주·해외 — 발주 환경(중동·재건·EPC·DC) 신호를 ≤2줄로. 발주/EPC/프로젝트를 공급사
+    # 단독보다 먼저(정렬은 build_digest_data). 현대건설 직접에 이미 나온 주체는 키 선점으로 제외됨.
     biz = data.get("biz_signals") or []
     if biz:
-        lines += ["", f"[수주·해외] {_clip(biz[0]['title'], TITLE_MAX)}"]
+        lines += ["", "[수주·해외]"]
+        for b in biz:
+            lines.append(f"· {_clip(b['title'], TITLE_MAX)}")
 
-    # 리스크·규제 한 줄 — 중대재해·규제를 분명히 가리킨다.
+    # 리스크·규제 — 중대재해·규제를 가리킨다. 단, 현대건설 직접에 이미 나온 리스크(예: 벌점)는
+    # 헤드라인을 반복하지 않는다 — 다음 리스크가 있으면 그걸, 없으면 직접 영향 포인터만 (P0-C1.13).
     risk = data.get("risk_signals") or []
     if risk:
-        top = risk[0]
-        chip = top.get("risk_radar_label") or "리스크"
-        lines += ["", f"[리스크·규제] {chip}: {_clip(top['title'], TITLE_MAX)}"]
+        fresh = next((r for r in risk
+                      if r.get("article_id") not in hdec_shown_ids), None)
+        if fresh:
+            chip = fresh.get("risk_radar_label") or "리스크"
+            lines += ["", f"[리스크·규제] {chip}: {_clip(fresh['title'], TITLE_MAX)}"]
+        else:
+            chip = risk[0].get("risk_radar_label") or "리스크"
+            lines += ["", f"[리스크·규제] {chip}: 현대건설 직접 영향 항목 참고"]
 
-    themes = data["theme_rankings"][:3]
-    if themes:
-        lines += ["", "[주요 테마] " + " · ".join(
-            f"{t['theme']} {t.get('count', '')}건".strip() for t in themes)]
+    # [주요 테마]는 Telegram에서 제거(P0-C1.13) — 부풀어 보이는 '40건' 카운트는 임원용 노이즈.
+    # 테마 정보는 리포트/대시보드/감사 헬퍼에 유지된다 (theme_rankings는 data에 그대로 둔다).
 
     categories = data["category_counts"]
     if categories:
