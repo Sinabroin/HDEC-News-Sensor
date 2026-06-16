@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime, timedelta
 
-from app import article_quality, db, source_quality
+from app import article_quality, db, decision_relevance, source_quality
 
 MODEL_NAME = "rule-based-v1"
 
@@ -469,6 +469,17 @@ def _score_article(article: dict, ctx: dict) -> dict:
         grade = _max_grade(grade, GRADE_DAILY if aq["enforcement_severe"] else GRADE_WEEKLY)
     elif aq["hdec_ai_contract"]:
         # 현대건설 AI 계약검토/협력사 리스크 관리 — 최소 추적 필요로 floor (제외 금지).
+        grade = _max_grade(grade, GRADE_WEEKLY)
+    elif decision_relevance.is_hdec_strategic(article["title"]):
+        # 현대건설 직접 전략(데이터센터/SMR/뉴에너지/에너지전환/R&D/수주/도시정비) —
+        # 종합 점수가 희석돼도 임원 직접 의사결정 신호이므로 최소 추적 필요로 floor (P0-C1.12).
+        # 헬스케어/생활성 현대건설 기사는 is_hdec_strategic이 걸러낸다 (무차별 승격 금지).
+        grade = _max_grade(grade, GRADE_WEEKLY)
+    elif (decision_relevance.is_order_environment(article)
+          and quality["source_quality"] not in ("excluded", "low")):
+        # 수주·해외 발주 환경(EPC/데이터센터/SMR/플랜트/원전/중동/재건) + 신뢰 출처 —
+        # 확정 계약이 아니어도 임원 발주 환경 신호이므로 최소 추적 필요로 surface (P0-C1.12).
+        # 섹터/지역 신호를 요구하므로 '주택 착공 통계' 같은 generic 건설 기사는 floor 안 됨.
         grade = _max_grade(grade, GRADE_WEEKLY)
 
     return {

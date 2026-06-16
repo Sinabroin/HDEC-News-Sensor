@@ -14,7 +14,10 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from app import config, db, insight, macro_snapshot, radar, scoring, source_quality
+from app import (
+    config, db, decision_relevance, insight, macro_snapshot, radar, scoring,
+    source_quality,
+)
 
 KST = timezone(timedelta(hours=9))
 
@@ -224,7 +227,7 @@ def _build_spreads(scored_rows: list[dict]) -> dict[str, dict]:
 
 def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
                   spread: dict, score: dict | None = None,
-                  section: str | None = None) -> dict:
+                  section: str | None = None, decision: dict | None = None) -> dict:
     topics = _parse_topics(row)
     # 출처 품질 라벨 (P0-C1.6) — 표시 전용 파생값. 저장된 source/title을 분류만 한다
     # (점수/등급 재계산 아님). 신뢰 출처/일반 출처/낮은 신뢰도를 UI·리포트가 노출한다.
@@ -261,6 +264,16 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "spread": spread,
         "url": row.get("url"),
     }
+    # 임원 의사결정 관련성 (P0-C1.12) — primary/secondary 임원 섹션 + 티어/사유.
+    # 표시·랭킹 가드레일이며 점수/등급을 재계산하지 않는다 (decision_relevance가 단일 소유).
+    if decision:
+        entry["decision_relevance_score"] = decision["decision_relevance_score"]
+        entry["decision_relevance_tier"] = decision["decision_relevance_tier"]
+        entry["decision_reason"] = decision["decision_reason"]
+        entry["executive_section"] = decision["primary_executive_section"]
+        entry["executive_label"] = decision["executive_label"]
+        entry["secondary_sections"] = decision["secondary_executive_sections"]
+        entry["secondary_labels"] = decision["secondary_labels"]
     # 리스크·규제 신호는 risk_priority(중요도가 낮아도 상단 노출)·사유·라벨을 부착한다.
     if section == radar.RISK:
         rf = radar.risk_fields(row, score)
@@ -605,6 +618,11 @@ def build_brief(pipeline_counts: dict | None = None,
     row_by_id = {r["id"]: r for r in scored}
     radar_sections = {rid: radar.classify_section(row, categories[rid])
                       for rid, row in row_by_id.items()}
+    # 임원 의사결정 관련성 (P0-C1.12, 표시 전용 파생값) — primary/secondary 임원 섹션 +
+    # 티어를 파생한다. radar 위에 얹혀 '현대건설 직접 영향'·'수주·해외 발주 환경'·'경쟁사·
+    # 공급망'을 추가하고, 같은 기사가 여러 섹션에 멤버로 들어갈 수 있게 한다 (multi-section).
+    decisions = {rid: decision_relevance.classify(row, categories[rid])
+                 for rid, row in row_by_id.items()}
 
     # Top 3/Top 5 노출 대상에서 excluded 출처(블로그/카페/커뮤니티성)는 배제한다
     # (P0-C1.6). excluded는 scoring 캡으로 이미 제외 등급이라 signal_rows에 거의 없지만,
@@ -616,7 +634,8 @@ def build_brief(pipeline_counts: dict | None = None,
         return _signal_entry(rank, row, categories[row["id"]],
                              implications[row["id"]], spreads[row["id"]],
                              scores_by_id.get(row["id"]),
-                             section=radar_sections[row["id"]])
+                             section=radar_sections[row["id"]],
+                             decision=decisions[row["id"]])
 
     # 즉시 알림 후보 우선, 비면 상위 신호로 보충 (entry의 alert_grade가 실제 등급).
     # 후보가 표시 한도보다 많을 때만 카테고리 다양성 선택이 동작한다 —
@@ -628,19 +647,63 @@ def build_brief(pipeline_counts: dict | None = None,
         instant_rows = _diverse_top(display_rows, categories, TOP_IMMEDIATE)
     top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
 
-    # ---- 섹션별 레이더 신호 (P0-C1.9) ----
-    # AI/수주·해외/거시는 display_rows(제외 등급·비뉴스 제외)에서 점수순으로 뽑는다.
-    # 리스크·규제는 broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
-    # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다.
+    # ---- 섹션별 레이더 신호 (P0-C1.9 + P0-C1.12 임원 의사결정 IA) ----
+    # AI/거시는 radar 분류(primary)로 뽑는다 — AI는 radar_section==ai 불변(IA 회귀 보호).
+    # 현대건설 직접/수주·해외/경쟁사·공급망은 decision_relevance 멤버십(primary or
+    # secondary)으로 뽑는다 — 같은 기사가 여러 섹션에 들어갈 수 있다(multi-section).
     def _radar_group(section_key, limit=TOP_RADAR):
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
         rows.sort(key=lambda r: (-(r.get("final_score") or 0), r["id"]))
         return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
 
+    def _decision_group(section_key, limit=TOP_RADAR, sort_key=None, company_cap=None):
+        rows = [r for r in display_rows
+                if decision_relevance.in_section(decisions[r["id"]], section_key)]
+        rows.sort(key=sort_key or (lambda r: (
+            -(decisions[r["id"]]["decision_relevance_score"] or 0),
+            -(r.get("final_score") or 0), r["id"])))
+        # 같은 회사(예: 가온전선 3건)가 한 섹션을 점유하지 않게 회사당 상한을 둔다 (P0-C1.12).
+        # 회사명이 없는 기사는 캡하지 않는다. 정렬 후 적용하므로 상위 신호가 먼저 살아남는다.
+        if company_cap:
+            capped, counts = [], {}
+            for r in rows:
+                ck = decision_relevance.company_key(r.get("title") or "")
+                if ck is not None and counts.get(ck, 0) >= company_cap:
+                    continue
+                if ck is not None:
+                    counts[ck] = counts.get(ck, 0) + 1
+                capped.append(r)
+            rows = capped
+        return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
+
+    # 현대건설 직접 영향 — Phase 3 순서(리스크/제재 → 수주·DC·SMR·뉴에너지 전략 →
+    # AI·계약 → R&D·조직 → 그 외 직접). 같은 기사가 risk/ai/order에도 노출될 수 있다.
+    def _hdec_sort(r):
+        d = decisions[r["id"]]
+        return (d["hdec_bucket"], -(d["decision_relevance_score"] or 0),
+                -(r.get("final_score") or 0), r["id"])
+    hdec_direct_signals = _decision_group(
+        decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort)
+
     ai_radar_signals = _radar_group(radar.AI)
-    business_signals = _radar_group(radar.BUSINESS)
+    # 수주·해외 — 확정 계약뿐 아니라 발주 환경(중동·재건·EPC·DC·SMR·플랜트)과 경쟁사
+    # 수주 전략까지 넓혀 'business 0건' 회귀를 방지한다 (decision 멤버십 기반).
+    # 현대건설 직접(primary)은 위 현대건설 섹션에 이미 노출되므로, 여기선 '순수 수주·해외/
+    # 경쟁사 발주' 신호(중동·재건 등)를 먼저 보여 같은 기사로 도배되지 않게 한다.
+    def _order_sort(r):
+        d = decisions[r["id"]]
+        is_hdec_primary = d["primary_executive_section"] == decision_relevance.HDEC_DIRECT
+        return (1 if is_hdec_primary else 0,
+                -(d["decision_relevance_score"] or 0),
+                -(r.get("final_score") or 0), r["id"])
+    business_signals = _decision_group(
+        decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2)
+    competitor_supply_signals = _decision_group(
+        decision_relevance.COMPETITOR, company_cap=2)
     macro_economy_signals = _radar_group(radar.MACRO)
 
+    # 리스크·규제는 broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
+    # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다.
     risk_pool = [r for r in scored
                  if radar_sections[r["id"]] == radar.RISK
                  and not _is_excluded_quality(r)]
@@ -747,12 +810,17 @@ def build_brief(pipeline_counts: dict | None = None,
         "executive_one_liner": one_liner,
         "top_immediate_signals": top_immediate,
         "top_new_issues": top_issues,
-        # P0-C1.9 섹션별 레이더 — 리포트/대시보드/Telegram이 AI-first IA로 소비한다.
+        # P0-C1.9 섹션별 레이더 + P0-C1.12 임원 의사결정 IA — 리포트/대시보드/Telegram이
+        # '현대건설 직접 → AI → 수주·해외 → 리스크·규제 → 경쟁사·공급망 → 거시'로 소비한다.
+        "hdec_direct_signals": hdec_direct_signals,
         "ai_radar_signals": ai_radar_signals,
         "risk_regulation_signals": risk_regulation_signals,
         "business_signals": business_signals,
+        "competitor_supply_signals": competitor_supply_signals,
         "macro_economy_signals": macro_economy_signals,
         "radar_labels": radar.RADAR_LABELS,
+        "executive_labels": decision_relevance.EXEC_LABELS,
+        "executive_short_labels": decision_relevance.EXEC_SHORT,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
         "category_sections": category_sections,

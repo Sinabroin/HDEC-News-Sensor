@@ -136,13 +136,15 @@ def check_message_text(message: str) -> None:
           "mock 데이터 기반" in message or "뉴스/시장지표 미연동" in message)
     leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in message]
     check("digest에 mock macro 고정값 수치 없음", not leaked, ", ".join(leaked))
+    # P0-C1.12 — macro가 live가 아닌 한 digest에 Macro Snapshot/미연동 placeholder를
+    # 넣지 않는다 (노이즈 제거). 거시경제는 리포트로 위임한다 (가짜 수치 금지는 그대로 유지).
     section = _macro_section(message)
-    check("digest에 [Macro Snapshot] 섹션 존재", bool(section))
-    if section and _macro_file_mode() != "live":
-        check("macro 섹션에 '미연동' 안내 포함", "미연동" in section)
-        decimals = re.findall(r"\d+\.\d+", section)
-        check("macro 섹션에 수치 없음 (live 아님)", not decimals,
-              ", ".join(decimals))
+    if _macro_file_mode() == "live":
+        check("live macro면 digest에 Macro Snapshot 노출", bool(section))
+    else:
+        check("mock/미연동 macro면 digest에 Macro Snapshot/미연동 placeholder 없음",
+              not section and "시장지표 미연동" not in message)
+        check("digest가 거시경제를 리포트로 위임", "리포트에서 확인" in message)
 
 
 def check_json_mode() -> None:

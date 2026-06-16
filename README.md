@@ -747,7 +747,67 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py \
 (라이브 결과는 PASS/FAIL을 내지 않는다). 라이브 Google News RSS는 주기적 쿼리/출처 튜닝이
 계속 필요하다 — 이 게이트는 알려진 오탐을 줄일 뿐 완벽을 주장하지 않는다.
 
-## 20. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 20. Executive Decision Relevance Reframe (P0-C1.12)
+
+제품 목표를 **'AI 뉴스 수집'에서 '현대건설 임원 의사결정 레이더'로** 재정렬한다(AI-우선
+강조는 유지). 분류/티어 로직은 새 leaf 모듈 `app/decision_relevance.py`(순수 함수,
+DB/네트워크 없음)가 `radar`/`article_quality` 위에 얹혀 소유한다 — briefing/scoring이
+소비만 한다. **생성된 사유/카테고리 라벨('현대건설 직접 연관성 낮음' 등)을 분류 입력으로
+쓰지 않는다** — raw 제목/출처/스니펫/토픽만 본다(self-fulfilling 오탐 방지).
+
+### 의사결정 관련성 레이어
+
+- `decision_relevance.classify(row)`가 기사를 임원 섹션 멤버십(primary + secondary)으로
+  나누고, 의사결정 관련성 **점수(0~5)·티어(A/A-/B+/B/B-/C/exclude)·사유**를 부여한다.
+- 임원 섹션: **현대건설 직접 영향 / AI 관련 / 수주·해외 / 리스크·규제 / 경쟁사·공급망 /
+  거시경제 / 기타**. 같은 기사가 여러 섹션에 멤버로 들어갈 수 있다(multi-section).
+- 상단 항목을 AI 관련성만이 아니라 **임원 유용성**으로 고른다. stock-hype/증권 리서치성은
+  exclude(§19 유지), 리스크·규제 품질 게이트도 그대로 유지된다.
+
+### 현대건설 직접 영향 (신규 최상위 섹션)
+
+- 현대건설/현대ENG/HMG건설기술연구원이 주체이고 전략/사업/조직/기술/리스크 신호가 있는
+  기사 → `hdec_direct`. 리포트·대시보드에서 **AI보다 먼저** 노출한다.
+- 정렬: 리스크/제재 → 수주·DC·SMR·뉴에너지 전략 → AI·계약 → R&D·조직 → 그 외 직접.
+- 벌점/제재는 primary `리스크·규제` + secondary `현대건설 직접`(둘 다 노출).
+- **무차별 승격 금지**: 헬스케어/생활성 현대건설 기사는 `is_hdec_strategic`이 걸러낸다.
+
+### 수주·해외 broadening + 경쟁사·공급망 (신규)
+
+- 수주·해외를 확정 계약뿐 아니라 **발주 환경**(중동·재건·사우디·네옴·EPC·플랜트·LNG·원전·
+  SMR·데이터센터·글로벌 수주)까지 넓혀 'business 0건' 회귀를 막는다. 현대건설 직접(primary)은
+  현대건설 섹션에 이미 노출되므로, 수주·해외에선 순수 발주/경쟁사 수주 신호를 먼저 보인다.
+- `scoring`에 등급 floor 추가: 현대건설 전략(`is_hdec_strategic`)·신뢰 출처의 발주 환경
+  (`is_order_environment`, 섹터/지역 신호 요구)은 **최소 '추적 필요'**로 surface(제외 금지).
+  섹터/지역 신호를 요구하므로 '주택 착공 통계' 같은 generic 건설 기사는 floor되지 않는다.
+- 경쟁사·공급망: 삼성물산·GS건설·SK에코플랜트·DL이앤씨 등 경쟁 건설사 + 전선·버스덕트·
+  변압기 등 구별되는 전력 공급망 신호.
+
+### Telegram 정리 + Top 다양성
+
+- 구성: `[현대건설 직접]` → `[AI 관련]` → `[수주·해외]` → `[리스크·규제]` → 버튼.
+- 같은 회사/공급사(예: 가온전선 2건)가 Top을 도배하지 않도록 회사 단위 dedup.
+- **Macro Snapshot/'시장지표 미연동' placeholder 제거** — 거시경제는 리포트로 위임한다
+  (live 시장지표가 연동될 때만 노출). 가짜 macro 수치 금지(§13)는 그대로 유지된다.
+
+### mock 영향 없음 / 검증
+
+- mock 데모 숫자 불변: **28 / 21 / 3 / 4 / 14 / 7**. 등급 floor는 WEEKLY까지만 올리고
+  섹터/지역·현대건설 전략으로 스코프돼 mock의 제외 7건을 건드리지 않는다(연합뉴스 '주택
+  착공 감소'는 floor 안 됨).
+- `scripts/verify_executive_decision_relevance.py`(fixture 13 시나리오) + 기존 13개 = **14/14 PASS**.
+
+```bash
+python3 scripts/verify_executive_decision_relevance.py   # 결정적 회귀 (RESULT: PASS)
+# 수동 라이브 의사결정 관련성 감사 (읽기 전용 · 라이브 네트워크 필요)
+NEWS_MODE=live python3 scripts/audit_live_article_quality.py \
+  --output /tmp/hdec_decision_relevance_audit.md
+```
+
+라이브 Google News RSS는 주기적 쿼리/출처 튜닝이 계속 필요하다 — 이 레이어는 제품을
+현대건설 임원 의사결정 지원에 더 가깝게 옮길 뿐 라이브 피드의 완벽을 주장하지 않는다.
+
+## 21. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

@@ -585,9 +585,11 @@ def _render_macro_section(brief: dict) -> list[str]:
 
 
 TOPNAV_ITEMS = [
-    ("#ai-radar", "AI 관련", True),
-    ("#risk-radar", "리스크·규제", False),
+    ("#hdec-radar", "현대건설 직접", True),
+    ("#ai-radar", "AI 관련", False),
     ("#biz-radar", "수주·해외", False),
+    ("#risk-radar", "리스크·규제", False),
+    ("#comp-radar", "경쟁사·공급망", False),
     ("#macro", "거시경제", False),
     ("#evidence", "전체 근거", False),
 ]
@@ -685,17 +687,35 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
         _render_topnav(),
     ]
 
-    # 1) AI 관련 — 주력 섹션 (Executive Signal 직후 첫 신호 섹션)
+    # 1) 현대건설 직접 영향 — 임원 의사결정 최상위 섹션 (Executive Signal 직후 첫 신호).
+    # AI보다 먼저 노출한다 (P0-C1.12: 제품 목표를 'AI 수집'에서 '현대건설 의사결정'으로).
+    hdec_sigs = brief.get("hdec_direct_signals") or []
+    body += _render_visible_radar(
+        "hdec-radar", "현대건설 직접 영향",
+        "현대건설 수주·전략·조직·리스크 · 의사결정 우선순위", hdec_sigs, lead=True,
+        empty="오늘 현대건설 직접 신호 없음 — 아래 산업 신호 확인")
+    sections.append("hdec_direct")
+
+    # 2) AI 관련
     ai_sigs = brief.get("ai_radar_signals") or []
     body += _render_visible_radar(
         "ai-radar", "AI 관련",
-        "AI 데이터센터·전력·SMR·스마트건설 · 점수순", ai_sigs, lead=True,
+        "AI 데이터센터·전력·SMR·스마트건설 · 점수순", ai_sigs,
         empty="오늘 AI 인프라·건설 AI 신호 없음")
     if ai_sigs:
         sections.append("ai_radar")
         sections.append("top_signals")  # 메타데이터 backward-compat 별칭
 
-    # 2) 리스크·규제 — 중요도가 낮아도 중대재해·규제를 분명히 노출
+    # 3) 수주·해외·발주 환경 — 확정 계약뿐 아니라 중동·재건·EPC·DC·SMR 발주 환경까지.
+    biz_sigs = brief.get("business_signals") or []
+    body += _render_visible_radar(
+        "biz-radar", "수주·해외·발주 환경",
+        "수주·발주·해외·플랜트·EPC·중동 · 의사결정순", biz_sigs,
+        empty="오늘 두드러진 수주·해외·발주 환경 신호 없음")
+    if biz_sigs:
+        sections.append("business_radar")
+
+    # 4) 리스크·규제 — 중요도가 낮아도 중대재해·규제를 분명히 노출
     risk_sigs = brief.get("risk_regulation_signals") or []
     body += _render_visible_radar(
         "risk-radar", "리스크·규제",
@@ -704,14 +724,14 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     if risk_sigs:
         sections.append("risk_radar")
 
-    # 3) 수주·해외
-    biz_sigs = brief.get("business_signals") or []
+    # 5) 경쟁사·공급망 — 경쟁 건설사 EPC/DC/SMR 전략 + 전력·냉각·전선 공급망 신호
+    comp_sigs = brief.get("competitor_supply_signals") or []
     body += _render_visible_radar(
-        "biz-radar", "수주·해외",
-        "수주·발주·해외·플랜트 · 점수순", biz_sigs,
-        empty="오늘 두드러진 수주·해외 사업 신호 없음")
-    if biz_sigs:
-        sections.append("business_radar")
+        "comp-radar", "경쟁사·공급망",
+        "경쟁 건설사·전력/공급망 · 의사결정순", comp_sigs,
+        empty="오늘 두드러진 경쟁사·공급망 신호 없음")
+    if comp_sigs:
+        sections.append("competitor_radar")
 
     # 4) 거시경제 — 기본 접힘 (<details>, open 없음). 첫 화면을 점유하지 않는다.
     sections.append("macro")
@@ -794,7 +814,9 @@ def report_metadata(brief: dict, html: str, sections: list[str]) -> dict:
         "html_chars": len(html),
         "sections": sections,
         "signal_count": len(brief.get("top_immediate_signals") or []),
+        "hdec_direct_count": len(brief.get("hdec_direct_signals") or []),
         "ai_radar_count": len(brief.get("ai_radar_signals") or []),
+        "competitor_supply_count": len(brief.get("competitor_supply_signals") or []),
         "risk_radar_count": len(brief.get("risk_regulation_signals") or []),
         "business_radar_count": len(brief.get("business_signals") or []),
         "macro_radar_count": len(brief.get("macro_economy_signals") or []),

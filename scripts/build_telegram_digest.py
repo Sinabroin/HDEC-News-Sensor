@@ -63,14 +63,55 @@ def _digest_signal(entry: dict) -> dict:
     }
 
 
+# 같은 회사/공급사가 Top 3를 도배하지 않도록 중복 키 추출용 (P0-C1.12).
+_ENTITY_NAMES = ["현대건설", "현대엔지니어링", "삼성물산", "gs건설", "sk에코플랜트",
+                 "dl이앤씨", "대우건설", "포스코이앤씨", "롯데건설",
+                 "가온전선", "ls전선", "대한전선", "대원전선"]
+
+
+def _entity_key(entry: dict) -> str:
+    """중복 도배 방지 키 — 같은 회사/공급사(예: 가온전선 2건)는 같은 키로 묶어 하나만 남긴다.
+
+    회사명이 없으면 기사별 고유 키(article_id)를 써서 서로 다른 AI 기사가 같은 테마라는
+    이유로 과도하게 합쳐지지 않게 한다 (테마는 같아도 별개 신호는 살린다)."""
+    title = (entry.get("title") or "").lower()
+    for name in _ENTITY_NAMES:
+        if name.lower() in title:
+            return f"co:{name}"
+    return f"id:{entry.get('article_id')}"
+
+
+def _pick_diverse(entries: list, limit: int, seen: set) -> list:
+    """점수순 후보에서 같은 회사/주체가 겹치지 않게 limit개를 고른다 (Telegram Top 다양성)."""
+    out = []
+    for e in entries:
+        key = _entity_key(e)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(e)
+        if len(out) == limit:
+            break
+    return out
+
+
 def build_digest_data() -> dict:
-    """공유 brief 레이어에서 다이제스트 구조체를 만든다 (P0-C1.9: AI-first)."""
+    """공유 brief 레이어에서 다이제스트 구조체를 만든다 (P0-C1.12: 현대건설 직접 우선).
+
+    상단 구성: 현대건설 직접 → AI 관련 → 수주·해외 → 리스크·규제. 같은 회사/주체가
+    Top을 도배하지 않도록 다양성 dedup을 적용한다."""
     brief = build_brief_via_mock_pipeline()
-    # AI 레이더 신호를 우선 노출하고, 없으면 즉시 알림 후보로 대체한다 (항상 1~3건).
+    hdec = brief.get("hdec_direct_signals") or []
     ai = brief.get("ai_radar_signals") or []
-    base = ai or brief.get("top_immediate_signals") or []
-    signals = [_digest_signal(e) for e in base[:3]]
-    risk = [_digest_signal(e) for e in (brief.get("risk_regulation_signals") or [])[:2]]
+    biz = brief.get("business_signals") or []
+    risk = brief.get("risk_regulation_signals") or []
+
+    seen: set = set()
+    hdec_top = _pick_diverse(hdec, 2, seen)            # 현대건설 직접 (키 선점)
+    ai_base = ai or brief.get("top_immediate_signals") or []
+    ai_top = _pick_diverse(ai_base, 3, seen)           # AI 관련 (현대건설 중복 제외)
+    biz_top = _pick_diverse(biz, 1, seen)              # 수주·해외 (앞 섹션과 중복 제외)
+    risk_top = _pick_diverse(risk, 1, set())           # 리스크·규제 (별도 — 항상 노출)
     return {
         "header": HEADER,
         "mode": brief["mode"],
@@ -81,9 +122,11 @@ def build_digest_data() -> dict:
         "generated_at": brief["generated_at"],
         "executive_one_liner": brief["executive_one_liner"],
         "status_board": brief["status_board"],
-        "top_signals": signals,
+        "hdec_signals": [_digest_signal(e) for e in hdec_top],
+        "top_signals": [_digest_signal(e) for e in ai_top],
         "ai_first": bool(ai),
-        "risk_signals": risk,
+        "biz_signals": [_digest_signal(e) for e in biz_top],
+        "risk_signals": [_digest_signal(e) for e in risk_top],
         "theme_rankings": brief["theme_rankings"][:DIGEST_THEMES_MAX],
         "category_counts": brief["category_counts"],
         "macro_snapshot": brief["macro_snapshot"],
@@ -100,11 +143,14 @@ def format_digest_message(data: dict) -> str:
     설명·반복 면책은 넣지 않고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
     """
     news_mode = data.get("news_data_mode", "mock")
-    source_line = "자동 수집" if news_mode == "live" else "mock 데이터 기반"
-    # 헤더에서 '시장지표 미연동' 노이즈를 빼고(하단 Macro 섹션에서만 정직 표기), 출처만 표기.
+    # 헤더는 mock일 때만 데이터 출처를 명시한다(데이터 정직성: 데모를 실데이터로 오인 방지).
+    # live는 '자동 수집' 같은 기술 표현을 빼고 날짜만 둔다 — 상세 출처/모드는 리포트가 보여준다.
+    date_line = f"{data['date_kst']} (KST)"
+    if news_mode != "live":
+        date_line += " · 뉴스 mock 데이터 기반"
     lines = [
         f"📡 {data['header']} — Executive Daily Brief",
-        f"{data['date_kst']} (KST) · 뉴스 {source_line}",
+        date_line,
         "",
         "[오늘의 Executive Signal]",
         data["executive_one_liner"],
@@ -113,13 +159,22 @@ def format_digest_message(data: dict) -> str:
         " · ".join(f"{b['label']} {b['value']}" for b in data["status_board"]),
     ]
 
-    # AI-first: AI 관련 신호를 가장 먼저 보여준다 (거시경제보다 앞).
+    # 현대건설 직접 영향 — 임원 의사결정 최상위. 있으면 AI보다 먼저 한 블록으로 노출한다.
+    hdec = data.get("hdec_signals") or []
+    if hdec:
+        lines += ["", "[현대건설 직접]"]
+        for h in hdec:
+            chip = h.get("risk_radar_label")
+            prefix = f"{chip} · " if chip else ""
+            lines.append(f"· {prefix}{_clip(h['title'], TITLE_MAX)}")
+
+    # AI 관련 신호 (현대건설 직접 다음). 같은 회사 도배는 build_digest_data에서 dedup됨.
     signals = data["top_signals"]
     has_instant = any(s.get("alert_grade") == "즉시 알림 후보" for s in signals)
     section = "AI 관련" if data.get("ai_first") else "주요 신호"
     lines += ["", f"[{section} Top {len(signals)}]"]
-    for s in signals:
-        lines.append(f"{s['rank']}. {_clip(s['title'], TITLE_MAX)}")
+    for rank, s in enumerate(signals, start=1):
+        lines.append(f"{rank}. {_clip(s['title'], TITLE_MAX)}")
         meta = []
         if s.get("final_score") is not None:
             meta.append(f"중요도 {s['final_score']:.1f}/5")
@@ -129,12 +184,17 @@ def format_digest_message(data: dict) -> str:
             lines.append("   " + " · ".join(meta))
 
     # live 수집일에 즉시 확인급(신뢰 출처 4.5+) 신호가 없으면 — 약한 출처(블로그·재전송 등)를
-    # 임원 알림으로 띄우지 않고, 주간 모니터링 후보 중심임을 명확히 한다 (P0-C1.6).
+    # 임원 알림으로 띄우지 않고, 추적 필요 신호 중심임을 명확히 한다 (P0-C1.6).
     # mock 데모는 즉시 후보가 항상 있어 이 줄이 추가되지 않는다 (다이제스트 길이 불변).
     if news_mode == "live" and not has_instant:
         lines += ["", "오늘은 즉시 확인급 신호 없음 · 추적 필요 신호 중심"]
 
-    # 리스크·규제 한 줄 — 있으면 거시경제보다 먼저, 중대재해·규제를 분명히 가리킨다.
+    # 수주·해외 한 줄 — 발주 환경(중동·재건·EPC·DC) 신호를 분명히 가리킨다.
+    biz = data.get("biz_signals") or []
+    if biz:
+        lines += ["", f"[수주·해외] {_clip(biz[0]['title'], TITLE_MAX)}"]
+
+    # 리스크·규제 한 줄 — 중대재해·규제를 분명히 가리킨다.
     risk = data.get("risk_signals") or []
     if risk:
         top = risk[0]
@@ -155,8 +215,9 @@ def format_digest_message(data: dict) -> str:
             summary += f" · 외 {rest}개 분류"
         lines += ["", "[카테고리 요약] " + summary]
 
-    # Macro Snapshot — AI/리스크 뒤에 둔다. live가 아닌 한 수치를 넣지 않는다 (P0-B6).
-    # mock 고정값을 시세처럼 보낼 수 없다: 미연동 상태만 알리고 상세는 리포트로.
+    # Macro Snapshot — P0-C1.12: 실제 시장지표가 live로 연동될 때만 노출한다.
+    # mock/미연동 상태에서는 '시장지표 미연동' placeholder 자체를 넣지 않는다 (노이즈 제거).
+    # 거시경제 신호는 리포트로 위임한다 (데이터 정직성: 가짜 수치 금지는 그대로 유지).
     macro = data.get("macro_snapshot") or {}
     macro_mode = macro.get("macro_data_mode") or data.get("macro_data_mode")
     if macro_mode == "live" and macro.get("values"):
@@ -164,11 +225,8 @@ def format_digest_message(data: dict) -> str:
         lines.append(" · ".join(
             f"{v['label']} {v['value']}{v.get('unit', '')}"
             for v in macro["values"]))
-    else:
-        lines += ["", "[Macro Snapshot]",
-                  "시장지표 미연동 · 거시경제 신호는 리포트에서 확인"]
 
-    lines += ["", "※ 원문·점수·카테고리별 근거 기사는 '오늘 브리프 보기' 리포트에서 확인"]
+    lines += ["", "※ 원문·점수·거시경제·카테고리별 근거 기사는 '오늘 브리프 보기' 리포트에서 확인"]
     message = "\n".join(lines)
     if len(message) > MESSAGE_BUDGET:
         message = message[: MESSAGE_BUDGET - 1] + "…"

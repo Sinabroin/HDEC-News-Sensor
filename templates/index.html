@@ -413,15 +413,23 @@ const GRADE_CLASS = {
   "추적 필요": "grade-weekly", "제외": "grade-excluded",
 };
 const state = { articles: [], logs: [], selectedId: null, lastRun: null,
-                catSections: [], activeCat: null, brief: null, activeRadar: "ai" };
-/* P0-C1.9 레이더 탭 — 기본 선택은 AI (거시경제가 첫 화면을 점유하지 않게 한다) */
+                catSections: [], activeCat: null, brief: null, activeRadar: "ai",
+                radarUserPicked: false };
+/* P0-C1.12 임원 의사결정 레이더 탭 — 현대건설 직접 신호가 있으면 현대건설을 기본 선택,
+   없으면 AI (거시경제가 첫 화면을 점유하지 않게 한다). */
 const RADAR_TABS = [
+  ["hdec", "현대건설", "hdec_direct_signals"],
   ["ai", "AI", "ai_radar_signals"],
-  ["risk", "리스크·규제", "risk_regulation_signals"],
   ["biz", "수주·해외", "business_signals"],
+  ["risk", "리스크·규제", "risk_regulation_signals"],
+  ["competitor", "경쟁사·공급망", "competitor_supply_signals"],
   ["macro", "거시경제", "macro_economy_signals"],
   ["all", "전체", "top_new_issues"],
 ];
+const RADAR_HEADINGS = {
+  hdec: "현대건설 직접 영향", ai: "AI 관련", biz: "수주·해외·발주 환경",
+  risk: "리스크·규제", competitor: "경쟁사·공급망", macro: "거시경제", all: "전체 신호",
+};
 
 function esc(value) {
   const div = document.createElement("div");
@@ -577,6 +585,11 @@ function renderBrief(b) {
   document.getElementById("brief-macro").innerHTML = macroHtml;
   document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "")
     + (b.source_quality_note ? "  ·  " + b.source_quality_note : "");
+  /* 기본 탭: 현대건설 직접 신호가 있으면 현대건설, 없으면 AI (운영자가 탭을 누르기 전까지) */
+  if (!state.radarUserPicked) {
+    state.activeRadar = (b.hdec_direct_signals && b.hdec_direct_signals.length)
+      ? "hdec" : "ai";
+  }
   renderRadarTabs();
   renderRadarSignals();
   renderCategorySection(b);
@@ -595,15 +608,18 @@ function renderRadarTabs() {
 }
 function selectRadar(id) {
   state.activeRadar = id;
+  state.radarUserPicked = true;
   renderRadarTabs();
   renderRadarSignals();
 }
 function radarCardHtml(s, isRisk) {
   const cat = s.category_label ? `<span>${esc(s.category_label)}</span>` : "";
   const date = s.published_at ? `<span>${esc(fmtTime(s.published_at))}</span>` : "";
-  const chip = (isRisk && s.risk_radar_label)
+  /* 리스크 칩/우선도는 등급(벌점·제재 등)이 붙은 카드면 어느 탭에서든 노출한다
+     (현대건설 직접 탭의 제재 기사도 리스크 맥락이 보이게 한다). */
+  const chip = s.risk_radar_label
     ? `<span class="risk-chip">${esc(s.risk_radar_label)}</span>` : "";
-  const pri = (isRisk && s.risk_priority_score != null)
+  const pri = (s.risk_priority_score != null)
     ? `<div class="rc-pri">리스크 우선도 ${score5(s.risk_priority_score)} / 5.0</div>` : "";
   const reason = s.one_line_reason || s.implication || "";
   const why = reason ? `<div class="rc-reason">${esc(reason)}</div>` : "";
@@ -619,8 +635,8 @@ function renderRadarSignals() {
   if (!el) return;
   const tab = RADAR_TABS.find(t => t[0] === state.activeRadar) || RADAR_TABS[0];
   const heading = document.getElementById("radar-heading");
-  /* AI 탭은 '버튼은 AI / 섹션 제목은 AI 관련'으로 표기 (Phase 11) */
-  if (heading) heading.textContent = tab[0] === "ai" ? "AI 관련" : tab[1];
+  /* 버튼은 짧은 라벨, 섹션 제목은 풀 라벨로 표기 (현대건설→현대건설 직접 영향 등) */
+  if (heading) heading.textContent = RADAR_HEADINGS[tab[0]] || tab[1];
   const isRisk = tab[0] === "risk";
   const items = (state.brief || {})[tab[2]] || [];
   el.innerHTML = items.length

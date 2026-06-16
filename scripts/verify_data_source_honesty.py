@@ -258,17 +258,15 @@ def check_digest_output() -> None:
           "mock 데이터 기반" in message or "뉴스/시장지표 미연동" in message)
     leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in message]
     check("digest에 mock macro 고정값 수치 없음", not leaked, ", ".join(leaked))
+    # P0-C1.12 — mock/미연동 상태에서 digest는 Macro Snapshot/미연동 placeholder를 넣지
+    # 않는다 (거시경제는 리포트로 위임). live 데이터일 때만 수치를 노출한다(아래 단위 검사).
     idx = message.find("[Macro Snapshot")
     section = ""
     if idx >= 0:
         end = message.find("\n\n", idx)
         section = message[idx:end if end > 0 else len(message)]
-    check("digest [Macro Snapshot] 섹션 존재", bool(section))
-    if section:
-        check("digest macro 섹션에 '미연동' 표기", "미연동" in section)
-        decimals = re.findall(r"\d+\.\d+", section)
-        check("digest macro 섹션에 수치 없음 (live 아님)", not decimals,
-              ", ".join(decimals))
+    check("digest에 mock Macro Snapshot/미연동 placeholder 없음 (거시 리포트 위임)",
+          not section and "시장지표 미연동" not in message)
     bad = claim_violations(message)
     check("digest에 부정 없는 live/현재성 주장 없음", not bad, "; ".join(bad))
 
@@ -298,8 +296,8 @@ def check_digest_live_branch() -> None:
         "macro_data_mode": "mock_static",
         "values": [{"label": "USD/KRW", "value": 1480.5, "unit": "원"}],
     }})
-    check("mock_static macro → 수치 숨김 + 미연동 안내",
-          "1480.5" not in mock_msg and "시장지표 미연동" in mock_msg)
+    check("mock_static macro → 수치 숨김 + Macro Snapshot 미노출 (거시 리포트 위임)",
+          "1480.5" not in mock_msg and "Macro Snapshot" not in mock_msg)
 
 
 def _check_report_html(html: str, label: str) -> None:

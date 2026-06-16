@@ -4,8 +4,10 @@
 (네트워크/비밀값 없음, 임시 DB 격리):
 
 정적 리포트
-- 상단 목차(AI 레이더 / 리스크·규제 / 수주·해외 / 거시경제 / 전체 근거)가 있다.
-- Executive Signal 직후 첫 신호 섹션이 AI 레이더다 (ai-radar < risk-radar < macro).
+- 상단 목차(현대건설 직접 / AI 관련 / 수주·해외 / 리스크·규제 / 경쟁사·공급망 /
+  거시경제 / 전체 근거)가 있다 (P0-C1.12 임원 의사결정 IA).
+- Executive Signal 직후 첫 신호 섹션이 현대건설 직접 영향이다 (hdec < ai < biz <
+  risk < comp < macro).
 - 거시경제는 <details ...macro-section>로 기본 접힘(open 없음)이고, 전체 리포트에
   열린 <details open>가 0건이다 (점수 구성요소·전체 근거도 기본 접힘).
 - 점수 구성요소는 '중요도' summary 아코디언 뒤에 접혀 있다.
@@ -23,7 +25,8 @@ Telegram digest
 - AI 레이더가 거시경제/시장지표보다 먼저 나온다. 노이즈 용어가 없다.
 
 대시보드
-- 레이더 탭(AI/리스크·규제/수주·해외/거시경제/전체)이 있고 기본 선택이 AI다.
+- 레이더 탭(현대건설/AI/수주·해외/리스크·규제/경쟁사·공급망/거시경제/전체)이 있고
+  기본 선택은 현대건설 직접 신호가 있으면 현대건설, 없으면 AI다 (동적).
 
 사용법:
     python3 scripts/verify_executive_ia_polish.py
@@ -49,7 +52,8 @@ NOISE_TERMS = ["상대 강도", "유사 주제 기사", "참고 묶음", "권장
 # 리스크 키워드 (리스크·규제 레이더 surface 검사용).
 RISK_KEYWORDS = ["중대재해", "안전", "사망", "산재", "처벌", "규제", "감독",
                  "영업정지", "입찰제한", "시행령", "국토부", "고용"]
-NAV_LABELS = ["AI 관련", "리스크·규제", "수주·해외", "거시경제", "전체 근거"]
+NAV_LABELS = ["현대건설 직접", "AI 관련", "수주·해외", "리스크·규제", "경쟁사·공급망",
+              "거시경제", "전체 근거"]
 # P0-C1.10: 임원 메모 스타일 — 생성된 요약/사유 줄에 없어야 하는 종결어미.
 # (기사 제목·footer 고지문은 검사 대상이 아니다 — 생성 요약/사유 줄만 본다.)
 BANNED_ENDINGS = ["입니다", "합니다", "됩니다", "있습니다", "신호다",
@@ -110,24 +114,30 @@ def check_report_ia() -> None:
     for label in NAV_LABELS:
         check(f"목차 버튼 '{label}' 존재", label in nav)
 
-    # 섹션 순서: AI → 리스크 → 수주·해외 → 거시경제 → 전체 근거
+    # 섹션 순서 (P0-C1.12 임원 의사결정 IA):
+    #   현대건설 직접 → AI → 수주·해외 → 리스크·규제 → 경쟁사·공급망 → 거시경제 → 전체 근거
     def idx(marker):
         return html.index(marker) if marker in html else -1
+    hdec_i = idx('id="hdec-radar"')
     ai_i = idx('id="ai-radar"')
-    risk_i = idx('id="risk-radar"')
     biz_i = idx('id="biz-radar"')
+    risk_i = idx('id="risk-radar"')
+    comp_i = idx('id="comp-radar"')
     macro_i = idx('id="macro"')
     ev_i = idx('id="evidence"')
+    check("현대건설 직접 섹션(id=hdec-radar) 존재", hdec_i >= 0)
     check("AI 레이더 섹션(id=ai-radar) 존재", ai_i >= 0)
-    check("리스크·규제 레이더 섹션(id=risk-radar) 존재", risk_i >= 0)
     check("수주·해외 섹션(id=biz-radar) 존재", biz_i >= 0)
+    check("리스크·규제 레이더 섹션(id=risk-radar) 존재", risk_i >= 0)
+    check("경쟁사·공급망 섹션(id=comp-radar) 존재", comp_i >= 0)
     check("거시경제 섹션(id=macro) 존재", macro_i >= 0)
     check("전체 근거 섹션(id=evidence) 존재", ev_i >= 0)
-    check("AI 레이더가 Executive Signal 직후 첫 신호 섹션 (ai < risk)",
-          0 <= ai_i < risk_i)
-    check("AI 레이더가 거시경제보다 앞 (ai < macro)", 0 <= ai_i < macro_i)
-    check("섹션 순서 ai < risk < biz < macro < evidence",
-          0 <= ai_i < risk_i < biz_i < macro_i < ev_i)
+    check("현대건설 직접이 Executive Signal 직후 첫 신호 섹션 (hdec < ai)",
+          0 <= hdec_i < ai_i)
+    check("현대건설 직접이 generic AI보다 먼저 (HDEC-first IA)", 0 <= hdec_i < ai_i)
+    check("AI가 거시경제보다 앞 (ai < macro)", 0 <= ai_i < macro_i)
+    check("섹션 순서 hdec < ai < biz < risk < comp < macro < evidence",
+          0 <= hdec_i < ai_i < biz_i < risk_i < comp_i < macro_i < ev_i)
     check("본문에서 'AI 관련'이 '거시경제'보다 먼저",
           "AI 관련" in body and body.index("AI 관련") < body.index("거시경제"))
 
@@ -202,9 +212,15 @@ def check_brief_radar() -> None:
     risk = brief.get("risk_regulation_signals")
     biz = brief.get("business_signals")
     macro = brief.get("macro_economy_signals")
-    for key, val in [("ai_radar_signals", ai), ("risk_regulation_signals", risk),
-                     ("business_signals", biz), ("macro_economy_signals", macro)]:
+    hdec = brief.get("hdec_direct_signals")
+    comp = brief.get("competitor_supply_signals")
+    for key, val in [("hdec_direct_signals", hdec), ("ai_radar_signals", ai),
+                     ("risk_regulation_signals", risk), ("business_signals", biz),
+                     ("competitor_supply_signals", comp),
+                     ("macro_economy_signals", macro)]:
         check(f"brief에 {key} 존재 (리스트)", isinstance(val, list), str(type(val)))
+    # P0-C1.12 — mock에는 현대건설 직접 신호(네옴 EPC)가 항상 1건 이상이다.
+    check("현대건설 직접 신호 1건 이상 (mock)", bool(hdec), f"{len(hdec or [])}건")
 
     check("AI 레이더 신호 1건 이상 (mock)", bool(ai), f"{len(ai or [])}건")
     # AI 레이더에 macro_economy 기사가 섞이지 않는다
@@ -269,9 +285,12 @@ def check_dashboard_tabs() -> None:
     html = TEMPLATE.read_text(encoding="utf-8")
     check("대시보드에 레이더 탭 영역(radar-tabs)", 'id="radar-tabs"' in html)
     check("대시보드에 RADAR_TABS 정의", "RADAR_TABS" in html)
-    check("대시보드 기본 선택 탭 == AI", 'activeRadar: "ai"' in html)
+    # P0-C1.12 — 기본 탭은 현대건설 직접 신호가 있으면 현대건설, 없으면 AI (동적 선택).
+    check("대시보드 기본 탭 동적 선택 (현대건설 직접 우선, 없으면 AI)",
+          "hdec_direct_signals" in html and 'activeRadar = ' in html
+          and '"hdec"' in html)
     check("대시보드 레이더 렌더 함수(renderRadarTabs)", "renderRadarTabs" in html)
-    for label in ["리스크·규제", "수주·해외", "거시경제"]:
+    for label in ["현대건설", "AI", "수주·해외", "리스크·규제", "경쟁사·공급망", "거시경제"]:
         check(f"대시보드 레이더 탭 '{label}'", label in html)
     check("대시보드에 옛 '상대 강도' 표현 없음", "상대 강도" not in html)
 

@@ -1,6 +1,9 @@
-"""P0-C1.11 — 라이브 기사 품질 수동 점검 헬퍼 (비-프로덕션, 읽기 전용).
+"""P0-C1.11 / P0-C1.12 — 라이브 기사 품질·의사결정 관련성 수동 점검 헬퍼 (읽기 전용).
 
 라이브 brief를 마크다운 표로 떨어뜨려 운영자가 임원용 분류 품질을 눈으로 검토하게 한다.
+P0-C1.12: 현대건설 직접 영향 / 수주·해외·발주 환경 후보 / 경쟁사·공급망 섹션과,
+'제외됐지만 의사결정 관련성 높은 후보' 점검을 추가한다. '즉시 알림 후보'는 즉시 등급이
+0건이면 상위 신호로 대체되므로 '상단 표시 후보'로 명시한다(추적 필요 행 오라벨 방지).
 검증기(verify_*)와 달리 결정적 PASS/FAIL을 내지 않는다 — 운영자가 직접 보는 감사 표다.
 
 안전 계약:
@@ -77,12 +80,16 @@ def _suspicious_section(brief: dict) -> list[str]:
     """
     lines = ["", "## 의심 행 (수동 점검 대상)", ""]
     try:
-        from app import (article_quality, db, insight, radar,  # noqa: F401
-                         source_quality)
+        from app import (article_quality, db, decision_relevance,  # noqa: F401
+                         insight, radar, source_quality)
         rows = db.fetch_articles_with_scores()
     except Exception as exc:  # noqa: BLE001 — 헬퍼는 어떤 경우에도 죽지 않는다
         lines.append(f"_전 기사 점검 생략 (DB 접근 불가: {_cell(exc)})_")
         return lines
+    # 의사결정 관련성은 raw 제목/출처/스니펫으로만 판정한다 (생성된 사유/카테고리 라벨에
+    # '현대건설'이 들어가 self-fulfilling 오탐을 내는 것을 막는다 — P0-C1.12 미션 주의).
+    high_tiers = {decision_relevance.TIER_A, decision_relevance.TIER_A_MINUS,
+                  decision_relevance.TIER_B_PLUS}
 
     # 카테고리/섹션 파생 (brief와 동일 로직 — 점수 재계산 없음)
     def _category(rid):
@@ -96,13 +103,14 @@ def _suspicious_section(brief: dict) -> list[str]:
 
     risk_kw = getattr(radar, "RISK_ACTION_STRONG", [])
     stockhype, aggregator, hdec_excluded = [], [], []
-    risk_kw_not_risk, risk_no_action = [], []
+    risk_kw_not_risk, risk_no_action, decision_excluded = [], [], []
     for r in rows:
         title = r.get("title") or ""
         source = r.get("source") or ""
         grade = r.get("alert_grade")
         aq = article_quality.assess(source, title)
         section = radar.classify_section(r, _category(r["id"]))
+        dr = decision_relevance.classify(r, _category(r["id"]))
         disp = source_quality.normalize_display_source(source)
         if aq["stock_hype"]:
             stockhype.append((title, source, grade, section))
@@ -115,6 +123,11 @@ def _suspicious_section(brief: dict) -> list[str]:
             risk_kw_not_risk.append((title, section, grade))
         if section == radar.RISK and not has_risk_kw and not aq["hdec_enforcement"]:
             risk_no_action.append((title, grade))
+        # 의사결정 관련성이 높은데(B+ 이상) 제외 등급이면 surface 후보 — 운영자 점검 대상.
+        if grade == "제외" and dr["decision_relevance_tier"] in high_tiers:
+            decision_excluded.append(
+                (title, source, dr["decision_relevance_tier"],
+                 dr["executive_label"]))
 
     def _block(title, items, header, fmt):
         out = [f"### {title} ({len(items)}건)", ""]
@@ -148,6 +161,11 @@ def _suspicious_section(brief: dict) -> list[str]:
         "리스크·규제 분류인데 risk-action 키워드 없음", risk_no_action,
         "| 제목 | 등급 |",
         lambda it: f"| {_cell(it[0])} | {_cell(it[1], 12)} |")
+    lines += _block(
+        "제외됐지만 의사결정 관련성 높은 후보 (B+ 이상 — surface 점검)", decision_excluded,
+        "| 제목 | 출처 | 의사결정 티어 | 섹션 |",
+        lambda it: f"| {_cell(it[0])} | {_cell(it[1], 22)} | {_cell(it[2], 8)} "
+                   f"| {_cell(it[3], 14)} |")
     return lines
 
 
@@ -168,14 +186,20 @@ def build_markdown(brief: dict) -> str:
         "> 운영자 수동 점검용 자동 표입니다. 라이브 Google News RSS는 주기적 쿼리/출처 "
         "튜닝이 계속 필요합니다 (이 표는 완벽을 주장하지 않습니다).",
         "",
+        "## 현대건설 직접 영향",
+        *_signal_rows(brief.get("hdec_direct_signals")),
+        "",
         "## AI 관련",
         *_signal_rows(brief.get("ai_radar_signals")),
+        "",
+        "## 수주·해외·발주 환경 후보",
+        *_signal_rows(brief.get("business_signals")),
         "",
         "## 리스크·규제 (리스크 우선도순)",
         *_signal_rows(brief.get("risk_regulation_signals"), risk=True),
         "",
-        "## 수주·해외",
-        *_signal_rows(brief.get("business_signals")),
+        "## 경쟁사·공급망",
+        *_signal_rows(brief.get("competitor_supply_signals")),
         "",
         "## 거시경제",
         *_signal_rows(brief.get("macro_economy_signals")),
@@ -183,7 +207,9 @@ def build_markdown(brief: dict) -> str:
         "## 신규 이슈 Top",
         *_signal_rows(brief.get("top_new_issues")),
         "",
-        "## 즉시 알림 후보",
+        # P0-C1.12: 'top_immediate_signals'는 즉시 등급이 0건이면 상위 신호로 대체되므로
+        # '즉시 알림 후보'로 라벨하면 추적 필요 행을 오라벨한다 → '상단 표시 후보'로 명시한다.
+        "## 상단 표시 후보 (운영자 점검 · 즉시 등급만 '즉시 확인')",
         *_signal_rows(brief.get("top_immediate_signals")),
         "",
         "## 카테고리별 분포",
