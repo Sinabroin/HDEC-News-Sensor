@@ -234,6 +234,10 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "article_id": row["id"],
         "title": row["title"],
         "source": row.get("source") or "출처 미상",
+        # 임원 표시용 출처 — 집계 호스트(v.daum.net 등)는 'Daum 경유'로 정규화 (P0-C1.11).
+        # raw source 필드는 위에 그대로 보존한다 (내부/감사용).
+        "display_source": source_quality.normalize_display_source(
+            row.get("source")) or "출처 미상",
         "published_at": row.get("published_at"),
         "source_quality": quality["source_quality"],
         "source_quality_label": quality["source_quality_label"],
@@ -287,6 +291,8 @@ def _category_article_entry(row: dict, category_key: str, implication: str) -> d
         "article_id": row["id"],
         "title": row["title"],
         "source": row.get("source") or "출처 미상",
+        "display_source": source_quality.normalize_display_source(
+            row.get("source")) or "출처 미상",
         "source_quality": quality["source_quality"],
         "source_quality_label": quality["source_quality_label"],
         "published_at": row.get("published_at"),
@@ -398,6 +404,7 @@ def _source_filtered_entry_from_provenance(item: dict) -> dict:
         "article_id": None,
         "title": item.get("title") or "",
         "source": source,
+        "display_source": source_quality.normalize_display_source(source) or "출처 미상",
         "source_quality": quality["source_quality"],
         "source_quality_label": SOURCE_FILTERED_LABEL,
         "source_quality_reason": quality["source_quality_reason"],

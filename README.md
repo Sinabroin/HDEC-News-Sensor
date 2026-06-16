@@ -677,7 +677,77 @@ python3 scripts/verify_telegram_channel_to_personal_entry.py
 python3 scripts/verify_executive_ia_polish.py
 ```
 
-## 19. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 19. Live Article Quality Gate & Classifier Tuning (P0-C1.11)
+
+AI 편중 수집(§18) 이후 임원용 분류 품질을 끌어올리는 결정적 품질 게이트. 외부 API·매크로·
+inbound 봇은 건드리지 않는다. 정책 키워드는 `data/article_quality_rules.json` 한 곳이 단일
+소스이고, 판정 로직은 새 leaf 모듈 `app/article_quality.py`(순수 함수, DB/네트워크 없음)가
+소유한다 — scoring/radar/briefing이 소비만 한다.
+
+### 주식 테마/증권 리서치성(stock-hype) 강등
+
+- `app/article_quality.assess(source, title)`가 **제목·출처만** 보고 결정적으로 판정한다
+  (500자 본문은 보지 않는다 — '수혜/급등'이 누적돼 정상 기사가 오강등되는 것을 막는다).
+- strong 지표(머니무브·테마주·목표가·파운드리 거물·증권가 등)는 단독으로, weak 지표
+  (수혜·급등·성장 기대 등)는 **2개 이상**일 때만 stock-hype로 본다 → 신뢰 매체의 광범위
+  산업 기사가 시장 용어 1개 때문에 강등되지 않는다.
+- `리서치알음` 등 증권 리서치성 출처는 출처만으로 강등한다.
+- bare `주가`는 `발주가/수주가`(정상 건설 기사)에 substring으로 걸리므로 **쓰지 않는다**
+  (`주가 급등`/`목표주가` 같은 명시 구절만). verifier가 이 오탐을 회귀 검사한다.
+- 현대건설 직접 언급(제목) 기사는 stock-hype 강등에서 제외한다(아래 보호 로직이 따로 다룸).
+- 효과: `scoring`이 stock-hype를 **2.4점 캡 + 제외 등급**으로 강등 → AI 관련 Top·신규 이슈·
+  즉시 후보·수주·해외·리스크·규제 어디에도 안 들어가고, `radar`도 `other`로 라우팅해 레이더에서
+  뺀다. 참고/제외 감사 섹션에만 투명하게 남는다. (데일리머니 SMR·일진파워 리서치알음 회귀)
+
+### 리스크/규제 분류 강화
+
+- `app/radar.py`가 실제 **risk-action 키워드**(중대재해·사망사고·벌점·영업정지·입찰제한·
+  과징금·특별감독·사전통보 등 `RISK_ACTION_STRONG`)가 있을 때만 단독 리스크로 본다.
+- 약한 규제 신호(제재·처벌·조사·규제·시행령 등 `RISK_REG_WEAK`)는 **산업 anchor**가 함께
+  있을 때만 리스크. `국토부/고용노동부/정부/안전/점검` 단독으로는 더 이상 리스크가 아니다.
+- 효과: "국토부, 건설산업 대전환 이끌 혁신기술 발굴한다"는 더 이상 `risk_regulation`이
+  아니다(혁신/정책/스마트건설). `_SEVERITY_FLOOR`도 부처명·'안전' 단독 floor를 제거했다.
+
+### 현대건설 직접 관련성 보호
+
+- 현대건설 + AI + 계약/하도급/협력사/상생펀드/불공정 → `hdec_ai_contract`:
+  `radar`가 **ai**로 라우팅, `scoring`이 **최소 '추적 필요'**로 floor(제외 금지).
+- 현대건설 + 벌점/사전통보/제재/영업정지/입찰제한 → `hdec_enforcement`:
+  `radar`가 **risk_regulation**으로 라우팅(+`risk_priority_score`), `scoring`이 최소
+  '추적 필요'(고심각 제재는 '검토 필요')로 floor. (서울시 벌점 사전통보 회귀)
+- 단, 모든 현대건설 기사를 무조건 승격하지 않는다 — AI/리스크 관련성이 있을 때만.
+
+### 집계 호스트 출처 표시 정규화
+
+- `app/source_quality.normalize_display_source()`가 `v.daum.net`·`n.news.naver.com`·
+  `news.google.com` 등 집계/재전송 호스트를 **`Daum 경유`/`Naver 경유`/`Google News 경유`**
+  (그 외 호스트형은 `원문 경유`)로 정규화한다. 정상 매체명(연합뉴스 등)은 그대로 둔다.
+- `briefing`/`main`이 entry에 `display_source`를 부착하고, 정적 리포트·대시보드·드릴다운·감사
+  카드가 이를 우선 노출한다. **원문 URL(href)은 그대로 보존** — 신뢰 매체처럼 보이지 않게
+  표시 라벨만 바꾼다.
+
+### mock 영향 없음
+
+- mock 데모 숫자 불변: **28 수집·분석 / 21 신호 / 즉시 3 / 검토 4 / 추적 14 / 참고/제외 7**.
+- mock의 유일한 stock-hype 기사(테마주·증권가)는 이미 제외 등급이라 카운트가 바뀌지 않는다.
+
+### 로컬 실행 (검증은 네트워크·비밀값 불필요)
+
+```bash
+# 결정적 회귀 검증 (fixture 기반, RESULT: PASS / exit 0)
+python3 scripts/verify_live_article_quality_gate.py
+
+# 수동 라이브 품질 감사 (운영자용, 읽기 전용 · DB 쓰기/commit 없음 · 라이브 네트워크 필요)
+NEWS_MODE=live python3 scripts/audit_live_article_quality.py \
+  --output /tmp/hdec_article_quality_audit.md
+```
+
+`audit_live_article_quality.py`는 brief를 마크다운 표로 떨어뜨리고 의심 행(stock-hype·집계
+호스트·현대건설인데 제외·리스크 오분류)을 모아 수동 점검을 돕는다. **검증기가 아니다**
+(라이브 결과는 PASS/FAIL을 내지 않는다). 라이브 Google News RSS는 주기적 쿼리/출처 튜닝이
+계속 필요하다 — 이 게이트는 알려진 오탐을 줄일 뿐 완벽을 주장하지 않는다.
+
+## 20. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

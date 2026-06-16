@@ -23,6 +23,7 @@
 """
 
 import json
+import re
 
 from app import config
 
@@ -177,6 +178,34 @@ def classify(source: str, title: str = "") -> dict:
         "source_quality_reason": "식별된 제외/신뢰 패턴 없음 — 중립 처리",
         "source_quality_label": _label("neutral"),
     }
+
+
+# 집계/재전송 호스트 표시 정규화 (P0-C1.11) — raw 호스트가 신뢰 매체처럼 보이지 않게.
+_AGGREGATOR_DISPLAY = _load_rules().get("aggregator_display") or {}
+# 일반 호스트형 출처(점 포함, 한글/공백 없음) 판별 — 알 수 없는 집계 호스트는 '원문 경유'로.
+_HOST_RE = re.compile(r"^https?://|^[a-z0-9][a-z0-9.\-]*\.[a-z]{2,}(?:/|$)")
+VIA_GENERIC_LABEL = "원문 경유"
+
+
+def normalize_display_source(source: str) -> str:
+    """임원 표시용 출처 라벨 — 집계/재전송 호스트는 'Daum 경유' 등으로 정규화한다.
+
+    공개 RSS가 출처를 v.daum.net 같은 집계 호스트로 돌려줄 때, 이를 신뢰 매체처럼
+    노출하지 않는다. 정상 매체명(연합뉴스 등)은 그대로 둔다 (정규화 대상 아님).
+    원문 URL/내부 source 필드는 호출자가 그대로 보존한다 — 이 함수는 표시 라벨만 만든다.
+    """
+    src = (source or "").strip()
+    if not src:
+        return src
+    low = src.lower()
+    # 명시된 집계 호스트는 긴 키 우선으로 라벨 매핑 (v.daum.net이 daum.net보다 먼저).
+    for host in sorted(_AGGREGATOR_DISPLAY, key=len, reverse=True):
+        if host and host.lower() in low:
+            return _AGGREGATOR_DISPLAY[host]
+    # 매핑에 없지만 명백한 호스트형 출처(점 포함, 한글/공백 없음)면 중립적 '원문 경유'.
+    if " " not in src and not any("가" <= ch <= "힣" for ch in src) and _HOST_RE.match(low):
+        return VIA_GENERIC_LABEL
+    return src
 
 
 def is_excluded(source: str, title: str = "") -> bool:

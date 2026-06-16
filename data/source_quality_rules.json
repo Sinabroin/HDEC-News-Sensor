@@ -76,6 +76,18 @@
     "excluded": 1.0,
     "low": 3.4
   },
+  "aggregator_display": {
+    "v.daum.net": "Daum 경유",
+    "media.daum.net": "Daum 경유",
+    "daum.net": "Daum 경유",
+    "n.news.naver.com": "Naver 경유",
+    "m.news.naver.com": "Naver 경유",
+    "news.naver.com": "Naver 경유",
+    "naver.com": "Naver 경유",
+    "news.google.com": "Google News 경유",
+    "google.com": "Google News 경유"
+  },
+  "aggregator_display_note": "공개 RSS가 출처를 집계 호스트(v.daum.net 등)로 돌려줄 때, 임원 화면에는 신뢰 매체처럼 보이는 raw 호스트 대신 'Daum 경유'/'원문 경유'로 표기한다. 원문 URL은 그대로 유지한다 (재전송 경유임을 정직하게 표기).",
   "rules": {
     "top3_excludes_excluded": true,
     "unknown_is_neutral": true,

@@ -340,7 +340,8 @@ def _render_signal(index: int, entry: dict, risk_mode: bool = False) -> str:
     if risk_mode and entry.get("risk_radar_label"):
         labels.append(f'<span class="risk-chip">{escape(entry["risk_radar_label"])}</span>')
     labels.append(escape(entry.get("action_label") or "모니터링"))
-    meta_parts = [escape(entry.get("source") or "출처 미상")]
+    # 임원 표시용 출처 — 집계 호스트는 'Daum 경유' 등으로 정규화된 display_source 우선 (P0-C1.11).
+    meta_parts = [escape(entry.get("display_source") or entry.get("source") or "출처 미상")]
     # 출처 품질 라벨 — 어수선함을 피해 신뢰/낮은 신뢰도일 때만 노출 (일반 출처는 생략).
     sq = entry.get("source_quality")
     if sq in ("trusted", "low"):
@@ -396,7 +397,7 @@ def _render_category_article(art: dict) -> str:
     url = art.get("url") or ""
     title = art.get("title") or ""
     title_html = (_source_link(url, f"{title} ↗") if _is_http(url) else escape(title))
-    meta = [escape(art.get("source") or "출처 미상")]
+    meta = [escape(art.get("display_source") or art.get("source") or "출처 미상")]
     sq = art.get("source_quality")
     if sq in ("trusted", "low"):
         cls = "srcq trust" if sq == "trusted" else "srcq low"
@@ -467,7 +468,7 @@ def _render_audit_article(art: dict) -> str:
     url = art.get("url") or ""
     title = art.get("title") or ""
     title_html = (_source_link(url, f"{title} ↗") if _is_http(url) else escape(title))
-    meta = [escape(art.get("source") or "출처 미상")]
+    meta = [escape(art.get("display_source") or art.get("source") or "출처 미상")]
     audit_label = art.get("audit_label")
     if audit_label:  # 출처 품질 제외 — 비뉴스성/낮은 신뢰 출처임을 항목마다 명시
         meta.append(f'<span class="srcq low">{escape(audit_label)}</span>')

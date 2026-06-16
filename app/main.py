@@ -95,6 +95,9 @@ def _attach_source_quality(row: dict | None) -> dict | None:
     row["source_quality"] = q["source_quality"]
     row["source_quality_label"] = q["source_quality_label"]
     row["source_type"] = q["source_type"]
+    # 임원 표시용 출처 — 집계 호스트(v.daum.net 등)는 'Daum 경유'로 정규화 (P0-C1.11).
+    # raw source는 보존한다 (UI가 display_source를 우선 노출).
+    row["display_source"] = source_quality.normalize_display_source(row.get("source"))
     return row
 
 

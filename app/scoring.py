@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime, timedelta
 
-from app import db, source_quality
+from app import article_quality, db, source_quality
 
 MODEL_NAME = "rule-based-v1"
 
@@ -78,6 +78,14 @@ GRADE_DAILY = "검토 필요"
 # '추적 필요'(긴급하진 않지만 계속 봐야 하는 신호)로 변경. 공개 등급: 즉시 확인/검토 필요/추적 필요/참고.
 GRADE_WEEKLY = "추적 필요"
 GRADE_EXCLUDED = "제외"
+
+# 등급 서열 — 관련성 floor가 두 등급 중 높은 쪽을 고를 때 쓴다 (P0-C1.11).
+_GRADE_RANK = {GRADE_EXCLUDED: 0, GRADE_WEEKLY: 1, GRADE_DAILY: 2, GRADE_INSTANT: 3}
+
+
+def _max_grade(a: str, b: str) -> str:
+    """두 등급 중 서열이 높은 쪽을 돌려준다 (floor는 등급을 낮추지 않는다)."""
+    return a if _GRADE_RANK.get(a, 0) >= _GRADE_RANK.get(b, 0) else b
 
 INSTANT_THRESHOLD = 4.5
 DAILY_THRESHOLD = 3.5
@@ -391,6 +399,8 @@ def _score_article(article: dict, ctx: dict) -> dict:
     fresh = _is_fresh(article.get("published_at"))
     tier = _source_tier(article.get("source"))
     quality = source_quality.classify(article.get("source"), article.get("title"))
+    # 임원 품질 게이트 (P0-C1.11) — stock-hype 강등 + 현대건설 직접 관련성 보호.
+    aq = article_quality.assess(article.get("source"), article.get("title"))
 
     dims = {
         "hdec_relevance": _hdec_relevance(g),
@@ -421,6 +431,13 @@ def _score_article(article: dict, ctx: dict) -> dict:
     if quality_capped:
         final_score = round(cap, 2)
 
+    # stock-hype/증권 리서치성 캡 (P0-C1.11): 주식 테마·급등·목표가·증권가 리서치성
+    # 기사는 현대건설 직접 액션이 아니면 임원 핵심 섹션에 들어가지 않게 점수를 캡하고
+    # (검토 필요 임계 아래), 아래에서 등급을 '제외'로 강등한다. 캡은 점수를 낮추기만 한다.
+    stockhype_capped = aq["stock_hype"] and final_score > article_quality.STOCKHYPE_SCORE_CAP
+    if stockhype_capped:
+        final_score = round(article_quality.STOCKHYPE_SCORE_CAP, 2)
+
     matched_groups = sum(1 for v in g.values() if v)
     confidence = round(clamp(0.45 + 0.05 * min(matched_groups, 8)
                              + (0.08 if tier >= 4.5 else 0.0)
@@ -439,6 +456,21 @@ def _score_article(article: dict, ctx: dict) -> dict:
             f"중요도를 {final_score}점으로 상한 처리함; "
         ) + why_not_higher
 
+    # 등급 결정 → 임원 관련성 floor/강등 (P0-C1.11). _grade_for는 그대로 두고 후처리한다.
+    grade = _grade_for(final_score, dims)
+    scoring_reason = _build_reason(g, bonuses, penalties)
+    if aq["stock_hype"]:
+        # 주식 테마/리서치성 → 제외 등급으로 강등 (전략 게이트로 추적 필요에 오르는 것도 차단).
+        grade = GRADE_EXCLUDED
+        why_not_higher = aq["stock_hype_reason"] + "; " + why_not_higher
+        scoring_reason = "주식 테마/증권 리서치성 기사 — 임원 핵심 섹션 제외 / " + scoring_reason
+    elif aq["hdec_enforcement"]:
+        # 현대건설 제재/벌점 — 종합 점수가 희석돼도 최소 추적(고심각이면 검토) 필요로 floor.
+        grade = _max_grade(grade, GRADE_DAILY if aq["enforcement_severe"] else GRADE_WEEKLY)
+    elif aq["hdec_ai_contract"]:
+        # 현대건설 AI 계약검토/협력사 리스크 관리 — 최소 추적 필요로 floor (제외 금지).
+        grade = _max_grade(grade, GRADE_WEEKLY)
+
     return {
         "id": f"score_{article['id']}",
         "article_id": article["id"],
@@ -446,9 +478,9 @@ def _score_article(article: dict, ctx: dict) -> dict:
         "rule_bonus": rule_bonus,
         "rule_penalty": rule_penalty,
         "final_score": final_score,
-        "alert_grade": _grade_for(final_score, dims),
+        "alert_grade": grade,
         "confidence": confidence,
-        "scoring_reason": _build_reason(g, bonuses, penalties),
+        "scoring_reason": scoring_reason,
         "evidence_basis": json.dumps(evidence, ensure_ascii=False),
         "why_not_higher": why_not_higher,
         "why_not_lower": _build_why_not_lower(g, dims, bonuses, final_score),

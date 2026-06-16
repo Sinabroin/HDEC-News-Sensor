@@ -610,7 +610,7 @@ function radarCardHtml(s, isRisk) {
   return `<div class="radar-card${isRisk ? " risk" : ""}" ` +
     `onclick="selectArticle('${esc(s.article_id)}')">` +
     `<div class="rc-title">${esc(s.title)}</div>` +
-    `<div class="rc-meta">${chip}<span>${esc(s.source || "-")}</span>${srcQualityChip(s)}` +
+    `<div class="rc-meta">${chip}<span>${esc(s.display_source || s.source || "-")}</span>${srcQualityChip(s)}` +
     `${date}${cat}<span>중요도 ${score5(s.final_score)} / 5.0</span></div>` +
     `${pri}${why}</div>`;
 }
@@ -674,7 +674,7 @@ function renderCategoryArticles() {
     return `<div class="cat-art" onclick="selectArticle('${esc(a.article_id)}')">` +
       `<div class="cat-art-head"><span class="cat-art-title">${esc(a.title)}</span>` +
       `<span class="cat-art-sc">중요도 ${score5(a.final_score)} / 5.0</span></div>` +
-      `<div class="meta"><span>${esc(a.source || "-")}</span>${srcQualityChip(a)}` +
+      `<div class="meta"><span>${esc(a.display_source || a.source || "-")}</span>${srcQualityChip(a)}` +
       `<span>${esc(fmtTime(a.published_at))}</span>` +
       `<span class="badge ${gradeClass}">${esc(grade)}</span>${link}</div>${why}</div>`;
   }).join("");
@@ -707,7 +707,7 @@ function auditItemHtml(a, sourceFiltered) {
   return `<div class="cat-art">` +
     `<div class="cat-art-head"><span class="cat-art-title">${esc(a.title)}</span>` +
     `<span class="cat-art-sc">${esc(score)}</span></div>` +
-    `<div class="meta"><span>${esc(a.source || "-")}</span>${label}${cat}${link}</div>${why}</div>`;
+    `<div class="meta"><span>${esc(a.display_source || a.source || "-")}</span>${label}${cat}${link}</div>${why}</div>`;
 }
 function renderAuditArea(b) {
   const area = document.getElementById("audit-area");
@@ -779,7 +779,7 @@ function cardHtml(a) {
   <div class="card ${gradeClass}${a.id === state.selectedId ? " active" : ""}" data-id="${esc(a.id)}" onclick="selectArticle('${esc(a.id)}')">
     <div class="title">${esc(a.title)}</div>
     <div class="meta">
-      <span>${esc(a.source || "-")}</span>${srcQualityChip(a)}<span>${esc(fmtTime(a.published_at))}</span>
+      <span>${esc(a.display_source || a.source || "-")}</span>${srcQualityChip(a)}<span>${esc(fmtTime(a.published_at))}</span>
     </div>
     <div class="badges">
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
@@ -847,7 +847,7 @@ function detailHtml(d) {
   return `
     <h3>${esc(a.title)}</h3>
     <div class="meta">
-      <span>${esc(a.source || "-")}</span>${srcQualityChip(a)}<span>${esc(fmtTime(a.published_at))}</span>
+      <span>${esc(a.display_source || a.source || "-")}</span>${srcQualityChip(a)}<span>${esc(fmtTime(a.published_at))}</span>
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
     </div>
     <div class="kv"><a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></div>
