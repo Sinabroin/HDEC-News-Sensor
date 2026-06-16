@@ -280,6 +280,7 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         entry["is_competitor"] = decision.get("is_competitor")
         entry["is_finance"] = decision.get("is_finance")
         entry["supplier_only"] = decision.get("supplier_only")
+        entry["order_class"] = decision.get("order_class")
     # 리스크·규제 신호는 risk_priority(중요도가 낮아도 상단 노출)·사유·라벨을 부착한다.
     if section == radar.RISK:
         rf = radar.risk_fields(row, score)
@@ -629,6 +630,13 @@ def build_brief(pipeline_counts: dict | None = None,
     # 공급망'을 추가하고, 같은 기사가 여러 섹션에 멤버로 들어갈 수 있게 한다 (multi-section).
     decisions = {rid: decision_relevance.classify(row, categories[rid])
                  for rid, row in row_by_id.items()}
+    # 재무 하드 오버라이드 (P0-C1.14) — raw 제목+스니펫이 재무·자금조달 신호인데 전략 맥락이
+    # 없으면, collector의 생성 topic_candidates가 AI로 끌어올린 radar_section을 거시로 되돌린다.
+    # 이렇게 해야 전환사채 등 재무 기사가 ai_radar_signals/AI 섹션/AI Top에서 빠지고 거시·현대건설
+    # 직접으로 라우팅된다 (decision_relevance가 단일 소유, is_finance는 raw만 본다, radar는 불변).
+    for rid in row_by_id:
+        radar_sections[rid] = decision_relevance.override_radar_section(
+            radar_sections[rid], decisions[rid])
 
     # Top 3/Top 5 노출 대상에서 excluded 출처(블로그/카페/커뮤니티성)는 배제한다
     # (P0-C1.6). excluded는 scoring 캡으로 이미 제외 등급이라 signal_rows에 거의 없지만,
@@ -657,9 +665,9 @@ def build_brief(pipeline_counts: dict | None = None,
     # AI/거시는 radar 분류(primary)로 뽑는다 — AI는 radar_section==ai 불변(IA 회귀 보호).
     # 현대건설 직접/수주·해외/경쟁사·공급망은 decision_relevance 멤버십(primary or
     # secondary)으로 뽑는다 — 같은 기사가 여러 섹션에 들어갈 수 있다(multi-section).
-    def _radar_group(section_key, limit=TOP_RADAR):
+    def _radar_group(section_key, limit=TOP_RADAR, sort_key=None):
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
-        rows.sort(key=lambda r: (-(r.get("final_score") or 0), r["id"]))
+        rows.sort(key=sort_key or (lambda r: (-(r.get("final_score") or 0), r["id"])))
         return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
 
     def _decision_group(section_key, limit=TOP_RADAR, sort_key=None, company_cap=None):
@@ -691,7 +699,13 @@ def build_brief(pipeline_counts: dict | None = None,
     hdec_direct_signals = _decision_group(
         decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort)
 
-    ai_radar_signals = _radar_group(radar.AI)
+    # AI 관련 — 공급사 단독(부품·전선·설비)은 더 강한 비공급사 AI/EPC 신호가 top-N(cap) 안에
+    # 들도록 뒤로 정렬한다. 공급사가 강한 신호를 cap 밖으로 밀어내 AI Top/AI 섹션을 차지하는
+    # 것을 막는다 (P0-C1.14). 점수순은 그 안에서 유지. 비공급사 후보가 cap을 채우면 공급사는
+    # 경쟁사·공급망/드릴다운으로만 남는다 (제품 원칙: 공급사는 보조 신호).
+    ai_radar_signals = _radar_group(radar.AI, sort_key=lambda r: (
+        1 if decisions[r["id"]].get("supplier_only") else 0,
+        -(r.get("final_score") or 0), r["id"]))
     # 수주·해외 — 확정 계약뿐 아니라 발주 환경(중동·재건·EPC·DC·SMR·플랜트)과 경쟁사
     # 수주 전략까지 넓혀 'business 0건' 회귀를 방지한다 (decision 멤버십 기반).
     # 현대건설 직접(primary)은 위 현대건설 섹션에 이미 노출되므로, 여기선 '순수 수주·해외/

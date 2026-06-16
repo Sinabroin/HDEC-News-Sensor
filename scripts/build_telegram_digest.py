@@ -64,6 +64,8 @@ def _digest_signal(entry: dict) -> dict:
         "executive_section": entry.get("executive_section"),
         "supplier_only": bool(entry.get("supplier_only")),
         "is_finance": bool(entry.get("is_finance")),
+        # P0-C1.14: 수주·해외 블록 우선순위 클래스 (발주/EPC/해외 > 공급사 단독).
+        "order_class": entry.get("order_class"),
         "url": entry.get("url"),
     }
 
@@ -86,14 +88,26 @@ def _entity_key(entry: dict) -> str:
     return f"id:{entry.get('article_id')}"
 
 
-def _pick_diverse(entries: list, limit: int, seen: set) -> list:
-    """점수순 후보에서 같은 회사/주체가 겹치지 않게 limit개를 고른다 (Telegram Top 다양성)."""
+def _dedup_key(entry: dict) -> str:
+    """AI Top·수주·해외 도배 방지 키 (P0-C1.14). 공급사 단독은 회사가 달라도(가온전선·솔루엠
+    등) 하나의 '공급사 클래스'로 묶어, 서로 다른 전선·버스덕트 기사 2건이 Top을 차지하지
+    못하게 한다 (클래스 단위 dedup). 그 외는 회사/기사 단위 키(_entity_key)를 그대로 쓴다."""
+    if entry.get("supplier_only"):
+        return "class:supplier-only"
+    return _entity_key(entry)
+
+
+def _pick_diverse(entries: list, limit: int, seen: set, key=_entity_key) -> list:
+    """점수순 후보에서 같은 주체(key)가 겹치지 않게 limit개를 고른다 (Telegram Top 다양성).
+
+    key는 중복 판정 함수다 — 기본은 회사/기사 단위(_entity_key), 공급사 클래스 단위로
+    묶으려면 _dedup_key를 넘긴다 (P0-C1.14 AI Top 공급사 도배 방지)."""
     out = []
     for e in entries:
-        key = _entity_key(e)
-        if key in seen:
+        k = key(e)
+        if k in seen:
             continue
-        seen.add(key)
+        seen.add(k)
         out.append(e)
         if len(out) == limit:
             break
@@ -150,20 +164,27 @@ def build_digest_data() -> dict:
     biz = brief.get("business_signals") or []
     risk = brief.get("risk_regulation_signals") or []
 
-    seen: set = set()
-    # 현대건설 직접 — 그룹핑용으로 전체(briefing 캡 최대 5건)를 넘긴다. 모두 현대건설 주체라
-    # 회사 키(co:현대건설)를 선점해, 같은 주체가 AI/수주·해외 Top을 다시 차지하지 않게 한다.
+    # 현대건설 직접 — 그룹핑용으로 전체(briefing 캡 최대 5건)를 넘긴다. AI Top에서는 같은
+    # 현대건설 주체가 다시 올라오지 않게 회사 키를 선점한다. 단 이 선점은 AI Top에만 쓴다 —
+    # 수주·해외 블록까지 막으면 발주 신호가 통째로 사라지므로(P0-C1.14) 분리한다.
     hdec_list = hdec[:5]
-    for e in hdec_list:
-        seen.add(_entity_key(e))
-    # AI 관련 — 부품·전선 공급사 단독(가온전선 등) 신호는 뒤로 정렬해, 더 강한 AI/EPC/현대건설
-    # 신호가 있으면 AI Top을 공급사가 차지하지 않게 한다 (P0-C1.13). 동률은 기존 점수순 유지.
+    ai_seen: set = {_entity_key(e) for e in hdec_list}
+    # AI 관련 — 부품·전선 공급사 단독(가온전선 등)은 뒤로 정렬하고 클래스 단위로 묶어, 더 강한
+    # AI/EPC/현대건설 신호가 있으면 공급사가 AI Top을 차지/도배하지 않게 한다 (P0-C1.13/14).
     ai_base = ai or brief.get("top_immediate_signals") or []
     ai_sorted = sorted(ai_base, key=lambda e: 1 if e.get("supplier_only") else 0)
-    ai_top = _pick_diverse(ai_sorted, 3, seen)         # AI 관련 (현대건설/공급사 후순위)
-    # 수주·해외 — 발주/EPC/프로젝트 신호를 공급사 단독보다 먼저. 최대 2줄, 앞 섹션과 중복 제외.
-    biz_sorted = sorted(biz, key=lambda e: 1 if e.get("supplier_only") else 0)
-    biz_top = _pick_diverse(biz_sorted, 2, seen)
+    ai_top = _pick_diverse(ai_sorted, 3, ai_seen, key=_dedup_key)
+    # 수주·해외 — 발주/EPC/DC/SMR·경쟁사 발주(0) > 해외·중동·재건 환경(1) > 현대건설 직접
+    # 발주(2) > 공급사 단독(3) 순으로 정렬한다 (order_class). 회사 키 선점을 쓰지 않으므로
+    # 현대건설 주체가 앞 섹션에 있어도 블록이 통째로 사라지지 않는다 — 같은 '기사' 중복만
+    # format 단계에서 제외한다. 블록 내부에선 클래스 단위로 묶어 공급사/같은 회사 도배를 막는다.
+    # 재무·자금조달 신호는 [현대건설 직접]/거시로 라우팅되므로 수주·해외에서 제외한다
+    # (decision_relevance가 이미 발주 멤버십을 비우지만, 표시 단계에서도 한 번 더 막는다).
+    biz_sorted = sorted(
+        (e for e in biz if not e.get("is_finance")),
+        key=lambda e: ((e.get("order_class") if e.get("order_class") is not None
+                        else 9), -(e.get("final_score") or 0)))
+    biz_candidates = _pick_diverse(biz_sorted, 4, set(), key=_dedup_key)
     # 리스크·규제 — 별도 풀(항상 노출). 최상위가 현대건설 직접에 이미 나오면 다음 리스크로
     # 대체할 수 있게 2건까지 확보한다 (헤드라인 중복 회피는 format 단계에서).
     risk_top = _pick_diverse(risk, 2, set())
@@ -180,7 +201,7 @@ def build_digest_data() -> dict:
         "hdec_signals": [_digest_signal(e) for e in hdec_list],
         "top_signals": [_digest_signal(e) for e in ai_top],
         "ai_first": bool(ai),
-        "biz_signals": [_digest_signal(e) for e in biz_top],
+        "biz_signals": [_digest_signal(e) for e in biz_candidates],
         "risk_signals": [_digest_signal(e) for e in risk_top],
         "theme_rankings": brief["theme_rankings"][:DIGEST_THEMES_MAX],
         "category_counts": brief["category_counts"],
@@ -245,13 +266,20 @@ def format_digest_message(data: dict) -> str:
     if news_mode == "live" and not has_instant:
         lines += ["", "오늘은 즉시 확인급 신호 없음 · 추적 필요 신호 중심"]
 
-    # 수주·해외 — 발주 환경(중동·재건·EPC·DC) 신호를 ≤2줄로. 발주/EPC/프로젝트를 공급사
-    # 단독보다 먼저(정렬은 build_digest_data). 현대건설 직접에 이미 나온 주체는 키 선점으로 제외됨.
+    # 수주·해외 — 발주 환경(EPC·DC·SMR·중동·재건) 신호를 ≤2줄로. 우선순위 정렬(발주/EPC/
+    # 해외 > 공급사 단독)은 build_digest_data(order_class)에서 끝났다. 현대건설 직접에 '이미
+    # 노출된 같은 기사'만 중복 제외하고(헤드라인 반복 방지), 회사 키 선점으로 블록이 통째로
+    # 사라지지 않게 한다 — 후보가 모두 직접에 나왔으면 헤드라인 대신 포인터만 둔다 (P0-C1.14).
     biz = data.get("biz_signals") or []
     if biz:
-        lines += ["", "[수주·해외]"]
-        for b in biz:
-            lines.append(f"· {_clip(b['title'], TITLE_MAX)}")
+        biz_pick = [b for b in biz
+                    if b.get("article_id") not in hdec_shown_ids][:2]
+        if biz_pick:
+            lines += ["", "[수주·해외]"]
+            for b in biz_pick:
+                lines.append(f"· {_clip(b['title'], TITLE_MAX)}")
+        else:
+            lines += ["", "[수주·해외] 발주·해외 환경 신호 — 현대건설 직접 항목 참고"]
 
     # 리스크·규제 — 중대재해·규제를 가리킨다. 단, 현대건설 직접에 이미 나온 리스크(예: 벌점)는
     # 헤드라인을 반복하지 않는다 — 다음 리스크가 있으면 그걸, 없으면 직접 영향 포인터만 (P0-C1.13).

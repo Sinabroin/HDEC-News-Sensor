@@ -859,7 +859,48 @@ python3 scripts/verify_executive_telegram_polish.py   # 결정적 회귀 (RESULT
 NEWS_MODE=live python3 scripts/build_telegram_digest.py --dry-run   # 라이브 다이제스트 확인
 ```
 
-## 22. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
+## 22. Final Live Routing Cleanup (P0-C1.14)
+
+§21의 라이브 점검에서 남은 라우팅 갭 3개를 닫는다. 제품 원칙은 **"AI 뉴스 수집기가 아니라
+현대건설 임원 의사결정 레이더"** — 분류는 "이 신호가 수주/해외/리스크/재무/기술/경쟁사/
+공급망/거시 의사결정에 도움이 되는가"에 답해야 한다. 오늘 제목에 과적합하지 않고 **카테고리
+규칙과 그 이유**를 구현한다. 변경은 `decision_relevance`/`briefing`/Telegram/감사에 한정한다.
+
+### A. 수주·해외 Telegram 블록 — 항상 노출
+
+- `order_class`(0 경쟁사·EPC/DC/SMR 발주 > 1 해외·중동·재건 환경 > 2 현대건설 직접 발주 >
+  3 공급사 단독)로 정렬한다. 발주/EPC/해외를 공급사 단독보다 먼저.
+- 현대건설 회사 키 선점이 블록을 **통째로 지우지 않게** AI Top용 선점과 분리한다 — 수주·해외는
+  `[현대건설 직접]`에 **이미 노출된 같은 기사(article_id)**만 중복 제외하고, 후보가 모두 직접에
+  나왔으면 헤드라인 대신 포인터만 둔다.
+
+### B. 재무·자금조달 하드 오버라이드
+
+- raw 제목+스니펫이 재무 신호인데 전략 맥락이 없으면 `override_radar_section`이 AI radar_section을
+  **거시(MACRO)로 되돌린다**(`radar.classify_section`은 불변 — 게이트 verifier/스코어 floor 호환).
+- 결과: 현대건설 전환사채 기사가 `ai_radar_signals`/AI Top/신규이슈·즉시 신호에 **'AI'로 남지
+  않고** 현대건설 직접 + 거시로 라우팅된다. 생성 `topic_candidates`는 오버라이드 입력에서 제외.
+- 단, 명시적 데이터센터/사업/SMR/EPC 전략이면 현대건설 전략(AI)으로 유지한다.
+
+### C. 공급사 단독 — 클래스 단위 후순위
+
+- 공급사 단독은 더 강한 비공급사 AI/EPC 신호가 cap 안에 들도록 `ai_radar_signals`에서 **뒤로
+  정렬**한다(briefing). Telegram AI Top은 **클래스 단위 dedup**(`_dedup_key`)으로 서로 다른
+  전선/버스덕트 회사라도 1슬롯만 — 공급사 도배 차단. 공급사는 **경쟁사·공급망**에 그대로 남는다.
+
+### D. 감사 0건 + 검증
+
+- 감사 헬퍼의 'AI 섹션에 남은 재무 신호'는 오버라이드를 거쳐 **0건(통과)**이어야 한다.
+- mock 데모 숫자 불변: **28 / 21 / 3 / 4 / 14 / 7**(섹션 멤버십만 바뀜, 등급 재계산 없음).
+- `scripts/verify_executive_final_live_routing.py`(fixture, temp DB 시뮬 + 감사 마크다운) +
+  기존 15개 = **16/16 PASS**.
+
+```bash
+python3 scripts/verify_executive_final_live_routing.py   # 결정적 회귀 (RESULT: PASS)
+NEWS_MODE=live python3 scripts/audit_live_article_quality.py --output /tmp/audit.md   # 재무 0건 확인
+```
+
+## 23. 다음 스프린트 — P0-C2 Real Macro Snapshot Integration
 
 시장지표(거시) 실시간 연동. 반드시 다음을 만족해야 한다:
 

@@ -105,15 +105,15 @@ def _suspicious_section(brief: dict) -> list[str]:
     stockhype, aggregator, hdec_excluded = [], [], []
     risk_kw_not_risk, risk_no_action, decision_excluded = [], [], []
     ai_finance_misroute = []
-    fin_tokens = getattr(decision_relevance, "FINANCE_TOKENS", [])
-    fin_ctx = getattr(decision_relevance, "FINANCE_STRATEGY_CTX", [])
     for r in rows:
         title = r.get("title") or ""
         source = r.get("source") or ""
         grade = r.get("alert_grade")
         aq = article_quality.assess(source, title)
-        section = radar.classify_section(r, _category(r["id"]))
         dr = decision_relevance.classify(r, _category(r["id"]))
+        # 재무 하드 오버라이드(P0-C1.14)를 brief와 동일하게 적용 — raw가 재무 신호면 AI→거시.
+        section = decision_relevance.override_radar_section(
+            radar.classify_section(r, _category(r["id"])), dr)
         disp = source_quality.normalize_display_source(source)
         if aq["stock_hype"]:
             stockhype.append((title, source, grade, section))
@@ -131,12 +131,10 @@ def _suspicious_section(brief: dict) -> list[str]:
             decision_excluded.append(
                 (title, source, dr["decision_relevance_tier"],
                  dr["executive_label"]))
-        # AI 후보인데 raw 제목이 재무·자금조달 신호(전환사채/금리 등)면 — AI가 아니라 재무로
-        # 라우팅돼야 할 후보 점검 (P0-C1.13). decision_relevance가 이미 AI에서 빼지만,
-        # 명시적 전략 맥락이 없는 finance가 AI 레이더에 남았는지 감사로 한 번 더 본다.
-        low = title.lower()
-        if (section == radar.AI and any(t in low for t in fin_tokens)
-                and not any(t in low for t in fin_ctx)):
+        # 재무 하드 오버라이드 검증 (P0-C1.14) — 오버라이드 후에도 재무·자금조달 신호가 AI
+        # 섹션에 남았는지 본다. decision_relevance가 finance를 AI에서 빼므로 정상 동작 시 0건
+        # (감사가 '알려진 미해결 오분류'를 받아들이지 않고 통과 섹션으로 둔다 — P0-C1.14).
+        if section == radar.AI and dr.get("is_finance"):
             ai_finance_misroute.append(
                 (title, source, dr["primary_executive_section"]))
 
@@ -178,7 +176,8 @@ def _suspicious_section(brief: dict) -> list[str]:
         lambda it: f"| {_cell(it[0])} | {_cell(it[1], 22)} | {_cell(it[2], 8)} "
                    f"| {_cell(it[3], 14)} |")
     lines += _block(
-        "AI 후보인데 재무·자금조달 신호 (AI→재무 라우팅 점검)", ai_finance_misroute,
+        "재무·자금조달인데 AI 섹션 잔류 (재무 하드 오버라이드 검증 · 정상=0건)",
+        ai_finance_misroute,
         "| 제목 | 출처 | 의사결정 섹션 |",
         lambda it: f"| {_cell(it[0])} | {_cell(it[1], 22)} | {_cell(it[2], 16)} |")
     return lines

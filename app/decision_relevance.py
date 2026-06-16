@@ -193,6 +193,51 @@ def is_supplier_only(title: str) -> bool:
     return _hits(low, [n.lower() for n in SUPPLIER_ONLY_NAMES])
 
 
+# 수주·해외 Telegram 블록 정렬용 전략 키워드 (EPC/DC/SMR/플랜트/원전 등 — 발주 전략 신호).
+ORDER_STRATEGY_TERMS = ["epc", "데이터센터", "데이터 센터", "smr", "소형모듈원자로",
+                        "플랜트", "원전", "lng", "신사업", "송전", "변전"]
+ORDER_BARE_TOKENS = ["수주", "발주", "낙찰", "우선협상", "본계약", "수주 목표",
+                     "수주 채비", "수주 추진", "수주 확대", "수주잔고"]
+
+
+def _order_class(title: str) -> int:
+    """수주·해외 블록 우선순위 클래스 (작을수록 먼저) — raw 제목만 본다 (P0-C1.14).
+
+    0 건설/EPC/DC/SMR·경쟁사 발주 전략 · 1 해외·중동·재건·플랜트 등 발주 환경 ·
+    2 현대건설 직접 발주([현대건설 직접]에서 우선 다룸) · 3 공급사 단독 · 9 해당 없음.
+    제품 원칙대로 '발주 전략/해외 환경'을 공급사 단독보다, 현대건설 직접은 직접 블록 뒤로 둔다."""
+    low = (title or "").lower()
+    if is_supplier_only(title):
+        return 3
+    if is_hdec_direct(title):
+        return 2
+    has_strategy = _hits(low, ORDER_STRATEGY_TERMS)
+    has_geo = _hits(low, ORDER_GEO)
+    has_order = _hits(low, ORDER_BARE_TOKENS)
+    is_competitor = _hits(low, [n.lower() for n in COMPETITOR_NAMES])
+    if is_competitor and (has_strategy or has_order or has_geo):
+        return 0
+    if has_strategy:
+        return 0
+    if has_geo:
+        return 1
+    if has_order:
+        return 1
+    return 9
+
+
+def override_radar_section(base_section, decision: dict) -> str:
+    """radar primary section을 의사결정 관점에서 보정한다 (P0-C1.14 재무 하드 오버라이드).
+
+    raw 제목+스니펫이 재무·자금조달 신호인데 전략 맥락이 없으면(decision['is_finance']),
+    collector의 생성 topic_candidates가 AI로 끌어올린 분류를 거시(MACRO)로 되돌린다.
+    생성 토픽을 오버라이드 입력으로 쓰지 않는다 — is_finance는 raw 제목+스니펫만 본다.
+    radar.classify_section 자체는 바꾸지 않는다 (게이트 verifier/스코어 floor 호환 유지)."""
+    if base_section == radar.AI and (decision or {}).get("is_finance"):
+        return radar.MACRO
+    return base_section
+
+
 def _memberships(row: dict, category=None) -> tuple[set, dict]:
     """기사 1건의 임원 섹션 멤버십 집합과 부가 플래그를 계산한다."""
     title = row.get("title") or ""
@@ -224,13 +269,16 @@ def _memberships(row: dict, category=None) -> tuple[set, dict]:
     # raw 제목+스니펫만 본다 (생성된 topic_candidates는 '현대건설 데이터센터' 같은 캔드
     # 토픽을 느슨하게 붙여 재무 기사를 DC 전략으로 오인시키므로 분류 입력에서 제외).
     fin_text = " ".join([title, row.get("snippet") or ""]).lower()
+    # raw(제목+스니펫)에 실제 발주 신호가 있는지 — 생성 topic_candidates를 제외한 판정.
+    # collector의 '현대건설 데이터센터' 주입이 전환사채 기사를 수주·해외로 끌어오는 것을
+    # 차단하는 데 쓴다 (재무 라우팅과 동일한 raw-only 일관성, P0-C1.14).
+    raw_has_order = (_hits(fin_text, ORDER_SECTOR) or _hits(fin_text, ORDER_GEO)
+                     or _hits(fin_text, ORDER_TOKENS))
     if _is_finance(fin_text) and not _hits(fin_text, FINANCE_STRATEGY_CTX):
         flags["is_finance"] = True
         members.discard(AI)
         members.add(MACRO)
-        # radar가 '현대건설'(business_geo) 매칭으로 붙인 수주·해외 멤버십은, 실제 수주·발주
-        # 신호가 없으면 제거한다 (순수 파이낸싱을 수주·해외로 오분류하지 않게).
-        if not (is_order_environment(row) or _hits(text, ORDER_TOKENS)):
+        if not raw_has_order:
             members.discard(ORDER_OVERSEAS)
 
     # 현대건설 직접 영향
@@ -244,15 +292,18 @@ def _memberships(row: dict, category=None) -> tuple[set, dict]:
         if flags["is_finance"]:
             members.add(HDEC_DIRECT)
 
-    # 수주·해외 환경 (broadening) — 섹터/지역 신호가 있으면 무조건 후보.
+    # 수주·해외 환경 (broadening) — 섹터/지역 신호가 있으면 무조건 후보. 단 재무 신호면
+    # raw에 실제 발주 신호가 있을 때만 (주입된 '데이터센터' 토픽으로 전환사채가 오르는 것 차단).
     if is_order_environment(row) or _hits(text, ORDER_TOKENS):
         if _hits(text, ORDER_SECTOR) or _hits(text, ORDER_GEO) or _hits(
                 text, ORDER_ENV_STRONG):
-            members.add(ORDER_OVERSEAS)
+            if not flags["is_finance"] or raw_has_order:
+                members.add(ORDER_OVERSEAS)
 
-    # 경쟁사·공급망
-    if _hits(title_low, [n.lower() for n in COMPETITOR_NAMES]) or _hits(
-            text, SUPPLY_TOKENS):
+    # 경쟁사·공급망 — 건설 경쟁사 또는 부품·전선·설비 공급망 신호. 공급사 단독(가온전선 등)도
+    # 공급망 신호이므로 항상 이 섹션 멤버로 둔다 (P0-C1.14 — 리포트/감사 '경쟁사·공급망' 보장).
+    if (_hits(title_low, [n.lower() for n in COMPETITOR_NAMES])
+            or _hits(text, SUPPLY_TOKENS) or is_supplier_only(title)):
         members.add(COMPETITOR)
         flags["is_competitor"] = True
 
@@ -358,7 +409,8 @@ def classify(row: dict, category=None) -> dict:
         primary_executive_section / secondary_executive_sections / executive_sections
         executive_label / secondary_labels
         decision_relevance_score / decision_relevance_tier / decision_reason
-        hdec_direct / hdec_strategic / is_competitor / is_finance / supplier_only / hdec_bucket
+        hdec_direct / hdec_strategic / is_competitor / is_finance / supplier_only
+        hdec_bucket / order_class
     """
     members, flags = _memberships(row, category)
     aq = article_quality.assess(row.get("source"), row.get("title"))
@@ -382,6 +434,8 @@ def classify(row: dict, category=None) -> dict:
         "is_finance": flags["is_finance"],
         "supplier_only": is_supplier_only(row.get("title") or ""),
         "hdec_bucket": _hdec_bucket(row, members, aq) if flags["hdec_direct"] else 9,
+        # 수주·해외 Telegram 블록 정렬용 우선순위 클래스 (P0-C1.14, 표시 전용).
+        "order_class": _order_class(row.get("title") or ""),
     }
 
 
