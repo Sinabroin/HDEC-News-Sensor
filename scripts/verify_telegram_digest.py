@@ -130,6 +130,12 @@ def check_message_text(message: str) -> None:
     check("digest에 금지어 없음", not hits, ", ".join(hits))
     check(f"digest 길이 {len(message)} <= {MESSAGE_BUDGET_MAX}",
           len(message) <= MESSAGE_BUDGET_MAX)
+    check("digest에 HTML article title link 존재", '<a href="http' in message)
+    check("digest에 현대건설 연관 라벨 사용", "[현대건설 연관]" in message)
+    check("digest에 user-facing '현대건설 직접' 없음", "현대건설 직접" not in message)
+    check("digest에 검토/추적 필요 액션 라벨 없음",
+          "검토 필요" not in message and "추적 필요" not in message)
+    check("digest에 '판정 신뢰도' 없음", "판정 신뢰도" not in message)
 
     # P0-B6 — mock macro 고정값을 시세처럼 발송하지 않는다
     check("digest 헤더에 데이터 출처 표기 (mock 데이터 기반/미연동)",
@@ -216,6 +222,10 @@ def check_sender_source() -> None:
           not leaks, "; ".join(leaks))
     check("send_telegram.py에 token 모양 하드코딩 없음",
           not TOKEN_SHAPE.search(src))
+    check("send_telegram.py가 Telegram HTML parse_mode 사용",
+          '"parse_mode": "HTML"' in src)
+    check("send_telegram.py가 MESSAGE env를 HTML escape",
+          "escape(message" in src)
 
     cap_match = re.search(r"^MAX_MESSAGE_LEN\s*=\s*(\d+)", src, re.M)
     budget_match = re.search(r"^MESSAGE_BUDGET\s*=\s*(\d+)",

@@ -26,7 +26,7 @@ CATEGORY_PRIORITY = ["hdec", "dc_power", "competitor", "safety",
                      "mideast_overseas", "macro", "gov", "smart_const"]
 
 CATEGORY_PHRASE = {
-    "hdec": "현대건설 직접 관련",
+    "hdec": "현대건설 연관",
     "dc_power": "AI 데이터센터·전력 인프라",
     "competitor": "경쟁 건설사 동향",
     "safety": "건설현장 안전·중대재해",
@@ -40,7 +40,7 @@ CATEGORY_PHRASE = {
 # P0-C1.10: 임원 메모 스타일 — 종결어미('~있다/~신호다/~합니다') 없이 명사형 구절로.
 # (briefing._CATEGORY_BY_IMPLICATION 역매핑이 이 dict를 그대로 읽으므로 값은 고유해야 한다.)
 IMPLICATION_TEMPLATES = {
-    "hdec": "현대건설 직접 언급 — 수주 경쟁력·시장 포지션 직접 영향권",
+    "hdec": "현대건설 연관 신호 — 수주 경쟁력·시장 포지션 영향권",
     "dc_power": "데이터센터 EPC·원전/SMR·송배전 등 에너지 인프라 사업 기회",
     "competitor": "경쟁사 AI·스마트건설 행보 — 기술 투자 우선순위·수주 경쟁 구도 변수",
     "safety": "현장 안전·중대재해 규제 변화 — 안전관리·입찰 자격·평판 리스크",
@@ -48,7 +48,7 @@ IMPLICATION_TEMPLATES = {
     "macro": "환율·금리·원자재 등 거시 변수 — 해외수주 원가·파이낸싱 여건 변수",
     "gov": "정부 정책·예산 방향 — 인프라·에너지 발주 환경 변수",
     "smart_const": "스마트건설 기술 확산 — 생산성·안전 기술 도입 검토 대상",
-    "general": "현대건설 직접 연관성 낮음 — 참고 수준 모니터링 대상",
+    "general": "현대건설 연관성 낮음 — 참고 수준 모니터링 대상",
 }
 
 AFFECTED_UNITS_MAP = {
@@ -86,7 +86,7 @@ CHECKPOINT_TEMPLATES = {
 RECOMMENDED_ACTION_BY_GRADE = {
     "즉시 알림 후보": "운영자 검토 후 발송",
     "검토 필요": "담당부서 검토",
-    "추적 필요": "추적 필요",
+    "추적 필요": "계속 관찰",
     "제외": "제외",
 }
 

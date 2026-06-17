@@ -45,7 +45,7 @@ SECTION_PRIORITY = [RISK, HDEC_DIRECT, AI, ORDER_OVERSEAS, COMPETITOR, MACRO, OT
 
 # UI·리포트·Telegram이 그대로 노출하는 섹션 라벨 (표시 전용 단일 소스)
 EXEC_LABELS = {
-    HDEC_DIRECT: "현대건설 직접 영향",
+    HDEC_DIRECT: "현대건설 연관",
     AI: "AI 관련",
     ORDER_OVERSEAS: "수주·해외",
     RISK: "리스크·규제",
@@ -55,7 +55,7 @@ EXEC_LABELS = {
 }
 # 짧은 라벨 (대시보드 탭/Telegram 칩)
 EXEC_SHORT = {
-    HDEC_DIRECT: "현대건설", AI: "AI", ORDER_OVERSEAS: "수주·해외",
+    HDEC_DIRECT: "현대건설 연관", AI: "AI", ORDER_OVERSEAS: "수주·해외",
     RISK: "리스크·규제", COMPETITOR: "경쟁사·공급망", MACRO: "거시경제", OTHER: "기타",
 }
 

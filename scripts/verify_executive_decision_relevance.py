@@ -152,16 +152,16 @@ def check_integration() -> None:
           "is_hdec_strategic" in sc and "is_order_environment" in sc)
 
     rep = REPORT_BUILDER.read_text(encoding="utf-8")
-    check("리포트가 현대건설 직접/경쟁사·공급망 섹션 렌더",
+    check("리포트가 현대건설 연관/경쟁사·공급망 섹션 렌더",
           "hdec-radar" in rep and "comp-radar" in rep
-          and "현대건설 직접 영향" in rep)
+          and "현대건설 연관" in rep)
     tpl = TEMPLATE.read_text(encoding="utf-8")
     check("대시보드가 현대건설/경쟁사·공급망 탭 + 동적 기본 탭",
           "hdec_direct_signals" in tpl and "competitor_supply_signals" in tpl
           and '"hdec"' in tpl)
     dg = DIGEST_BUILDER.read_text(encoding="utf-8")
-    check("Telegram이 현대건설 직접 라인 + 회사 dedup",
-          "현대건설 직접" in dg and "_entity_key" in dg)
+    check("Telegram이 현대건설 연관 라인 + 회사 dedup",
+          "현대건설 연관" in dg and "_entity_key" in dg)
 
 
 # ---------- 순수 함수 단위 검사 (in-process, DB 미접촉) ----------
@@ -339,15 +339,15 @@ def check_report_structure() -> None:
 
     def idx(m):
         return html.index(m) if m in html else -1
-    check("리포트에 '현대건설 직접 영향' 섹션", "현대건설 직접 영향" in html)
+    check("리포트에 '현대건설 연관' 섹션", "현대건설 연관" in html)
     check("리포트에 '수주·해외·발주 환경' (broadened) 섹션", "수주·해외·발주 환경" in html)
-    check("현대건설 직접 섹션이 generic AI 섹션보다 먼저",
+    check("현대건설 연관 섹션이 generic AI 섹션보다 먼저",
           0 <= idx('id="hdec-radar"') < idx('id="ai-radar"'))
-    # 거시경제는 기본 접힘(<details>, open 없음) 유지
+    # 거시경제는 탭 패널로 유지 — 기본 선택이 아니면 CSS로 숨김.
     import re
-    macro_det = re.search(r'<details id="macro"[^>]*>', html)
-    check("거시경제 기본 접힘 유지 (open 없음)",
-          bool(macro_det) and " open" not in macro_det.group(0))
+    macro_panel = re.search(r'<section id="macro"[^>]*class="[^"]*radar-panel', html)
+    check("거시경제 탭 패널 유지", bool(macro_panel))
+    check("거시경제 탭이 기본 선택 아님", 'id="radar-tab-macro" checked' not in html)
 
 
 def check_telegram_structure() -> None:
@@ -358,13 +358,13 @@ def check_telegram_structure() -> None:
                  (proc.stderr or "").strip()[-200:]):
         return
     msg = proc.stdout or ""
-    check("digest에 [현대건설 직접] 라인 (mock 네옴 EPC)", "[현대건설 직접]" in msg)
+    check("digest에 [현대건설 연관] 라인 (mock 네옴 EPC)", "[현대건설 연관]" in msg)
     check("digest에 '뉴스 자동 수집' 표기 없음 (기술 용어 제거)", "자동 수집" not in msg)
     check("digest에 Macro Snapshot 미노출 (mock — 거시 리포트 위임)",
           "Macro Snapshot" not in msg and "시장지표 미연동" not in msg)
     # HDEC 직접 라인이 AI 관련보다 먼저
-    h, a = msg.find("[현대건설 직접]"), msg.find("[AI 관련")
-    check("digest: 현대건설 직접이 AI 관련보다 먼저", h >= 0 and a >= 0 and h < a)
+    h, a = msg.find("[현대건설 연관]"), msg.find("[AI 관련")
+    check("digest: 현대건설 연관이 AI 관련보다 먼저", h >= 0 and a >= 0 and h < a)
 
 
 def check_audit_helper() -> None:

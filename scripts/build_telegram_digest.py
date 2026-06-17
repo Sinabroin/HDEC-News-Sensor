@@ -17,6 +17,7 @@ P0-B2부터 다이제스트 데이터는 scripts/build_executive_brief.py(공유
 import argparse
 import json
 import sys
+from html import escape
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -38,6 +39,50 @@ DIGEST_CATEGORIES_MAX = 5
 def _clip(text: str, limit: int) -> str:
     text = (text or "").strip()
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _display(text) -> str:
+    out = "" if text is None else str(text)
+    for old, new in (
+        ("현대건설 직접 관련", "현대건설 연관"),
+        ("현대건설 직접 영향", "현대건설 연관"),
+        ("현대건설 직접", "현대건설 연관"),
+        ("검토 필요", "중요 신호"),
+        ("추적 필요", "계속 관찰"),
+    ):
+        out = out.replace(old, new)
+    return out
+
+
+def _html(text) -> str:
+    return escape(_display(text), quote=True)
+
+
+def _is_http(url) -> bool:
+    return bool(url) and str(url).startswith(("http://", "https://"))
+
+
+def _title_html(entry: dict, limit: int = TITLE_MAX) -> str:
+    title = _clip(entry.get("title") or "", limit)
+    url = entry.get("url") or ""
+    if _is_http(url):
+        return f'<a href="{escape(str(url), quote=True)}">{_html(title)}</a>'
+    return _html(title)
+
+
+def _join_budgeted(lines: list[str]) -> str:
+    message = "\n".join(lines)
+    if len(message) <= MESSAGE_BUDGET:
+        return message
+    kept = []
+    for line in lines:
+        candidate = "\n".join(kept + [line])
+        if len(candidate) > MESSAGE_BUDGET - 2:
+            break
+        kept.append(line)
+    if not kept:
+        return "…"
+    return "\n".join(kept + ["…"])
 
 
 def _digest_signal(entry: dict) -> dict:
@@ -140,13 +185,13 @@ def _hdec_grouped_bullets(signals: list) -> tuple[list, set]:
             continue
         titles, used = [], []
         for s in items[:2]:                     # 그룹당 대표 최대 2건
-            clipped = _clip(s.get("title", ""), HDEC_GROUP_TITLE_MAX)
-            if clipped:
-                titles.append(clipped)
+            title = _title_html(s, HDEC_GROUP_TITLE_MAX)
+            if title:
+                titles.append(title)
                 used.append(s.get("article_id"))
         if not titles:
             continue
-        bullets.append(f"· {label}: " + " / ".join(titles))
+        bullets.append(f"· {_html(label)}: " + " / ".join(titles))
         shown_ids.update(used)
         if len(bullets) >= HDEC_BULLET_MAX:
             break
@@ -212,11 +257,11 @@ def build_digest_data() -> dict:
 
 
 def format_digest_message(data: dict) -> str:
-    """다이제스트 구조체를 Telegram용 한국어 plain text로 변환한다.
+    """다이제스트 구조체를 Telegram HTML 메시지로 변환한다.
 
     P0-C1: 임원용으로 간결하게 — 제목/날짜/모드, 한 줄 시그널, 현황판 한 줄,
-    Top 3 짧은 제목, 시장지표 미연동 한 줄, 추정 안내 한 줄. 원문 URL·장문 점수
-    설명·반복 면책은 넣지 않고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
+    Top 3 짧은 제목, live Macro Snapshot, 추정 안내 한 줄. 원문 URL이 있는 핵심
+    기사 제목만 HTML 링크로 만들고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
     """
     news_mode = data.get("news_data_mode", "mock")
     # 헤더는 mock일 때만 데이터 출처를 명시한다(데이터 정직성: 데모를 실데이터로 오인 방지).
@@ -225,14 +270,14 @@ def format_digest_message(data: dict) -> str:
     if news_mode != "live":
         date_line += " · 뉴스 mock 데이터 기반"
     lines = [
-        f"📡 {data['header']} — Executive Daily Brief",
-        date_line,
+        f"📡 {_html(data['header'])} — Executive Daily Brief",
+        _html(date_line),
         "",
         "[오늘의 Executive Signal]",
-        data["executive_one_liner"],
+        _html(data["executive_one_liner"]),
         "",
         "[데일리 현황판]",
-        " · ".join(f"{b['label']} {b['value']}" for b in data["status_board"]),
+        " · ".join(f"{_html(b['label'])} {_html(b['value'])}" for b in data["status_board"]),
     ]
 
     # 현대건설 직접 영향 — 임원 의사결정 최상위. 있으면 AI보다 먼저, implication(리스크/전략/
@@ -242,7 +287,7 @@ def format_digest_message(data: dict) -> str:
     if hdec:
         hdec_bullets, hdec_shown_ids = _hdec_grouped_bullets(hdec)
         if hdec_bullets:
-            lines += ["", "[현대건설 직접]"] + hdec_bullets
+            lines += ["", "[현대건설 연관]"] + hdec_bullets
 
     # AI 관련 신호 (현대건설 직접 다음). 같은 회사 도배는 build_digest_data에서 dedup됨.
     signals = data["top_signals"]
@@ -251,20 +296,18 @@ def format_digest_message(data: dict) -> str:
     section = "AI 관련" if data.get("ai_first") else "주요 신호"
     lines += ["", f"[{section}]"]
     for rank, s in enumerate(signals, start=1):
-        lines.append(f"{rank}. {_clip(s['title'], TITLE_MAX)}")
+        lines.append(f"{rank}. {_title_html(s, TITLE_MAX)}")
         meta = []
         if s.get("final_score") is not None:
             meta.append(f"중요도 {s['final_score']:.1f}/5")
-        if s.get("action_label"):
-            meta.append(s["action_label"])
         if meta:
-            lines.append("   " + " · ".join(meta))
+            lines.append("   " + " · ".join(_html(m) for m in meta))
 
     # live 수집일에 즉시 확인급(신뢰 출처 4.5+) 신호가 없으면 — 약한 출처(블로그·재전송 등)를
     # 임원 알림으로 띄우지 않고, 추적 필요 신호 중심임을 명확히 한다 (P0-C1.6).
     # mock 데모는 즉시 후보가 항상 있어 이 줄이 추가되지 않는다 (다이제스트 길이 불변).
     if news_mode == "live" and not has_instant:
-        lines += ["", "오늘은 즉시 확인급 신호 없음 · 추적 필요 신호 중심"]
+        lines += ["", "오늘은 즉시 확인급 신호 없음 · 관찰 신호 중심"]
 
     # 수주·해외 — 발주 환경(EPC·DC·SMR·중동·재건) 신호를 ≤2줄로. 우선순위 정렬(발주/EPC/
     # 해외 > 공급사 단독)은 build_digest_data(order_class)에서 끝났다. 현대건설 직접에 '이미
@@ -277,9 +320,9 @@ def format_digest_message(data: dict) -> str:
         if biz_pick:
             lines += ["", "[수주·해외]"]
             for b in biz_pick:
-                lines.append(f"· {_clip(b['title'], TITLE_MAX)}")
+                lines.append(f"· {_title_html(b, TITLE_MAX)}")
         else:
-            lines += ["", "[수주·해외] 발주·해외 환경 신호 — 현대건설 직접 항목 참고"]
+            lines += ["", "[수주·해외] 발주·해외 환경 신호 — 현대건설 연관 항목 참고"]
 
     # 리스크·규제 — 중대재해·규제를 가리킨다. 단, 현대건설 직접에 이미 나온 리스크(예: 벌점)는
     # 헤드라인을 반복하지 않는다 — 다음 리스크가 있으면 그걸, 없으면 직접 영향 포인터만 (P0-C1.13).
@@ -289,10 +332,10 @@ def format_digest_message(data: dict) -> str:
                       if r.get("article_id") not in hdec_shown_ids), None)
         if fresh:
             chip = fresh.get("risk_radar_label") or "리스크"
-            lines += ["", f"[리스크·규제] {chip}: {_clip(fresh['title'], TITLE_MAX)}"]
+            lines += ["", f"[리스크·규제] {_html(chip)}: {_title_html(fresh, TITLE_MAX)}"]
         else:
             chip = risk[0].get("risk_radar_label") or "리스크"
-            lines += ["", f"[리스크·규제] {chip}: 현대건설 직접 영향 항목 참고"]
+            lines += ["", f"[리스크·규제] {_html(chip)}: 현대건설 연관 항목 참고"]
 
     # [주요 테마]는 Telegram에서 제거(P0-C1.13) — 부풀어 보이는 '40건' 카운트는 임원용 노이즈.
     # 테마 정보는 리포트/대시보드/감사 헬퍼에 유지된다 (theme_rankings는 data에 그대로 둔다).
@@ -304,7 +347,7 @@ def format_digest_message(data: dict) -> str:
         summary = " · ".join(f"{c['label']} {c['count']}" for c in shown)
         if rest > 0:
             summary += f" · 외 {rest}개 분류"
-        lines += ["", "[카테고리 요약] " + summary]
+        lines += ["", "[카테고리 요약] " + _html(summary)]
 
     # Macro Snapshot — P0-C1.12: 실제 시장지표가 live로 연동될 때만 노출한다.
     # mock/미연동 상태에서는 '시장지표 미연동' placeholder 자체를 넣지 않는다 (노이즈 제거).
@@ -312,16 +355,13 @@ def format_digest_message(data: dict) -> str:
     macro = data.get("macro_snapshot") or {}
     macro_mode = macro.get("macro_data_mode") or data.get("macro_data_mode")
     if macro_mode == "live" and macro.get("values"):
-        lines += ["", f"[Macro Snapshot — {macro.get('source')} · 기준 {macro.get('updated_at')}]"]
+        lines += ["", f"[Macro Snapshot — {_html(macro.get('source'))} · 기준 {_html(macro.get('updated_at'))}]"]
         lines.append(" · ".join(
-            f"{v['label']} {v['value']}{v.get('unit', '')}"
+            f"{_html(v['label'])} {_html(v['value'])}{_html(v.get('unit', ''))}"
             for v in macro["values"]))
 
     lines += ["", "※ 원문·점수·거시경제·카테고리별 근거 기사는 '오늘 브리프 보기' 리포트에서 확인"]
-    message = "\n".join(lines)
-    if len(message) > MESSAGE_BUDGET:
-        message = message[: MESSAGE_BUDGET - 1] + "…"
-    return message
+    return _join_budgeted(lines)
 
 
 def build_digest_message() -> str:

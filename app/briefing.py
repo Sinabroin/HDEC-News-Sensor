@@ -81,8 +81,8 @@ SOURCE_FILTERED_NOTE = (
 # label은 scoring 등급 상수를 그대로 써서 표시 라벨과 항상 일치시킨다(이중 관리 금지).
 STATUS_BOARD_LEGEND = [
     {"label": scoring.GRADE_INSTANT, "meaning": "중요도 4.5 이상 — 운영자 즉시 확인 후보"},
-    {"label": scoring.GRADE_DAILY, "meaning": "중요도 3.5~4.4 — 일간 검토 후보"},
-    {"label": scoring.GRADE_WEEKLY, "meaning": "전략·반복 트렌드 — 지속 추적 대상"},
+    {"label": "중요 신호", "meaning": "중요도 3.5~4.4 — 일간 확인 후보"},
+    {"label": "관찰 신호", "meaning": "전략·반복 트렌드 — 지속 관찰 대상"},
     {"label": "참고/제외", "meaning": "낮은 관련성 또는 제외 판단"},
 ]
 
@@ -90,11 +90,15 @@ STATUS_BOARD_LEGEND = [
 _CATEGORY_BY_IMPLICATION = {
     text: key for key, text in insight.IMPLICATION_TEMPLATES.items()
 }
+_CATEGORY_BY_IMPLICATION.update({
+    "현대건설 직접 언급 — 수주 경쟁력·시장 포지션 직접 영향권": "hdec",
+    "현대건설 직접 연관성 낮음 — 참고 수준 모니터링 대상": "general",
+})
 
 # ---- executive_one_liner 조립용 표현 사전 (표현 전용 — 점수/등급 판단 아님) ----
 
 SUBJECT_BY_CATEGORY = {
-    "hdec": "현대건설 직접 관련 수주 신호",
+    "hdec": "현대건설 연관 수주 신호",
     "dc_power": "AI 데이터센터·전력 인프라 투자",
     "competitor": "경쟁사 스마트건설 행보",
     "safety": "건설현장 중대재해·안전 규제",
@@ -847,8 +851,8 @@ def build_brief(pipeline_counts: dict | None = None,
         "status_board": [
             {"key": "detected", "label": "수집·분석 기사", "value": len(rows)},
             {"key": "immediate", "label": scoring.GRADE_INSTANT, "value": immediate_count},
-            {"key": "daily", "label": scoring.GRADE_DAILY, "value": daily_count},
-            {"key": "weekly", "label": scoring.GRADE_WEEKLY, "value": weekly_count},
+            {"key": "daily", "label": "중요 신호", "value": daily_count},
+            {"key": "weekly", "label": "관찰 신호", "value": weekly_count},
             {"key": "excluded", "label": "참고/제외", "value": excluded_count},
         ],
         "executive_one_liner": one_liner,

@@ -43,7 +43,7 @@ REVIEW_EXCLUDED_TITLE = "참고/제외 기사"
 SOURCE_FILTERED_TITLE = "출처 품질 제외"
 SOURCE_FILTERED_LABEL = "비뉴스성/낮은 신뢰 출처"
 OLD_DAILY_LABEL = "일간 요약"   # 사용자 노출 표면에서 사라져야 하는 옛 라벨
-NEW_DAILY_LABEL = "검토 필요"   # 명확화된 새 라벨
+NEW_DAILY_LABEL = "중요 신호"   # 임원용으로 완화된 새 라벨
 
 # 함께 돌리는 기존 verifier (회귀 게이트) — 출처 품질 Top 3 가드/워크플로/리포트 안전성/
 # brief·digest·quality 체인을 전이적으로 덮는다. WSL에서 파이프라인을 여러 번 돌리므로 넉넉히.
@@ -431,7 +431,7 @@ def check_telegram_brief_mention() -> None:
     # '간결히'만 — 드릴다운을 통째로 넣지 않는다 (카테고리 근거 언급은 1회, details 마크업 없음)
     check("digest의 카테고리 근거 언급은 1회뿐 (드릴다운 미포함)",
           msg.count(DRILLDOWN_TITLE) == 1, f"{msg.count(DRILLDOWN_TITLE)}회")
-    check("digest에 HTML details/summary 마크업 없음 (plain text 유지)",
+    check("digest에 HTML details/summary 마크업 없음 (상세 드릴다운 미포함)",
           "<details" not in msg and "<summary" not in msg)
     # P0-C1.8: Telegram 용어 명확화 + 참고/제외 간결 안내
     check(f"digest에 옛 라벨 '{OLD_DAILY_LABEL}' 없음", OLD_DAILY_LABEL not in msg)

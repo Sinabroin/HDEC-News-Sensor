@@ -1,7 +1,7 @@
 """P0-FINAL-MVP 검증기 — executive 시그널 품질 규칙 회귀 검사.
 
 검사 항목 (전부 결정적 — 네트워크/비밀값 없음):
-- 모든 시그널 entry에 표준 액션 라벨(즉시 확인/검토 필요/추적 필요/모니터링)이 있다.
+- 모든 시그널 entry에는 내부 액션 라벨이 유지되지만 Telegram은 중요도 중심으로 노출한다.
 - spread 라벨이 보수적 표현("토픽상 관련 추정 신호 n건 · 출처 m곳" 또는 "단독 신호")이다.
 - "n개 매체 보도" 같은 확정 표현이 brief/digest에 없다 (lesson: spread-score-overclaiming).
 - 신규 이슈 Top 5가 단일 카테고리로 도배되지 않는다 (전체 카테고리가 2개 이상일 때).
@@ -104,8 +104,9 @@ def check_digest_quality() -> None:
                  (proc.stderr or "").strip()[-300:]):
         return
     message = proc.stdout
-    check("digest에 액션 라벨 표시",
-          any(label in message for label in ALLOWED_ACTION_LABELS))
+    check("digest에 중요도 표시", "중요도 " in message and "/5" in message)
+    check("digest에 검토/추적 필요 액션 라벨 없음",
+          "검토 필요" not in message and "추적 필요" not in message)
     over = OVERCLAIM_RE.findall(message)
     check("digest에 'n개 매체 보도' 확정 표현 없음", not over,
           "; ".join(str(o) for o in over[:3]))

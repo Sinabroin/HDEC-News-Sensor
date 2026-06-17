@@ -94,7 +94,7 @@ def warn(message: str) -> None:
 def _clean_env(**extra: str) -> dict:
     env = {**os.environ, "APP_MODE": "mock"}
     for key in ("MESSAGE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS",
-                "DB_PATH", "REPORT_URL"):
+                "DB_PATH", "REPORT_URL", "NEWS_MODE", "MACRO_MODE"):
         env.pop(key, None)
     env.update(extra)
     return env
@@ -149,6 +149,8 @@ def check_sender_source() -> None:
           'os.environ.get("REPORT_URL"' in src)
     check("sender에 reply_markup/inline_keyboard 버튼 지원 존재",
           "reply_markup" in src and "inline_keyboard" in src)
+    check("sender에 Telegram HTML parse_mode 지원 존재",
+          '"parse_mode": "HTML"' in src)
     check(f"sender 버튼 텍스트 '{BUTTON_TEXT}' 존재", BUTTON_TEXT in src)
     # P0-C1.10: 1:1 봇 진입 버튼 '개인 질의하기' deep link 지원
     check("sender에 '개인 질의하기' 1:1 봇 버튼 지원 존재",
@@ -342,8 +344,13 @@ def _is_live_report(html: str) -> bool:
     return "news-data-mode:live" in html
 
 
+def _has_unlinked_macro_marker(html: str) -> bool:
+    return "시장지표: 미연동" in html or "시장지표 미연동" in html
+
+
 def _check_html_content(html: str, label: str, committed: bool = False) -> None:
     live = _is_live_report(html)
+    committed_live_macro = committed and (live or "Yahoo Finance" in html)
 
     for marker in CORE_HTML_MARKERS:
         check(f"{label}: '{marker}' 포함", marker in html)
@@ -368,20 +375,39 @@ def _check_html_content(html: str, label: str, committed: bool = False) -> None:
     check(f"{label}: 사용자 화면에 'LIVE' 배지 없음", "LIVE" not in html)
     check(f"{label}: 사용자 화면에 '공개 RSS' 표기 없음", "공개 RSS" not in html)
     check(f"{label}: spread 추정 라벨 포함", "추정" in html)
+    check(f"{label}: 탭/필터 UI 존재", 'class="radar-tabs-ui"' in html)
+    check(f"{label}: 기본 탭 checked 존재",
+          bool(re.search(r'id="radar-tab-(hdec|ai)"[^>]* checked', html)))
+    check(f"{label}: primary nav 앵커 점프 href 없음",
+          'href="#hdec-radar"' not in html and 'href="#ai-radar"' not in html
+          and 'href="#biz-radar"' not in html)
+    check(f"{label}: '현대건설 연관' 라벨 사용", "현대건설 연관" in html)
+    check(f"{label}: user-facing '현대건설 직접' 없음", "현대건설 직접" not in html)
+    check(f"{label}: '판정 신뢰도' 문구 없음", "판정 신뢰도" not in html)
+    check(f"{label}: raw confidence 텍스트 없음", "confidence " not in html.lower())
 
     # P0-B6 — mock macro 고정값을 시세처럼 렌더링하지 않는다
     macro_match = re.search(r'<section aria-label="Macro Snapshot".*?</section>',
                             html, re.S)
     macro_sec = macro_match.group(0) if macro_match else ""
     check(f"{label}: Macro Snapshot 섹션 존재", bool(macro_sec))
-    if macro_sec and 'macro-cell live' not in macro_sec:
-        check(f"{label}: macro 미연동 placeholder 표시", "미연동" in macro_sec)
-        decimals = re.findall(r"\d+\.\d+", re.sub(r"<style.*?</style>", "",
-                                                  macro_sec, flags=re.S))
-        check(f"{label}: macro 섹션에 수치 없음 (live 아님)", not decimals,
-              ", ".join(decimals))
-    check(f"{label}: macro 경고(현재 시장값 아님) 포함",
-          bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
+    if committed_live_macro:
+        check(f"{label}: live macro 출처 Yahoo Finance 표기", "Yahoo Finance" in html)
+        check(f"{label}: live macro 기준시각/출처 provenance 표기",
+              "기준" in html or "시장지표: Yahoo Finance" in html)
+        check(f"{label}: live macro와 시장지표 미연동 동시표시 없음",
+              not _has_unlinked_macro_marker(html))
+    else:
+        check(f"{label}: macro live 값 없음 (mock/non-live)",
+              "macro-cell live" not in macro_sec)
+        if macro_sec:
+            check(f"{label}: macro 미연동 placeholder 표시", "미연동" in macro_sec)
+            decimals = re.findall(r"\d+\.\d+", re.sub(r"<style.*?</style>", "",
+                                                      macro_sec, flags=re.S))
+            check(f"{label}: macro 섹션에 수치 없음 (live 아님)", not decimals,
+                  ", ".join(decimals))
+        check(f"{label}: macro 경고(현재 시장값 아님) 포함",
+              bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
     leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
     check(f"{label}: mock macro 고정값 수치 미노출", not leaked, ", ".join(leaked))
 

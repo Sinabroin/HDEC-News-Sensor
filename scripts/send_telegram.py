@@ -25,6 +25,7 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+from html import escape
 
 # Telegram sendMessage 한도(4096자)보다 여유를 둔 발송 상한.
 # build_telegram_digest.MESSAGE_BUDGET(3000)보다 항상 크거나 같아야 한다
@@ -49,7 +50,9 @@ def resolve_message() -> tuple[str, str]:
     """발송할 메시지와 그 출처 라벨을 결정한다."""
     message = os.environ.get("MESSAGE", "").strip()
     if message:
-        return message, "env-message"
+        # Payloads are sent with Telegram HTML parse mode. Treat MESSAGE env as
+        # plain text so literal '<'/'&' cannot break the fallback send path.
+        return escape(message, quote=False), "env-message"
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from build_telegram_digest import build_digest_message
 
@@ -104,6 +107,7 @@ def build_payload(chat_id: str, message: str, report_url: str,
     payload = {
         "chat_id": chat_id,
         "text": message,
+        "parse_mode": "HTML",
         "disable_web_page_preview": "true",
     }
     buttons = []

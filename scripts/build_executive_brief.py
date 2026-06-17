@@ -80,11 +80,6 @@ def _fmt5(value) -> str:
     return "-" if value is None else f"{value:.1f}"
 
 
-def _pct(value) -> str:
-    """판정 신뢰도 — 0~1 값을 백분율로."""
-    return "-" if value is None else f"{round(value * 100)}%"
-
-
 def format_brief_text(brief: dict) -> str:
     """--dry-run용 사람 읽기 좋은 한국어 brief 텍스트."""
     news_mode = brief.get("news_data_mode", "mock")
@@ -110,8 +105,7 @@ def format_brief_text(brief: dict) -> str:
     for s in brief["top_immediate_signals"]:
         lines.append(f"{s['rank']}. {s['title']}")
         lines.append(f"   {s['source']} · {s['category_label']}"
-                     f" · 중요도 {_fmt5(s['final_score'])}/5.0 ({s.get('score_band', '-')})"
-                     f" · 판정 신뢰도 {_pct(s['confidence'])}")
+                     f" · 중요도 {_fmt5(s['final_score'])}/5.0")
         comps = s.get("score_components") or []
         if comps:
             lines.append("   " + " · ".join(

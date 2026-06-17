@@ -4,7 +4,7 @@
 직관적 표현으로 바뀌었는지 결정적으로 검사한다 (네트워크/비밀값 없음):
 - 중요도는 분모 명시(X.X / 5.0)로 표시되고 미터 막대가 있다.
 - 점수 구성요소(현대건설 관련성/사업기회/리스크 등)가 막대/숫자로 보인다.
-- 'confidence 0.90' → '판정 신뢰도 90%'.
+- confidence는 JSON 내부에만 남고 임원 화면에는 노출되지 않는다.
 - '강도' → '테마 비중'(0~100) + 설명 캡션 (P0-C1.9: '상대 강도' 표현 제거).
 - '토픽상 관련 추정 신호' → '관련 기사 n건 · 출처 m곳' + 추정 캡션 (P0-C1.9: '유사 주제 기사' 대체).
 
@@ -82,7 +82,7 @@ def check_report_ui() -> None:
     present_labels = [c for c in COMPONENT_LABELS if c in html]
     check("점수 구성요소 라벨 4종 이상 노출", len(present_labels) >= 4,
           f"{present_labels}")
-    check("'판정 신뢰도' 표현 사용 (confidence 0.90 대체)", "판정 신뢰도" in html)
+    check("임원 화면에 '판정 신뢰도' 문구 없음", "판정 신뢰도" not in html)
     check("리포트에 'confidence ' 원시 표기 없음", "confidence " not in html.lower())
 
     # P0-C1.9: '상대 강도'(단위 불명) → '테마 비중'으로 임원 친화적 표현 통일.
@@ -99,9 +99,9 @@ def check_report_ui() -> None:
           "토픽상 관련 추정 신호" not in html)
     check("관련 기사 추정 캡션 존재 (추정 표기)", "추정" in html)
 
-    bands_present = [b for b in ALLOWED_BANDS if b in html]
-    check("점수대 라벨 1개 이상 노출 (즉시 확인 등)", bool(bands_present),
-          f"{bands_present}")
+    noisy_bands = [b for b in ("검토 필요", "추적 필요") if b in html]
+    check("리포트 주요 화면에 검토/추적 필요 라벨 없음", not noisy_bands,
+          f"{noisy_bands}")
 
 
 def check_brief_fields() -> None:
@@ -146,7 +146,7 @@ def check_dashboard_ui() -> None:
         check(f"대시보드에 점수 헬퍼 {fn}() 존재", fn in html)
     check("대시보드 중요도 미터 마크업 (class=meter)", 'class="meter"' in html)
     check("대시보드 '중요도' 표현 사용", "중요도" in html)
-    check("대시보드 '판정 신뢰도' 표현 사용", "판정 신뢰도" in html)
+    check("대시보드에 '판정 신뢰도' 문구 없음", "판정 신뢰도" not in html)
     check("대시보드 '테마 비중' 표현 사용 (상대 강도 대체)", "테마 비중" in html)
     check("대시보드에 옛 '상대 강도' 표현 없음", "상대 강도" not in html)
     check("대시보드에 'confidence ' 원시 표기 없음", "confidence " not in html.lower())

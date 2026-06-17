@@ -294,7 +294,7 @@ def check_sim(sim: dict | None) -> None:
           bool(sim.get("audit_fin_zero")), f"audit_chars={sim.get('audit_chars')}")
 
     # ---- 회귀 가드 ----
-    check("회귀: [현대건설 직접] 블록 유지", "[현대건설 직접]" in msg)
+    check("회귀: [현대건설 연관] 블록 유지", "[현대건설 연관]" in msg)
     check("회귀: AI 라벨 '[AI 관련]' (리포트형 'Top 3' 아님)",
           "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
     check("회귀: [주요 테마] 없음", "[주요 테마]" not in msg)

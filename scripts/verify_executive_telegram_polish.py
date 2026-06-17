@@ -4,7 +4,7 @@
 보이게 만든 변경을 결정적으로 보장한다 (네트워크 없음, temp DB 격리).
 
 검사:
-- 현대건설 직접이 implication(리스크/전략/운영/재무)별로 묶여 ≤3줄 메모형으로 나온다.
+- 현대건설 연관 블록이 implication(리스크/전략/운영/재무)별로 묶여 ≤3줄 메모형으로 나온다.
 - AI 라벨이 '[AI 관련]'(간결)이고 '[AI 관련 Top 3]'(리포트형)이 아니다.
 - 수주·해외 후보가 있으면 [수주·해외] 블록(≤2줄)이 나온다 — 발주/EPC가 공급사보다 먼저.
 - [주요 테마]·Macro Snapshot·시장지표 미연동·뉴스 자동 수집이 다이제스트에 없다.
@@ -197,8 +197,8 @@ def check_format_units() -> None:
     msg = d.format_digest_message(data)
     check("벌점 헤드라인이 다이제스트에 한 번만 (직접 vs 리스크 중복 제거)",
           msg.count(PENALTY_MARK) == 1, f"{msg.count(PENALTY_MARK)}회")
-    check("리스크·규제 줄이 직접 영향 포인터로 대체",
-          "현대건설 직접 영향 항목 참고" in msg)
+    check("리스크·규제 줄이 현대건설 연관 포인터로 대체",
+          "현대건설 연관 항목 참고" in msg)
     check("[수주·해외] 블록 노출 (후보 있을 때)", "[수주·해외]" in msg)
     check("AI 라벨이 '[AI 관련]'이고 '[AI 관련 Top 3]' 아님",
           "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
@@ -257,9 +257,9 @@ def check_pipeline(sim: dict | None) -> None:
     check("시뮬: live 모드로 fixture 파이프라인 통과", sim.get("mode") == "live")
 
     # 다이제스트 구조 (Phase 2/3/5/6/7)
-    check("다이제스트에 [현대건설 직접] 블록", "[현대건설 직접]" in msg)
-    h_i, a_i = msg.find("[현대건설 직접]"), msg.find("[AI 관련")
-    check("현대건설 직접이 AI보다 먼저", 0 <= h_i < a_i)
+    check("다이제스트에 [현대건설 연관] 블록", "[현대건설 연관]" in msg)
+    h_i, a_i = msg.find("[현대건설 연관]"), msg.find("[AI 관련")
+    check("현대건설 연관이 AI보다 먼저", 0 <= h_i < a_i)
     check("AI 라벨 '[AI 관련]' (리포트형 'Top 3' 아님)",
           "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
     check("[수주·해외] 블록 노출 (발주 환경 후보 있음)", "[수주·해외]" in msg)

@@ -338,22 +338,37 @@ def check_digest_live_branch() -> None:
           "1480.5" not in mock_msg and "Macro Snapshot" not in mock_msg)
 
 
-def _check_report_html(html: str, label: str) -> None:
+def _has_unlinked_macro_marker(html: str) -> bool:
+    return "시장지표: 미연동" in html or "시장지표 미연동" in html
+
+
+def _check_report_html(html: str, label: str, committed: bool = False) -> None:
+    live_news = "news-data-mode:live" in html
+    committed_live_macro = committed and (live_news or "Yahoo Finance" in html)
     macro_match = re.search(r'<section aria-label="Macro Snapshot".*?</section>',
                             html, re.S)
     macro_sec = macro_match.group(0) if macro_match else ""
     check(f"{label}: Macro Snapshot 섹션 존재", bool(macro_sec))
-    if macro_sec and "macro-cell live" not in macro_sec:
-        check(f"{label}: macro 미연동 placeholder", "미연동" in macro_sec)
-        decimals = re.findall(r"\d+\.\d+", macro_sec)
-        check(f"{label}: macro 섹션에 수치 없음 (live 아님)", not decimals,
-              ", ".join(decimals))
-    check(f"{label}: '현재 시장값 아님' 경고 포함",
-          bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
+    if committed_live_macro:
+        check(f"{label}: live macro 출처 Yahoo Finance 표기", "Yahoo Finance" in html)
+        check(f"{label}: live macro 기준시각/출처 provenance 표기",
+              "기준" in html or "시장지표: Yahoo Finance" in html)
+        check(f"{label}: live macro와 시장지표 미연동 동시표시 없음",
+              not _has_unlinked_macro_marker(html))
+    else:
+        check(f"{label}: macro live 값 없음 (mock/non-live)",
+              "macro-cell live" not in macro_sec)
+        if macro_sec:
+            check(f"{label}: macro 미연동 placeholder", "미연동" in macro_sec)
+            decimals = re.findall(r"\d+\.\d+", macro_sec)
+            check(f"{label}: macro 섹션에 수치 없음 (live 아님)", not decimals,
+                  ", ".join(decimals))
+        check(f"{label}: '현재 시장값 아님' 경고 포함",
+              bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
     # 게시 리포트는 mock 스냅샷이거나 (워크플로 auto-publish 후) live 리포트일 수 있다.
     # P0-C1.10: live/mock은 보이지 않는 모드 마커로 판별한다 ('LIVE'·'공개 RSS' 노출 금지).
     # live면 중립 '자동 수집' 표기 + mock 배지 금지, 아니면 mock/데모 표기를 요구한다.
-    if "news-data-mode:live" in html:
+    if live_news:
         check(f"{label}: live 출처 표기 (자동 수집)", "자동 수집" in html)
         check(f"{label}: live 리포트에 '데모 데이터' 배지 없음", "데모 데이터" not in html)
     else:
@@ -376,7 +391,8 @@ def check_report_output() -> None:
         if ok:
             _check_report_html(out.read_text(encoding="utf-8"), "생성 HTML")
     if COMMITTED_REPORT.exists():
-        _check_report_html(COMMITTED_REPORT.read_text(encoding="utf-8"), "커밋 HTML")
+        _check_report_html(COMMITTED_REPORT.read_text(encoding="utf-8"), "커밋 HTML",
+                           committed=True)
     else:
         check("docs/daily/latest.html 존재", False)
 

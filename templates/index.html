@@ -404,7 +404,7 @@
 "use strict";
 const FEEDBACK_BUTTONS = [
   ["positive", "좋음"], ["irrelevant", "불필요"], ["instant_alert", "즉시알림급"],
-  ["weekly_report", "추적 필요"], ["boost_topic", "이 주제 강화"],
+  ["weekly_report", "계속 관찰"], ["boost_topic", "이 주제 강화"],
   ["exclude_source", "이 언론사 제외"], ["exclude_keyword", "이 키워드 제외"],
   ["classify_competitor", "경쟁사 동향으로 분류"], ["classify_macro", "거시경제로 분류"],
 ];
@@ -415,10 +415,10 @@ const GRADE_CLASS = {
 const state = { articles: [], logs: [], selectedId: null, lastRun: null,
                 catSections: [], activeCat: null, brief: null, activeRadar: "ai",
                 radarUserPicked: false };
-/* P0-C1.12 임원 의사결정 레이더 탭 — 현대건설 직접 신호가 있으면 현대건설을 기본 선택,
+/* P0-C1.12 임원 의사결정 레이더 탭 — 현대건설 연관 신호가 있으면 현대건설을 기본 선택,
    없으면 AI (거시경제가 첫 화면을 점유하지 않게 한다). */
 const RADAR_TABS = [
-  ["hdec", "현대건설", "hdec_direct_signals"],
+  ["hdec", "현대건설 연관", "hdec_direct_signals"],
   ["ai", "AI", "ai_radar_signals"],
   ["biz", "수주·해외", "business_signals"],
   ["risk", "리스크·규제", "risk_regulation_signals"],
@@ -427,14 +427,22 @@ const RADAR_TABS = [
   ["all", "전체", "top_new_issues"],
 ];
 const RADAR_HEADINGS = {
-  hdec: "현대건설 직접 영향", ai: "AI 관련", biz: "수주·해외·발주 환경",
+  hdec: "현대건설 연관", ai: "AI 관련", biz: "수주·해외·발주 환경",
   risk: "리스크·규제", competitor: "경쟁사·공급망", macro: "거시경제", all: "전체 신호",
 };
 
 function esc(value) {
   const div = document.createElement("div");
-  div.textContent = value == null ? "" : String(value);
+  div.textContent = displayText(value);
   return div.innerHTML;
+}
+function displayText(value) {
+  return (value == null ? "" : String(value))
+    .replaceAll("현대건설 직접 관련", "현대건설 연관")
+    .replaceAll("현대건설 직접 영향", "현대건설 연관")
+    .replaceAll("현대건설 직접", "현대건설 연관")
+    .replaceAll("검토 필요", "중요 신호")
+    .replaceAll("추적 필요", "계속 관찰");
 }
 function fmtTime(iso) { return iso ? iso.replace("T", " ").slice(0, 16) : "-"; }
 /* ---- 점수 표시 헬퍼 (P0-C1: 분모 명시 /5, 점수대 라벨, 구성요소 막대) ---- */
@@ -466,7 +474,7 @@ const COMP_KEYS = [
 function scoreMeter(s, band) {
   return `<div class="score-meter"><div class="score-head">` +
     `<span class="score-num">중요도 ${score5(s)} / 5.0</span>` +
-    `<span class="band">${esc(band || scoreBand(s))}</span></div>` +
+    `</div>` +
     `<div class="meter"><span style="width:${scorePct(s)}%"></span></div></div>`;
 }
 function compBars(s) {
@@ -505,7 +513,7 @@ function applyDataStatus() {
     setStatus("empty", "아직 수집된 신호가 없습니다 — Run Sensing을 실행하세요.");
   } else if (candidates.length === 0) {
     setStatus("nocandidates",
-      "No Candidates — 4.5점 이상 즉시 알림 후보가 없습니다. 검토 필요 후보를 확인하세요.");
+      "No Candidates — 4.5점 이상 즉시 알림 후보가 없습니다. 중요 신호 후보를 확인하세요.");
   } else {
     setStatus(null);
   }
@@ -541,12 +549,11 @@ function renderBrief(b) {
         `<b>${esc(x.label)}</b> ${esc(x.meaning)}`).join("　·　")
     : "";
   document.getElementById("brief-issues").innerHTML = (b.top_new_issues || []).map(i => {
-    const band = i.score_band || scoreBand(i.final_score);
     const spread = (i.spread && i.spread.label) || "단독 신호";
     return `<li onclick="selectArticle('${esc(i.article_id)}')">` +
       `<span class="t">${esc(i.title)}</span> ${srcQualityChip(i)}<br>` +
       `<span class="sub">${esc(i.category_label || "-")} · 중요도 ${score5(i.final_score)}/5.0` +
-      ` · ${esc(band)} · ${esc(spread)}</span></li>`;
+      ` · ${esc(spread)}</span></li>`;
   }).join("");
   const themes = b.theme_rankings || [];
   document.getElementById("brief-themes").innerHTML = themes.map(t => {
@@ -558,7 +565,7 @@ function renderBrief(b) {
   document.getElementById("brief-themes-note").textContent = b.theme_strength_note || "";
   const modeChip = document.getElementById("mode-chip");
   if (modeChip) modeChip.textContent = (b.news_data_mode === "live")
-    ? "LIVE · 공개 RSS" : "데모 데이터";
+    ? "자동 수집" : "데모 데이터";
   document.getElementById("brief-categories").innerHTML = (b.category_counts || []).map(c =>
     `<li><span>${esc(c.label)}</span><span>${esc(c.count)}` +
     `${c.immediate ? ` <span class="imm">●${esc(c.immediate)}</span>` : ""}</span></li>`
@@ -585,7 +592,7 @@ function renderBrief(b) {
   document.getElementById("brief-macro").innerHTML = macroHtml;
   document.getElementById("brief-note").textContent = "※ " + (b.operator_note || "")
     + (b.source_quality_note ? "  ·  " + b.source_quality_note : "");
-  /* 기본 탭: 현대건설 직접 신호가 있으면 현대건설, 없으면 AI (운영자가 탭을 누르기 전까지) */
+  /* 기본 탭: 현대건설 연관 신호가 있으면 현대건설, 없으면 AI (운영자가 탭을 누르기 전까지) */
   if (!state.radarUserPicked) {
     state.activeRadar = (b.hdec_direct_signals && b.hdec_direct_signals.length)
       ? "hdec" : "ai";
@@ -616,7 +623,7 @@ function radarCardHtml(s, isRisk) {
   const cat = s.category_label ? `<span>${esc(s.category_label)}</span>` : "";
   const date = s.published_at ? `<span>${esc(fmtTime(s.published_at))}</span>` : "";
   /* 리스크 칩/우선도는 등급(벌점·제재 등)이 붙은 카드면 어느 탭에서든 노출한다
-     (현대건설 직접 탭의 제재 기사도 리스크 맥락이 보이게 한다). */
+     (현대건설 연관 탭의 제재 기사도 리스크 맥락이 보이게 한다). */
   const chip = s.risk_radar_label
     ? `<span class="risk-chip">${esc(s.risk_radar_label)}</span>` : "";
   const pri = (s.risk_priority_score != null)
@@ -635,7 +642,7 @@ function renderRadarSignals() {
   if (!el) return;
   const tab = RADAR_TABS.find(t => t[0] === state.activeRadar) || RADAR_TABS[0];
   const heading = document.getElementById("radar-heading");
-  /* 버튼은 짧은 라벨, 섹션 제목은 풀 라벨로 표기 (현대건설→현대건설 직접 영향 등) */
+  /* 버튼은 짧은 라벨, 섹션 제목은 풀 라벨로 표기 (현대건설→현대건설 연관 등) */
   if (heading) heading.textContent = RADAR_HEADINGS[tab[0]] || tab[1];
   const isRisk = tab[0] === "risk";
   const items = (state.brief || {})[tab[2]] || [];
@@ -680,8 +687,6 @@ function renderCategoryArticles() {
   if (!sec) { wrap.innerHTML = ""; return; }
   const arts = sec.top_articles || [];
   let html = arts.map(a => {
-    const grade = a.alert_grade || "미채점";
-    const gradeClass = GRADE_CLASS[grade] || "grade-excluded";
     const link = a.url
       ? ` <a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" ` +
         `onclick="event.stopPropagation()">원문 ↗</a>` : "";
@@ -691,8 +696,7 @@ function renderCategoryArticles() {
       `<div class="cat-art-head"><span class="cat-art-title">${esc(a.title)}</span>` +
       `<span class="cat-art-sc">중요도 ${score5(a.final_score)} / 5.0</span></div>` +
       `<div class="meta"><span>${esc(a.display_source || a.source || "-")}</span>${srcQualityChip(a)}` +
-      `<span>${esc(fmtTime(a.published_at))}</span>` +
-      `<span class="badge ${gradeClass}">${esc(grade)}</span>${link}</div>${why}</div>`;
+      `<span>${esc(fmtTime(a.published_at))}</span>${link}</div>${why}</div>`;
   }).join("");
   if (!arts.length) {
     html = `<div class="caption">표시 가능한 뉴스 출처 근거가 없습니다 ` +
@@ -799,7 +803,6 @@ function cardHtml(a) {
     </div>
     <div class="badges">
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
-      <span class="badge ${gradeClass}">${esc(grade)}</span>
     </div>
     ${scoreMeter(a.final_score, scoreBand(a.final_score))}
     <div class="row-extra">영향 부문: ${esc(units)}</div>
@@ -867,12 +870,8 @@ function detailHtml(d) {
       <span class="badge origin">${esc(a.signal_origin || "-")}</span>
     </div>
     <div class="kv"><a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></div>
-    <div class="badges">
-      <span class="badge ${GRADE_CLASS[s.alert_grade] || "grade-excluded"}">${esc(s.alert_grade || "미채점")}</span>
-    </div>
     ${scoreMeter(s.final_score, scoreBand(s.final_score))}
     ${s.hdec_relevance != null ? compBars(s) : ""}
-    <div class="kv"><div class="k">판정 신뢰도</div>${confPct(s.confidence)}</div>
     <div class="kv"><div class="k">3줄 요약</div>${list(i.summary_3lines)}</div>
     <div class="kv"><div class="k">현대건설 관점</div>${esc(i.hdec_implication || "-")}</div>
     <div class="kv"><div class="k">영향 부문 · 기회/리스크</div>
