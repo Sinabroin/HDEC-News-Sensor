@@ -93,8 +93,10 @@ def warn(message: str) -> None:
 
 def _clean_env(**extra: str) -> dict:
     env = {**os.environ, "APP_MODE": "mock"}
+    # 데이터 정직성 게이트는 항상 mock-safe로 돈다 — 주변 환경의 NEWS_MODE/MACRO_MODE=live가
+    # 이 결정적 검사(브리프 provenance == mock 등)를 흔들지 못하게 제거한다.
     for key in ("MESSAGE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS",
-                "DB_PATH", "REPORT_URL"):
+                "DB_PATH", "REPORT_URL", "NEWS_MODE", "MACRO_MODE"):
         env.pop(key, None)
     env.update(extra)
     return env
@@ -172,9 +174,13 @@ def check_macro_file() -> None:
 
 
 def check_macro_module() -> None:
-    """app/macro_snapshot.py 동작 — live 미구현·가짜 fallback 금지."""
+    """app/macro_snapshot.py 동작 — 경계(네트워크 격리)·가짜 fallback 금지·live 정직성 (P0-C2)."""
+    from datetime import datetime, timedelta, timezone
+
     src = MACRO_MODULE.read_text(encoding="utf-8")
-    check("macro 모듈에 네트워크 import 없음",
+    # P0-C2: live 네트워크 IO는 leaf(app/live_macro.py)가 소유한다 — macro_snapshot은
+    # fetcher를 호출만 할 뿐 네트워크를 직접 import하지 않는다 (collector→live_collector와 동일).
+    check("macro 모듈에 네트워크 import 없음 (live IO는 live_macro leaf로 격리)",
           not re.search(r"^\s*import (urllib|requests|httpx|socket)|"
                         r"^\s*from (urllib|requests|httpx|socket)", src, re.M))
 
@@ -191,11 +197,43 @@ def check_macro_module() -> None:
           bool(snap.get("updated_at")) and snap.get("is_stale") is True)
     check("mock 모드 → values 존재", bool(snap.get("values")))
 
-    live = mod.get_macro_snapshot("live")
-    check("live 모드(미구현) → unavailable 반환",
-          live.get("macro_data_mode") == "unavailable", str(live.get("macro_data_mode")))
-    check("live 모드(미구현) → 가짜 값 없음 (values 비어 있음)",
-          live.get("values") == [])
+    # --- live 분기 (P0-C2) — fetcher 주입으로 네트워크 없이 계약을 검증한다 ---
+    # 기본 fetcher(=실 네트워크)는 여기서 호출하지 않는다. 실수집 SKIP-friendly 검사는
+    # 전용 verify_macro_snapshot_integration.py가 담당한다 (이 게이트는 네트워크 0건 유지).
+    now = datetime(2026, 6, 17, 0, 0, tzinfo=timezone.utc)
+    fresh_iso = (now - timedelta(hours=1)).isoformat(timespec="seconds")
+    stale_iso = (now - timedelta(hours=72)).isoformat(timespec="seconds")
+
+    def fresh_fetch():
+        return {"source": "test_feed", "fetched_at": fresh_iso, "stale_after_hours": 24,
+                "values": [{"key": "usdkrw", "label": "USD/KRW", "value": 1399.9,
+                            "unit": "원", "direction": "up", "as_of": fresh_iso}]}
+
+    ok = mod.get_macro_snapshot("live", fetcher=fresh_fetch, now=now)
+    check("live 성공 → macro_data_mode == live",
+          ok.get("macro_data_mode") == "live", str(ok.get("macro_data_mode")))
+    check("live 성공 → source/updated_at 표기",
+          bool(ok.get("source")) and bool(ok.get("updated_at")))
+    check("live 성공(최근 기준시각) → is_stale False", ok.get("is_stale") is False)
+    check("live 성공 → 실데이터 values 노출", bool(ok.get("values")))
+    leak = [v for v in DISTINCTIVE_MACRO_VALUES
+            if v in json.dumps(ok, ensure_ascii=False)]
+    check("live 성공 → mock 고정값(1480.5/2864.7) 혼입 없음", not leak, ", ".join(leak))
+
+    def stale_fetch():
+        return {"source": "test_feed", "fetched_at": stale_iso, "stale_after_hours": 24,
+                "values": [{"key": "wti", "label": "WTI", "value": 90.0,
+                            "unit": "달러", "as_of": stale_iso}]}
+
+    stale = mod.get_macro_snapshot("live", fetcher=stale_fetch, now=now)
+    check("live 지연 데이터(72h>24h) → is_stale True", stale.get("is_stale") is True)
+
+    for label, bad in (("None 반환", lambda: None),
+                       ("빈 values", lambda: {"source": "x", "values": []}),
+                       ("fetcher 예외", lambda: (_ for _ in ()).throw(RuntimeError("net down")))):
+        res = mod.get_macro_snapshot("live", fetcher=bad, now=now)
+        check(f"live 실패({label}) → unavailable (가짜 값 없음)",
+              res.get("macro_data_mode") == "unavailable" and res.get("values") == [])
 
     missing = mod.get_macro_snapshot("mock", snapshot_path=ROOT / "data" / "_no_such_file.json")
     check("파일 누락 → unavailable (가짜 fallback 없음)",
@@ -232,7 +270,7 @@ def check_brief_provenance() -> None:
     check("brief news_data_mode == mock", brief.get("news_data_mode") == "mock")
     check("brief news_fallback_used == false (mock 정상 경로)",
           brief.get("news_fallback_used") is False)
-    check("brief macro_data_mode ∈ {mock_static, unavailable} (live 미구현)",
+    check("brief macro_data_mode ∈ {mock_static, unavailable} (기본 MACRO_MODE=mock 경로)",
           brief.get("macro_data_mode") in ("mock_static", "unavailable"),
           str(brief.get("macro_data_mode")))
     macro = brief.get("macro_snapshot") or {}

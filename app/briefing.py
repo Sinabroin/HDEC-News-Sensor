@@ -571,17 +571,39 @@ def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
             f"즉시 알림 후보 {immediate_count}건")
 
 
-def _data_warning(news_mode: str, fallback_used: bool) -> str:
-    """뉴스 수집 모드에 맞는 한 줄 데이터 출처 고지 (시장지표는 P0-C1까지 항상 미연동).
+def _macro_warning(macro: dict | None) -> str:
+    """시장지표 한 조각 — live로 실수집됐을 때만 출처·기준을 표기하고 그 외에는 '미연동'.
+
+    P0-C2: 표시 게이팅(_render_macro_section)이 macro_data_mode=="live"일 때만 수치를
+    렌더하는데, footer 고지가 항상 '미연동'이면 같은 리포트가 live 수치와 '미연동'을 동시에
+    보여주는 모순이 생긴다. footer를 같은 조건으로 묶어 그 회귀를 차단한다.
+    """
+    macro = macro or {}
+    if macro.get("macro_data_mode") == "live" and macro.get("values"):
+        line = f"시장지표: {macro.get('source') or 'live'}"
+        updated = macro.get("updated_at")
+        if updated:
+            line += f" · 기준 {updated}"
+        if macro.get("is_stale"):
+            line += " (지연)"
+        return line
+    return "시장지표: 미연동"
+
+
+def _data_warning(news_mode: str, fallback_used: bool, macro: dict | None = None) -> str:
+    """뉴스 수집 모드 + 시장지표 출처를 한 줄로 합친 데이터 출처 고지.
 
     P0-C1.10: 임원 화면에 'LIVE'·'공개 RSS' 같은 기술 용어를 노출하지 않는다 —
     live는 중립적 '자동 수집'으로 표기한다 (내부 news_data_mode/JSON은 그대로 유지).
+    P0-C2: 시장지표 조각은 macro_data_mode가 live일 때만 출처·기준을 표기한다.
     """
     if news_mode == "live":
-        return "뉴스: 자동 수집 · 시장지표: 미연동"
-    if fallback_used:
-        return "뉴스: live 수집 실패로 데모(mock) 데이터 대체 · 시장지표: 미연동"
-    return "뉴스: 데모(mock) 데이터 · 시장지표: 미연동"
+        news = "뉴스: 자동 수집"
+    elif fallback_used:
+        news = "뉴스: live 수집 실패로 데모(mock) 데이터 대체"
+    else:
+        news = "뉴스: 데모(mock) 데이터"
+    return f"{news} · {_macro_warning(macro)}"
 
 
 def build_brief(pipeline_counts: dict | None = None,
@@ -784,8 +806,10 @@ def build_brief(pipeline_counts: dict | None = None,
     top_theme = theme_rankings[0]["theme"] if theme_rankings else None
     one_liner = _compose_one_liner(signal_rows, categories, immediate_count, top_theme)
 
-    # macro snapshot + 데이터 출처 provenance (P0-B6 — mock을 live로 오인하지 않게)
-    macro = macro_snapshot.get_macro_snapshot(config.APP_MODE)
+    # macro snapshot + 데이터 출처 provenance (P0-B6 → P0-C2 — mock을 live로 오인하지 않게).
+    # MACRO_MODE는 NEWS_MODE와 독립적이다: 기본 mock = 네트워크 0건, live일 때만
+    # app/live_macro.py가 공개 시세 API를 시도하고 실패 시 unavailable로 강등한다.
+    macro = macro_snapshot.get_macro_snapshot(config.MACRO_MODE)
 
     # 뉴스 출처 모드는 저장된 기사 signal_origin에서 파생한다 (DB가 단일 진실).
     # provenance가 주어지면 fallback 여부 등 런타임 상태를 추가로 반영한다.
@@ -811,7 +835,7 @@ def build_brief(pipeline_counts: dict | None = None,
         "macro_source": macro.get("source"),
         "macro_updated_at": macro.get("updated_at"),
         "macro_is_stale": macro.get("is_stale", True),
-        "data_warning": _data_warning(news_mode, news_fallback_used),
+        "data_warning": _data_warning(news_mode, news_fallback_used, macro),
         "date_kst": now.strftime("%Y-%m-%d"),
         "generated_at": now.isoformat(timespec="seconds"),
         "total_articles": len(rows),

@@ -1,0 +1,18 @@
+{
+  "provider": "yahoo_chart",
+  "source_label": "Yahoo Finance",
+  "base_url": "https://query1.finance.yahoo.com/v8/finance/chart/",
+  "params": { "interval": "1d", "range": "5d" },
+  "stale_after_hours": 24,
+  "timeout_seconds": 8,
+  "max_indicators": 8,
+  "_symbol_notes": "Yahoo chart meta.shortName으로 라벨 검증함(2026-06 프로빙). USDKRW=X=USD/KRW(CCY), CL=F=WTI 근월물(NYM, Crude Oil), ^KS11=KOSPI Composite Index(KSC) — KOSPI200(^KS200, ~1300대)와 다르므로 종합지수가 필요하면 ^KS11이 맞다. ^VIX=CBOE Volatility Index(CXI), ^TNX=US 10Y 금리(이미 퍼센트 스케일, 예 4.43 — ÷10 불필요), ^GSPC=S&P 500(SNP). sane_min/sane_max는 실세계 스케일 기준 가드로, 심볼 혼동·자릿수 오류 값을 결측 처리한다(가짜로 표시하지 않음). 정상값 오탐을 피하려 넓게 잡았다.",
+  "indicators": [
+    { "key": "usdkrw", "label": "USD/KRW", "unit": "원", "symbol": "USDKRW=X", "sane_min": 500, "sane_max": 3000 },
+    { "key": "wti", "label": "WTI", "unit": "달러", "symbol": "CL=F", "sane_min": 5, "sane_max": 250 },
+    { "key": "kospi", "label": "KOSPI", "unit": "pt", "symbol": "^KS11", "sane_min": 1000, "sane_max": 5000 },
+    { "key": "vix", "label": "VIX", "unit": "pt", "symbol": "^VIX", "sane_min": 1, "sane_max": 200 },
+    { "key": "us10y", "label": "미 국채 10Y", "unit": "%", "symbol": "^TNX", "sane_min": 0, "sane_max": 25 },
+    { "key": "sp500", "label": "S&P 500", "unit": "pt", "symbol": "^GSPC", "sane_min": 1000, "sane_max": 20000 }
+  ]
+}

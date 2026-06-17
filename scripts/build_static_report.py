@@ -835,7 +835,8 @@ def format_summary_text(brief: dict, html: str, sections: list[str]) -> str:
     signals = brief.get("top_immediate_signals") or []
     lines = [
         f"== {REPORT_TITLE} (정적 리포트) ==",
-        f"{brief['date_kst']} (KST) · mock 데이터 기반 · 시장지표 미연동",
+        # 데이터 출처 한 줄은 brief의 data_warning을 그대로 쓴다 (뉴스·시장지표 모드 정직 반영).
+        f"{brief['date_kst']} (KST) · {brief.get('data_warning') or 'mock 데이터 기반'}",
         "",
         "[오늘의 Executive Signal]",
         brief["executive_one_liner"],

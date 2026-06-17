@@ -89,9 +89,15 @@ def format_brief_text(brief: dict) -> str:
     """--dry-run용 사람 읽기 좋은 한국어 brief 텍스트."""
     news_mode = brief.get("news_data_mode", "mock")
     source_line = "자동 수집" if news_mode == "live" else "데모(mock) 데이터"
+    # 시장지표는 macro_data_mode=live일 때만 출처를 표기한다 — 헤더가 항상 '미연동'이면
+    # 아래 [Macro Snapshot] 블록의 live 수치와 모순된다 (P0-C2 정직성).
+    _macro = brief.get("macro_snapshot") or {}
+    macro_tag = (f"시장지표 {_macro.get('source') or 'live'}"
+                 if _macro.get("macro_data_mode") == "live" and _macro.get("values")
+                 else "시장지표 미연동")
     lines = [
         f"== {brief['header']} — Executive Brief ==",
-        f"{brief['date_kst']} (KST) · 뉴스 {source_line} · 시장지표 미연동",
+        f"{brief['date_kst']} (KST) · 뉴스 {source_line} · {macro_tag}",
         "",
         "[데일리 현황판]",
         " · ".join(f"{b['label']} {b['value']}" for b in brief["status_board"]),
