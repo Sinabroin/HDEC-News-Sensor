@@ -29,6 +29,8 @@ TOP_THEMES = 5
 TOP_RADAR = 5
 # 카테고리 드릴다운에서 카테고리당 노출할 근거 기사 상한 (모바일 가독성 · 나머지는 '외 n건')
 TOP_CATEGORY_ARTICLES = 6
+TOP_DISPLAY_SCORE_FLOOR = 2.5
+TOP_NEW_SCORE_FLOOR = 2.5
 
 # spread 한계 고지: 토픽 후보 집합이 겹치는 신호 수 기반의 보수적 추정이다.
 # (동일 사건 클러스터링이 아니며, dedup으로 제거된 중복 기사는 집계되지 않는다)
@@ -198,6 +200,26 @@ def _parse_topics(row: dict) -> list[str]:
     except ValueError:
         return []
     return [t for t in topics if isinstance(t, str)]
+
+
+def _age_days(published_at: str) -> float | None:
+    try:
+        published = datetime.fromisoformat(published_at)
+    except (TypeError, ValueError):
+        return None
+    now = datetime.now(published.tzinfo)
+    return max(0.0, (now - published).total_seconds() / 86400)
+
+
+def _freshness_rank(row: dict) -> int:
+    age = _age_days(row.get("published_at"))
+    if age is None:
+        return 1
+    if age <= scoring.DAILY_FRESH_DAYS:
+        return 0
+    if age <= scoring.BACKGROUND_MAX_DAYS:
+        return 1
+    return 9
 
 
 def _category_key(detail: dict | None) -> str:
@@ -684,7 +706,13 @@ def build_brief(pipeline_counts: dict | None = None,
                     if r.get("alert_grade") == scoring.GRADE_INSTANT]
     instant_rows = _diverse_top(instant_pool, categories, TOP_IMMEDIATE)
     if not instant_rows:
-        instant_rows = _diverse_top(display_rows, categories, TOP_IMMEDIATE)
+        fallback_pool = [r for r in display_rows
+                         if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
+        fallback_pool.sort(key=lambda r: (
+            _freshness_rank(r),
+            -(decisions[r["id"]]["decision_relevance_score"] or 0),
+            -(r.get("final_score") or 0), r["id"]))
+        instant_rows = _diverse_top(fallback_pool, categories, TOP_IMMEDIATE)
     top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
 
     # ---- 섹션별 레이더 신호 (P0-C1.9 + P0-C1.12 임원 의사결정 IA) ----
@@ -696,9 +724,12 @@ def build_brief(pipeline_counts: dict | None = None,
         rows.sort(key=sort_key or (lambda r: (-(r.get("final_score") or 0), r["id"])))
         return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
 
-    def _decision_group(section_key, limit=TOP_RADAR, sort_key=None, company_cap=None):
+    def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
+                        company_cap=None, min_score=None):
         rows = [r for r in display_rows
                 if decision_relevance.in_section(decisions[r["id"]], section_key)]
+        if min_score is not None:
+            rows = [r for r in rows if (r.get("final_score") or 0) >= min_score]
         rows.sort(key=sort_key or (lambda r: (
             -(decisions[r["id"]]["decision_relevance_score"] or 0),
             -(r.get("final_score") or 0), r["id"])))
@@ -743,9 +774,10 @@ def build_brief(pipeline_counts: dict | None = None,
                 -(d["decision_relevance_score"] or 0),
                 -(r.get("final_score") or 0), r["id"])
     business_signals = _decision_group(
-        decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2)
+        decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2,
+        min_score=1.5)
     competitor_supply_signals = _decision_group(
-        decision_relevance.COMPETITOR, company_cap=2)
+        decision_relevance.COMPETITOR, company_cap=2, min_score=1.5)
     macro_economy_signals = _radar_group(radar.MACRO)
 
     # 리스크·규제는 broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
@@ -759,10 +791,19 @@ def build_brief(pipeline_counts: dict | None = None,
     risk_regulation_signals = [
         _entry(i, r) for i, r in enumerate(risk_pool[:TOP_RADAR], start=1)]
 
+    top_issue_pool = [r for r in display_rows
+                      if (r.get("final_score") or 0) >= TOP_NEW_SCORE_FLOOR]
+    if not top_issue_pool:
+        top_issue_pool = [r for r in display_rows
+                          if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
+    top_issue_pool.sort(key=lambda r: (
+        _freshness_rank(r),
+        -(decisions[r["id"]]["decision_relevance_score"] or 0),
+        -(r.get("final_score") or 0), r["id"]))
     top_issues = [
         _entry(i, r)
         for i, r in enumerate(
-            _diverse_top(display_rows, categories, TOP_ISSUES), start=1)
+            _diverse_top(top_issue_pool, categories, TOP_ISSUES), start=1)
     ]
 
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계

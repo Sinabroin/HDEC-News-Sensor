@@ -63,6 +63,14 @@ FIX = [
      "title": "국토부 건설산업 대전환 이끌 혁신기술 발굴한다",
      "snippet": "국토교통부가 스마트건설 혁신기술 공모 지원사업으로 건설산업 대전환을 추진한다",
      "published_at": "2026-06-14T09:00:00+09:00", "url": "https://ex.test/gov"},
+    {"id": "f_event", "source": "인공지능신문",
+     "title": "인공지능 로봇으로 안전한 건설현장 만든다 스마트건설 챌린지 개최",
+     "snippet": "스마트건설 챌린지 행사가 개최되고 총 3억원 상금이 수여된다",
+     "published_at": "2026-06-14T09:00:00+09:00", "url": "https://ex.test/event"},
+    {"id": "f_local_safety", "source": "시사저널",
+     "title": "대전시 건설관리본부 폭염 집중호우 대비 안전점검",
+     "snippet": "지역 건설관리본부가 폭염과 집중호우에 대비해 안전점검을 실시한다",
+     "published_at": "2026-06-14T09:00:00+09:00", "url": "https://ex.test/local"},
     {"id": "f_hdec_ai", "source": "데일리안",
      "title": "현대건설 AI로 하도급 계약 점검 1660억원 상생펀드 운영",
      "snippet": "현대건설이 AI로 협력사 하도급 계약을 점검하고 동반성장펀드를 운영한다",
@@ -79,6 +87,10 @@ FIX = [
      "title": "삼성물산 SMR 데이터센터 EPC 수주 추진 스마트건설 확대",
      "snippet": "삼성물산이 데이터센터 EPC와 원전 SMR 수주를 추진하며 스마트건설을 확대한다",
      "published_at": "2026-06-14T09:00:00+09:00", "url": "https://ex.test/samsung"},
+    {"id": "f_old_hdec", "source": "한국경제",
+     "title": "현대건설 도시정비 12조 데이터센터 양 축 강화",
+     "snippet": "현대건설이 도시정비와 데이터센터를 두 축으로 포트폴리오를 강화한다",
+     "published_at": "2026-04-03T09:00:00+09:00", "url": "https://ex.test/oldhdec"},
     {"id": "f_agg", "source": "v.daum.net",
      "title": "AI 데이터센터 전력 인프라 건설 발주 확대 전망",
      "snippet": "데이터센터 전력 건설 EPC 발주가 늘어날 전망이다",
@@ -154,6 +166,12 @@ def check_rules_files() -> None:
                     "hdec_contract_patterns", "hdec_enforcement_patterns"):
             check(f"{key} 1건 이상", bool(data.get(key)),
                   f"{len(data.get(key) or [])}건")
+        check("low_actionability_score_cap이 검토 필요 임계(3.5)보다 낮음",
+              float(data.get("low_actionability_score_cap") or 9) < DAILY_THRESHOLD,
+              str(data.get("low_actionability_score_cap")))
+        check("low_actionability/local safety 패턴 존재",
+              bool(data.get("low_actionability_title_patterns"))
+              and bool(data.get("local_safety_inspection_patterns")))
         # 발주가/수주가(정상 건설 기사)에 substring으로 걸리는 패턴이 있으면 안 된다.
         # bare '주가'는 위험('발주가'에 포함), '주가 급등'/'목표주가'는 안전(부분문자열 아님).
         pats = [str(p).strip() for p in
@@ -216,6 +234,10 @@ def check_article_quality_unit() -> None:
     check("국토부 혁신기술 → stock_hype/hdec 아님 (중립)",
           not by["f_gov"]["stock_hype"] and not by["f_gov"]["hdec_ai_contract"]
           and not by["f_gov"]["hdec_enforcement"])
+    check("스마트건설 챌린지 행사 → low_actionability",
+          by["f_event"]["low_actionability"])
+    check("지역 폭염·집중호우 안전점검 → local_safety_inspection",
+          by["f_local_safety"]["local_safety_inspection"])
     check("정상 AI 데이터센터 기사 → stock_hype 아님", not by["f_ai_dc"]["stock_hype"])
     check("삼성물산 EPC/SMR 경쟁사 기사 → stock_hype 아님",
           not by["f_samsung"]["stock_hype"])
@@ -238,6 +260,8 @@ def check_radar_unit() -> None:
           f"smr={s['f_smr']} iljin={s['f_iljin']}")
     check("radar: 국토부 혁신기술 ≠ risk_regulation (오탐 차단)",
           s["f_gov"] != radar.RISK, s["f_gov"])
+    check("radar: 지역 폭염·집중호우 안전점검 ≠ risk_regulation (배경 처리)",
+          s["f_local_safety"] != radar.RISK, s["f_local_safety"])
     check("radar: 현대건설 AI 하도급 → ai", s["f_hdec_ai"] == radar.AI, s["f_hdec_ai"])
     check("radar: 현대건설 벌점 → risk_regulation",
           s["f_hdec_enf"] == radar.RISK, s["f_hdec_enf"])
@@ -277,6 +301,17 @@ def check_scoring_unit() -> None:
     check("scoring: 현대건설 벌점 ≠ 제외 (최소 추적 필요로 floor)",
           rows["f_hdec_enf"]["alert_grade"] != GRADE_EXCLUDED,
           rows["f_hdec_enf"]["alert_grade"])
+    for fid, label in (("f_event", "스마트건설 챌린지"),
+                       ("f_local_safety", "지역 안전점검")):
+        check(f"scoring: {label}은 배경화되어 등급=제외",
+              rows[fid]["alert_grade"] == GRADE_EXCLUDED,
+              rows[fid]["alert_grade"])
+        check(f"scoring: {label} 점수 캡(<=1.4)",
+              (rows[fid]["final_score"] or 0) <= 1.4, str(rows[fid]["final_score"]))
+    check("scoring: 30일 초과 현대건설 직접 기사도 배경 근거로 캡",
+          rows["f_old_hdec"]["alert_grade"] == GRADE_EXCLUDED
+          and (rows["f_old_hdec"]["final_score"] or 0) <= 1.0,
+          f"{rows['f_old_hdec']['alert_grade']} {rows['f_old_hdec']['final_score']}")
 
 
 # ---------- 파이프라인 시뮬레이션 (temp DB subprocess, fetch_all 패치) ----------
@@ -347,6 +382,8 @@ def check_pipeline(sim: dict | None) -> None:
     # (3) risk 오탐 가드 — 국토부 혁신기술은 리스크·규제에 없음
     check("국토부 혁신기술이 리스크·규제 섹션에 없음 (오탐 차단)",
           "f_gov" not in allsec["risk"], str(sim.get("risk")))
+    check("지역 폭염·집중호우 안전점검이 리스크·규제 섹션에 없음",
+          "f_local_safety" not in allsec["risk"], str(sim.get("risk")))
 
     # (4) 현대건설 AI 계약 — 제외 아님 + ai 또는 risk 노출
     check("현대건설 AI 하도급이 제외 아님",
@@ -377,6 +414,12 @@ def check_pipeline(sim: dict | None) -> None:
     check("정상 AI 데이터센터 기사가 AI 섹션 유지", "f_ai_dc" in allsec["ai"])
     check("삼성물산 EPC/SMR 경쟁사 기사가 AI 또는 수주·해외 유지",
           "f_samsung" in allsec["ai"] or "f_samsung" in allsec["biz"])
+    check("스마트건설 챌린지가 Top 신규/상단 표시 후보에 없음",
+          "f_event" not in allsec["top_new"] and "f_event" not in allsec["top_imm"],
+          f"top_new={sim.get('top_new')} top_imm={sim.get('top_imm')}")
+    check("30일 초과 현대건설 기사는 Top 신규/상단 표시 후보에 없음",
+          "f_old_hdec" not in allsec["top_new"] and "f_old_hdec" not in allsec["top_imm"],
+          f"top_new={sim.get('top_new')} top_imm={sim.get('top_imm')}")
 
 
 # ---------- mock 무결성 ----------

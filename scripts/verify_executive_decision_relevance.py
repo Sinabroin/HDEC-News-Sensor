@@ -45,6 +45,9 @@ MOCK_BASELINE = {"total_articles": 28, "total_signals": 21, "immediate_count": 3
 
 # ---- fixture: 미션 회귀 시나리오 (제목·출처만으로 결정적 판정) ----
 FIX = [
+    {"id": "f_backlog", "source": "한국경제",
+     "title": "현대건설 수주잔고 95조 돌파 올해 수주 33조 목표",
+     "snippet": "현대건설이 수주잔고 95조원을 확보하고 올해 수주 목표를 제시했다"},
     {"id": "f_dc", "source": "한국경제",
      "title": "현대건설 도시정비 12조 데이터센터 양 축 강화",
      "snippet": "현대건설이 도시정비와 데이터센터를 두 축으로 포트폴리오를 강화한다"},
@@ -57,6 +60,9 @@ FIX = [
     {"id": "f_rnd", "source": "연합뉴스",
      "title": "현대건설 현대ENG R&D조직 일원화 에너지전환 스마트건설 대응",
      "snippet": "현대건설과 현대ENG가 R&D 조직을 일원화해 에너지전환과 스마트건설에 대응한다"},
+    {"id": "f_fin", "source": "한국경제",
+     "title": "현대건설 0% 금리 5000억 전환사채 발행 투자자 몰린 까닭",
+     "snippet": "현대건설이 전환사채를 통해 자금조달에 나섰다"},
     {"id": "f_smr", "source": "매일경제",
      "title": "아파트부터 SMR까지 뉴에너지 인프라 판 키우는 현대건설",
      "snippet": "현대건설이 아파트부터 SMR까지 뉴에너지 인프라 사업을 키운다"},
@@ -75,6 +81,12 @@ FIX = [
     {"id": "f_gaon2", "source": "전기신문",
      "title": "가온전선 전력망 버스덕트 수주 급증",
      "snippet": "가온전선 전력망 버스덕트 수주가 급증했다"},
+    {"id": "f_ls", "source": "전자신문",
+     "title": "LS일렉트릭 AI 데이터센터 전력 솔루션 공급 확대",
+     "snippet": "LS일렉트릭이 AI 데이터센터 전력 솔루션 공급을 확대한다"},
+    {"id": "f_local_safety", "source": "시사저널",
+     "title": "대전시 건설관리본부 폭염 집중호우 대비 안전점검",
+     "snippet": "지역 건설관리본부가 폭염과 집중호우에 대비해 안전점검을 실시한다"},
     {"id": "f_money", "source": "데일리머니",
      "title": "스페이스X 상장 쇼크의 대안 SMR 파운드리 거물 두산에너빌리티로 머니무브 터졌다",
      "snippet": "두산에너빌리티 SMR 파운드리 머니무브 테마주 급등"},
@@ -182,19 +194,29 @@ def check_decision_unit() -> None:
     def secs(fid):
         return by[fid]["executive_sections"]
 
-    # 현대건설 직접 — 전략/계약/조직/뉴에너지가 현대건설 직접 영향에 들어간다.
-    for fid, label in (("f_dc", "데이터센터 전략"), ("f_aicon", "AI 계약"),
-                       ("f_rnd", "R&D 일원화"), ("f_smr", "뉴에너지 SMR")):
-        check(f"현대건설 {label} → 현대건설 직접 영향 멤버 + 제외 아님",
+    # 현대건설 직접 — 전략/계약/조직/재무/뉴에너지가 현대건설 직접 primary다.
+    for fid, label in (("f_backlog", "수주잔고"), ("f_dc", "데이터센터 전략"),
+                       ("f_aicon", "AI 계약"), ("f_rnd", "R&D 일원화"),
+                       ("f_fin", "전환사채·자금조달"), ("f_smr", "뉴에너지 SMR")):
+        check(f"현대건설 {label} → 현대건설 직접 영향 primary + 제외 아님",
               dr.HDEC_DIRECT in secs(fid)
+              and by[fid]["primary_executive_section"] == dr.HDEC_DIRECT
               and by[fid]["decision_relevance_tier"] != dr.TIER_EXCLUDE,
-              f"{secs(fid)} / {by[fid]['decision_relevance_tier']}")
-    # 현대건설 벌점 — 리스크·규제(primary) + 현대건설 직접(secondary) 둘 다 노출.
+              f"{secs(fid)} / {by[fid]['primary_executive_section']} / {by[fid]['decision_relevance_tier']}")
+    check("현대건설 도시정비·데이터센터 → AI secondary 허용",
+          dr.AI in by["f_dc"]["secondary_executive_sections"],
+          str(by["f_dc"]["secondary_executive_sections"]))
+    check("현대건설 전환사채 → 거시 secondary, AI primary 아님",
+          dr.MACRO in by["f_fin"]["secondary_executive_sections"]
+          and by["f_fin"]["primary_executive_section"] == dr.HDEC_DIRECT
+          and dr.AI not in secs("f_fin"), str(secs("f_fin")))
+    # 현대건설 벌점 — 현대건설 직접(primary) + 리스크·규제(secondary) 둘 다 노출.
     check("현대건설 벌점 → 리스크·규제 + 현대건설 직접 둘 다 멤버",
           dr.RISK in secs("f_pen") and dr.HDEC_DIRECT in secs("f_pen"),
           str(secs("f_pen")))
-    check("현대건설 벌점 primary == 리스크·규제 (임원이 반드시 봄)",
-          by["f_pen"]["primary_executive_section"] == dr.RISK)
+    check("현대건설 벌점 primary == 현대건설 직접 (리스크 secondary 유지)",
+          by["f_pen"]["primary_executive_section"] == dr.HDEC_DIRECT,
+          by["f_pen"]["primary_executive_section"])
     # 삼성물산 EPC/SMR/DC — AI + 수주·해외 둘 다 후보 (multi-section).
     check("삼성물산 EPC/SMR/DC → AI + 수주·해외 멤버",
           dr.AI in secs("f_sams") and dr.ORDER_OVERSEAS in secs("f_sams"),
@@ -207,6 +229,15 @@ def check_decision_unit() -> None:
           (dr.COMPETITOR in secs("f_sk") or dr.ORDER_OVERSEAS in secs("f_sk"))
           and by["f_sk"]["decision_relevance_tier"] != dr.TIER_EXCLUDE,
           str(secs("f_sk")))
+    for fid, label in (("f_gaon1", "가온전선 공급"), ("f_gaon2", "가온전선 수주"),
+                       ("f_ls", "LS일렉트릭 공급")):
+        check(f"공급사 단독({label}) → 경쟁사·공급망 primary, 수주·해외/AI 아님",
+              by[fid]["primary_executive_section"] == dr.COMPETITOR
+              and dr.ORDER_OVERSEAS not in secs(fid) and dr.AI not in secs(fid),
+              str(secs(fid)))
+    check("지역 폭염·집중호우 안전점검 → 리스크 primary 아님",
+          by["f_local_safety"]["primary_executive_section"] != dr.RISK,
+          by["f_local_safety"]["primary_executive_section"])
     # stock-hype — exclude 티어 + other (어떤 임원 섹션에도 없음).
     for fid in ("f_money", "f_iljin"):
         check(f"stock-hype({fid}) → exclude 티어 + other",
@@ -218,8 +249,9 @@ def check_decision_unit() -> None:
 def check_telegram_dedup_unit() -> None:
     sys.path.insert(0, str(ROOT / "scripts"))
     import build_telegram_digest as d
-    g1 = {"title": FIX[8]["title"], "article_id": "f_gaon1", "topic": "전력 케이블"}
-    g2 = {"title": FIX[9]["title"], "article_id": "f_gaon2", "topic": "버스덕트"}
+    by_id = {f["id"]: f for f in FIX}
+    g1 = {"title": by_id["f_gaon1"]["title"], "article_id": "f_gaon1", "topic": "전력 케이블"}
+    g2 = {"title": by_id["f_gaon2"]["title"], "article_id": "f_gaon2", "topic": "버스덕트"}
     check("같은 회사(가온전선) 2건은 같은 dedup 키",
           d._entity_key(g1) == d._entity_key(g2),
           f"{d._entity_key(g1)} vs {d._entity_key(g2)}")
@@ -282,24 +314,34 @@ def check_pipeline(sim: dict | None) -> None:
     S = {k: set(sim.get(k) or []) for k in core}
     grades = sim.get("grades") or {}
 
-    # 현대건설 직접 — 전략/계약/조직/뉴에너지/벌점이 현대건설 직접 섹션에 노출 + 제외 아님.
-    for fid, label in (("f_dc", "데이터센터"), ("f_aicon", "AI 계약"),
+    # 현대건설 직접 — 전략/계약/조직/재무/뉴에너지/벌점이 현대건설 직접 섹션에 노출 + 제외 아님.
+    for fid, label in (("f_backlog", "수주잔고"), ("f_dc", "데이터센터"),
                        ("f_rnd", "R&D"), ("f_smr", "뉴에너지"), ("f_pen", "벌점")):
         check(f"현대건설 {label}({fid})가 현대건설 직접 섹션에 노출", fid in S["hdec"],
               f"hdec={sorted(S['hdec'])}")
         check(f"현대건설 {label}({fid}) 제외 아님",
+              grades.get(fid) != GRADE_EXCLUDED, str(grades.get(fid)))
+    for fid, label in (("f_aicon", "AI 계약"), ("f_fin", "전환사채")):
+        check(f"현대건설 {label}({fid}) primary는 현대건설 직접이며 제외 아님",
               grades.get(fid) != GRADE_EXCLUDED, str(grades.get(fid)))
     # 현대건설 벌점은 리스크·규제에도 노출 (multi-section).
     check("현대건설 벌점이 리스크·규제 섹션에도 노출", "f_pen" in S["risk"])
     # 수주·해외 broadening — 삼성물산/중동 재건/SK에코플랜트가 수주·해외에 노출.
     check("삼성물산 EPC/SMR이 AI 또는 수주·해외에 노출",
           "f_sams" in S["ai"] or "f_sams" in S["biz"])
-    check("중동 재건 기사가 수주·해외에 노출 (0건 회귀 방지)", "f_mideast" in S["biz"],
+    check("수주·해외에 발주/EPC/해외 후보 노출 (0건 회귀 방지)",
+          bool(S["biz"] & {"f_mideast", "f_sams", "f_sk", "f_backlog"}),
           f"biz={sorted(S['biz'])}")
     check("중동 재건 기사 제외 아님 (발주 환경 floor)",
           grades.get("f_mideast") != GRADE_EXCLUDED, str(grades.get("f_mideast")))
     check("SK에코플랜트가 수주·해외 또는 경쟁사·공급망에 노출",
           "f_sk" in S["biz"] or "f_sk" in S["comp"])
+    for fid in ("f_gaon1", "f_gaon2", "f_ls"):
+        check(f"공급사 단독 {fid}는 수주·해외가 아니라 경쟁사·공급망/근거",
+              fid not in S["biz"] and (fid in S["comp"] or grades.get(fid) == GRADE_EXCLUDED),
+              f"biz={sorted(S['biz'])} comp={sorted(S['comp'])} grade={grades.get(fid)}")
+    check("지역 폭염·집중호우 안전점검은 리스크 섹션에 없음",
+          "f_local_safety" not in S["risk"], f"risk={sorted(S['risk'])}")
     # stock-hype — 제외 + 어떤 임원 섹션에도 없음 (P0-C1.11 유지).
     for fid in ("f_money", "f_iljin"):
         where = [k for k in core if fid in S[k]]

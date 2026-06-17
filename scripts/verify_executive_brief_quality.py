@@ -83,6 +83,13 @@ def check_brief_quality() -> None:
           "; ".join(bad_spreads[:3]))
 
     issues = brief.get("top_new_issues") or []
+    low_scores = [f"{e.get('article_id')}:{e.get('final_score')}"
+                  for e in issues
+                  if (e.get("final_score") or 0) < 2.5]
+    has_better = any((e.get("final_score") or 0) >= 2.5
+                     for e in (brief.get("top_immediate_signals") or []) + issues)
+    check("신규 이슈 Top에 저점수(<2.5) 항목 없음 (대안 후보 있을 때)",
+          not (has_better and low_scores), "; ".join(low_scores))
     issue_cats = {e.get("category") for e in issues if e.get("category")}
     total_cats = len(brief.get("category_counts") or [])
     if total_cats >= 2 and len(issues) >= 2:

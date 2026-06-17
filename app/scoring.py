@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime, timedelta
 
-from app import article_quality, db, decision_relevance, source_quality
+from app import article_quality, db, decision_relevance, radar, source_quality
 
 MODEL_NAME = "rule-based-v1"
 
@@ -90,6 +90,10 @@ def _max_grade(a: str, b: str) -> str:
 INSTANT_THRESHOLD = 4.5
 DAILY_THRESHOLD = 3.5
 MAX_INSTANT_CANDIDATES = 3
+DAILY_FRESH_DAYS = 14
+BACKGROUND_MAX_DAYS = 30
+STALE_BACKGROUND_SCORE_CAP = 1.4
+OLD_BACKGROUND_SCORE_CAP = 1.0
 
 TREND_CLUSTERS = ["dc", "nuclear", "competitor", "safety", "mideast", "macro", "gov"]
 
@@ -149,6 +153,34 @@ def _is_fresh(published_at: str, hours: int = 48) -> bool:
         return now - published <= timedelta(hours=hours)
     except (TypeError, ValueError):
         return False
+
+
+def _age_days(published_at: str) -> float | None:
+    try:
+        published = datetime.fromisoformat(published_at)
+    except (TypeError, ValueError):
+        return None
+    now = datetime.now(published.tzinfo)
+    age = now - published
+    return max(0.0, age.total_seconds() / 86400)
+
+
+def _mid_age_allowed(article: dict, aq: dict) -> bool:
+    """15~30일 기사 중 daily/top 경쟁을 허용할 강한 예외인지."""
+    if decision_relevance.is_hdec_primary_candidate(article):
+        return True
+    if aq.get("hdec_enforcement"):
+        return True
+    try:
+        if radar.classify_section(article, None) == radar.RISK:
+            return True
+    except Exception:  # noqa: BLE001 — 점수화는 보수적으로 계속
+        pass
+    if decision_relevance.is_order_environment(article):
+        return True
+    if decision_relevance.is_finance_signal(article):
+        return True
+    return False
 
 
 # ---------- 9개 평가 항목 (각 0~5) ----------
@@ -438,6 +470,32 @@ def _score_article(article: dict, ctx: dict) -> dict:
     if stockhype_capped:
         final_score = round(article_quality.STOCKHYPE_SCORE_CAP, 2)
 
+    background_capped = False
+    background_reason = ""
+    age_days = _age_days(article.get("published_at"))
+    if age_days is not None and age_days > BACKGROUND_MAX_DAYS:
+        if final_score > OLD_BACKGROUND_SCORE_CAP:
+            final_score = round(OLD_BACKGROUND_SCORE_CAP, 2)
+        background_capped = True
+        background_reason = (
+            f"게시 {age_days:.0f}일 경과(30일 초과) — 오늘의 상단/신규 신호가 아닌 "
+            "배경 근거로 점수 상한 처리")
+    elif (age_days is not None and age_days > DAILY_FRESH_DAYS
+          and not _mid_age_allowed(article, aq)):
+        if final_score > STALE_BACKGROUND_SCORE_CAP:
+            final_score = round(STALE_BACKGROUND_SCORE_CAP, 2)
+        background_capped = True
+        background_reason = (
+            f"게시 {age_days:.0f}일 경과(15~30일)이나 현대건설 직접·공식 리스크·"
+            "주요 수주/해외·재무 신호가 아님 — 배경 근거로 점수 상한 처리")
+
+    if aq.get("low_actionability") and not aq.get("hdec_direct"):
+        if final_score > article_quality.LOW_ACTIONABILITY_SCORE_CAP:
+            final_score = round(article_quality.LOW_ACTIONABILITY_SCORE_CAP, 2)
+        background_capped = True
+        background_reason = aq.get("low_actionability_reason") or (
+            "행사·지역 점검성 기사 — 임원 상단 노출에서 배경화")
+
     matched_groups = sum(1 for v in g.values() if v)
     confidence = round(clamp(0.45 + 0.05 * min(matched_groups, 8)
                              + (0.08 if tier >= 4.5 else 0.0)
@@ -455,11 +513,16 @@ def _score_article(article: dict, ctx: dict) -> dict:
             f"출처 품질이 낮아({quality['source_quality_label']}) 상위 노출을 제한 — "
             f"중요도를 {final_score}점으로 상한 처리함; "
         ) + why_not_higher
+    if background_capped:
+        why_not_higher = background_reason + "; " + why_not_higher
 
     # 등급 결정 → 임원 관련성 floor/강등 (P0-C1.11). _grade_for는 그대로 두고 후처리한다.
     grade = _grade_for(final_score, dims)
     scoring_reason = _build_reason(g, bonuses, penalties)
-    if aq["stock_hype"]:
+    if background_capped:
+        grade = GRADE_EXCLUDED
+        scoring_reason = "배경/근거 보존 대상 — 임원 상단 신호 제외 / " + scoring_reason
+    elif aq["stock_hype"]:
         # 주식 테마/리서치성 → 제외 등급으로 강등 (전략 게이트로 추적 필요에 오르는 것도 차단).
         grade = GRADE_EXCLUDED
         why_not_higher = aq["stock_hype_reason"] + "; " + why_not_higher

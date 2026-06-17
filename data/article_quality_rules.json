@@ -2,6 +2,7 @@
   "version": "p0-c1.11",
   "description": "임원 관련성 품질 게이트 정책 (P0-C1.11). 주식 테마/급등/증권 리서치성(stock-hype) 기사를 임원용 핵심 섹션에서 강등하고, 현대건설 직접 AI-계약/제재 기사를 보호한다. 이 키워드는 사실 보증이 아니라 결정적 랭킹/필터 가드레일이다. 본문(snippet/source)이 아닌 제목·출처 위주로 판정해 오탐을 줄인다.",
   "stockhype_score_cap": 2.4,
+  "low_actionability_score_cap": 1.4,
   "_note_jugA": "bare '주가'는 '발주가/수주가'(정상 건설 기사)에 substring으로 걸려 오탐을 낸다 — 포함하지 않는다. 대신 '목표주가'/'주가 급등' 등 명시 구절만 쓴다.",
   "stockhype_strong_title_patterns": [
     "머니무브", "테마주", "관련주", "대장주", "주도주", "급등주", "상한가",
@@ -15,6 +16,15 @@
   ],
   "equity_research_source_patterns": [
     "리서치알음", "인포스탁", "팍스넷", "씽크풀", "한경컨센서스", "써치엠"
+  ],
+  "low_actionability_title_patterns": [
+    "챌린지", "공모전", "경진대회", "상금", "행사", "세미나", "컨퍼런스",
+    "서밋", "summit", "포럼", "전시회", "박람회", "성황리", "마무리",
+    "개최", "교육", "양성", "전문 엔지니어 양성", "모집"
+  ],
+  "local_safety_inspection_patterns": [
+    "폭염", "집중호우", "대비", "안전점검", "지역", "지자체",
+    "건설관리본부", "대전시", "시흥시", "구청"
   ],
   "hdec_names": ["현대건설", "hyundai e&c", "hyundai engineering"],
   "ai_tokens": ["ai", "인공지능", "에이아이", "생성형"],

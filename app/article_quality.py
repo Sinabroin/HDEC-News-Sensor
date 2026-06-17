@@ -36,9 +36,12 @@ _RULES_PATH = config.DATA_DIR / "article_quality_rules.json"
 # JSON 로드 실패 시에도 안전하게 동작하도록 최소 기본값 (가짜 강등 금지 — 비면 비활성).
 _DEFAULT_RULES = {
     "stockhype_score_cap": 2.4,
+    "low_actionability_score_cap": 1.4,
     "stockhype_strong_title_patterns": [],
     "stockhype_weak_title_patterns": [],
     "equity_research_source_patterns": [],
+    "low_actionability_title_patterns": [],
+    "local_safety_inspection_patterns": [],
     "hdec_names": ["현대건설"],
     "ai_tokens": ["ai", "인공지능"],
     "hdec_contract_patterns": [],
@@ -65,6 +68,8 @@ def _load_rules() -> dict:
 
 # 공개 상수 — 다른 도메인이 import해 단일 소스로 쓴다.
 STOCKHYPE_SCORE_CAP = float(_load_rules().get("stockhype_score_cap") or 2.4)
+LOW_ACTIONABILITY_SCORE_CAP = float(
+    _load_rules().get("low_actionability_score_cap") or 1.4)
 
 
 def _first(haystack: str, patterns) -> str | None:
@@ -98,10 +103,13 @@ def assess(source: str = "", title: str = "", snippet: str = "") -> dict:
         hdec_ai_contract: bool — 현대건설 + AI + 계약/하도급/협력사/상생펀드 등
         hdec_enforcement: bool — 현대건설 + 벌점/제재/영업정지/입찰제한 등
         enforcement_severe: bool — 영업정지·입찰제한·중대재해 등 고심각 제재
+        low_actionability: bool — 행사/챌린지/교육성 PR 등 상단 노출 부적합
+        local_safety_inspection: bool — 지자체 폭염·집중호우 대비 점검 등 배경성 안전 기사
     """
     rules = _load_rules()
     title_low = (title or "").lower()
     src_low = (source or "").lower()
+    text_low = f"{title or ''} {snippet or ''}".lower()
 
     hdec_direct = _first(title_low, rules.get("hdec_names")) is not None
 
@@ -123,6 +131,23 @@ def assess(source: str = "", title: str = "", snippet: str = "") -> dict:
                       "임원 핵심 섹션에서 강등")
     else:
         reason = ""
+
+    # ---- low-actionability / local inspection ----
+    # 제목+스니펫만 본다. 현대건설 직접·제재 기사는 아래 HDEC 보호 로직이 처리하므로
+    # 행사/교육/챌린지성 표현이 있어도 여기서 배경화하지 않는다.
+    local_hits = _all_hits(text_low, rules.get("local_safety_inspection_patterns"))
+    local_safety = bool(len(local_hits) >= 2 and not hdec_direct)
+    low_hits = _all_hits(text_low, rules.get("low_actionability_title_patterns"))
+    low_actionability = bool((low_hits or local_safety) and not hdec_direct)
+    low_reason = ""
+    if local_safety:
+        low_reason = (
+            f"지자체/지역 안전점검성 기사({'·'.join(local_hits[:3])}) — "
+            "임원 상단 노출에서 배경화")
+    elif low_actionability:
+        low_reason = (
+            f"행사·챌린지·교육성 기사({'·'.join(low_hits[:3])}) — "
+            "임원 상단 노출에서 배경화")
 
     # ---- 현대건설 직접 AI-계약 / 제재 ----
     hdec_ai_contract = False
@@ -146,4 +171,7 @@ def assess(source: str = "", title: str = "", snippet: str = "") -> dict:
         "hdec_ai_contract": hdec_ai_contract,
         "hdec_enforcement": hdec_enforcement,
         "enforcement_severe": enforcement_severe,
+        "low_actionability": low_actionability,
+        "low_actionability_reason": low_reason,
+        "local_safety_inspection": local_safety,
     }

@@ -24,6 +24,7 @@ import argparse
 import os
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -67,7 +68,7 @@ def _signal_rows(signals, risk: bool = False) -> list[str]:
         out.append(
             f"| {_cell(s.get('rank'), 4)} | {_cell(s.get('action_label') or s.get('alert_grade'), 14)} "
             f"| {score_txt} | {_cell(src, 24)} "
-            f"| {_cell(s.get('radar_label') or s.get('radar_section'), 14)} "
+            f"| {_cell(s.get('executive_label') or s.get('radar_label') or s.get('radar_section'), 14)} "
             f"| {_cell(s.get('title'))} |")
     return out
 
@@ -90,6 +91,17 @@ def _suspicious_section(brief: dict) -> list[str]:
     # '현대건설'이 들어가 self-fulfilling 오탐을 내는 것을 막는다 — P0-C1.12 미션 주의).
     high_tiers = {decision_relevance.TIER_A, decision_relevance.TIER_A_MINUS,
                   decision_relevance.TIER_B_PLUS}
+
+    def _age_days(row: dict) -> float | None:
+        try:
+            published = datetime.fromisoformat(row.get("published_at") or "")
+        except (TypeError, ValueError):
+            return None
+        return max(0.0, (datetime.now(published.tzinfo) - published).total_seconds() / 86400)
+
+    def _freshness_background(row: dict) -> bool:
+        age = _age_days(row)
+        return age is not None and age > 30
 
     # 카테고리/섹션 파생 (brief와 동일 로직 — 점수 재계산 없음)
     def _category(rid):
@@ -119,7 +131,7 @@ def _suspicious_section(brief: dict) -> list[str]:
             stockhype.append((title, source, grade, section))
         if disp != source:
             aggregator.append((title, source, disp, grade))
-        if aq["hdec_direct"] and grade == "제외":
+        if aq["hdec_direct"] and grade == "제외" and not _freshness_background(r):
             hdec_excluded.append((title, source, grade))
         has_risk_kw = any(kw in title for kw in risk_kw)
         if has_risk_kw and section != radar.RISK:
@@ -127,7 +139,8 @@ def _suspicious_section(brief: dict) -> list[str]:
         if section == radar.RISK and not has_risk_kw and not aq["hdec_enforcement"]:
             risk_no_action.append((title, grade))
         # 의사결정 관련성이 높은데(B+ 이상) 제외 등급이면 surface 후보 — 운영자 점검 대상.
-        if grade == "제외" and dr["decision_relevance_tier"] in high_tiers:
+        if (grade == "제외" and dr["decision_relevance_tier"] in high_tiers
+                and not _freshness_background(r)):
             decision_excluded.append(
                 (title, source, dr["decision_relevance_tier"],
                  dr["executive_label"]))

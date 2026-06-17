@@ -162,6 +162,8 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
         return AI
     if aq["hdec_enforcement"]:
         return RISK
+    if aq.get("local_safety_inspection"):
+        return OTHER
 
     if _hits(text, AI_KEYWORDS):
         return AI
