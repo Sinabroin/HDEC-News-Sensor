@@ -100,6 +100,73 @@ def _dedup(rows: list[dict]) -> list[dict]:
     return kept
 
 
+# news.google 리다이렉트는 canonical 원문이 아니다 — 원문(originallink) 우선 판정에 쓴다.
+_GOOGLE_REDIRECT_MARK = "news.google."
+
+
+def merge_provider_articles(rows: list[dict]) -> list[dict]:
+    """여러 provider(Google RSS + Naver API)의 raw 기사를 교차 dedup해 합친다 (P0-D2).
+
+    설계 (coverage와 ranking 분리: 여기선 '하나의 정규화된 기사'만 만든다):
+    - dedup 키: url_hash(정확 URL) 우선, 다음 normalized_title(동일 사건·다른 URL).
+    - 동일 사건이 여러 provider에서 오면 하나만 남기고, source_metadata.provider를
+      결합 토큰('google_news_rss+naver_news_api')으로 합쳐 provider 근거를 보존한다
+      (rules.md §3 허용 키 'provider'만 쓴다 — naver_link 등 새 키를 만들지 않는다).
+    - 원문 URL을 우선한다: news.google 리다이렉트보다 언론사 원문(originallink)을 채택하고,
+      그때 더 구체적인 source(매체명)도 함께 받는다.
+    - Naver-only 기사(중복 아님)는 절대 잃지 않는다 — 새 항목으로 남는다.
+
+    입력은 raw dict(live_collector / naver_news_provider 형태)이며, 반환도 같은 raw dict다
+    (collector._to_article_row가 이후 정규화/저장한다). 점수·등급은 다루지 않는다.
+    """
+    kept: list[dict] = []
+    by_url: dict[str, int] = {}
+    by_title: dict[str, int] = {}
+    providers: list[set] = []
+
+    for raw in rows:
+        url = raw.get("url") or ""
+        title = raw.get("title") or ""
+        uh = make_url_hash(url)
+        nt = normalize_title(title)
+        prov = ((raw.get("source_metadata") or {}).get("provider")) or "unknown"
+
+        idx = by_url.get(uh)
+        if idx is None and nt:
+            idx = by_title.get(nt)
+
+        if idx is None:
+            entry = dict(raw)
+            entry["source_metadata"] = dict(raw.get("source_metadata") or {})
+            kept.append(entry)
+            i = len(kept) - 1
+            by_url[uh] = i
+            if nt:
+                by_title.setdefault(nt, i)
+            providers.append({prov})
+            continue
+
+        # 중복 — provider 근거 병합 + 원문(originallink) URL 우선
+        providers[idx].add(prov)
+        existing = kept[idx]
+        ex_url = (existing.get("url") or "").lower()
+        if _GOOGLE_REDIRECT_MARK in ex_url and _GOOGLE_REDIRECT_MARK not in url.lower():
+            by_url.pop(make_url_hash(existing.get("url") or ""), None)
+            existing["url"] = url
+            meta = dict(existing.get("source_metadata") or {})
+            meta["source_url"] = url
+            existing["source_metadata"] = meta
+            if raw.get("source") and existing.get("source") in (None, "", "출처 미상"):
+                existing["source"] = raw["source"]
+            by_url[make_url_hash(url)] = idx
+
+    for i, entry in enumerate(kept):
+        meta = dict(entry.get("source_metadata") or {})
+        meta["provider"] = "+".join(sorted(providers[i]))
+        entry["source_metadata"] = meta
+    return kept
+
+
 def _ingest(raw_articles: list[dict], signal_origin: str) -> tuple[int, int, int]:
     """raw 기사들을 정규화 → dedup(배치+DB) → articles 저장. (collected, deduped, inserted)."""
     queries = _load_topic_queries()
@@ -134,36 +201,70 @@ def _run_mock(fallback: bool = False, attempted: str = "mock") -> dict:
 
 
 def _run_live() -> dict:
-    """공개 RSS 수집 파이프라인. 0건이면 live를 주장하지 않고 mock으로 fallback한다.
+    """공개 provider 수집 파이프라인. 0건이면 live를 주장하지 않고 mock으로 fallback한다.
 
-    네트워크 import는 이 함수 안에서만 일어난다 (rules.md §10 D3 — collector 모듈
-    레벨 네트워크 import 금지). live가 실패하면 가짜 live 값을 만들지 않고
-    mock fallback을 명시 라벨과 함께 반환한다 ("live 주장 금지").
+    P0-D2: Google News RSS(기본 provider)에 더해 선택적 Naver News Search API(보조 provider)를
+    합친다. 두 provider 결과를 교차 dedup(merge_provider_articles)한 뒤 동일한 정규화/저장
+    파이프라인에 넣는다 — coverage(폭넓은 수집)와 ranking(점수/등급)은 분리한다.
+
+    네트워크 import는 이 함수 안에서만 일어난다 (rules.md §10 D3 — collector 모듈 레벨
+    네트워크 import 금지). Naver는 기본 off(disabled)이며 자격증명이 없으면 정직하게 skip한다
+    (전체 수집을 실패시키지 않는다). live가 0건이면 가짜 live를 만들지 않고 mock으로 fallback한다.
     """
-    from app import live_collector
+    from app import live_collector, naver_news_provider
 
     # 출처 품질로 수집 단계에서 제외된 비뉴스성 항목을 감사용으로 함께 받는다 (P0-C1.8).
-    # 본문 없이 title/source/url/published_at 메타데이터만 담긴다.
     source_filtered: list[dict] = []
     try:
-        raw_articles = live_collector.fetch_all(filtered_out=source_filtered)
+        google_rows = live_collector.fetch_all(filtered_out=source_filtered)
     except Exception:  # noqa: BLE001 — 네트워크/파싱 오류는 fallback으로 흡수
-        raw_articles = []
+        google_rows = []
         source_filtered = []
+    google_status = "active" if google_rows else "skipped"
 
-    if not raw_articles:
+    # Naver 보조 provider — 기본 off면 네트워크 0건(status=disabled), 자격증명 없으면 정직 skip.
+    naver_filtered: list[dict] = []
+    try:
+        naver_result = naver_news_provider.fetch(filtered_out=naver_filtered)
+    except Exception:  # noqa: BLE001 — leaf가 흡수하지만 방어적으로 한 번 더
+        naver_result = {"provider": naver_news_provider.PROVIDER,
+                        "status": naver_news_provider.STATUS_ERROR, "articles": []}
+    naver_rows = naver_result.get("articles") or []
+
+    # 교차 dedup — Naver-only는 보존하고, 동일 사건은 provider 근거를 합쳐 하나로 만든다.
+    combined = merge_provider_articles(google_rows + naver_rows)
+    if not combined:
         return _run_mock(fallback=True, attempted="live")
 
-    collected, deduped, inserted = _ingest(raw_articles, "Live RSS")
+    # 감사용 제외 항목 — 두 provider의 것을 URL 기준 dedup해 합친다.
+    seen_filtered = {f.get("url") for f in source_filtered}
+    for item in naver_filtered:
+        u = item.get("url")
+        if u and u not in seen_filtered:
+            seen_filtered.add(u)
+            source_filtered.append(item)
+
+    _, deduped, inserted = _ingest(combined, "Live RSS")
+    labels = []
+    if google_rows:
+        labels.append(live_collector.SOURCE_LABEL)
+    if naver_rows:
+        labels.append(naver_news_provider.SOURCE_LABEL)
     return {
-        "collected": collected,
+        # collected = 두 provider 원시 수집 합계, deduplicated = 교차 dedup 후 고유 기사 수.
+        "collected": len(google_rows) + len(naver_rows),
         "deduplicated": deduped,
         "inserted": inserted,
         "news_data_mode": "live",
-        "news_source": live_collector.SOURCE_LABEL,
+        "news_source": " + ".join(labels) or live_collector.SOURCE_LABEL,
         "attempted_mode": "live",
         "fallback_used": False,
         "source_filtered": source_filtered,
+        # provider 상태 — 비밀값 0건. 감사/운영자가 어느 provider가 활성/skip/error인지 본다.
+        "provider_status": {
+            "google_news_rss": google_status,
+            "naver_news_api": naver_result.get("status"),
+        },
     }
 
 

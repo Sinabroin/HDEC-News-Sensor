@@ -28,6 +28,8 @@ LIVE_COLLECTOR = ROOT / "app" / "live_collector.py"
 COLLECTOR = ROOT / "app" / "collector.py"
 CONFIG = ROOT / "app" / "config.py"
 SOURCES = ROOT / "data" / "live_news_sources.json"
+NAVER_PROVIDER = ROOT / "app" / "naver_news_provider.py"
+NAVER_OFFICIAL_ENDPOINT = "https://openapi.naver.com/v1/search/news.json"
 RADAR_DB = ROOT / "radar.db"
 
 # 본문 전문 필드명 (rules.md §3) — 조각 조립으로 grep 규약 회피
@@ -293,6 +295,102 @@ def check_real_fetch_optional() -> None:
           all("x.com" not in r.get("url", "") for r in rows))
 
 
+def check_naver_provider() -> None:
+    """P0-D2 — 선택적 Naver provider 경계·파서·상태 계약 (네트워크 없음).
+
+    Naver는 인증 API라 자격증명 변수명(config.NAVER_*)을 참조하지만, 값은 어디에도
+    출력하지 않는다. live_collector(무인증)에 적용하는 SECRET_TOKENS 금지 스캔은 여기엔
+    적용하지 않는다 — 대신 token 모양 하드코딩 금지 + 자격증명/헤더 값 출력 금지를 본다.
+    """
+    if not check("app/naver_news_provider.py 존재", NAVER_PROVIDER.exists()):
+        return
+    src = NAVER_PROVIDER.read_text(encoding="utf-8")
+    lowered = src.lower()
+    hits = [t for t in BANNED_TERMS if t in lowered]
+    check("naver_provider에 본문 전문 필드명 없음", not hits, ", ".join(hits))
+    check("naver_provider에 token 모양 하드코딩 없음", not TOKEN_SHAPE.search(src))
+    check("naver_provider가 공식 엔드포인트만 사용 (웹/언론사 크롤링 아님)",
+          NAVER_OFFICIAL_ENDPOINT in src)
+    check("naver_provider가 os.environ을 직접 읽지 않음 (config만 사용)",
+          "os.environ" not in src)
+    # 자격증명/헤더 값을 print/log하지 않는다 (값 노출 금지).
+    leaks = []
+    for lineno, line in enumerate(src.splitlines(), start=1):
+        low = line.lower()
+        if "print(" in low or "logging" in low or ".log(" in low:
+            if "client_id" in low or "client_secret" in low or "x-naver" in low:
+                leaks.append(f"L{lineno}")
+    check("naver_provider가 자격증명/헤더 값을 print/log하지 않음", not leaks,
+          "; ".join(leaks))
+
+    sys.path.insert(0, str(ROOT))
+    os.environ.setdefault("APP_MODE", "mock")
+    from app import naver_news_provider as nv
+
+    # 파서 계약 (fixtures 1~4) — 네트워크 없이 fixture dict로
+    payload = {"items": [
+        {"title": "<b>현대건설</b> 사우디 원전 EPC 수주",
+         "originallink": "https://www.yna.co.kr/view/AKR1",
+         "link": "https://n.news.naver.com/redirect",
+         "description": "원전 &amp; SMR <b>수주</b> 기대",
+         "pubDate": "Mon, 16 Jun 2025 09:00:00 +0900"},
+        {"title": "현대건설 도시정비 단독", "originallink": "",
+         "link": "https://n.news.naver.com/only",
+         "description": "재개발", "pubDate": "Tue, 17 Jun 2025 10:00:00 +0900"},
+        {"title": "엑스 게시글", "originallink": "https://x.com/post/9",
+         "link": "https://x.com/post/9", "description": "x", "pubDate": ""},
+    ]}
+    rows = nv.parse_response(payload, "현대건설 원전", "2026-06-17T00:00:00+09:00",
+                            {"yna.co.kr": "연합뉴스"}, 10)
+    check("naver 파서: 정상 2건 추출 (X 소스 필터)", len(rows) == 2, f"{len(rows)}건")
+    if len(rows) == 2:
+        check("naver 파서: <b> 태그 제거 + 엔티티 복원",
+              "<b>" not in rows[0]["title"] and "현대건설" in rows[0]["title"])
+        check("naver 파서: originallink 우선 (url=originallink)",
+              rows[0]["url"] == "https://www.yna.co.kr/view/AKR1")
+        check("naver 파서: originallink 없으면 link 사용",
+              rows[1]["url"] == "https://n.news.naver.com/only")
+        check("naver 파서: pubDate(+0900) → tz 포함 ISO",
+              rows[0]["published_at"].startswith("2025-06-16T09:00:00+09:00"),
+              rows[0]["published_at"])
+        check("naver 파서: 기사 키가 허용 집합뿐 (본문 필드 없음)",
+              all(set(r.keys()) <= ALLOWED_ROW_KEYS for r in rows))
+        check("naver 파서: source_metadata 키가 허용 5종뿐 (rules.md §3)",
+              all(set(r["source_metadata"].keys()) <= ALLOWED_META_KEYS for r in rows))
+        check("naver 파서: snippet에 HTML 태그 잔존 없음",
+              all("<" not in (r["snippet"] or "") for r in rows))
+        check("naver 파서: X(엑스)/x.com 소스 제외",
+              all("x.com" not in r["url"] for r in rows))
+
+    # 상태 계약 (fixtures 9,10) — disabled/자격증명 부재는 네트워크 0건
+    import app.config as cfg
+    saved = (cfg.NAVER_NEWS_ENABLED, cfg.NAVER_CLIENT_ID, cfg.NAVER_CLIENT_SECRET)
+    net = {"calls": 0}
+    orig_req = nv._request_json
+
+    def _boom(*_a, **_k):
+        net["calls"] += 1
+        raise AssertionError("disabled/skip 경로에서 네트워크를 호출하면 안 된다")
+
+    nv._request_json = _boom
+    try:
+        cfg.NAVER_NEWS_ENABLED = False
+        r = nv.fetch()
+        check("naver disabled → status disabled + 네트워크 0건",
+              r["status"] == nv.STATUS_DISABLED and net["calls"] == 0, str(r["status"]))
+        cfg.NAVER_NEWS_ENABLED = True
+        cfg.NAVER_CLIENT_ID = ""
+        cfg.NAVER_CLIENT_SECRET = ""
+        r = nv.fetch()
+        check("naver enabled+자격증명 부재 → skipped_missing_credentials + 네트워크 0건",
+              r["status"] == nv.STATUS_SKIPPED_MISSING_CREDENTIALS and net["calls"] == 0,
+              str(r["status"]))
+        check("naver skip 상태에 articles 빈 리스트 (가짜 값 0건)", r["articles"] == [])
+    finally:
+        nv._request_json = orig_req
+        cfg.NAVER_NEWS_ENABLED, cfg.NAVER_CLIENT_ID, cfg.NAVER_CLIENT_SECRET = saved
+
+
 def main() -> int:
     print(f"== verify_live_news_ingestion @ {ROOT} ==")
     db_before = _db_state()
@@ -304,6 +402,7 @@ def main() -> int:
     check_sources_file()
     check_query_rebalance()
     check_parse_contract()
+    check_naver_provider()
     check_fallback_when_live_empty()
     check_real_fetch_optional()
 

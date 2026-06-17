@@ -71,6 +71,12 @@ jobs:
         if: steps.mode.outputs.live_publish == 'true'
         env:
           NEWS_MODE: live
+          # Naver 보조 provider — 이미 생성된 repo secrets로 안전 주입 (P0-D2). 값은 출력하지
+          # 않는다. 자격증명이 없거나 호출 실패해도 collector가 정직하게 skip하므로(전체 live
+          # 수집은 실패하지 않음) live_ok 판정에는 영향이 없다.
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           # 시장지표도 live로 연동한다 (P0-C2). 실패 시 macro는 '미연동' placeholder로
           # 강등될 뿐(가짜 값 0건) live_ok 판정은 뉴스 수집 성공 여부로만 한다.
           MACRO_MODE: live
@@ -112,6 +118,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           NEWS_MODE: live
+          # Naver 보조 provider — 이미 생성된 repo secrets로 안전 주입 (P0-D2). 값은 출력하지 않는다.
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           # 시장지표도 live로 연동 (P0-C2) — 수집 실패 시 digest는 macro 블록을 생략한다(가짜 값 0건).
           MACRO_MODE: live
           # 위 리포트 step이 남긴 snapshot 파일을 읽어 동일 시세를 쓴다(재fetch 없음 → 불일치 0).

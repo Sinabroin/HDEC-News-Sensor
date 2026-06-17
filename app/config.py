@@ -54,3 +54,14 @@ MACRO_MODE = (os.environ.get("MACRO_MODE") or "mock").strip().lower() or "mock"
 # 미설정(기본)이면 파일 공유 없이 각자 fetch하되, 같은 프로세스 안에서는 live_macro의 프로세스
 # 캐시가 중복 fetch를 막는다. 저장소에 commit하지 않는 휘발 경로를 쓴다(가짜 값 0건 계약 유지).
 MACRO_SNAPSHOT_FILE = (os.environ.get("MACRO_SNAPSHOT_FILE") or "").strip() or None
+
+# P0-D2 — Naver News Search API 보조 provider 스위치. 기본값 off = 네트워크/비밀값 0건이며
+# 기존 Google-only 수집 동작을 그대로 유지한다 (rules.md §2 안전 계약과 동일). NEWS_MODE와
+# 독립적이다: 이 플래그를 명시적으로 켜고(아래) 자격증명이 모두 있을 때만 app/naver_news_provider.py가
+# 공식 검색 API(https://openapi.naver.com/v1/search/news.json)를 호출한다. 자격증명이 없으면
+# 전체 live 수집을 실패시키지 않고 정직하게 skip한다(provider_status: skipped_missing_credentials).
+# 자격증명은 환경변수에서만 읽고 어디에도 print/log/직렬화하지 않는다 (rules.md §4).
+NAVER_NEWS_ENABLED = (os.environ.get("NAVER_NEWS_ENABLED") or "").strip().lower() in (
+    "1", "true", "on", "yes")
+NAVER_CLIENT_ID = (os.environ.get("NAVER_CLIENT_ID") or "").strip()
+NAVER_CLIENT_SECRET = (os.environ.get("NAVER_CLIENT_SECRET") or "").strip()
