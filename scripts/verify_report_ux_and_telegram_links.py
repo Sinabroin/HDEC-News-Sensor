@@ -141,8 +141,12 @@ def check_telegram_links() -> None:
               "https://t.me/hdec_bot?start=ask_today"))
     payload = send_telegram.build_payload("DRY", msg, "", "")
     check("Telegram payload parse_mode=HTML", payload.get("parse_mode") == "HTML")
-    check("live macro digest에 Yahoo Finance + 기준 표기",
-          "Yahoo Finance" in msg and "기준 2026-06-17T09:00:00+09:00" in msg)
+    # P0-D1.5: macro 기준시각은 KST 벽시계로 표기한다 (raw +09:00/+00:00 offset 비노출).
+    check("live macro digest에 Yahoo Finance + KST 참고시각 표기",
+          "Yahoo Finance" in msg and "시장지표 참고시각" in msg
+          and "2026-06-17 09:00" in msg and "(KST 기준)" in msg)
+    check("live macro digest에 raw UTC/ISO offset 비노출",
+          "+00:00" not in msg and "+09:00" not in msg)
     check("live macro digest에 시장지표 미연동 없음", "시장지표 미연동" not in msg)
     for bad in ("[AI 관련 Top 3]", "[주요 테마]", "뉴스 자동 수집", "판정 신뢰도"):
         check(f"digest에 '{bad}' 없음", bad not in msg)
@@ -203,7 +207,8 @@ def check_macro_live_contradiction() -> None:
     brief["macro_data_mode"] = "live"
     brief["macro_source"] = "Yahoo Finance"
     brief["macro_updated_at"] = "2026-06-17T09:00:00+09:00"
-    brief["data_warning"] = "뉴스: 데모(mock) 데이터 · 시장지표: Yahoo Finance · 기준 2026-06-17T09:00:00+09:00"
+    # P0-D1.5: data_warning은 _data_warning 실제 출력과 동일하게 KST 참고시각으로 표기한다.
+    brief["data_warning"] = "뉴스: 데모(mock) 데이터 · 시장지표: Yahoo Finance · 참고시각 2026-06-17 09:00 (KST 기준)"
     brief["macro_snapshot"] = {
         "macro_data_mode": "live",
         "source": "Yahoo Finance",
@@ -213,7 +218,12 @@ def check_macro_live_contradiction() -> None:
     }
     html, _sections = render_report_html(brief)
     check("live macro report Yahoo Finance 표기", "Yahoo Finance" in html)
-    check("live macro report 기준 timestamp 표기", "2026-06-17T09:00:00+09:00" in html)
+    # P0-D1.5: 리포트도 macro 기준시각을 KST 벽시계로 표시한다 (raw +00:00/+09:00 offset 비노출).
+    check("live macro report KST 참고시각 표기",
+          "시장지표 참고시각" in html and "2026-06-17 09:00" in html
+          and "(KST 기준)" in html)
+    check("live macro report raw UTC/ISO offset 비노출",
+          "+00:00" not in html and "+09:00" not in html)
     check("live macro 값과 시장지표: 미연동 동시표시 없음", "시장지표: 미연동" not in html)
 
 

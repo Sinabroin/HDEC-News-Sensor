@@ -18,9 +18,24 @@ import json
 import os
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+_KST = timezone(timedelta(hours=9))
+
+
+def _fmt_kst(iso) -> str:
+    """ISO 타임스탬프를 KST 벽시계 'YYYY-MM-DD HH:MM'로 (raw +00:00 비노출, P0-D1.5)."""
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return str(iso)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_KST).strftime("%Y-%m-%d %H:%M")
 
 # 프로세스당 1회만 부트스트랩한다 — app.config가 import 시점에 DB_PATH를 읽으므로
 # 임시 DB 경로는 app 모듈 import 전에 환경변수로 고정해야 한다.
@@ -132,7 +147,8 @@ def format_brief_text(brief: dict) -> str:
     macro_mode = macro.get("macro_data_mode") or brief.get("macro_data_mode")
     lines += ["", "[Macro Snapshot]"]
     if macro_mode == "live" and macro.get("values"):
-        lines.append(f"출처 {macro.get('source')} · 기준 {macro.get('updated_at')}")
+        lines.append(f"출처 {macro.get('source')} · 참고시각 "
+                     f"{_fmt_kst(macro.get('updated_at'))} (KST 기준)")
         lines.append(" · ".join(
             f"{v['label']} {v['value']}{v.get('unit', '')}"
             for v in macro["values"]))

@@ -597,19 +597,38 @@ def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
             f"즉시 알림 후보 {immediate_count}건")
 
 
+def _fmt_kst(iso) -> str:
+    """ISO 타임스탬프(UTC/KST 무관)를 KST 벽시계 'YYYY-MM-DD HH:MM'로 표시한다.
+
+    임원 화면에 +00:00 같은 raw offset(Yahoo는 시장 기준시각을 UTC로 준다)을 그대로
+    노출하지 않기 위한 표시 전용 변환이다 — 같은 순간을 KST로 읽어줄 뿐 시각 자체를
+    바꾸지 않는다. 파싱 불가하면 원본을 그대로 돌려준다 (가짜 KST로 위장하지 않는다).
+    """
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return str(iso)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(KST).strftime("%Y-%m-%d %H:%M")
+
+
 def _macro_warning(macro: dict | None) -> str:
-    """시장지표 한 조각 — live로 실수집됐을 때만 출처·기준을 표기하고 그 외에는 '미연동'.
+    """시장지표 한 조각 — live로 실수집됐을 때만 출처·참고시각(KST)을 표기하고 그 외엔 '미연동'.
 
     P0-C2: 표시 게이팅(_render_macro_section)이 macro_data_mode=="live"일 때만 수치를
     렌더하는데, footer 고지가 항상 '미연동'이면 같은 리포트가 live 수치와 '미연동'을 동시에
     보여주는 모순이 생긴다. footer를 같은 조건으로 묶어 그 회귀를 차단한다.
+    P0-D1.5: 기준시각은 KST 벽시계로 표기한다 — Yahoo의 UTC(+00:00)를 그대로 노출하지 않는다.
     """
     macro = macro or {}
     if macro.get("macro_data_mode") == "live" and macro.get("values"):
         line = f"시장지표: {macro.get('source') or 'live'}"
-        updated = macro.get("updated_at")
+        updated = _fmt_kst(macro.get("updated_at"))
         if updated:
-            line += f" · 기준 {updated}"
+            line += f" · 참고시각 {updated} (KST 기준)"
         if macro.get("is_stale"):
             line += " (지연)"
         return line

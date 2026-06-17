@@ -17,6 +17,7 @@ P0-B2부터 다이제스트 데이터는 scripts/build_executive_brief.py(공유
 import argparse
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 
@@ -34,11 +35,26 @@ TITLE_MAX = 70
 REASON_MAX = 90
 DIGEST_THEMES_MAX = 5
 DIGEST_CATEGORIES_MAX = 5
+_KST = timezone(timedelta(hours=9))
 
 
 def _clip(text: str, limit: int) -> str:
     text = (text or "").strip()
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _fmt_kst(iso) -> str:
+    """ISO 타임스탬프(UTC/KST 무관)를 KST 벽시계 'YYYY-MM-DD HH:MM'로 표시한다.
+    임원 알림에 +00:00 같은 raw offset을 노출하지 않기 위한 표시 전용 변환 (P0-D1.5)."""
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return str(iso)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_KST).strftime("%Y-%m-%d %H:%M")
 
 
 def _display(text) -> str:
@@ -355,10 +371,14 @@ def format_digest_message(data: dict) -> str:
     macro = data.get("macro_snapshot") or {}
     macro_mode = macro.get("macro_data_mode") or data.get("macro_data_mode")
     if macro_mode == "live" and macro.get("values"):
-        lines += ["", f"[Macro Snapshot — {_html(macro.get('source'))} · 기준 {_html(macro.get('updated_at'))}]"]
+        # 기준시각은 KST 벽시계로 (Yahoo UTC offset 비노출). 참고용 시세 면책 한 줄 동봉 (P0-D1.5).
+        updated_kst = _fmt_kst(macro.get("updated_at"))
+        lines += ["", f"[Macro Snapshot — {_html(macro.get('source'))} · "
+                  f"시장지표 참고시각 {_html(updated_kst)} (KST 기준)]"]
         lines.append(" · ".join(
             f"{_html(v['label'])} {_html(v['value'])}{_html(v.get('unit', ''))}"
             for v in macro["values"]))
+        lines.append("※ 시장지표는 Yahoo Finance 참고값이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).")
 
     lines += ["", "※ 원문·점수·거시경제·카테고리별 근거 기사는 '오늘 브리프 보기' 리포트에서 확인"]
     return _join_budgeted(lines)

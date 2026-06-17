@@ -20,6 +20,7 @@
 import argparse
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 
 REPORT_TITLE = "HDEC Executive Radar — Executive Daily Brief"
 DEFAULT_OUTPUT = "docs/daily/latest.html"
+_KST = timezone(timedelta(hours=9))
 
 # live macro 전용 — mock/unavailable 상태에서는 수치·방향 자체를 렌더링하지 않는다
 DIRECTION_ARROW = {"up": ("▲", "dir-up"), "down": ("▼", "dir-down")}
@@ -265,6 +267,23 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 
 def _fmt(value) -> str:
     return "-" if value is None else f"{value:.2f}"
+
+
+def _fmt_kst(iso) -> str:
+    """ISO 타임스탬프(UTC/KST 무관)를 KST 벽시계 'YYYY-MM-DD HH:MM'로 표시한다.
+
+    임원 화면에 +00:00 같은 raw offset(Yahoo는 시장 기준시각을 UTC로 준다)을 그대로
+    노출하지 않기 위한 표시 전용 변환이다 (P0-D1.5). 시각 자체는 바꾸지 않고 같은 순간을
+    KST로 읽어줄 뿐이며, 파싱 불가하면 원본을 그대로 돌려준다 (가짜 KST 위장 금지)."""
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return str(iso)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_KST).strftime("%Y-%m-%d %H:%M")
 
 
 def _fmt5(value) -> str:
@@ -581,9 +600,11 @@ def _render_macro_section(brief: dict) -> list[str]:
 
     body = ['<section aria-label="Macro Snapshot">']
     if mode == "live" and values:
+        # 기준시각은 KST 벽시계로 표기한다 — Yahoo의 UTC(+00:00)를 그대로 노출하지 않는다 (P0-D1.5).
+        updated_kst = _fmt_kst(macro.get("updated_at"))
         body.append('<h2 class="sec-h">MACRO SNAPSHOT'
                     f'<span class="tag">출처 {escape(str(macro.get("source") or ""))}'
-                    f' · 기준 {escape(str(macro.get("updated_at") or ""))}</span></h2>')
+                    f' · 시장지표 참고시각 {escape(updated_kst)} (KST 기준)</span></h2>')
         body.append('<div class="macro-grid">')
         for v in values:
             arrow, dir_class = DIRECTION_ARROW.get(v.get("direction"), ("", ""))
@@ -593,6 +614,8 @@ def _render_macro_section(brief: dict) -> list[str]:
                         f'{arrow_html}</div></div>')
         body.append('</div>')
         body.append(f'<p class="macro-src">{escape(str(macro.get("disclaimer") or ""))}</p>')
+        body.append('<p class="macro-src">시장지표는 Yahoo Finance 참고값이며 '
+                    '거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).</p>')
     else:
         labels = [v.get("label") for v in values if v.get("label")] or DEFAULT_MACRO_LABELS
         body.append('<h2 class="sec-h">MACRO SNAPSHOT'
@@ -809,18 +832,20 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     body += _render_tabs_ui(panels, default_tab)
 
     sections += ["notes", "footer"]
-    legend = brief.get("status_board_legend") or []
-    legend_text = " · ".join(f"{x['label']}: {x['meaning']}" for x in legend)
+    # P0-D1.5: footer 각주 통합 — 현황판 legend와 중복 cluster(spread) 줄을 덜어내고
+    # 운영자 검토 고지 · 출처 품질 · 데이터 출처(시장지표 KST 참고시각) · 시세 면책만 남긴다.
+    # ('추정' 표현은 operator_note가 유지하므로 spread 줄 제거에도 검증 회귀 없음.)
     body += [
         '<div class="notes">',
-        f'<p>※ 현황판 기준 — {escape(legend_text)}</p>' if legend_text else "",
         f'<p>※ {escape(brief["operator_note"])}</p>',
-        f'<p>※ {escape(brief.get("spread_note") or "")}</p>',
         f'<p>※ {escape(brief.get("source_quality_note") or "")}</p>',
-        # 데이터 출처/시장지표 상태 — 헤더에서 내려온 작은 footer 고지 (정직성 유지).
+        # 데이터 출처/시장지표 상태 — 뉴스 수집 모드 + 시장지표 출처·참고시각(KST) (정직성 유지).
         f'<p>※ 데이터 출처 — {escape(brief.get("data_warning") or "")}</p>',
+        '<p>※ 시장지표는 참고용이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).</p>',
         '</div>',
-        f'<footer class="num">생성 {escape(brief["generated_at"])} · {escape(brief["header"])}</footer>',
+        # 생성 시각은 KST 벽시계로 표기한다 (raw +09:00 ISO offset 대신).
+        f'<footer class="num">생성 {escape(_fmt_kst(brief["generated_at"]))} KST'
+        f' · {escape(brief["header"])}</footer>',
     ]
 
     html = "\n".join([
