@@ -15,8 +15,8 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from app import (
-    config, db, decision_relevance, insight, macro_snapshot, radar, scoring,
-    source_quality,
+    article_quality, config, db, decision_relevance, insight, macro_snapshot,
+    radar, scoring, source_quality,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -31,6 +31,29 @@ TOP_RADAR = 5
 TOP_CATEGORY_ARTICLES = 6
 TOP_DISPLAY_SCORE_FLOOR = 2.5
 TOP_NEW_SCORE_FLOOR = 2.5
+TOP_STALE_DAYS = 45
+TOP_VERY_STALE_DAYS = 90
+
+SECURITIES_CONTEXT_PATTERNS = (
+    "주가", "목표가", "목표주가", "투자의견", "종목", "관련주", "테마주",
+    "급등", "폭등", "상한가",
+)
+WEAK_TOP_SOURCE_PATTERNS = (
+    "데일리머니", "네이버 프리미엄콘텐츠", "naver premium", "증권플러스",
+    "리서치알음", "인포스탁", "팍스넷", "씽크풀",
+)
+GENERIC_ROUNDUP_PATTERNS = (
+    "업계 소식", "오늘의 건설", "리뷰", "브리핑", "소식 모음",
+    "굿모닝!",
+)
+DIRECT_PROJECT_PATTERNS = (
+    "수주", "발주", "입찰", "우선협상", "본계약", "계약", "프로젝트",
+    "원전", "smr", "소형모듈원자로", "데이터센터", "데이터 센터",
+    "epc", "플랜트", "착공", "준공", "특별법", "시행", "정책",
+    "규제", "벌점", "제재", "중대재해", "전력망", "스마트건설",
+    "스마트 건설", "r&d", "연구원", "조직", "전략", "에너지전환",
+    "에너지 전환", "뉴에너지",
+)
 
 # spread 한계 고지: 토픽 후보 집합이 겹치는 신호 수 기반의 보수적 추정이다.
 # (동일 사건 클러스터링이 아니며, dedup으로 제거된 중복 기사는 집계되지 않는다)
@@ -307,6 +330,7 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         entry["is_finance"] = decision.get("is_finance")
         entry["supplier_only"] = decision.get("supplier_only")
         entry["order_class"] = decision.get("order_class")
+        entry.update(_top_exposure_profile(row, decision))
     # 리스크·규제 신호는 risk_priority(중요도가 낮아도 상단 노출)·사유·라벨을 부착한다.
     if section == radar.RISK:
         rf = radar.risk_fields(row, score)
@@ -321,11 +345,105 @@ def _is_excluded_quality(row: dict) -> bool:
         row.get("source"), row.get("title"))["source_quality"] == "excluded"
 
 
+def _contains_any(text: str, patterns) -> bool:
+    low = (text or "").lower()
+    return any((p or "").lower() in low for p in patterns)
+
+
+def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
+    """상단 노출 품질 프로필 — 저장 점수/등급은 바꾸지 않는 표시 전용 가드레일."""
+    title = row.get("title") or ""
+    source = row.get("source") or ""
+    snippet = row.get("snippet") or ""
+    text = " ".join([title, snippet])
+    quality = source_quality.classify(source, title)
+    aq = article_quality.assess(source, title, snippet)
+    age = _age_days(row.get("published_at"))
+
+    flags: list[str] = []
+    penalty = 0
+    exclude_top = False
+
+    if age is not None and age > TOP_VERY_STALE_DAYS:
+        flags.append("very_stale")
+        penalty += 100
+        exclude_top = True
+    elif age is not None and age > TOP_STALE_DAYS:
+        flags.append("stale")
+        penalty += 35
+
+    stock_hype = bool((decision or {}).get("stock_hype") or aq.get("stock_hype"))
+    securities_context = _contains_any(title, SECURITIES_CONTEXT_PATTERNS)
+    if stock_hype:
+        flags.append("stock_hype")
+        penalty += 100
+        exclude_top = True
+    elif securities_context:
+        flags.append("securities_context")
+        penalty += 40
+
+    source_low = source.lower()
+    if quality["source_quality"] in ("low", "excluded"):
+        flags.append(f"source_{quality['source_quality']}")
+        penalty += 30
+    elif _contains_any(source_low, WEAK_TOP_SOURCE_PATTERNS):
+        flags.append("weak_source")
+        penalty += 25
+
+    if (decision or {}).get("supplier_only"):
+        flags.append("supplier_only")
+        penalty += 25
+    if _contains_any(title, GENERIC_ROUNDUP_PATTERNS):
+        flags.append("generic_roundup")
+        penalty += 25
+    if aq.get("low_actionability"):
+        flags.append("low_actionability")
+        penalty += 15
+
+    direct_project = (
+        _contains_any(text, DIRECT_PROJECT_PATTERNS)
+        and not securities_context
+        and not (decision or {}).get("supplier_only")
+        and not _contains_any(title, GENERIC_ROUNDUP_PATTERNS)
+        and not aq.get("low_actionability")
+    )
+    if direct_project:
+        flags.append("direct_project_signal")
+        penalty -= 20
+
+    if quality["source_quality"] == "trusted":
+        flags.append("trusted_source")
+        penalty -= 5
+
+    return {
+        "top_exposure_penalty": penalty,
+        "top_exposure_flags": flags,
+        "top_exposure_excluded": exclude_top,
+        "top_exposure_age_days": round(age, 1) if age is not None else None,
+    }
+
+
+def _top_exposure_sort_key(row: dict, decision: dict | None = None):
+    profile = _top_exposure_profile(row, decision)
+    return (
+        profile["top_exposure_penalty"],
+        _freshness_rank(row),
+        -((decision or {}).get("decision_relevance_score") or 0),
+        -(row.get("final_score") or 0),
+        row["id"],
+    )
+
+
+def _is_top_exposure_excluded(row: dict, decision: dict | None = None) -> bool:
+    return _top_exposure_profile(row, decision)["top_exposure_excluded"]
+
+
 def _has_http_url(url) -> bool:
     return bool(url) and str(url).startswith(("http://", "https://"))
 
 
-def _category_article_entry(row: dict, category_key: str, implication: str) -> dict:
+def _category_article_entry(row: dict, category_key: str, implication: str,
+                            decision: dict | None = None) -> dict:
     """카테고리 드릴다운용 근거 기사 항목 — 표시 전용 파생값 (P0-C1.7).
 
     저장된 article/score 값을 그대로 옮길 뿐 점수·등급을 재계산하지 않는다.
@@ -333,7 +451,7 @@ def _category_article_entry(row: dict, category_key: str, implication: str) -> d
     """
     quality = source_quality.classify(row.get("source"), row.get("title"))
     url = row.get("url")
-    return {
+    entry = {
         "article_id": row["id"],
         "title": row["title"],
         "source": row.get("source") or "출처 미상",
@@ -352,10 +470,13 @@ def _category_article_entry(row: dict, category_key: str, implication: str) -> d
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
         "why_it_matters": implication,
     }
+    entry.update(_top_exposure_profile(row, decision))
+    return entry
 
 
 def _build_category_sections(scored_rows: list[dict], categories: dict[str, str],
-                             reasons: dict[str, str]) -> list[dict]:
+                             reasons: dict[str, str],
+                             decisions: dict[str, dict] | None = None) -> list[dict]:
     """카테고리별 근거 기사 섹션을 만든다 — 집계/정렬만 (점수·등급 재계산 없음, P0-C1.7).
 
     설계 원칙:
@@ -377,11 +498,14 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         weekly = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_WEEKLY)
         excluded = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_EXCLUDED)
 
-        # 근거 목록 풀: excluded 품질(블로그/카페/커뮤니티)은 빼고 점수순으로 정렬한다.
+        # 근거 목록 풀: excluded 품질(블로그/카페/커뮤니티)은 빼고 상단 노출 품질순으로 정렬한다.
         evidence = sorted(
             (r for r in rows if not _is_excluded_quality(r)),
-            key=lambda r: (-(r.get("final_score") or 0), r["id"]))
-        top = [_category_article_entry(r, cat_key, reasons.get(r["id"], ""))
+            key=lambda r: _top_exposure_sort_key(
+                r, (decisions or {}).get(r["id"])))
+        top = [_category_article_entry(
+                    r, cat_key, reasons.get(r["id"], ""),
+                    (decisions or {}).get(r["id"]))
                for r in evidence[:TOP_CATEGORY_ARTICLES]]
         sources = {(r.get("source") or "출처 미상") for r in evidence}
 
@@ -512,7 +636,8 @@ def _build_source_filtered(scored_rows: list[dict], categories: dict[str, str],
     }
 
 
-def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int) -> list[dict]:
+def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int,
+                 sort_key=None) -> list[dict]:
     """점수순 후보에서 카테고리가 몰리지 않게 limit개를 고른다.
 
     1차: 점수순으로 카테고리당 1건씩. 2차: 남은 슬롯을 점수순으로 채움.
@@ -536,7 +661,7 @@ def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int) -> li
             picked.append(row)
             if len(picked) == limit:
                 break
-    picked.sort(key=lambda r: (-(r["final_score"]), r["id"]))
+    picked.sort(key=sort_key or (lambda r: (-(r["final_score"]), r["id"])))
     return picked
 
 
@@ -719,7 +844,11 @@ def build_brief(pipeline_counts: dict | None = None,
     # (P0-C1.6). excluded는 scoring 캡으로 이미 제외 등급이라 signal_rows에 거의 없지만,
     # 표시 직전 한 번 더 거른다 — "Top 3에 비-뉴스 금지"를 구조적으로 보장한다.
     # mock 데모는 excluded 출처가 신호에 없어 display_rows == signal_rows로 동일하다.
-    display_rows = [r for r in signal_rows if not _is_excluded_quality(r)]
+    display_rows = [
+        r for r in signal_rows
+        if (not _is_excluded_quality(r)
+            and not _is_top_exposure_excluded(r, decisions.get(r["id"])))
+    ]
 
     def _entry(rank, row):
         return _signal_entry(rank, row, categories[row["id"]],
@@ -733,15 +862,18 @@ def build_brief(pipeline_counts: dict | None = None,
     # 등급 판정 자체는 바꾸지 않고, 어떤 후보를 보여줄지만 고른다.
     instant_pool = [r for r in display_rows
                     if r.get("alert_grade") == scoring.GRADE_INSTANT]
-    instant_rows = _diverse_top(instant_pool, categories, TOP_IMMEDIATE)
+    instant_pool.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+    instant_rows = _diverse_top(
+        instant_pool, categories, TOP_IMMEDIATE,
+        sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
     if not instant_rows:
         fallback_pool = [r for r in display_rows
                          if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
-        fallback_pool.sort(key=lambda r: (
-            _freshness_rank(r),
-            -(decisions[r["id"]]["decision_relevance_score"] or 0),
-            -(r.get("final_score") or 0), r["id"]))
-        instant_rows = _diverse_top(fallback_pool, categories, TOP_IMMEDIATE)
+        fallback_pool.sort(
+            key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        instant_rows = _diverse_top(
+            fallback_pool, categories, TOP_IMMEDIATE,
+            sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
     top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
 
     # ---- 섹션별 레이더 신호 (P0-C1.9 + P0-C1.12 임원 의사결정 IA) ----
@@ -750,7 +882,8 @@ def build_brief(pipeline_counts: dict | None = None,
     # secondary)으로 뽑는다 — 같은 기사가 여러 섹션에 들어갈 수 있다(multi-section).
     def _radar_group(section_key, limit=TOP_RADAR, sort_key=None):
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
-        rows.sort(key=sort_key or (lambda r: (-(r.get("final_score") or 0), r["id"])))
+        rows.sort(key=sort_key or (
+            lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
         return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
 
     def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
@@ -759,9 +892,8 @@ def build_brief(pipeline_counts: dict | None = None,
                 if decision_relevance.in_section(decisions[r["id"]], section_key)]
         if min_score is not None:
             rows = [r for r in rows if (r.get("final_score") or 0) >= min_score]
-        rows.sort(key=sort_key or (lambda r: (
-            -(decisions[r["id"]]["decision_relevance_score"] or 0),
-            -(r.get("final_score") or 0), r["id"])))
+        rows.sort(key=sort_key or (
+            lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
         # 같은 회사(예: 가온전선 3건)가 한 섹션을 점유하지 않게 회사당 상한을 둔다 (P0-C1.12).
         # 회사명이 없는 기사는 캡하지 않는다. 정렬 후 적용하므로 상위 신호가 먼저 살아남는다.
         if company_cap:
@@ -780,7 +912,9 @@ def build_brief(pipeline_counts: dict | None = None,
     # AI·계약 → R&D·조직 → 그 외 직접). 같은 기사가 risk/ai/order에도 노출될 수 있다.
     def _hdec_sort(r):
         d = decisions[r["id"]]
-        return (d["hdec_bucket"], -(d["decision_relevance_score"] or 0),
+        return (_top_exposure_profile(r, d)["top_exposure_penalty"],
+                d["hdec_bucket"], _freshness_rank(r),
+                -(d["decision_relevance_score"] or 0),
                 -(r.get("final_score") or 0), r["id"])
     hdec_direct_signals = _decision_group(
         decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort)
@@ -790,7 +924,10 @@ def build_brief(pipeline_counts: dict | None = None,
     # 것을 막는다 (P0-C1.14). 점수순은 그 안에서 유지. 비공급사 후보가 cap을 채우면 공급사는
     # 경쟁사·공급망/드릴다운으로만 남는다 (제품 원칙: 공급사는 보조 신호).
     ai_radar_signals = _radar_group(radar.AI, sort_key=lambda r: (
+        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
         1 if decisions[r["id"]].get("supplier_only") else 0,
+        _freshness_rank(r),
+        -(decisions[r["id"]]["decision_relevance_score"] or 0),
         -(r.get("final_score") or 0), r["id"]))
     # 수주·해외 — 확정 계약뿐 아니라 발주 환경(중동·재건·EPC·DC·SMR·플랜트)과 경쟁사
     # 수주 전략까지 넓혀 'business 0건' 회귀를 방지한다 (decision 멤버십 기반).
@@ -799,7 +936,10 @@ def build_brief(pipeline_counts: dict | None = None,
     def _order_sort(r):
         d = decisions[r["id"]]
         is_hdec_primary = d["primary_executive_section"] == decision_relevance.HDEC_DIRECT
-        return (1 if is_hdec_primary else 0,
+        return (_top_exposure_profile(r, d)["top_exposure_penalty"],
+                1 if is_hdec_primary else 0,
+                (d.get("order_class") if d.get("order_class") is not None else 9),
+                _freshness_rank(r),
                 -(d["decision_relevance_score"] or 0),
                 -(r.get("final_score") or 0), r["id"])
     business_signals = _decision_group(
@@ -813,8 +953,10 @@ def build_brief(pipeline_counts: dict | None = None,
     # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다.
     risk_pool = [r for r in scored
                  if radar_sections[r["id"]] == radar.RISK
-                 and not _is_excluded_quality(r)]
+                 and not _is_excluded_quality(r)
+                 and not _is_top_exposure_excluded(r, decisions.get(r["id"]))]
     risk_pool.sort(key=lambda r: (
+        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
         -radar.risk_fields(r, scores_by_id.get(r["id"]))["risk_priority_score"],
         -(r.get("final_score") or 0), r["id"]))
     risk_regulation_signals = [
@@ -825,14 +967,15 @@ def build_brief(pipeline_counts: dict | None = None,
     if not top_issue_pool:
         top_issue_pool = [r for r in display_rows
                           if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
-    top_issue_pool.sort(key=lambda r: (
-        _freshness_rank(r),
-        -(decisions[r["id"]]["decision_relevance_score"] or 0),
-        -(r.get("final_score") or 0), r["id"]))
+    top_issue_pool.sort(
+        key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
     top_issues = [
         _entry(i, r)
         for i, r in enumerate(
-            _diverse_top(top_issue_pool, categories, TOP_ISSUES), start=1)
+            _diverse_top(
+                top_issue_pool, categories, TOP_ISSUES,
+                sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]])),
+            start=1)
     ]
 
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계
@@ -875,7 +1018,8 @@ def build_brief(pipeline_counts: dict | None = None,
 
     # 카테고리별 근거 기사 드릴다운 (P0-C1.7) — 채점된 전 기사를 카테고리로 묶어
     # 수집 총량을 카테고리별로 감사 가능하게 한다 (점수·등급 재계산 없음, DB 쓰기 없음).
-    category_sections = _build_category_sections(scored, categories, display_reasons)
+    category_sections = _build_category_sections(
+        scored, categories, display_reasons, decisions)
 
     top_theme = theme_rankings[0]["theme"] if theme_rankings else None
     one_liner = _compose_one_liner(signal_rows, categories, immediate_count, top_theme)

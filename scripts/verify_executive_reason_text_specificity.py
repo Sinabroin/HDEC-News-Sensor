@@ -320,8 +320,13 @@ def check_pipeline(sim: dict | None) -> None:
     reasons = sim.get("reasons") or {}
 
     # 각 fixture가 브리프(카드/드릴다운) 어딘가에 유형별 사유로 노출된다.
+    # 단 P0-D3D 이후 목표가/증권 리서치성 fixture(r_sec)는 단위 검사에서 사유 copy를
+    # 검증하고, 브리프 상단/드릴다운 노출은 품질 게이트가 억제할 수 있다.
     for f in FIX:
         seen = reasons.get(f["id"]) or []
+        if not seen and f["id"] == "r_sec":
+            check("시뮬: r_sec 증권 리서치 fixture는 top exposure gate로 미노출 허용", True)
+            continue
         if not check(f"시뮬: {f['id']} 사유가 브리프에 노출됨", bool(seen)):
             continue
         ok_must = any(any(m in r for m in f["must"]) for r in seen)
