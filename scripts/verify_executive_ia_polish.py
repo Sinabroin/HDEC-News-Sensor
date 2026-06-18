@@ -72,6 +72,28 @@ def check(name: str, ok: bool, detail: str = "") -> bool:
     return ok
 
 
+def _visible_on_exec_surface(brief: dict, radar_list_key: str, section: str) -> bool:
+    """한 임원 섹션의 신호가 '임원에게 보이는지' 판정한다 (D3L visible single-use 인지).
+
+    D3L부터 같은 기사/title/url은 임원 visible surface에 단 1회만 노출된다 — 즉시 알림
+    후보(top_immediate_signals)나 신규 이슈(top_new_issues)가 기사를 먼저 점유하면 그
+    섹션의 레이더 리스트(radar_list_key)는 비어 있을 수 있다. 그래도 신호는 임원 화면에
+    보인다. 따라서 'radar-tab 전용 배치'가 아니라 '임원 surface 노출'로 판정한다:
+      1) 섹션 레이더 리스트에 1건 이상 있거나,
+      2) 즉시 알림/신규 이슈에 primary executive_section == section 인 기사가 있거나,
+      3) 즉시 알림/신규 이슈에 secondary_sections로 section을 포함한 기사가 있다.
+    """
+    if brief.get(radar_list_key):
+        return True
+    for surface in ("top_immediate_signals", "top_new_issues"):
+        for entry in brief.get(surface) or []:
+            if entry.get("executive_section") == section:
+                return True
+            if section in (entry.get("secondary_sections") or []):
+                return True
+    return False
+
+
 def _clean_env(**extra: str) -> dict:
     env = {**os.environ, "APP_MODE": "mock", "NEWS_MODE": "mock"}
     for key in ("MESSAGE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS", "DB_PATH"):
@@ -216,8 +238,12 @@ def check_brief_radar() -> None:
                      ("competitor_supply_signals", comp),
                      ("macro_economy_signals", macro)]:
         check(f"brief에 {key} 존재 (리스트)", isinstance(val, list), str(type(val)))
-    # P0-C1.12 — mock에는 현대건설 직접 신호(네옴 EPC)가 항상 1건 이상이다.
-    check("현대건설 연관 신호 1건 이상 (mock)", bool(hdec), f"{len(hdec or [])}건")
+    # P0-C1.12 — mock에는 현대건설 직접 신호(네옴 EPC)가 항상 1건 이상이다. 단 D3L visible
+    # single-use로 hdec_direct_signals가 비고 그 기사가 즉시 알림 후보(top_immediate)로
+    # 승격될 수 있다 — radar-tab 전용이 아니라 임원 surface 노출 여부로 판정한다.
+    check("현대건설 연관 신호가 임원 surface에 노출 (mock)",
+          _visible_on_exec_surface(brief, "hdec_direct_signals", "hdec_direct"),
+          f"리스트 {len(hdec or [])}건 (+ 상단 노출 포함)")
 
     check("AI 레이더 신호 1건 이상 (mock)", bool(ai), f"{len(ai or [])}건")
     # AI 레이더에 macro_economy 기사가 섞이지 않는다
@@ -231,8 +257,12 @@ def check_brief_radar() -> None:
           "; ".join(str(b)[:30] for b in bad_macro[:2]))
 
     # 리스크·규제 레이더: 중대재해/안전/규제 기사가 surface되고, 종합 중요도가 낮아도
-    # risk_priority로 상단 노출된다 ('버려지지 않음').
-    check("리스크·규제 레이더 신호 1건 이상 (mock)", bool(risk), f"{len(risk or [])}건")
+    # risk_priority로 상단 노출된다 ('버려지지 않음'). D3L visible single-use로 레이더
+    # 리스트가 비고 상단 surface로 승격될 수 있으므로 임원 surface 노출 여부로 판정한다.
+    # 레이더 리스트에 있을 때는 아래에서 risk_priority/라벨/규제 관련성을 추가 검증한다.
+    check("리스크·규제 신호가 임원 surface에 노출 (mock)",
+          _visible_on_exec_surface(brief, "risk_regulation_signals", "risk_regulation"),
+          f"리스트 {len(risk or [])}건 (+ 상단 노출 포함)")
     if risk:
         top = risk[0]
         title = top.get("title") or ""

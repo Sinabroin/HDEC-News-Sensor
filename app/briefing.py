@@ -903,16 +903,22 @@ def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
         penalty += 90
         exclude_top = True
 
-    sports_context = _contains_any(text, SPORTS_CONTEXT_PATTERNS)
+    # 중대재해·제재·규제 등 강한 리스크 맥락은 노이즈 가드(스포츠/판촉)에서 면제한다.
+    # '특별감독'의 '감독'이 스포츠 패턴('감독')에 오탐돼 중대재해·특별감독 신호가 상단
+    # 노출에서 통째로 제외(exclude_top)되던 회귀를 막는다 — 리스크·규제 기사는 종합 중요도가
+    # 낮아도 버려지지 않는다(리스크 레이더 surface 계약, P0-C1.9). sales_promo도 동일 가드.
+    strong_risk_context = _contains_any(text, (
+        "벌점", "제재", "중대재해", "영업정지", "영업 정지", "입찰제한",
+        "입찰 제한", "사전통보", "과징금", "행정처분", "처분", "부실시공",
+    ))
+
+    sports_context = (_contains_any(text, SPORTS_CONTEXT_PATTERNS)
+                      and not strong_risk_context)
     if sports_context:
         flags.append("sports_context")
         penalty += 120
         exclude_top = True
 
-    strong_risk_context = _contains_any(text, (
-        "벌점", "제재", "중대재해", "영업정지", "영업 정지", "입찰제한",
-        "입찰 제한", "사전통보", "과징금", "행정처분", "처분", "부실시공",
-    ))
     sales_promo = _is_sales_promo_text(text) and not strong_risk_context
     customer_operation_ai = _is_customer_operation_ai_text(text)
     if sales_promo and not customer_operation_ai:
