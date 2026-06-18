@@ -16,9 +16,10 @@ HDEC Executive Radar를 인수하는 다음 운영자/개발자를 위한 인계
 
 - **D3A–D3G 완료.** 임원 의사결정 레이더로서의 분류·라우팅·중복제어·근거/감사·품질 게이트가 정착.
 - **공개 live 스냅샷 검증됨** — 공개 Pages 주소가 `news-data-mode:live`로 게시·검증된 상태.
-- **전체 게이트 10/10 PASS**(`5d5a543` 기준 실측), `git diff --check` clean.
+- **전체 게이트 11/11 PASS**(D3I 발송 게이트 `verify_human_review_gate.py` 포함), `git diff --check` clean.
 - 게시 자동화: `.github/workflows/telegram-notify.yml`(KST 08:00 예약 → live 리포트 생성 →
-  성공 시 `github-actions[bot]` auto-commit → Telegram 다이제스트 발송).
+  성공 시 `github-actions[bot]` auto-commit). **다이제스트 발송은 자동이 아니다(D3I)** —
+  `approve_send=true` 수동 승인일 때만 발송된다(런북 §G).
 
 ## 3. D3A–D3G로 완료한 것 (각 능력 + 잠금 검증기)
 
@@ -30,6 +31,7 @@ HDEC Executive Radar를 인수하는 다음 운영자/개발자를 위한 인계
 | **D3D** 노출 클러스터 캡 | 같은 사안 near-duplicate를 클러스터로 묶어 대표 1건만 상단(`ai_datacenter_power` 등) | `verify_executive_cluster_exposure.py` · `d64275c` |
 | **D3F** Surface dedup + 감사 | 한 기사/클러스터가 여러 Top 카드를 도배하지 않게 cross-surface dedup + 운영자 노출 감사 섹션 | `verify_executive_surface_dedup_audit.py` · `8edd4bd` |
 | **D3G** Live 품질 게이트 복구 | D3D 클러스터 캡 이후 stale해진 집계 호스트(f_agg) 기대를 검증기 전용으로 좁게 교정 | `verify_live_article_quality_gate.py` · `5d5a543` |
+| **D3I** 사람 검토 / 수동 Send 게이트 | 다이제스트 발송 기본 비발송(`manual`), 실제 발송은 `TELEGRAM_SEND_MODE=send`+운영자 승인+자격증명 모두 필요. 워크플로는 `approve_send=true` 수동 승인일 때만 발송(예약 자동발송 차단). 자격증명 없으면 발송 위장 금지 | `verify_human_review_gate.py` · (이 스프린트) |
 
 > D3G 상세 근본원인: D3D가 `ai_datacenter_power` 클러스터 키를 도입하면서, 집계 호스트
 > near-dup(`f_agg`, v.daum.net)이 신뢰 매체 동일 사안(`f_ai_dc`)과 한 클러스터로 묶여 AI
@@ -39,7 +41,7 @@ HDEC Executive Radar를 인수하는 다음 운영자/개발자를 위한 인계
 
 ## 4. 현재 게이트 팩 (Gate Pack)
 
-- **전체 게이트**: 런북 §B(10개 verifier + `py_compile` + `git diff --check`). 릴리스/핸드오프 시.
+- **전체 게이트**: 런북 §B(11개 verifier + `py_compile` + `git diff --check`). 릴리스/핸드오프 시.
 - **빠른 게이트**: 런북 §C(static_report / live_article_quality_gate / final_live_routing /
   data_source_honesty + `git diff --check`). 평상 운영 시.
 - 전부 네트워크 없이 결정적으로 돈다(fixture + temp DB 시뮬, 저장소 `radar.db` 미접촉, 비밀값 0건).
@@ -69,14 +71,23 @@ HDEC Executive Radar를 인수하는 다음 운영자/개발자를 위한 인계
   직접 기사 — D3G 회귀). 표시 라벨만 정규화하고 원문 URL은 보존한다.
 - **mock 데모 숫자(28/21/3/4/14/7)를 깨지 않는다.** 라우팅/표현 변경은 섹션 멤버십만 바꾸고
   등급을 재계산하지 않아야 한다. 깨지면 scoring/collector 경계를 침범한 것이다.
+- **사람 검토 발송 게이트를 약화하지 않는다 (D3I).** `send_telegram.py`의 기본 모드를 `send`로
+  바꾸거나, 승인(`REVIEW_APPROVED`)·자격증명 검사를 우회하거나, 워크플로 발송 step의
+  `TELEGRAM_SEND_MODE`를 `approve_send` 게이트에서 떼어 무조건 `send`로 두면 안 된다.
+  자격증명 fail-fast(`TELEGRAM_BOT_TOKEN is missing`)는 `verify_static_report`/
+  `verify_executive_brief`가 잠그고 있으니 그대로 유지한다(발송 결정보다 먼저 실행).
 
 ## 7. 다음 권장 작업 (Next Recommended Work)
 
-- **D3I — 사람 검토 큐 / 수동 Send 게이트 하드닝**(Human Review Queue / Manual Send Gate hardening),
-  **또는 D3I — 알림 후보 워크플로 폴리시**(Alert candidate workflow polish).
-- 방향: 현재 "예약 게시 + 다이제스트 자동" 위에, **임원에게 즉시 알림을 띄우기 전 운영자
-  검토/승인 단계**를 더 명시적으로 만든다(임의 자동 발송 금지 원칙 유지 — 런북 §F 6).
-- 착수 전 점검: 이 작업은 **알림/발송 경계**(notification 도메인 + 워크플로)이지 랭킹/분류가
+- **D3I 완료** — 사람 검토 / 수동 Send 게이트 하드닝(이 스프린트). 다이제스트는 기본 비발송,
+  실제 발송은 운영자 승인(`approve_send=true` / `TELEGRAM_SEND_MODE=send`+`REVIEW_APPROVED`)
+  일 때만. 검증: `verify_human_review_gate.py`. 런북 §G 참조.
+- **다음 후보 (notification 경계 연장선, 랭킹 아님)**:
+  - **발송 승인 이력/감사 로그** — 누가 언제 무엇을 승인해 발송했는지 남기는 경량 기록
+    (`notification_logs`는 이미 schema에 있음 — 읽기/표시 위주, scoring 불변).
+  - **사람 검토 큐 UI** — 후보 다이제스트를 운영자가 화면에서 보고 승인/보류하는 최소 뷰.
+  - **inbound 1:1 봇(P1)** — "개인 질의하기" deep link의 실제 자연어 응답(현재는 진입 UX만).
+- 착수 전 점검: 위 작업은 **알림/발송 경계**(notification 도메인 + 워크플로)이지 랭킹/분류가
   아니다. provider/수집/scoring을 건드리지 않고 끝내는 것이 성공 기준이다.
 
 ---

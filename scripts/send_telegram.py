@@ -17,6 +17,13 @@ P0-C1.10 — 채널→1:1 봇 진입: TELEGRAM_BOT_USERNAME(또는 TELEGRAM_PERS
 경우에도 출력하지 않는다 (정상 발송 경로) — 출력은 메시지 출처/길이, 링크 버튼
 사용 여부(true/false), 발송 집계뿐이다 (rules.md §4). --dry-run-payload만 검증용으로
 버튼 text/url을 출력하며, 이때도 토큰은 절대 읽거나 출력하지 않는다.
+
+P0-D3I — 사람 검토 / 수동 Send 게이트 (human-on-the-loop):
+이 스크립트는 기본적으로 임원 알림을 자동 발송하지 않는다. TELEGRAM_SEND_MODE가
+'send'이고 운영자 승인(REVIEW_APPROVED=true 또는 CONFIRM_SEND=yes)이 있으며
+자격증명이 모두 존재할 때만 실제 Telegram POST가 일어난다. 그 외(기본 manual·
+dry_run·승인 누락)에서는 후보 다이제스트를 출력만 하고 보류한다(발송 0건). 자격증명이
+없으면 모드와 무관하게 즉시 fail-fast하여 '발송됨'으로 위장하지 않는다.
 """
 
 import json
@@ -40,10 +47,36 @@ PERSONAL_BUTTON_TEXT = "개인 질의하기"
 PERSONAL_START_PARAM = "ask_today"
 TELEGRAM_DEEP_LINK_PREFIX = "https://t.me/"
 
+# ── 발송 모드 게이트 (P0-D3I — 사람 검토 / 수동 Send 경계) ──────────────────
+# 이 시스템은 human-on-the-loop을 유지한다: 레이더는 알림 후보를 추천할 뿐,
+# 운영자의 명시적 승인 없이는 임원 알림을 자동 발송하지 않는다.
+#   manual(기본) / dry_run : 후보 다이제스트를 만들어 출력만 한다 (실제 발송 0건).
+#   send                   : 실제 Telegram 발송 — 단, 아래 세 조건이 모두 참일 때만.
+#       1) TELEGRAM_SEND_MODE=send
+#       2) REVIEW_APPROVED=true (또는 CONFIRM_SEND=yes) — 운영자 승인
+#       3) TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_IDS 자격증명 존재
+# 'send'가 아닌 모든 값(빈 값·오타 포함)은 비발송으로 처리한다 (fail-closed).
+SEND_MODE_ENV = "TELEGRAM_SEND_MODE"
+DEFAULT_SEND_MODE = "manual"
+SEND_MODE_SEND = "send"
+APPROVAL_ENVS = ("REVIEW_APPROVED", "CONFIRM_SEND")
+APPROVAL_TRUE = {"true", "yes", "1", "approved"}
+
 
 def fail(message: str) -> None:
     print(f"ERROR: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def resolve_send_mode() -> str:
+    """발송 모드를 결정한다. 미설정/빈 값이면 안전한 기본값(manual = 비발송)."""
+    return os.environ.get(SEND_MODE_ENV, "").strip().lower() or DEFAULT_SEND_MODE
+
+
+def review_approved() -> bool:
+    """운영자 승인 여부 — REVIEW_APPROVED/CONFIRM_SEND 중 하나라도 승인값이면 True."""
+    return any(os.environ.get(key, "").strip().lower() in APPROVAL_TRUE
+               for key in APPROVAL_ENVS)
 
 
 def resolve_message() -> tuple[str, str]:
@@ -148,9 +181,16 @@ def main() -> None:
         dry_run_payload(argv[1] if len(argv) > 1 else "dry-run")
         return
 
+    send_mode = resolve_send_mode()
+    approved = review_approved()
+    will_send = send_mode == SEND_MODE_SEND and approved
+
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_ids_raw = os.environ.get("TELEGRAM_CHAT_IDS", "").strip()
 
+    # 자격증명 fail-fast (모든 모드 공통, 발송 결정보다 먼저). 채널이 설정돼 있지 않으면
+    # 조용히 '발송됨'으로 위장하지 않고 즉시 실패한다 (P0-B1 계약 유지 +
+    # '자격증명 없으면 발송 아님' 원칙). 승인된 send라도 자격증명이 없으면 여기서 멈춘다.
     if not token:
         fail("TELEGRAM_BOT_TOKEN is missing")
     if not chat_ids_raw:
@@ -159,6 +199,7 @@ def main() -> None:
     chat_ids = [item.strip() for item in chat_ids_raw.split(",") if item.strip()]
     if not chat_ids:
         fail("No valid chat ids found")
+    recipient_count = len(chat_ids)
 
     message, message_source = resolve_message()
     report_url = resolve_report_url()
@@ -168,7 +209,29 @@ def main() -> None:
     print(f"Message source: {message_source} ({len(message)} chars)")
     print(f"Report link enabled: {'true' if report_url else 'false'}")
     print(f"Personal bot link enabled: {'true' if personal_url else 'false'}")
+    print(f"Send mode: {send_mode}")
+    print(f"Review gate: review_required={'false' if will_send else 'true'} "
+          f"send_mode={send_mode} send_allowed={'true' if will_send else 'false'} "
+          f"recipients={recipient_count}")
 
+    # 사람 검토 게이트 — send 모드 + 명시 승인이 아니면 실제 발송하지 않는다.
+    if not will_send:
+        if send_mode == SEND_MODE_SEND and not approved:
+            # 발송 의도(send)는 있으나 승인이 없다 — 분명히 막고 시끄럽게 종료한다.
+            print("Send status: approval_required — TELEGRAM_SEND_MODE=send 이지만 "
+                  "운영자 승인(REVIEW_APPROVED/CONFIRM_SEND) 없음 · 발송하지 않음")
+            print("--- 후보 다이제스트 (검토용, 발송 안 됨) ---")
+            print(message)
+            raise SystemExit(2)
+        # manual / dry_run (기본) — 후보 다이제스트만 출력하고 보류한다 (실제 발송 0건).
+        print("Send status: review_required — 사람 검토 필요 · 발송하지 않음 "
+              "(승인 후 TELEGRAM_SEND_MODE=send + REVIEW_APPROVED=true 로 발송)")
+        print("--- 후보 다이제스트 (검토용, 발송 안 됨) ---")
+        print(message)
+        return
+
+    # send 모드 + 운영자 승인 + 자격증명 확보 — 여기서만 실제 발송한다.
+    print("Send status: approved — 운영자 승인 확인 · 실제 발송 진행")
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     delivered = 0

@@ -165,9 +165,12 @@ python3 scripts/verify_telegram_digest.py
 
 ### GitHub Actions 실행
 
-- **수동**: Actions → **Telegram Notify** → Run workflow.
-  `message` 입력을 비워 두면 mock daily digest를, 입력하면 그 메시지를 발송한다.
-- **스케줄**: 매일 UTC 23:00 (KST 08:00)에 digest 자동 발송 (`cron: "0 23 * * *"`).
+- **수동**: Actions → **Telegram Notify** → Run workflow. `message`를 비우면 live 리포트를
+  게시하고 다이제스트 후보를 만든다. **실제 발송하려면 `approve_send`에 `true`를 넣어야 한다**
+  (P0-D3I 사람 검토 게이트 — 비우면 후보만 보류하고 발송하지 않는다).
+- **스케줄**: 매일 UTC 23:00 (KST 08:00)에 live 리포트를 **자동 게시**한다(`cron: "0 23 * * *"`).
+  단 **다이제스트 발송은 자동이 아니다** — 예약 실행은 발송 게이트가 `manual`로 닫혀 후보만
+  보류하고, 운영자가 `approve_send=true`로 승인할 때만 발송된다(런북 `docs/operations` §G).
 - 발송 전에 워크플로가 `scripts/verify_telegram_digest.py`,
   `scripts/verify_executive_brief.py`, `scripts/verify_executive_brief_quality.py`,
   `scripts/verify_static_report.py`, `scripts/verify_data_source_honesty.py`를

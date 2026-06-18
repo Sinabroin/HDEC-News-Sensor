@@ -4,11 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       message:
-        description: "Custom message (leave empty to publish + send the live daily digest)"
+        description: "Custom message (leave empty to publish the live daily report; digest send still needs approve_send=true)"
+        required: false
+        default: ""
+      approve_send:
+        # P0-D3I — 사람 검토 / 수동 Send 게이트. 'true'로 명시 승인할 때만 실제 Telegram 발송.
+        # 비어 있거나(기본) schedule 트리거면 send 게이트가 manual로 닫혀 발송하지 않는다.
+        description: "Type 'true' to actually SEND the digest (default/empty = review only, report still publishes)"
         required: false
         default: ""
   schedule:
-    - cron: "0 23 * * *" # UTC 23:00 = KST 08:00 — live daily report publish + digest
+    - cron: "0 23 * * *" # UTC 23:00 = KST 08:00 — live daily report publish (digest send held for approval)
 
 # 빈 메시지(예약/수동) 경로에서 live RSS 리포트를 main에 auto-commit하기 위해 필요.
 permissions:
@@ -117,6 +123,9 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          # P0-D3I — 발송 게이트: approve_send=true(수동 승인)일 때만 send, 그 외/예약은 manual(비발송).
+          TELEGRAM_SEND_MODE: ${{ github.event.inputs.approve_send == 'true' && 'send' || 'manual' }}
+          REVIEW_APPROVED: ${{ github.event.inputs.approve_send == 'true' && 'true' || 'false' }}
           NEWS_MODE: live
           # Naver 보조 provider — 이미 생성된 repo secrets로 안전 주입 (P0-D2). 값은 출력하지 않는다.
           NAVER_NEWS_ENABLED: "1"
@@ -141,6 +150,9 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          # P0-D3I — 발송 게이트: approve_send=true(수동 승인)일 때만 send, 그 외/예약은 manual(비발송).
+          TELEGRAM_SEND_MODE: ${{ github.event.inputs.approve_send == 'true' && 'send' || 'manual' }}
+          REVIEW_APPROVED: ${{ github.event.inputs.approve_send == 'true' && 'true' || 'false' }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
           # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
@@ -154,6 +166,9 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          # P0-D3I — 발송 게이트: approve_send=true(수동 승인)일 때만 send, 그 외/예약은 manual(비발송).
+          TELEGRAM_SEND_MODE: ${{ github.event.inputs.approve_send == 'true' && 'send' || 'manual' }}
+          REVIEW_APPROVED: ${{ github.event.inputs.approve_send == 'true' && 'true' || 'false' }}
           MESSAGE: ${{ github.event.inputs.message }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
           # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
