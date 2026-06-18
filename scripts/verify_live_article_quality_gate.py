@@ -330,7 +330,11 @@ def _run_pipeline_sim() -> dict | None:
         "b=briefing.build_brief()\n"
         "rows={r['id']:r for r in db.fetch_articles_with_scores()}\n"
         "def ids(k):return [s.get('article_id') for s in (b.get(k) or [])]\n"
-        "pools=(b.get('ai_radar_signals') or [])+(b.get('business_signals') or [])\n"
+        # 집계 호스트 near-dup(f_agg)은 D3D cluster cap 이후 신뢰 매체 f_ai_dc에 밀려 AI 테마
+        # 섹션에서 dedup되고 '신규 이슈'로 노출된다 — display_source 확인은 실제 노출 surface
+        # (ai/biz/top_new) 전체에서 찾는다.
+        "pools=((b.get('ai_radar_signals') or [])+(b.get('business_signals') or [])\n"
+        "       +(b.get('top_new_issues') or []))\n"
         "agg=next((s for s in pools if s.get('article_id')=='f_agg'),{})\n"
         "from build_static_report import render_report_html\n"
         "html,_=render_report_html(b)\n"
@@ -401,9 +405,16 @@ def check_pipeline(sim: dict | None) -> None:
           (sim.get("risk_pri") or {}).get("f_hdec_enf", 0) > 0,
           str((sim.get("risk_pri") or {}).get("f_hdec_enf")))
 
-    # (6) 집계 호스트 표시 정규화
-    check("집계 호스트 fixture가 AI 섹션에 노출 (정상 AI 기사)",
-          "f_agg" in allsec["ai"], str(sim.get("ai")))
+    # (6) 집계 호스트(v.daum.net) 정상 노출(하드 제외 금지) + 표시 정규화
+    # D3D near-dup cluster cap(d64275c) 이후: 동일 'AI 데이터센터 전력' 사안을 신뢰 매체
+    # f_ai_dc가 AI 테마 섹션 대표로 점유하므로, 집계 호스트 near-dup f_agg는 AI 섹션에서
+    # dedup되고 D3F cross-surface 로직에 의해 '신규 이슈'로 노출된다(하드 제외 아님).
+    # 핵심 계약은 그대로다: 집계 호스트 기사가 (1) 임원 surface에 정상 노출되고 (2)
+    # display_source가 'Daum 경유'로 정규화된다. ('AI 섹션 고정 노출'은 클러스터링 도입
+    # 이전의 stale 기대였다 — 집계 near-dup을 신뢰 매체 위에 노출하지 않는 것이 옳다.)
+    check("집계 호스트 fixture가 임원 surface에 정상 노출 (하드 제외 아님)",
+          "f_agg" in (allsec["ai"] | allsec["top_new"]),
+          f"ai={sim.get('ai')} top_new={sim.get('top_new')}")
     check("집계 호스트 display_source가 'Daum 경유'로 정규화",
           sim.get("agg_display") == "Daum 경유", str(sim.get("agg_display")))
     check("정적 리포트에 raw 'v.daum.net' 가시 노출 없음 (href 제외)",
