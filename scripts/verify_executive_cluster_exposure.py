@@ -122,10 +122,18 @@ def _run_pipeline_sim() -> dict | None:
         "sys.path.insert(0,'.')\n"
         "FIX=" + json.dumps(FIX, ensure_ascii=False) + "\n"
         "from app import db, collector, scoring, insight, briefing, live_collector as lc\n"
+        "from app import decision_relevance\n"
         "lc.fetch_all=lambda *a,**k:[dict(x) for x in FIX]\n"
         "db.init_db(); collector.run(); scoring.score_all(); insight.generate_all()\n"
         "b=briefing.build_brief()\n"
         "rows={r['id']:r for r in db.fetch_articles_with_scores()}\n"
+        "profiles={}\n"
+        "for rid,row in rows.items():\n"
+        "    d=decision_relevance.classify(row, 'general')\n"
+        "    p=briefing._top_exposure_profile(row, d)\n"
+        "    profiles[rid]={'flags':p.get('top_exposure_flags') or [],\n"
+        "                   'penalty':p.get('top_exposure_penalty'),\n"
+        "                   'excluded':p.get('top_exposure_excluded')}\n"
         "def slim(e):\n"
         "    return {'id':e.get('article_id'),'title':e.get('title'),\n"
         "            'reason':e.get('one_line_reason') or e.get('why_it_matters'),\n"
@@ -149,7 +157,7 @@ def _run_pipeline_sim() -> dict | None:
         " 'biz':entries('business_signals'), 'comp':entries('competitor_supply_signals'),\n"
         " 'risk':entries('risk_regulation_signals'), 'top_new':entries('top_new_issues'),\n"
         " 'top_imm':entries('top_immediate_signals'), 'cat':cat, 'reasons':reasons,\n"
-        " 'grades':{i:rows[i]['alert_grade'] for i in rows},\n"
+        " 'grades':{i:rows[i]['alert_grade'] for i in rows}, 'profiles':profiles,\n"
         " 'generic_absent':('" + GENERIC + "' not in json.dumps(b, ensure_ascii=False))}\n"
         "print(json.dumps(out, ensure_ascii=False))\n"
     )
@@ -286,9 +294,13 @@ def check_pipeline(sim: dict | None) -> None:
     check("E: 원더독스는 현대건설 직접 섹션에 없음",
           "c_wonder" not in hdec_ids, f"hdec={hdec_ids}")
     stock_entry = _entry(sim, "c_stock_smr")
-    check("E: D3D top exposure flags 유지",
-          {"securities_context", "weak_source"} <= set(stock_entry.get("flags") or []),
-          str(stock_entry))
+    stock_profile = (sim.get("profiles") or {}).get("c_stock_smr") or stock_entry
+    check("E: D3D top exposure flags 유지(표시는 억제, profile은 보존)",
+          {"securities_context", "weak_source"} <= set(stock_profile.get("flags") or []),
+          str(stock_profile))
+    check("E: D3L 주가/SMR 증권성 기사는 executive visible top에서 제외",
+          "c_stock_smr" not in {e.get("id") for e in all_top},
+          f"top={sorted(e.get('id') for e in all_top)}")
 
 
 def main() -> int:

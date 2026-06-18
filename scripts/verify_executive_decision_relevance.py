@@ -291,6 +291,7 @@ def _run_pipeline_sim() -> dict | None:
         " 'hdec':ids('hdec_direct_signals'),'ai':ids('ai_radar_signals'),\n"
         " 'risk':ids('risk_regulation_signals'),'biz':ids('business_signals'),\n"
         " 'comp':ids('competitor_supply_signals'),'macro':ids('macro_economy_signals'),\n"
+        " 'top_new':ids('top_new_issues'),'top_imm':ids('top_immediate_signals'),\n"
         " 'grades':{i:rows[i]['alert_grade'] for i in rows}}\n"
         "print(json.dumps(out, ensure_ascii=False))\n"
     )
@@ -310,32 +311,37 @@ def check_pipeline(sim: dict | None) -> None:
     if not sim:
         return
     check("시뮬: live 모드로 fixture 파이프라인 통과", sim.get("mode") == "live")
-    core = ("hdec", "ai", "risk", "biz", "comp", "macro")
+    core = ("hdec", "ai", "risk", "biz", "comp", "macro", "top_new", "top_imm")
     S = {k: set(sim.get(k) or []) for k in core}
     grades = sim.get("grades") or {}
 
     # 현대건설 직접 — 전략/계약/조직/재무/뉴에너지/벌점이 현대건설 직접 섹션에 노출 + 제외 아님.
     for fid, label in (("f_backlog", "수주잔고"), ("f_dc", "데이터센터"),
                        ("f_rnd", "R&D"), ("f_smr", "뉴에너지"), ("f_pen", "벌점")):
-        check(f"현대건설 {label}({fid})가 현대건설 직접 섹션에 노출", fid in S["hdec"],
-              f"hdec={sorted(S['hdec'])}")
+        check(f"현대건설 {label}({fid})가 현대건설 직접/상단 surface에 노출",
+              fid in (S["hdec"] | S["top_imm"] | S["top_new"]),
+              f"hdec={sorted(S['hdec'])} top_imm={sorted(S['top_imm'])} top_new={sorted(S['top_new'])}")
         check(f"현대건설 {label}({fid}) 제외 아님",
               grades.get(fid) != GRADE_EXCLUDED, str(grades.get(fid)))
     for fid, label in (("f_aicon", "AI 계약"), ("f_fin", "전환사채")):
         check(f"현대건설 {label}({fid}) primary는 현대건설 직접이며 제외 아님",
               grades.get(fid) != GRADE_EXCLUDED, str(grades.get(fid)))
-    # 현대건설 벌점은 리스크·규제에도 노출 (multi-section).
-    check("현대건설 벌점이 리스크·규제 섹션에도 노출", "f_pen" in S["risk"])
+    # D3L: display는 exact article single-use. 멤버십은 unit test에서 risk secondary를
+    # 유지하되, visible radar에서는 현대건설 직접 또는 리스크 중 한 곳에만 노출한다.
+    f_pen_sections = [k for k in core if "f_pen" in S[k]]
+    check("현대건설 벌점은 visible executive section에 1회만 노출",
+          len(f_pen_sections) == 1, str(f_pen_sections))
     # 수주·해외 broadening — 삼성물산/중동 재건/SK에코플랜트가 수주·해외에 노출.
     check("삼성물산 EPC/SMR이 AI 또는 수주·해외에 노출",
-          "f_sams" in S["ai"] or "f_sams" in S["biz"])
+          "f_sams" in (S["ai"] | S["biz"] | S["top_imm"] | S["top_new"]))
     check("수주·해외에 발주/EPC/해외 후보 노출 (0건 회귀 방지)",
           bool(S["biz"] & {"f_mideast", "f_sams", "f_sk", "f_backlog"}),
           f"biz={sorted(S['biz'])}")
     check("중동 재건 기사 제외 아님 (발주 환경 floor)",
           grades.get("f_mideast") != GRADE_EXCLUDED, str(grades.get("f_mideast")))
-    check("SK에코플랜트가 수주·해외 또는 경쟁사·공급망에 노출",
-          "f_sk" in S["biz"] or "f_sk" in S["comp"])
+    check("SK에코플랜트가 AI/수주·해외/경쟁사·공급망 중 한 곳에 노출",
+          "f_sk" in (S["ai"] | S["biz"] | S["comp"]),
+          f"ai={sorted(S['ai'])} biz={sorted(S['biz'])} comp={sorted(S['comp'])}")
     for fid in ("f_gaon1", "f_gaon2", "f_ls"):
         check(f"공급사 단독 {fid}는 수주·해외가 아니라 경쟁사·공급망/근거",
               fid not in S["biz"] and (fid in S["comp"] or grades.get(fid) == GRADE_EXCLUDED),
@@ -363,9 +369,13 @@ def check_mock_integrity() -> None:
     got = {k: b.get(k) for k in MOCK_BASELINE}
     check("mock 데모 숫자 불변 (의사결정 재정렬이 mock을 바꾸지 않음)",
           got == MOCK_BASELINE, f"got={got}")
+    mock_hdec_visible = bool(b.get("hdec_direct_signals")) or any(
+        e.get("executive_section") == "hdec_direct"
+        for e in (b.get("top_immediate_signals") or []))
     check("mock에 현대건설 직접 신호 존재 (네옴 EPC)",
-          bool(b.get("hdec_direct_signals")),
-          f"{len(b.get('hdec_direct_signals') or [])}건")
+          mock_hdec_visible,
+          f"hdec={len(b.get('hdec_direct_signals') or [])} top_imm="
+          f"{[(e.get('article_id'), e.get('executive_section')) for e in (b.get('top_immediate_signals') or [])]}")
 
 
 def check_report_structure() -> None:

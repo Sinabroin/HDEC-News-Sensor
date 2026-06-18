@@ -110,10 +110,23 @@ def _run_pipeline_sim() -> dict | None:
         "sys.path.insert(0,'.')\n"
         "FIX=" + json.dumps(FIX, ensure_ascii=False) + "\n"
         "from app import db, collector, scoring, insight, briefing, live_collector as lc\n"
+        "from app import decision_relevance\n"
         "lc.fetch_all=lambda *a,**k:[dict(x) for x in FIX]\n"
         "db.init_db(); collector.run(); scoring.score_all(); insight.generate_all()\n"
         "b=briefing.build_brief()\n"
         "rows={r['id']:r for r in db.fetch_articles_with_scores()}\n"
+        "profiles={}; direct_reasons={}\n"
+        "for rid,row in rows.items():\n"
+        "    d=decision_relevance.classify(row, 'general')\n"
+        "    p=briefing._top_exposure_profile(row, d)\n"
+        "    profiles[rid]={'flags':p.get('top_exposure_flags') or [],\n"
+        "                   'penalty':p.get('top_exposure_penalty'),\n"
+        "                   'excluded':p.get('top_exposure_excluded')}\n"
+        "    direct_reasons[rid]=insight.executive_reason(\n"
+        "        row.get('title') or '', row.get('snippet') or '',\n"
+        "        is_stock_hype=bool(d.get('stock_hype')),\n"
+        "        is_finance=bool(d.get('is_finance')),\n"
+        "        hdec_direct=bool(d.get('hdec_direct')))\n"
         "def slim(e):\n"
         "    return {'id':e.get('article_id'),'title':e.get('title'),\n"
         "            'reason':e.get('one_line_reason') or e.get('why_it_matters'),\n"
@@ -136,7 +149,7 @@ def _run_pipeline_sim() -> dict | None:
         " 'biz':entries('business_signals'), 'comp':entries('competitor_supply_signals'),\n"
         " 'macro':entries('macro_economy_signals'), 'top_new':entries('top_new_issues'),\n"
         " 'top_imm':entries('top_immediate_signals'), 'cat':cat_entries,\n"
-        " 'reasons':reasons,\n"
+        " 'reasons':reasons, 'profiles':profiles, 'direct_reasons':direct_reasons,\n"
         " 'grades':{i:rows[i]['alert_grade'] for i in rows},\n"
         " 'generic_absent':('" + GENERIC + "' not in json.dumps(b, ensure_ascii=False))}\n"
         "print(json.dumps(out, ensure_ascii=False))\n"
@@ -205,12 +218,18 @@ def check_pipeline(sim: dict | None) -> None:
         check(f"B: 주가/SMR 기사가 {section} top-1 아님",
               not ids or ids[0] != "q_stock_smr", f"{section}={ids}")
     stock_reasons = sim.get("reasons", {}).get("q_stock_smr") or []
+    if not stock_reasons:
+        stock_reasons = [((sim.get("direct_reasons") or {}).get("q_stock_smr") or "")]
     check("B: 주가/SMR 사유는 자본시장 관찰 유지",
           any("자본시장 관찰" in r for r in stock_reasons), str(stock_reasons))
     stock_entry = _entry(sim, "q_stock_smr")
+    stock_profile = (sim.get("profiles") or {}).get("q_stock_smr") or stock_entry
     check("B: 주가/SMR 기사에 securities/weak source 노출 flag 부착",
-          {"securities_context", "weak_source"} <= set(stock_entry.get("flags") or []),
-          str(stock_entry))
+          {"securities_context", "weak_source"} <= set(stock_profile.get("flags") or []),
+          str(stock_profile))
+    check("B: D3L 주가/SMR 기사는 executive top/radar visible에서 제외",
+          "q_stock_smr" not in set().union(*(set(_ids(sim, s)) for s in top_sections)),
+          " / ".join(f"{s}={_ids(sim, s)}" for s in top_sections))
 
     check("C: 최근 AI/DC 정책·EPC 기사가 AI 섹션에 노출",
           bool({"q_dc_policy", "q_dc_epc"} & set(ai_ids)), f"ai={ai_ids}")

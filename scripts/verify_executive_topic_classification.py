@@ -315,7 +315,9 @@ def check_pipeline(sim: dict | None) -> None:
     check("A: t_iran_hdec(종전·현대건설·제재)가 AI 섹션에 없음", "t_iran_hdec" not in S["ai"])
     # AI 유지 — 직접 AI 증거가 있는 기사.
     for fid in ("t_ai_dc", "t_smr"):
-        check(f"A: {fid}가 AI 섹션 유지", fid in S["ai"], f"ai={sorted(S['ai'])}")
+        check(f"A: {fid}가 AI/상단 executive surface 유지",
+              fid in (S["ai"] | S["top_imm"] | S["top_new"]),
+              f"ai={sorted(S['ai'])} top_imm={sorted(S['top_imm'])} top_new={sorted(S['top_new'])}")
     check("A: 현대건설 생성형 AI가 AI 또는 현대건설 직접에 노출",
           "t_hdec_genai" in S["ai"] or "t_hdec_genai" in S["hdec"])
 
@@ -350,9 +352,13 @@ def check_mock_integrity() -> None:
     got = {k: b.get(k) for k in MOCK_BASELINE}
     check("mock 데모 숫자 불변 (분류 가드가 mock을 바꾸지 않음)",
           got == MOCK_BASELINE, f"got={got} expect={MOCK_BASELINE}")
+    mock_hdec_visible = bool(b.get("hdec_direct_signals")) or any(
+        e.get("executive_section") == "hdec_direct"
+        for e in (b.get("top_immediate_signals") or []))
     check("mock 현대건설 직접 신호 유지 (네옴 EPC)",
-          bool(b.get("hdec_direct_signals")),
-          f"{len(b.get('hdec_direct_signals') or [])}건")
+          mock_hdec_visible,
+          f"hdec={len(b.get('hdec_direct_signals') or [])} top_imm="
+          f"{[(e.get('article_id'), e.get('executive_section')) for e in (b.get('top_immediate_signals') or [])]}")
     check("mock AI 신호 유지", bool(b.get("ai_radar_signals")),
           f"{len(b.get('ai_radar_signals') or [])}건")
 

@@ -36,12 +36,19 @@ TOP_NEW_SCORE_FLOOR = 2.5
 TOP_STALE_DAYS = 45
 TOP_VERY_STALE_DAYS = 90
 
-# P0-D3F: surface 간 노출 중복 억제 — 같은 기사/클러스터가 여러 상단 카드를 도배하지 않게 한다.
-# 한 기사는 '의도된 multi-section'(예: 현대건설 벌점 = 현대건설 연관 + 리스크·규제)을 보존하려고
-# 최대 2개 상단 surface까지 허용한다(완전 제거 아님). 같은 cluster도 최대 2개 상단 surface까지.
-# 표시 전용 가드레일이며 점수·등급·원문 dedup은 변경하지 않는다.
-MAX_ARTICLE_TOP_SURFACES = 2
+# P0-D3F/P0-D3L: surface 간 노출 중복 억제 — 같은 기사/제목/클러스터가 여러 상단 카드를
+# 도배하지 않게 한다. D3L부터 임원 visible surface에서는 정확히 같은 article/title/url은
+# 단 1회만 노출한다. 점수·등급·원문 dedup은 변경하지 않는 표시 전용 가드레일이다.
+MAX_ARTICLE_TOP_SURFACES = 1
 MAX_CLUSTER_TOP_SURFACES = 2
+# D3L global high-exposure cluster budget. hdec_netherlands_nuclear도 canonical key에서
+# nuclear_smr_project로 합산한다(현대건설 직접 원전 2건 예외가 전체 원전 flood로 번지지 않게).
+GLOBAL_HIGH_EXPOSURE_CLUSTER_CAPS = {
+    "nuclear_smr_project": 3,
+    "ai_datacenter_power": 3,
+    "smart_construction_challenge": 2,
+}
+CATEGORY_GLOBAL_CLUSTER_CAP = 2
 # 노출 품질·중복 감사(운영자 전용)에 담을 항목 상한.
 TOP_EXPOSURE_AUDIT = 30
 EXPOSURE_AUDIT_NOTE = (
@@ -68,13 +75,19 @@ SUPPRESSION_REASON_LABELS = {
     "source_low": "약한 출처",
     "source_excluded": "약한 출처",
     "generic_roundup": "roundup/listicle",
+    "generic_finance_roundup": "금융/PF roundup",
+    "sales_promo": "분양/청약 홍보성",
+    "customer_operation_ai": "고객 운영 AI",
+    "sports_context": "스포츠/선수 기사",
+    "competitor_only_ai_robot": "경쟁사 AI 로봇 단독",
     "suppressed_cluster_cap": "유사 기사 대표 선정됨",
     "suppressed_duplicate": "동일 기사 이미 상단 노출",
 }
 
 SECURITIES_CONTEXT_PATTERNS = (
-    "주가", "목표가", "목표주가", "투자의견", "종목", "관련주", "테마주",
-    "급등", "폭등", "상한가",
+    "주가", "목표가", "목표주가", "투자의견", "투자 의견", "투자포인트",
+    "증권 레이더", "증권", "종목", "관련주", "수혜주", "테마주",
+    "급등", "폭등", "상한가", "삼전닉스", "포스트워 수혜", "뭐 사야",
 )
 WEAK_TOP_SOURCE_PATTERNS = (
     "데일리머니", "네이버 프리미엄콘텐츠", "naver premium", "증권플러스",
@@ -82,7 +95,29 @@ WEAK_TOP_SOURCE_PATTERNS = (
 )
 GENERIC_ROUNDUP_PATTERNS = (
     "업계 소식", "오늘의 건설", "리뷰", "브리핑", "소식 모음",
-    "굿모닝!",
+    "굿모닝!", "금융권 이모저모", "은행권 이모저모",
+)
+GENERIC_BANKING_PATTERNS = (
+    "금융권 이모저모", "은행권 이모저모", "은행권 브리핑", "은행권 소식",
+)
+SALES_PROMO_PATTERNS = (
+    "분양", "청약", "홍보관", "모델하우스", "견본주택", "특별공급",
+    "사이버 모델하우스", "분양가", "1순위 마감", "정당계약",
+)
+CUSTOMER_OPERATION_AI_PATTERNS = (
+    "ai 상담", "ai상담", "생성형 ai", "인공지능 상담", "챗봇", "콜센터",
+    "고객 응대", "고객상담", "상담 자동화", "청약 상담", "분양 상담",
+)
+SPORTS_CONTEXT_PATTERNS = (
+    "배구", "원더독스", "스타랭킹", "박정아", "선수", "구단", "프로팀",
+    "우승", "리그", "감독",
+)
+LOW_DIRECT_COMPETITOR_AI_PATTERNS = (
+    "ai 로봇", "ai·로봇", "인공지능 로봇", "건설로봇", "스마트건설 로봇",
+)
+GENERIC_ENERGY_FINANCE_PATTERNS = (
+    "태양광 pf", "태양광 프로젝트 파이낸싱", "태양광 금융", "solar pf",
+    "신한은행", "은행", "pf 완료",
 )
 DIRECT_PROJECT_PATTERNS = (
     "수주", "발주", "입찰", "우선협상", "본계약", "계약", "프로젝트",
@@ -395,6 +430,30 @@ def _contains_any(text: str, patterns) -> bool:
     return any((p or "").lower() in low for p in patterns)
 
 
+def _is_sales_promo_text(text: str) -> bool:
+    return _contains_any(text, SALES_PROMO_PATTERNS)
+
+
+def _is_customer_operation_ai_text(text: str) -> bool:
+    return (
+        _contains_any(text, CUSTOMER_OPERATION_AI_PATTERNS)
+        and _contains_any(text, ("ai", "인공지능", "생성형", "챗봇"))
+    )
+
+
+def _is_customer_operation_ai_sales(row: dict) -> bool:
+    text = " ".join([row.get("title") or "", row.get("snippet") or ""])
+    return _is_sales_promo_text(text) and _is_customer_operation_ai_text(text)
+
+
+def _surface_quality_excluded(row: dict, decision: dict | None, surface: str) -> bool:
+    if _is_top_exposure_excluded(row, decision):
+        return True
+    if surface in ("top_new_issues", "top_immediate_signals"):
+        return _is_customer_operation_ai_sales(row)
+    return False
+
+
 def _normalize_exposure_text(text: str) -> str:
     """노출 클러스터링용 제목 정규화 — 표시 선택 전용, DB dedup과 분리."""
     normalized = unicodedata.normalize("NFKC", text or "").lower()
@@ -447,6 +506,14 @@ def _exposure_cluster_key(row: dict) -> str:
     meaningful = [t for t in title.split()
                   if t not in EXPOSURE_FALLBACK_STOPWORDS]
     return "title:" + " ".join(meaningful[:8]) if meaningful else "title:unknown"
+
+
+def _global_exposure_cluster_key(row: dict) -> str:
+    """상단 노출 예산용 canonical cluster key."""
+    key = _exposure_cluster_key(row)
+    if key == "hdec_netherlands_nuclear":
+        return "nuclear_smr_project"
+    return key
 
 
 def _hdec_direct_project_for_cluster(row: dict, decision: dict | None) -> bool:
@@ -540,6 +607,8 @@ class _ExposureSurfaceState:
         self.title_owner: dict[str, str] = {}             # 정규화 제목 -> 최초 노출 id
         self.cluster_surfaces: dict[str, set[str]] = {}   # cluster -> {surface}
         self.cluster_owner: dict[str, str] = {}           # cluster -> 대표(최초) id
+        self.global_cluster_counts: dict[str, int] = {}   # canonical cluster -> visible count
+        self.category_cluster_counts: dict[str, int] = {} # canonical cluster -> category count
         self.audit: dict[str, dict] = {}                  # id -> 억제 사유/대표
 
     def alias_owner(self, row: dict):
@@ -556,7 +625,8 @@ class _ExposureSurfaceState:
     def surface_count(self, row: dict) -> int:
         return len(self.article_surfaces.get(row["id"], ()))
 
-    def register(self, row: dict, surface: str, cluster: str) -> None:
+    def register(self, row: dict, surface: str, cluster: str, *,
+                 count_global: bool = True, count_category: bool = False) -> None:
         aid = row["id"]
         self.article_surfaces.setdefault(aid, set()).add(surface)
         url = _norm_url(row.get("url"))
@@ -567,6 +637,13 @@ class _ExposureSurfaceState:
             self.title_owner.setdefault(title, aid)
         self.cluster_surfaces.setdefault(cluster, set()).add(surface)
         self.cluster_owner.setdefault(cluster, aid)
+        if count_global:
+            gkey = _global_exposure_cluster_key(row)
+            self.global_cluster_counts[gkey] = self.global_cluster_counts.get(gkey, 0) + 1
+            if count_category:
+                self.category_cluster_counts[gkey] = (
+                    self.category_cluster_counts.get(gkey, 0) + 1
+                )
 
     def note_audit(self, row: dict, status: str, representative=None) -> None:
         rec = self.audit.setdefault(
@@ -575,6 +652,23 @@ class _ExposureSurfaceState:
         if representative and representative != row["id"] and not rec["representative"]:
             rec["representative"] = representative
 
+    def exact_representative(self, row: dict):
+        aid = row["id"]
+        if aid in self.article_surfaces:
+            return aid
+        return self.alias_owner(row)
+
+    def global_cluster_capped(self, row: dict, decision: dict | None = None, *,
+                              category: bool = False) -> bool:
+        gkey = _global_exposure_cluster_key(row)
+        cap = GLOBAL_HIGH_EXPOSURE_CLUSTER_CAPS.get(gkey)
+        if cap is not None and self.global_cluster_counts.get(gkey, 0) >= cap:
+            return True
+        if category and self.category_cluster_counts.get(gkey, 0) >= CATEGORY_GLOBAL_CLUSTER_CAP:
+            if not _hdec_direct_project_for_cluster(row, decision):
+                return True
+        return False
+
 
 def _filter_surface_exposures(rows: list[dict], limit: int, *,
                               decisions: dict[str, dict] | None,
@@ -582,7 +676,9 @@ def _filter_surface_exposures(rows: list[dict], limit: int, *,
                               max_per_cluster: int = 1,
                               hdec_direct_pair_cap: bool = False,
                               max_article_surfaces: int = MAX_ARTICLE_TOP_SURFACES,
-                              max_cluster_surfaces: int = MAX_CLUSTER_TOP_SURFACES
+                              max_cluster_surfaces: int = MAX_CLUSTER_TOP_SURFACES,
+                              count_global: bool = True,
+                              count_category: bool = False
                               ) -> list[dict]:
     """정렬된 후보에서 surface 간 중복(동일 기사·동일 cluster 도배)을 억제하며 limit개를 고른다.
 
@@ -602,16 +698,27 @@ def _filter_surface_exposures(rows: list[dict], limit: int, *,
     for row in rows:
         aid = row["id"]
         cluster = _exposure_cluster_key(row)
-        # 1) cross-surface 동일 기사 cap (의도된 multi-section 보존 위해 완전 제거 아님)
-        alias = state.alias_owner(row)
+        decision = decisions.get(aid)
+        if (not surface.startswith("category:")
+                and _surface_quality_excluded(row, decision, surface)):
+            state.note_audit(row, "suppressed_quality_gate")
+            continue
+        # 1) cross-surface 동일 기사/title/url cap (D3L: visible surface 단 1회)
+        alias = state.exact_representative(row)
         if alias is not None or state.surface_count(row) >= max_article_surfaces:
             state.note_audit(row, "suppressed_duplicate", representative=alias or aid)
             continue
-        # 2) per-list cluster cap (+ 현대건설 직접 쌍 예외: 다른 출처면 2건 허용)
+        # 2) global high-exposure cluster cap (top30 flood 방지)
+        if count_global and state.global_cluster_capped(
+                row, decision, category=count_category):
+            state.note_audit(row, "suppressed_cluster_cap",
+                             representative=state.cluster_owner.get(cluster))
+            continue
+        # 3) per-list cluster cap (+ 현대건설 직접 쌍 예외: 다른 출처면 2건 허용)
         cap = max_per_cluster
         source_key = _cluster_source_key(row)
         allow_pair = (hdec_direct_pair_cap
-                      and _hdec_direct_project_for_cluster(row, decisions.get(aid)))
+                      and _hdec_direct_project_for_cluster(row, decision))
         local = local_counts.get(cluster, 0)
         if allow_pair:
             cap = max(cap, 2)
@@ -631,17 +738,27 @@ def _filter_surface_exposures(rows: list[dict], limit: int, *,
         local_counts[cluster] = local + 1
         if allow_pair:
             sources_by_cluster.setdefault(cluster, set()).add(source_key)
-        state.register(row, surface, cluster)
+        state.register(row, surface, cluster, count_global=count_global,
+                       count_category=count_category)
         if len(picked) >= limit:
             break
 
     # 빈 surface 방지 — 단, 이미 다른 곳에 충분히 노출된 기사는 재노출하지 않는다.
     if not picked and rows:
         for row in rows:
-            if (state.alias_owner(row) is None
-                    and state.surface_count(row) < max_article_surfaces):
+            decision = decisions.get(row["id"])
+            if (not surface.startswith("category:")
+                    and _surface_quality_excluded(row, decision, surface)):
+                state.note_audit(row, "suppressed_quality_gate")
+                continue
+            if (state.exact_representative(row) is None
+                    and state.surface_count(row) < max_article_surfaces
+                    and not (count_global and state.global_cluster_capped(
+                        row, decision, category=count_category))):
                 picked.append(row)
-                state.register(row, surface, _exposure_cluster_key(row))
+                state.register(row, surface, _exposure_cluster_key(row),
+                               count_global=count_global,
+                               count_category=count_category)
                 break
     return picked
 
@@ -783,7 +900,40 @@ def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
         exclude_top = True
     elif securities_context:
         flags.append("securities_context")
-        penalty += 40
+        penalty += 90
+        exclude_top = True
+
+    sports_context = _contains_any(text, SPORTS_CONTEXT_PATTERNS)
+    if sports_context:
+        flags.append("sports_context")
+        penalty += 120
+        exclude_top = True
+
+    strong_risk_context = _contains_any(text, (
+        "벌점", "제재", "중대재해", "영업정지", "영업 정지", "입찰제한",
+        "입찰 제한", "사전통보", "과징금", "행정처분", "처분", "부실시공",
+    ))
+    sales_promo = _is_sales_promo_text(text) and not strong_risk_context
+    customer_operation_ai = _is_customer_operation_ai_text(text)
+    if sales_promo and not customer_operation_ai:
+        flags.append("sales_promo")
+        penalty += 95
+        exclude_top = True
+    elif sales_promo and customer_operation_ai:
+        flags.append("customer_operation_ai")
+        penalty += 20
+
+    generic_banking = _contains_any(title, GENERIC_BANKING_PATTERNS)
+    energy_finance = _contains_any(text, GENERIC_ENERGY_FINANCE_PATTERNS)
+    clear_dc_epc = (
+        _contains_any(text, ("데이터센터", "데이터 센터"))
+        and _contains_any(text, ("epc", "건설", "시공", "수주", "전력 인프라",
+                                 "전력망", "냉각", "프로젝트"))
+    )
+    if generic_banking or (energy_finance and not clear_dc_epc):
+        flags.append("generic_finance_roundup")
+        penalty += 80
+        exclude_top = True
 
     source_low = source.lower()
     if quality["source_quality"] in ("low", "excluded"):
@@ -798,10 +948,23 @@ def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
         penalty += 25
     if _contains_any(title, GENERIC_ROUNDUP_PATTERNS):
         flags.append("generic_roundup")
-        penalty += 25
+        penalty += 80
+        exclude_top = True
     if aq.get("low_actionability"):
         flags.append("low_actionability")
         penalty += 15
+
+    competitor_only_ai_robot = (
+        not (decision or {}).get("hdec_direct")
+        and _contains_any(text, decision_relevance.COMPETITOR_NAMES)
+        and _contains_any(text, LOW_DIRECT_COMPETITOR_AI_PATTERNS)
+        and not _contains_any(text, ("수주", "epc", "데이터센터", "데이터 센터",
+                                     "프로젝트", "정책", "특별법", "규제",
+                                     "중대재해", "전력망", "발주", "계약"))
+    )
+    if competitor_only_ai_robot:
+        flags.append("competitor_only_ai_robot")
+        penalty += 45
 
     direct_project = (
         _contains_any(text, DIRECT_PROJECT_PATTERNS)
@@ -880,7 +1043,9 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
 
 def _build_category_sections(scored_rows: list[dict], categories: dict[str, str],
                              reasons: dict[str, str],
-                             decisions: dict[str, dict] | None = None) -> list[dict]:
+                             decisions: dict[str, dict] | None = None,
+                             surface_state: _ExposureSurfaceState | None = None
+                             ) -> list[dict]:
     """카테고리별 근거 기사 섹션을 만든다 — 집계/정렬만 (점수·등급 재계산 없음, P0-C1.7).
 
     설계 원칙:
@@ -895,7 +1060,7 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         grouped.setdefault(categories.get(row["id"], "general"), []).append(row)
 
     sections = []
-    category_cluster_counts: dict[str, int] = {}
+    surface_state = surface_state or _ExposureSurfaceState()
     for cat_key, rows in sorted(
             grouped.items(), key=lambda item: (-len(item[1]), item[0])):
         total = len(rows)
@@ -912,11 +1077,10 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         # P0-D3F: 같은 cluster(예: 스마트건설 챌린지·AI 데이터센터)가 여러 카테고리 근거 상단을
         # 도배하지 않게, 카테고리 간 cluster당 최대 2건으로 제한한다(global_cluster_keys=None=전체 대상).
         # 카테고리당 cluster 최대 2건은 그대로. total_count(전 기사)는 불변이라 카운트 감사 가능.
-        evidence_top = _cap_exposure_clusters(
-            evidence, TOP_CATEGORY_ARTICLES, max_per_cluster=2,
-            decisions=decisions,
-            global_cluster_counts=category_cluster_counts,
-            global_cluster_keys=None)
+        evidence_top = _filter_surface_exposures(
+            evidence, TOP_CATEGORY_ARTICLES, decisions=decisions,
+            surface=f"category:{cat_key}", state=surface_state,
+            max_per_cluster=2, count_global=True, count_category=True)
         top = [_category_article_entry(
                     r, cat_key, reasons.get(r["id"], ""),
                     (decisions or {}).get(r["id"]))
@@ -1342,13 +1506,12 @@ def build_brief(pipeline_counts: dict | None = None,
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
         rows.sort(key=sort_key or (
             lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
-        rows = _cap_exposure_clusters(rows, limit, decisions=decisions)
-        # 레이더 탭은 '의사결정 렌즈'라 같은 기사가 여러 탭에 노출되는 건 의도된 multi-section이다
-        # (탭이라 동시에 보이지 않음). 선택은 바꾸지 않고 결과만 상태에 등록해, 항상 보이는
-        # 디제스트(신규 이슈)가 이 카드들을 그대로 반복하지 않게 한다 (P0-D3F).
         if surface:
-            for r in rows:
-                surface_state.register(r, surface, _exposure_cluster_key(r))
+            rows = _filter_surface_exposures(
+                rows, limit, decisions=decisions, surface=surface,
+                state=surface_state)
+        else:
+            rows = _cap_exposure_clusters(rows, limit, decisions=decisions)
         return [_entry(i, r) for i, r in enumerate(rows, start=1)]
 
     def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
@@ -1372,17 +1535,43 @@ def build_brief(pipeline_counts: dict | None = None,
                 capped.append(r)
             rows = capped
         pair_cap = (section_key == decision_relevance.HDEC_DIRECT)
-        rows = _cap_exposure_clusters(
-            rows, limit, decisions=decisions, hdec_direct_pair_cap=pair_cap)
-        # 의사결정 섹션도 multi-section을 보존한다 — 선택 불변, 결과만 상태에 등록(신규 이슈 dedup용).
         if surface:
-            for r in rows:
-                surface_state.register(r, surface, _exposure_cluster_key(r))
+            rows = _filter_surface_exposures(
+                rows, limit, decisions=decisions, surface=surface,
+                state=surface_state, hdec_direct_pair_cap=pair_cap)
+        else:
+            rows = _cap_exposure_clusters(
+                rows, limit, decisions=decisions, hdec_direct_pair_cap=pair_cap)
         return [_entry(i, r) for i, r in enumerate(rows, start=1)]
 
     # --- 상단 노출 surface를 우선순위대로 빌드한다 (높은 우선순위가 기사를 먼저 점유) ---
+    # 0) 즉시 알림 후보 — 임원 헤드라인 다이제스트이므로 가장 먼저 점유한다. 이후 레이더는
+    #    같은 article/title/url을 반복하지 않고 다른 근거로 backfill한다(D3L visible single-use).
+    instant_pool = [r for r in display_rows
+                    if r.get("alert_grade") == scoring.GRADE_INSTANT]
+    instant_pool.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+    instant_rows = _diverse_top(
+        instant_pool, categories, TOP_IMMEDIATE,
+        sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+    instant_rows = _filter_surface_exposures(
+        instant_rows, TOP_IMMEDIATE, decisions=decisions,
+        surface="top_immediate_signals", state=surface_state)
+    if not instant_rows:
+        fallback_pool = [r for r in display_rows
+                         if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
+        fallback_pool.sort(
+            key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        instant_rows = _diverse_top(
+            fallback_pool, categories, TOP_IMMEDIATE,
+            sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        instant_rows = _filter_surface_exposures(
+            instant_rows, TOP_IMMEDIATE, decisions=decisions,
+            surface="top_immediate_signals", state=surface_state)
+    top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
+
     # 1) 현대건설 직접 영향 — Phase 3 순서(리스크/제재 → 수주·DC·SMR·뉴에너지 전략 →
-    #    AI·계약 → R&D·조직 → 그 외 직접). 같은 기사가 risk/ai/order에도 노출될 수 있다.
+    #    AI·계약 → R&D·조직 → 그 외 직접). 이미 헤드라인에 잡힌 exact article/title은
+    #    반복하지 않고 다른 현대건설 근거로 backfill한다.
     def _hdec_sort(r):
         d = decisions[r["id"]]
         return (_top_exposure_profile(r, d)["top_exposure_penalty"],
@@ -1418,7 +1607,7 @@ def build_brief(pipeline_counts: dict | None = None,
                 -(r.get("final_score") or 0), r["id"])
     business_signals = _decision_group(
         decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2,
-        min_score=1.5, surface="business_signals")
+        min_score=1.2, surface="business_signals")
 
     # 4) 리스크·규제 — broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
     # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다. 경쟁사·공급망보다
@@ -1431,9 +1620,9 @@ def build_brief(pipeline_counts: dict | None = None,
         _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
         -radar.risk_fields(r, scores_by_id.get(r["id"]))["risk_priority_score"],
         -(r.get("final_score") or 0), r["id"]))
-    risk_rows = _cap_exposure_clusters(risk_pool, TOP_RADAR, decisions=decisions)
-    for r in risk_rows:
-        surface_state.register(r, "risk_regulation_signals", _exposure_cluster_key(r))
+    risk_rows = _filter_surface_exposures(
+        risk_pool, TOP_RADAR, decisions=decisions,
+        surface="risk_regulation_signals", state=surface_state)
     risk_regulation_signals = [
         _entry(i, r) for i, r in enumerate(risk_rows, start=1)]
 
@@ -1442,33 +1631,9 @@ def build_brief(pipeline_counts: dict | None = None,
         decision_relevance.COMPETITOR, company_cap=2, min_score=1.5,
         surface="competitor_supply_signals")
 
-    # 거시경제 — 고-노출 surface가 아니므로 dedup 체인에서 제외(독립).
-    macro_economy_signals = _radar_group(radar.MACRO)
-
-    # 즉시 알림 후보 — 임원 헤드라인 다이제스트. 독립적으로 뽑는다(긴급 신호는 상단 섹션과
-    # 겹칠 수 있다 — 헤드라인+상세는 정상 IA). 단 빌드 후 id를 상태에 등록해 '신규 이슈'가
-    # 헤드라인을 그대로 반복하지 않게 한다. (등록은 섹션 빌드 뒤라 위 섹션 예산을 잠식하지 않음.)
-    instant_pool = [r for r in display_rows
-                    if r.get("alert_grade") == scoring.GRADE_INSTANT]
-    instant_pool.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-    instant_rows = _diverse_top(
-        instant_pool, categories, TOP_IMMEDIATE,
-        sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-    instant_rows = _cap_exposure_clusters(
-        instant_rows, TOP_IMMEDIATE, decisions=decisions)
-    if not instant_rows:
-        fallback_pool = [r for r in display_rows
-                         if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
-        fallback_pool.sort(
-            key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-        instant_rows = _diverse_top(
-            fallback_pool, categories, TOP_IMMEDIATE,
-            sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-        instant_rows = _cap_exposure_clusters(
-            instant_rows, TOP_IMMEDIATE, decisions=decisions)
-    top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
-    for r in instant_rows:
-        surface_state.register(r, "top_immediate_signals", _exposure_cluster_key(r))
+    # 거시경제 — executive visible surface의 exact 중복만 피한다.
+    macro_economy_signals = _radar_group(
+        radar.MACRO, surface="macro_economy_signals")
 
     # 신규 이슈 — 가장 낮은 우선순위. 위 모든 상단 카드에 양보해 '다른 카드에 없는' 신규
     # 신호만 남긴다(max_article_surfaces=1). 전부 이미 노출됐으면 빈 카드보다 상위 신호
@@ -1490,8 +1655,10 @@ def build_brief(pipeline_counts: dict | None = None,
         issue_rows = _diverse_top(
             top_issue_pool, categories, TOP_ISSUES,
             sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-        issue_rows = _cap_exposure_clusters(
-            issue_rows, TOP_ISSUES, decisions=decisions)
+        issue_rows = _filter_surface_exposures(
+            issue_rows, TOP_ISSUES, decisions=decisions,
+            surface="top_new_issues", state=surface_state,
+            max_article_surfaces=1)
     top_issues = [
         _entry(i, r)
         for i, r in enumerate(issue_rows, start=1)
@@ -1538,7 +1705,7 @@ def build_brief(pipeline_counts: dict | None = None,
     # 카테고리별 근거 기사 드릴다운 (P0-C1.7) — 채점된 전 기사를 카테고리로 묶어
     # 수집 총량을 카테고리별로 감사 가능하게 한다 (점수·등급 재계산 없음, DB 쓰기 없음).
     category_sections = _build_category_sections(
-        scored, categories, display_reasons, decisions)
+        scored, categories, display_reasons, decisions, surface_state)
 
     # 노출 품질·중복 감사 (P0-D3F, 운영자 전용) — 어떤 기사가 어느 surface에 노출/억제됐는지
     # 투명화한다. 임원 카드에는 raw 키를 노출하지 않고, 이 감사 구조에서만 사유를 보여준다.

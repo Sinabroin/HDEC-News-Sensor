@@ -224,11 +224,22 @@ def build_digest_data() -> dict:
     ai = brief.get("ai_radar_signals") or []
     biz = brief.get("business_signals") or []
     risk = brief.get("risk_regulation_signals") or []
+    top_immediate = brief.get("top_immediate_signals") or []
 
     # 현대건설 직접 — 그룹핑용으로 전체(briefing 캡 최대 5건)를 넘긴다. AI Top에서는 같은
     # 현대건설 주체가 다시 올라오지 않게 회사 키를 선점한다. 단 이 선점은 AI Top에만 쓴다 —
     # 수주·해외 블록까지 막으면 발주 신호가 통째로 사라지므로(P0-C1.14) 분리한다.
-    hdec_list = hdec[:5]
+    # D3L visible single-use로 HDEC 직접 기사가 top_immediate에 먼저 배치될 수 있으므로,
+    # Telegram 그룹핑 입력에는 즉시 후보의 HDEC 항목도 포함한다(리포트 surface 중복은 없음).
+    hdec_candidates = list(hdec)
+    seen_hdec_ids = {e.get("article_id") for e in hdec_candidates}
+    for e in top_immediate:
+        if (e.get("article_id") not in seen_hdec_ids
+                and (e.get("executive_section") == "hdec_direct"
+                     or (e.get("hdec_bucket") or 9) != 9)):
+            hdec_candidates.append(e)
+            seen_hdec_ids.add(e.get("article_id"))
+    hdec_list = hdec_candidates[:5]
     ai_seen: set = {_entity_key(e) for e in hdec_list}
     # AI 관련 — 부품·전선 공급사 단독(가온전선 등)은 뒤로 정렬하고 클래스 단위로 묶어, 더 강한
     # AI/EPC/현대건설 신호가 있으면 공급사가 AI Top을 차지/도배하지 않게 한다 (P0-C1.13/14).

@@ -66,6 +66,8 @@ REASON_FINANCE = "자본시장·재무전략 관찰 신호"
 REASON_SECURITIES = "자본시장 관찰 신호 — 사업 의사결정 핵심도 낮음"
 REASON_SALES_PROMO = "소비자 분양 홍보성 정보 — 임원 의사결정 핵심도 낮음"
 REASON_BUSINESS_OVERSEAS = "해외 발주 환경 변화 — 수주 전략·원가 관리 변수"
+REASON_OVERSEAS_LABOR = "해외 노동시장 관찰 신호 — 직접 EPC 기회 제한적"
+REASON_ENERGY_FINANCE = "에너지 금융·PF 관찰 신호 — 직접 EPC 관여 확인 필요"
 REASON_GENERIC_AI = "스마트건설 기술 확산 — 생산성·안전 기술 도입 검토 대상"
 REASON_GENERIC_POLICY = "정책·제도 방향 변화 — 사업 환경 모니터링 대상"
 REASON_HDEC_GENERIC = "현대건설 직접 언급 — 사업 영향 점검 대상"
@@ -94,7 +96,8 @@ _RT_AI_GENERIC = ["ai", "인공지능", "생성형", "로봇", "스마트건설"
 _RT_SECURITIES = ["주가", "목표가", "목표주가", "투자의견", "투자 의견", "투자포인트",
                   "투자 포인트", "증권", "증권가", "증권사", "증권사 리포트",
                   "종목", "종목+", "[종목", "테마주", "관련주", "대장주",
-                  "급등", "폭등", "급등주", "상한가", "하한가"]
+                  "급등", "폭등", "급등주", "상한가", "하한가", "증권 레이더",
+                  "삼전닉스", "뭐 사야", "사야 해", "수혜주", "포스트워 수혜"]
 _RT_FINANCE = ["전환사채", "cb 발행", "회사채", "유상증자", "자금조달", "신용등급",
                "신용도", "메자닌", "사채 발행", "기업어음"]
 _RT_SALES_PROMO = ["견본주택", "모델하우스", "분양가", "특별공급", "미분양", "개관",
@@ -103,6 +106,11 @@ _RT_SALES_PROMO = ["견본주택", "모델하우스", "분양가", "특별공급
 _RT_OVERSEAS = ["중동", "사우디", "네옴", "neom", "uae", "아랍에미리트", "카타르",
                 "쿠웨이트", "이라크", "해외수주", "해외 수주", "글로벌 수주", "플랜트",
                 "epc", "재건", "해외 발주", "해외 진출", "수주 채비"]
+_RT_EMPLOYMENT = ["취업", "채용", "구인", "일자리", "인력", "인재", "고용", "비자"]
+_RT_ENERGY_FINANCE = ["태양광 pf", "태양광 프로젝트 파이낸싱", "태양광 금융", "solar pf",
+                      "pf 완료", "프로젝트 파이낸싱", "신한은행", "은행", "금융권 이모저모"]
+_RT_CLEAR_DC_EPC = ["epc", "건설", "건설사", "시공", "공사", "수주", "전력 인프라",
+                    "전력망", "냉각", "프로젝트", "발주"]
 _RT_POLICY = ["정부 정책", "기술대전", "챌린지", "공모전", "예산", "특별법", "로드맵",
               "시행령", "규제 완화", "국가 정책", "정책 발표"]
 _RT_POLICY_ORG = ["국토부", "국토교통부", "정부", "고용노동부", "공정위"]
@@ -131,6 +139,13 @@ def executive_reason(title: str, snippet: str = "", *, is_stock_hype: bool = Fal
         and has(_RT_POLICY_EVENT)
         and has(_RT_AI_GENERIC)
     )
+    overseas_employment = has(_RT_EMPLOYMENT) and has(
+        ["uae", "아랍에미리트", "중동", "사우디", "해외"])
+    energy_finance = (
+        has(_RT_ENERGY_FINANCE)
+        or (has(["태양광", "solar"]) and has(["pf", "금융", "은행", "대출"]))
+    )
+    clear_dc_epc = has(_RT_DATACENTER) and has(_RT_CLEAR_DC_EPC)
 
     # 1) 리스크·규제 — 기관명 단독이 아니라 실제 제재/사고/처분 토큰이 있을 때만.
     if strong_risk:
@@ -143,34 +158,40 @@ def executive_reason(title: str, snippet: str = "", *, is_stock_hype: bool = Fal
     # 3) 국토부+스마트건설 행사/정책 — 컴플라이언스 리스크가 아니라 기술/정책 모니터링.
     if smart_policy_event:
         return REASON_GENERIC_AI
-    # 4) 데이터센터 — 가장 강한 차별적 전략 신호. 회사채 등 재무 맥락보다 DC 전략 우선.
+    # 4) UAE/중동 취업·채용 — 발주/EPC 기회로 과장하지 않는다.
+    if overseas_employment:
+        return REASON_OVERSEAS_LABOR
+    # 5) 은행/PF/태양광 금융 — 명시적 DC/EPC/건설 맥락 없이는 AI 데이터센터 기회가 아니다.
+    if energy_finance and not clear_dc_epc:
+        return REASON_ENERGY_FINANCE
+    # 6) 데이터센터 — 가장 강한 차별적 전략 신호. 회사채 등 재무 맥락보다 DC 전략 우선.
     if has(_RT_DATACENTER):
         return REASON_DATACENTER
-    # 5) 도시정비 수주 — 점유율·경쟁력 신호.
+    # 7) 도시정비 수주 — 점유율·경쟁력 신호.
     if has(_RT_ORDER_CITY):
         return REASON_ORDER_CITY
-    # 6) 원전·SMR·에너지 인프라 — 밸류체인·발주 기회.
+    # 8) 원전·SMR·에너지 인프라 — 밸류체인·발주 기회.
     if has(_RT_ENERGY):
         return REASON_ENERGY
-    # 7) 고객접점 AI — 생성형/AI + 상담·청약·입주민 맥락 (분양 운영 효율화 실험).
+    # 9) 고객접점 AI — 생성형/AI + 상담·청약·입주민 맥락 (분양 운영 효율화 실험).
     if has(_RT_AI_CORE) and has(_RT_CUSTOMER_CTX):
         return REASON_CUSTOMER_AI
-    # 8) 자본시장·재무 이벤트 — 전환사채/회사채/유상증자 등 실제 재무 이벤트(증권 리서치와 구분).
+    # 10) 자본시장·재무 이벤트 — 전환사채/회사채/유상증자 등 실제 재무 이벤트(증권 리서치와 구분).
     if is_finance or has(_RT_FINANCE):
         return REASON_FINANCE
-    # 9) 단순 분양·견본주택 마케팅 — 소비자 PR, 임원 의사결정 핵심도 낮음.
+    # 11) 단순 분양·견본주택 마케팅 — 소비자 PR, 임원 의사결정 핵심도 낮음.
     if has(_RT_SALES_PROMO):
         return REASON_SALES_PROMO
-    # 10) 해외·발주 환경 — 수주 전략·원가 관리 변수.
+    # 12) 해외·발주 환경 — 수주 전략·원가 관리 변수.
     if has(_RT_OVERSEAS):
         return REASON_BUSINESS_OVERSEAS
-    # 11) 스마트건설·AI 기술 일반 — 직접 HDEC 영향이 아니라 기술 확산 모니터링.
+    # 13) 스마트건설·AI 기술 일반 — 직접 HDEC 영향이 아니라 기술 확산 모니터링.
     if has(_RT_AI_GENERIC):
         return REASON_GENERIC_AI
-    # 12) 정책·제도 — 사업 환경 모니터링.
+    # 14) 정책·제도 — 사업 환경 모니터링.
     if has(_RT_POLICY):
         return REASON_GENERIC_POLICY
-    # 13) fallback — 현대건설 직접 언급이면 중립 점검 대상, 아니면 일반 동향(과장 금지).
+    # 15) fallback — 현대건설 직접 언급이면 중립 점검 대상, 아니면 일반 동향(과장 금지).
     if hdec_direct or has(_RT_HDEC):
         return REASON_HDEC_GENERIC
     return REASON_FALLBACK
