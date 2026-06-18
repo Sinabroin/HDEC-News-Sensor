@@ -7,7 +7,10 @@ A. 수주·해외 Telegram 블록 — 발주/EPC/해외 후보가 있으면 [수
    dedup(현대건설 직접 키 선점)이 블록을 통째로 지우지 않는다. 공급사 단독은 발주/EPC/해외
    신호보다 먼저 오지 않는다.
 B. 재무·자금조달 하드 오버라이드 — 현대건설 전환사채 기사가 ai_radar_signals/AI Top/
-   신규이슈·즉시 신호에 'AI'로 남지 않고 현대건설 직접 + 거시로 라우팅된다. 단 명시적
+   신규이슈·즉시 신호에 'AI'로 남지 않고 현대건설 직접으로 라우팅된다. P0-D3A: 재무는
+   거시경제 레이더(FX·유가·금리 시장변수)에 **들어가지 않는다** — 자본시장 이벤트(전환사채·
+   CB)는 거시 변수가 아니므로 override가 AI를 거시가 아니라 other로 내린다 (현대건설 재무는
+   decision 멤버십으로 [현대건설 직접], 거시는 secondary 라벨로만 남는다). 단 명시적
    데이터센터/사업 전략 맥락이 있으면 현대건설 전략(AI)으로 유지된다.
 C. 공급사 단독 우선순위 — 더 강한 비공급사(현대건설/삼성/EPC/해외) 후보가 3건 이상이면
    공급사 단독은 AI Top에 들지 않는다. 공급사만 있으면 1건만(클래스 단위 dedup). 공급사는
@@ -149,8 +152,9 @@ def check_units() -> None:
     check("B: 재무 기사 현대건설 직접 + 거시 라우팅",
           fin["primary_executive_section"] == dr.HDEC_DIRECT
           and dr.MACRO in fin["secondary_executive_sections"])
-    check("B: override_radar_section이 AI를 거시로 되돌림",
-          dr.override_radar_section("ai", fin) == dr.MACRO)
+    # P0-D3A: 재무 AI는 거시가 아니라 other로 내린다 (자본시장 이벤트 ≠ 거시 변수).
+    check("B: override_radar_section이 AI 재무를 other로 내림 (거시 비혼입)",
+          dr.override_radar_section("ai", fin) == dr.OTHER)
     check("B: 비재무는 override가 AI 그대로 둠",
           dr.override_radar_section("ai", {"is_finance": False}) == "ai")
     # 예외 — 명시적 데이터센터/사업 전략이면 재무라도 현대건설 전략(AI 유지 가능).
@@ -253,8 +257,9 @@ def check_sim(sim: dict | None) -> None:
     check("B: f_fin이 Telegram AI Top에 없음", "f_fin" not in ai_top,
           f"ai_top={sorted(ai_top)}")
     check("B: f_fin이 현대건설 직접으로 라우팅", "f_fin" in hdec, f"hdec={sorted(hdec)}")
-    check("B: f_fin이 거시경제 섹션(재무/거시)에 노출", "f_fin" in macro_section,
-          f"macro_section={sorted(macro_section)}")
+    # P0-D3A: 재무는 거시경제 레이더에 들어가지 않는다 ([현대건설 직접]에서만 노출, 거시 secondary 라벨).
+    check("B: f_fin이 거시경제 섹션에 없음 (재무 거시 레이더 비혼입)",
+          "f_fin" not in macro_section, f"macro_section={sorted(macro_section)}")
     check("B: f_fin이 Telegram 수주·해외에 없음", "f_fin" not in set(biz), f"biz={biz}")
     for label, seq in (("신규이슈", sim.get("top_new")),
                        ("즉시 신호", sim.get("top_immediate"))):

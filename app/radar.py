@@ -2,10 +2,18 @@
 
 briefing.py가 build_brief에서 호출하는 표시 전용 분류기다:
 - 기사를 ai / risk_regulation / business_overseas / macro_economy / other 중
-  하나의 primary radar_section으로 분류한다 (제목·스니펫·토픽·카테고리 기반).
+  하나의 primary radar_section으로 분류한다.
 - 리스크/규제 기사에는 risk_priority_score·risk_reason·risk_radar_label·
   regulatory_relevance를 부여해, 종합 중요도(final_score)가 낮아도 리스크 레이더에
   드러나게 한다 (중대재해·규제가 9항목 가중합에서 희석되는 문제 보정).
+
+분류 입력 계약 (P0-D3A — false-positive guard):
+- AI / 거시 / 수주·해외(BUSINESS) primary 판정은 **raw 제목+스니펫만** 본다.
+  collector가 50% 토큰 매칭으로 붙이는 생성 topic_candidates(예: '현대건설'만 맞아도
+  '현대건설 데이터센터'가 붙음)는 분류 증거로 쓰지 않는다 — 주입된 '데이터센터'가 종전·
+  주가 기사를 AI로 끌어올리던 오탐을 차단한다.
+- AI 섹션은 raw에 직접 AI 인프라 증거(AI_KEYWORDS)가 있어야 한다. 종전·재건·건설주·
+  주가 폭등·종목·CB·전환사채 등은 AI 증거가 아니다 (AI_NEGATIVE_GUARD 참고).
 
 경계 (briefing 도메인과 동일한 '파생 전용' 원칙):
 - DB 접근/쓰기 없음, 네트워크 없음.
@@ -41,11 +49,22 @@ RADAR_LABELS = {
 # 단독 'ai'는 'email/detail' 등 오탐을 피해 한국어 토큰/복합어로만 매칭한다.
 AI_KEYWORDS = [
     "데이터센터", "idc", "인공지능", "생성형",
-    "smr", "소형모듈원자로", "전력망", "송배전", "냉각",
+    "smr", "소형모듈원자로", "전력망", "송배전", "냉각", "전력수요",
     "스마트건설", "스마트 건설", "건설로봇", "건설 로봇", "bim", "디지털트윈",
     "건설 자동화", "자동화 시공", "영상인식", "자율시공", "자율주행",
     "ai 데이터센터", "ai 인프라", "ai 전력", "ai 시공", "ai 설계", "ai 안전",
     "ai 수주", "ai 반도체", "스마트 안전", "gpu",
+]
+
+# AI 오탐 차단 (P0-D3A) — 이 토큰들은 AI 증거가 아니다. 종전·재건·건설주·주가 폭등·종목·
+# CB·전환사채는 단독으로 (또는 collector가 주입한 topic_candidates만으로) AI 섹션에
+# 들어가지 못한다. classify_section은 raw 제목+스니펫에 AI_KEYWORDS가 직접 있을 때만 AI를
+# 반환하므로(아래 단독 'ai'는 일부러 AI_KEYWORDS에 넣지 않는다) 이 토큰들은 구조적으로 AI가
+# 될 수 없다. 단 '데이터센터 사업 전환사채'처럼 raw에 직접 AI 인프라 증거가 함께 있으면 AI다
+# (전략 맥락 예외 — decision_relevance의 FINANCE_STRATEGY_CTX와 같은 의도).
+AI_NEGATIVE_GUARD = [
+    "종전", "재건", "건설주", "주가 폭등", "주가폭등", "잭팟", "종목",
+    "전환사채", "회사채", "유상증자",
 ]
 
 # 강한 리스크 액션 (P0-C1.11) — 제재/사고 등 실제 리스크-액션이 있을 때만 단독 risk.
@@ -129,7 +148,7 @@ def _hits(text: str, keywords: list[str]) -> bool:
 
 
 def _row_text(row: dict) -> str:
-    """제목 + 스니펫 + 토픽 후보를 한 덩어리 소문자 텍스트로 (분류 입력)."""
+    """제목 + 스니펫 + 토픽 후보를 한 덩어리 소문자 텍스트로 (risk 우선도 floor 입력)."""
     parts = [row.get("title") or "", row.get("snippet") or ""]
     try:
         topics = json.loads(row.get("topic_candidates") or "[]")
@@ -139,21 +158,32 @@ def _row_text(row: dict) -> str:
     return " ".join(parts).lower()
 
 
+def _raw_text(row: dict) -> str:
+    """제목 + 스니펫만 소문자로 (생성 topic_candidates 제외 — primary 분류 입력, P0-D3A).
+
+    collector가 50% 토큰 매칭으로 붙이는 topic_candidates는 보지 않는다 — 주입된 '데이터센터'
+    등이 종전·재무·주가 기사를 AI로 끌어올리던 오탐을 차단한다."""
+    return " ".join([row.get("title") or "", row.get("snippet") or ""]).lower()
+
+
 def classify_section(row: dict, category_key: str | None = None) -> str:
     """기사 1건의 primary radar_section을 정한다 (표시 전용 파생값).
+
+    AI/거시/수주·해외 판정은 **raw 제목+스니펫만** 본다 (P0-D3A — 생성 topic_candidates 제외).
 
     우선순위 (사용자 IA 의도 반영 + P0-C1.11 품질 게이트):
     0) 주식 테마/증권 리서치성(stock-hype, 현대건설 직접 제외)은 어떤 레이더에도
        두지 않는다 → other (임원 핵심 섹션 보호).
     0') 현대건설 직접 AI 계약검토/컴플라이언스 → ai, 제재/벌점 → risk_regulation.
-    1) AI 인프라/건설 AI 신호는 전력/SMR/거시를 언급해도 ai로 둔다.
+    1) AI 인프라/건설 AI 신호(raw에 직접 AI_KEYWORDS)는 전력/SMR/거시를 언급해도 ai로 둔다.
+       종전·재건·건설주·주가 폭등·종목·CB·전환사채는 AI 증거가 아니다 (AI_NEGATIVE_GUARD).
     2) 실제 리스크-액션(중대재해/벌점/제재 등) 또는 산업 맥락의 규제 신호는 risk_regulation.
        부처명(국토부 등)·정책·'혁신기술'만으로는 리스크로 보지 않는다.
     3) pure 거시 변수(수주/해외 이벤트 없는 FX·유가·금리)는 macro_economy.
     4) 수주/해외 사업 이벤트는 business_overseas.
     5) 남은 거시 키워드는 macro_economy, 그래도 없으면 카테고리 보정.
     """
-    text = _row_text(row)
+    raw = _raw_text(row)
     aq = article_quality.assess(row.get("source"), row.get("title"))
 
     if aq["stock_hype"]:
@@ -165,16 +195,19 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
     if aq.get("local_safety_inspection"):
         return OTHER
 
-    if _hits(text, AI_KEYWORDS):
+    # AI는 raw에 직접 AI 인프라 증거가 있을 때만. AI_KEYWORDS는 의도적으로 단독 'ai'·bare
+    # '원전/로봇/자동화'를 제외하므로, AI_NEGATIVE_GUARD(전환사채·종전 등)는 직접 AI 인프라
+    # 증거(데이터센터·SMR 등)가 raw에 함께 있지 않는 한 구조적으로 AI가 될 수 없다.
+    if _hits(raw, AI_KEYWORDS):
         return AI
 
-    if _hits(text, RISK_ACTION_STRONG) or (
-            _hits(text, RISK_REG_WEAK) and _hits(text, INDUSTRY_KEYWORDS)):
+    if _hits(raw, RISK_ACTION_STRONG) or (
+            _hits(raw, RISK_REG_WEAK) and _hits(raw, INDUSTRY_KEYWORDS)):
         return RISK
 
-    has_macro = _hits(text, MACRO_KEYWORDS)
-    has_business = (_hits(text, ORDER_EVENT_KEYWORDS)
-                    or _hits(text, BUSINESS_GEO_KEYWORDS))
+    has_macro = _hits(raw, MACRO_KEYWORDS)
+    has_business = (_hits(raw, ORDER_EVENT_KEYWORDS)
+                    or _hits(raw, BUSINESS_GEO_KEYWORDS))
     if has_macro and not has_business:
         return MACRO
     if has_business:
