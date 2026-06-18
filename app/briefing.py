@@ -1079,6 +1079,64 @@ def _diverse_top(rows: list[dict], categories: dict[str, str], limit: int,
     return picked
 
 
+def _clean_summary_topic(topic: str) -> str:
+    text = unicodedata.normalize("NFKC", str(topic or ""))
+    return re.sub(r"\s+", " ", text).strip(" \t\r\n.,;:!?")
+
+
+def _summary_topic_key(topic: str) -> str:
+    text = unicodedata.normalize("NFKC", str(topic or ""))
+    text = re.sub(r"\s+", "", text)
+    text = re.sub(r"[.,;:!?()\\[\\]{}'\"“”‘’·ㆍ\\-_/]", "", text)
+    for suffix in ("동시부각", "중심", "부각"):
+        if text.endswith(suffix):
+            text = text[:-len(suffix)]
+    return text
+
+
+def _unique_summary_topics(topics: list[str]) -> list[str]:
+    unique = []
+    seen = set()
+    for topic in topics:
+        clean = _clean_summary_topic(topic)
+        key = _summary_topic_key(clean)
+        if not clean or not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append(clean)
+    return unique
+
+
+def _join_summary_topics(topics: list[str]) -> str:
+    if not topics:
+        return ""
+    if len(topics) == 1:
+        return topics[0]
+    prefix = "현대건설 연관 "
+    display = [topics[0]]
+    prefix_seen = topics[0].startswith(prefix)
+    for topic in topics[1:]:
+        if prefix_seen and topic.startswith(prefix):
+            display.append(topic[len(prefix):])
+        else:
+            display.append(topic)
+            prefix_seen = prefix_seen or topic.startswith(prefix)
+    a, b = display[0], display[1]
+    return f"{a}{_josa(a, '과', '와')} {b}"
+
+
+def _compose_executive_signal_summary(topics: list[str], opportunity: str,
+                                      risk: str) -> str:
+    unique_topics = _unique_summary_topics(topics)
+    if len(unique_topics) >= 2:
+        return (
+            f"{_join_summary_topics(unique_topics[:2])} 동시 부각 — "
+            f"{opportunity} 기회·{risk} 리스크 병존"
+        )
+    topic = unique_topics[0] if unique_topics else SUBJECT_BY_CATEGORY["general"]
+    return f"{topic} 중심 — {opportunity} 기회와 {risk} 리스크 요인 점검 필요"
+
+
 def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
                        immediate_count: int, top_theme: str | None) -> str:
     """저장된 opportunity_or_risk 분류를 종합해 1~2문장 한 줄 시그널을 조립한다.
@@ -1114,10 +1172,10 @@ def _compose_one_liner(signal_rows: list[dict], categories: dict[str, str],
     if opp and risk:
         a = SUBJECT_BY_CATEGORY.get(opp_cat, SUBJECT_BY_CATEGORY["general"])
         b = SUBJECT_BY_CATEGORY.get(risk_cat, SUBJECT_BY_CATEGORY["general"])
-        return (
-            f"{a}{_josa(a, '과', '와')} {b} 동시 부각 — "
-            f"{OPP_ASPECT_BY_CATEGORY.get(opp_cat, '신규 사업')} 기회·"
-            f"{RISK_ASPECT_BY_CATEGORY.get(risk_cat, '운영')} 리스크 병존"
+        return _compose_executive_signal_summary(
+            [a, b],
+            OPP_ASPECT_BY_CATEGORY.get(opp_cat, "신규 사업"),
+            RISK_ASPECT_BY_CATEGORY.get(risk_cat, "운영"),
         )
     if opp:
         a = SUBJECT_BY_CATEGORY.get(opp_cat, SUBJECT_BY_CATEGORY["general"])
