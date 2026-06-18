@@ -47,9 +47,11 @@ GROUPS = {
     "gov": ["정부", "정책", "국토교통부", "산업통상자원부", "고용노동부", "고용부",
             "특별법", "시행령", "로드맵", "예산", "의무화"],
     "infra_energy": ["인프라", "에너지", "건설투자", "건설 투자", "전력망", "기반시설"],
-    "safety": ["중대재해", "안전관리", "안전", "사망사고", "산재"],
-    "severe": ["중대재해", "사망사고"],
-    "regulation": ["규제", "처벌", "감독", "의무화", "점검"],
+    "safety": ["중대재해", "안전관리", "안전", "사망사고", "산재", "안전사고"],
+    "severe": ["중대재해", "사망사고", "입찰제한", "영업정지", "압수수색"],
+    "regulation": ["규제", "처벌", "감독", "특별감독", "의무화", "점검",
+                   "벌점", "입찰제한", "영업정지", "제재", "소송", "조사",
+                   "하자", "부실시공", "품질점검", "품질 점검"],
     "cost": ["원가", "공사비", "환헤지"],
     "invest": ["투자", "투입", "협약", "mou", "파트너십"],
     "consumer": ["소비자", "이용자", "가입자", "구독", "앱", "맛집", "숙소", "패션"],
@@ -538,6 +540,13 @@ def _score_article(article: dict, ctx: dict) -> dict:
         # 종합 점수가 희석돼도 임원 직접 의사결정 신호이므로 최소 추적 필요로 floor (P0-C1.12).
         # 헬스케어/생활성 현대건설 기사는 is_hdec_strategic이 걸러낸다 (무차별 승격 금지).
         grade = _max_grade(grade, GRADE_WEEKLY)
+    elif (radar.classify_section(article, None) == radar.RISK
+          and quality["source_quality"] not in ("excluded", "low")):
+        # 중대재해·벌점·입찰제한·하자 등 명시적 리스크/규제 기사 + 정상 출처 —
+        # 종합 점수가 낮아도 임원 레이더에서 추적 이상으로 보존한다. 국토부 혁신기술 같은
+        # 부처명 단독 기사는 radar.RISK가 아니므로 여기서 승격되지 않는다.
+        rp = radar.risk_fields(article, dims)["risk_priority_score"]
+        grade = _max_grade(grade, GRADE_DAILY if rp >= 3.8 else GRADE_WEEKLY)
     elif (decision_relevance.is_order_environment(article)
           and quality["source_quality"] not in ("excluded", "low")):
         # 수주·해외 발주 환경(EPC/데이터센터/SMR/플랜트/원전/중동/재건) + 신뢰 출처 —

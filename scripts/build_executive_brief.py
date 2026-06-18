@@ -82,6 +82,7 @@ def build_brief_via_mock_pipeline() -> dict:
             "fallback_used": collect_stats.get("fallback_used"),
             "attempted_mode": collect_stats.get("attempted_mode"),
             "source_filtered": collect_stats.get("source_filtered"),
+            "google_query_audit": collect_stats.get("google_query_audit"),
         },
     )
 

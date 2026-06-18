@@ -215,11 +215,14 @@ def _run_live() -> dict:
 
     # 출처 품질로 수집 단계에서 제외된 비뉴스성 항목을 감사용으로 함께 받는다 (P0-C1.8).
     source_filtered: list[dict] = []
+    google_query_audit: list[dict] = []
     try:
-        google_rows = live_collector.fetch_all(filtered_out=source_filtered)
+        google_rows = live_collector.fetch_all(
+            filtered_out=source_filtered, query_audit=google_query_audit)
     except Exception:  # noqa: BLE001 — 네트워크/파싱 오류는 fallback으로 흡수
         google_rows = []
         source_filtered = []
+        google_query_audit = []
     google_status = "active" if google_rows else "skipped"
 
     # Naver 보조 provider — 기본 off면 네트워크 0건(status=disabled), 자격증명 없으면 정직 skip.
@@ -260,6 +263,7 @@ def _run_live() -> dict:
         "attempted_mode": "live",
         "fallback_used": False,
         "source_filtered": source_filtered,
+        "google_query_audit": google_query_audit,
         # provider 상태 — 비밀값 0건. 감사/운영자가 어느 provider가 활성/skip/error인지 본다.
         "provider_status": {
             "google_news_rss": google_status,

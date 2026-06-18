@@ -200,6 +200,8 @@ def build_markdown(brief: dict) -> str:
     counts = {k: brief.get(k) for k in (
         "total_articles", "total_signals", "immediate_count", "daily_count",
         "weekly_count", "excluded_count")}
+    risk_cov = brief.get("risk_query_coverage") or {}
+    risk_queries = risk_cov.get("queries") or []
     lines = [
         f"# HDEC 라이브 기사 품질 감사 — {_cell(brief.get('date_kst'))}",
         "",
@@ -209,6 +211,11 @@ def build_markdown(brief: dict) -> str:
         f"- 카운트: 수집·분석 {counts['total_articles']} · 신호 {counts['total_signals']} · "
         f"즉시 {counts['immediate_count']} · 검토 {counts['daily_count']} · "
         f"추적 {counts['weekly_count']} · 참고/제외 {counts['excluded_count']}",
+        f"- 리스크 쿼리 커버리지: 시도 {risk_cov.get('attempted', 0)} · "
+        f"ok {risk_cov.get('ok', 0)} · empty {risk_cov.get('empty', 0)} · "
+        f"error {risk_cov.get('error', 0)} · fetched {risk_cov.get('fetched_count', 0)} · "
+        f"added {risk_cov.get('added_count', 0)}",
+        f"- 리스크 쿼리 예: {_cell(' / '.join(risk_queries[:6]) if risk_queries else '없음', 160)}",
         "",
         "> 운영자 수동 점검용 자동 표입니다. 라이브 Google News RSS는 주기적 쿼리/출처 "
         "튜닝이 계속 필요합니다 (이 표는 완벽을 주장하지 않습니다).",

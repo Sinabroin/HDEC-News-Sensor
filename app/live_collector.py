@@ -88,6 +88,42 @@ def _build_google_news_url(query: str, cfg: dict) -> str:
     return f"https://news.google.com/rss/search?{params}"
 
 
+def _configured_query_groups(cfg: dict) -> list[dict]:
+    """Return ordered query groups with per-group caps.
+
+    query_groups, when present, are attempted before the legacy top-level queries so
+    risk/regulation coverage can be probed without raising the global max_total.
+    """
+    groups: list[dict] = []
+    for raw in cfg.get("query_groups") or []:
+        if not isinstance(raw, dict):
+            continue
+        queries = [q for q in (raw.get("queries") or [])
+                   if isinstance(q, str) and q.strip()]
+        if not queries:
+            continue
+        groups.append({
+            "name": raw.get("name") or "custom",
+            "label": raw.get("label") or raw.get("name") or "custom",
+            "queries": queries,
+            "max_per_query": int(raw.get("max_per_query")
+                                 or cfg.get("max_per_query", 4)),
+            "max_total": int(raw.get("max_total") or cfg.get("max_total", 40)),
+        })
+
+    legacy_queries = [q for q in (cfg.get("queries") or [])
+                      if isinstance(q, str) and q.strip()]
+    if legacy_queries:
+        groups.append({
+            "name": "default",
+            "label": "기본",
+            "queries": legacy_queries,
+            "max_per_query": int(cfg.get("max_per_query", 4)),
+            "max_total": int(cfg.get("max_total", 40)),
+        })
+    return groups
+
+
 def _fetch(url: str, timeout: int) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (public RSS)
@@ -171,7 +207,8 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
 
 
 def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
-              filtered_out: list | None = None) -> list[dict]:
+              filtered_out: list | None = None,
+              query_audit: list | None = None) -> list[dict]:
     """설정된 모든 query에 대해 공개 RSS를 수집해 raw dict 리스트를 반환한다.
 
     네트워크/파싱 실패는 해당 query만 건너뛰고 계속한다 (가짜 값 생성 금지).
@@ -181,38 +218,69 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     URL 기준으로 dedup해 담는다 (P0-C1.8 감사 — 임원이 무엇이 걸러졌는지 볼 수 있게).
     """
     cfg = _load_sources(sources_path)
-    queries = [q for q in (cfg.get("queries") or []) if isinstance(q, str) and q.strip()]
-    if not queries:
+    query_groups = _configured_query_groups(cfg)
+    if not query_groups:
         return []
 
-    max_per_query = int(cfg.get("max_per_query", 4))
     max_total = int(cfg.get("max_total", 40))
     collected_at = datetime.now(KST).isoformat(timespec="seconds")
 
     seen_urls, results = set(), []
     filtered_urls = set()
-    for query in queries:
+    seen_queries = set()
+    for group in query_groups:
+        group_count = 0
+        for query in group["queries"]:
+            if len(results) >= max_total or group_count >= group["max_total"]:
+                break
+            query_key = query.strip().lower()
+            if query_key in seen_queries:
+                continue
+            seen_queries.add(query_key)
+            url = _build_google_news_url(query, cfg)
+            try:
+                xml_text = _fetch(url, timeout)
+            except Exception:  # noqa: BLE001 — 네트워크/HTTP 오류는 query 단위로 무시
+                if query_audit is not None:
+                    query_audit.append({
+                        "provider": PROVIDER,
+                        "group": group["name"],
+                        "query": query,
+                        "status": "error",
+                        "fetched_count": 0,
+                        "added_count": 0,
+                    })
+                continue
+            sink = [] if filtered_out is not None else None
+            parsed = _parse_items(
+                xml_text, query, collected_at, group["max_per_query"], sink)
+            added = 0
+            for row in parsed:
+                if row["url"] in seen_urls:
+                    continue
+                seen_urls.add(row["url"])
+                results.append(row)
+                added += 1
+                group_count += 1
+                if len(results) >= max_total or group_count >= group["max_total"]:
+                    break
+            if query_audit is not None:
+                query_audit.append({
+                    "provider": PROVIDER,
+                    "group": group["name"],
+                    "query": query,
+                    "status": "ok" if parsed else "empty",
+                    "fetched_count": len(parsed),
+                    "added_count": added,
+                })
+            if sink:  # 제외 항목을 URL 기준 dedup해 누적 (수집된 기사와 겹치면 제외)
+                for item in sink:
+                    u = item.get("url")
+                    if not u or u in filtered_urls or u in seen_urls:
+                        continue
+                    filtered_urls.add(u)
+                    if len(filtered_out) < max_total:
+                        filtered_out.append(item)
         if len(results) >= max_total:
             break
-        url = _build_google_news_url(query, cfg)
-        try:
-            xml_text = _fetch(url, timeout)
-        except Exception:  # noqa: BLE001 — 네트워크/HTTP 오류는 query 단위로 무시
-            continue
-        sink = [] if filtered_out is not None else None
-        for row in _parse_items(xml_text, query, collected_at, max_per_query, sink):
-            if row["url"] in seen_urls:
-                continue
-            seen_urls.add(row["url"])
-            results.append(row)
-            if len(results) >= max_total:
-                break
-        if sink:  # 제외 항목을 URL 기준 dedup해 누적 (수집된 기사와 겹치면 제외)
-            for item in sink:
-                u = item.get("url")
-                if not u or u in filtered_urls or u in seen_urls:
-                    continue
-                filtered_urls.add(u)
-                if len(filtered_out) < max_total:
-                    filtered_out.append(item)
     return results

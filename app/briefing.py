@@ -107,6 +107,7 @@ SALES_PROMO_PATTERNS = (
 CUSTOMER_OPERATION_AI_PATTERNS = (
     "ai 상담", "ai상담", "생성형 ai", "인공지능 상담", "챗봇", "콜센터",
     "고객 응대", "고객상담", "상담 자동화", "청약 상담", "분양 상담",
+    "분양상담",
 )
 SPORTS_CONTEXT_PATTERNS = (
     "배구", "원더독스", "스타랭킹", "박정아", "선수", "구단", "프로팀",
@@ -449,8 +450,8 @@ def _is_customer_operation_ai_sales(row: dict) -> bool:
 def _surface_quality_excluded(row: dict, decision: dict | None, surface: str) -> bool:
     if _is_top_exposure_excluded(row, decision):
         return True
-    if surface in ("top_new_issues", "top_immediate_signals"):
-        return _is_customer_operation_ai_sales(row)
+    if _is_customer_operation_ai_sales(row):
+        return True
     return False
 
 
@@ -910,6 +911,7 @@ def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
     strong_risk_context = _contains_any(text, (
         "벌점", "제재", "중대재해", "영업정지", "영업 정지", "입찰제한",
         "입찰 제한", "사전통보", "과징금", "행정처분", "처분", "부실시공",
+        "특별감독", "하자", "품질 점검", "품질점검", "소송", "압수수색",
     ))
 
     sports_context = (_contains_any(text, SPORTS_CONTEXT_PATTERNS)
@@ -1217,6 +1219,24 @@ def _build_source_filtered(scored_rows: list[dict], categories: dict[str, str],
         "remaining_count": max(0, total - len(shown)),
         "audit_label": SOURCE_FILTERED_LABEL,
         "note": SOURCE_FILTERED_NOTE,
+    }
+
+
+def _risk_query_coverage(query_audit: list[dict]) -> dict:
+    """Google RSS risk/regulation query attempt summary for operator audit."""
+    risk_rows = [
+        q for q in (query_audit or [])
+        if q.get("group") == "risk_regulation"
+    ]
+    return {
+        "group": "risk_regulation",
+        "attempted": len(risk_rows),
+        "ok": sum(1 for q in risk_rows if q.get("status") == "ok"),
+        "empty": sum(1 for q in risk_rows if q.get("status") == "empty"),
+        "error": sum(1 for q in risk_rows if q.get("status") == "error"),
+        "fetched_count": sum(int(q.get("fetched_count") or 0) for q in risk_rows),
+        "added_count": sum(int(q.get("added_count") or 0) for q in risk_rows),
+        "queries": [q.get("query") for q in risk_rows if q.get("query")],
     }
 
 
@@ -1741,6 +1761,7 @@ def build_brief(pipeline_counts: dict | None = None,
     news_fallback_used = bool(prov.get("fallback_used"))
     news_source = prov.get("news_source") or (
         "live_rss" if news_mode == "live" else "mock")
+    google_query_audit = prov.get("google_query_audit") or []
 
     # 참고/제외 · 출처 품질 감사 (P0-C1.8) — 카운트만 보이던 버킷을 감사 가능하게 한다.
     # 두 기준을 분리한다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
@@ -1754,6 +1775,8 @@ def build_brief(pipeline_counts: dict | None = None,
         "news_data_mode": news_mode,
         "news_source": news_source,
         "news_fallback_used": news_fallback_used,
+        "news_query_audit": google_query_audit,
+        "risk_query_coverage": _risk_query_coverage(google_query_audit),
         "macro_data_mode": macro["macro_data_mode"],
         "macro_source": macro.get("source"),
         "macro_updated_at": macro.get("updated_at"),

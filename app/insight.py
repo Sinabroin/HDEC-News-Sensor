@@ -57,18 +57,19 @@ IMPLICATION_TEMPLATES = {
 # 해결: raw 제목+스니펫과 미리 계산된 플래그(stock_hype/is_finance/hdec_direct)만 보고 유형별
 # 명사형 사유 copy를 고른다. 생성된 라벨/카테고리 텍스트를 입력으로 쓰지 않는다(self-fulfilling
 # 오탐 금지). 직접 영향을 과장하지 않는다 — 매칭이 없으면 중립 fallback으로 둔다.
-REASON_DATACENTER = "AI 데이터센터 EPC·전력 인프라 수주 기회"
-REASON_ENERGY = "원전·SMR 밸류체인 및 에너지 인프라 수주 기회"
-REASON_ORDER_CITY = "도시정비 수주 경쟁력·점유율 신호"
-REASON_CUSTOMER_AI = "고객접점 자동화·분양 운영 효율화 실험"
-REASON_RISK = "입찰 자격·평판·컴플라이언스 리스크"
+REASON_DATACENTER = "AI 데이터센터 EPC·전력 인프라 수주 기회 점검"
+REASON_ENERGY = "유럽 원전 EPC 파이프라인·파트너십 점검"
+REASON_ORDER_CITY = "국내 정비사업 점유율·경쟁사 추격 구도 확인"
+REASON_ORDER_BACKLOG = "수주잔고 질·마진·사업 포트폴리오 점검"
+REASON_CUSTOMER_AI = "분양/고객상담 운영 자동화 실험"
+REASON_RISK = "입찰 자격·평판·안전관리 리스크 확인"
 REASON_FINANCE = "자본시장·재무전략 관찰 신호"
 REASON_SECURITIES = "자본시장 관찰 신호 — 사업 의사결정 핵심도 낮음"
 REASON_SALES_PROMO = "소비자 분양 홍보성 정보 — 임원 의사결정 핵심도 낮음"
 REASON_BUSINESS_OVERSEAS = "해외 발주 환경 변화 — 수주 전략·원가 관리 변수"
 REASON_OVERSEAS_LABOR = "해외 노동시장 관찰 신호 — 직접 EPC 기회 제한적"
 REASON_ENERGY_FINANCE = "에너지 금융·PF 관찰 신호 — 직접 EPC 관여 확인 필요"
-REASON_GENERIC_AI = "스마트건설 기술 확산 — 생산성·안전 기술 도입 검토 대상"
+REASON_GENERIC_AI = "스마트건설 기술 확산 — 현장 적용성 모니터링"
 REASON_GENERIC_POLICY = "정책·제도 방향 변화 — 사업 환경 모니터링 대상"
 REASON_HDEC_GENERIC = "현대건설 직접 언급 — 사업 영향 점검 대상"
 REASON_FALLBACK = "참고 수준 산업 동향 — 직접 영향 제한적"
@@ -79,15 +80,18 @@ _RT_DATACENTER = ["데이터센터", "데이터 센터", "ai 데이터센터", "
 _RT_RISK = ["벌점", "제재", "하도급", "중대재해", "안전사고", "사망사고",
             "산업재해", "영업정지", "영업 정지", "입찰제한", "입찰 제한",
             "과징금", "행정처분", "행정 처분", "처분 통보", "사전통보",
-            "부실시공", "붕괴"]
-_RT_ORDER_CITY = ["도시정비", "재개발", "재건축", "정비사업", "수주액", "수주고",
-                  "수주잔고", "정비 수주", "리모델링 수주"]
+            "부실시공", "붕괴", "특별감독", "하자", "품질 점검", "품질점검",
+            "소송", "조사", "압수수색", "공정위"]
+_RT_ORDER_CITY = ["도시정비", "재개발", "재건축", "정비사업", "정비 수주",
+                  "리모델링 수주"]
+_RT_ORDER_BACKLOG = ["수주잔고", "수주고", "수주액", "수주 실적", "수주실적"]
 _RT_ENERGY = ["원전", "smr", "소형모듈원자로", "원자력", "송배전", "전력망",
               "에너지 인프라", "전력 인프라", "해상풍력", "수소", "재생에너지",
               "태양광", "수전해"]
 _RT_AI_CORE = ["ai", "인공지능", "생성형", "에이아이"]
 _RT_CUSTOMER_CTX = ["상담사", "청약 상담", "분양 상담", "입주민", "고객 응대",
-                    "고객 상담", "콜센터", "챗봇", "상담 자동화", "고객 서비스"]
+                    "분양상담", "고객 상담", "고객상담", "콜센터", "챗봇",
+                    "상담 자동화", "고객 서비스"]
 _RT_AI_GENERIC = ["ai", "인공지능", "생성형", "로봇", "스마트건설", "스마트 건설",
                   "bim", "디지털트윈", "디지털 트윈", "자동화", "머신러닝", "딥러닝"]
 # 증권 리서치/주가 테마 마커. 현대건설은 article_quality stock_hype 게이트에서 면제
@@ -167,31 +171,34 @@ def executive_reason(title: str, snippet: str = "", *, is_stock_hype: bool = Fal
     # 6) 데이터센터 — 가장 강한 차별적 전략 신호. 회사채 등 재무 맥락보다 DC 전략 우선.
     if has(_RT_DATACENTER):
         return REASON_DATACENTER
-    # 7) 도시정비 수주 — 점유율·경쟁력 신호.
+    # 7) 도시정비 수주 — 점유율·경쟁 구도.
     if has(_RT_ORDER_CITY):
         return REASON_ORDER_CITY
-    # 8) 원전·SMR·에너지 인프라 — 밸류체인·발주 기회.
+    # 8) 수주잔고/실적 — 포트폴리오·마진 점검.
+    if has(_RT_ORDER_BACKLOG):
+        return REASON_ORDER_BACKLOG
+    # 9) 원전·SMR·에너지 인프라 — 밸류체인·파트너십 점검.
     if has(_RT_ENERGY):
         return REASON_ENERGY
-    # 9) 고객접점 AI — 생성형/AI + 상담·청약·입주민 맥락 (분양 운영 효율화 실험).
+    # 10) 고객접점 AI — 생성형/AI + 상담·청약·입주민 맥락 (분양 운영 효율화 실험).
     if has(_RT_AI_CORE) and has(_RT_CUSTOMER_CTX):
         return REASON_CUSTOMER_AI
-    # 10) 자본시장·재무 이벤트 — 전환사채/회사채/유상증자 등 실제 재무 이벤트(증권 리서치와 구분).
+    # 11) 자본시장·재무 이벤트 — 전환사채/회사채/유상증자 등 실제 재무 이벤트(증권 리서치와 구분).
     if is_finance or has(_RT_FINANCE):
         return REASON_FINANCE
-    # 11) 단순 분양·견본주택 마케팅 — 소비자 PR, 임원 의사결정 핵심도 낮음.
+    # 12) 단순 분양·견본주택 마케팅 — 소비자 PR, 임원 의사결정 핵심도 낮음.
     if has(_RT_SALES_PROMO):
         return REASON_SALES_PROMO
-    # 12) 해외·발주 환경 — 수주 전략·원가 관리 변수.
+    # 13) 해외·발주 환경 — 수주 전략·원가 관리 변수.
     if has(_RT_OVERSEAS):
         return REASON_BUSINESS_OVERSEAS
-    # 13) 스마트건설·AI 기술 일반 — 직접 HDEC 영향이 아니라 기술 확산 모니터링.
+    # 14) 스마트건설·AI 기술 일반 — 직접 HDEC 영향이 아니라 기술 확산 모니터링.
     if has(_RT_AI_GENERIC):
         return REASON_GENERIC_AI
-    # 14) 정책·제도 — 사업 환경 모니터링.
+    # 15) 정책·제도 — 사업 환경 모니터링.
     if has(_RT_POLICY):
         return REASON_GENERIC_POLICY
-    # 15) fallback — 현대건설 직접 언급이면 중립 점검 대상, 아니면 일반 동향(과장 금지).
+    # 16) fallback — 현대건설 직접 언급이면 중립 점검 대상, 아니면 일반 동향(과장 금지).
     if hdec_direct or has(_RT_HDEC):
         return REASON_HDEC_GENERIC
     return REASON_FALLBACK
