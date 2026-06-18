@@ -535,6 +535,10 @@ def classify(row: dict, category=None) -> dict:
         "hdec_strategic": flags["hdec_strategic"],
         "is_competitor": flags["is_competitor"],
         "is_finance": flags["is_finance"],
+        # P0-D3B: 증권 리서치/주가 테마 여부 — 표시 사유(insight.executive_reason)가
+        # 목표가·잭팟성 기사를 '직접 수주 win'으로 과장하지 않고 자본시장 관찰로 강등하는 데
+        # 쓴다 (이미 _memberships에서 계산된 플래그를 표시 소비처에 surface만 한다).
+        "stock_hype": flags["stock_hype"],
         "supplier_only": flags.get("supplier_only"),
         "supplier_order_context": flags.get("supplier_order_context"),
         "hdec_bucket": _hdec_bucket(row, members, aq) if flags["hdec_direct"] else 9,

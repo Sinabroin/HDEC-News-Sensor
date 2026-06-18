@@ -355,7 +355,7 @@ def _category_article_entry(row: dict, category_key: str, implication: str) -> d
 
 
 def _build_category_sections(scored_rows: list[dict], categories: dict[str, str],
-                             implications: dict[str, str]) -> list[dict]:
+                             reasons: dict[str, str]) -> list[dict]:
     """카테고리별 근거 기사 섹션을 만든다 — 집계/정렬만 (점수·등급 재계산 없음, P0-C1.7).
 
     설계 원칙:
@@ -381,7 +381,7 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         evidence = sorted(
             (r for r in rows if not _is_excluded_quality(r)),
             key=lambda r: (-(r.get("final_score") or 0), r["id"]))
-        top = [_category_article_entry(r, cat_key, implications.get(r["id"], ""))
+        top = [_category_article_entry(r, cat_key, reasons.get(r["id"], ""))
                for r in evidence[:TOP_CATEGORY_ARTICLES]]
         sources = {(r.get("source") or "출처 미상") for r in evidence}
 
@@ -415,7 +415,7 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
 
 
 def _build_review_excluded(scored_rows: list[dict], categories: dict[str, str],
-                           implications: dict[str, str]) -> dict:
+                           reasons: dict[str, str]) -> dict:
     """참고/제외 등급(제외) 중 '정상 뉴스 출처'만 모은다 — 낮은 관련성/우선순위 뉴스 (P0-C1.8).
 
     출처 품질 제외(블로그/카페 등)는 여기서 빼고 별도 audit 섹션으로 보낸다.
@@ -427,7 +427,7 @@ def _build_review_excluded(scored_rows: list[dict], categories: dict[str, str],
          if r.get("alert_grade") == scoring.GRADE_EXCLUDED and not _is_excluded_quality(r)),
         key=lambda r: (-(r.get("final_score") or 0), r["id"]))
     items = [_category_article_entry(r, categories.get(r["id"], "general"),
-                                     implications.get(r["id"], ""))
+                                     reasons.get(r["id"], ""))
              for r in rows[:TOP_REVIEW_EXCLUDED]]
     return {
         "items": items,
@@ -470,7 +470,7 @@ def _source_filtered_entry_from_provenance(item: dict) -> dict:
 
 
 def _build_source_filtered(scored_rows: list[dict], categories: dict[str, str],
-                           implications: dict[str, str],
+                           reasons: dict[str, str],
                            provenance: dict | None) -> dict:
     """출처 품질 제외(블로그/카페/커뮤니티) 감사 목록 (P0-C1.8).
 
@@ -484,7 +484,7 @@ def _build_source_filtered(scored_rows: list[dict], categories: dict[str, str],
     seen = set()
     for r in stored:
         entry = _category_article_entry(r, categories.get(r["id"], "general"),
-                                        implications.get(r["id"], ""))
+                                        reasons.get(r["id"], ""))
         entry["source_quality_label"] = SOURCE_FILTERED_LABEL
         entry["source_quality_reason"] = source_quality.classify(
             r.get("source"), r.get("title"))["source_quality_reason"]
@@ -678,10 +678,6 @@ def build_brief(pipeline_counts: dict | None = None,
     # 카테고리: 저장된 implication 텍스트를 역매핑 (재탐지 없음)
     details = {r["id"]: db.fetch_article_detail(r["id"]) for r in scored}
     categories = {rid: _category_key(d) for rid, d in details.items()}
-    implications = {
-        rid: ((d or {}).get("insight") or {}).get("hdec_implication") or ""
-        for rid, d in details.items()
-    }
     # 점수 구성요소(9항목)는 detail의 score row에만 있다 — 표시용으로 묶어둔다.
     scores_by_id = {rid: ((d or {}).get("score") or {}) for rid, d in details.items()}
 
@@ -705,6 +701,20 @@ def build_brief(pipeline_counts: dict | None = None,
         radar_sections[rid] = decision_relevance.override_radar_section(
             radar_sections[rid], decisions[rid])
 
+    # 표시용 임원 사유 (P0-D3B) — 저장된 카테고리 implication 대신 기사 유형별 명사형 사유를
+    # 파생한다. raw 제목+스니펫과 decision 플래그(stock_hype/is_finance/hdec_direct)만 입력으로
+    # 보고(생성 라벨 입력 금지), 분류/등급은 재계산하지 않는다. 도시정비 수주·원전/SMR·데이터센터·
+    # 분양 PR·전환사채를 한 문장("수주 경쟁력·시장 포지션 영향권")으로 뭉뚱그리던 것을 유형화한다.
+    # 리포트/대시보드 카드의 '왜 중요한가'·카테고리 드릴다운 사유·Telegram 사유가 이 값에서 나온다.
+    display_reasons = {
+        rid: insight.executive_reason(
+            row.get("title") or "", row.get("snippet") or "",
+            is_stock_hype=bool(decisions[rid].get("stock_hype")),
+            is_finance=bool(decisions[rid].get("is_finance")),
+            hdec_direct=bool(decisions[rid].get("hdec_direct")))
+        for rid, row in row_by_id.items()
+    }
+
     # Top 3/Top 5 노출 대상에서 excluded 출처(블로그/카페/커뮤니티성)는 배제한다
     # (P0-C1.6). excluded는 scoring 캡으로 이미 제외 등급이라 signal_rows에 거의 없지만,
     # 표시 직전 한 번 더 거른다 — "Top 3에 비-뉴스 금지"를 구조적으로 보장한다.
@@ -713,7 +723,7 @@ def build_brief(pipeline_counts: dict | None = None,
 
     def _entry(rank, row):
         return _signal_entry(rank, row, categories[row["id"]],
-                             implications[row["id"]], spreads[row["id"]],
+                             display_reasons[row["id"]], spreads[row["id"]],
                              scores_by_id.get(row["id"]),
                              section=radar_sections[row["id"]],
                              decision=decisions[row["id"]])
@@ -865,7 +875,7 @@ def build_brief(pipeline_counts: dict | None = None,
 
     # 카테고리별 근거 기사 드릴다운 (P0-C1.7) — 채점된 전 기사를 카테고리로 묶어
     # 수집 총량을 카테고리별로 감사 가능하게 한다 (점수·등급 재계산 없음, DB 쓰기 없음).
-    category_sections = _build_category_sections(scored, categories, implications)
+    category_sections = _build_category_sections(scored, categories, display_reasons)
 
     top_theme = theme_rankings[0]["theme"] if theme_rankings else None
     one_liner = _compose_one_liner(signal_rows, categories, immediate_count, top_theme)
@@ -885,8 +895,8 @@ def build_brief(pipeline_counts: dict | None = None,
 
     # 참고/제외 · 출처 품질 감사 (P0-C1.8) — 카운트만 보이던 버킷을 감사 가능하게 한다.
     # 두 기준을 분리한다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
-    review_excluded = _build_review_excluded(scored, categories, implications)
-    source_filtered = _build_source_filtered(scored, categories, implications, prov)
+    review_excluded = _build_review_excluded(scored, categories, display_reasons)
+    source_filtered = _build_source_filtered(scored, categories, display_reasons, prov)
 
     now = datetime.now(KST)
     return {
