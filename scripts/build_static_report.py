@@ -592,6 +592,69 @@ def _render_audit_sections(brief: dict) -> list[str]:
     return body
 
 
+def _render_exposure_audit(brief: dict) -> list[str]:
+    """운영자 점검: 노출 품질·중복 제어 (P0-D3F) — 기본 접힘 <details>, 임원 카드와 분리.
+
+    어떤 기사가 어느 surface에 노출/억제됐는지 한국어 라벨로 보여준다. 운영자 감사용이므로
+    compact raw 키(cluster/penalty/flags)도 한국어 라벨과 함께 노출할 수 있다 — 단 임원 상단
+    카드에는 절대 raw 키를 노출하지 않는다(이 섹션 안에서만). 본문 전문·외부 링크는 없다.
+    """
+    audit = brief.get("exposure_quality_audit") or {}
+    items = audit.get("items") or []
+    status_labels = audit.get("status_labels") or {}
+    total = audit.get("total_count", len(items))
+    body = [
+        '<section aria-label="운영자 점검: 노출 품질·중복 제어">',
+        '<details class="cat-drill">',
+        '<summary>'
+        '<span class="cd-label">운영자 점검: 노출 품질·중복 제어</span>'
+        f'<span class="cd-count num">{total}건</span>'
+        '<span class="cd-flex"></span></summary>',
+        '<div class="cd-body">',
+        f'<p class="cd-note">{escape(audit.get("note") or "")}</p>',
+    ]
+    if not items:
+        body.append('<p class="cd-empty">노출 억제·품질 사유가 있는 기사가 없습니다.</p>')
+    for it in items:
+        status_ko = status_labels.get(
+            it.get("exposure_surface_status") or "", it.get("exposure_surface_status") or "")
+        title = escape(_display(it.get("title") or ""))
+        meta = [escape(_display(it.get("display_source") or it.get("source") or "출처 미상"))]
+        if it.get("published_at"):
+            meta.append(f'<span class="num">{escape(_fmt_date(it.get("published_at")))}</span>')
+        score = it.get("final_score")
+        score_html = (f'중요도 {_fmt5(score)} / 5.0' if score is not None else '미채점')
+        chips = "".join(
+            f'<span class="srcq low">{escape(_display(lbl))}</span>'
+            for lbl in (it.get("suppression_reason_labels") or []))
+        # compact raw 키 — 한국어 라벨(위 chips)과 함께만 노출하는 운영자 감사용 한 줄.
+        raw_parts = [f'cluster={it.get("exposure_cluster_key")}',
+                     f'penalty={it.get("top_exposure_penalty")}']
+        flags = it.get("top_exposure_flags") or []
+        if flags:
+            raw_parts.append('flags=' + ",".join(flags))
+        rep = it.get("representative_article_id")
+        if rep:
+            raw_parts.append(f'rep={rep}')
+        body += [
+            '<article class="cd-art">',
+            '<div class="cd-art-head">',
+            f'<span class="cd-title">{title}</span>',
+            f'<span class="cd-sc num">{score_html}</span>',
+            '</div>',
+            f'<p class="cd-meta"><strong>{escape(status_ko)}</strong> · {" · ".join(meta)}</p>',
+        ]
+        if chips:
+            body.append(f'<p class="labels">{chips}</p>')
+        body.append(f'<p class="cd-meta num">{escape(" · ".join(raw_parts))}</p>')
+        body.append('</article>')
+    remaining = audit.get("remaining_count", 0)
+    if remaining:
+        body.append(f'<p class="cd-more">외 {remaining}건</p>')
+    body.append('</div></details></section>')
+    return body
+
+
 def _render_macro_section(brief: dict) -> list[str]:
     """Macro Snapshot 섹션 — live가 아닌 한 수치를 렌더링하지 않는다 (P0-B6)."""
     macro = brief.get("macro_snapshot") or {}
@@ -830,6 +893,11 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     panels["evidence"] = _render_evidence_panel(brief)
     default_tab = "hdec" if hdec_sigs else "ai"
     body += _render_tabs_ui(panels, default_tab)
+
+    # 운영자 점검: 노출 품질·중복 제어 (P0-D3F) — 탭 밖, 본문 하단의 기본 접힘 감사 블록.
+    # 임원 카드는 깨끗하게 두고, 노출 억제/중복/품질 사유는 여기서만 raw 키와 함께 투명화한다.
+    sections.append("exposure_audit")
+    body += _render_exposure_audit(brief)
 
     sections += ["notes", "footer"]
     # P0-D1.5: footer 각주 통합 — 현황판 legend와 중복 cluster(spread) 줄을 덜어내고

@@ -36,6 +36,42 @@ TOP_NEW_SCORE_FLOOR = 2.5
 TOP_STALE_DAYS = 45
 TOP_VERY_STALE_DAYS = 90
 
+# P0-D3F: surface 간 노출 중복 억제 — 같은 기사/클러스터가 여러 상단 카드를 도배하지 않게 한다.
+# 한 기사는 '의도된 multi-section'(예: 현대건설 벌점 = 현대건설 연관 + 리스크·규제)을 보존하려고
+# 최대 2개 상단 surface까지 허용한다(완전 제거 아님). 같은 cluster도 최대 2개 상단 surface까지.
+# 표시 전용 가드레일이며 점수·등급·원문 dedup은 변경하지 않는다.
+MAX_ARTICLE_TOP_SURFACES = 2
+MAX_CLUSTER_TOP_SURFACES = 2
+# 노출 품질·중복 감사(운영자 전용)에 담을 항목 상한.
+TOP_EXPOSURE_AUDIT = 30
+EXPOSURE_AUDIT_NOTE = (
+    "운영자 점검용 노출 품질·중복 제어 기록입니다. 동일·유사 기사는 상단에서 대표 1건만 "
+    "노출하고 나머지는 근거·감사 영역에 남깁니다. 점수·등급은 변경하지 않습니다."
+)
+# 노출 상태 한국어 라벨 (운영자 감사 표시 전용).
+EXPOSURE_STATUS_LABELS = {
+    "shown_top": "상단 노출",
+    "shown_category": "카테고리 근거 노출",
+    "suppressed_duplicate": "중복 억제(동일 기사)",
+    "suppressed_cluster_cap": "유사 기사 대표 외 억제",
+    "suppressed_quality_gate": "품질 게이트 억제",
+    "evidence_only": "근거/감사만",
+}
+# top_exposure flag / 억제 상태 → 사람이 읽는 한국어 사유 라벨 (운영자 감사 전용).
+SUPPRESSION_REASON_LABELS = {
+    "securities_context": "증권/주가성 문맥",
+    "stock_hype": "stock-hype 제외",
+    "very_stale": "매우 오래된 기사",
+    "stale": "45일 초과 기사",
+    "supplier_only": "공급사 단독",
+    "weak_source": "약한 출처",
+    "source_low": "약한 출처",
+    "source_excluded": "약한 출처",
+    "generic_roundup": "roundup/listicle",
+    "suppressed_cluster_cap": "유사 기사 대표 선정됨",
+    "suppressed_duplicate": "동일 기사 이미 상단 노출",
+}
+
 SECURITIES_CONTEXT_PATTERNS = (
     "주가", "목표가", "목표주가", "투자의견", "종목", "관련주", "테마주",
     "급등", "폭등", "상한가",
@@ -470,14 +506,251 @@ def _cap_exposure_clusters(rows: list[dict], limit: int, *,
             break
 
     if not picked and rows:
+        # 빈 섹션 방지로 최소 1건은 보여주되, 전부 '전역 클러스터 캡'에 막힌 경우엔 빈 채로 둔다
+        # (같은 cluster를 카테고리마다 반복 노출하지 않기 위함). 카운트 기반이라 global_cluster_keys가
+        # None(전체 클러스터 대상)일 때도 올바르게 동작한다 (P0-D3F: smart-only → 전체 클러스터 일반화).
         all_rows_globally_capped = (
             global_cluster_counts is not None
-            and global_cluster_keys is not None
-            and all(_exposure_cluster_key(r) in global_cluster_keys for r in rows)
+            and all(global_cluster_counts.get(_exposure_cluster_key(r), 0) >= max_per_cluster
+                    for r in rows)
         )
         if not all_rows_globally_capped:
             return rows[:1]
     return picked
+
+
+def _norm_url(url) -> str:
+    """surface dedup용 URL 정규화 — 표시 선택 전용 (collector의 url_hash dedup과 별개)."""
+    u = str(url or "").strip().lower()
+    return u.rstrip("/")
+
+
+class _ExposureSurfaceState:
+    """surface 간 노출 중복 억제 상태 (표시 전용 — 점수/등급/원문 dedup 불변, P0-D3F).
+
+    같은 기사가 여러 상단 카드에 반복되거나(동일 기사·동일 URL·동일 정규화 제목), 같은
+    cluster가 여러 surface를 도배하는 것을 막는다. '의도된 multi-section'(예: 현대건설 벌점 =
+    현대건설 연관 + 리스크·규제)을 보존하려고 기사당 surface 수에 cap을 둘 뿐 완전히 지우지
+    않는다. 억제 결정은 audit으로 남겨 운영자가 사유를 볼 수 있게 한다.
+    """
+
+    def __init__(self) -> None:
+        self.article_surfaces: dict[str, set[str]] = {}   # id -> {surface}
+        self.url_owner: dict[str, str] = {}               # 정규화 URL -> 최초 노출 id
+        self.title_owner: dict[str, str] = {}             # 정규화 제목 -> 최초 노출 id
+        self.cluster_surfaces: dict[str, set[str]] = {}   # cluster -> {surface}
+        self.cluster_owner: dict[str, str] = {}           # cluster -> 대표(최초) id
+        self.audit: dict[str, dict] = {}                  # id -> 억제 사유/대표
+
+    def alias_owner(self, row: dict):
+        """이미 노출된 동일 기사(같은 URL/정규화 제목, 다른 id)의 대표 id (없으면 None)."""
+        aid = row["id"]
+        url = _norm_url(row.get("url"))
+        if url and self.url_owner.get(url) not in (None, aid):
+            return self.url_owner[url]
+        title = _normalize_exposure_text(row.get("title") or "")
+        if title and self.title_owner.get(title) not in (None, aid):
+            return self.title_owner[title]
+        return None
+
+    def surface_count(self, row: dict) -> int:
+        return len(self.article_surfaces.get(row["id"], ()))
+
+    def register(self, row: dict, surface: str, cluster: str) -> None:
+        aid = row["id"]
+        self.article_surfaces.setdefault(aid, set()).add(surface)
+        url = _norm_url(row.get("url"))
+        if url:
+            self.url_owner.setdefault(url, aid)
+        title = _normalize_exposure_text(row.get("title") or "")
+        if title:
+            self.title_owner.setdefault(title, aid)
+        self.cluster_surfaces.setdefault(cluster, set()).add(surface)
+        self.cluster_owner.setdefault(cluster, aid)
+
+    def note_audit(self, row: dict, status: str, representative=None) -> None:
+        rec = self.audit.setdefault(
+            row["id"], {"status": status, "representative": None})
+        rec["status"] = status
+        if representative and representative != row["id"] and not rec["representative"]:
+            rec["representative"] = representative
+
+
+def _filter_surface_exposures(rows: list[dict], limit: int, *,
+                              decisions: dict[str, dict] | None,
+                              surface: str, state: _ExposureSurfaceState,
+                              max_per_cluster: int = 1,
+                              hdec_direct_pair_cap: bool = False,
+                              max_article_surfaces: int = MAX_ARTICLE_TOP_SURFACES,
+                              max_cluster_surfaces: int = MAX_CLUSTER_TOP_SURFACES
+                              ) -> list[dict]:
+    """정렬된 후보에서 surface 간 중복(동일 기사·동일 cluster 도배)을 억제하며 limit개를 고른다.
+
+    - 동일 기사: 이미 max_article_surfaces개 상단 surface에 노출(또는 같은 URL/제목이 다른
+      id로 노출)됐으면 양보(audit). top_new는 max_article_surfaces=1로 호출해 '다른 카드에
+      없는' 기사만 남긴다(의도된 multi-section은 max=2로 보존).
+    - 동일 cluster: 이미 max_cluster_surfaces개 surface를 점유했으면 새 surface 진입을 양보.
+    - 양보분은 백필(정렬된 후보를 끝까지 훑어 다음 후보로 채움)로 빈 카드를 피한다.
+    - per-list cluster cap(같은 surface 안 max_per_cluster, 현대건설 직접 쌍 예외)은 기존대로.
+    순서·랭킹은 바꾸지 않는다 — D3D 정렬을 그대로 두고 중복만 억제한다.
+    """
+    picked: list[dict] = []
+    local_counts: dict[str, int] = {}
+    sources_by_cluster: dict[str, set[str]] = {}
+    decisions = decisions or {}
+
+    for row in rows:
+        aid = row["id"]
+        cluster = _exposure_cluster_key(row)
+        # 1) cross-surface 동일 기사 cap (의도된 multi-section 보존 위해 완전 제거 아님)
+        alias = state.alias_owner(row)
+        if alias is not None or state.surface_count(row) >= max_article_surfaces:
+            state.note_audit(row, "suppressed_duplicate", representative=alias or aid)
+            continue
+        # 2) per-list cluster cap (+ 현대건설 직접 쌍 예외: 다른 출처면 2건 허용)
+        cap = max_per_cluster
+        source_key = _cluster_source_key(row)
+        allow_pair = (hdec_direct_pair_cap
+                      and _hdec_direct_project_for_cluster(row, decisions.get(aid)))
+        local = local_counts.get(cluster, 0)
+        if allow_pair:
+            cap = max(cap, 2)
+            seen_sources = sources_by_cluster.setdefault(cluster, set())
+            if local >= 1 and source_key in seen_sources:
+                continue
+        if local >= cap:
+            continue
+        # 3) cross-surface cluster cap — 이 surface 첫 진입 때만 검사(같은 surface 내 복수는 per-list가 관리)
+        if local == 0 and not allow_pair:
+            other_surfaces = state.cluster_surfaces.get(cluster, set()) - {surface}
+            if len(other_surfaces) >= max_cluster_surfaces:
+                state.note_audit(row, "suppressed_cluster_cap",
+                                 representative=state.cluster_owner.get(cluster))
+                continue
+        picked.append(row)
+        local_counts[cluster] = local + 1
+        if allow_pair:
+            sources_by_cluster.setdefault(cluster, set()).add(source_key)
+        state.register(row, surface, cluster)
+        if len(picked) >= limit:
+            break
+
+    # 빈 surface 방지 — 단, 이미 다른 곳에 충분히 노출된 기사는 재노출하지 않는다.
+    if not picked and rows:
+        for row in rows:
+            if (state.alias_owner(row) is None
+                    and state.surface_count(row) < max_article_surfaces):
+                picked.append(row)
+                state.register(row, surface, _exposure_cluster_key(row))
+                break
+    return picked
+
+
+def _build_exposure_audit(scored_rows: list[dict], decisions: dict[str, dict],
+                          shown_top_ids: set, shown_cat_ids: set) -> dict:
+    """노출 품질·중복 감사 (P0-D3F, 운영자 전용) — 어디에 노출/억제됐는지 투명화.
+
+    self-contained 추론: 노출 집합(shown_top/shown_cat)과 cluster/URL/제목 대표를 비교해
+    각 기사의 상태를 정한다(품질 게이트 > 동일 기사 중복 > 유사 기사 대표 외 > 근거만).
+    저장된 점수·등급을 그대로 옮길 뿐 재계산하지 않는다. top_exposure flag가 있거나 억제된
+    기사만 담고(최대 TOP_EXPOSURE_AUDIT건), 임원 카드에는 raw 키를 노출하지 않는다.
+    """
+    shown_ids = shown_top_ids | shown_cat_ids
+    # 노출된 기사 기준 대표(최초) id — cluster/URL/제목별. 미노출 기사가 어떤 대표에 양보했는지 추적.
+    cluster_rep: dict[str, str] = {}
+    url_rep: dict[str, str] = {}
+    title_rep: dict[str, str] = {}
+    for row in scored_rows:
+        if row["id"] not in shown_ids:
+            continue
+        cluster_rep.setdefault(_exposure_cluster_key(row), row["id"])
+        url = _norm_url(row.get("url"))
+        if url:
+            url_rep.setdefault(url, row["id"])
+        title = _normalize_exposure_text(row.get("title") or "")
+        if title:
+            title_rep.setdefault(title, row["id"])
+
+    entries = []
+    for row in scored_rows:
+        rid = row["id"]
+        # 출처 품질 제외(블로그·카페·커뮤니티)는 전용 '출처 품질 감사' 섹션이 단일 소유한다 —
+        # 여기(노출 품질·중복 감사)서는 다루지 않는다(섹션 역할 중복·혼선 방지).
+        if _is_excluded_quality(row):
+            continue
+        decision = decisions.get(rid)
+        profile = _top_exposure_profile(row, decision)
+        flags = profile["top_exposure_flags"]
+        cluster = _exposure_cluster_key(row)
+        representative = None
+
+        if rid in shown_top_ids:
+            status = "shown_top"
+        elif rid in shown_cat_ids:
+            status = "shown_category"
+        elif profile["top_exposure_excluded"] or _is_excluded_quality(row):
+            status = "suppressed_quality_gate"
+        else:
+            url = _norm_url(row.get("url"))
+            title = _normalize_exposure_text(row.get("title") or "")
+            if url and url_rep.get(url) not in (None, rid):
+                status, representative = "suppressed_duplicate", url_rep[url]
+            elif title and title_rep.get(title) not in (None, rid):
+                status, representative = "suppressed_duplicate", title_rep[title]
+            elif cluster_rep.get(cluster) not in (None, rid):
+                status, representative = "suppressed_cluster_cap", cluster_rep[cluster]
+            else:
+                status = "evidence_only"
+
+        is_suppressed = status.startswith("suppressed")
+        labels = []
+        for flag in flags:
+            label = SUPPRESSION_REASON_LABELS.get(flag)
+            if label and label not in labels:
+                labels.append(label)
+        if SUPPRESSION_REASON_LABELS.get(status) and SUPPRESSION_REASON_LABELS[status] not in labels:
+            labels.append(SUPPRESSION_REASON_LABELS[status])
+        # 감사 대상은 '왜 강등/억제됐나'가 있는 기사만 — 억제됐거나 부정적 사유 라벨이 있을 때.
+        # trusted_source·direct_project_signal 같은 긍정 flag만 있는 정상 노출 기사는 제외(노이즈 방지).
+        if not labels and not is_suppressed:
+            continue
+
+        entries.append({
+            "article_id": rid,
+            "title": row["title"],
+            "source": row.get("source") or "출처 미상",
+            "display_source": source_quality.normalize_display_source(
+                row.get("source")) or "출처 미상",
+            "published_at": row.get("published_at"),
+            "final_score": row.get("final_score"),
+            "alert_grade": row.get("alert_grade"),
+            "exposure_cluster_key": cluster,
+            "top_exposure_flags": flags,
+            "top_exposure_penalty": profile["top_exposure_penalty"],
+            "top_exposure_excluded": profile["top_exposure_excluded"],
+            "exposure_surface_status": status,
+            "suppression_reason_labels": labels,
+            "representative_article_id": representative,
+        })
+
+    # 운영자가 가장 의심스러운 항목부터 보게 — 억제/감점 큰 것 먼저.
+    order = {"suppressed_quality_gate": 0, "suppressed_duplicate": 1,
+             "suppressed_cluster_cap": 2, "evidence_only": 3,
+             "shown_category": 4, "shown_top": 5}
+    entries.sort(key=lambda e: (
+        order.get(e["exposure_surface_status"], 9),
+        -(e["top_exposure_penalty"] or 0),
+        -(e["final_score"] or 0), e["article_id"]))
+    total = len(entries)
+    shown = entries[:TOP_EXPOSURE_AUDIT]
+    return {
+        "items": shown,
+        "total_count": total,
+        "shown_count": len(shown),
+        "remaining_count": max(0, total - len(shown)),
+        "note": EXPOSURE_AUDIT_NOTE,
+        "status_labels": EXPOSURE_STATUS_LABELS,
+    }
 
 
 def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
@@ -636,11 +909,14 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
             (r for r in rows if not _is_excluded_quality(r)),
             key=lambda r: _top_exposure_sort_key(
                 r, (decisions or {}).get(r["id"])))
+        # P0-D3F: 같은 cluster(예: 스마트건설 챌린지·AI 데이터센터)가 여러 카테고리 근거 상단을
+        # 도배하지 않게, 카테고리 간 cluster당 최대 2건으로 제한한다(global_cluster_keys=None=전체 대상).
+        # 카테고리당 cluster 최대 2건은 그대로. total_count(전 기사)는 불변이라 카운트 감사 가능.
         evidence_top = _cap_exposure_clusters(
             evidence, TOP_CATEGORY_ARTICLES, max_per_cluster=2,
             decisions=decisions,
             global_cluster_counts=category_cluster_counts,
-            global_cluster_keys={"smart_construction_challenge"})
+            global_cluster_keys=None)
         top = [_category_article_entry(
                     r, cat_key, reasons.get(r["id"], ""),
                     (decisions or {}).get(r["id"]))
@@ -995,9 +1271,125 @@ def build_brief(pipeline_counts: dict | None = None,
                              section=radar_sections[row["id"]],
                              decision=decisions[row["id"]])
 
-    # 즉시 알림 후보 우선, 비면 상위 신호로 보충 (entry의 alert_grade가 실제 등급).
-    # 후보가 표시 한도보다 많을 때만 카테고리 다양성 선택이 동작한다 —
-    # 등급 판정 자체는 바꾸지 않고, 어떤 후보를 보여줄지만 고른다.
+    # ---- 섹션별 레이더 신호 (P0-C1.9 + P0-C1.12 임원 의사결정 IA + P0-D3F dedup) ----
+    # AI/거시는 radar 분류(primary)로 뽑는다 — AI는 radar_section==ai 불변(IA 회귀 보호).
+    # 현대건설 직접/수주·해외/경쟁사·공급망은 decision_relevance 멤버십(primary or
+    # secondary)으로 뽑는다 — 같은 기사가 여러 섹션에 들어갈 수 있다(multi-section).
+    # P0-D3F: surface_state를 우선순위대로 통과시켜 같은 기사·cluster가 여러 상단 카드를
+    # 도배하지 않게 한다. 의도된 multi-section(현대건설 벌점=현대건설 연관+리스크)은 기사당
+    # 최대 2 surface로 보존한다. 거시·즉시 알림은 독립(고-노출 surface 아님).
+    surface_state = _ExposureSurfaceState()
+
+    def _radar_group(section_key, limit=TOP_RADAR, sort_key=None, *, surface=None):
+        rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
+        rows.sort(key=sort_key or (
+            lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
+        rows = _cap_exposure_clusters(rows, limit, decisions=decisions)
+        # 레이더 탭은 '의사결정 렌즈'라 같은 기사가 여러 탭에 노출되는 건 의도된 multi-section이다
+        # (탭이라 동시에 보이지 않음). 선택은 바꾸지 않고 결과만 상태에 등록해, 항상 보이는
+        # 디제스트(신규 이슈)가 이 카드들을 그대로 반복하지 않게 한다 (P0-D3F).
+        if surface:
+            for r in rows:
+                surface_state.register(r, surface, _exposure_cluster_key(r))
+        return [_entry(i, r) for i, r in enumerate(rows, start=1)]
+
+    def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
+                        company_cap=None, min_score=None, *, surface=None):
+        rows = [r for r in display_rows
+                if decision_relevance.in_section(decisions[r["id"]], section_key)]
+        if min_score is not None:
+            rows = [r for r in rows if (r.get("final_score") or 0) >= min_score]
+        rows.sort(key=sort_key or (
+            lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
+        # 같은 회사(예: 가온전선 3건)가 한 섹션을 점유하지 않게 회사당 상한을 둔다 (P0-C1.12).
+        # 회사명이 없는 기사는 캡하지 않는다. 정렬 후 적용하므로 상위 신호가 먼저 살아남는다.
+        if company_cap:
+            capped, counts = [], {}
+            for r in rows:
+                ck = decision_relevance.company_key(r.get("title") or "")
+                if ck is not None and counts.get(ck, 0) >= company_cap:
+                    continue
+                if ck is not None:
+                    counts[ck] = counts.get(ck, 0) + 1
+                capped.append(r)
+            rows = capped
+        pair_cap = (section_key == decision_relevance.HDEC_DIRECT)
+        rows = _cap_exposure_clusters(
+            rows, limit, decisions=decisions, hdec_direct_pair_cap=pair_cap)
+        # 의사결정 섹션도 multi-section을 보존한다 — 선택 불변, 결과만 상태에 등록(신규 이슈 dedup용).
+        if surface:
+            for r in rows:
+                surface_state.register(r, surface, _exposure_cluster_key(r))
+        return [_entry(i, r) for i, r in enumerate(rows, start=1)]
+
+    # --- 상단 노출 surface를 우선순위대로 빌드한다 (높은 우선순위가 기사를 먼저 점유) ---
+    # 1) 현대건설 직접 영향 — Phase 3 순서(리스크/제재 → 수주·DC·SMR·뉴에너지 전략 →
+    #    AI·계약 → R&D·조직 → 그 외 직접). 같은 기사가 risk/ai/order에도 노출될 수 있다.
+    def _hdec_sort(r):
+        d = decisions[r["id"]]
+        return (_top_exposure_profile(r, d)["top_exposure_penalty"],
+                d["hdec_bucket"], _freshness_rank(r),
+                -(d["decision_relevance_score"] or 0),
+                -(r.get("final_score") or 0), r["id"])
+    hdec_direct_signals = _decision_group(
+        decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort,
+        surface="hdec_direct_signals")
+
+    # 2) AI 관련 — 공급사 단독(부품·전선·설비)은 더 강한 비공급사 AI/EPC 신호가 top-N(cap) 안에
+    # 들도록 뒤로 정렬한다. 공급사가 강한 신호를 cap 밖으로 밀어내 AI Top/AI 섹션을 차지하는
+    # 것을 막는다 (P0-C1.14). 점수순은 그 안에서 유지. 비공급사 후보가 cap을 채우면 공급사는
+    # 경쟁사·공급망/드릴다운으로만 남는다 (제품 원칙: 공급사는 보조 신호).
+    ai_radar_signals = _radar_group(radar.AI, sort_key=lambda r: (
+        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
+        1 if decisions[r["id"]].get("supplier_only") else 0,
+        _freshness_rank(r),
+        -(decisions[r["id"]]["decision_relevance_score"] or 0),
+        -(r.get("final_score") or 0), r["id"]), surface="ai_radar_signals")
+    # 3) 수주·해외 — 확정 계약뿐 아니라 발주 환경(중동·재건·EPC·DC·SMR·플랜트)과 경쟁사
+    # 수주 전략까지 넓혀 'business 0건' 회귀를 방지한다 (decision 멤버십 기반).
+    # 현대건설 직접(primary)은 위 현대건설 섹션에 이미 노출되므로, 여기선 '순수 수주·해외/
+    # 경쟁사 발주' 신호(중동·재건 등)를 먼저 보여 같은 기사로 도배되지 않게 한다.
+    def _order_sort(r):
+        d = decisions[r["id"]]
+        is_hdec_primary = d["primary_executive_section"] == decision_relevance.HDEC_DIRECT
+        return (_top_exposure_profile(r, d)["top_exposure_penalty"],
+                1 if is_hdec_primary else 0,
+                (d.get("order_class") if d.get("order_class") is not None else 9),
+                _freshness_rank(r),
+                -(d["decision_relevance_score"] or 0),
+                -(r.get("final_score") or 0), r["id"])
+    business_signals = _decision_group(
+        decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2,
+        min_score=1.5, surface="business_signals")
+
+    # 4) 리스크·규제 — broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
+    # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다. 경쟁사·공급망보다
+    # 우선순위가 높아 먼저 기사를 점유한다(현대건설 벌점 등 현대건설+리스크 multi-section 보존).
+    risk_pool = [r for r in scored
+                 if radar_sections[r["id"]] == radar.RISK
+                 and not _is_excluded_quality(r)
+                 and not _is_top_exposure_excluded(r, decisions.get(r["id"]))]
+    risk_pool.sort(key=lambda r: (
+        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
+        -radar.risk_fields(r, scores_by_id.get(r["id"]))["risk_priority_score"],
+        -(r.get("final_score") or 0), r["id"]))
+    risk_rows = _cap_exposure_clusters(risk_pool, TOP_RADAR, decisions=decisions)
+    for r in risk_rows:
+        surface_state.register(r, "risk_regulation_signals", _exposure_cluster_key(r))
+    risk_regulation_signals = [
+        _entry(i, r) for i, r in enumerate(risk_rows, start=1)]
+
+    # 5) 경쟁사·공급망
+    competitor_supply_signals = _decision_group(
+        decision_relevance.COMPETITOR, company_cap=2, min_score=1.5,
+        surface="competitor_supply_signals")
+
+    # 거시경제 — 고-노출 surface가 아니므로 dedup 체인에서 제외(독립).
+    macro_economy_signals = _radar_group(radar.MACRO)
+
+    # 즉시 알림 후보 — 임원 헤드라인 다이제스트. 독립적으로 뽑는다(긴급 신호는 상단 섹션과
+    # 겹칠 수 있다 — 헤드라인+상세는 정상 IA). 단 빌드 후 id를 상태에 등록해 '신규 이슈'가
+    # 헤드라인을 그대로 반복하지 않게 한다. (등록은 섹션 빌드 뒤라 위 섹션 예산을 잠식하지 않음.)
     instant_pool = [r for r in display_rows
                     if r.get("alert_grade") == scoring.GRADE_INSTANT]
     instant_pool.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
@@ -1017,99 +1409,12 @@ def build_brief(pipeline_counts: dict | None = None,
         instant_rows = _cap_exposure_clusters(
             instant_rows, TOP_IMMEDIATE, decisions=decisions)
     top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
+    for r in instant_rows:
+        surface_state.register(r, "top_immediate_signals", _exposure_cluster_key(r))
 
-    # ---- 섹션별 레이더 신호 (P0-C1.9 + P0-C1.12 임원 의사결정 IA) ----
-    # AI/거시는 radar 분류(primary)로 뽑는다 — AI는 radar_section==ai 불변(IA 회귀 보호).
-    # 현대건설 직접/수주·해외/경쟁사·공급망은 decision_relevance 멤버십(primary or
-    # secondary)으로 뽑는다 — 같은 기사가 여러 섹션에 들어갈 수 있다(multi-section).
-    def _radar_group(section_key, limit=TOP_RADAR, sort_key=None):
-        rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
-        rows.sort(key=sort_key or (
-            lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
-        rows = _cap_exposure_clusters(rows, limit, decisions=decisions)
-        return [_entry(i, r) for i, r in enumerate(rows, start=1)]
-
-    def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
-                        company_cap=None, min_score=None):
-        rows = [r for r in display_rows
-                if decision_relevance.in_section(decisions[r["id"]], section_key)]
-        if min_score is not None:
-            rows = [r for r in rows if (r.get("final_score") or 0) >= min_score]
-        rows.sort(key=sort_key or (
-            lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
-        # 같은 회사(예: 가온전선 3건)가 한 섹션을 점유하지 않게 회사당 상한을 둔다 (P0-C1.12).
-        # 회사명이 없는 기사는 캡하지 않는다. 정렬 후 적용하므로 상위 신호가 먼저 살아남는다.
-        if company_cap:
-            capped, counts = [], {}
-            for r in rows:
-                ck = decision_relevance.company_key(r.get("title") or "")
-                if ck is not None and counts.get(ck, 0) >= company_cap:
-                    continue
-                if ck is not None:
-                    counts[ck] = counts.get(ck, 0) + 1
-                capped.append(r)
-            rows = capped
-        rows = _cap_exposure_clusters(
-            rows, limit, decisions=decisions,
-            hdec_direct_pair_cap=(section_key == decision_relevance.HDEC_DIRECT))
-        return [_entry(i, r) for i, r in enumerate(rows, start=1)]
-
-    # 현대건설 직접 영향 — Phase 3 순서(리스크/제재 → 수주·DC·SMR·뉴에너지 전략 →
-    # AI·계약 → R&D·조직 → 그 외 직접). 같은 기사가 risk/ai/order에도 노출될 수 있다.
-    def _hdec_sort(r):
-        d = decisions[r["id"]]
-        return (_top_exposure_profile(r, d)["top_exposure_penalty"],
-                d["hdec_bucket"], _freshness_rank(r),
-                -(d["decision_relevance_score"] or 0),
-                -(r.get("final_score") or 0), r["id"])
-    hdec_direct_signals = _decision_group(
-        decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort)
-
-    # AI 관련 — 공급사 단독(부품·전선·설비)은 더 강한 비공급사 AI/EPC 신호가 top-N(cap) 안에
-    # 들도록 뒤로 정렬한다. 공급사가 강한 신호를 cap 밖으로 밀어내 AI Top/AI 섹션을 차지하는
-    # 것을 막는다 (P0-C1.14). 점수순은 그 안에서 유지. 비공급사 후보가 cap을 채우면 공급사는
-    # 경쟁사·공급망/드릴다운으로만 남는다 (제품 원칙: 공급사는 보조 신호).
-    ai_radar_signals = _radar_group(radar.AI, sort_key=lambda r: (
-        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
-        1 if decisions[r["id"]].get("supplier_only") else 0,
-        _freshness_rank(r),
-        -(decisions[r["id"]]["decision_relevance_score"] or 0),
-        -(r.get("final_score") or 0), r["id"]))
-    # 수주·해외 — 확정 계약뿐 아니라 발주 환경(중동·재건·EPC·DC·SMR·플랜트)과 경쟁사
-    # 수주 전략까지 넓혀 'business 0건' 회귀를 방지한다 (decision 멤버십 기반).
-    # 현대건설 직접(primary)은 위 현대건설 섹션에 이미 노출되므로, 여기선 '순수 수주·해외/
-    # 경쟁사 발주' 신호(중동·재건 등)를 먼저 보여 같은 기사로 도배되지 않게 한다.
-    def _order_sort(r):
-        d = decisions[r["id"]]
-        is_hdec_primary = d["primary_executive_section"] == decision_relevance.HDEC_DIRECT
-        return (_top_exposure_profile(r, d)["top_exposure_penalty"],
-                1 if is_hdec_primary else 0,
-                (d.get("order_class") if d.get("order_class") is not None else 9),
-                _freshness_rank(r),
-                -(d["decision_relevance_score"] or 0),
-                -(r.get("final_score") or 0), r["id"])
-    business_signals = _decision_group(
-        decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2,
-        min_score=1.5)
-    competitor_supply_signals = _decision_group(
-        decision_relevance.COMPETITOR, company_cap=2, min_score=1.5)
-    macro_economy_signals = _radar_group(radar.MACRO)
-
-    # 리스크·규제는 broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
-    # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다.
-    risk_pool = [r for r in scored
-                 if radar_sections[r["id"]] == radar.RISK
-                 and not _is_excluded_quality(r)
-                 and not _is_top_exposure_excluded(r, decisions.get(r["id"]))]
-    risk_pool.sort(key=lambda r: (
-        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
-        -radar.risk_fields(r, scores_by_id.get(r["id"]))["risk_priority_score"],
-        -(r.get("final_score") or 0), r["id"]))
-    risk_rows = _cap_exposure_clusters(
-        risk_pool, TOP_RADAR, decisions=decisions)
-    risk_regulation_signals = [
-        _entry(i, r) for i, r in enumerate(risk_rows, start=1)]
-
+    # 신규 이슈 — 가장 낮은 우선순위. 위 모든 상단 카드에 양보해 '다른 카드에 없는' 신규
+    # 신호만 남긴다(max_article_surfaces=1). 전부 이미 노출됐으면 빈 카드보다 상위 신호
+    # 재노출이 낫다 — 기존 로직으로 폴백한다(top_new 1~5건 계약 보존).
     top_issue_pool = [r for r in display_rows
                       if (r.get("final_score") or 0) >= TOP_NEW_SCORE_FLOOR]
     if not top_issue_pool:
@@ -1117,11 +1422,18 @@ def build_brief(pipeline_counts: dict | None = None,
                           if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
     top_issue_pool.sort(
         key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-    issue_rows = _diverse_top(
-        top_issue_pool, categories, TOP_ISSUES,
+    issue_candidates = _diverse_top(
+        top_issue_pool, categories, min(len(top_issue_pool), TOP_ISSUES * 3),
         sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
-    issue_rows = _cap_exposure_clusters(
-        issue_rows, TOP_ISSUES, decisions=decisions)
+    issue_rows = _filter_surface_exposures(
+        issue_candidates, TOP_ISSUES, decisions=decisions,
+        surface="top_new_issues", state=surface_state, max_article_surfaces=1)
+    if not issue_rows:
+        issue_rows = _diverse_top(
+            top_issue_pool, categories, TOP_ISSUES,
+            sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        issue_rows = _cap_exposure_clusters(
+            issue_rows, TOP_ISSUES, decisions=decisions)
     top_issues = [
         _entry(i, r)
         for i, r in enumerate(issue_rows, start=1)
@@ -1169,6 +1481,19 @@ def build_brief(pipeline_counts: dict | None = None,
     # 수집 총량을 카테고리별로 감사 가능하게 한다 (점수·등급 재계산 없음, DB 쓰기 없음).
     category_sections = _build_category_sections(
         scored, categories, display_reasons, decisions)
+
+    # 노출 품질·중복 감사 (P0-D3F, 운영자 전용) — 어떤 기사가 어느 surface에 노출/억제됐는지
+    # 투명화한다. 임원 카드에는 raw 키를 노출하지 않고, 이 감사 구조에서만 사유를 보여준다.
+    _top_surface_entries = (
+        top_immediate + hdec_direct_signals + ai_radar_signals + business_signals
+        + risk_regulation_signals + competitor_supply_signals
+        + macro_economy_signals + top_issues)
+    shown_top_ids = {e.get("article_id") for e in _top_surface_entries}
+    shown_cat_ids = {a.get("article_id")
+                     for sec in category_sections
+                     for a in (sec.get("top_articles") or [])}
+    exposure_quality_audit = _build_exposure_audit(
+        scored, decisions, shown_top_ids, shown_cat_ids)
 
     top_theme = theme_rankings[0]["theme"] if theme_rankings else None
     one_liner = _compose_one_liner(signal_rows, categories, immediate_count, top_theme)
@@ -1237,6 +1562,7 @@ def build_brief(pipeline_counts: dict | None = None,
         "category_sections": category_sections,
         "review_excluded_evidence": review_excluded,
         "source_filtered_evidence": source_filtered,
+        "exposure_quality_audit": exposure_quality_audit,
         "macro_snapshot": macro,
         "status_board_legend": STATUS_BOARD_LEGEND,
         "spread_method": SPREAD_METHOD,
