@@ -12,6 +12,8 @@
 """
 
 import json
+import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from app import (
@@ -54,6 +56,12 @@ DIRECT_PROJECT_PATTERNS = (
     "스마트 건설", "r&d", "연구원", "조직", "전략", "에너지전환",
     "에너지 전환", "뉴에너지",
 )
+EXPOSURE_TITLE_NOISE_WORDS = {
+    "단독", "속보", "인터뷰", "기획", "오늘의", "업계소식", "업계", "소식",
+}
+EXPOSURE_FALLBACK_STOPWORDS = EXPOSURE_TITLE_NOISE_WORDS | {
+    "및", "등", "관련", "대상", "위한", "한다", "개최", "진행", "확대",
+}
 
 # spread 한계 고지: 토픽 후보 집합이 겹치는 신호 수 기반의 보수적 추정이다.
 # (동일 사건 클러스터링이 아니며, dedup으로 제거된 중복 기사는 집계되지 않는다)
@@ -310,6 +318,7 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "opportunity_or_risk": row.get("opportunity_or_risk") or "관찰",
         "implication": implication,
         "one_line_reason": implication,
+        "exposure_cluster_key": _exposure_cluster_key(row),
         "spread": spread,
         "url": row.get("url"),
     }
@@ -348,6 +357,127 @@ def _is_excluded_quality(row: dict) -> bool:
 def _contains_any(text: str, patterns) -> bool:
     low = (text or "").lower()
     return any((p or "").lower() in low for p in patterns)
+
+
+def _normalize_exposure_text(text: str) -> str:
+    """노출 클러스터링용 제목 정규화 — 표시 선택 전용, DB dedup과 분리."""
+    normalized = unicodedata.normalize("NFKC", text or "").lower()
+    normalized = re.sub(r"[\[\]{}()<>〈〉《》「」『』\"'“”‘’`´]+", " ", normalized)
+    normalized = re.sub(r"[-–—→←·ㆍ/|:;,.!?~…]+", " ", normalized)
+    normalized = re.sub(r"[^0-9a-z가-힣]+", " ", normalized)
+    tokens = [t for t in normalized.split()
+              if t and t not in EXPOSURE_TITLE_NOISE_WORDS]
+    return " ".join(tokens)
+
+
+def _exposure_cluster_key(row: dict) -> str:
+    """상단 노출용 near-duplicate 클러스터 키 (점수/등급/원문 dedup 불변)."""
+    title = _normalize_exposure_text(row.get("title") or "")
+    snippet = _normalize_exposure_text(row.get("snippet") or "")
+    text = f"{title} {snippet}".strip()
+
+    is_hdec_nuclear = (
+        "현대건설" in text
+        and ("네덜란드" in text or "웨스팅하우스" in text)
+        and _contains_any(text, ("원전", "smr", "소형모듈원자로", "대형원전"))
+    )
+    if is_hdec_nuclear:
+        return "hdec_netherlands_nuclear"
+
+    is_smart_challenge = (
+        _contains_any(text, ("스마트건설", "스마트 건설"))
+        and "챌린지" in text
+        and _contains_any(text, ("ai", "로봇", "국토부", "건설현장", "안전", "품질"))
+    )
+    if is_smart_challenge:
+        return "smart_construction_challenge"
+
+    if _contains_any(text, (
+            "원전", "smr", "소형모듈원자로", "네덜란드", "웨스팅하우스",
+            "후보지", "대형원전")):
+        return "nuclear_smr_project"
+
+    has_ai_datacenter_phrase = _contains_any(
+        text, ("ai 데이터센터", "ai 데이터 센터"))
+    has_datacenter_power = (
+        _contains_any(text, ("데이터센터", "데이터 센터"))
+        and _contains_any(text, (
+            "전력망", "전력 인프라", "전력인프라", "냉각", "ppa", "분산전원",
+        ))
+    )
+    if has_ai_datacenter_phrase or has_datacenter_power:
+        return "ai_datacenter_power"
+
+    meaningful = [t for t in title.split()
+                  if t not in EXPOSURE_FALLBACK_STOPWORDS]
+    return "title:" + " ".join(meaningful[:8]) if meaningful else "title:unknown"
+
+
+def _hdec_direct_project_for_cluster(row: dict, decision: dict | None) -> bool:
+    if not (decision or {}).get("hdec_direct"):
+        return False
+    return "direct_project_signal" in _top_exposure_profile(
+        row, decision).get("top_exposure_flags", [])
+
+
+def _cluster_source_key(row: dict) -> str:
+    return source_quality.normalize_display_source(
+        row.get("source")) or row.get("source") or "출처 미상"
+
+
+def _cap_exposure_clusters(rows: list[dict], limit: int, *,
+                           max_per_cluster: int = 1,
+                           decisions: dict[str, dict] | None = None,
+                           hdec_direct_pair_cap: bool = False,
+                           global_cluster_counts: dict[str, int] | None = None,
+                           global_cluster_keys: set[str] | None = None) -> list[dict]:
+    """정렬된 후보에서 유사 기사 노출 수만 제한한다. 순서는 바꾸지 않는다."""
+    picked: list[dict] = []
+    counts: dict[str, int] = {}
+    sources_by_cluster: dict[str, set[str]] = {}
+    decisions = decisions or {}
+
+    for row in rows:
+        key = _exposure_cluster_key(row)
+        current = counts.get(key, 0)
+        use_global = (
+            global_cluster_counts is not None
+            and (global_cluster_keys is None or key in global_cluster_keys)
+        )
+        global_current = global_cluster_counts.get(key, 0) if use_global else 0
+        cap = max_per_cluster
+        source_key = _cluster_source_key(row)
+        allow_pair = (
+            hdec_direct_pair_cap
+            and _hdec_direct_project_for_cluster(row, decisions.get(row["id"]))
+        )
+        if allow_pair:
+            cap = max(cap, 2)
+            seen_sources = sources_by_cluster.setdefault(key, set())
+            if current >= 1 and source_key in seen_sources:
+                continue
+
+        if current >= cap or global_current >= cap:
+            continue
+
+        picked.append(row)
+        counts[key] = current + 1
+        if use_global:
+            global_cluster_counts[key] = global_current + 1
+        if allow_pair:
+            sources_by_cluster.setdefault(key, set()).add(source_key)
+        if len(picked) >= limit:
+            break
+
+    if not picked and rows:
+        all_rows_globally_capped = (
+            global_cluster_counts is not None
+            and global_cluster_keys is not None
+            and all(_exposure_cluster_key(r) in global_cluster_keys for r in rows)
+        )
+        if not all_rows_globally_capped:
+            return rows[:1]
+    return picked
 
 
 def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
@@ -469,6 +599,7 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
         "category": category_key,
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
         "why_it_matters": implication,
+        "exposure_cluster_key": _exposure_cluster_key(row),
     }
     entry.update(_top_exposure_profile(row, decision))
     return entry
@@ -491,7 +622,9 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         grouped.setdefault(categories.get(row["id"], "general"), []).append(row)
 
     sections = []
-    for cat_key, rows in grouped.items():
+    category_cluster_counts: dict[str, int] = {}
+    for cat_key, rows in sorted(
+            grouped.items(), key=lambda item: (-len(item[1]), item[0])):
         total = len(rows)
         instant = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_INSTANT)
         daily = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_DAILY)
@@ -503,10 +636,15 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
             (r for r in rows if not _is_excluded_quality(r)),
             key=lambda r: _top_exposure_sort_key(
                 r, (decisions or {}).get(r["id"])))
+        evidence_top = _cap_exposure_clusters(
+            evidence, TOP_CATEGORY_ARTICLES, max_per_cluster=2,
+            decisions=decisions,
+            global_cluster_counts=category_cluster_counts,
+            global_cluster_keys={"smart_construction_challenge"})
         top = [_category_article_entry(
                     r, cat_key, reasons.get(r["id"], ""),
                     (decisions or {}).get(r["id"]))
-               for r in evidence[:TOP_CATEGORY_ARTICLES]]
+               for r in evidence_top]
         sources = {(r.get("source") or "출처 미상") for r in evidence}
 
         shown = len(top)
@@ -866,6 +1004,8 @@ def build_brief(pipeline_counts: dict | None = None,
     instant_rows = _diverse_top(
         instant_pool, categories, TOP_IMMEDIATE,
         sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+    instant_rows = _cap_exposure_clusters(
+        instant_rows, TOP_IMMEDIATE, decisions=decisions)
     if not instant_rows:
         fallback_pool = [r for r in display_rows
                          if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
@@ -874,6 +1014,8 @@ def build_brief(pipeline_counts: dict | None = None,
         instant_rows = _diverse_top(
             fallback_pool, categories, TOP_IMMEDIATE,
             sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        instant_rows = _cap_exposure_clusters(
+            instant_rows, TOP_IMMEDIATE, decisions=decisions)
     top_immediate = [_entry(i, r) for i, r in enumerate(instant_rows, start=1)]
 
     # ---- 섹션별 레이더 신호 (P0-C1.9 + P0-C1.12 임원 의사결정 IA) ----
@@ -884,7 +1026,8 @@ def build_brief(pipeline_counts: dict | None = None,
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
         rows.sort(key=sort_key or (
             lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
-        return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
+        rows = _cap_exposure_clusters(rows, limit, decisions=decisions)
+        return [_entry(i, r) for i, r in enumerate(rows, start=1)]
 
     def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
                         company_cap=None, min_score=None):
@@ -906,7 +1049,10 @@ def build_brief(pipeline_counts: dict | None = None,
                     counts[ck] = counts.get(ck, 0) + 1
                 capped.append(r)
             rows = capped
-        return [_entry(i, r) for i, r in enumerate(rows[:limit], start=1)]
+        rows = _cap_exposure_clusters(
+            rows, limit, decisions=decisions,
+            hdec_direct_pair_cap=(section_key == decision_relevance.HDEC_DIRECT))
+        return [_entry(i, r) for i, r in enumerate(rows, start=1)]
 
     # 현대건설 직접 영향 — Phase 3 순서(리스크/제재 → 수주·DC·SMR·뉴에너지 전략 →
     # AI·계약 → R&D·조직 → 그 외 직접). 같은 기사가 risk/ai/order에도 노출될 수 있다.
@@ -959,8 +1105,10 @@ def build_brief(pipeline_counts: dict | None = None,
         _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
         -radar.risk_fields(r, scores_by_id.get(r["id"]))["risk_priority_score"],
         -(r.get("final_score") or 0), r["id"]))
+    risk_rows = _cap_exposure_clusters(
+        risk_pool, TOP_RADAR, decisions=decisions)
     risk_regulation_signals = [
-        _entry(i, r) for i, r in enumerate(risk_pool[:TOP_RADAR], start=1)]
+        _entry(i, r) for i, r in enumerate(risk_rows, start=1)]
 
     top_issue_pool = [r for r in display_rows
                       if (r.get("final_score") or 0) >= TOP_NEW_SCORE_FLOOR]
@@ -969,13 +1117,14 @@ def build_brief(pipeline_counts: dict | None = None,
                           if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
     top_issue_pool.sort(
         key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+    issue_rows = _diverse_top(
+        top_issue_pool, categories, TOP_ISSUES,
+        sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+    issue_rows = _cap_exposure_clusters(
+        issue_rows, TOP_ISSUES, decisions=decisions)
     top_issues = [
         _entry(i, r)
-        for i, r in enumerate(
-            _diverse_top(
-                top_issue_pool, categories, TOP_ISSUES,
-                sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]])),
-            start=1)
+        for i, r in enumerate(issue_rows, start=1)
     ]
 
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계
