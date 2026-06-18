@@ -909,3 +909,16 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py --output /tmp/audit
 - 조회 실패 시 가짜 fallback 값을 만들지 않고 `unavailable`로 강등한다.
 - `app/macro_snapshot.py`의 `get_macro_snapshot()` 경계를 통해서만 들어온다.
 - `macro_data_mode=live`일 때만 표시 레이어가 수치를 렌더링한다 (§13 데이터 정직성 유지).
+
+## 24. 운영 핸드오프 문서 (Operations)
+
+이 제품을 임원용 뉴스 센서 MVP로 **매일 운영·시연·인계**하기 위한 문서는
+`docs/operations/`에 모았다(코드 변경 아님 — 운영 절차서).
+
+- **[Executive Radar 운영 런북](docs/operations/EXECUTIVE_RADAR_RUNBOOK.md)** —
+  매일 운영 흐름, 전체/빠른 검증 게이트, 공개 리포트 캐시버스트 검증, 실패 트리아지,
+  절대 깨면 안 되는 제품 원칙.
+- **[임원 데모 스크립트](docs/operations/EXECUTIVE_DEMO_SCRIPT.md)** —
+  5–7분 시연 대본(섹션 설명·신뢰성·과대주장 금지·임원 토크 트랙).
+- **[다음 운영자 핸드오프](docs/operations/NEXT_OPERATOR_HANDOFF.md)** —
+  기준 커밋, D3A–D3G 완료 내역, 게이트 팩, stale 복구, 과거 실수 반복 금지, 다음 권장 작업.
