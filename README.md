@@ -924,4 +924,7 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py --output /tmp/audit
 - **[임원 데모 스크립트](docs/operations/EXECUTIVE_DEMO_SCRIPT.md)** —
   5–7분 시연 대본(섹션 설명·신뢰성·과대주장 금지·임원 토크 트랙).
 - **[다음 운영자 핸드오프](docs/operations/NEXT_OPERATOR_HANDOFF.md)** —
-  기준 커밋, D3A–D3G 완료 내역, 게이트 팩, stale 복구, 과거 실수 반복 금지, 다음 권장 작업.
+  기준 커밋, D3A–D3I 완료 내역, 게이트 팩, stale 복구, 과거 실수 반복 금지, 다음 권장 작업.
+- **[RC 봉인 — MVP 운영 증거 패킷 (P0-D3J)](docs/operations/RC_SEAL_D3J.md)** —
+  1일 운영 리허설(live 빌드·로컬/공개 검증·다이제스트 후보·발송 게이트·전체 회귀) 실측 증거,
+  실제 발송 0건 확인, 남은 리스크.

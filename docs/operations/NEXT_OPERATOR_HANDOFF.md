@@ -17,6 +17,8 @@ HDEC Executive Radar를 인수하는 다음 운영자/개발자를 위한 인계
 - **D3A–D3G 완료.** 임원 의사결정 레이더로서의 분류·라우팅·중복제어·근거/감사·품질 게이트가 정착.
 - **공개 live 스냅샷 검증됨** — 공개 Pages 주소가 `news-data-mode:live`로 게시·검증된 상태.
 - **전체 게이트 11/11 PASS**(D3I 발송 게이트 `verify_human_review_gate.py` 포함), `git diff --check` clean.
+- **D3J — MVP RC 봉인됨.** 1일 운영 리허설(live 빌드·로컬/공개 검증·다이제스트 후보·발송 게이트
+  3종·전체 회귀) 실측 PASS, 실제 Telegram 발송 0건. 증거: `docs/operations/RC_SEAL_D3J.md`.
 - 게시 자동화: `.github/workflows/telegram-notify.yml`(KST 08:00 예약 → live 리포트 생성 →
   성공 시 `github-actions[bot]` auto-commit). **다이제스트 발송은 자동이 아니다(D3I)** —
   `approve_send=true` 수동 승인일 때만 발송된다(런북 §G).
