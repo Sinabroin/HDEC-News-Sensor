@@ -1,4 +1,4 @@
-"""P0-D3B 검증기 — Executive Reason Text Specificity (결정적·네트워크 없음).
+"""P0-D3B/D3C 검증기 — Executive Reason Text Specificity (결정적·네트워크 없음).
 
 분류가 맞아도 '왜 중요한가' 사유가 모든 현대건설 기사에 generic으로 붙던 문제
 ("현대건설 연관 신호 — 수주 경쟁력·시장 포지션 영향권")를 유형별 사유로 바꿨는지 검사한다.
@@ -69,21 +69,47 @@ FIX = [
      "snippet": "대신증권이 현대건설에 대해 원전 모멘텀을 들어 목표가 7만원을 제시했다",
      # 목표가 리포트 — 원전을 언급해도 '직접 수주 win'으로 과장 금지(자본시장 관찰).
      "must": ["원전", "자본시장 관찰"], "forbid": ["수주 기회", "수주 경쟁력", GENERIC]},
+    {"id": "r_smr_stock", "source": "증권플러스",
+     "title": "[현대건설] 현대건설 주가, 팰리세이즈 SMR 계약 뜨면 얼마나 달라질까? (2026_1Q)",
+     "snippet": "현대건설 주가와 관련 종목 흐름을 SMR 계약 기대감과 함께 짚었다",
+     # 주가/종목 맥락 — SMR 계약을 언급해도 수주 기회로 과장 금지.
+     "must": ["자본시장 관찰"], "forbid": ["수주 기회", "수주 경쟁력", GENERIC]},
     {"id": "r_risk", "source": "이데일리",
      "title": "현대건설, 벌점 사전통보…분양·수주 영향권",
      "snippet": "현대건설이 벌점 사전통보를 받아 분양·수주에 영향이 우려된다",
-     "must": ["입찰 자격", "평판", "컴플라이언스 리스크"], "forbid": [GENERIC]},
+     "must": ["입찰 자격", "평판", "컴플라이언스 리스크", "규제 리스크", "수주 자격"],
+     "forbid": [GENERIC]},
+    {"id": "r_molit_smart1", "source": "연합뉴스",
+     "title": "AI·로봇 활용 스마트건설 기술 한자리에…국토부, 챌린지 개최",
+     "snippet": "국토부가 AI와 로봇을 활용한 스마트건설 기술 챌린지를 개최한다",
+     "must": ["스마트건설", "정책·제도"],
+     "forbid": ["컴플라이언스 리스크", "입찰 자격", GENERIC]},
+    {"id": "r_molit_smart2", "source": "뉴스1",
+     "title": "국토부, AI·로봇 등 스마트건설 챌린지 개최",
+     "snippet": "스마트건설 기술 확산을 위한 국토부 챌린지 행사가 열린다",
+     "must": ["스마트건설", "정책·제도"],
+     "forbid": ["컴플라이언스 리스크", "입찰 자격", GENERIC]},
     {"id": "r_smartc", "source": "대학신문",
      "title": "스마트 건설 시대 이끄는 전문 엔지니어 양성 집중",
      "snippet": "스마트 건설 시대를 이끄는 전문 엔지니어 양성에 집중한다",
      # 직접 HDEC 영향으로 과장 금지 — 기술 확산/참고 수준 모니터링.
      "must": ["스마트건설", "검토", "참고", "모니터링"],
      "forbid": ["현대건설 직접", "수주 경쟁력", GENERIC]},
+    {"id": "r_nuclear_jackpot", "source": "매일경제",
+     "title": "현대건설, 유럽 대형원전 ‘잭팟’ 속도 낸다",
+     "snippet": "네덜란드 대형 원전 사업 계약을 겨냥해 웨스팅하우스와 수주 전략을 가다듬고 있다",
+     # '잭팟' 단독은 증권 강등 금지 — 실제 원전/수주 프로젝트 맥락은 에너지 사유 허용.
+     "must": ["원전", "수주 기회"], "forbid": ["자본시장 관찰", GENERIC]},
     # ---- P0-D3A 가드 유지 ----
     {"id": "r_jackpot", "source": "데일리머니", "guard": "stockhype",
      "title": "87조 잭팟 터진다…美·이란 종전에 주가 24% 폭등 [종목+]",
      "snippet": "미국과 이란 종전 기대에 관련 종목 주가가 24% 폭등했다",
      "must": ["자본시장 관찰"], "forbid": ["수주", GENERIC]},
+    {"id": "r_mideast_stock", "source": "머니투데이", "guard": "stockhype",
+     "title": "중동 '종전 합의'에 韓 건설 주 '폭등'…재건 특수",
+     "snippet": "재건 기대감에 건설 관련주가 급등하며 자금이 몰렸다",
+     "must": ["자본시장 관찰"],
+     "forbid": ["현대건설 직접", "수주 기회", "수주 경쟁력", "해외 발주", GENERIC]},
     {"id": "r_cb2", "source": "머니투데이", "guard": "finance",
      "title": "주가상승 자신한 CB 발행…안전판 부재에 역풍 부나",
      "snippet": "주가상승을 자신한 CB 발행이 안전판 부재로 역풍을 맞을 수 있다",
@@ -228,6 +254,11 @@ def check_units() -> None:
     _, dec_sec = route(by_id("r_sec"))
     check("guard: 목표가 리포트는 현대건설 직접 발주 win으로 과장하지 않음 (사유=자본시장 관찰)",
           "자본시장 관찰" in reasons["r_sec"], reasons["r_sec"])
+    sec_mid, dec_mid = route(by_id("r_mideast_stock"))
+    check("guard: 중동 건설주 폭등 기사 → AI 아님", sec_mid != radar.AI, sec_mid)
+    check("guard: 중동 건설주 폭등 기사 → 현대건설 직접 아님",
+          dec_mid["primary_executive_section"] != dr.HDEC_DIRECT,
+          dec_mid["primary_executive_section"])
 
 
 # ---------- 파이프라인 시뮬레이션 (temp DB subprocess, fetch_all 패치) ----------
@@ -307,6 +338,9 @@ def check_pipeline(sim: dict | None) -> None:
           grades.get("r_jackpot") == GRADE_EXCLUDED, str(grades.get("r_jackpot")))
     check("guard 시뮬: CB 발행이 거시경제 섹션에 없음", "r_cb2" not in S["macro"])
     check("guard 시뮬: 원더독스가 현대건설 직접 섹션에 없음", "r_wonder" not in S["hdec"])
+    check("guard 시뮬: 중동 건설주 폭등이 AI 섹션에 없음", "r_mideast_stock" not in S["ai"])
+    check("guard 시뮬: 중동 건설주 폭등이 현대건설 직접 섹션에 없음",
+          "r_mideast_stock" not in S["hdec"])
 
 
 # ---------- mock 무결성 ----------

@@ -74,9 +74,9 @@ REASON_FALLBACK = "참고 수준 산업 동향 — 직접 영향 제한적"
 # 유형 판정 키워드 (소문자 매칭, raw 제목+스니펫 기준). 분류/라우팅을 재계산하지 않고
 # 표시 copy 선택에만 쓴다 (insight._detect_categories와 같은 결의 키워드→copy 선택).
 _RT_DATACENTER = ["데이터센터", "데이터 센터", "ai 데이터센터", "idc"]
-_RT_RISK = ["벌점", "제재", "하도급", "중대재해", "공정위", "국토부", "고용노동부",
-            "안전사고", "사망사고", "산업재해", "영업정지", "영업 정지", "입찰제한",
-            "입찰 제한", "과징금", "행정처분", "행정 처분", "처분 통보", "사전통보",
+_RT_RISK = ["벌점", "제재", "하도급", "중대재해", "안전사고", "사망사고",
+            "산업재해", "영업정지", "영업 정지", "입찰제한", "입찰 제한",
+            "과징금", "행정처분", "행정 처분", "처분 통보", "사전통보",
             "부실시공", "붕괴"]
 _RT_ORDER_CITY = ["도시정비", "재개발", "재건축", "정비사업", "수주액", "수주고",
                   "수주잔고", "정비 수주", "리모델링 수주"]
@@ -88,13 +88,13 @@ _RT_CUSTOMER_CTX = ["상담사", "청약 상담", "분양 상담", "입주민", 
                     "고객 상담", "콜센터", "챗봇", "상담 자동화", "고객 서비스"]
 _RT_AI_GENERIC = ["ai", "인공지능", "생성형", "로봇", "스마트건설", "스마트 건설",
                   "bim", "디지털트윈", "디지털 트윈", "자동화", "머신러닝", "딥러닝"]
-# 증권 리서치/주가 테마 마커 (목표가·증권사 리포트·종목+·잭팟 등). 현대건설은 article_quality
-# stock_hype 게이트에서 면제(P0-C1.11 floor — 제외 방지)되므로 is_stock_hype만으로는 '현대건설
-# 목표가' 리포트를 못 잡는다. 사유 정직성을 위해 reason 레이어에서 별도로 본다 — 라우팅/등급은
-# 절대 바꾸지 않고(스코어 floor는 그대로), '직접 수주 win'으로 과장하는 copy만 막는다.
-_RT_SECURITIES = ["목표가", "목표주가", "투자의견", "투자포인트", "투자 포인트",
-                  "증권가", "증권사 리포트", "종목+", "[종목", "잭팟", "테마주",
-                  "관련주", "대장주", "급등주", "상한가"]
+# 증권 리서치/주가 테마 마커. 현대건설은 article_quality stock_hype 게이트에서 면제
+# (P0-C1.11 floor — 제외 방지)되므로 reason 레이어에서 별도로 본다. 단, '잭팟' 단독은
+# 실제 수주/원전 프로젝트 기사일 수 있어 증권 마커로 쓰지 않는다.
+_RT_SECURITIES = ["주가", "목표가", "목표주가", "투자의견", "투자 의견", "투자포인트",
+                  "투자 포인트", "증권", "증권가", "증권사", "증권사 리포트",
+                  "종목", "종목+", "[종목", "테마주", "관련주", "대장주",
+                  "급등", "폭등", "급등주", "상한가", "하한가"]
 _RT_FINANCE = ["전환사채", "cb 발행", "회사채", "유상증자", "자금조달", "신용등급",
                "신용도", "메자닌", "사채 발행", "기업어음"]
 _RT_SALES_PROMO = ["견본주택", "모델하우스", "분양가", "특별공급", "미분양", "개관",
@@ -105,6 +105,8 @@ _RT_OVERSEAS = ["중동", "사우디", "네옴", "neom", "uae", "아랍에미리
                 "epc", "재건", "해외 발주", "해외 진출", "수주 채비"]
 _RT_POLICY = ["정부 정책", "기술대전", "챌린지", "공모전", "예산", "특별법", "로드맵",
               "시행령", "규제 완화", "국가 정책", "정책 발표"]
+_RT_POLICY_ORG = ["국토부", "국토교통부", "정부", "고용노동부", "공정위"]
+_RT_POLICY_EVENT = ["챌린지", "기술대전", "공모전", "행사", "정책", "개최", "한자리에"]
 _RT_HDEC = ["현대건설", "현대 건설", "현대엔지니어링", "현대eng", "hyundai e&c",
             "hyundai engineering"]
 
@@ -122,43 +124,53 @@ def executive_reason(title: str, snippet: str = "", *, is_stock_hype: bool = Fal
     def has(keywords) -> bool:
         return any(kw in text for kw in keywords)
 
-    # 1) 데이터센터 — 가장 강한 차별적 전략 신호. 회사채/증권 맥락이 섞여도 DC 전략으로 본다
-    #    (예: '현대건설 데이터센터 사업 회사채' → 재무가 아니라 DC EPC·전력).
+    strong_risk = has(_RT_RISK)
+    securities_context = has(_RT_SECURITIES)
+    smart_policy_event = (
+        has(_RT_POLICY_ORG)
+        and has(_RT_POLICY_EVENT)
+        and has(_RT_AI_GENERIC)
+    )
+
+    # 1) 리스크·규제 — 기관명 단독이 아니라 실제 제재/사고/처분 토큰이 있을 때만.
+    if strong_risk:
+        return REASON_RISK
+    # 2) 증권 리서치/주가 테마 — 원전/SMR/데이터센터를 언급해도 직접 수주 win으로 과장하지
+    #    않는다. '잭팟'은 stock/securities 마커가 같이 있을 때만 여기로 온다.
+    #    is_stock_hype 플래그 단독은 legacy '잭팟' 계열까지 포함할 수 있어 충분조건으로 쓰지 않는다.
+    if securities_context:
+        return REASON_SECURITIES
+    # 3) 국토부+스마트건설 행사/정책 — 컴플라이언스 리스크가 아니라 기술/정책 모니터링.
+    if smart_policy_event:
+        return REASON_GENERIC_AI
+    # 4) 데이터센터 — 가장 강한 차별적 전략 신호. 회사채 등 재무 맥락보다 DC 전략 우선.
     if has(_RT_DATACENTER):
         return REASON_DATACENTER
-    # 2) 리스크·규제 — 입찰 자격/평판/컴플라이언스. 분양·수주를 함께 언급해도 리스크 우선.
-    if has(_RT_RISK):
-        return REASON_RISK
-    # 3) 증권 리서치/주가 테마(목표가·증권가·종목+·잭팟 등) — 원전/수주를 언급해도 '직접 수주
-    #    win'으로 과장하지 않고 정직한 자본시장 관찰로 강등한다. 현대건설은 article_quality
-    #    stock_hype 면제 대상이라 is_stock_hype만으로는 못 잡으므로 reason 레이어에서 직접 본다.
-    if is_stock_hype or has(_RT_SECURITIES):
-        return REASON_SECURITIES
-    # 4) 도시정비 수주 — 점유율·경쟁력 신호.
+    # 5) 도시정비 수주 — 점유율·경쟁력 신호.
     if has(_RT_ORDER_CITY):
         return REASON_ORDER_CITY
-    # 5) 원전·SMR·에너지 인프라 — 밸류체인·발주 기회.
+    # 6) 원전·SMR·에너지 인프라 — 밸류체인·발주 기회.
     if has(_RT_ENERGY):
         return REASON_ENERGY
-    # 6) 고객접점 AI — 생성형/AI + 상담·청약·입주민 맥락 (분양 운영 효율화 실험).
+    # 7) 고객접점 AI — 생성형/AI + 상담·청약·입주민 맥락 (분양 운영 효율화 실험).
     if has(_RT_AI_CORE) and has(_RT_CUSTOMER_CTX):
         return REASON_CUSTOMER_AI
-    # 7) 자본시장·재무 이벤트 — 전환사채/회사채/유상증자 등 실제 재무 이벤트(증권 리서치와 구분).
+    # 8) 자본시장·재무 이벤트 — 전환사채/회사채/유상증자 등 실제 재무 이벤트(증권 리서치와 구분).
     if is_finance or has(_RT_FINANCE):
         return REASON_FINANCE
-    # 8) 단순 분양·견본주택 마케팅 — 소비자 PR, 임원 의사결정 핵심도 낮음.
+    # 9) 단순 분양·견본주택 마케팅 — 소비자 PR, 임원 의사결정 핵심도 낮음.
     if has(_RT_SALES_PROMO):
         return REASON_SALES_PROMO
-    # 9) 해외·발주 환경 — 수주 전략·원가 관리 변수.
+    # 10) 해외·발주 환경 — 수주 전략·원가 관리 변수.
     if has(_RT_OVERSEAS):
         return REASON_BUSINESS_OVERSEAS
-    # 10) 스마트건설·AI 기술 일반 — 직접 HDEC 영향이 아니라 기술 확산 모니터링.
+    # 11) 스마트건설·AI 기술 일반 — 직접 HDEC 영향이 아니라 기술 확산 모니터링.
     if has(_RT_AI_GENERIC):
         return REASON_GENERIC_AI
-    # 11) 정책·제도 — 사업 환경 모니터링.
+    # 12) 정책·제도 — 사업 환경 모니터링.
     if has(_RT_POLICY):
         return REASON_GENERIC_POLICY
-    # 12) fallback — 현대건설 직접 언급이면 중립 점검 대상, 아니면 일반 동향(과장 금지).
+    # 13) fallback — 현대건설 직접 언급이면 중립 점검 대상, 아니면 일반 동향(과장 금지).
     if hdec_direct or has(_RT_HDEC):
         return REASON_HDEC_GENERIC
     return REASON_FALLBACK
