@@ -19,6 +19,7 @@
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from html import escape
@@ -566,19 +567,53 @@ def _render_audit_details(label: str, bucket: dict, empty_text: str) -> list[str
     return body
 
 
-def _render_risk_event_clusters(brief: dict) -> list[str]:
-    """리스크 사건 클러스터 — 기사 카드와 별도인 event-level 검토 렌즈."""
+def _render_support_evidence(articles: list) -> str:
+    """리스크 사건 근거 기사 묶음 — url이 있으면 새 탭 링크(↗), 없으면 평문 fallback (P0-D3P).
+
+    임원·운영자 양쪽 뷰가 공유한다. 각 제목은 _source_link(앵커) 또는 escape로 개별
+    이스케이프하므로, 조립된 HTML 문자열을 다시 escape하지 않는다 (이중 escape 방지).
+    링크는 기사 원문 href만 — 외부 스크립트/리소스는 도입하지 않는다.
+    """
+    links = []
+    for a in articles:
+        if not isinstance(a, dict):
+            continue
+        title = a.get("title")
+        if not title:
+            continue
+        url = a.get("url") or ""
+        if _is_http(url):
+            links.append(f'{_source_link(url, title)} ↗')
+        else:
+            links.append(escape(_display(title)))
+    return " / ".join(links)
+
+
+def _render_risk_event_clusters(brief: dict, audience: str = "operator") -> list[str]:
+    """리스크 사건 클러스터 — 기사 카드와 별도인 event-level 검토 렌즈 (P0-D3O/D3P).
+
+    operator: 운영자 확인·발송불가 등 운영 메커니즘을 그대로 노출한다 (검증용 감사 뷰).
+    executive: '주요 리스크 사건'으로 리네이밍하고 운영자 전용 설명(운영자 확인용 요약·
+    발송불가·운영자 확인)을 임원 친화 '확인 필요: 기관…'으로 바꾼다. 근거 기사 링크는 공통.
+    """
+    executive = audience == "executive"
     clusters = brief.get("risk_event_clusters") or []
+    if executive:
+        section_label = "주요 리스크 사건"
+        intro = "동일 이슈로 보이는 기사들을 묶어 주요 영향과 근거를 요약했습니다."
+    else:
+        section_label = "리스크 사건 클러스터"
+        intro = ("동일 사건으로 보이는 리스크 기사를 묶은 운영자 확인용 요약입니다. "
+                 "발송은 사람 검토 전까지 허용되지 않습니다.")
     body = [
-        '<section aria-label="리스크 사건 클러스터">',
+        f'<section aria-label="{escape(section_label)}">',
         '<details class="cat-drill">',
         '<summary>'
-        '<span class="cd-label">리스크 사건 클러스터</span>'
+        f'<span class="cd-label">{escape(section_label)}</span>'
         f'<span class="cd-count num">{len(clusters)}건</span>'
         '<span class="cd-flex"></span></summary>',
         '<div class="cd-body">',
-        '<p class="cd-note">동일 사건으로 보이는 리스크 기사를 묶은 운영자 확인용 요약입니다. '
-        '발송은 사람 검토 전까지 허용되지 않습니다.</p>',
+        f'<p class="cd-note">{escape(intro)}</p>',
     ]
     if not clusters:
         body.append('<p class="cd-empty">묶인 리스크 사건이 없습니다.</p>')
@@ -587,14 +622,9 @@ def _render_risk_event_clusters(brief: dict) -> list[str]:
         source_names = [s.get("name") for s in sources if isinstance(s, dict)]
         axes = " · ".join(ev.get("impact_axes") or []) or "영향축 확인 필요"
         counts = f"기사 {ev.get('article_count', 0)} / 출처 {ev.get('source_count', 0)}"
-        confirm = ev.get("operator_confirmation_note") or "운영자 확인 필요"
-        if not ev.get("send_allowed"):
-            confirm = f"{confirm} · 발송불가"
-        support_titles = [
-            _display(a.get("title") or "")
-            for a in (ev.get("supporting_articles") or [])[:5]
-            if isinstance(a, dict) and a.get("title")
-        ]
+        support_arts = [a for a in (ev.get("supporting_articles") or [])[:5]
+                        if isinstance(a, dict) and a.get("title")]
+        evidence_html = _render_support_evidence(support_arts)
         body += [
             '<article class="cd-art">',
             '<div class="cd-art-head">',
@@ -604,12 +634,21 @@ def _render_risk_event_clusters(brief: dict) -> list[str]:
             f'<p class="cd-meta">{escape(_display(counts))} · '
             f'{escape(_display(" / ".join(source_names) or "출처 확인 필요"))}</p>',
             f'<p class="cd-why"><strong>영향</strong> {escape(_display(axes))}</p>',
-            f'<p class="cd-why"><strong>운영자 확인</strong> {escape(_display(confirm))}</p>',
         ]
-        if support_titles:
+        if executive:
+            # 임원 뷰: 운영자 메커니즘 대신 '확인 필요: 기관…' 한 줄 (발송불가 표기 없음).
+            targets = ev.get("operator_confirmation_targets") or []
+            confirm = " / ".join(t for t in targets if t) or "공식자료"
             body.append(
-                f'<p class="cd-why"><strong>근거</strong> '
-                f'{escape(_display(" / ".join(support_titles)))}</p>')
+                f'<p class="cd-why"><strong>확인 필요</strong> {escape(_display(confirm))}</p>')
+        else:
+            confirm = ev.get("operator_confirmation_note") or "운영자 확인 필요"
+            if not ev.get("send_allowed"):
+                confirm = f"{confirm} · 발송불가"
+            body.append(
+                f'<p class="cd-why"><strong>운영자 확인</strong> {escape(_display(confirm))}</p>')
+        if evidence_html:
+            body.append(f'<p class="cd-why"><strong>근거</strong> {evidence_html}</p>')
         body.append('</article>')
     body.append('</div></details></section>')
     return body
@@ -836,26 +875,35 @@ def _render_macro_panel(brief: dict, signals: list) -> list[str]:
     return out
 
 
-def _render_evidence_panel(brief: dict) -> list[str]:
+def _render_evidence_panel(brief: dict, audience: str = "operator") -> list[str]:
+    # executive 뷰는 참고/제외·출처 품질 감사(운영자 전용 점검)를 노출하지 않는다 (P0-D3P).
+    executive = audience == "executive"
+    tag = "테마·카테고리·근거 기사" if executive else "테마·카테고리·근거 기사·참고/제외 감사"
     out = ['<section id="evidence" class="radar-panel radar evidence-section" aria-label="전체 근거">',
            '<h2 class="sec-h">전체 근거'
-           '<span class="tag">테마·카테고리·근거 기사·참고/제외 감사</span></h2>',
+           f'<span class="tag">{escape(tag)}</span></h2>',
            '<div class="duo">']
     out += _render_themes_block(brief)
     out += _render_categories_block(brief)
     out.append('</div>')
     out += _render_category_drilldown(brief)
-    out += _render_audit_sections(brief)
+    if not executive:
+        out += _render_audit_sections(brief)
     out.append('</section>')
     return out
 
 
-def render_report_html(brief: dict) -> tuple[str, list[str]]:
+def render_report_html(brief: dict, audience: str = "operator") -> tuple[str, list[str]]:
     """brief 구조체를 standalone HTML로 렌더링한다. (html, 포함된 섹션 키) 반환.
 
     IA (P0-C1.9~P0-C3): 헤더 → 현황판 → Executive Signal → 상단 탭 필터 →
     선택된 레이더 패널만 노출. 전체 근거는 탭 패널 안에서만 열린다.
+
+    audience (P0-D3P): 'operator'(기본)는 운영자 감사 상세(참고/제외·출처 품질 제외·
+    운영자 점검·운영자 확인·발송불가)를 그대로 노출한다. 'executive'는 그 운영자 전용
+    블록·문구를 숨기고 리스크 사건을 임원 친화 요약으로 보여준다. 기본값은 운영자 호환.
     """
+    executive = audience == "executive"
     sections = ["hero", "status_board", "one_liner"]
     # 헤더 — 노이즈 출처/시장지표 표기는 제거하고 footer로 내린다 (Phase 6).
     body = [
@@ -938,32 +986,51 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     sections += ["themes", "categories", "evidence"]
     if brief.get("category_sections"):
         sections.append("category_drilldown")
-    sections.append("audit_evidence")
-    panels["evidence"] = _render_evidence_panel(brief)
+    # 참고/제외·출처 품질 감사는 운영자 전용 — executive 뷰에서는 렌더하지 않는다 (P0-D3P).
+    if not executive:
+        sections.append("audit_evidence")
+    panels["evidence"] = _render_evidence_panel(brief, audience)
     default_tab = "hdec" if hdec_sigs else "ai"
     body += _render_tabs_ui(panels, default_tab)
 
     # D3O: 기사별 리스크 카드와 별개로, 같은 사건을 하나로 묶은 검토 렌즈.
+    # D3P: operator는 '리스크 사건 클러스터', executive는 '주요 리스크 사건'으로 렌더.
     sections.append("risk_events")
-    body += _render_risk_event_clusters(brief)
+    body += _render_risk_event_clusters(brief, audience)
 
     # 운영자 점검: 노출 품질·중복 제어 (P0-D3F) — 탭 밖, 본문 하단의 기본 접힘 감사 블록.
     # 임원 카드는 깨끗하게 두고, 노출 억제/중복/품질 사유는 여기서만 raw 키와 함께 투명화한다.
-    sections.append("exposure_audit")
-    body += _render_exposure_audit(brief)
+    # executive 뷰에서는 운영자 전용 점검 블록이므로 노출하지 않는다 (P0-D3P).
+    if not executive:
+        sections.append("exposure_audit")
+        body += _render_exposure_audit(brief)
 
     sections += ["notes", "footer"]
-    # P0-D1.5: footer 각주 통합 — 현황판 legend와 중복 cluster(spread) 줄을 덜어내고
-    # 운영자 검토 고지 · 출처 품질 · 데이터 출처(시장지표 KST 참고시각) · 시세 면책만 남긴다.
-    # ('추정' 표현은 operator_note가 유지하므로 spread 줄 제거에도 검증 회귀 없음.)
+    # P0-D1.5/D3P: footer 각주. operator는 운영자 검토 고지·출처 품질 가드레일·데이터 출처
+    # (mock 표기 포함)·시세 면책을 모두 싣는다. executive는 운영자/품질-제어 설명과 raw
+    # 'mock' 토큰을 덜어내고, 자동 생성 고지(추정 안내 유지)·데이터 출처·시세 면책만 남긴다.
+    if executive:
+        brief_note = (brief.get("operator_note") or "").replace(
+            "운영자 검토용 자동 생성", "자동 생성")
+        data_src = (brief.get("data_warning") or "").replace("(mock)", "")
+        body += [
+            '<div class="notes">',
+            f'<p>※ {escape(brief_note)}</p>',
+            f'<p>※ 데이터 출처 — {escape(data_src)}</p>',
+            '<p>※ 시장지표는 참고용이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).</p>',
+            '</div>',
+        ]
+    else:
+        body += [
+            '<div class="notes">',
+            f'<p>※ {escape(brief["operator_note"])}</p>',
+            f'<p>※ {escape(brief.get("source_quality_note") or "")}</p>',
+            # 데이터 출처/시장지표 상태 — 뉴스 수집 모드 + 시장지표 출처·참고시각(KST) (정직성 유지).
+            f'<p>※ 데이터 출처 — {escape(brief.get("data_warning") or "")}</p>',
+            '<p>※ 시장지표는 참고용이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).</p>',
+            '</div>',
+        ]
     body += [
-        '<div class="notes">',
-        f'<p>※ {escape(brief["operator_note"])}</p>',
-        f'<p>※ {escape(brief.get("source_quality_note") or "")}</p>',
-        # 데이터 출처/시장지표 상태 — 뉴스 수집 모드 + 시장지표 출처·참고시각(KST) (정직성 유지).
-        f'<p>※ 데이터 출처 — {escape(brief.get("data_warning") or "")}</p>',
-        '<p>※ 시장지표는 참고용이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).</p>',
-        '</div>',
         # 생성 시각은 KST 벽시계로 표기한다 (raw +09:00 ISO offset 대신).
         f'<footer class="num">생성 {escape(_fmt_kst(brief["generated_at"]))} KST'
         f' · {escape(brief["header"])}</footer>',
@@ -992,10 +1059,12 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     return html, sections
 
 
-def report_metadata(brief: dict, html: str, sections: list[str]) -> dict:
+def report_metadata(brief: dict, html: str, sections: list[str],
+                    audience: str = "operator") -> dict:
     """--json용 기계 검증 메타데이터 (HTML 전문은 싣지 않는다)."""
     return {
         "report_title": REPORT_TITLE,
+        "audience": audience,
         "mode": brief["mode"],
         "news_data_mode": brief.get("news_data_mode"),
         "macro_data_mode": brief.get("macro_data_mode"),
@@ -1055,13 +1124,23 @@ def main(argv: list[str] | None = None) -> int:
                        help="기계 검증용 메타데이터 JSON을 출력한다")
     group.add_argument("--output", metavar="PATH",
                        help=f"HTML 파일을 PATH에 생성한다 (예: {DEFAULT_OUTPUT})")
+    # P0-D3P: 대상 뷰. 기본은 operator(운영자 감사 상세 유지=기존 호환). executive는
+    # 운영자 전용 설명/감사 블록을 숨긴다. 명시적 CLI 플래그가 REPORT_AUDIENCE env보다 우선.
+    env_audience = (os.environ.get("REPORT_AUDIENCE") or "operator").strip().lower()
+    if env_audience not in ("operator", "executive"):
+        env_audience = "operator"
+    parser.add_argument("--audience", choices=["operator", "executive"],
+                        default=env_audience,
+                        help="리포트 대상 뷰: operator(기본, 운영자 감사 상세 포함) | "
+                             "executive(운영자 전용 설명 숨김). env REPORT_AUDIENCE로도 지정 가능.")
     args = parser.parse_args(argv)
+    audience = args.audience
 
     brief = build_brief_via_mock_pipeline()
-    html, sections = render_report_html(brief)
+    html, sections = render_report_html(brief, audience=audience)
 
     if args.json:
-        print(json.dumps(report_metadata(brief, html, sections),
+        print(json.dumps(report_metadata(brief, html, sections, audience),
                          ensure_ascii=False, indent=2))
         return 0
 
@@ -1069,15 +1148,16 @@ def main(argv: list[str] | None = None) -> int:
         out_path = Path(args.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(html, encoding="utf-8")
-        # news_data_mode를 함께 출력한다 — CI가 단일 빌드(=단일 RSS 수집) 결과만으로
+        # news_data_mode·audience를 함께 출력한다 — CI가 단일 빌드(=단일 RSS 수집) 결과만으로
         # live/mock을 판별해 게시 여부를 정한다 (비밀값 아님, 출력 안전).
         print(f"report written: {out_path} ({len(html)} chars) "
-              f"news_data_mode={brief.get('news_data_mode')}")
+              f"news_data_mode={brief.get('news_data_mode')} audience={audience}")
         return 0
 
     print(format_summary_text(brief, html, sections))
     if args.dry_run:
-        print(f"[dry-run] html_chars={len(html)} sections={len(sections)} "
+        print(f"[dry-run] audience={audience} html_chars={len(html)} "
+              f"sections={len(sections)} "
               f"signals={len(brief.get('top_immediate_signals') or [])} (쓰기 없음)",
               file=sys.stderr)
     return 0
