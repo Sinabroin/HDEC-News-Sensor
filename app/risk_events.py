@@ -57,6 +57,27 @@ _REVIEW_RISK_TERMS = (
     "선분양", "특별감독", "제재", "고용부", "고용노동부", "국토부",
     "서울시", "공정위", "안전규제", "품질관리", "품질 점검", "품질점검",
 )
+_CONCRETE_RISK_ACTION_TERMS = (
+    "중대재해", "중대재해처벌법", "사망사고", "사망 사고", "산업재해", "산재",
+    "안전사고", "붕괴", "인명피해", "압수수색",
+    "영업정지", "영업 정지", "입찰제한", "입찰 제한", "공공수주 제한",
+    "벌점", "공식 벌점 통보", "벌점 통보", "제재", "과징금",
+    "행정처분", "행정 처분", "사전통보", "사전 통보", "면허취소", "등록말소",
+    "하자", "부실시공", "품질 점검", "품질점검", "품질 논란",
+    "철근 누락", "철근누락", "누수",
+    "소송", "손배", "손해배상", "공방", "공기지연", "공기 지연",
+    "고발", "법 위반",
+)
+_SPECIAL_SUPERVISION_CONTEXT_TERMS = (
+    "중대재해", "사망", "산재", "산업재해", "안전사고",
+    "현장", "건설현장", "고용부", "고용노동부",
+)
+_POLICY_OR_INDUSTRY_CONTEXT_TERMS = tuple(dict.fromkeys(
+    list(radar.INDUSTRY_KEYWORDS) + [
+        "국토부", "국토교통부", "고용부", "고용노동부", "공정위", "정부", "서울시",
+        "공공수주", "공공 수주", "공공공사", "공공 공사", "입찰", "건설사", "건설현장",
+    ]
+))
 _ALL_RISK_TERMS = tuple(dict.fromkeys(
     list(radar.RISK_ACTION_STRONG) + list(radar.RISK_REG_WEAK)
     + list(_SEVERE_TERMS) + list(_REVIEW_RISK_TERMS)
@@ -99,8 +120,16 @@ def _has_hdec(row: dict, decision: dict | None = None) -> bool:
     )
 
 
+def _has_concrete_risk_action(text: str) -> bool:
+    if "철근" in text and "누락" in text:
+        return True
+    if _contains(text, _CONCRETE_RISK_ACTION_TERMS):
+        return True
+    return "특별감독" in text and _contains(text, _SPECIAL_SUPERVISION_CONTEXT_TERMS)
+
+
 def _has_strong_risk(text: str) -> bool:
-    return _contains(text, tuple(radar.RISK_ACTION_STRONG) + _SEVERE_TERMS)
+    return _has_concrete_risk_action(text)
 
 
 def _has_review_risk(text: str) -> bool:
@@ -121,21 +150,23 @@ def event_key_for_row(row: dict, decision: dict | None = None,
 
     text = _text(row)
     has_hdec = _has_hdec(row, decision)
-    strong = _has_strong_risk(text)
-    riskish = strong or _has_review_risk(text) or radar_section == radar.RISK
+    concrete_action = _has_concrete_risk_action(text)
+    riskish = concrete_action or radar_section == radar.RISK
 
     # Known HDEC incident keys run before generic risk eligibility so excluded direct-risk
     # follow-up articles that omit legal action terms still attach to the event evidence.
-    gtx_rebar_anchor = (
-        ("gtx" in text or "삼성역" in text or "영동대로" in text)
-        or (has_hdec and "철근" in text
-            and _contains(text, ("벌점", "공공수주", "공공 수주", "선분양",
-                                 "안전불감증", "178톤", "입찰제한", "입찰 제한")))
+    gtx_station_anchor = "삼성역" in text or "영동대로" in text
+    gtx_station_action = _contains(
+        text,
+        ("철근", "철근누락", "철근 누락", "벌점", "공공수주", "공공 수주", "입찰제한", "입찰 제한"),
     )
-    if gtx_rebar_anchor and (
-        "철근" in text or "벌점" in text or "공공수주" in text
-        or "입찰" in text or "안전불감증" in text
-    ):
+    hdec_rebar_anchor = (
+        has_hdec
+        and _contains(text, ("철근", "철근누락", "철근 누락", "178톤"))
+        and _contains(text, ("벌점", "공공수주", "공공 수주", "선분양",
+                             "안전불감증", "입찰제한", "입찰 제한"))
+    )
+    if (gtx_station_anchor and gtx_station_action) or hdec_rebar_anchor:
         return "hdec_risk_gtx_samseong_rebar_penalty"
 
     if not riskish:
@@ -168,11 +199,13 @@ def event_key_for_row(row: dict, decision: dict | None = None,
     ):
         return "construction_penalty_bid_restriction_policy"
 
-    if has_hdec and (strong or _has_review_risk(text)):
+    if has_hdec and concrete_action:
         tokens = _core_tokens(text)
         return "hdec_risk:" + "_".join(tokens) if tokens else "hdec_risk:unknown"
 
-    if radar_section == radar.RISK or _has_review_risk(text):
+    if concrete_action and (
+        radar_section == radar.RISK or _contains(text, _POLICY_OR_INDUSTRY_CONTEXT_TERMS)
+    ):
         tokens = _core_tokens(text)
         return "policy_risk:" + "_".join(tokens) if tokens else "policy_risk:unknown"
 

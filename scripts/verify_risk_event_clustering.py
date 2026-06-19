@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RADAR_DB = ROOT / "radar.db"
+sys.path.insert(0, str(ROOT))
 
 FIX = [
     {"id": "gtx_1", "source": "서울신문",
@@ -30,6 +31,18 @@ FIX = [
     {"id": "stock_noise", "source": "한국경제",
      "title": "AI 전력난 수혜주 급등…건설 관련주 투자포인트",
      "snippet": "AI 전력난 수혜주와 건설 관련주 투자포인트를 점검했다."},
+    {"id": "bad_sales", "source": "서울경제",
+     "title": "서울시, 현대건설 힐스테이트 분양 일정 공개",
+     "snippet": "청약 일정과 분양 정보를 공개했다."},
+    {"id": "bad_forum", "source": "국토일보",
+     "title": "국토부, 스마트건설 기술 포럼 개최",
+     "snippet": "건설사와 스마트건설 기술 방향을 논의했다."},
+    {"id": "bad_gtxc", "source": "연합뉴스",
+     "title": "GTX-C 입찰 제도 개선안 발표",
+     "snippet": "GTX-C 노선 입찰 제도 개선안이 논의됐다."},
+    {"id": "bad_gtxa", "source": "뉴스1",
+     "title": "GTX-A 개통 앞두고 입찰 잡음 논란",
+     "snippet": "GTX-A 개통과 입찰 잡음 관련 보도가 이어졌다."},
     {"id": "severe_supervision", "source": "서울경제",
      "title": "현대건설 현장 중대재해…고용부 특별감독 착수",
      "snippet": "현대건설 건설현장에서 중대재해가 발생해 고용노동부가 특별감독에 착수했다."},
@@ -173,6 +186,9 @@ def _check_gtx(events: list[dict]) -> None:
     check("A: excluded/low-priority GTX evidence can be represented",
           "gtx_3" in ids or (gtx.get("excluded_support_count") or 0) > 0,
           f"support={sorted(ids)} excluded={gtx.get('excluded_support_count')}")
+    bad_ids = {"bad_gtxc", "bad_gtxa"} & ids
+    check("A: unrelated GTX-A/C articles absent from Samsung Station event",
+          not bad_ids, f"bad_support={sorted(bad_ids)}")
 
 
 def _check_ain_and_policy(events: list[dict]) -> None:
@@ -190,20 +206,18 @@ def _check_ain_and_policy(events: list[dict]) -> None:
               str({k: ain.get(k) for k in ("has_gateway_source", "needs_operator_confirmation")}))
 
     policy = _event_with_article(events, "policy_ai_dc")
-    if check("C: generic AI data center policy event exists", bool(policy)):
-        check("C: generic AI data center policy not mixed into HDEC direct risk",
-              not policy.get("has_direct_hdec")
-              and not str(policy.get("event_key") or "").startswith("hdec_risk"),
-              f"key={policy.get('event_key')} hdec={policy.get('has_direct_hdec')}")
-        check("C: generic AI data center policy is regulatory, not safety/defect",
-              policy.get("event_type") == "policy_regulatory",
-              str(policy.get("event_type")))
+    check("C: generic AI data center policy without concrete risk action has no risk event",
+          policy is None, str(policy.get("event_key") if policy else "none"))
 
 
 def _check_noise_and_supervision(sim: dict, events: list[dict]) -> None:
     stock = _event_with_article(events, "stock_noise")
     check("D: stock/noise has no risk event", stock is None,
           str(stock.get("event_key") if stock else "none"))
+    for article_id in ("bad_sales", "bad_forum", "bad_gtxc", "bad_gtxa"):
+        ev = _event_with_article(events, article_id)
+        check(f"D: review counterexample {article_id} has no risk event",
+              ev is None, str(ev.get("event_key") if ev else "none"))
 
     severe = _event_by_key(events, "construction_severe_accident_supervision")
     if check("E: 특별감독 severe safety event exists", bool(severe)):
@@ -217,9 +231,24 @@ def _check_noise_and_supervision(sim: dict, events: list[dict]) -> None:
           "sports_context" not in flags, str(flags))
 
 
+def _check_direct_counterexample_keys() -> None:
+    from app import risk_events
+
+    by_id = {item["id"]: item for item in FIX}
+    expected_none = ("bad_sales", "bad_forum", "bad_gtxc", "bad_gtxa")
+    for article_id in expected_none:
+        key = risk_events.event_key_for_row(by_id[article_id])
+        check(f"direct key: {article_id} emits no event key", key is None, str(key))
+
+    good_key = risk_events.event_key_for_row(by_id["gtx_1"])
+    check("direct key: Samsung Station GTX fixture still maps to known event",
+          good_key == "hdec_risk_gtx_samseong_rebar_penalty", str(good_key))
+
+
 def main() -> int:
     print(f"== verify_risk_event_clustering @ {ROOT} ==")
     before = _db_state()
+    _check_direct_counterexample_keys()
     sim = _run_pipeline_sim()
     events = (sim or {}).get("events") or []
     _check_event_contract(events)
