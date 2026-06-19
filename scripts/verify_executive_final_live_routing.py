@@ -40,7 +40,7 @@ RADAR_DB = ROOT / "radar.db"
 # ---- fixture: P0-C1.14 라이브 라우팅 시나리오 (제목·스니펫만으로 결정적 판정) ----
 # 현대건설 직접: 벌점(리스크) · 도시정비/DC(전략) · 전환사채(재무, AI 금지) ·
 #               데이터센터 사업 전환사채(전략 맥락 → AI 유지).
-# 비-공급사 AI: 광범위 AI DC 정책 · 삼성물산 EPC/SMR/DC · SK에코플랜트 AI EPC DC.
+# 비-공급사 AI: 광범위 AI DC 발주 환경 · 삼성물산 EPC/SMR/DC · SK에코플랜트 AI EPC DC.
 # 발주 환경: 중동 재건. 공급사 단독(서로 다른 회사, 같은 전선 클래스): 가온전선 · 대한전선.
 FIX = [
     {"id": "f_pen", "source": "서울신문",
@@ -56,8 +56,8 @@ FIX = [
      "title": "현대건설 데이터센터 사업 투자 위해 3000억 회사채 발행",
      "snippet": "현대건설이 데이터센터 사업 투자를 위해 회사채를 발행한다"},
     {"id": "f_broadai", "source": "전자신문",
-     "title": "특별법 시행 앞둔 AI 데이터센터 건설사 전력망 냉각 설루션 경쟁",
-     "snippet": "AI 데이터센터 특별법 시행을 앞두고 건설사들이 전력망 냉각 경쟁을 벌인다"},
+     "title": "AI 데이터센터 발주 확대 건설사 전력망 냉각 설루션 경쟁",
+     "snippet": "AI 데이터센터 발주 확대에 맞춰 건설사들이 전력망 냉각 경쟁을 벌인다"},
     {"id": "f_sams", "source": "한국경제",
      "title": "삼성물산 올해 EPC 수주 목표 10.1조 SMR 데이터센터 정조준",
      "snippet": "삼성물산이 EPC 수주 목표를 높이고 SMR 데이터센터를 정조준한다"},
@@ -285,7 +285,7 @@ def check_sim(sim: dict | None) -> None:
           first_strong <= first_sup, f"biz={biz}")
 
     # ---- C. 공급사 단독 우선순위 ----
-    check("C: AI Top에 광범위 AI DC 정책(f_broadai) 포함", "f_broadai" in ai_top,
+    check("C: AI Top에 광범위 AI DC 발주 환경(f_broadai) 포함", "f_broadai" in ai_top,
           f"ai_top={sorted(ai_top)}")
     check("C: AI Top에 공급사 단독 없음 (강한 비공급사 3건 이상 존재)",
           not (SUPPLIERS & ai_top), f"ai_top={sorted(ai_top)}")

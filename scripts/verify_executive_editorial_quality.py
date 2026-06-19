@@ -1,4 +1,4 @@
-"""P0-D3S/D3T 검증기 — 임원 편집 품질(AI 탭/리스크 사건/재무·노이즈 억제) 회귀 검사.
+"""P0-D3S/D3T/D3U 검증기 — 임원 편집 품질(AI 탭/리스크 사건/재무·노이즈 억제) 회귀 검사.
 
 결정적·네트워크 없음·temp DB 격리. 저장소의 radar.db는 절대 건드리지 않는다.
 
@@ -9,6 +9,7 @@
 - C AI 탭 정렬 라벨이 '점수순' 단정이 아니라 '종합 우선순위순'으로 정정됨.
 - D 임원 리스크 사건 최대 5건(고심각 아니면 최대 3건) + 분리 안내.
 - E AI 데이터센터·전력 인프라 근거 목록은 DC/전력 인프라 + 건설 앵커 동시 요구.
+- G 부적격 generic AI 후보만 있는 날에는 AI 탭을 원 후보로 fallback하지 않음.
 
 사용법:
     python3 scripts/verify_executive_editorial_quality.py
@@ -101,6 +102,15 @@ D3T_POSITIVE_FIXTURES = [
      "snippet": "AI 데이터센터 전력 수요 급증으로 건설사 EPC와 냉각 기술 경쟁이 심화하고 있다"},
 ]
 
+D3U_FALLBACK_FIXTURES = [
+    {"id": "uae_jobs_ai_noise", "source": "KOTRA",
+     "title": "비석유 5대 전략 산업이 여는 2026 UAE 취업 기회",
+     "snippet": "UAE AI 데이터센터와 비석유 산업의 취업·채용 기회를 소개했다"},
+    {"id": "generic_ai_semiconductor_noise", "source": "한국경제",
+     "title": "AI 반도체 투자 사이클 기대",
+     "snippet": "반도체 업황과 GPU 산업 전망을 다뤘다"},
+]
+
 D3T_HDEC_SURFACE_FILLERS = [
     {"id": "hdec_risk_filler_1", "source": "연합뉴스",
      "title": "현대건설, 중대재해 특별감독 사전통보…현장 안전관리 비상",
@@ -130,7 +140,8 @@ for _fixtures, _prefix in (
         (FIX, "d3s"),
         (D3T_NEGATIVE_FIXTURES, "d3t-negative"),
         (D3T_POSITIVE_FIXTURES, "d3t-positive"),
-        (D3T_HDEC_SURFACE_FILLERS, "d3t-hdec-filler")):
+        (D3T_HDEC_SURFACE_FILLERS, "d3t-hdec-filler"),
+        (D3U_FALLBACK_FIXTURES, "d3u-fallback")):
     _apply_fixture_defaults(_fixtures, _prefix)
 
 GRADE_INSTANT = "즉시 알림 후보"
@@ -206,6 +217,9 @@ def check_units() -> None:
     for item in D3T_POSITIVE_FIXTURES:
         check(f"B/D3T: {item['id']} AI 적격성 통과",
               briefing._ai_top_eligible(item))
+    for item in D3U_FALLBACK_FIXTURES:
+        check(f"G/D3U: {item['id']} AI 적격성 탈락",
+              not briefing._ai_top_eligible(item))
 
     # true_risk_event는 리스크 사건 키를 받는다
     check("F: true_risk_event는 리스크 사건 키 보유",
@@ -361,6 +375,20 @@ def check_d3t_ai_tab_pipeline(sims: list[dict | None]) -> None:
           f"missing={sorted(positive_ids - ai_union)} ai_union={sorted(ai_union)}")
 
 
+def check_d3u_no_ineligible_fallback(sim: dict | None) -> None:
+    if not sim:
+        return
+    fallback_ids = {item["id"] for item in D3U_FALLBACK_FIXTURES}
+    check("D3U: live 모드로 fallback fixture 파이프라인 통과",
+          sim.get("mode") == "live", str(sim.get("mode")))
+    check("D3U: 부적격 generic AI만 있으면 ai_radar_signals 비움",
+          not (sim.get("ai") or []), f"ai={sim.get('ai')}")
+    top = set().union(*(set(sim.get(s) or []) for s in (
+        "ai", "risk_reg", "top_imm", "top_new", "biz", "macro", "hdec", "comp")))
+    check("D3U: 부적격 generic AI가 임원 핵심 surface에 없음",
+          not (fallback_ids & top), f"top={sorted(top)}")
+
+
 def main() -> int:
     print(f"== verify_executive_editorial_quality @ {ROOT} ==")
     os.environ["DB_PATH"] = os.path.join(
@@ -384,6 +412,8 @@ def main() -> int:
         for items in d3t_sim_sets
     ]
     check_d3t_ai_tab_pipeline(d3t_sims)
+    d3u_sim = _run_sim(D3U_FALLBACK_FIXTURES, isolate_ai_tab=True)
+    check_d3u_no_ineligible_fallback(d3u_sim)
 
     check("repo radar.db 미변경 (temp DB 격리)", _db_state() == before)
 

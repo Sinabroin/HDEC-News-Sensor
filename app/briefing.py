@@ -1642,12 +1642,11 @@ def build_brief(pipeline_counts: dict | None = None,
     def _radar_group(section_key, limit=TOP_RADAR, sort_key=None, *, surface=None,
                      eligible=None):
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
-        # P0-D3S Goal B: AI 상단 적격성 필터 — 직접 건설/인프라 관련성 없는 generic AI
-        # (순수 인공지능/반도체/우주/소비자 AI)는 AI 상단에서 제외한다. 필터가 후보를 전부
-        # 비우면(엣지) 원래 후보로 폴백해 빈 탭을 피한다.
+        # P0-D3S/D3U Goal B: AI 상단 적격성 필터 — 직접 건설/인프라 관련성 없는 generic AI
+        # (순수 인공지능/반도체/우주/소비자 AI)는 AI 상단에서 제외한다. 빈 탭을 피하려고
+        # 원 후보로 폴백하지 않는다. 부적격 AI 후보 1건만 있는 날에는 빈 상태 문구가 맞다.
         if eligible is not None:
-            kept = [r for r in rows if eligible(r)]
-            rows = kept if kept else rows
+            rows = [r for r in rows if eligible(r)]
         rows.sort(key=sort_key or (
             lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
         if surface:
