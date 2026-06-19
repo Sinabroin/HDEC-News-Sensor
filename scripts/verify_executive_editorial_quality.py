@@ -239,10 +239,14 @@ def check_static() -> None:
     check("D: 임원 뷰 risk 캡 로직(고심각 5 / 그 외 3) 존재",
           "send_candidate" in rep and "cap = 5 if high_severity else 3" in rep)
     brf = (ROOT / "app" / "briefing.py").read_text(encoding="utf-8")
-    check("B/D3T: briefing에 AI 토픽+실행 앵커/필터 존재",
-          "AI_TOPIC_ANCHORS" in brf
-          and "CONSTRUCTION_EXECUTION_ANCHORS" in brf
+    contract = (ROOT / "app" / "surface_contracts.py").read_text(encoding="utf-8")
+    check("B/D3T/D4A: briefing AI 탭이 surface_contracts 계약 사용",
+          "surface_contracts.decide_ai_tab(row).eligible" in brf
           and "_ai_top_eligible" in brf)
+    check("B/D3T/D4A: surface_contracts에 AI 토픽+실행 앵커/필터 존재",
+          "STRONG_AI_TITLE_TOPICS" in contract
+          and "EXECUTION_ANCHORS" in contract
+          and "TITLE_EXCLUSION_PATTERNS" in contract)
     check("E: briefing에 dc_power 근거 적격성 필터 존재",
           "_dc_power_evidence_ok" in brf and "DC_POWER_INFRA_TERMS" in brf)
 
