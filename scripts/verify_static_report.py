@@ -186,6 +186,25 @@ def check_workflow() -> None:
     check("리포트 생성 step이 발송 step보다 앞",
           0 <= build_idx < send_idx)
 
+    # P0-D3R — 공개 latest.html은 항상 executive 뷰로만 게시한다. build_static_report.py
+    # 기본 audience는 operator라, 워크플로가 명시하지 않으면 운영자 화면이 공개로 새어나간다.
+    _bare_latest = "build_static_report.py --output docs/daily/latest.html"
+    _exec_latest = _bare_latest + " --audience executive"
+    check("workflow가 공개 latest.html을 executive 뷰로 빌드", _exec_latest in text)
+    # latest.html 빌드 호출은 모두 --audience executive를 동반해야 한다 (audience 누락 금지):
+    # bare 등장 횟수가 executive 등장 횟수와 같으면 audience 없는 latest 빌드가 없다는 뜻.
+    check("workflow의 latest.html 빌드는 audience 누락 없이 항상 executive",
+          text.count(_bare_latest) >= 1
+          and text.count(_bare_latest) == text.count(_exec_latest),
+          f"bare={text.count(_bare_latest)} executive={text.count(_exec_latest)}")
+    # 운영자 진단용 스냅샷은 별도 파일로 operator 뷰 생성 (공개 파일을 덮어쓰지 않음).
+    check("workflow가 operator-latest.html을 operator 뷰로 빌드",
+          "build_static_report.py --output docs/daily/operator-latest.html --audience operator"
+          in text)
+    # commit step이 두 리포트 파일을 함께 add (operator 스냅샷 누락 방지).
+    check("commit step이 latest.html·operator-latest.html을 함께 add",
+          "git add docs/daily/latest.html docs/daily/operator-latest.html" in text)
+
     report_lines = [line for line in text.splitlines()
                     if re.match(r"\s*REPORT_URL\s*:", line)]
     ok = bool(report_lines) and all(

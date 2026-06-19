@@ -91,15 +91,18 @@ jobs:
           # runner temp는 commit되지 않으며 실행마다 새로 만들어진다.
           MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
         run: |
-          OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html)"
+          OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html --audience executive)"
           echo "$OUT"
           if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
+            # 공개 latest.html은 항상 executive 뷰로 게시한다 (operator 기본값 유출 방지, P0-D3R).
+            # 같은 live 데이터로 운영자 진단용 operator-latest.html 스냅샷도 함께 생성한다.
+            python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · live RSS collected > 0 · live report generated"
+            echo "NEWS_MODE=live · live RSS collected > 0 · executive report published + operator snapshot"
           else
             echo "live_ok=false" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · live collection failed/empty · fell back to mock · NOT publishing as live"
-            git checkout -- docs/daily/latest.html || true
+            git checkout -- docs/daily/latest.html docs/daily/operator-latest.html || true
           fi
 
       # live 성공 시에만 변경분을 main에 commit (변경 없으면 skip — 실패 안 함).
@@ -108,10 +111,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- docs/daily/latest.html; then
+          if git diff --quiet -- docs/daily/latest.html docs/daily/operator-latest.html; then
             echo "live report unchanged — no diff, skip commit"
           else
-            git add docs/daily/latest.html
+            git add docs/daily/latest.html docs/daily/operator-latest.html
             git commit -m "chore: update live daily report"
             git push
             echo "live report committed and pushed"
