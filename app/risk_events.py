@@ -83,6 +83,17 @@ _ALL_RISK_TERMS = tuple(dict.fromkeys(
     + list(_SEVERE_TERMS) + list(_REVIEW_RISK_TERMS)
 ))
 
+# P0-D3S: 시장·증권 코멘터리 마커(제목 기준) — 주가 반응/종목성/기대감 기사를 식별한다.
+# 이런 기사는 '사건'이 아니라 시장 반응이므로, 제목에 구체적 리스크 액션이 없으면 리스크
+# 사건 클러스터에서 제외한다. bare '주가'는 발주가/수주가에 substring 오탐이 있어 쓰지 않고
+# (급등/급락/폭등으로 대체), '株'는 한국어 제목에서 사실상 종목 표기로만 쓰여 안전하다.
+_MARKET_COMMENTARY_TERMS = (
+    "급등", "급락", "폭등", "건설주", "건설株", "반도체주", "반도체株", "株",
+    "관련주", "수혜주", "테마주", "목표가", "목표주가", "증권", "종목",
+    "상한가", "잭팟", "사세요", "오를까", "오를지", "샴페인", "투자 기대",
+    "etf", "코스피", "코스닥", "대장주", "팔고", "상장폐지", "시간외", "매수",
+)
+
 
 def _contains(text: str, terms) -> bool:
     return any((term or "").lower() in text for term in terms)
@@ -146,6 +157,15 @@ def event_key_for_row(row: dict, decision: dict | None = None,
     """
     aq = article_quality.assess(row.get("source"), row.get("title"))
     if aq.get("stock_hype"):
+        return None
+
+    # P0-D3S: 시장·증권 코멘터리(주가 반응·건설株·종전 투자기대·샴페인 등)는 사건이 아니다.
+    # 제목에 구체적 리스크 액션(중대재해·벌점·제재·하자·소송 등)이 없으면 리스크 사건에서
+    # 제외한다 — stock_hype에서 면제된 현대건설 직접 시세 기사('현대건설 주가 28% 급등')도
+    # 여기서 걸러진다. 제목만 보므로 시장 기사 스니펫에 섞인 위험 단어가 사건으로 승격되지 않는다.
+    title_low = (row.get("title") or "").lower()
+    if (_contains(title_low, _MARKET_COMMENTARY_TERMS)
+            and not _has_concrete_risk_action(title_low)):
         return None
 
     text = _text(row)

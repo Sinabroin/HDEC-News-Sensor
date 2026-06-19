@@ -47,6 +47,7 @@ _DEFAULT_RULES = {
     "hdec_contract_patterns": [],
     "hdec_enforcement_patterns": [],
     "hdec_enforcement_severe_patterns": [],
+    "concrete_risk_override_patterns": [],
 }
 
 _rules_cache = None
@@ -118,8 +119,11 @@ def assess(source: str = "", title: str = "", snippet: str = "") -> dict:
     weak_hits = _all_hits(title_low, rules.get("stockhype_weak_title_patterns"))
     equity_src = _first(src_low, rules.get("equity_research_source_patterns"))
     hype_hit = bool(strong) or len(weak_hits) >= 2 or bool(equity_src)
+    # P0-D3S: 제목에 구체적 운영 리스크 액션(벌점/중대재해/하자/소송 등)이 있으면 시장성
+    # 표현이 섞여도 stock-hype로 강등하지 않는다 — 구체 리스크가 시장성 표현을 이긴다.
+    concrete_risk = _first(title_low, rules.get("concrete_risk_override_patterns"))
     # 현대건설 직접 기사는 stock-hype 강등에서 제외 — Phase 4 보호가 따로 다룬다.
-    stock_hype = bool(hype_hit and not hdec_direct)
+    stock_hype = bool(hype_hit and not hdec_direct and not concrete_risk)
 
     if stock_hype:
         if equity_src:

@@ -598,6 +598,16 @@ def _render_risk_event_clusters(brief: dict, audience: str = "operator") -> list
     """
     executive = audience == "executive"
     clusters = brief.get("risk_event_clusters") or []
+    # P0-D3S Goal D: 임원 뷰는 주요 리스크 사건을 최대 5건(고심각 send_candidate가 없으면
+    # 최대 3건)만 노출하고 나머지는 운영자 검수 화면으로 분리한다. 운영자 뷰는 전부 노출한다.
+    # (시장·증권성 항목은 risk_events 단계에서 이미 클러스터로 잡히지 않으므로 카운트되지 않는다.)
+    hidden_count = 0
+    if executive and clusters:
+        high_severity = any(ev.get("severity") == "send_candidate" for ev in clusters)
+        cap = 5 if high_severity else 3
+        if len(clusters) > cap:
+            hidden_count = len(clusters) - cap
+            clusters = clusters[:cap]
     if executive:
         section_label = "주요 리스크 사건"
         intro = "동일 이슈로 보이는 기사들을 묶어 주요 영향과 근거를 요약했습니다."
@@ -615,6 +625,8 @@ def _render_risk_event_clusters(brief: dict, audience: str = "operator") -> list
         '<div class="cd-body">',
         f'<p class="cd-note">{escape(intro)}</p>',
     ]
+    if hidden_count:
+        body.append('<p class="cd-note">추가 관찰 신호는 운영자 검수 화면에 분리했습니다.</p>')
     if not clusters:
         body.append('<p class="cd-empty">묶인 리스크 사건이 없습니다.</p>')
     for ev in clusters:
@@ -942,10 +954,13 @@ def render_report_html(brief: dict, audience: str = "operator") -> tuple[str, li
 
     # 2) AI 관련
     ai_sigs = brief.get("ai_radar_signals") or []
+    # P0-D3S Goal C: 라벨을 '점수순'에서 '종합 우선순위순'으로 정정한다. 순서는 표시 중요도
+    # 점수만이 아니라 관련성·출처·최신성을 함께 반영하므로(증권/공급사/오래된 기사 강등),
+    # 라벨에 정렬 기준을 명시해 '점수순인데 2.5가 4.1 위'라는 혼선을 없앤다.
     panels["ai"] = _render_visible_radar(
         "ai-radar", "AI 관련",
-        "AI 데이터센터·전력·SMR·스마트건설 · 점수순", ai_sigs,
-        empty="오늘 AI 인프라·건설 AI 신호 없음")
+        "AI 데이터센터·전력·SMR·스마트건설 · 종합 우선순위순(관련성·중요도·출처·최신성)",
+        ai_sigs, empty="오늘 AI 인프라·건설 AI 신호 없음")
     if ai_sigs:
         sections.append("ai_radar")
         sections.append("top_signals")  # 메타데이터 backward-compat 별칭

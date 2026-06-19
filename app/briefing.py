@@ -88,6 +88,11 @@ SECURITIES_CONTEXT_PATTERNS = (
     "주가", "목표가", "목표주가", "투자의견", "투자 의견", "투자포인트",
     "증권 레이더", "증권", "종목", "관련주", "수혜주", "테마주",
     "급등", "폭등", "상한가", "삼전닉스", "포스트워 수혜", "뭐 사야",
+    # P0-D3S: 구어체 종목추천성 헤드라인(삼전/하닉/사세요/반도체주)과 株 표기 종목명을
+    # 임원 상단 노출에서 제외한다(여전히 운영자 감사·참고/제외에는 남는다). stock_hype 면제된
+    # 현대건설 직접 시세 기사(예: '현대건설 주가 급등')도 여기 securities_context로 걸러진다.
+    "사세요", "삼전", "하닉", "반도체주", "반도체株", "건설株", "株",
+    "etf", "코스피", "코스닥", "대장주", "팔고", "상장폐지", "시간외", "매수",
 )
 WEAK_TOP_SOURCE_PATTERNS = (
     "데일리머니", "네이버 프리미엄콘텐츠", "naver premium", "증권플러스",
@@ -127,6 +132,17 @@ DIRECT_PROJECT_PATTERNS = (
     "규제", "벌점", "제재", "중대재해", "전력망", "스마트건설",
     "스마트 건설", "r&d", "연구원", "조직", "전략", "에너지전환",
     "에너지 전환", "뉴에너지",
+)
+# P0-D3S Goal B: AI 관련 상단 적격성 앵커 — AI 신호가 직접 건설/인프라/현대건설 의사결정과
+# 닿아 있는지(데이터센터·전력·EPC·수주·원전/SMR·스마트건설·현장 등). 순수 인공지능/반도체/
+# 우주/소비자 AI(앵커 없음)는 AI 상단에서 제외한다. radar의 AI_KEYWORDS보다 좁다(generic
+# '인공지능/생성형/gpu/반도체'는 의도적으로 제외 — 건설 맥락이 함께 있어야 적격).
+AI_TOP_RELEVANCE_ANCHORS = (
+    "데이터센터", "데이터 센터", "idc", "전력", "전력망", "전력 인프라", "전력인프라",
+    "계통", "송배전", "송전", "변전", "냉각", "쿨링", "epc", "수주", "발주", "부지",
+    "원전", "smr", "소형모듈원자로", "플랜트", "건설", "건설사", "시공", "현대건설",
+    "스마트건설", "스마트 건설", "건설로봇", "건설 로봇", "bim", "디지털트윈",
+    "건설현장", "현장", "안전관리", "영상인식", "자율시공", "에너지 인프라", "기반시설",
 )
 EXPOSURE_TITLE_NOISE_WORDS = {
     "단독", "속보", "인터뷰", "기획", "오늘의", "업계소식", "업계", "소식",
@@ -429,6 +445,37 @@ def _is_excluded_quality(row: dict) -> bool:
 def _contains_any(text: str, patterns) -> bool:
     low = (text or "").lower()
     return any((p or "").lower() in low for p in patterns)
+
+
+def _ai_top_eligible(row: dict) -> bool:
+    """AI 관련 상단 노출 적격성 (P0-D3S Goal B) — 직접 건설/인프라/현대건설 관련성 요구.
+
+    radar가 AI로 분류했어도, 제목·스니펫에 AI_TOP_RELEVANCE_ANCHORS(데이터센터·전력·EPC·
+    수주·원전/SMR·스마트건설·현장 등)가 하나도 없으면 순수 generic AI(인공지능/반도체/우주/
+    소비자 AI)로 보고 AI 상단에서 제외한다. 표시 가드레일이며 점수/등급/분류는 바꾸지 않는다."""
+    text = " ".join([row.get("title") or "", row.get("snippet") or ""])
+    return _contains_any(text, AI_TOP_RELEVANCE_ANCHORS)
+
+
+# P0-D3S Goal E: 'AI 데이터센터·전력 인프라'(dc_power) 카테고리 근거 목록 적격성.
+# DC/전력 인프라 신호 + 건설/실행 앵커가 함께 있어야 근거로 노출한다 — 외국인 안전교육·
+# 화학물질 규제·종목성 기사처럼 broad 키워드로 잘못 묶인 비직접 항목을 근거에서 강등한다.
+DC_POWER_INFRA_TERMS = (
+    "데이터센터", "데이터 센터", "idc", "전력", "전력망", "전력 인프라", "전력인프라",
+    "계통", "송배전", "송전", "변전", "냉각", "쿨링", "epc", "수주", "부지",
+    "원전", "smr", "소형모듈원자로", "에너지 인프라",
+)
+DC_POWER_CONSTRUCTION_ANCHORS = (
+    "건설", "건설사", "epc", "현대건설", "수주", "발주", "프로젝트", "인프라",
+    "플랜트", "원전", "전력망", "냉각", "부지", "시공", "착공", "준공",
+)
+
+
+def _dc_power_evidence_ok(row: dict) -> bool:
+    """dc_power 근거 적격성 — DC/전력 인프라 신호 + 건설/실행 앵커가 둘 다 있어야 한다."""
+    text = " ".join([row.get("title") or "", row.get("snippet") or ""])
+    return (_contains_any(text, DC_POWER_INFRA_TERMS)
+            and _contains_any(text, DC_POWER_CONSTRUCTION_ANCHORS))
 
 
 def _is_sales_promo_text(text: str) -> bool:
@@ -1078,8 +1125,24 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         excluded = sum(1 for r in rows if r.get("alert_grade") == scoring.GRADE_EXCLUDED)
 
         # 근거 목록 풀: excluded 품질(블로그/카페/커뮤니티)은 빼고 상단 노출 품질순으로 정렬한다.
+        news_rows = [r for r in rows if not _is_excluded_quality(r)]
+        nonnews = total - len(news_rows)        # 블로그/카페 등 비-뉴스 출처 수
+        # P0-D3S Goal E/issue#4: 'AI 데이터센터·전력 인프라'(dc_power) 근거 목록만 강화한다 —
+        # stock-hype 시세성 노이즈(인프라 단어가 섞여도)를 제외하고 DC/전력 인프라 + 건설/실행
+        # 앵커가 함께 있는 기사만 근거로 둔다. broad 키워드로 잘못 묶인 안전교육·화학규제·종목성
+        # 항목을 근거에서 강등한다(total_count 불변 — 감사 가능). 다른 카테고리 근거는 건드리지
+        # 않는다 — 증권성 기사도 자기 카테고리/참고·제외에 자본시장 사유로 남아 감사 가능하다.
+        def _category_evidence_ok(r: dict) -> bool:
+            if cat_key != "dc_power":
+                return True
+            if article_quality.assess(
+                    r.get("source"), r.get("title")).get("stock_hype"):
+                return False
+            return _dc_power_evidence_ok(r)
+        eligible_rows = [r for r in news_rows if _category_evidence_ok(r)]
+        offtopic = len(news_rows) - len(eligible_rows)   # dc_power 비직접/시세성 제외 수
         evidence = sorted(
-            (r for r in rows if not _is_excluded_quality(r)),
+            eligible_rows,
             key=lambda r: _top_exposure_sort_key(
                 r, (decisions or {}).get(r["id"])))
         # P0-D3F: 같은 cluster(예: 스마트건설 챌린지·AI 데이터센터)가 여러 카테고리 근거 상단을
@@ -1096,13 +1159,14 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
         sources = {(r.get("source") or "출처 미상") for r in evidence}
 
         shown = len(top)
-        remaining = total - shown          # '외 n건' (표시 한도 초과분 + 비-뉴스 제외분)
-        weak = total - len(evidence)       # 근거 목록에서 빠진 비-뉴스(블로그/카페 등) 수
+        remaining = total - shown          # '외 n건' (표시 한도 초과분 + 비-뉴스/비직접 제외분)
         note_parts = []
         if remaining > 0:
             note_parts.append(f"외 {remaining}건")
-        if weak > 0:
-            note_parts.append(f"블로그·카페 등 비-뉴스 출처 {weak}건은 근거 목록에서 제외")
+        if nonnews > 0:
+            note_parts.append(f"블로그·카페 등 비-뉴스 출처 {nonnews}건은 근거 목록에서 제외")
+        if offtopic > 0:
+            note_parts.append(f"직접 관련성 낮은 {offtopic}건은 근거 목록에서 제외")
         sections.append({
             "category_key": cat_key,
             "category_label": insight.CATEGORY_PHRASE.get(cat_key, "건설산업 일반"),
@@ -1111,7 +1175,7 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
             "evidence_count": len(evidence),
             "shown_count": shown,
             "remaining_count": remaining,
-            "weak_count": weak,
+            "weak_count": nonnews,
             "instant_count": instant,
             "daily_count": daily,
             "weekly_count": weekly,
@@ -1528,8 +1592,15 @@ def build_brief(pipeline_counts: dict | None = None,
     # 최대 2 surface로 보존한다. 거시·즉시 알림은 독립(고-노출 surface 아님).
     surface_state = _ExposureSurfaceState()
 
-    def _radar_group(section_key, limit=TOP_RADAR, sort_key=None, *, surface=None):
+    def _radar_group(section_key, limit=TOP_RADAR, sort_key=None, *, surface=None,
+                     eligible=None):
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
+        # P0-D3S Goal B: AI 상단 적격성 필터 — 직접 건설/인프라 관련성 없는 generic AI
+        # (순수 인공지능/반도체/우주/소비자 AI)는 AI 상단에서 제외한다. 필터가 후보를 전부
+        # 비우면(엣지) 원래 후보로 폴백해 빈 탭을 피한다.
+        if eligible is not None:
+            kept = [r for r in rows if eligible(r)]
+            rows = kept if kept else rows
         rows.sort(key=sort_key or (
             lambda r: _top_exposure_sort_key(r, decisions[r["id"]])))
         if surface:
@@ -1608,16 +1679,28 @@ def build_brief(pipeline_counts: dict | None = None,
         decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort,
         surface="hdec_direct_signals")
 
-    # 2) AI 관련 — 공급사 단독(부품·전선·설비)은 더 강한 비공급사 AI/EPC 신호가 top-N(cap) 안에
-    # 들도록 뒤로 정렬한다. 공급사가 강한 신호를 cap 밖으로 밀어내 AI Top/AI 섹션을 차지하는
-    # 것을 막는다 (P0-C1.14). 점수순은 그 안에서 유지. 비공급사 후보가 cap을 채우면 공급사는
-    # 경쟁사·공급망/드릴다운으로만 남는다 (제품 원칙: 공급사는 보조 신호).
-    ai_radar_signals = _radar_group(radar.AI, sort_key=lambda r: (
-        _top_exposure_profile(r, decisions[r["id"]])["top_exposure_penalty"],
-        1 if decisions[r["id"]].get("supplier_only") else 0,
-        _freshness_rank(r),
-        -(decisions[r["id"]]["decision_relevance_score"] or 0),
-        -(r.get("final_score") or 0), r["id"]), surface="ai_radar_signals")
+    # 2) AI 관련 — 정렬 우선순위 (P0-D3S, 임원 의도): (1) 현대건설/건설/EPC/데이터센터/전력
+    # 인프라 직접 관련성 → (2) 임원 중요도(종합 점수) → (3) 신뢰 출처 → (4) 최신성.
+    # penalty를 맨 앞에 둬 증권·공급사·stale·roundup 노이즈를 먼저 억제한다(품질 게이트 계약
+    # 유지). 공급사 단독(부품·전선·설비)은 비공급사 AI/EPC 신호가 top-N(cap) 안에 들도록
+    # 뒤로 둔다(P0-C1.14). 직접 관련성을 최신성보다 앞세워 '실뉴스성 종목·시세 기사가 실제
+    # AI 인프라/데이터센터/EPC 기사를 누르지 않게' 한다.
+    def _ai_sort(r):
+        d = decisions[r["id"]]
+        prof = _top_exposure_profile(r, d)
+        flags = prof["top_exposure_flags"]
+        return (
+            prof["top_exposure_penalty"],
+            1 if d.get("supplier_only") else 0,
+            0 if (d.get("hdec_direct") or "direct_project_signal" in flags) else 1,
+            -(r.get("final_score") or 0),
+            -(d.get("decision_relevance_score") or 0),
+            0 if "trusted_source" in flags else 1,
+            _freshness_rank(r),
+            r["id"])
+    ai_radar_signals = _radar_group(
+        radar.AI, sort_key=_ai_sort, surface="ai_radar_signals",
+        eligible=_ai_top_eligible)
     # 3) 수주·해외 — 확정 계약뿐 아니라 발주 환경(중동·재건·EPC·DC·SMR·플랜트)과 경쟁사
     # 수주 전략까지 넓혀 'business 0건' 회귀를 방지한다 (decision 멤버십 기반).
     # 현대건설 직접(primary)은 위 현대건설 섹션에 이미 노출되므로, 여기선 '순수 수주·해외/
