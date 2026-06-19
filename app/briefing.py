@@ -133,16 +133,23 @@ DIRECT_PROJECT_PATTERNS = (
     "스마트 건설", "r&d", "연구원", "조직", "전략", "에너지전환",
     "에너지 전환", "뉴에너지",
 )
-# P0-D3S Goal B: AI 관련 상단 적격성 앵커 — AI 신호가 직접 건설/인프라/현대건설 의사결정과
-# 닿아 있는지(데이터센터·전력·EPC·수주·원전/SMR·스마트건설·현장 등). 순수 인공지능/반도체/
-# 우주/소비자 AI(앵커 없음)는 AI 상단에서 제외한다. radar의 AI_KEYWORDS보다 좁다(generic
-# '인공지능/생성형/gpu/반도체'는 의도적으로 제외 — 건설 맥락이 함께 있어야 적격).
-AI_TOP_RELEVANCE_ANCHORS = (
-    "데이터센터", "데이터 센터", "idc", "전력", "전력망", "전력 인프라", "전력인프라",
-    "계통", "송배전", "송전", "변전", "냉각", "쿨링", "epc", "수주", "발주", "부지",
-    "원전", "smr", "소형모듈원자로", "플랜트", "건설", "건설사", "시공", "현대건설",
-    "스마트건설", "스마트 건설", "건설로봇", "건설 로봇", "bim", "디지털트윈",
-    "건설현장", "현장", "안전관리", "영상인식", "자율시공", "에너지 인프라", "기반시설",
+# P0-D3T: AI 관련 상단 적격성은 "AI/DC/SMR/스마트건설 토픽"과
+# "건설/임원 실행 앵커"가 함께 있어야 한다. 건설·수주·전력·현대건설 같은 범용 앵커만으로
+# 도시정비/재개발/에너지 금융 기사가 AI 탭에 들어오던 D3S 후속 오탐을 막는다.
+AI_TOPIC_ANCHORS = (
+    "ai", "인공지능", "생성형", "데이터센터", "데이터 센터", "idc",
+    "ai 데이터센터", "ai 인프라", "스마트건설", "스마트 건설", "건설 ai",
+    "ai 로봇", "건설로봇", "건설 로봇", "bim", "디지털트윈", "영상인식",
+    "자율시공", "smr", "소형모듈원자로", "원전", "전력망", "냉각", "쿨링",
+)
+CONSTRUCTION_EXECUTION_ANCHORS = (
+    "현대건설", "건설", "건설사", "epc", "시공", "수주", "발주", "프로젝트",
+    "플랜트", "인프라", "전력 인프라", "전력인프라", "전력망", "부지", "냉각",
+    "계통", "송전", "변전", "현장", "안전관리", "r&d", "연구원",
+)
+HDEC_AI_STRATEGIC_EXCEPTION_ANCHORS = (
+    "r&d", "스마트건설", "스마트 건설", "에너지전환", "에너지 전환",
+    "데이터센터", "데이터 센터", "smr", "원전", "ai",
 )
 EXPOSURE_TITLE_NOISE_WORDS = {
     "단독", "속보", "인터뷰", "기획", "오늘의", "업계소식", "업계", "소식",
@@ -448,13 +455,16 @@ def _contains_any(text: str, patterns) -> bool:
 
 
 def _ai_top_eligible(row: dict) -> bool:
-    """AI 관련 상단 노출 적격성 (P0-D3S Goal B) — 직접 건설/인프라/현대건설 관련성 요구.
+    """AI 관련 상단 노출 적격성 (P0-D3T) — 토픽 앵커와 실행 앵커를 모두 요구한다.
 
-    radar가 AI로 분류했어도, 제목·스니펫에 AI_TOP_RELEVANCE_ANCHORS(데이터센터·전력·EPC·
-    수주·원전/SMR·스마트건설·현장 등)가 하나도 없으면 순수 generic AI(인공지능/반도체/우주/
-    소비자 AI)로 보고 AI 상단에서 제외한다. 표시 가드레일이며 점수/등급/분류는 바꾸지 않는다."""
+    radar가 AI로 분류했어도 도시정비·재개발·일반 에너지 금융처럼 범용 건설/전력 단어만 있는
+    기사는 AI 탭에서 제외한다. 표시 가드레일이며 점수/등급/분류는 바꾸지 않는다."""
     text = " ".join([row.get("title") or "", row.get("snippet") or ""])
-    return _contains_any(text, AI_TOP_RELEVANCE_ANCHORS)
+    if ("현대건설" in text
+            and _contains_any(text, HDEC_AI_STRATEGIC_EXCEPTION_ANCHORS)):
+        return True
+    return (_contains_any(text, AI_TOPIC_ANCHORS)
+            and _contains_any(text, CONSTRUCTION_EXECUTION_ANCHORS))
 
 
 # P0-D3S Goal E: 'AI 데이터센터·전력 인프라'(dc_power) 카테고리 근거 목록 적격성.
