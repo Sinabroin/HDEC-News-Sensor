@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     article_quality, config, db, decision_relevance, insight, macro_snapshot,
-    radar, scoring, source_quality,
+    radar, risk_events, scoring, source_quality,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -1767,6 +1767,11 @@ def build_brief(pipeline_counts: dict | None = None,
     # 두 기준을 분리한다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
     review_excluded = _build_review_excluded(scored, categories, display_reasons)
     source_filtered = _build_source_filtered(scored, categories, display_reasons, prov)
+    # D3O: 리스크 사건 클러스터 — 기사 단위 카드를 대체하지 않고, visible risk/HDEC-risk와
+    # 강한 직접 리스크 제외 후보를 같은 사건 렌즈로 묶어 운영자 검토를 돕는다.
+    risk_event_clusters = risk_events.build_risk_event_clusters(
+        scored, categories=categories, decisions=decisions,
+        radar_sections=radar_sections, scores_by_id=scores_by_id)
 
     now = datetime.now(KST)
     return {
@@ -1814,6 +1819,7 @@ def build_brief(pipeline_counts: dict | None = None,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
         "category_sections": category_sections,
+        "risk_event_clusters": risk_event_clusters,
         "review_excluded_evidence": review_excluded,
         "source_filtered_evidence": source_filtered,
         "exposure_quality_audit": exposure_quality_audit,

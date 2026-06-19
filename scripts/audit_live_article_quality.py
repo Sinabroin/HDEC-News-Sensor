@@ -73,6 +73,30 @@ def _signal_rows(signals, risk: bool = False) -> list[str]:
     return out
 
 
+def _risk_event_cluster_rows(clusters) -> list[str]:
+    out = ["| # | 등급 | 사건 | 영향축 | 근거수 | 출처 | 운영자 확인 |",
+           "|---|---|---|---|---|---|---|"]
+    if not clusters:
+        out.append("| _(없음)_ |  |  |  |  |  |  |")
+        return out
+    for i, ev in enumerate(clusters[:12], start=1):
+        sources = ev.get("sources") or []
+        source_names = [s.get("name") for s in sources if isinstance(s, dict)]
+        axes = " / ".join(ev.get("impact_axes") or [])
+        counts = f"기사 {ev.get('article_count', 0)} / 출처 {ev.get('source_count', 0)}"
+        confirm = ev.get("operator_confirmation_note") or (
+            "운영자 확인 필요" if ev.get("needs_operator_confirmation") else "확인 불필요")
+        if not ev.get("send_allowed"):
+            confirm = f"{confirm} · 발송불가"
+        out.append(
+            f"| {_cell(i, 4)} | {_cell(ev.get('severity_label') or ev.get('severity'), 16)} "
+            f"| {_cell(ev.get('event_title'))} | {_cell(axes, 70)} "
+            f"| {_cell(counts, 18)} | {_cell(source_names, 44)} | {_cell(confirm, 60)} |")
+    if len(clusters) > 12:
+        out.append(f"| _…외 {len(clusters) - 12}건_ |  |  |  |  |  |  |")
+    return out
+
+
 def _suspicious_section(brief: dict) -> list[str]:
     """의심 행 — stock-hype/집계호스트/저품질-상위/현대건설-제외/리스크 오분류를 모은다.
 
@@ -82,7 +106,7 @@ def _suspicious_section(brief: dict) -> list[str]:
     lines = ["", "## 의심 행 (수동 점검 대상)", ""]
     try:
         from app import (article_quality, db, decision_relevance,  # noqa: F401
-                         insight, radar, source_quality)
+                         insight, radar, risk_events, source_quality)
         rows = db.fetch_articles_with_scores()
     except Exception as exc:  # noqa: BLE001 — 헬퍼는 어떤 경우에도 죽지 않는다
         lines.append(f"_전 기사 점검 생략 (DB 접근 불가: {_cell(exc)})_")
@@ -114,6 +138,10 @@ def _suspicious_section(brief: dict) -> list[str]:
             return "general"
 
     risk_kw = getattr(radar, "RISK_ACTION_STRONG", [])
+    represented_events = {
+        ev.get("event_key") for ev in (brief.get("risk_event_clusters") or [])
+        if ev.get("event_key")
+    }
     stockhype, aggregator, hdec_excluded = [], [], []
     risk_kw_not_risk, risk_no_action, decision_excluded = [], [], []
     ai_finance_misroute = []
@@ -126,13 +154,21 @@ def _suspicious_section(brief: dict) -> list[str]:
         # 재무 하드 오버라이드(P0-C1.14)를 brief와 동일하게 적용 — raw가 재무 신호면 AI→거시.
         section = decision_relevance.override_radar_section(
             radar.classify_section(r, _category(r["id"])), dr)
+        event_key = risk_events.event_key_for_row(
+            r, decision=dr, radar_section=section)
         disp = source_quality.normalize_display_source(source)
         if aq["stock_hype"]:
             stockhype.append((title, source, grade, section))
         if disp != source:
             aggregator.append((title, source, disp, grade))
         if aq["hdec_direct"] and grade == "제외" and not _freshness_background(r):
-            hdec_excluded.append((title, source, grade))
+            if event_key and event_key in represented_events:
+                event_status = "사건 근거로 편입됨"
+            elif event_key:
+                event_status = "직접 리스크 사건 후보 — 운영자 확인"
+            else:
+                event_status = "직접 언급 낮은 우선순위"
+            hdec_excluded.append((title, source, grade, event_key or "-", event_status))
         has_risk_kw = any(kw in title for kw in risk_kw)
         if has_risk_kw and section != radar.RISK:
             risk_kw_not_risk.append((title, section, grade))
@@ -173,8 +209,9 @@ def _suspicious_section(brief: dict) -> list[str]:
         lambda it: f"| {_cell(it[0])} | {_cell(it[1], 22)} | {_cell(it[2], 14)} | {_cell(it[3], 12)} |")
     lines += _block(
         "현대건설 직접 언급인데 제외됨 (승격 후보 점검)", hdec_excluded,
-        "| 제목 | 출처 | 등급 |",
-        lambda it: f"| {_cell(it[0])} | {_cell(it[1], 24)} | {_cell(it[2], 12)} |")
+        "| 제목 | 출처 | 등급 | 사건 키 | 점검 메모 |",
+        lambda it: f"| {_cell(it[0])} | {_cell(it[1], 24)} | {_cell(it[2], 12)} "
+                   f"| {_cell(it[3], 36)} | {_cell(it[4], 36)} |")
     lines += _block(
         "리스크 키워드 있으나 리스크·규제 분류 아님", risk_kw_not_risk,
         "| 제목 | 섹션 | 등급 |",
@@ -219,6 +256,9 @@ def build_markdown(brief: dict) -> str:
         "",
         "> 운영자 수동 점검용 자동 표입니다. 라이브 Google News RSS는 주기적 쿼리/출처 "
         "튜닝이 계속 필요합니다 (이 표는 완벽을 주장하지 않습니다).",
+        "",
+        "## 리스크 사건 클러스터",
+        *_risk_event_cluster_rows(brief.get("risk_event_clusters")),
         "",
         "## 현대건설 직접 영향",
         *_signal_rows(brief.get("hdec_direct_signals")),

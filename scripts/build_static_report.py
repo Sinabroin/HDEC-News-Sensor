@@ -566,6 +566,55 @@ def _render_audit_details(label: str, bucket: dict, empty_text: str) -> list[str
     return body
 
 
+def _render_risk_event_clusters(brief: dict) -> list[str]:
+    """리스크 사건 클러스터 — 기사 카드와 별도인 event-level 검토 렌즈."""
+    clusters = brief.get("risk_event_clusters") or []
+    body = [
+        '<section aria-label="리스크 사건 클러스터">',
+        '<details class="cat-drill">',
+        '<summary>'
+        '<span class="cd-label">리스크 사건 클러스터</span>'
+        f'<span class="cd-count num">{len(clusters)}건</span>'
+        '<span class="cd-flex"></span></summary>',
+        '<div class="cd-body">',
+        '<p class="cd-note">동일 사건으로 보이는 리스크 기사를 묶은 운영자 확인용 요약입니다. '
+        '발송은 사람 검토 전까지 허용되지 않습니다.</p>',
+    ]
+    if not clusters:
+        body.append('<p class="cd-empty">묶인 리스크 사건이 없습니다.</p>')
+    for ev in clusters:
+        sources = ev.get("sources") or []
+        source_names = [s.get("name") for s in sources if isinstance(s, dict)]
+        axes = " · ".join(ev.get("impact_axes") or []) or "영향축 확인 필요"
+        counts = f"기사 {ev.get('article_count', 0)} / 출처 {ev.get('source_count', 0)}"
+        confirm = ev.get("operator_confirmation_note") or "운영자 확인 필요"
+        if not ev.get("send_allowed"):
+            confirm = f"{confirm} · 발송불가"
+        support_titles = [
+            _display(a.get("title") or "")
+            for a in (ev.get("supporting_articles") or [])[:5]
+            if isinstance(a, dict) and a.get("title")
+        ]
+        body += [
+            '<article class="cd-art">',
+            '<div class="cd-art-head">',
+            f'<span class="cd-title">{escape(_display(ev.get("event_title") or ""))}</span>',
+            f'<span class="cd-sc num">{escape(_display(ev.get("severity_label") or ""))}</span>',
+            '</div>',
+            f'<p class="cd-meta">{escape(_display(counts))} · '
+            f'{escape(_display(" / ".join(source_names) or "출처 확인 필요"))}</p>',
+            f'<p class="cd-why"><strong>영향</strong> {escape(_display(axes))}</p>',
+            f'<p class="cd-why"><strong>운영자 확인</strong> {escape(_display(confirm))}</p>',
+        ]
+        if support_titles:
+            body.append(
+                f'<p class="cd-why"><strong>근거</strong> '
+                f'{escape(_display(" / ".join(support_titles)))}</p>')
+        body.append('</article>')
+    body.append('</div></details></section>')
+    return body
+
+
 def _render_audit_sections(brief: dict) -> list[str]:
     """참고/제외 기사 + 출처 품질 제외 결과 (감사 전용, 둘 다 기본 접힘) — P0-C1.8.
 
@@ -893,6 +942,10 @@ def render_report_html(brief: dict) -> tuple[str, list[str]]:
     panels["evidence"] = _render_evidence_panel(brief)
     default_tab = "hdec" if hdec_sigs else "ai"
     body += _render_tabs_ui(panels, default_tab)
+
+    # D3O: 기사별 리스크 카드와 별개로, 같은 사건을 하나로 묶은 검토 렌즈.
+    sections.append("risk_events")
+    body += _render_risk_event_clusters(brief)
 
     # 운영자 점검: 노출 품질·중복 제어 (P0-D3F) — 탭 밖, 본문 하단의 기본 접힘 감사 블록.
     # 임원 카드는 깨끗하게 두고, 노출 억제/중복/품질 사유는 여기서만 raw 키와 함께 투명화한다.
