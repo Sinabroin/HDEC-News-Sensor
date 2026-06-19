@@ -125,6 +125,11 @@ GENERIC_ENERGY_FINANCE_PATTERNS = (
     "태양광 pf", "태양광 프로젝트 파이낸싱", "태양광 금융", "solar pf",
     "신한은행", "은행", "pf 완료",
 )
+RENEWABLE_PROJECT_FINANCE_NOISE_PATTERNS = (
+    "재생에너지 금융", "해상풍력 pf", "풍력 pf", "pf 주선",
+    "프로젝트파이낸싱", "프로젝트 파이낸싱", "금융 주선", "은행",
+    "대출", "투자금융", "인프라금융", "해상풍력", "태양광 pf",
+)
 DIRECT_PROJECT_PATTERNS = (
     "수주", "발주", "입찰", "우선협상", "본계약", "계약", "프로젝트",
     "원전", "smr", "소형모듈원자로", "데이터센터", "데이터 센터",
@@ -140,16 +145,27 @@ AI_TOPIC_ANCHORS = (
     "ai", "인공지능", "생성형", "데이터센터", "데이터 센터", "idc",
     "ai 데이터센터", "ai 인프라", "스마트건설", "스마트 건설", "건설 ai",
     "ai 로봇", "건설로봇", "건설 로봇", "bim", "디지털트윈", "영상인식",
-    "자율시공", "smr", "소형모듈원자로", "원전", "전력망", "냉각", "쿨링",
+    "자율시공", "smr", "소형모듈원자로",
 )
 CONSTRUCTION_EXECUTION_ANCHORS = (
     "현대건설", "건설", "건설사", "epc", "시공", "수주", "발주", "프로젝트",
     "플랜트", "인프라", "전력 인프라", "전력인프라", "전력망", "부지", "냉각",
-    "계통", "송전", "변전", "현장", "안전관리", "r&d", "연구원",
+    "쿨링", "계통", "송전", "변전", "전력", "원전", "현장", "안전관리",
+    "r&d", "연구원", "에너지전환", "에너지 전환",
 )
 HDEC_AI_STRATEGIC_EXCEPTION_ANCHORS = (
-    "r&d", "스마트건설", "스마트 건설", "에너지전환", "에너지 전환",
-    "데이터센터", "데이터 센터", "smr", "원전", "ai",
+    "스마트건설", "스마트 건설", "건설 ai", "ai", "데이터센터",
+    "데이터 센터", "smr", "소형모듈원자로",
+)
+HDEC_ENERGY_TRANSITION_PAIR_ANCHORS = (
+    "스마트건설", "스마트 건설", "r&d", "연구개발", "연구원",
+    "데이터센터", "데이터 센터", "smr", "소형모듈원자로",
+)
+STRONG_AI_DC_SMART_TOPIC_ANCHORS = (
+    "ai 데이터센터", "데이터센터", "데이터 센터", "idc", "ai 인프라",
+    "스마트건설", "스마트 건설", "건설 ai", "ai 로봇", "건설로봇",
+    "건설 로봇", "bim", "디지털트윈", "영상인식", "자율시공", "smr",
+    "소형모듈원자로",
 )
 EXPOSURE_TITLE_NOISE_WORDS = {
     "단독", "속보", "인터뷰", "기획", "오늘의", "업계소식", "업계", "소식",
@@ -454,14 +470,35 @@ def _contains_any(text: str, patterns) -> bool:
     return any((p or "").lower() in low for p in patterns)
 
 
+def _has_strong_ai_dc_smart_topic(text: str) -> bool:
+    return _contains_any(text, STRONG_AI_DC_SMART_TOPIC_ANCHORS)
+
+
+def _renewable_project_finance_noise(text: str) -> bool:
+    return _contains_any(text, RENEWABLE_PROJECT_FINANCE_NOISE_PATTERNS)
+
+
+def _hdec_ai_strategic_exception(text: str) -> bool:
+    if "현대건설" not in (text or ""):
+        return False
+    if _contains_any(text, HDEC_AI_STRATEGIC_EXCEPTION_ANCHORS):
+        return True
+    return (
+        _contains_any(text, ("에너지전환", "에너지 전환"))
+        and _contains_any(text, HDEC_ENERGY_TRANSITION_PAIR_ANCHORS)
+    )
+
+
 def _ai_top_eligible(row: dict) -> bool:
     """AI 관련 상단 노출 적격성 (P0-D3T) — 토픽 앵커와 실행 앵커를 모두 요구한다.
 
     radar가 AI로 분류했어도 도시정비·재개발·일반 에너지 금융처럼 범용 건설/전력 단어만 있는
     기사는 AI 탭에서 제외한다. 표시 가드레일이며 점수/등급/분류는 바꾸지 않는다."""
     text = " ".join([row.get("title") or "", row.get("snippet") or ""])
-    if ("현대건설" in text
-            and _contains_any(text, HDEC_AI_STRATEGIC_EXCEPTION_ANCHORS)):
+    if (_renewable_project_finance_noise(text)
+            and not _has_strong_ai_dc_smart_topic(text)):
+        return False
+    if _hdec_ai_strategic_exception(text):
         return True
     return (_contains_any(text, AI_TOPIC_ANCHORS)
             and _contains_any(text, CONSTRUCTION_EXECUTION_ANCHORS))
