@@ -291,7 +291,7 @@ def format_digest_message(data: dict) -> str:
     기사 제목만 HTML 링크로 만들고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
     """
     news_mode = data.get("news_data_mode", "mock")
-    # 헤더는 mock일 때만 데이터 출처를 명시한다(데이터 정직성: 데모를 실데이터로 오인 방지).
+    # 헤더는 mock일 때만 데이터 출처를 명시한다(데이터 정직성: 데모를 실제 시장지표로 오인 방지).
     # live는 '자동 수집' 같은 기술 표현을 빼고 날짜만 둔다 — 상세 출처/모드는 리포트가 보여준다.
     date_line = f"{data['date_kst']} (KST)"
     if news_mode != "live":

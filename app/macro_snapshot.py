@@ -37,10 +37,13 @@ _LIVE_FETCH_FAILED_DISCLAIMER = (
     "(미연동과 동일하게 수치를 시세처럼 표시하지 않는다)."
 )
 _LIVE_OK_DISCLAIMER = (
-    "공개 시세 API에서 수집한 실데이터 — 출처·기준시각을 함께 표기한다. "
-    "참고용이며 체결값과 차이가 있을 수 있다."
+    "시장지표는 공개 시세 API 기준 참고용 데이터입니다. "
+    "현재 체결값이 아니며, 출처·기준시각을 함께 확인해야 합니다."
 )
-_LIVE_STALE_SUFFIX = " 최신 갱신이 지연되어 stale(지연) 데이터로 표시한다."
+_LIVE_STALE_SUFFIX = (
+    " 최신 갱신이 지연된 공개 시세 API 기준 참고용 데이터입니다. "
+    "현재 체결값이 아닙니다."
+)
 
 
 def _unavailable(disclaimer: str) -> dict:

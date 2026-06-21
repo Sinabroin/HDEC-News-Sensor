@@ -215,7 +215,7 @@ def check_macro_module() -> None:
     check("live 성공 → source/updated_at 표기",
           bool(ok.get("source")) and bool(ok.get("updated_at")))
     check("live 성공(최근 기준시각) → is_stale False", ok.get("is_stale") is False)
-    check("live 성공 → 실데이터 values 노출", bool(ok.get("values")))
+    check("live 성공 → 공개 시세 values 노출", bool(ok.get("values")))
     leak = [v for v in DISTINCTIVE_MACRO_VALUES
             if v in json.dumps(ok, ensure_ascii=False)]
     check("live 성공 → mock 고정값(1480.5/2864.7) 혼입 없음", not leak, ", ".join(leak))

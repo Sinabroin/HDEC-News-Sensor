@@ -378,7 +378,7 @@ def check_shared_snapshot_file() -> None:
 def _brief(mode: str, value: float) -> dict:
     snap = ({"macro_data_mode": "live", "source": "Yahoo Finance",
              "updated_at": "2026-06-16T21:30:00+00:00", "is_stale": False,
-             "disclaimer": "공개 시세 API 실데이터",
+             "disclaimer": "시장지표는 공개 시세 API 기준 참고용 데이터입니다. 현재 체결값이 아닙니다.",
              "values": [{"key": "usdkrw", "label": "USD/KRW", "value": value,
                          "unit": "원", "direction": "up"}]}
             if mode == "live"
@@ -442,7 +442,8 @@ from app import briefing
 _orig = briefing.macro_snapshot.get_macro_snapshot
 LIVE = {"macro_data_mode": "live", "source": "Yahoo Finance",
         "updated_at": "2026-06-17T23:16:00+00:00", "as_of": "2026-06-17T23:16:00+00:00",
-        "is_stale": False, "disclaimer": "공개 시세 API 실데이터",
+        "is_stale": False,
+        "disclaimer": "시장지표는 공개 시세 API 기준 참고용 데이터입니다. 현재 체결값이 아닙니다.",
         "values": [{"key": "usdkrw", "label": "USD/KRW", "value": 1512.91,
                     "unit": "원", "direction": "down"}]}
 def render(mode):
