@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config, source_quality
+from app import config, source_quality, topic_profiles
 
 KST = timezone(timedelta(hours=9))
 
@@ -124,6 +124,49 @@ def _configured_query_groups(cfg: dict) -> list[dict]:
     return groups
 
 
+def _merge_topic_profile_groups(groups: list[dict], cfg: dict) -> list[dict]:
+    """기본(production) 소스에 한해 enabled 토픽 프로파일 쿼리 그룹을 합친다 (P0-D5-A).
+
+    리스크/규제 그룹(고정 커버리지) 다음, 기본(default) 백필 그룹 앞에 끼워 넣어 프로파일이
+    공정한 수집 몫을 갖되 전역 max_total(70)을 넘지 않게 한다. 이미 다른 그룹에 있는 쿼리는
+    제외해 쿼리 폭증을 막는다(런타임 dedup과 별개로 audit도 깔끔). 새 그룹의 group["name"]은
+    profile.id라 query_audit이 자동으로 프로파일 출처를 담는다.
+
+    custom sources_path로 호출될 때(테스트 등)는 fetch_all이 이 함수를 거치지 않는다 —
+    호출자가 넘긴 설정만 그대로 쓰는 계약을 보존한다.
+    """
+    existing = {q.strip().casefold()
+                for g in groups for q in (g.get("queries") or [])}
+    default_per_query = int(cfg.get("max_per_query", 4))
+    profile_groups: list[dict] = []
+    for profile in topic_profiles.get_enabled_topic_profiles():
+        queries, seen = [], set()
+        for query in profile.queries:
+            key = query.strip().casefold()
+            if not key or key in existing or key in seen:
+                continue
+            seen.add(key)
+            queries.append(query)
+        if not queries:
+            continue
+        existing.update(seen)
+        profile_groups.append({
+            "name": profile.id,
+            "label": profile.label,
+            "queries": queries,
+            # 새 그룹은 보수적으로 per-query 2건 — 기존 그룹의 max_per_query는 바꾸지
+            # 않는다. 그룹 총량은 프로파일 max_items로 제한한다.
+            "max_per_query": min(2, default_per_query),
+            "max_total": max(1, int(profile.max_items)),
+        })
+    if not profile_groups:
+        return groups
+    for i, group in enumerate(groups):
+        if group.get("name") == "default":
+            return groups[:i] + profile_groups + groups[i:]
+    return groups + profile_groups
+
+
 def _fetch(url: str, timeout: int) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (public RSS)
@@ -219,6 +262,10 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     """
     cfg = _load_sources(sources_path)
     query_groups = _configured_query_groups(cfg)
+    # P0-D5-A: 기본 production 소스일 때만 enabled 토픽 프로파일 쿼리를 합친다.
+    # custom sources_path(테스트/대체 설정)는 넘긴 설정만 그대로 쓴다.
+    if sources_path is None:
+        query_groups = _merge_topic_profile_groups(query_groups, cfg)
     if not query_groups:
         return []
 

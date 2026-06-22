@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     article_quality, config, db, decision_relevance, insight, macro_snapshot,
-    radar, risk_events, scoring, source_quality, surface_contracts,
+    radar, risk_events, scoring, source_quality, surface_contracts, topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -42,6 +42,11 @@ TOP_VERY_STALE_DAYS = 90
 AI_TAB_SUPPLEMENT_TARGET = 3
 AI_TAB_SUPPLEMENT_MAX = 5
 AI_TAB_SUPPLEMENT_NEAR_DUP_RATIO = 0.6
+
+# P0-D5-A: 토픽 프로파일 섹션에서 한 회사가 섹션을 도배하지 않게 회사당 상한(경쟁사 섹션과
+# 동일 메커니즘). 회사명이 없는 기사(신탁/시행 일부)는 캡하지 않는다. 회사 다양성을 높여
+# 같은 보도의 매체별 중복(예: 동일 특허 5개 매체)이 섹션을 채우는 것을 막는다.
+TOPIC_SECTION_COMPANY_CAP = 2
 
 # P0-D3F/P0-D3L: surface 간 노출 중복 억제 — 같은 기사/제목/클러스터가 여러 상단 카드를
 # 도배하지 않게 한다. D3L부터 임원 visible surface에서는 정확히 같은 article/title/url은
@@ -1841,6 +1846,50 @@ def build_brief(pipeline_counts: dict | None = None,
         ai_radar_signals,
         [top_immediate, hdec_direct_signals, business_signals, top_issues])
 
+    # D5-A: 구성 가능한 토픽 프로파일 섹션 (현대 그룹사·신탁사·시행사·경쟁 시공사).
+    # topic_profiles로 분류해 추가 커버리지 섹션을 파생한다. surface_state를 쓰지 않아
+    # (독립 surface) 위 상단 카드 선택을 바꾸지 않는다 — 순수 추가 출력 키이며 점수/등급/
+    # 분류 재계산이나 DB 쓰기는 없다. 같은 기사가 상단 카드와 이 섹션에 함께 노출될 수 있다
+    # (의도된 multi-section 커버리지, category_sections·risk 섹션과 동형).
+    # 풀은 risk_pool과 동형: scored 전체에서 비뉴스성 출처·노출 제외만 거른다(등급 필터 없음).
+    # 신탁/시행 등 신규 주제는 generic scorer가 낮게(심지어 '제외') 매겨도 임원 인지를 위해
+    # 드러나야 하므로 등급으로 걸러내지 않는다. 노이즈는 match_topic_profile(엔티티∧관련성∧
+    # ¬노이즈) + 출처/노출 필터 + max 5건 상한으로 막는다.
+    topic_pool = [r for r in scored
+                  if not _is_excluded_quality(r)
+                  and not _is_top_exposure_excluded(r, decisions.get(r["id"]))]
+
+    def _topic_profile_group(profile_id):
+        profile = topic_profiles.get_topic_profile(profile_id)
+        if profile is None or not profile.enabled:
+            return []
+        rows = [r for r in topic_pool
+                if topic_profiles.match_topic_profile(
+                    {"title": r.get("title"), "snippet": r.get("snippet"),
+                     "source": r.get("source")}, profile)]
+        rows.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        # 회사당 상한 — 같은 보도의 매체별 중복이 섹션을 도배하지 않게 (회사명 없으면 캡 없음).
+        capped, counts = [], {}
+        for r in rows:
+            ck = decision_relevance.company_key(r.get("title") or "")
+            if ck is not None and counts.get(ck, 0) >= TOPIC_SECTION_COMPANY_CAP:
+                continue
+            if ck is not None:
+                counts[ck] = counts.get(ck, 0) + 1
+            capped.append(r)
+        return [_entry(i, r) for i, r in enumerate(capped[:profile.max_items], start=1)]
+
+    hyundai_group_signals = _topic_profile_group("hyundai_group")
+    competitor_contractor_signals = _topic_profile_group("competitor_contractors")
+    trust_company_signals = _topic_profile_group("trust_companies")
+    developer_signals = _topic_profile_group("developers")
+    topic_profile_catalog = [
+        {"id": p.id, "label": p.label, "description": p.description,
+         "enabled": p.enabled, "surface_key": p.surface_key,
+         "max_items": p.max_items, "priority": p.priority}
+        for p in topic_profiles.all_topic_profiles()
+    ]
+
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계
     theme_stats = {}
     for row in signal_rows:
@@ -1964,6 +2013,12 @@ def build_brief(pipeline_counts: dict | None = None,
         "business_signals": business_signals,
         "competitor_supply_signals": competitor_supply_signals,
         "macro_economy_signals": macro_economy_signals,
+        # P0-D5-A 구성 가능한 토픽 프로파일 섹션 (표시 전용 추가 키, 기존 surface 예산 불변).
+        "hyundai_group_signals": hyundai_group_signals,
+        "competitor_contractor_signals": competitor_contractor_signals,
+        "trust_company_signals": trust_company_signals,
+        "developer_signals": developer_signals,
+        "topic_profile_catalog": topic_profile_catalog,
         "radar_labels": radar.RADAR_LABELS,
         "executive_labels": decision_relevance.EXEC_LABELS,
         "executive_short_labels": decision_relevance.EXEC_SHORT,
