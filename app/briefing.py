@@ -18,7 +18,8 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     article_quality, config, db, decision_relevance, insight, macro_snapshot,
-    radar, risk_events, scoring, source_quality, surface_contracts, topic_profiles,
+    market_snapshot, radar, risk_events, scoring, source_quality, surface_contracts,
+    topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -1954,6 +1955,13 @@ def build_brief(pipeline_counts: dict | None = None,
     # app/live_macro.py가 공개 시세 API를 시도하고 실패 시 unavailable로 강등한다.
     macro = macro_snapshot.get_macro_snapshot(config.MACRO_MODE)
 
+    # P0-D5-B 시장 센싱 데이터 레이어 — 건설 원자재·국채 금리·환율 (표시 전용 추가 키).
+    # 공개 시세(지연)/대용(proxy)/보고/미연동을 종목별 data_mode로 정직하게 표기하며,
+    # macro와 같은 MACRO_MODE 스위치를 공유한다(둘 다 공개 시장 데이터). 기본 mock =
+    # 네트워크 0건·값 미생성, live일 때만 app/live_market.py가 공개 시세를 시도하고
+    # 실패 시 unavailable로 강등한다. surface_state를 쓰지 않는 순수 파생 키다.
+    market = market_snapshot.get_market_snapshot(config.MACRO_MODE)
+
     # 뉴스 출처 모드는 저장된 기사 signal_origin에서 파생한다 (DB가 단일 진실).
     # provenance가 주어지면 fallback 여부 등 런타임 상태를 추가로 반영한다.
     news_mode = _derive_news_mode(rows)
@@ -2030,6 +2038,13 @@ def build_brief(pipeline_counts: dict | None = None,
         "source_filtered_evidence": source_filtered,
         "exposure_quality_audit": exposure_quality_audit,
         "macro_snapshot": macro,
+        # P0-D5-B 시장 센싱 데이터 레이어 (표시 전용 추가 키, 기존 surface/예산 불변).
+        # 종목별 data_mode(delayed/proxy/manual/unavailable)·출처·기준시각을 함께 싣는다.
+        "market_data_mode": market.get("mode"),
+        "market_snapshot": market,
+        "construction_commodities_snapshot": market["categories"]["construction_commodities"],
+        "sovereign_yields_snapshot": market["categories"]["sovereign_yields"],
+        "fx_snapshot": market["categories"]["fx"],
         "status_board_legend": STATUS_BOARD_LEGEND,
         "spread_method": SPREAD_METHOD,
         "spread_note": SPREAD_NOTE,
