@@ -77,6 +77,51 @@
         "ai_tab": false,
         "operator_reference": true
       }
+    },
+    {
+      "id": "hdec_urban_redevelopment_dc_mixed_noise",
+      "article": {
+        "source": "테스트",
+        "title": "[기획] 현대건설, 도시정비 12조·데이터센터 양 축 강화",
+        "snippet": "현대건설이 도시정비 수주와 데이터센터를 양 축으로 사업 포트폴리오를 강화하고 있다"
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    },
+    {
+      "id": "dc_epc_power_cooling_positive",
+      "article": {
+        "source": "테스트",
+        "title": "[에코플랜트 밸류업]③ 데이터센터 EPC, '전력·냉각 기술'로 차별화",
+        "snippet": "데이터센터 EPC에서 전력·냉각 기술 경쟁력이 중요해지고 있다"
+      },
+      "expected": {
+        "ai_tab": true
+      }
+    },
+    {
+      "id": "ai_infra_hightech_epc_positive",
+      "article": {
+        "source": "테스트",
+        "title": "[에코플랜트 밸류업]② AI 인프라 전략, 하이테크 EPC로 실행",
+        "snippet": "AI 인프라 수요에 맞춰 하이테크 EPC 역량을 강화한다"
+      },
+      "expected": {
+        "ai_tab": true
+      }
+    },
+    {
+      "id": "smart_construction_robot_positive",
+      "article": {
+        "source": "테스트",
+        "title": "대동로보틱스, GS건설과 맞손… AI 필드로봇으로 ‘스마트 건설 자동화’ 영토 확장",
+        "snippet": "AI 필드로봇이 건설현장 자동화와 스마트 건설 실행으로 확산되고 있다"
+      },
+      "expected": {
+        "ai_tab": true
+      }
     }
   ]
 }

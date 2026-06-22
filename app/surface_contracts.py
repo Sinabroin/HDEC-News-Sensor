@@ -94,6 +94,63 @@ CAREER_EVENT_PATTERNS = (
     "취업 기회",
 )
 
+# Mixed HDEC business / urban-redevelopment / order-portfolio title terms.
+# When a title is built around these AND carries no AI/DC execution-primary
+# phrase, a side mention of "데이터센터" must not pull the item into the
+# executive AI tab — e.g. "현대건설, 도시정비 12조·데이터센터 양 축 강화" is an
+# order/portfolio story where the data center is only one of several axes.
+# NOTE: keep these specific. Bare "12조" is intentionally excluded — it is a
+# substring of legitimate DC-investment headlines (e.g. "데이터센터에 12조원
+# 투자"), so the redevelopment-bound "도시정비 12조" is used instead.
+MIXED_BUSINESS_TITLE_PATTERNS = (
+    "도시정비",
+    "도시정비 12조",
+    "정비사업",
+    "정비사업 대어급",
+    "재건축",
+    "재개발",
+    "수주",
+    "매출",
+    "실적",
+    "포트폴리오",
+    "사업 포트폴리오",
+    "분양",
+    "양 축",
+)
+
+# Strong AI/DC/smart-construction/SMR *execution-primary* title phrases. A title
+# carrying one of these is AI/DC-primary even if it also names a business axis,
+# so it stays eligible. This is a STRICTER subset than STRONG_AI_TITLE_TOPICS
+# (which accepts a bare "데이터센터"): the bare topic alone cannot rescue a
+# mixed-business title. Data center is bound to an execution noun
+# (EPC/신축/공사/시공/건설/발주) so genuine data-center build orders such as
+# "데이터센터 신축 공사 수주" are never mistaken for portfolio/order narrative.
+STRONG_AI_PRIMARY_TITLE_PATTERNS = (
+    "AI 데이터센터",
+    "데이터센터 EPC",
+    "데이터 센터 EPC",
+    "데이터센터 신축",
+    "데이터센터 공사",
+    "데이터센터 시공",
+    "데이터센터 건설",
+    "데이터센터 발주",
+    "전력·냉각",
+    "전력망·냉각",
+    "냉각 기술",
+    "AI 인프라",
+    "하이테크 EPC",
+    "스마트건설",
+    "스마트 건설",
+    "건설 AI",
+    "AI 로봇",
+    "AI 필드로봇",
+    "건설로봇",
+    "BIM",
+    "디지털트윈",
+    "SMR",
+    "소형모듈원자로",
+)
+
 
 def _norm(text: str | None) -> str:
     return (text or "").casefold()
@@ -146,6 +203,9 @@ def decide_ai_tab(article: dict) -> SurfaceDecision:
     - snippet may provide execution context, but cannot rescue a non-AI title
     - title-centered finance/PF/stock/redevelopment noise is rejected unless the
       title itself has a strong topic
+    - title-primary: a mixed business/urban-redevelopment/order title (도시정비·
+      수주·포트폴리오·양 축 …) is rejected when it lacks an AI/DC execution-primary
+      phrase, so a side mention of "데이터센터" cannot make it AI-eligible
     - career/event items stay out of the executive AI tab even when they mention
       smart construction
     """
@@ -156,6 +216,8 @@ def decide_ai_tab(article: dict) -> SurfaceDecision:
     strong_title = _strong_title_matches(title)
     title_exclusions = _matches(title, TITLE_EXCLUSION_PATTERNS)
     career_event = _matches(title, CAREER_EVENT_PATTERNS)
+    mixed_business = _matches(title, MIXED_BUSINESS_TITLE_PATTERNS)
+    ai_primary = _matches(title, STRONG_AI_PRIMARY_TITLE_PATTERNS)
 
     if career_event:
         return _decision(
@@ -165,6 +227,20 @@ def decide_ai_tab(article: dict) -> SurfaceDecision:
             operator_note="career/event-centered title is operator/reference, not executive AI tab",
             severity="review",
             matched_terms=career_event,
+        )
+
+    # Title-primary guard: an order/portfolio/urban-redevelopment title whose
+    # only AI hook is a bare "데이터센터" mention is operator/reference, not the
+    # executive AI tab. An AI/DC execution-primary phrase (incl. DC bound to a
+    # build noun) keeps genuine data-center execution stories eligible.
+    if mixed_business and not ai_primary:
+        return _decision(
+            eligible=False,
+            reason_code="ai_tab.reject.mixed_business_title_not_ai_primary",
+            public_reason="제목이 도시정비·수주·포트폴리오 등 사업 축 중심이며 AI·DC 실행이 핵심이 아님",
+            operator_note="mixed business/urban-redevelopment/order title; data center is only a side axis, not AI/DC execution-primary",
+            severity="review",
+            matched_terms=mixed_business,
         )
 
     if title_exclusions and not strong_title:
