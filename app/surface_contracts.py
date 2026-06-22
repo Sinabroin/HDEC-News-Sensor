@@ -17,6 +17,8 @@ class SurfaceDecision:
     operator_note: str
     severity: str = "info"
     matched_terms: list[str] = field(default_factory=list)
+    # D4-E: AI-tab supplement priority (1=best). 0 means "not applicable".
+    tier: int = 0
 
 
 STRONG_AI_TITLE_TOPICS = (
@@ -151,6 +153,45 @@ STRONG_AI_PRIMARY_TITLE_PATTERNS = (
     "소형모듈원자로",
 )
 
+# --- D4-E AI-tab supplement contract --------------------------------------
+# When the executive AI tab is under-filled (<3 items), high-quality AI/DC/
+# smart-construction stories the radar routed into OTHER executive sections
+# (HDEC-direct, order/overseas, immediate) may *supplement* it. This gate is
+# title-first and intentionally BROADER than decide_ai_tab — the candidates are
+# already executive-surfaced, so we only re-confirm the title is genuinely an
+# AI/DC/smart-construction story (not a side mention) and free of mixed-business
+# or stock noise. Generic 원전/SMR is deliberately NOT a supplement signal
+# (unlike decide_ai_tab): a nuclear title belongs in the AI tab only when it
+# also carries a data-center/AI/power/cooling/robot/EPC hook, which the primary
+# patterns below already require, so a pure "원전 부지 선정" never supplements.
+AI_SUPPLEMENT_PRIMARY_PATTERNS = (
+    "AI 데이터센터", "데이터센터", "데이터 센터", "IDC", "AI 인프라",
+    "AI 필드로봇", "필드로봇", "건설로봇", "건설 로봇", "AI 로봇",
+    "스마트건설", "스마트 건설", "건설 AI", "건설사 AI", "건설현장 AI",
+    "건설 현장 AI", "BIM", "디지털트윈", "자율시공",
+)
+# Mixed business / urban-redevelopment / stock noise that must never enter the
+# AI tab even as a supplement (D4-D contract terms + stock-hype tickers).
+AI_SUPPLEMENT_REJECT_PATTERNS = (
+    "도시정비 12조", "데이터센터 양 축 강화", "사업 포트폴리오",
+    "정비사업 대어급", "도시정비", "재건축", "재개발", "분양",
+    "ETF", "삼전", "하닉", "진로", "현장견학",
+)
+# Data-center primary tokens (tier classification).
+AI_SUPPLEMENT_DC_TERMS = ("AI 데이터센터", "데이터센터", "데이터 센터", "IDC")
+# Order/contract/policy hooks that mark a data-center story execution-grade
+# (tier-2) rather than a generic mention.
+AI_SUPPLEMENT_DC_ORDER_HOOKS = (
+    "수주", "계약", "본계약", "EPC", "특별법", "전력", "냉각", "발주", "투자",
+)
+# Robot / field-automation / smart-construction execution hooks (tier-3).
+AI_SUPPLEMENT_ROBOT_HOOKS = (
+    "필드로봇", "건설로봇", "건설 로봇", "로봇", "자동화",
+    "스마트건설", "스마트 건설",
+)
+# HDEC / Hyundai construction-group names (tier-1 with an AI/DC primary signal).
+AI_SUPPLEMENT_HDEC_NAMES = ("현대건설", "현대엔지니어링", "현대ENG", "현대 ENG")
+
 
 def _norm(text: str | None) -> str:
     return (text or "").casefold()
@@ -283,6 +324,56 @@ def decide_ai_tab(article: dict) -> SurfaceDecision:
         public_reason="AI 인프라·건설 AI 실행 맥락",
         operator_note="strong title topic plus construction/project/execution anchor",
         matched_terms=matched,
+    )
+
+
+def decide_ai_supplement(article: dict) -> SurfaceDecision:
+    """Decide whether an already-surfaced non-AI item may supplement the AI tab.
+
+    Title-first and broader than decide_ai_tab (the candidate is already
+    executive-surfaced). Eligible iff the TITLE carries a genuine AI/DC/smart-
+    construction signal AND no mixed-business/stock-noise term. Sets `tier` for
+    ordering: 1=HDEC + AI/DC, 2=data center + order/policy hook, 3=robot/smart-
+    construction, 4=other AI/DC. Generic 원전/SMR alone never qualifies — it is
+    not a primary supplement term (see AI_SUPPLEMENT_PRIMARY_PATTERNS).
+    """
+    title = article.get("title") or ""
+    primary = _matches(title, AI_SUPPLEMENT_PRIMARY_PATTERNS)
+    reject = _matches(title, AI_SUPPLEMENT_REJECT_PATTERNS)
+
+    if reject or not primary:
+        return SurfaceDecision(
+            surface="ai_tab_supplement",
+            eligible=False,
+            reason_code=("ai_tab.supplement.reject.mixed_or_stock_noise"
+                         if reject else
+                         "ai_tab.supplement.reject.not_ai_primary"),
+            public_reason="AI 탭 보충 기준 미충족",
+            operator_note=("mixed business / stock noise in title"
+                           if reject else
+                           "no AI/DC/smart-construction primary signal in title"),
+            severity="review",
+            matched_terms=reject or [],
+        )
+
+    has_dc = bool(_matches(title, AI_SUPPLEMENT_DC_TERMS))
+    if _matches(title, AI_SUPPLEMENT_HDEC_NAMES):
+        tier = 1
+    elif has_dc and _matches(title, AI_SUPPLEMENT_DC_ORDER_HOOKS):
+        tier = 2
+    elif _matches(title, AI_SUPPLEMENT_ROBOT_HOOKS):
+        tier = 3
+    else:
+        tier = 4
+    return SurfaceDecision(
+        surface="ai_tab_supplement",
+        eligible=True,
+        reason_code=f"ai_tab.supplement.accept.tier{tier}",
+        public_reason="AI 인프라·데이터센터·스마트건설 보충 신호",
+        operator_note="AI/DC/smart-construction title surfaced in another section",
+        severity="info",
+        matched_terms=primary,
+        tier=tier,
     )
 
 

@@ -36,6 +36,13 @@ TOP_NEW_SCORE_FLOOR = 2.5
 TOP_STALE_DAYS = 45
 TOP_VERY_STALE_DAYS = 90
 
+# D4-E: AI 탭 보충 — AI 탭이 TARGET건 미만이면 이미 다른 임원 섹션에 노출된 고품질
+# AI/DC/스마트건설 후보로 채워 '안정적 3~5건' 커버리지를 만든다. 점수/등급 재계산 없는
+# 표시 전용 가드레일이며, mixed 사업·종목성 제목은 절대 보충하지 않는다(D4-D 계약 유지).
+AI_TAB_SUPPLEMENT_TARGET = 3
+AI_TAB_SUPPLEMENT_MAX = 5
+AI_TAB_SUPPLEMENT_NEAR_DUP_RATIO = 0.6
+
 # P0-D3F/P0-D3L: surface 간 노출 중복 억제 — 같은 기사/제목/클러스터가 여러 상단 카드를
 # 도배하지 않게 한다. D3L부터 임원 visible surface에서는 정확히 같은 article/title/url은
 # 단 1회만 노출한다. 점수·등급·원문 dedup은 변경하지 않는 표시 전용 가드레일이다.
@@ -793,6 +800,75 @@ def _filter_surface_exposures(rows: list[dict], limit: int, *,
                                count_category=count_category)
                 break
     return picked
+
+
+def _supplement_title_overlap(a: str, b: str) -> float:
+    """두 정규화 제목의 토큰 겹침 비율(교집합 / 짧은 쪽 길이) — near-duplicate 판정용.
+
+    제목 접미 조사 차이(예: '필드로봇' vs '필드로봇으로')로 클러스터 키가 갈리는 거의 같은
+    기사(동일 로봇 자동화 기사쌍)를 잡아낸다. 서로 다른 DC 기사는 겹침이 낮아 보존된다.
+    """
+    ta, tb = set(a.split()), set(b.split())
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / min(len(ta), len(tb))
+
+
+def _supplement_ai_tab(ai_entries: list[dict],
+                       candidate_surfaces: list[list[dict]]) -> list[dict]:
+    """D4-E: AI 탭이 비어 보이지 않게 보충한다 (표시 전용, 점수/등급/분류 재계산 없음).
+
+    AI 탭이 AI_TAB_SUPPLEMENT_TARGET건 미만이면, 이미 다른 임원 상단 섹션에 노출된 고품질
+    AI/DC/스마트건설 기사로 채운다. 적격성·우선순위(tier)는 surface_contracts.
+    decide_ai_supplement(raw 제목만 본다)가 결정한다 — HDEC+AI/DC → DC+수주·정책 →
+    로봇·스마트건설 순. 동일 기사/클러스터/유사 제목(특히 동일 로봇 자동화 기사쌍)은 1건으로
+    dedup하고, mixed 사업·종목성 제목은 들이지 않는다(D4-D 계약 유지). 기존 AI 탭 선택·순서는
+    그대로 두고 뒤에 보충분만 덧붙이며, 보충분은 ai_supplement=True 내부 표식만 남기고 임원
+    라벨은 노출하지 않는다. risk_regulation·경쟁사·거시는 호출자가 candidate_surfaces에서
+    제외한다(AI 안전·산재·제재는 리스크 섹션이 소유). TARGET~MAX(3~5)에서 멈춘다."""
+    if len(ai_entries) >= AI_TAB_SUPPLEMENT_TARGET:
+        return ai_entries
+
+    seen_ids = {e.get("article_id") for e in ai_entries}
+    seen_clusters = {e.get("exposure_cluster_key") for e in ai_entries
+                     if e.get("exposure_cluster_key")}
+    seen_titles = [_normalize_exposure_text(e.get("title") or "")
+                   for e in ai_entries]
+
+    # 우선순위 surface 순서대로 적격 후보 수집(원 노출 순서를 tie-break로 보존).
+    candidates = []
+    for order, entry in enumerate(
+            e for surface in candidate_surfaces for e in surface):
+        if entry.get("article_id") in seen_ids:
+            continue
+        decision = surface_contracts.decide_ai_supplement(
+            {"title": entry.get("title") or ""})
+        if decision.eligible:
+            candidates.append((decision.tier, order, entry))
+    candidates.sort(key=lambda c: (c[0], c[1]))
+
+    supplemented = list(ai_entries)
+    for _tier, _order, entry in candidates:
+        if len(supplemented) >= AI_TAB_SUPPLEMENT_TARGET:
+            break
+        if len(supplemented) >= AI_TAB_SUPPLEMENT_MAX:
+            break
+        cluster = entry.get("exposure_cluster_key")
+        ntitle = _normalize_exposure_text(entry.get("title") or "")
+        if cluster and cluster in seen_clusters:
+            continue
+        if any(_supplement_title_overlap(ntitle, prev) >= AI_TAB_SUPPLEMENT_NEAR_DUP_RATIO
+               for prev in seen_titles):
+            continue
+        sup = dict(entry)
+        sup["ai_supplement"] = True
+        sup["rank"] = len(supplemented) + 1
+        supplemented.append(sup)
+        seen_ids.add(entry.get("article_id"))
+        if cluster:
+            seen_clusters.add(cluster)
+        seen_titles.append(ntitle)
+    return supplemented
 
 
 def _build_exposure_audit(scored_rows: list[dict], decisions: dict[str, dict],
@@ -1755,6 +1831,15 @@ def build_brief(pipeline_counts: dict | None = None,
         _entry(i, r)
         for i, r in enumerate(issue_rows, start=1)
     ]
+
+    # D4-E: AI 탭 보충 — AI 탭이 3건 미만이면 이미 다른 임원 섹션에 노출된 고품질 AI/DC/
+    # 스마트건설 후보로 채워 '안정적 3~5건'을 만든다. 후보는 즉시 알림·현대건설 직접·수주·해외·
+    # 신규 이슈 surface에서만 가져온다(risk_regulation·경쟁사·거시 제외 — AI 안전·산재·제재는
+    # 리스크 섹션이 소유). 보충분은 원 섹션에도 그대로 남아 의도된 multi-section으로 함께
+    # 노출된다(표시 전용, 점수/등급/분류 재계산 없음).
+    ai_radar_signals = _supplement_ai_tab(
+        ai_radar_signals,
+        [top_immediate, hdec_direct_signals, business_signals, top_issues])
 
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계
     theme_stats = {}
