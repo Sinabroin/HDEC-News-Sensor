@@ -239,6 +239,28 @@
   .legend .it.off .sw{background:repeating-linear-gradient(90deg,var(--mute5) 0 3px,transparent 3px 6px); height:2px;}
   .axisnote{font-size:11px; color:var(--mute3); font-weight:500; margin-top:8px; line-height:1.5;}
 
+  /* ===== Market universe: category cards + maturity/country chips ===== */
+  .mktcats{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; align-items:start; margin-top:10px;}
+  @media (max-width:760px){ .mktcats{grid-template-columns:1fr;} }
+  .mcat-card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:14px 16px 9px;}
+  .mcat-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:2px;}
+  .mcat-t{font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
+  .mcat-c{font-size:10.5px; font-weight:700; color:var(--mute4); flex:none;}
+  .men{font-size:10.5px; font-weight:600; color:var(--mute4); margin-left:5px;}
+  .chiprow{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:6px 0 8px;}
+  .chiprow .chiplabel{font-size:12px; font-weight:700; color:var(--mute3); flex:none;}
+  .chips-inline{display:flex; flex-wrap:wrap; gap:6px;}
+  .mtog{border:1px solid var(--line); background:var(--card); color:var(--ink4); font:inherit; font-size:12px; font-weight:700;
+    padding:5px 11px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center;}
+  .mtog:hover{background:#F4F9FE;}
+  .mtog.on{background:var(--sky-tint); border-color:var(--sky-bd); color:var(--sky);}
+  .mtog.off{color:var(--mute4); background:#F4F6FA; border-style:dashed; cursor:not-allowed;}
+  .mtog .x{font-size:9px; font-weight:800; margin-left:5px; opacity:.75; letter-spacing:0.02em;}
+  .expandbtn{border:none; background:transparent; color:var(--sky); font:inherit; font-size:12px; font-weight:700; cursor:pointer; padding:5px 4px;}
+  .seeall{width:100%; margin-top:12px; padding:9px; background:#F4F9FE; border:1px solid var(--sky-bd); border-radius:10px;
+    font-size:12px; font-weight:700; color:var(--sky); cursor:pointer;}
+  .seeall:hover{background:var(--sky-tint);}
+
   /* ===== Hormuz card ===== */
   .hz .row{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
   .hz .big{font-size:30px; font-weight:800; color:var(--mute4); font-variant-numeric:tabular-nums; line-height:1;}
@@ -424,7 +446,7 @@
     <div class="metric"><div class="row"><span class="ic" style="background:#FBF3E5; color:#9C7232;">◆</span><span class="lbl">리스크·규제</span></div><div class="val num" style="color:#9C7232;">2</div><div class="desc">중대재해·특별감독</div></div>
     <div class="metric"><div class="row"><span class="ic" style="background:#EAF5EE; color:#3C7A4E;">◈</span><span class="lbl">AI 신호</span></div><div class="val num" style="color:#3C7A4E;">8</div><div class="desc">AI 관련 · 기사 상대 비중</div></div>
     <div class="metric"><div class="row"><span class="ic" style="background:#EAF2FC; color:#3F6FA8;">■</span><span class="lbl">현대건설 직접</span></div><div class="val num" style="color:#3F6FA8;">1</div><div class="desc">직접 의사결정 신호</div></div>
-    <div class="metric"><div class="row"><span class="ic" style="background:#EEF2F7; color:#9AAAC1;">◑</span><span class="lbl">시장 압력 / 추세 관찰</span></div><div class="val small num" style="color:#9AAAC1;">미연동</div><div class="desc">원자재·금리·환율 (지연/대용)</div></div>
+    <div class="metric"><div class="row"><span class="ic" style="background:#EEF2F7; color:#9AAAC1;">◑</span><span class="lbl">시장 모니터링</span></div><div class="val small num" style="color:#9AAAC1;">지연·대용</div><div class="desc">원자재·금속·유가·금리·환율 (데모)</div></div>
   </section>
 
   <!-- =================== MAIN GRID =================== -->
@@ -470,7 +492,7 @@
           <button class="tab active" data-tab="news" role="tab">뉴스</button>
           <button class="tab" data-tab="ai" role="tab">AI 신호</button>
           <button class="tab" data-tab="market" role="tab">시장</button>
-          <button class="tab" data-tab="rumor" role="tab">카더라·초기신호</button>
+          <button class="tab" data-tab="rumor" role="tab">초기신호</button>
         </div>
         <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · 21 신호 <span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
       </div>
@@ -562,8 +584,8 @@
 
         <div class="card" style="padding:22px 24px; margin-bottom:14px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0; margin-bottom:14px;">
-            <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 (282건 기준)</small></div>
-            <div class="pnote">% = 수집 기사 중 해당 테마 언급 상대 비중입니다. 전력량/전력망 측정값이 아닙니다.</div>
+            <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 · 전력 실측값 아님 (282건 기준)</small></div>
+            <div class="pnote">% = 수집 기사 중 해당 테마 언급 상대 비중입니다. 전력량·전력망 실측값이 아닙니다 (전력 실측값 아님).</div>
           </div>
           <div id="aiThemes"></div>
         </div>
@@ -574,29 +596,30 @@
 
       <!-- ====== TAB: 시장 ====== -->
       <section class="tabpanel hidden" id="panel-market">
+        <!-- 1) 정직성 스트립 -->
         <div class="banner">
           <span>ⓘ</span>
           <span>모든 시세는 공개·무료 <b>지연</b> / 대용(proxy) / 보고 기반 참고용이며 <b>현재 체결값이 아닙니다</b>.
-          공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기).</span>
+          공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기). <b>NON-PRODUCTION PREVIEW</b>.</span>
         </div>
 
-        <!-- snapshot rows with sparklines -->
-        <div class="card" style="padding:20px 22px; margin-bottom:14px;">
-          <div class="panel" style="border:none; box-shadow:none; padding:0;">
-            <div class="ph">시장 스냅샷 <small>· 원자재 · 금리 · 환율</small></div>
-            <div class="pnote">행별 스파크라인은 추세 방향 데모입니다. 종목별 data_mode(지연/대용/보고/미연동)를 함께 확인하세요.</div>
+        <!-- 2) 카테고리 카드 — 원자재·금속 / 철강·건자재 / 유가·정제유 / 가스·LNG / 석탄 / 금리·물가 / 환율 -->
+        <div style="margin-bottom:8px;">
+          <div class="panel" style="border:none; box-shadow:none; padding:0 2px;">
+            <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
+            <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
           </div>
-          <div class="clickhint">↗ 행을 클릭하면 상세 차트(기간 1주·1개월·3개월·1년)가 열립니다 — 데모 미리보기.</div>
-          <div id="marketSnapshot"></div>
+          <div class="clickhint" style="margin-top:8px;">↗ 행을 클릭하면 상세 차트(기간 1주·1개월·3개월·1년)가 열립니다 — 데모 미리보기.</div>
+          <div class="mktcats" id="marketCategories"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
-            <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다.</div>
+            <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
         </div>
 
-        <!-- detail chart -->
+        <!-- 3) 상세 비교 차트 — 국가 내 / 국가 간 / 정규화 -->
         <div class="card chartcard" style="margin-bottom:14px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0;">
-            <div class="ph">금리·물가 비교 <small>· 상세 차트</small></div>
-            <div class="pnote">프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (데모 시계열 — 현재 체결값 아님). 미연동 시리즈는 가짜 선을 그리지 않으며, 단위가 다른 비교는 정규화(기준일=100)로만 표시합니다.</div>
+            <div class="ph">금리·물가 비교 <small>· 상세 차트 (전체 만기 · 정책/물가/스프레드)</small></div>
+            <div class="pnote">프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (데모 시계열 — 현재 체결값 아님). 미연동 만기/지표는 가짜 선을 그리지 않고 <b>소스 필요</b> 칩으로 표시하며, 단위가 다른 비교는 정규화(기준일=100)로만 표시합니다.</div>
           </div>
           <div class="chartctl">
             <div class="seg" id="yieldModeSeg">
@@ -607,19 +630,48 @@
               <select class="sel" id="countrySel">
                 <option value="us">미국 (US)</option>
                 <option value="kr">한국 (KR)</option>
-                <option value="eu">유럽 (EU)</option>
+                <option value="eu">유로존 (EU/DE)</option>
                 <option value="jp">일본 (JP)</option>
+                <option value="uk">영국 (UK)</option>
+                <option value="cn">중국 (CN)</option>
+                <option value="ca">캐나다 (CA)</option>
+                <option value="au">호주 (AU)</option>
               </select>
             </span>
             <span class="selwrap hidden" id="crossSel"><span>지표</span>
               <select class="sel" id="metricSel">
-                <option value="2y">2Y</option>
-                <option value="5y">5Y</option>
-                <option value="10y" selected>10Y</option>
-                <option value="cpi">CPI</option>
+                <optgroup label="만기 (금리)">
+                  <option value="3m">3M</option>
+                  <option value="6m">6M</option>
+                  <option value="1y">1Y</option>
+                  <option value="2y">2Y</option>
+                  <option value="3y">3Y</option>
+                  <option value="5y">5Y</option>
+                  <option value="7y">7Y</option>
+                  <option value="10y" selected>10Y</option>
+                  <option value="20y">20Y</option>
+                  <option value="30y">30Y</option>
+                </optgroup>
+                <optgroup label="정책 · 물가 · 스프레드">
+                  <option value="base_rate">기준금리</option>
+                  <option value="cpi">CPI YoY</option>
+                  <option value="core_cpi">Core CPI YoY</option>
+                  <option value="ppi">PPI YoY</option>
+                  <option value="spread_10y_2y">10Y-2Y 스프레드</option>
+                  <option value="spread_10y_3m">10Y-3M 스프레드</option>
+                </optgroup>
               </select>
             </span>
             <label class="toggle"><input type="checkbox" id="normToggle"> 정규화 추세 (기준일=100)</label>
+          </div>
+          <div class="chiprow" id="matChipRow">
+            <span class="chiplabel">만기</span>
+            <div class="chips-inline" id="matChips"></div>
+            <button class="expandbtn" id="matExpand" type="button">전체 만기 ▾</button>
+          </div>
+          <div class="chiprow hidden" id="ctryChipRow">
+            <span class="chiplabel">국가</span>
+            <div class="chips-inline" id="ctryChips"></div>
           </div>
           <div class="chartctl" style="margin-top:0;">
             <span class="selwrap" style="color:var(--mute3);">기간</span>
@@ -734,7 +786,7 @@
         </div>
       </section>
 
-      <!-- ====== TAB: 카더라·초기신호 ====== -->
+      <!-- ====== TAB: 초기신호 (검증 전 관찰 · 카더라 포함) ====== -->
       <section class="tabpanel hidden" id="panel-rumor">
         <div class="banner">
           <span>⚠</span>
@@ -767,16 +819,16 @@
       <div class="railnote">보조 컨텍스트 · SUPPORTING CONTEXT</div>
 
       <div class="panel">
-        <div class="ph">시장 압력 <small>· 원가·금리·환율</small></div>
-        <div class="pnote">값이 아니라 추세 신호 — 현재 체결값이 아님. 종목별 data_mode 확인. 자세히는 <b>시장</b> 탭.</div>
+        <div class="ph">시장 모니터링 <small>· 핵심 지표 요약</small></div>
+        <div class="pnote">대표 지표만 — 값이 아니라 추세 신호이며 <b>현재 체결값 아님</b>. 종목별 data_mode 확인. 전체 유니버스는 <b>시장</b> 탭.</div>
         <div id="railMarket"></div>
         <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
           <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다.</div>
       </div>
 
       <div class="panel">
-        <div class="ph">AI 테마 강도 <small>· 기사 상대 비중</small></div>
-        <div class="pnote">최대 테마는 AI·데이터센터입니다. % = 기사 상대 비중이며 전력 실측이 아닙니다. 자세히는 <b>AI 신호</b> 탭.</div>
+        <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 · 전력 실측값 아님</small></div>
+        <div class="pnote">최대 테마는 AI·데이터센터입니다. % = 기사 상대 비중이며 전력 실측값이 아닙니다. 자세히는 <b>AI 신호</b> 탭.</div>
         <div id="railAi"></div>
       </div>
 
@@ -901,29 +953,104 @@
     {"label": "안전 규제·중대재해", "share": 27, "color": "#9C7232"},
     {"label": "해외 수주·중동", "share": 19, "color": "#3C7A4E"}
   ],
+  "rail_snapshot": ["usdkrw", "wti", "us_10y", "copper", "jpykrw"],
   "market_items": [
-    {"id": "copper", "label_kr": "구리", "category": "construction_commodities", "value": "9,820",
-     "unit": "USD/lb", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72]},
-    {"id": "wti_crude", "label_kr": "WTI 원유", "category": "construction_commodities", "value": "78.4",
-     "unit": "USD/bbl", "delta": "▲ 0.9%", "dir": "up", "data_mode": "delayed_market", "spark": [70,71,69,72,74,73,75,74,76,77,76,78]},
-    {"id": "steel_rebar_proxy", "label_kr": "철근(대용)", "category": "construction_commodities", "value": "62.1",
-     "unit": "pt", "delta": "▼ 0.4%", "dir": "down", "data_mode": "proxy_market", "spark": [66,65,66,64,63,64,62,63,62,61,62,62]},
-    {"id": "cement_proxy", "label_kr": "국내 시멘트(보고)", "category": "construction_commodities", "value": null,
-     "unit": "원/t", "delta": "", "dir": "flat", "data_mode": "manual_or_reported", "spark": []},
-    {"id": "nickel", "label_kr": "니켈", "category": "construction_commodities", "value": null,
+    {"id": "copper", "label_kr": "구리", "en": "Copper", "category": "base_metals", "value": "9,180",
+     "unit": "USD/t", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72]},
+    {"id": "aluminum", "label_kr": "알루미늄", "en": "Aluminum", "category": "base_metals", "value": "2,540",
+     "unit": "USD/t", "delta": "▼ 0.3%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,57,56,55,56,55,54,55,54]},
+    {"id": "nickel", "label_kr": "니켈", "en": "Nickel", "category": "base_metals", "value": null,
      "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
-    {"id": "us_10y", "label_kr": "미 국채 10Y", "category": "sovereign_yields", "value": "4.45",
+    {"id": "zinc", "label_kr": "아연", "en": "Zinc", "category": "base_metals", "value": "2,710",
+     "unit": "USD/t", "delta": "▲ 0.6%", "dir": "up", "data_mode": "proxy_market", "spark": [50,51,50,52,53,52,54,53,55,54,56,55]},
+    {"id": "iron_ore", "label_kr": "철광석", "en": "Iron ore", "category": "steel_materials", "value": "108.5",
+     "unit": "USD/t", "delta": "▼ 0.5%", "dir": "down", "data_mode": "proxy_market", "spark": [64,63,64,62,63,61,62,61,60,61,60,59]},
+    {"id": "hrc_steel", "label_kr": "열연강판", "en": "HRC steel", "category": "steel_materials", "value": "545",
+     "unit": "USD/t", "delta": "▲ 0.4%", "dir": "up", "data_mode": "proxy_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,54]},
+    {"id": "rebar", "label_kr": "철근(대용)", "en": "Rebar", "category": "steel_materials", "value": "62.1",
+     "unit": "pt", "delta": "▼ 0.4%", "dir": "down", "data_mode": "proxy_market", "spark": [66,65,66,64,63,64,62,63,62,61,62,62]},
+    {"id": "scrap_steel", "label_kr": "철스크랩", "en": "Scrap steel", "category": "steel_materials", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "cement", "label_kr": "국내 시멘트(보고)", "en": "Cement", "category": "steel_materials", "value": null,
+     "unit": "원/t", "delta": "", "dir": "flat", "data_mode": "manual_or_reported", "spark": []},
+    {"id": "lumber", "label_kr": "목재", "en": "Lumber", "category": "steel_materials", "value": "486",
+     "unit": "USD/MBF", "delta": "▲ 0.8%", "dir": "up", "data_mode": "delayed_market", "spark": [44,45,46,45,47,48,47,49,48,50,49,51]},
+    {"id": "bitumen", "label_kr": "아스팔트(역청)", "en": "Bitumen", "category": "steel_materials", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "wti", "label_kr": "WTI 원유", "en": "WTI", "category": "oil_refined", "value": "78.4",
+     "unit": "USD/bbl", "delta": "▲ 0.9%", "dir": "up", "data_mode": "delayed_market", "spark": [70,71,69,72,74,73,75,74,76,77,76,78]},
+    {"id": "brent", "label_kr": "브렌트유", "en": "Brent", "category": "oil_refined", "value": "82.1",
+     "unit": "USD/bbl", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [72,73,72,74,75,74,76,75,77,78,77,79]},
+    {"id": "dubai_crude", "label_kr": "두바이유", "en": "Dubai crude", "category": "oil_refined", "value": "80.6",
+     "unit": "USD/bbl", "delta": "▲ 0.6%", "dir": "up", "data_mode": "manual_or_reported", "spark": [71,72,71,73,74,73,75,74,76,75,77,76]},
+    {"id": "diesel_gasoil", "label_kr": "경유(가스오일)", "en": "Gasoil (Diesel)", "category": "oil_refined", "value": "96.4",
+     "unit": "USD/bbl", "delta": "▲ 0.5%", "dir": "up", "data_mode": "proxy_market", "spark": [60,61,60,62,63,62,64,63,65,64,66,65]},
+    {"id": "gasoline", "label_kr": "휘발유", "en": "Gasoline", "category": "oil_refined", "value": "2.34",
+     "unit": "USD/gal", "delta": "▲ 0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [54,55,54,56,57,56,58,57,59,58,60,59]},
+    {"id": "jet_kerosene", "label_kr": "항공유(등유)", "en": "Jet · Kerosene", "category": "oil_refined", "value": null,
+     "unit": "USD/bbl", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "bunker_fuel", "label_kr": "벙커유", "en": "Bunker fuel", "category": "oil_refined", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "lng_jkm", "label_kr": "LNG JKM", "en": "LNG JKM", "category": "gas_lng", "value": "12.4",
+     "unit": "USD/MMBtu", "delta": "▲ 1.1%", "dir": "up", "data_mode": "manual_or_reported", "spark": [40,41,42,41,43,44,43,45,44,46,45,47]},
+    {"id": "ttf_gas", "label_kr": "TTF 가스", "en": "TTF", "category": "gas_lng", "value": "34.5",
+     "unit": "EUR/MWh", "delta": "▼ 0.6%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,55,56,54,55,53,54,52,53]},
+    {"id": "henry_hub", "label_kr": "헨리허브 가스", "en": "Henry Hub", "category": "gas_lng", "value": "2.86",
+     "unit": "USD/MMBtu", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [36,37,36,38,39,38,40,39,41,40,42,41]},
+    {"id": "thermal_coal", "label_kr": "연료탄(보고)", "en": "Thermal coal", "category": "coal", "value": "118",
+     "unit": "USD/t", "delta": "▼ 0.4%", "dir": "down", "data_mode": "manual_or_reported", "spark": [62,61,62,60,61,59,60,59,58,59,58,57]},
+    {"id": "coking_coal", "label_kr": "원료탄", "en": "Coking coal", "category": "coal", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "us_10y", "label_kr": "미 국채 10Y", "en": "US 10Y", "category": "rates_inflation", "value": "4.45",
      "unit": "%", "delta": "▲ +3bp", "dir": "up", "data_mode": "delayed_market", "spark": [40,41,42,42,43,44,43,45,44,45,44,45]},
-    {"id": "us_5y", "label_kr": "미 국채 5Y", "category": "sovereign_yields", "value": "4.22",
+    {"id": "us_5y", "label_kr": "미 국채 5Y", "en": "US 5Y", "category": "rates_inflation", "value": "4.22",
      "unit": "%", "delta": "▲ +2bp", "dir": "up", "data_mode": "delayed_market", "spark": [38,39,40,40,41,42,42,41,43,42,43,42]},
-    {"id": "kr_10y", "label_kr": "한국 국고 10Y", "category": "sovereign_yields", "value": null,
+    {"id": "us_2y", "label_kr": "미 국채 2Y", "en": "US 2Y", "category": "rates_inflation", "value": null,
      "unit": "%", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
-    {"id": "usdkrw", "label_kr": "USD / KRW", "category": "fx", "value": "1,536.8",
+    {"id": "kr_10y", "label_kr": "한국 국고 10Y", "en": "KR 10Y", "category": "rates_inflation", "value": null,
+     "unit": "%", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "us_cpi_row", "label_kr": "미 CPI(YoY)", "en": "US CPI", "category": "rates_inflation", "value": "2.7",
+     "unit": "%", "delta": "▼ 0.1%p", "dir": "down", "data_mode": "manual_or_reported", "spark": [48,47,46,45,45,44,43,43,42,42,41,41]},
+    {"id": "us_base_rate", "label_kr": "미 기준금리", "en": "US base rate", "category": "rates_inflation", "value": "4.50",
+     "unit": "%", "delta": "—", "dir": "flat", "data_mode": "manual_or_reported", "spark": [55,55,53,53,50,50,48,48,46,46,45,45]},
+    {"id": "usdkrw", "label_kr": "USD/KRW", "en": "", "category": "fx", "value": "1,536.8",
      "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "delayed_market", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
-    {"id": "jpykrw", "label_kr": "JPY / KRW", "category": "fx", "value": "9.74",
+    {"id": "jpykrw", "label_kr": "JPY/KRW (100)", "en": "", "category": "fx", "value": "9.74",
      "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "delayed_market", "spark": [60,59,60,58,59,57,58,57,56,57,56,56]},
-    {"id": "eurkrw", "label_kr": "EUR / KRW", "category": "fx", "value": "1,648.2",
-     "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [52,53,52,54,55,54,56,55,57,56,58,57]}
+    {"id": "eurkrw", "label_kr": "EUR/KRW", "en": "", "category": "fx", "value": "1,648.2",
+     "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [52,53,52,54,55,54,56,55,57,56,58,57]},
+    {"id": "cnykrw", "label_kr": "CNY/KRW", "en": "CNH/KRW", "category": "fx", "value": "211.4",
+     "unit": "원", "delta": "▲ +0.2%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,54]},
+    {"id": "gbpkrw", "label_kr": "GBP/KRW", "en": "", "category": "fx", "value": "1,952.0",
+     "unit": "원", "delta": "▲ +0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [46,47,46,48,49,48,50,49,51,50,52,51]},
+    {"id": "chfkrw", "label_kr": "CHF/KRW", "en": "", "category": "fx", "value": "1,712.3",
+     "unit": "원", "delta": "▲ +0.1%", "dir": "up", "data_mode": "proxy_market", "spark": [50,50,51,50,52,51,53,52,54,53,55,54]},
+    {"id": "cadkrw", "label_kr": "CAD/KRW", "en": "", "category": "fx", "value": "1,121.5",
+     "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "proxy_market", "spark": [56,55,56,54,55,53,54,53,52,53,52,51]},
+    {"id": "audkrw", "label_kr": "AUD/KRW", "en": "", "category": "fx", "value": "1,012.7",
+     "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "proxy_market", "spark": [44,45,44,46,47,46,48,47,49,48,50,49]},
+    {"id": "sgdkrw", "label_kr": "SGD/KRW", "en": "", "category": "fx", "value": "1,138.9",
+     "unit": "원", "delta": "▲ +0.2%", "dir": "up", "data_mode": "proxy_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,53]},
+    {"id": "hkdkrw", "label_kr": "HKD/KRW", "en": "", "category": "fx", "value": "196.3",
+     "unit": "원", "delta": "▲ +0.1%", "dir": "up", "data_mode": "proxy_market", "spark": [50,50,51,50,52,51,52,51,53,52,54,53]},
+    {"id": "twdkrw", "label_kr": "TWD/KRW", "en": "", "category": "fx", "value": null,
+     "unit": "원", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "inrkrw", "label_kr": "INR/KRW", "en": "", "category": "fx", "value": "18.42",
+     "unit": "원", "delta": "▼ 0.1%", "dir": "down", "data_mode": "proxy_market", "spark": [54,53,54,52,53,51,52,51,50,51,50,49]},
+    {"id": "aedkrw", "label_kr": "AED/KRW", "en": "", "category": "fx", "value": "418.5",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "manual_or_reported", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "sarkrw", "label_kr": "SAR/KRW", "en": "", "category": "fx", "value": "409.8",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "manual_or_reported", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "qarkrw", "label_kr": "QAR/KRW", "en": "", "category": "fx", "value": "422.1",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "manual_or_reported", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "dxy", "label_kr": "달러 인덱스(DXY)", "en": "DXY", "category": "fx", "value": "104.8",
+     "unit": "pt", "delta": "▲ +0.2%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,51,50,52,51,53,52,54,53]},
+    {"id": "eurusd", "label_kr": "EUR/USD", "en": "참고", "category": "fx", "value": "1.073",
+     "unit": "", "delta": "▼ 0.1%", "dir": "down", "data_mode": "delayed_market", "spark": [56,55,56,54,55,53,54,53,52,53,52,51]},
+    {"id": "usdjpy", "label_kr": "USD/JPY", "en": "참고", "category": "fx", "value": "157.8",
+     "unit": "", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [44,45,46,45,47,48,47,49,48,50,49,51]},
+    {"id": "usdcny", "label_kr": "USD/CNY", "en": "참고", "category": "fx", "value": "7.27",
+     "unit": "", "delta": "▲ +0.1%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,53]}
   ],
   "early_signals": [
     {"src": "X (엑스)", "state": "unverified_social", "stateLabel": "확인 전",
@@ -1094,37 +1221,52 @@
     return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" fill="none"><path d="' + d +
       '" stroke="' + (rising ? "#B85049" : "#3C7A4E") + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
   }
-  var CAT_LABEL = { construction_commodities: "원자재", sovereign_yields: "금리", fx: "환율" };
-  function renderMarket(targetId, opts) {
-    var box = el(targetId); if (!box) return; box.innerHTML = "";
+  var CAT_LABEL = {
+    base_metals: "원자재·금속", steel_materials: "철강·건자재", oil_refined: "유가·정제유",
+    gas_lng: "가스·LNG", coal: "석탄", rates_inflation: "금리·물가", fx: "환율"
+  };
+  var CAT_ORDER = ["base_metals", "steel_materials", "oil_refined", "gas_lng", "coal", "rates_inflation", "fx"];
+  function mrowHtml(it, clickable) {
+    var off = it.value == null;
+    var spark = (it.spark && it.spark.length) ? sparkSvg(it.spark) : "";
+    var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
+    var en = it.en ? ' <span class="men">' + esc(it.en) + '</span>' : "";
+    var attrs = clickable ? ' data-mid="' + esc(it.id) + '" role="button" tabindex="0"' : "";
+    return '<div class="mrow' + (clickable ? " click" : "") + '"' + attrs + '>' +
+      '<span class="mn">' + spark + esc(it.label_kr) + en + '</span>' +
+      '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
+      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chev + '</span></div>';
+  }
+  /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출. */
+  function renderCategoryCards() {
+    var box = el("marketCategories"); if (!box) return; box.innerHTML = "";
     var items = MODEL.market_items || [];
-    var cats = ["construction_commodities", "sovereign_yields", "fx"];
-    cats.forEach(function (cat) {
+    CAT_ORDER.forEach(function (cat) {
       var rows = items.filter(function (it) { return it.category === cat; });
-      if (opts.compact) rows = rows.slice(0, opts.perCat || 2);
       if (!rows.length) return;
       var conn = rows.filter(function (r) { return r.value != null; }).length;
-      var g = document.createElement("div"); g.className = "mgrp";
-      g.innerHTML = '<span class="t">' + CAT_LABEL[cat] + '</span><span class="m">연동 ' + conn + '/' + rows.length + '</span>';
-      box.appendChild(g);
-      rows.forEach(function (it) {
-        var off = it.value == null;
-        var spark = (!opts.compact && it.spark && it.spark.length) ? sparkSvg(it.spark) : "";
-        var clickable = !opts.compact;
-        var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
-        var row = document.createElement("div");
-        row.className = "mrow" + (clickable ? " click" : "");
-        if (clickable) { row.setAttribute("data-mid", it.id); row.setAttribute("role", "button"); row.setAttribute("tabindex", "0"); }
-        row.innerHTML =
-          '<span class="mn">' + (spark ? spark : "") + esc(it.label_kr) + '</span>' +
-          '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
-          '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chev + '</span>';
-        box.appendChild(row);
-      });
+      var card = document.createElement("div"); card.className = "mcat-card";
+      var body = rows.map(function (it) { return mrowHtml(it, true); }).join("");
+      card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
+        '</span><span class="mcat-c">연동 ' + conn + '/' + rows.length + '</span></div>' + body;
+      box.appendChild(card);
     });
   }
-  renderMarket("marketSnapshot", { compact: false });
-  renderMarket("railMarket", { compact: true, perCat: 2 });
+  /* 우측 레일 — 대표 4~6개만 요약(중복 금지). '전체 보기'로 시장 탭 이동. */
+  function renderRailSnapshot() {
+    var box = el("railMarket"); if (!box) return; box.innerHTML = "";
+    var byId = {}; (MODEL.market_items || []).forEach(function (it) { byId[it.id] = it; });
+    var ids = MODEL.rail_snapshot || ["usdkrw", "wti", "us_10y", "copper", "jpykrw"];
+    ids.forEach(function (id) { var it = byId[id]; if (it) box.insertAdjacentHTML("beforeend", mrowHtml(it, false)); });
+    var b = document.createElement("button"); b.type = "button"; b.className = "seeall"; b.id = "railSeeAll";
+    b.textContent = "시장 전체 보기 →"; box.appendChild(b);
+    b.addEventListener("click", function () {
+      var t = document.querySelector('.tab[data-tab="market"]'); if (t) t.click();
+      var p = el("panel-market"); if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+  renderCategoryCards();
+  renderRailSnapshot();
 
   /* ---------- early signal rows ---------- */
   (function () {
@@ -1177,35 +1319,93 @@
     "3m": ["3/22", "4/7", "4/22", "5/7", "5/22", "6/7", "6/22"],
     "1y": ["'25/7", "'25/9", "'25/11", "'26/1", "'26/3", "'26/5", "'26/6"]
   };
-  /* 데모 고정 시계열. 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐, 그 외는 미연동(null). */
+  /* 데모 고정 금리/물가 커브 (현재 체결값 아님). 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐.
+     여기 없는 (국가×만기/지표) 조합은 차트에서 가짜 선을 그리지 않고 '소스 필요' 칩으로 둔다.
+     스프레드(10Y-2Y/10Y-3M)는 보유 시리즈에서 계산한다 — 별도 가짜 데이터 없음. */
   var YBASE = {
+    "us_3m": [5.30, 5.31, 5.30, 5.29, 5.30, 5.28, 5.27, 5.26, 5.25, 5.24, 5.23, 5.22],
+    "us_6m": [5.18, 5.17, 5.16, 5.15, 5.14, 5.13, 5.12, 5.11, 5.10, 5.09, 5.08, 5.07],
+    "us_1y": [4.98, 4.97, 4.96, 4.95, 4.94, 4.93, 4.92, 4.91, 4.90, 4.89, 4.88, 4.87],
     "us_2y": [4.55, 4.58, 4.60, 4.62, 4.63, 4.65, 4.66, 4.68, 4.69, 4.70, 4.71, 4.72],
+    "us_3y": [4.30, 4.32, 4.34, 4.35, 4.36, 4.37, 4.38, 4.39, 4.40, 4.41, 4.42, 4.43],
     "us_5y": [3.95, 3.98, 4.02, 4.05, 4.08, 4.10, 4.12, 4.15, 4.18, 4.20, 4.21, 4.22],
+    "us_7y": [4.05, 4.08, 4.12, 4.15, 4.18, 4.20, 4.22, 4.25, 4.27, 4.29, 4.30, 4.32],
     "us_10y": [4.10, 4.16, 4.20, 4.25, 4.28, 4.31, 4.35, 4.40, 4.42, 4.44, 4.45, 4.46],
+    "us_20y": [4.40, 4.45, 4.50, 4.54, 4.58, 4.61, 4.64, 4.67, 4.69, 4.71, 4.72, 4.74],
+    "us_30y": [4.50, 4.55, 4.60, 4.64, 4.68, 4.71, 4.74, 4.77, 4.79, 4.81, 4.82, 4.84],
+    "kr_1y": [3.18, 3.17, 3.16, 3.15, 3.14, 3.13, 3.12, 3.11, 3.10, 3.10, 3.09, 3.08],
     "kr_2y": [3.05, 3.08, 3.07, 3.10, 3.12, 3.11, 3.14, 3.16, 3.15, 3.18, 3.20, 3.21],
     "kr_5y": [3.28, 3.30, 3.33, 3.31, 3.35, 3.37, 3.36, 3.39, 3.41, 3.40, 3.42, 3.44],
     "kr_10y": [3.42, 3.45, 3.48, 3.46, 3.50, 3.53, 3.52, 3.55, 3.57, 3.56, 3.58, 3.60],
+    "kr_30y": [3.55, 3.57, 3.60, 3.59, 3.63, 3.65, 3.64, 3.67, 3.69, 3.68, 3.71, 3.73],
     "eu_2y": [2.55, 2.58, 2.57, 2.60, 2.62, 2.61, 2.64, 2.66, 2.65, 2.67, 2.69, 2.70],
     "eu_5y": [2.72, 2.74, 2.77, 2.75, 2.79, 2.81, 2.80, 2.83, 2.85, 2.84, 2.86, 2.88],
     "eu_10y": [2.90, 2.93, 2.96, 2.94, 2.98, 3.01, 3.00, 3.03, 3.05, 3.04, 3.06, 3.08],
+    "eu_30y": [3.12, 3.15, 3.18, 3.16, 3.20, 3.23, 3.22, 3.25, 3.27, 3.26, 3.29, 3.31],
     "jp_2y": [0.62, 0.64, 0.66, 0.65, 0.68, 0.70, 0.69, 0.72, 0.74, 0.73, 0.75, 0.77],
     "jp_5y": [0.95, 0.97, 0.99, 0.98, 1.01, 1.03, 1.02, 1.05, 1.07, 1.06, 1.08, 1.10],
     "jp_10y": [1.30, 1.33, 1.36, 1.34, 1.38, 1.41, 1.40, 1.43, 1.45, 1.44, 1.46, 1.48],
+    "uk_2y": [4.05, 4.07, 4.09, 4.10, 4.12, 4.13, 4.15, 4.16, 4.18, 4.19, 4.20, 4.22],
+    "uk_5y": [3.90, 3.92, 3.94, 3.95, 3.97, 3.98, 4.00, 4.01, 4.03, 4.04, 4.05, 4.07],
+    "uk_10y": [4.00, 4.02, 4.05, 4.04, 4.08, 4.10, 4.09, 4.12, 4.14, 4.13, 4.16, 4.18],
+    "cn_2y": [1.62, 1.61, 1.60, 1.59, 1.58, 1.57, 1.56, 1.55, 1.54, 1.53, 1.52, 1.51],
+    "cn_5y": [1.85, 1.84, 1.83, 1.82, 1.81, 1.80, 1.79, 1.78, 1.77, 1.76, 1.75, 1.74],
+    "cn_10y": [2.05, 2.04, 2.03, 2.02, 2.01, 2.00, 1.99, 1.98, 1.97, 1.96, 1.95, 1.94],
+    "ca_10y": [3.22, 3.24, 3.27, 3.26, 3.30, 3.32, 3.31, 3.34, 3.36, 3.35, 3.37, 3.39],
+    "au_10y": [4.15, 4.17, 4.20, 4.19, 4.23, 4.25, 4.24, 4.27, 4.29, 4.28, 4.31, 4.33],
     "us_cpi": [3.4, 3.3, 3.2, 3.1, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7],
     "kr_cpi": [3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5],
     "eu_cpi": [2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3],
-    "jp_cpi": null
+    "jp_cpi": null,
+    "us_core_cpi": [3.8, 3.7, 3.6, 3.6, 3.5, 3.4, 3.4, 3.3, 3.3, 3.2, 3.2, 3.1],
+    "kr_core_cpi": [3.2, 3.1, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6],
+    "us_ppi": [2.6, 2.5, 2.6, 2.4, 2.5, 2.3, 2.4, 2.3, 2.2, 2.3, 2.2, 2.1],
+    "us_base_rate": [5.50, 5.50, 5.50, 5.25, 5.25, 5.00, 5.00, 4.75, 4.75, 4.50, 4.50, 4.50],
+    "kr_base_rate": [3.50, 3.50, 3.50, 3.50, 3.25, 3.25, 3.25, 3.00, 3.00, 3.00, 2.75, 2.75],
+    "eu_base_rate": [4.00, 4.00, 3.75, 3.75, 3.50, 3.50, 3.25, 3.25, 3.00, 3.00, 2.75, 2.75],
+    "jp_base_rate": [0.10, 0.10, 0.25, 0.25, 0.25, 0.25, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50]
   };
   var YNAME = {
     "us_2y": "US 2Y", "us_5y": "US 5Y", "us_10y": "US 10Y",
     "kr_2y": "KR 2Y", "kr_5y": "KR 5Y", "kr_10y": "KR 10Y",
     "eu_2y": "EU 2Y", "eu_5y": "EU 5Y", "eu_10y": "EU 10Y",
-    "jp_2y": "JP 2Y", "jp_5y": "JP 5Y", "jp_10y": "JP 10Y",
-    "us_cpi": "US CPI", "kr_cpi": "KR CPI", "eu_cpi": "EU CPI", "jp_cpi": "JP CPI"
+    "jp_2y": "JP 2Y", "jp_5y": "JP 5Y", "jp_10y": "JP 10Y"
   };
-  var CC = { us: "US", kr: "KR", eu: "EU", jp: "JP" };
-  var MAT_COLOR = { "2y": "#9C7232", "5y": "#5B8FCB", "10y": "#26344D", "cpi": "#26344D" };
-  var CTRY_COLOR = { us: "#3F6FA8", kr: "#3C7A4E", eu: "#9C7232", jp: "#B85049" };
+  var CC = { us: "US", kr: "KR", eu: "EU", jp: "JP", uk: "UK", cn: "CN", ca: "CA", au: "AU" };
+  var MAT_NAME = { "3m": "3M", "6m": "6M", "1y": "1Y", "2y": "2Y", "3y": "3Y", "5y": "5Y", "7y": "7Y", "10y": "10Y", "20y": "20Y", "30y": "30Y" };
+  var MACRO_NAME = { "base_rate": "기준금리", "cpi": "CPI", "core_cpi": "Core CPI", "ppi": "PPI", "spread_10y_2y": "10Y-2Y", "spread_10y_3m": "10Y-3M" };
+  var MAT_COLOR = {
+    "3m": "#7E8CA6", "6m": "#5E6E8C", "1y": "#46557A", "2y": "#9C7232", "3y": "#C79248",
+    "5y": "#5B8FCB", "7y": "#3F6FA8", "10y": "#26344D", "20y": "#3C7A4E", "30y": "#B85049",
+    "cpi": "#9C7232", "core_cpi": "#C79248", "ppi": "#5B8FCB", "base_rate": "#3F6FA8",
+    "spread_10y_2y": "#3C7A4E", "spread_10y_3m": "#B85049"
+  };
+  var CTRY_COLOR = { us: "#3F6FA8", kr: "#3C7A4E", eu: "#9C7232", jp: "#B85049", uk: "#5B8FCB", cn: "#26344D", ca: "#7E8CA6", au: "#C79248" };
+  var MAT_LIST = [
+    { id: "3m", name: "3M", core: false }, { id: "6m", name: "6M", core: false }, { id: "1y", name: "1Y", core: false },
+    { id: "2y", name: "2Y", core: true }, { id: "3y", name: "3Y", core: false }, { id: "5y", name: "5Y", core: true },
+    { id: "7y", name: "7Y", core: false }, { id: "10y", name: "10Y", core: true }, { id: "20y", name: "20Y", core: false }, { id: "30y", name: "30Y", core: false }
+  ];
+  var COUNTRY_LIST = [
+    { id: "us", name: "US" }, { id: "kr", name: "KR" }, { id: "eu", name: "EU" }, { id: "jp", name: "JP" },
+    { id: "uk", name: "UK" }, { id: "cn", name: "CN" }, { id: "ca", name: "CA" }, { id: "au", name: "AU" }
+  ];
+  var matSel = { "2y": true, "5y": true, "10y": true };
+  var matExpanded = false;
+  var ctrySel = { us: true, kr: true, eu: true, jp: true };
+  /* (국가, 지표) → 데모 시계열. 스프레드는 보유 시리즈에서 계산(가짜 데이터 없음). 없으면 null = 미연동. */
+  function seriesFor(c, m) {
+    if (m === "spread_10y_2y") {
+      var a = YBASE[c + "_10y"], b = YBASE[c + "_2y"];
+      return (a && b) ? a.map(function (v, i) { return Math.round((v - b[i]) * 100) / 100; }) : null;
+    }
+    if (m === "spread_10y_3m") {
+      var a2 = YBASE[c + "_10y"], b2 = YBASE[c + "_3m"];
+      return (a2 && b2) ? a2.map(function (v, i) { return Math.round((v - b2[i]) * 100) / 100; }) : null;
+    }
+    return YBASE[c + "_" + m] || null;
+  }
+  function nameFor(c, m) { return YNAME[c + "_" + m] || ((CC[c] || c) + " " + (MAT_NAME[m] || MACRO_NAME[m] || m)); }
 
   function resample(base, n) {
     if (!base || !base.length) return [];
@@ -1269,33 +1469,33 @@
     var period = activeSeg("yieldPeriodSeg", "1m");
     var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
     var norm = el("normToggle").checked;
-    var specs = [], isCpi = false;
-    if (mode === "within") {
-      var ctry = el("countrySel").value;
-      ["2y", "5y", "10y"].forEach(function (m) { specs.push({ key: ctry + "_" + m, color: MAT_COLOR[m] }); });
-    } else {
-      var metric = el("metricSel").value; isCpi = metric === "cpi";
-      ["us", "kr", "eu", "jp"].forEach(function (c) { specs.push({ key: c + "_" + metric, color: CTRY_COLOR[c] }); });
-    }
-    var drawn = [], unavail = [];
-    specs.forEach(function (sp) {
-      var base = YBASE[sp.key];
+    var drawn = [], unavail = [], kind = "yield";
+    function pushSeries(label, color, base) {
       if (base && base.length) {
         var data = resample(base, n);
         if (norm) { var b0 = data[0] || 1; data = data.map(function (v) { return v / b0 * 100; }); }
-        drawn.push({ name: YNAME[sp.key], color: sp.color, data: data });
-      } else { unavail.push(YNAME[sp.key]); }
-    });
-    return { mode: mode, isCpi: isCpi, norm: norm, dates: dates, drawn: drawn, unavail: unavail, period: period };
+        drawn.push({ name: label, color: color, data: data });
+      } else { unavail.push(label); }
+    }
+    if (mode === "within") {
+      var c = el("countrySel").value;
+      MAT_LIST.forEach(function (m) { if (matSel[m.id]) pushSeries(nameFor(c, m.id), MAT_COLOR[m.id], seriesFor(c, m.id)); });
+    } else {
+      var metric = el("metricSel").value;
+      kind = (metric === "cpi" || metric === "core_cpi" || metric === "ppi") ? "infl"
+        : (metric.indexOf("spread") === 0 ? "spread" : "yield");
+      COUNTRY_LIST.forEach(function (co) { if (ctrySel[co.id]) pushSeries(nameFor(co.id, metric), CTRY_COLOR[co.id], seriesFor(co.id, metric)); });
+    }
+    return { mode: mode, kind: kind, norm: norm, dates: dates, drawn: drawn, unavail: unavail, period: period };
   }
 
   function drawYieldChart() {
     var svg = el("yieldChart"); if (!svg) return;
     var v = buildYieldView();
+    var yLabel = v.norm ? "지수(=100)" : (v.kind === "infl" ? "물가 %" : (v.kind === "spread" ? "%p" : "%"));
     renderLineChart(svg, v.drawn, v.dates, {
-      yLabel: v.norm ? "지수(=100)" : (v.isCpi ? "CPI %" : "%"),
-      decimals: v.norm ? 0 : (v.isCpi ? 1 : 2),
-      emptyMsg: "선택한 시리즈는 미연동 — 표시할 시세 없음 (가짜 선 미표시)"
+      yLabel: yLabel, decimals: v.norm ? 0 : 2,
+      emptyMsg: "선택한 시리즈는 미연동/소스 필요 — 표시할 시세 없음 (가짜 선 미표시)"
     });
     var leg = el("chartLegend"); leg.innerHTML = "";
     v.drawn.forEach(function (s) {
@@ -1306,28 +1506,63 @@
       leg.insertAdjacentHTML("beforeend", '<span class="it off"><span class="sw"></span>' + esc(nm) + ' · 미연동</span>');
     });
     var note = el("chartNote"), msg;
-    if (v.isCpi) {
-      msg = "CPI(물가)는 금리와 단위·축이 다른 별도 비교입니다 — 금리와 같은 y축에 올리지 않습니다. " +
-        (v.norm ? "정규화(기준일=100) 추세입니다." : "국가 간 CPI 추세(%) 비교입니다.");
+    if (v.kind === "infl") {
+      msg = "물가(CPI/Core CPI/PPI)는 금리와 단위·축이 다른 별도 비교입니다 — 금리와 같은 y축에 올리지 않습니다. " +
+        (v.norm ? "정규화(기준일=100) 추세입니다." : "국가 간 물가 추세(%) 비교입니다.");
     } else if (v.norm) {
       msg = "정규화 추세 · 기준일=100 · 절대 가격 비교 아님. 단위가 다른 지표 비교에 사용합니다.";
+    } else if (v.kind === "spread") {
+      msg = "장단기 금리차(스프레드 · %p) 데모 시계열 — 현재 체결값 아님. 음수이면 장단기 금리 역전 신호입니다.";
     } else {
       msg = "데모 시계열 — 현재 체결값 아님. 프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (예: US 2Y는 프로덕션 미연동이나 preview에선 데모 선으로 표시).";
     }
-    if (v.unavail.length) msg += " 미연동(선 미표시): " + v.unavail.join(", ") + ".";
+    if (v.unavail.length) msg += " 미연동(선 미표시 · 소스 필요): " + v.unavail.join(", ") + ".";
     note.textContent = msg;
   }
 
-  /* yield chart controls — mode / country / metric / normalize / period */
+  /* 만기/국가 멀티셀렉트 칩 — 가용 시리즈만 활성, 미연동은 비활성('소스 필요'/'미연동') 칩으로 노출 */
+  function renderMatChips() {
+    var box = el("matChips"); if (!box) return; box.innerHTML = "";
+    var c = el("countrySel").value;
+    MAT_LIST.forEach(function (m) {
+      if (!matExpanded && !m.core) return;
+      var avail = !!seriesFor(c, m.id);
+      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-mat", m.id);
+      b.className = "mtog " + (!avail ? "off" : (matSel[m.id] ? "on" : ""));
+      b.innerHTML = esc(m.name) + (!avail ? '<span class="x">소스 필요</span>' : "");
+      if (!avail) b.disabled = true;
+      box.appendChild(b);
+    });
+  }
+  function renderCtryChips() {
+    var box = el("ctryChips"); if (!box) return; box.innerHTML = "";
+    var metric = el("metricSel").value;
+    COUNTRY_LIST.forEach(function (co) {
+      var avail = !!seriesFor(co.id, metric);
+      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-ctry", co.id);
+      b.className = "mtog " + (!avail ? "off" : (ctrySel[co.id] ? "on" : ""));
+      b.innerHTML = esc(co.name) + (!avail ? '<span class="x">미연동</span>' : "");
+      if (!avail) b.disabled = true;
+      box.appendChild(b);
+    });
+  }
+  function selCount(o) { var k, n = 0; for (k in o) { if (o[k]) n++; } return n; }
+
+  /* yield chart controls — mode / country / metric / 만기·국가 칩 / 전체 만기 / normalize / period */
   (function () {
+    function syncModeUI() {
+      var within = activeSeg("yieldModeSeg", "within") === "within";
+      el("withinSel").classList.toggle("hidden", !within);
+      el("crossSel").classList.toggle("hidden", within);
+      el("matChipRow").classList.toggle("hidden", !within);
+      el("ctryChipRow").classList.toggle("hidden", within);
+      if (within) renderMatChips(); else renderCtryChips();
+    }
     var seg = el("yieldModeSeg");
     if (seg) seg.addEventListener("click", function (ev) {
       var b = ev.target.closest("button"); if (!b) return;
       [].forEach.call(seg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
-      var within = b.getAttribute("data-mode") === "within";
-      el("withinSel").classList.toggle("hidden", !within);
-      el("crossSel").classList.toggle("hidden", within);
-      drawYieldChart();
+      syncModeUI(); drawYieldChart();
     });
     var pseg = el("yieldPeriodSeg");
     if (pseg) pseg.addEventListener("click", function (ev) {
@@ -1335,9 +1570,28 @@
       [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
       drawYieldChart();
     });
-    ["countrySel", "metricSel", "normToggle"].forEach(function (id) {
-      var nn = el(id); if (nn) nn.addEventListener("change", drawYieldChart);
+    var cs = el("countrySel"); if (cs) cs.addEventListener("change", function () { renderMatChips(); drawYieldChart(); });
+    var ms = el("metricSel"); if (ms) ms.addEventListener("change", function () { renderCtryChips(); drawYieldChart(); });
+    var nt = el("normToggle"); if (nt) nt.addEventListener("change", drawYieldChart);
+    var ex = el("matExpand");
+    if (ex) ex.addEventListener("click", function () {
+      matExpanded = !matExpanded; ex.textContent = matExpanded ? "간략히 ▴" : "전체 만기 ▾"; renderMatChips();
     });
+    var mc = el("matChips");
+    if (mc) mc.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-mat]"); if (!b || b.disabled) return;
+      var id = b.getAttribute("data-mat");
+      if (matSel[id]) { if (selCount(matSel) <= 1) return; matSel[id] = false; } else { matSel[id] = true; }
+      renderMatChips(); drawYieldChart();
+    });
+    var cc = el("ctryChips");
+    if (cc) cc.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-ctry]"); if (!b || b.disabled) return;
+      var id = b.getAttribute("data-ctry");
+      if (ctrySel[id]) { if (selCount(ctrySel) <= 1) return; ctrySel[id] = false; } else { ctrySel[id] = true; }
+      renderCtryChips(); drawYieldChart();
+    });
+    renderMatChips(); renderCtryChips(); syncModeUI();
   })();
 
   /* ============================================================
@@ -1346,7 +1600,7 @@
      ============================================================ */
   (function () {
     var ov = el("mktDrawerOv"); if (!ov) return;
-    var snap = el("marketSnapshot");
+    var snap = el("marketCategories");
     var ITEMS = {}; (MODEL.market_items || []).forEach(function (it) { ITEMS[it.id] = it; });
     var UPD = { delayed_market: "지연 ~15분", proxy_market: "대용 · 일일", manual_or_reported: "보고 기준일",
       unavailable: "미연동", policy_required: "정책/키 필요" };
