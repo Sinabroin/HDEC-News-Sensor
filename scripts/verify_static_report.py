@@ -33,7 +33,11 @@ REQUIRED_VERIFIERS = [
     "verify_executive_brief.py",
     "verify_dashboard_export.py",
 ]
-OPTIONAL_VERIFIERS = ["verify_issue_clusters.py", "verify_executive_brief_quality.py"]
+OPTIONAL_VERIFIERS = [
+    "verify_executive_preferences.py",
+    "verify_issue_clusters.py",
+    "verify_executive_brief_quality.py",
+]
 
 SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
 FULL_REPORT_BUTTON_TEXT = "전체 리포트 보기"

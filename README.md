@@ -697,6 +697,30 @@ python3 scripts/verify_telegram_channel_to_personal_entry.py
 python3 scripts/verify_executive_ia_polish.py
 ```
 
+### Executive Telegram Preferences (D6-C foundation)
+
+Executive preferences are a **personal receiving/filtering layer**, not operator
+settings. They live in `data/executive_preferences.json` and are loaded through
+`app/executive_preferences.py`.
+
+- Schema: `chat_id`, `user_label`, `lens_preferences`, `delivery_mode`,
+  `created_at`, `updated_at`.
+- Default behavior: an unknown `chat_id` gets `delivery_mode="all"` with empty
+  lens lists, meaning no personal filter is applied yet.
+- Scope boundary: preferences may later filter/reroute an individual recipient's
+  Telegram delivery, but they do **not** alter `app/topic_profiles.py`, live
+  search queries, business lens catalogs, scoring, source rules, or operator
+  settings.
+- Safety: malformed/missing preference JSON loads as an empty store, so callers
+  fall back to `default_preference(chat_id)`. The preference module does not read
+  secrets or env files.
+- Future work: a `/settings` command can write this store only after inbound bot
+  handling is explicitly implemented and gated. It is not implemented yet.
+
+```bash
+python3 scripts/verify_executive_preferences.py
+```
+
 ## 19. Live Article Quality Gate & Classifier Tuning (P0-C1.11)
 
 AI 편중 수집(§18) 이후 임원용 분류 품질을 끌어올리는 결정적 품질 게이트. 외부 API·매크로·

@@ -261,6 +261,31 @@ grep -c "수주 경쟁력·시장 포지션 영향권" /tmp/hdec_public_latest.h
 
 ---
 
+## H. 임원 Telegram 개인 선호 (D6-C foundation)
+
+임원 선호는 **개인 수신/필터링** 데이터다. 운영자 설정은 **전역 sensing/source/keyword**
+규칙이다. 두 경계를 섞지 않는다.
+
+- Store: `data/executive_preferences.json`
+- Model/helper: `app/executive_preferences.py`
+- Schema: `chat_id`, `user_label`, `lens_preferences`, `delivery_mode`, `created_at`,
+  `updated_at`
+- Safe default: 알 수 없는 `chat_id`는 `delivery_mode="all"`과 빈 lens 목록을 받는다. 즉,
+  현재 동작에서는 개인 필터가 적용되지 않는다.
+- Malformed JSON: 빈 store로 읽어 default로 fallback한다. upsert 시 안전한 schema로 다시 쓴다.
+- Non-goals: live 검색 쿼리, topic profile catalog, business lens catalog, scoring/source 규칙,
+  Telegram send gate를 바꾸지 않는다.
+- Future: `/settings` 명령은 inbound 1:1 bot 처리가 별도로 구현·검증된 뒤 이 store만 쓰도록
+  추가한다. 아직 구현하지 않았다.
+
+검증:
+
+```bash
+python3 scripts/verify_executive_preferences.py
+```
+
+---
+
 ## 부록 — 모드/환경 변수 빠른 참조
 
 | 변수 | 기본값 | 의미 |
