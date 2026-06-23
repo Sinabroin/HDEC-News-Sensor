@@ -109,6 +109,20 @@ def index_page():
     return FileResponse(index_path)
 
 
+@app.get("/dashboard-preview")
+def dashboard_preview_page():
+    """비프로덕션 대시보드 미리보기 (Claude Design 기반).
+
+    프로덕션 일일 리포트(docs/daily/latest.html · operator-latest.html)와 무관하며,
+    발송/DB 쓰기/네트워크가 전혀 없는 자기완결 정적 페이지를 그대로 서빙한다.
+    데이터 정직성 하드룰을 따른다: 시장/AIS/소셜 실데이터를 위조하지 않고 데모/미연동으로 표기한다.
+    """
+    preview_path = config.TEMPLATES_DIR / "dashboard_preview.html"
+    if not preview_path.exists():
+        raise HTTPException(status_code=404, detail="대시보드 미리보기가 준비되지 않았다")
+    return FileResponse(preview_path)
+
+
 @app.post("/api/sense/run")
 def sense_run(body: SenseRunRequest | None = None):
     mode = (body.mode if body and body.mode else config.APP_MODE).strip().lower()
