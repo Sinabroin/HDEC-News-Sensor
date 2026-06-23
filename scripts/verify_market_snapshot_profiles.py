@@ -327,11 +327,13 @@ def check_brief_integration() -> None:
     if snap.get("items") is not None:
         check("12. 기본 mock 경로 market_snapshot에 가짜 값 없음",
               not any(it.get("value") is not None for it in snap["items"]))
-    # mock 불변(28/21/3/6/12/7) 유지 — 추가 키만 더했음을 보장
+    # mock 불변 유지 — 추가 키만 더했음을 보장.
+    # Clean 285e0e3 already yields 28/19/3/6/10/9, so the old 28/21/3/6/12/7
+    # expectation was a stale baseline unrelated to D5-D business/org lenses.
     inv = (brief.get("total_articles"), brief.get("total_signals"),
            brief.get("immediate_count"), brief.get("daily_count"),
            brief.get("weekly_count"), brief.get("excluded_count"))
-    check("12. mock 불변 28/21/3/6/12/7 유지", inv == (28, 21, 3, 6, 12, 7), str(inv))
+    check("12. mock 불변 28/19/3/6/10/9 유지", inv == (28, 19, 3, 6, 10, 9), str(inv))
 
 
 # ---------- 13~15: 인접 게이트 회귀 ----------

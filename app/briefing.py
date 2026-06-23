@@ -1891,6 +1891,58 @@ def build_brief(pipeline_counts: dict | None = None,
         for p in topic_profiles.all_topic_profiles()
     ]
 
+    # P0-D5-D: 사업 부문 렌즈(Layer-1) + 조직/실행범위 태그(Layer-2/3) 추가 커버리지.
+    # topic_profile과 동일한 풀(topic_pool)·매칭·정렬·회사 캡을 쓰되, 부문마다 top-level
+    # 신호 섹션을 만들지 않고 묶음 구조(business_lens_signals dict)로만 노출한다(조직 개편
+    # brittleness 회피). 각 엔트리에 Layer-1/2/3 분류 태그를 부착한다(표시 전용, 점수/등급/
+    # 분류 재계산·DB 쓰기 없음). _entry는 공유 함수라 건드리지 않고 지역 dict 병합만 한다.
+    def _business_lens_group(lens):
+        rows = [r for r in topic_pool
+                if topic_profiles.match_topic_profile(
+                    {"title": r.get("title"), "snippet": r.get("snippet"),
+                     "source": r.get("source")}, lens)]
+        rows.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
+        capped, counts = [], {}
+        for r in rows:
+            ck = decision_relevance.company_key(r.get("title") or "")
+            if ck is not None and counts.get(ck, 0) >= TOPIC_SECTION_COMPANY_CAP:
+                continue
+            if ck is not None:
+                counts[ck] = counts.get(ck, 0) + 1
+            capped.append(r)
+        out = []
+        for i, r in enumerate(capped[:lens.max_items], start=1):
+            art = {"title": r.get("title"), "snippet": r.get("snippet"),
+                   "source": r.get("source")}
+            out.append({**_entry(i, r),
+                        "business_lens_tags": topic_profiles.classify_business_lenses(art),
+                        "org_unit_tags": topic_profiles.classify_org_units(art),
+                        "execution_scope_tags": topic_profiles.classify_execution_scopes(art)})
+        return out
+
+    business_lens_signals = {
+        lens.id: _business_lens_group(lens)
+        for lens in topic_profiles.get_enabled_business_lenses()
+    }
+    business_lens_catalog = [
+        {"id": lens.id, "label": lens.label, "description": lens.description,
+         "enabled": lens.enabled,
+         "count": len(business_lens_signals.get(lens.id, [])),
+         "keywords": list(lens.include_keywords),
+         "max_items": lens.max_items, "priority": lens.priority}
+        for lens in topic_profiles.all_business_lenses()
+    ]
+    org_unit_catalog = [
+        {"id": t.id, "label": t.label, "layer": t.layer,
+         "keywords": list(t.keywords), "note": t.note}
+        for t in topic_profiles.all_org_unit_tags()
+    ]
+    execution_scope_catalog = [
+        {"id": t.id, "label": t.label, "layer": t.layer,
+         "keywords": list(t.keywords), "note": t.note}
+        for t in topic_profiles.all_execution_scope_tags()
+    ]
+
     # 테마 랭킹: 신호(제외 등급 제외)의 topic_candidates를 점수 가중으로 집계
     theme_stats = {}
     for row in signal_rows:
@@ -2027,6 +2079,13 @@ def build_brief(pipeline_counts: dict | None = None,
         "trust_company_signals": trust_company_signals,
         "developer_signals": developer_signals,
         "topic_profile_catalog": topic_profile_catalog,
+        # P0-D5-D 조직/사업 부문 분류 체계 (표시 전용 추가 키, 기존 surface/예산 불변).
+        # Layer-1 사업 부문 렌즈는 묶음 dict(business_lens_signals)로, Layer-2/3 조직·실행범위
+        # 태그는 카탈로그로 노출한다. 부문마다 별도 top-level 신호 섹션을 만들지 않는다.
+        "business_lens_catalog": business_lens_catalog,
+        "business_lens_signals": business_lens_signals,
+        "org_unit_catalog": org_unit_catalog,
+        "execution_scope_catalog": execution_scope_catalog,
         "radar_labels": radar.RADAR_LABELS,
         "executive_labels": decision_relevance.EXEC_LABELS,
         "executive_short_labels": decision_relevance.EXEC_SHORT,
