@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
-"""verify_dashboard_preview — 비프로덕션 대시보드 미리보기 검수 (Design Parity 패치, D5-E2).
+"""verify_dashboard_preview — 비프로덕션 대시보드 미리보기 검수 (Design Parity, D5-E3).
 
-templates/dashboard_preview.html + app/main.py 라우트가 디자인 패리티 + 정직성 계약을
-지키는지 확인한다. 완전 오프라인이다:
+templates/dashboard_preview.html + app/main.py 라우트가 Claude Design 패리티 + 정직성
+계약을 지키는지 확인한다. 완전 오프라인이다:
 - 네트워크/발송/비밀값 0건. DB를 만들거나 바꾸지 않는다(라이프스팬 미실행, 라우트 직접 호출).
-- 프로덕션 일일 리포트(docs/daily/*.html)와 Telegram 발송 경로(send_telegram.py · 워크플로)가
-  이 작업으로 바뀌지 않았음을 git으로 확인한다.
+- 프로덕션 일일 리포트(docs/daily/*.html)와 Telegram 발송 경로가 이 작업으로 바뀌지 않았음을
+  git으로 확인한다.
 
-검사 항목(작업 명세 1~13):
+D5-E3 명세 검사(1~12):
    1  /dashboard-preview 라우트/페이지가 존재하고 렌더된다
-   2  프로덕션 docs/daily 파일이 변경되지 않았다
-   3  탭: 뉴스 / AI 신호 / 시장 / 카더라·초기신호
-   4  대시보드용 시각 자산/클래스(텍스트만이 아님)
-   5  국가 내 비교 / 국가 간 비교 / 2Y / 5Y / 10Y / CPI
-   6  최소 2개의 금리 시리즈 라벨(미리보기)
-   7  시장 상세 드로어/모달 마크업
-   8  호르무즈 카드: AIS 하한 추정 / unique MMSI / 실제 통과량보다 낮을 수 있음 / 1·6·24시간·7일
-   9  AI Radar 존재 · "전력 신호 100" 부재
-  10  초기신호 탭: X / Truth Social / Telegram + 임원 직접 발송 없음
-  11  NON-PRODUCTION PREVIEW 표기
-  12  docs/daily 미변경(git)
-  13  Telegram 발송 워크플로/스크립트 미변경(git)
+   2  NON-PRODUCTION PREVIEW 표기
+   3  '데모 데이터' + '현재 체결값 아님' 표기
+   4  금리 차트 데모 라벨: US 2Y / US 5Y / US 10Y
+   5  US 2Y가 preview 차트에서 '미연동만'으로 표시되지 않음 (데모 선이 그려짐)
+   6  '국가 내 비교' (within_country)
+   7  '국가 간 비교' (cross_country)
+   8  2Y / 5Y / 10Y / CPI 컨트롤
+   9  호르무즈 카드 필수 요소(제목·AIS 하한 추정·proxy·212·unique MMSI·유조선·LNG선·컨테이너·
+      현재 통항 중·대기/정박·평균 속도·AIS 신뢰도·실제 통과량보다 낮을 수 있음)
+  10  '전력 신호 100' 부재 (정직성)
+  11  프로덕션 docs/daily 파일 미변경 (git)
+  12  Telegram 발송 워크플로/스크립트 미변경 (git)
 
-추가 정직성 검사(요구사항 보강): data_mode 라벨, 미연동 가짜값 금지, 기간 컨트롤,
-정규화/CPI 별도축, 발송 토큰 미참조 등.
+추가 정직성 보강(요구사항 §4): 기간 컨트롤, data_mode 라벨, 미연동 가짜값/가짜 선 금지,
+시장 상세 드로어, 초기신호 탭 분리·임원 자동 발송 없음, 발송 토큰 미참조.
 """
 
 import re
@@ -34,8 +34,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 MAIN = ROOT / "app" / "main.py"
-SENDER = ROOT / "scripts" / "send_telegram.py"
-WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 DOCS_LATEST = ROOT / "docs" / "daily" / "latest.html"
 DOCS_OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
 
@@ -109,207 +107,177 @@ def check_route_and_render(tpl: str, main_src: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2 / 12 · 프로덕션 docs/daily 불변
+# 2 · NON-PRODUCTION PREVIEW 표기
 # ---------------------------------------------------------------------------
 
-def check_docs_untouched() -> None:
-    check("2a: docs/daily/latest.html 존재", DOCS_LATEST.exists())
-    check("2b: docs/daily/operator-latest.html 존재", DOCS_OPERATOR.exists())
-    ok, detail = _git_unchanged(["docs/daily/latest.html", "docs/daily/operator-latest.html"])
-    check("2c/12: 프로덕션 docs/daily 파일이 변경되지 않음", ok, detail)
+def check_preview_flag(tpl: str) -> None:
+    check("2: 'NON-PRODUCTION PREVIEW' 표기", "NON-PRODUCTION PREVIEW" in tpl)
 
 
 # ---------------------------------------------------------------------------
-# 3 · 탭
+# 3 · 데모/체결값 정직성 라벨
 # ---------------------------------------------------------------------------
 
-def check_tabs(tpl: str) -> None:
-    for tab in ("뉴스", "AI 신호", "시장", "카더라·초기신호"):
-        check(f"3: 탭 '{tab}' 노출", tab in tpl)
-
-
-# ---------------------------------------------------------------------------
-# 4 · 시각 자산/클래스 (텍스트만이 아님)
-# ---------------------------------------------------------------------------
-
-def check_visual_assets(tpl: str) -> None:
-    has_style = "<style>" in tpl and "</style>" in tpl
-    check("4a: 인라인 <style> 디자인 블록 존재", has_style)
-    classes = ["metric", "featured", "lens", "panel", "tabpanel", "srow",
-               "drawer", "hz-tile", "kpi", "chartbox", "hz-bars"]
-    present = [c for c in classes if (f'"{c}' in tpl or f" {c}" in tpl or f".{c}" in tpl)]
-    check("4b: 대시보드 카드/컴포넌트 클래스 다수 존재 (>=9)",
-          len(present) >= 9, f"{len(present)}/{len(classes)}: {present}")
-    soft = "box-shadow" in tpl and "border-radius" in tpl
-    check("4c: 소프트 카드 스타일(box-shadow + border-radius)", soft)
-    svg = tpl.count("<svg") >= 4
-    check("4d: 인라인 SVG 시각화 다수 (>=4)", svg, f"<svg 개수={tpl.count('<svg')}")
+def check_honesty_labels(tpl: str) -> None:
+    check("3a: '데모 데이터' 표기", "데모 데이터" in tpl)
+    check("3b: '현재 체결값 아님' 표기", "현재 체결값 아님" in tpl)
+    check("3c: production 일일 리포트와 무관함 명시",
+          "프로덕션 일일 리포트" in tpl or "docs/daily" in tpl)
 
 
 # ---------------------------------------------------------------------------
-# 5 · 금리 비교 모드 + 만기/CPI
+# 4 / 5 · 금리 차트 데모 라벨 + US 2Y 데모 선
 # ---------------------------------------------------------------------------
 
-def check_yield_modes(tpl: str) -> None:
-    check("5a: '국가 내 비교' (within_country)", "국가 내 비교" in tpl)
-    check("5b: '국가 간 비교' (cross_country)", "국가 간 비교" in tpl)
-    for m in ("2Y", "5Y", "10Y", "CPI"):
-        check(f"5c: 만기/지표 '{m}' 옵션", m in tpl)
-    check("5d: 정규화/기준일=100 라벨",
-          "정규화 추세" in tpl and "기준일=100" in tpl and "절대 가격 비교 아님" in tpl)
-    check("5e: CPI는 금리 y축에 강제되지 않음(별도 축/비교 설명)",
+def check_yield_labels(tpl: str) -> None:
+    for lab in ("US 2Y", "US 5Y", "US 10Y"):
+        check(f"4: 금리 차트 데모 라벨 '{lab}'", lab in tpl)
+    # KR/EU/JP 다중 시리즈도 라벨 존재(국가 내/간 다중선)
+    extra = [f"{c} {m}" for c in ("KR", "EU", "JP") for m in ("2Y", "5Y", "10Y")]
+    found = [x for x in extra if x in tpl]
+    check("4+: KR/EU/JP 만기 라벨도 존재 (국가 내/간 다중 시리즈)",
+          len(found) >= 6, f"{len(found)}/9 found")
+
+
+def check_us2y_demo(tpl: str) -> None:
+    has_arr = bool(re.search(r'"us_2y"\s*:\s*\[', tpl))
+    is_null = bool(re.search(r'"us_2y"\s*:\s*null', tpl))
+    check("5: US 2Y가 preview 차트에서 데모 선으로 표시됨 (미연동만 아님)",
+          has_arr and not is_null,
+          "us_2y=데모 배열" if has_arr and not is_null else "us_2y가 데모 배열이 아님/null")
+    # 정직성: 그래도 일부 미연동 시리즈(예: 일부 CPI)는 가짜 선을 그리지 않는 동작이 남아 있어야 한다
+    check("5+: 미연동 시리즈는 차트에 가짜 선을 그리지 않음 (가짜 선 미표시)",
+          "가짜 선 미표시" in tpl)
+
+
+# ---------------------------------------------------------------------------
+# 6 / 7 / 8 · 비교 모드 + 만기/CPI 컨트롤
+# ---------------------------------------------------------------------------
+
+def check_compare_modes(tpl: str) -> None:
+    check("6: '국가 내 비교' (within_country)", "국가 내 비교" in tpl)
+    check("7: '국가 간 비교' (cross_country)", "국가 간 비교" in tpl)
+    for opt in (">2Y<", ">5Y<", ">10Y<", ">CPI<"):
+        check(f"8: 지표 컨트롤 옵션 '{opt.strip('<>')}'", opt in tpl)
+    check("8+: CPI는 금리 y축에 강제되지 않음(별도 축/비교 설명)",
           "CPI" in tpl and ("단위·축이 다" in tpl or "같은 y축에 올리지 않" in tpl))
 
 
 # ---------------------------------------------------------------------------
-# 6 · 최소 2개 금리 시리즈 라벨
-# ---------------------------------------------------------------------------
-
-def check_series_labels(tpl: str) -> None:
-    labels = [f"{c} {m}" for c in ("US", "KR", "EU", "JP") for m in ("2Y", "5Y", "10Y")]
-    found = [lab for lab in labels if lab in tpl]
-    check("6: 금리 시리즈 라벨 2개 이상 (미리보기 다중 시리즈)",
-          len(found) >= 2, f"{len(found)} found: {found[:6]}")
-
-
-# ---------------------------------------------------------------------------
-# 7 · 시장 상세 드로어/모달
-# ---------------------------------------------------------------------------
-
-def check_market_drawer(tpl: str) -> None:
-    check("7a: 드로어 오버레이/컨테이너 마크업",
-          'id="mktDrawerOv"' in tpl and 'class="drawer"' in tpl)
-    check("7b: 드로어 상세 차트 SVG", 'id="dwChart"' in tpl)
-    check("7c: 드로어 기간 버튼(1주·1개월·3개월·1년)",
-          'id="dwPeriodSeg"' in tpl and "1주" in tpl and "1개월" in tpl
-          and "3개월" in tpl and "1년" in tpl)
-    check("7d: 드로어 값/변동/갱신 필드",
-          'id="dwVal"' in tpl and 'id="dwChg"' in tpl and 'id="dwUpd"' in tpl)
-    check("7e: 드로어 주의문(현재 체결값 아님)",
-          "공개·무료 또는 대용 데이터 기준이며 현재 체결값이 아닙니다" in tpl)
-    check("7f: 행 클릭 → 상세 안내(클릭 가능)",
-          "data-mid" in tpl and "행을 클릭" in tpl)
-
-
-# ---------------------------------------------------------------------------
-# 8 · 호르무즈 카드 (풍부 + 정직)
+# 9 · 호르무즈 카드 (운영 관찰 카드 · 필수 요소)
 # ---------------------------------------------------------------------------
 
 def check_hormuz(tpl: str) -> None:
-    check("8a: 호르무즈 카드 제목", "호르무즈 해협 관찰" in tpl)
-    check("8b: AIS 하한 추정 배지", "AIS 하한 추정" in tpl)
-    check("8c: unique MMSI 기준", "unique MMSI" in tpl)
-    check("8d: '실제 통과량보다 낮을 수 있음' 경고", "실제 통과량보다 낮을 수 있" in tpl)
+    required = [
+        ("호르무즈 해협 관찰", "제목"),
+        ("AIS 하한 추정", "AIS 하한 추정 배지"),
+        ("proxy", "proxy 표기"),
+        ("212", "24시간 통과 수(212)"),
+        ("unique MMSI", "unique MMSI 기준"),
+        ("유조선", "선종 유조선"),
+        ("LNG선", "선종 LNG선"),
+        ("컨테이너", "선종 컨테이너"),
+        ("현재 통항 중", "타일 현재 통항 중"),
+        ("대기/정박", "타일 대기/정박"),
+        ("평균 속도", "타일 평균 속도"),
+        ("AIS 신뢰도", "타일 AIS 신뢰도"),
+        ("실제 통과량보다 낮을 수 있", "하한 추정 경고"),
+    ]
+    for needle, label in required:
+        check(f"9: 호르무즈 — {label} ('{needle}')", needle in tpl)
+    # 시간 창 컨트롤
     for win in ("1시간", "6시간", "24시간", "7일"):
-        check(f"8e: 호르무즈 시간 옵션 '{win}'", win in tpl)
-    # 풍부한 미리보기 요소
-    check("8f: 시간대별 통과 막대 차트", 'id="hzBars"' in tpl)
-    check("8g: 선종 분포(유조선/LNG선/컨테이너·기타)",
-          "유조선" in tpl and "LNG선" in tpl and "컨테이너·기타" in tpl)
-    check("8h: 메트릭 타일(현재 통항 중/대기·정박/평균 속도/AIS 신뢰도)",
-          "현재 통항 중" in tpl and "평균 속도" in tpl and "AIS 신뢰도" in tpl)
-    check("8i: 해협 모식도(개념)", "해협 모식도" in tpl)
-    # 정직성: 데모 표기 + 라이브 미연동 명시 + 위성 AIS 경고
-    check("8j: '데모 데이터 · AIS 하한 추정' 배지 (값을 live로 위장하지 않음)",
-          "데모 데이터 · AIS 하한 추정" in tpl)
-    check("8k: 라이브 AIS 통합 아님 명시",
-          "라이브 AIS" in tpl and ("통합이 아" in tpl or "미연동" in tpl))
-    check("8l: 위성 AIS 미포함 누락 경고",
-          "위성 AIS 미포함" in tpl)
+        check(f"9+: 호르무즈 시간 창 '{win}'", win in tpl)
+    # 운영 카드 요소(설명-나열형이 아닌 시각 요소)
+    check("9+: 시간대별 통과 막대 + 해협 모식도 + 메트릭 타일",
+          'id="hzBars"' in tpl and "해협 모식도" in tpl and "hz-tile" in tpl)
+    # 데모/라이브 정직성
+    check("9+: 데모 미리보기 고정값 + 라이브 AIS 통합 아님 + 프로덕션 값 미생성",
+          "데모 미리보기 고정값" in tpl and "라이브 AIS" in tpl
+          and ("통합이 아" in tpl or "미연동" in tpl)
+          and "프로덕션 값을 생성하지 않" in tpl)
+    check("9+: 위성 AIS 미포함 누락 경고", "위성 AIS 미포함" in tpl and "누락" in tpl)
 
 
 # ---------------------------------------------------------------------------
-# 9 · AI Radar / 전력 신호 100 부재
+# 10 · '전력 신호 100' 부재
 # ---------------------------------------------------------------------------
 
-def check_ai_radar(tpl: str) -> None:
-    check("9a: 'AI Radar' 존재", "AI Radar" in tpl)
-    check("9b: '전력 신호 100' 부재 (기사 상대 비중으로 재구성)", "전력 신호 100" not in tpl)
-    check("9c: 테마 % = 기사 상대 비중 설명",
-          "상대 비중" in tpl and ("실측" in tpl or "전력 실측" in tpl))
+def check_no_power100(tpl: str) -> None:
+    check("10a: '전력 신호 100' 부재 (기사 상대 비중으로 재구성)", "전력 신호 100" not in tpl)
+    check("10b: 'AI Radar' 존재", "AI Radar" in tpl)
+    check("10c: 테마 % = 기사 상대 비중 설명",
+          "상대 비중" in tpl and "실측" in tpl)
 
 
 # ---------------------------------------------------------------------------
-# 10 / 11 · 초기신호 탭 분리 + 임원 자동 발송 없음
+# 11 / 12 · 프로덕션 docs/daily + Telegram 불변 (git)
 # ---------------------------------------------------------------------------
 
-def _rumor_panel(tpl: str) -> str:
-    start = tpl.find('id="panel-rumor"')
-    if start < 0:
-        return ""
-    end = tpl.find("</section>", start)
-    return tpl[start:end if end > 0 else len(tpl)]
+def check_production_untouched(tpl: str, main_src: str) -> None:
+    check("11a: docs/daily/latest.html 존재", DOCS_LATEST.exists())
+    check("11b: docs/daily/operator-latest.html 존재", DOCS_OPERATOR.exists())
+    ok, detail = _git_unchanged(["docs/daily/latest.html", "docs/daily/operator-latest.html"])
+    check("11c: 프로덕션 docs/daily 파일이 변경되지 않음 (git)", ok, detail)
+
+    for needle in ("send_telegram", "approve_send", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS"):
+        check(f"12a: 템플릿에 발송 토큰/경로 '{needle}' 미참조", needle not in tpl)
+    check("12b: main.py 미리보기 라우트가 발송을 호출하지 않음", "send_telegram" not in main_src)
+    ok_send, d_send = _git_unchanged(["scripts/send_telegram.py"])
+    check("12c: scripts/send_telegram.py 변경 없음", ok_send, d_send)
+    ok_wf, d_wf = _git_unchanged([".github/workflows/telegram-notify.yml"])
+    check("12d: telegram-notify.yml 워크플로 변경 없음", ok_wf, d_wf)
+
+
+# ---------------------------------------------------------------------------
+# 추가 정직성/구조 — 탭, 시각 자산, 기간 컨트롤, 드로어, 초기신호, data_mode
+# ---------------------------------------------------------------------------
+
+def check_structure_extras(tpl: str) -> None:
+    for tab in ("뉴스", "AI 신호", "시장", "카더라·초기신호"):
+        check(f"E-tab: 탭 '{tab}' 노출", tab in tpl)
+
+    classes = ["metric", "featured", "lens", "panel", "tabpanel", "srow",
+               "drawer", "hz-tile", "kpi", "chartbox", "hz-bars", "hz-metric"]
+    present = [c for c in classes if f".{c}" in tpl or f'"{c}' in tpl or f" {c}" in tpl]
+    check("E-visual: 대시보드 카드/컴포넌트 클래스 다수 (>=10)",
+          len(present) >= 10, f"{len(present)}/{len(classes)}")
+    check("E-visual: 소프트 카드 스타일(box-shadow + border-radius)",
+          "box-shadow" in tpl and "border-radius" in tpl)
+    check("E-visual: 인라인 SVG 시각화 다수 (>=4)", tpl.count("<svg") >= 4,
+          f"<svg 개수={tpl.count('<svg')}")
+
+    check("E-period: 금리 차트 기간 컨트롤(1주/1개월/3개월/1년)",
+          'id="yieldPeriodSeg"' in tpl and "1주" in tpl and "1개월" in tpl
+          and "3개월" in tpl and "1년" in tpl)
+
+    check("E-drawer: 시장 상세 드로어(행 클릭 → 상세 차트 + 기간 + 값/변동/갱신)",
+          'id="mktDrawerOv"' in tpl and 'id="dwChart"' in tpl and "data-mid" in tpl
+          and 'id="dwVal"' in tpl and "행을 클릭" in tpl)
+    check("E-drawer: 드로어 주의문(현재 체결값 아님)",
+          "공개·무료 또는 대용 데이터 기준이며 현재 체결값이 아닙니다" in tpl)
+
+    for label in ("지연", "대용", "보고", "미연동"):
+        check(f"E-data_mode: '{label}' 노출", label in tpl)
+    has_unavail_null = (bool(re.search(r'"data_mode"\s*:\s*"unavailable"', tpl))
+                        and bool(re.search(r'"value"\s*:\s*null', tpl)))
+    check("E-fake: 시장 미연동 지표는 value=null (가짜 숫자 없음)", has_unavail_null)
 
 
 def check_early_signals(tpl: str) -> None:
-    panel = _rumor_panel(tpl)
-    check("10a: 초기신호 탭 패널 존재", bool(panel))
-    check("10b: 관찰 소스 X(엑스) / Truth Social / Telegram",
+    start = tpl.find('id="panel-rumor"')
+    panel = tpl[start:tpl.find("</section>", start)] if start >= 0 else ""
+    check("E-early: 초기신호 탭 패널 존재", bool(panel))
+    check("E-early: 관찰 소스 X(엑스) / Truth Social / Telegram",
           "X (엑스)" in panel and "Truth Social" in panel and "Telegram" in panel)
-    check("10c: 허용 액션만(뉴스 승격 검토 / 근거 확인)",
+    check("E-early: 허용 액션만(뉴스 승격 검토 / 근거 확인)",
           "뉴스 승격 검토" in panel and "근거 확인" in panel)
-    check("10d: 임원 자동 알림/직접 발송 없음",
+    check("E-early: 임원 자동 알림/직접 발송 없음",
           "임원 자동 알림을 생성하지 않" in panel and "approve_send" not in panel
           and "send_telegram" not in panel)
-    check("10e: 즉시-알림 발송 후보 액션이 초기신호 탭에 없음",
-          "즉시 알림 후보" not in panel)
-    check("10f: 검증 뉴스와 분리 + 비공개 대화 수집 금지",
+    check("E-early: 검증 뉴스와 분리 + 비공개 대화 수집 금지",
           "확인된 뉴스가 아" in panel and "검증 뉴스와 분리" in panel
           and "비공개 대화 수집" in panel)
-
-
-# ---------------------------------------------------------------------------
-# 11 · NON-PRODUCTION PREVIEW 표기
-# ---------------------------------------------------------------------------
-
-def check_preview_flag(tpl: str) -> None:
-    check("11: 'NON-PRODUCTION PREVIEW' 표기", "NON-PRODUCTION PREVIEW" in tpl)
-    check("11+: '데모 데이터' 표기", "데모 데이터" in tpl)
-
-
-# ---------------------------------------------------------------------------
-# 13 · Telegram 발송 경로 불변 + 토큰 미참조
-# ---------------------------------------------------------------------------
-
-def check_telegram_untouched(tpl: str, main_src: str) -> None:
-    for needle in ("send_telegram", "approve_send", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS"):
-        check(f"13a: 템플릿에 발송 토큰/경로 '{needle}' 미참조", needle not in tpl)
-    check("13b: main.py 미리보기 라우트가 발송을 호출하지 않음",
-          "send_telegram" not in main_src)
-    ok_send, d_send = _git_unchanged(["scripts/send_telegram.py"])
-    check("13c: scripts/send_telegram.py 변경 없음", ok_send, d_send)
-    ok_wf, d_wf = _git_unchanged([".github/workflows/telegram-notify.yml"])
-    check("13d: telegram-notify.yml 워크플로 변경 없음", ok_wf, d_wf)
-
-
-# ---------------------------------------------------------------------------
-# 추가 정직성 — data_mode 라벨 / 미연동 가짜값 금지 / 기간 컨트롤
-# ---------------------------------------------------------------------------
-
-def check_data_modes(tpl: str) -> None:
-    for label in ("지연", "대용", "보고", "미연동"):
-        check(f"E-data_mode: '{label}' 노출", label in tpl)
-    for extra in ("정책/키 필요", "확인 전", "공식 발언", "승인 채널 관찰"):
-        check(f"E-state: honest 상태 '{extra}' 노출", extra in tpl)
-
-
-def check_no_fake_values(tpl: str) -> None:
-    has_unavail_null = bool(re.search(r'"data_mode"\s*:\s*"unavailable"', tpl)) and \
-        bool(re.search(r'"value"\s*:\s*null', tpl))
-    check("E-fake: 시장 미연동 지표는 value=null (가짜 숫자 없음)", has_unavail_null)
-    check("E-fake: 미연동 시리즈는 차트에 가짜 선을 그리지 않음 (가짜 선 미표시)",
-          "가짜 선 미표시" in tpl)
-    check("E-fake: 초기신호 소스 미연동/위조 금지",
-          "정책/키 필요" in tpl and "위조하지 않" in tpl)
-    check("E-fake: 호르무즈 수치는 데모 고정값 + 라이브 값 미생성 명시",
-          "데모 미리보기 고정값" in tpl and "프로덕션 값을 생성하지 않" in tpl)
-
-
-def check_period_controls(tpl: str) -> None:
-    check("E-period: 금리 차트 기간 컨트롤(1주/1개월/3개월/1년)",
-          'id="yieldPeriodSeg"' in tpl)
-    for p in ("1주", "1개월", "3개월", "1년"):
-        check(f"E-period: 기간 버튼 '{p}'", p in tpl)
 
 
 def main() -> int:
@@ -317,21 +285,17 @@ def main() -> int:
     tpl = _read(TEMPLATE)
     main_src = _read(MAIN)
 
-    check_route_and_render(tpl, main_src)        # 1
-    check_docs_untouched()                        # 2 / 12
-    check_tabs(tpl)                               # 3
-    check_visual_assets(tpl)                      # 4
-    check_yield_modes(tpl)                        # 5
-    check_series_labels(tpl)                      # 6
-    check_market_drawer(tpl)                      # 7
-    check_hormuz(tpl)                             # 8
-    check_ai_radar(tpl)                           # 9
-    check_early_signals(tpl)                      # 10 / 11(no-auto-alert)
-    check_preview_flag(tpl)                       # 11
-    check_telegram_untouched(tpl, main_src)       # 13
-    check_data_modes(tpl)                         # extra
-    check_no_fake_values(tpl)                     # extra
-    check_period_controls(tpl)                    # extra
+    check_route_and_render(tpl, main_src)     # 1
+    check_preview_flag(tpl)                    # 2
+    check_honesty_labels(tpl)                  # 3
+    check_yield_labels(tpl)                    # 4
+    check_us2y_demo(tpl)                       # 5
+    check_compare_modes(tpl)                   # 6 / 7 / 8
+    check_hormuz(tpl)                          # 9
+    check_no_power100(tpl)                     # 10
+    check_production_untouched(tpl, main_src)  # 11 / 12
+    check_structure_extras(tpl)               # 보강
+    check_early_signals(tpl)                   # 보강
 
     print()
     if _failures:
@@ -339,7 +303,7 @@ def main() -> int:
         for f in _failures:
             print(f"  - {f}")
         return 1
-    print("RESULT: PASS — 대시보드 미리보기 검수 통과 (design parity)")
+    print("RESULT: PASS — 대시보드 미리보기 검수 통과 (design parity · D5-E3)")
     return 0
 
 

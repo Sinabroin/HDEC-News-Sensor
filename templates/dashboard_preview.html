@@ -87,7 +87,8 @@
 
   /* ===== Summary Metrics ===== */
   .metrics{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px;}
-  .metric{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; box-shadow:var(--shadow);}
+  .metric{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); transition:box-shadow .16s ease, transform .16s ease;}
+  .metric:hover{box-shadow:var(--shadow-lg); transform:translateY(-1px);}
   .metric .row{display:flex; align-items:center; gap:10px;}
   .metric .ic{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none;}
   .metric .lbl{font-size:12.5px; font-weight:600; color:var(--mute);}
@@ -256,11 +257,35 @@
   @media (max-width:640px){ .hz-cols{grid-template-columns:1fr;} }
   .hz-bars{width:100%; height:96px;}
   .hz-map{background:#F2F8FE; border:1px solid #E1ECF8; border-radius:12px; padding:6px;}
-  .hz-vrow{display:grid; grid-template-columns:62px 1fr 40px; align-items:center; gap:9px; margin-bottom:10px;}
+  .hz-vrow{display:grid; grid-template-columns:88px 1fr 40px; align-items:center; gap:9px; margin-bottom:10px;}
   .hz-vrow .vl{font-size:12px; font-weight:600; color:var(--ink4);}
   .hz-vrow .vb{height:7px; border-radius:4px; background:#EAEFF6; overflow:hidden;}
   .hz-vrow .vb span{display:block; height:100%; border-radius:4px;}
   .hz-vrow .vp{font-size:11.5px; font-weight:700; color:var(--ink3); font-variant-numeric:tabular-nums; text-align:right;}
+  /* Hormuz operational card (D5-E3) */
+  .hz-head{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
+  .hz-subtitle{font-size:11.5px; color:var(--mute2); font-weight:500; margin-top:4px;}
+  .hz-badges{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:none;}
+  .hz-ctlrow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:14px 0 2px;}
+  .hz-hero{display:grid; grid-template-columns:1fr 0.92fr; gap:16px; align-items:stretch; margin-top:12px;}
+  @media (max-width:640px){ .hz-hero{grid-template-columns:1fr;} }
+  .hz-metric{background:linear-gradient(135deg,#F6FAFE 0%,#EAF3FF 100%); border:1px solid #E1ECF8; border-radius:14px;
+    padding:16px 18px; display:flex; flex-direction:column; justify-content:center;}
+  .hz-mlabel{font-size:11px; color:var(--mute2); font-weight:600; line-height:1.45;}
+  .hz-mval{display:flex; align-items:baseline; gap:7px; margin-top:10px;}
+  .hz-num{font-size:44px; font-weight:800; line-height:1; letter-spacing:-0.02em; color:var(--ink);}
+  .hz-unit{font-size:14px; font-weight:700; color:var(--mute2);}
+  .hz-delta{font-size:12.5px; font-weight:700; color:var(--sky); margin-top:9px; font-variant-numeric:tabular-nums;}
+  .hz-mnote{font-size:11px; color:var(--mute3); line-height:1.5; margin-top:10px;}
+  .hz-mnote b{color:var(--ink4); font-weight:700;}
+  .hz-mapwrap{display:flex; flex-direction:column;}
+  .hz-mapwrap .hz-map{flex:1; display:flex;}
+  .hz-maplabel{font-size:10.5px; color:var(--mute4); font-weight:500; margin-top:6px; text-align:center;}
+  .hz-fine{font-size:10.5px; color:var(--mute4); font-weight:500; line-height:1.55;}
+  .hz-warn{display:flex; gap:9px; align-items:flex-start; background:var(--amber-tint); border:1px solid var(--amber-bd);
+    border-radius:11px; padding:11px 13px; margin-top:16px; font-size:12px; color:#6E5A33; line-height:1.55;}
+  .hz-warn b{color:var(--amber); font-weight:800;}
+  .hz-warn .warn-ic{color:var(--amber); font-weight:800; flex:none;}
 
   /* ===== Clickable market rows ===== */
   .mrow.click{cursor:pointer; border-radius:9px; padding-left:8px; padding-right:8px; margin:0 -8px;}
@@ -571,7 +596,7 @@
         <div class="card chartcard" style="margin-bottom:14px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0;">
             <div class="ph">금리·물가 비교 <small>· 상세 차트</small></div>
-            <div class="pnote">미연동 시리즈는 가짜 선을 그리지 않습니다. 단위가 다른 비교는 정규화(기준일=100)로만 표시합니다.</div>
+            <div class="pnote">프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (데모 시계열 — 현재 체결값 아님). 미연동 시리즈는 가짜 선을 그리지 않으며, 단위가 다른 비교는 정규화(기준일=100)로만 표시합니다.</div>
           </div>
           <div class="chartctl">
             <div class="seg" id="yieldModeSeg">
@@ -612,14 +637,18 @@
 
         <!-- Hormuz -->
         <div class="card hz" style="padding:20px 22px; margin-bottom:14px;">
-          <div class="row">
-            <div class="panel" style="border:none; box-shadow:none; padding:0;">
-              <div class="ph">호르무즈 해협 관찰 <small>· 지정학 · 에너지 물류</small></div>
-              <div class="pnote">유가·해상 물류·중동 발주 환경의 선행 관찰 지표입니다. 아래 수치는 모두 <b>데모 미리보기</b>입니다.</div>
+          <div class="hz-head">
+            <div style="min-width:0;">
+              <div class="ph">호르무즈 해협 관찰 <small>· 선박 통항</small></div>
+              <div class="hz-subtitle">유가·LNG·플랜트·해외현장 연계 · 선박 통항</div>
             </div>
-            <span class="dm proxy" style="font-size:10.5px;">데모 데이터 · AIS 하한 추정 · proxy</span>
+            <div class="hz-badges">
+              <span class="dm proxy" style="font-size:10.5px;">AIS 하한 추정 · proxy</span>
+              <span class="previewflag" style="margin:0;">데모 데이터</span>
+            </div>
           </div>
-          <div class="chartctl" style="margin:14px 0 6px;">
+
+          <div class="hz-ctlrow">
             <div class="seg" id="hzTimeSeg">
               <button data-win="1h">1시간</button>
               <button data-win="6h">6시간</button>
@@ -628,64 +657,64 @@
             </div>
             <span class="dm policy" style="font-size:10px;">라이브 AIS 미연동 · 정책/키 필요</span>
           </div>
-          <div class="row" style="align-items:flex-end; margin-top:6px;">
-            <div>
-              <div style="font-size:11px; color:var(--mute3); font-weight:600;" id="hzWindowLabel">최근 24시간 AIS 관측 통과</div>
-              <div style="display:flex; align-items:baseline; gap:8px;">
-                <div class="big" id="hzCount" style="color:#5E6E8C;">1,180</div>
-                <span style="font-size:12px; font-weight:700; color:var(--mute4);">척<span style="color:var(--amber);"> · 데모</span></span>
-              </div>
-              <div style="font-size:11px; color:var(--mute3); margin-top:4px;">게이트 통과 <b>unique MMSI</b> 기준 · <b>AIS 하한 추정</b> (실제보다 낮을 수 있음)</div>
+
+          <!-- hero: 핵심 통과 수 + 해협 모식도 -->
+          <div class="hz-hero">
+            <div class="hz-metric">
+              <div class="hz-mlabel" id="hzWindowLabel">최근 24시간 통과 · 게이트 통과 unique MMSI</div>
+              <div class="hz-mval"><span class="hz-num num" id="hzCount">212</span><span class="hz-unit">척</span></div>
+              <div class="hz-delta" id="hzDelta">▲ +12% · 평균 189 대비</div>
+              <div class="hz-mnote">게이트 통과 <b>unique MMSI</b> 기준 · <b>AIS 하한 추정</b> (실제보다 낮을 수 있음).</div>
             </div>
-            <span class="dm proxy" style="font-size:10.5px;">preview 고정값</span>
+            <div class="hz-mapwrap">
+              <div class="hz-map">
+                <svg viewBox="0 0 240 150" width="100%" height="150" fill="none" aria-label="호르무즈 해협 모식도(개념 · 데모)" style="display:block;">
+                  <defs><linearGradient id="hzWater" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#EAF3FD"></stop><stop offset="1" stop-color="#DCEBFA"></stop></linearGradient></defs>
+                  <rect x="0" y="0" width="240" height="150" rx="8" fill="url(#hzWater)"></rect>
+                  <path d="M0 0 H240 V40 C188 36 150 12 96 18 C58 22 26 14 0 26 Z" fill="#E5EAD9"></path>
+                  <path d="M0 150 H240 V104 C190 110 150 124 100 120 C56 116 28 128 0 118 Z" fill="#E5EAD9"></path>
+                  <text x="40" y="22" font-size="8.5" fill="#7E8CA6">이란</text>
+                  <text x="150" y="138" font-size="8.5" fill="#7E8CA6">오만 / UAE</text>
+                  <line x1="120" y1="34" x2="120" y2="116" stroke="#B9CEE6" stroke-width="1" stroke-dasharray="3 3"></line>
+                  <rect x="112" y="60" width="16" height="34" rx="2" fill="#9CC0E8" fill-opacity="0.25" stroke="#5B8FCB" stroke-dasharray="2 2"></rect>
+                  <text x="120" y="54" text-anchor="middle" font-size="8" fill="#3F6FA8" font-weight="700">협해부</text>
+                  <path d="M16 80 H224" stroke="#5B8FCB" stroke-width="1.4" stroke-dasharray="6 5" opacity="0.7"></path>
+                  <polygon points="46,76 58,80 46,84" fill="#3F6FA8"></polygon>
+                  <polygon points="92,76 104,80 92,84" fill="#3C7A4E"></polygon>
+                  <polygon points="150,76 162,80 150,84" fill="#9C7232"></polygon>
+                  <polygon points="196,76 208,80 196,84" fill="#3F6FA8"></polygon>
+                </svg>
+              </div>
+              <div class="hz-maplabel">해협 모식도 · 협해부(게이트) 통과 관찰 (개념 · 데모)</div>
+            </div>
           </div>
 
-          <!-- metric tiles -->
+          <!-- 현재 상태 타일 (창과 무관한 현재값 · 데모 고정) -->
           <div class="hz-tiles">
-            <div class="hz-tile"><div class="k">현재 통항 중</div><div class="v" id="hzTransit">38 <small>척</small></div></div>
-            <div class="hz-tile"><div class="k">대기 / 정박</div><div class="v" id="hzWaiting">12 <small>척</small></div></div>
-            <div class="hz-tile"><div class="k">평균 속도</div><div class="v" id="hzSpeed">11.4 <small>kn</small></div></div>
-            <div class="hz-tile"><div class="k">AIS 신뢰도</div><div class="v" id="hzConf">하한 <small>추정</small></div></div>
+            <div class="hz-tile"><div class="k">현재 통항 중</div><div class="v" id="hzTransit">47 <small>척</small></div></div>
+            <div class="hz-tile"><div class="k">대기/정박</div><div class="v" id="hzWaiting">6 <small>척</small></div></div>
+            <div class="hz-tile"><div class="k">평균 속도</div><div class="v" id="hzSpeed">12.4 <small>kn</small></div></div>
+            <div class="hz-tile"><div class="k">AIS 신뢰도</div><div class="v" id="hzConf" style="font-size:15px;">중 · 부분</div></div>
           </div>
 
           <div class="hz-cols">
             <div>
               <div class="hz-sub">시간대별 통과 (데모)</div>
               <svg class="hz-bars" id="hzBars" viewBox="0 0 320 96" preserveAspectRatio="none" aria-label="시간대별 통과 막대(데모)"></svg>
-              <div style="font-size:10.5px; color:var(--mute4); font-weight:500; margin-top:4px;">막대는 시간대별 통과량 추세 데모 — 절대값 아님.</div>
+              <div class="hz-fine" style="margin-top:4px;">막대는 시간대별 통과량 추세 데모 — 절대값 아님.</div>
             </div>
             <div>
-              <div class="hz-sub">해협 모식도 (개념)</div>
-              <div class="hz-map">
-                <svg viewBox="0 0 240 110" width="100%" height="98" fill="none" aria-label="호르무즈 해협 모식도(개념)">
-                  <rect x="0" y="0" width="240" height="110" rx="8" fill="#EAF3FD"></rect>
-                  <path d="M0 0 H240 V34 C188 30 150 8 96 14 C58 18 26 12 0 22 Z" fill="#E5EAD9"></path>
-                  <path d="M0 110 H240 V78 C190 84 150 96 100 92 C56 88 28 98 0 90 Z" fill="#E5EAD9"></path>
-                  <text x="40" y="20" font-size="8" fill="#7E8CA6">이란</text>
-                  <text x="150" y="102" font-size="8" fill="#7E8CA6">오만 / UAE</text>
-                  <line x1="120" y1="30" x2="120" y2="82" stroke="#B9CEE6" stroke-width="1" stroke-dasharray="3 3"></line>
-                  <path d="M14 58 H214" stroke="#5B8FCB" stroke-width="1.4" stroke-dasharray="6 5" opacity="0.7"></path>
-                  <polygon points="40,55 50,58 40,61" fill="#3F6FA8"></polygon>
-                  <polygon points="96,55 106,58 96,61" fill="#3C7A4E"></polygon>
-                  <polygon points="160,55 170,58 160,61" fill="#9C7232"></polygon>
-                  <text x="118" y="46" text-anchor="middle" font-size="7.5" fill="#9AAAC1">게이트 라인 (개념)</text>
-                </svg>
-              </div>
+              <div class="hz-sub">선종 분포 (현재 통항 중 · 데모)</div>
+              <div id="hzVessels"></div>
             </div>
           </div>
 
-          <div class="hz-sub">선종 분포 (데모)</div>
-          <div id="hzVessels"></div>
-
-          <div class="warn">
-            <b>AIS 기반 하한 추정치입니다.</b> 게이트 통과 <b>unique MMSI</b> 기준이라 <b>실제 통과량보다 낮을 수 있습니다</b>.
-            <b>위성 AIS 미포함 시 중앙부 통과 선박이 누락될 수 있습니다.</b>
-            <ul>
-              <li>이 카드의 모든 수치는 <b>데모 미리보기 고정값</b>입니다 — 라이브 AIS 통합이 아닙니다.</li>
-              <li>실제 통과량보다 낮을 수 있음 (하한 추정).</li>
-              <li>공개 AIS 라이브 소스/키 연동 전에는 프로덕션 값을 생성하지 않습니다 (정책/키 필요 · 미연동).</li>
-            </ul>
+          <div class="hz-warn">
+            <span class="warn-ic">⚠</span>
+            <span><b>AIS 기반 하한 추정치입니다.</b> 위성 AIS 미포함 시 중앙부 통과 선박이 누락될 수 있으며 실제 통과량보다 낮을 수 있습니다.</span>
           </div>
+          <div class="hz-fine" style="margin-top:8px;">데모 미리보기 고정값 · 라이브 AIS 통합이 아니며(미연동) 공개 AIS 소스/키 연동 전에는 프로덕션 값을 생성하지 않습니다.</div>
         </div>
 
         <!-- Hyundai E&C market reaction (참고) -->
@@ -1150,7 +1179,7 @@
   };
   /* 데모 고정 시계열. 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐, 그 외는 미연동(null). */
   var YBASE = {
-    "us_2y": null,
+    "us_2y": [4.55, 4.58, 4.60, 4.62, 4.63, 4.65, 4.66, 4.68, 4.69, 4.70, 4.71, 4.72],
     "us_5y": [3.95, 3.98, 4.02, 4.05, 4.08, 4.10, 4.12, 4.15, 4.18, 4.20, 4.21, 4.22],
     "us_10y": [4.10, 4.16, 4.20, 4.25, 4.28, 4.31, 4.35, 4.40, 4.42, 4.44, 4.45, 4.46],
     "kr_2y": [3.05, 3.08, 3.07, 3.10, 3.12, 3.11, 3.14, 3.16, 3.15, 3.18, 3.20, 3.21],
@@ -1175,7 +1204,7 @@
     "us_cpi": "US CPI", "kr_cpi": "KR CPI", "eu_cpi": "EU CPI", "jp_cpi": "JP CPI"
   };
   var CC = { us: "US", kr: "KR", eu: "EU", jp: "JP" };
-  var MAT_COLOR = { "2y": "#9C7232", "5y": "#5B8FCB", "10y": "#3F6FA8", "cpi": "#3F6FA8" };
+  var MAT_COLOR = { "2y": "#9C7232", "5y": "#5B8FCB", "10y": "#26344D", "cpi": "#26344D" };
   var CTRY_COLOR = { us: "#3F6FA8", kr: "#3C7A4E", eu: "#9C7232", jp: "#B85049" };
 
   function resample(base, n) {
@@ -1283,7 +1312,7 @@
     } else if (v.norm) {
       msg = "정규화 추세 · 기준일=100 · 절대 가격 비교 아님. 단위가 다른 지표 비교에 사용합니다.";
     } else {
-      msg = "데모 고정 시계열 — 현재 체결값이 아닙니다. 프로덕션 무료 실데이터는 US 5Y·10Y(지연)뿐이며, 그 외 만기·국가·CPI는 미연동입니다.";
+      msg = "데모 시계열 — 현재 체결값 아님. 프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (예: US 2Y는 프로덕션 미연동이나 preview에선 데모 선으로 표시).";
     }
     if (v.unavail.length) msg += " 미연동(선 미표시): " + v.unavail.join(", ") + ".";
     note.textContent = msg;
@@ -1381,23 +1410,25 @@
   })();
 
   /* ---------- Hormuz preview (모든 값 데모 고정 · AIS 하한 추정 · 라이브 미연동) ----------
-     주의: 이 카드의 수치는 preview 데모 고정값이다. 라이브 AIS 통합이 아니며 프로덕션 값을 만들지 않는다. */
+     주의: 이 카드의 수치는 preview 데모 고정값이다. 라이브 AIS 통합이 아니며 프로덕션 값을 만들지 않는다.
+     '현재 통항 중/대기·정박/평균 속도/신뢰도' 타일과 선종 분포는 현재 상태라 시간창과 무관하게 마크업 고정값을 유지한다.
+     시간창은 누적 통과 수(count) · 증감(delta) · 시간대 막대(bars)만 바꾼다. */
   (function () {
     var seg = el("hzTimeSeg"); if (!seg) return;
     var HZ = {
-      "1h":  { label: "최근 1시간 AIS 관측 통과",  count: "52",    transit: "38", waiting: "12", speed: "11.8", bars: [3, 4, 5, 4, 6, 5, 7, 6, 5, 6, 7, 8] },
-      "6h":  { label: "최근 6시간 AIS 관측 통과",  count: "310",   transit: "41", waiting: "10", speed: "11.2", bars: [20, 24, 22, 26, 28, 25, 30, 27, 29, 31, 28, 30] },
-      "24h": { label: "최근 24시간 AIS 관측 통과", count: "1,180", transit: "38", waiting: "12", speed: "11.4", bars: [40, 44, 48, 52, 58, 55, 60, 57, 62, 59, 63, 61] },
-      "7d":  { label: "최근 7일 AIS 관측 통과",    count: "8,420", transit: "36", waiting: "14", speed: "10.9", bars: [820, 910, 870, 960, 1010, 980, 1120, 1080, 1150, 1100, 1180, 1160] }
+      "1h":  { label: "최근 1시간 통과 · 게이트 통과 unique MMSI",  count: "9",     delta: "▲ +6% · 평균 8 대비",    bars: [1, 2, 1, 2, 1, 2, 1, 2] },
+      "6h":  { label: "최근 6시간 통과 · 게이트 통과 unique MMSI",  count: "54",    delta: "▲ +9% · 평균 49 대비",   bars: [7, 9, 8, 10, 9, 11, 9, 10, 12, 9, 11, 10] },
+      "24h": { label: "최근 24시간 통과 · 게이트 통과 unique MMSI", count: "212",   delta: "▲ +12% · 평균 189 대비", bars: [6, 7, 5, 8, 9, 11, 13, 12, 10, 11, 9, 8, 7, 9, 11, 12, 13, 11, 9, 8, 10, 9, 8, 7] },
+      "7d":  { label: "최근 7일 통과 · 게이트 통과 unique MMSI",    count: "1,486", delta: "▼ 3% · 평균 1,530 대비", bars: [205, 224, 198, 236, 248, 214, 161] }
     };
     var VESSELS = [
-      { label: "유조선", color: "#3F6FA8", pct: 54 },
-      { label: "LNG선", color: "#3C7A4E", pct: 23 },
-      { label: "컨테이너·기타", color: "#9C7232", pct: 23 }
+      { label: "유조선", color: "#3F6FA8", count: 31 },
+      { label: "LNG선", color: "#3C7A4E", count: 9 },
+      { label: "컨테이너·기타", color: "#9C7232", count: 7 }
     ];
     function drawBars(arr) {
       var svg = el("hzBars"); if (!svg) return;
-      var W = 320, H = 96, n = arr.length, gap = 4, bw = (W - (n - 1) * gap) / n;
+      var W = 320, H = 96, n = arr.length, gap = n > 16 ? 2 : 4, bw = (W - (n - 1) * gap) / n;
       var mx = Math.max.apply(null, arr) || 1, parts = [];
       arr.forEach(function (v, i) {
         var h = (v / mx) * (H - 8), x = i * (bw + gap), y = H - h;
@@ -1407,11 +1438,13 @@
     }
     function drawVessels() {
       var box = el("hzVessels"); if (!box) return; box.innerHTML = "";
+      var total = VESSELS.reduce(function (s, v) { return s + v.count; }, 0) || 1;
       VESSELS.forEach(function (v) {
+        var w = (v.count / total * 100).toFixed(0);
         var d = document.createElement("div"); d.className = "hz-vrow";
         d.innerHTML = '<span class="vl">' + esc(v.label) + '</span>' +
-          '<span class="vb"><span style="width:' + v.pct + '%; background:' + v.color + '"></span></span>' +
-          '<span class="vp">' + v.pct + '%</span>';
+          '<span class="vb"><span style="width:' + w + '%; background:' + v.color + '"></span></span>' +
+          '<span class="vp">' + v.count + '척</span>';
         box.appendChild(d);
       });
     }
@@ -1419,9 +1452,7 @@
       var d = HZ[win] || HZ["24h"];
       el("hzWindowLabel").textContent = d.label;
       el("hzCount").textContent = d.count;
-      el("hzTransit").innerHTML = d.transit + ' <small>척</small>';
-      el("hzWaiting").innerHTML = d.waiting + ' <small>척</small>';
-      el("hzSpeed").innerHTML = d.speed + ' <small>kn</small>';
+      el("hzDelta").textContent = d.delta;
       drawBars(d.bars);
     }
     seg.addEventListener("click", function (ev) {

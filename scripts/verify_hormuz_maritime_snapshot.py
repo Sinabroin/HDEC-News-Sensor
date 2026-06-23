@@ -72,7 +72,7 @@ def main() -> int:
     # A · 카드 + 풍부한 요소
     check("A1: 호르무즈 카드 존재", bool(card))
     check("A2: 메트릭 타일(현재 통항 중/대기·정박/평균 속도/AIS 신뢰도)",
-          "현재 통항 중" in card and "대기 / 정박" in card
+          "현재 통항 중" in card and "대기/정박" in card
           and "평균 속도" in card and "AIS 신뢰도" in card)
     check("A3: 시간대별 통과 막대 차트", 'id="hzBars"' in card)
     # 선종 분포는 #hzVessels 컨테이너에 JS가 채운다 — 컨테이너는 카드 안, 라벨은 템플릿 JS에.
@@ -82,7 +82,9 @@ def main() -> int:
     check("A5: 해협 모식도(개념)", "해협 모식도" in card)
 
     # B · 데모/preview 표기 — live 위장 금지
-    check("B1: '데모 데이터 · AIS 하한 추정' 배지", "데모 데이터 · AIS 하한 추정" in card)
+    # 배지가 '데모 데이터'(label)와 'AIS 하한 추정 · proxy'(badge) 둘로 분리됨 — 둘 다 카드 안에 있으면 통과.
+    check("B1: '데모 데이터' + 'AIS 하한 추정' 표기 (값을 live로 위장하지 않음)",
+          "데모 데이터" in card and "AIS 하한 추정" in card)
     check("B2: 모든 수치가 데모 미리보기 고정값임을 명시",
           "데모 미리보기 고정값" in card or ("데모 미리보기" in card and "고정값" in card))
     check("B3: 통과 수에 '데모' 라벨", "데모" in card)
