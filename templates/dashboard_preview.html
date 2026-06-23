@@ -244,6 +244,49 @@
   .hz .warn{font-size:11.5px; color:var(--ink3); line-height:1.6; margin-top:12px; background:#F7FAFD; border:1px solid var(--hair); border-radius:10px; padding:11px 13px;}
   .hz .warn b{color:var(--amber); font-weight:700;}
   .hz ul{margin:8px 0 0; padding-left:16px; color:var(--ink3); font-size:11.5px; line-height:1.7;}
+  /* Hormuz rich preview */
+  .hz-tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+  @media (max-width:560px){ .hz-tiles{grid-template-columns:repeat(2,1fr);} }
+  .hz-tile{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:11px 12px;}
+  .hz-tile .k{font-size:10px; color:var(--mute3); font-weight:600; letter-spacing:0.02em;}
+  .hz-tile .v{font-size:17px; font-weight:800; color:var(--ink2); margin-top:4px; font-variant-numeric:tabular-nums;}
+  .hz-tile .v small{font-size:10px; font-weight:700; color:var(--mute4);}
+  .hz-sub{font-size:11px; font-weight:800; letter-spacing:0.08em; color:var(--mute4); margin:18px 0 10px; text-transform:uppercase;}
+  .hz-cols{display:grid; grid-template-columns:1.05fr 0.95fr; gap:18px; align-items:start;}
+  @media (max-width:640px){ .hz-cols{grid-template-columns:1fr;} }
+  .hz-bars{width:100%; height:96px;}
+  .hz-map{background:#F2F8FE; border:1px solid #E1ECF8; border-radius:12px; padding:6px;}
+  .hz-vrow{display:grid; grid-template-columns:62px 1fr 40px; align-items:center; gap:9px; margin-bottom:10px;}
+  .hz-vrow .vl{font-size:12px; font-weight:600; color:var(--ink4);}
+  .hz-vrow .vb{height:7px; border-radius:4px; background:#EAEFF6; overflow:hidden;}
+  .hz-vrow .vb span{display:block; height:100%; border-radius:4px;}
+  .hz-vrow .vp{font-size:11.5px; font-weight:700; color:var(--ink3); font-variant-numeric:tabular-nums; text-align:right;}
+
+  /* ===== Clickable market rows ===== */
+  .mrow.click{cursor:pointer; border-radius:9px; padding-left:8px; padding-right:8px; margin:0 -8px;}
+  .mrow.click:hover{background:#F4F9FE;}
+  .mrow .chev{display:flex; align-items:center; color:var(--mute5); flex:none;}
+  .clickhint{font-size:11px; color:var(--mute4); font-weight:600; margin:2px 0 6px;}
+
+  /* ===== Detail drawer / modal ===== */
+  .drawer-ov{position:fixed; inset:0; background:rgba(26,38,60,0.34); display:flex; justify-content:flex-end;
+    z-index:60; opacity:0; pointer-events:none; transition:opacity .18s ease;}
+  .drawer-ov.open{opacity:1; pointer-events:auto;}
+  .drawer{width:min(560px,95vw); height:100%; background:var(--card); border-left:1px solid var(--line);
+    box-shadow:-14px 0 44px rgba(40,70,120,0.20); padding:22px 24px 32px; overflow-y:auto;
+    transform:translateX(28px); transition:transform .2s ease;}
+  .drawer-ov.open .drawer{transform:translateX(0);}
+  .drawer-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
+  .drawer-head .dt{font-size:18px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
+  .drawer-head .dsub{font-size:12px; color:var(--mute3); font-weight:500; margin-top:3px;}
+  .drawer-close{border:1px solid var(--line); background:var(--card); border-radius:9px; width:32px; height:32px;
+    cursor:pointer; font-size:17px; line-height:1; color:var(--mute); flex:none;}
+  .drawer-close:hover{background:#F4F9FE; color:var(--ink3);}
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0;}
+  .kpi{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:11px 13px;}
+  .kpi .k{font-size:10px; color:var(--mute3); font-weight:600;}
+  .kpi .v{font-size:18px; font-weight:800; color:var(--ink); margin-top:4px; font-variant-numeric:tabular-nums;}
+  .kpi .v.off{color:var(--mute5); font-size:14px;}
 
   /* ===== AI tab ===== */
   .ai-radar{position:relative; height:200px; display:flex; align-items:center; justify-content:center;}
@@ -518,6 +561,7 @@
             <div class="ph">시장 스냅샷 <small>· 원자재 · 금리 · 환율</small></div>
             <div class="pnote">행별 스파크라인은 추세 방향 데모입니다. 종목별 data_mode(지연/대용/보고/미연동)를 함께 확인하세요.</div>
           </div>
+          <div class="clickhint">↗ 행을 클릭하면 상세 차트(기간 1주·1개월·3개월·1년)가 열립니다 — 데모 미리보기.</div>
           <div id="marketSnapshot"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
             <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다.</div>
@@ -552,6 +596,15 @@
             </span>
             <label class="toggle"><input type="checkbox" id="normToggle"> 정규화 추세 (기준일=100)</label>
           </div>
+          <div class="chartctl" style="margin-top:0;">
+            <span class="selwrap" style="color:var(--mute3);">기간</span>
+            <div class="seg" id="yieldPeriodSeg">
+              <button data-period="1w">1주</button>
+              <button class="active" data-period="1m">1개월</button>
+              <button data-period="3m">3개월</button>
+              <button data-period="1y">1년</button>
+            </div>
+          </div>
           <div class="chartbox"><svg id="yieldChart" viewBox="0 0 720 300" width="100%" height="300" preserveAspectRatio="xMidYMid meet"></svg></div>
           <div class="legend" id="chartLegend"></div>
           <div class="axisnote" id="chartNote"></div>
@@ -562,9 +615,9 @@
           <div class="row">
             <div class="panel" style="border:none; box-shadow:none; padding:0;">
               <div class="ph">호르무즈 해협 관찰 <small>· 지정학 · 에너지 물류</small></div>
-              <div class="pnote">유가·해상 물류·중동 발주 환경의 선행 관찰 지표입니다.</div>
+              <div class="pnote">유가·해상 물류·중동 발주 환경의 선행 관찰 지표입니다. 아래 수치는 모두 <b>데모 미리보기</b>입니다.</div>
             </div>
-            <span class="dm proxy" style="font-size:10.5px;">AIS 하한 추정 · proxy</span>
+            <span class="dm proxy" style="font-size:10.5px;">데모 데이터 · AIS 하한 추정 · proxy</span>
           </div>
           <div class="chartctl" style="margin:14px 0 6px;">
             <div class="seg" id="hzTimeSeg">
@@ -573,22 +626,64 @@
               <button class="active" data-win="24h">24시간</button>
               <button data-win="7d">7일</button>
             </div>
+            <span class="dm policy" style="font-size:10px;">라이브 AIS 미연동 · 정책/키 필요</span>
           </div>
           <div class="row" style="align-items:flex-end; margin-top:6px;">
             <div>
               <div style="font-size:11px; color:var(--mute3); font-weight:600;" id="hzWindowLabel">최근 24시간 AIS 관측 통과</div>
-              <div class="big" id="hzCount">미연동</div>
-              <div style="font-size:11px; color:var(--mute3); margin-top:4px;">게이트 통과 unique MMSI 기준</div>
+              <div style="display:flex; align-items:baseline; gap:8px;">
+                <div class="big" id="hzCount" style="color:#5E6E8C;">1,180</div>
+                <span style="font-size:12px; font-weight:700; color:var(--mute4);">척<span style="color:var(--amber);"> · 데모</span></span>
+              </div>
+              <div style="font-size:11px; color:var(--mute3); margin-top:4px;">게이트 통과 <b>unique MMSI</b> 기준 · <b>AIS 하한 추정</b> (실제보다 낮을 수 있음)</div>
             </div>
-            <span class="dm policy" style="font-size:10.5px;">정책/키 필요</span>
+            <span class="dm proxy" style="font-size:10.5px;">preview 고정값</span>
           </div>
+
+          <!-- metric tiles -->
+          <div class="hz-tiles">
+            <div class="hz-tile"><div class="k">현재 통항 중</div><div class="v" id="hzTransit">38 <small>척</small></div></div>
+            <div class="hz-tile"><div class="k">대기 / 정박</div><div class="v" id="hzWaiting">12 <small>척</small></div></div>
+            <div class="hz-tile"><div class="k">평균 속도</div><div class="v" id="hzSpeed">11.4 <small>kn</small></div></div>
+            <div class="hz-tile"><div class="k">AIS 신뢰도</div><div class="v" id="hzConf">하한 <small>추정</small></div></div>
+          </div>
+
+          <div class="hz-cols">
+            <div>
+              <div class="hz-sub">시간대별 통과 (데모)</div>
+              <svg class="hz-bars" id="hzBars" viewBox="0 0 320 96" preserveAspectRatio="none" aria-label="시간대별 통과 막대(데모)"></svg>
+              <div style="font-size:10.5px; color:var(--mute4); font-weight:500; margin-top:4px;">막대는 시간대별 통과량 추세 데모 — 절대값 아님.</div>
+            </div>
+            <div>
+              <div class="hz-sub">해협 모식도 (개념)</div>
+              <div class="hz-map">
+                <svg viewBox="0 0 240 110" width="100%" height="98" fill="none" aria-label="호르무즈 해협 모식도(개념)">
+                  <rect x="0" y="0" width="240" height="110" rx="8" fill="#EAF3FD"></rect>
+                  <path d="M0 0 H240 V34 C188 30 150 8 96 14 C58 18 26 12 0 22 Z" fill="#E5EAD9"></path>
+                  <path d="M0 110 H240 V78 C190 84 150 96 100 92 C56 88 28 98 0 90 Z" fill="#E5EAD9"></path>
+                  <text x="40" y="20" font-size="8" fill="#7E8CA6">이란</text>
+                  <text x="150" y="102" font-size="8" fill="#7E8CA6">오만 / UAE</text>
+                  <line x1="120" y1="30" x2="120" y2="82" stroke="#B9CEE6" stroke-width="1" stroke-dasharray="3 3"></line>
+                  <path d="M14 58 H214" stroke="#5B8FCB" stroke-width="1.4" stroke-dasharray="6 5" opacity="0.7"></path>
+                  <polygon points="40,55 50,58 40,61" fill="#3F6FA8"></polygon>
+                  <polygon points="96,55 106,58 96,61" fill="#3C7A4E"></polygon>
+                  <polygon points="160,55 170,58 160,61" fill="#9C7232"></polygon>
+                  <text x="118" y="46" text-anchor="middle" font-size="7.5" fill="#9AAAC1">게이트 라인 (개념)</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="hz-sub">선종 분포 (데모)</div>
+          <div id="hzVessels"></div>
+
           <div class="warn">
-            <b>AIS 하한 추정</b> — 게이트 통과 unique MMSI 기준이라 <b>실제 통과량보다 낮을 수 있습니다</b>.
-            현재 공개 AIS 라이브 소스/키가 연동되지 않아 선박 수를 생성하지 않습니다 (정책/키 필요 · 미연동).
+            <b>AIS 기반 하한 추정치입니다.</b> 게이트 통과 <b>unique MMSI</b> 기준이라 <b>실제 통과량보다 낮을 수 있습니다</b>.
+            <b>위성 AIS 미포함 시 중앙부 통과 선박이 누락될 수 있습니다.</b>
             <ul>
-              <li>최근 24시간 AIS 관측 통과 — 게이트 통과 unique MMSI 기준</li>
-              <li>실제 통과량보다 낮을 수 있음 (하한)</li>
-              <li>선박 수 위조 없음 — 연동 전에는 값 미생성</li>
+              <li>이 카드의 모든 수치는 <b>데모 미리보기 고정값</b>입니다 — 라이브 AIS 통합이 아닙니다.</li>
+              <li>실제 통과량보다 낮을 수 있음 (하한 추정).</li>
+              <li>공개 AIS 라이브 소스/키 연동 전에는 프로덕션 값을 생성하지 않습니다 (정책/키 필요 · 미연동).</li>
             </ul>
           </div>
         </div>
@@ -690,6 +785,43 @@
     HDEC Executive Radar · 대시보드 미리보기 — 참고용 브리프 (데모/mock 데이터).<br>
     모든 시장 지표는 지연 / 대용 / 보고 / 미연동 기준이며 현재 체결값이 아닙니다. 프로덕션 일일 리포트(docs/daily)와 무관합니다.
   </footer>
+</div>
+
+<!-- =================== MARKET DETAIL DRAWER (modal) ===================
+  시장 행 클릭 시 열리는 상세 드로어 — x/y축 차트 + 기간 버튼 + 값/변동/상태/갱신 + 주의문.
+  데모 고정값이며 현재 체결값이 아니다. 미연동 종목은 가짜 선을 그리지 않는다. -->
+<div class="drawer-ov" id="mktDrawerOv" role="dialog" aria-modal="true" aria-label="시장 상세">
+  <div class="drawer" id="mktDrawer">
+    <div class="drawer-head">
+      <div>
+        <div class="dt" id="dwTitle">—</div>
+        <div class="dsub" id="dwSub">상세 차트 · 데모 미리보기</div>
+      </div>
+      <button class="drawer-close" id="dwClose" type="button" aria-label="닫기">×</button>
+    </div>
+    <div style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span id="dwMode"></span>
+      <span class="previewflag" style="margin:0;">데모 데이터</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">현재값 (지연/대용)</div><div class="v num" id="dwVal">—</div></div>
+      <div class="kpi"><div class="k">변동</div><div class="v num" id="dwChg">—</div></div>
+      <div class="kpi"><div class="k">최근 업데이트</div><div class="v num" id="dwUpd" style="font-size:13px;">—</div></div>
+    </div>
+    <div class="chartctl" style="margin:4px 0 10px;">
+      <span class="selwrap" style="color:var(--mute3);">기간</span>
+      <div class="seg" id="dwPeriodSeg">
+        <button data-period="1w">1주</button>
+        <button class="active" data-period="1m">1개월</button>
+        <button data-period="3m">3개월</button>
+        <button data-period="1y">1년</button>
+      </div>
+    </div>
+    <div class="chartbox"><svg id="dwChart" viewBox="0 0 520 260" width="100%" height="260" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="axisnote" id="dwNote"></div>
+    <div class="disc" style="margin-top:14px;">공개·무료 또는 대용 데이터 기준이며 현재 체결값이 아닙니다.
+      미연동 종목은 값/선을 생성하지 않습니다 (데모 미리보기).</div>
+  </div>
 </div>
 
 <!-- =================== CONTRACT-SHAPED DEMO MODEL ===================
@@ -949,11 +1081,15 @@
       rows.forEach(function (it) {
         var off = it.value == null;
         var spark = (!opts.compact && it.spark && it.spark.length) ? sparkSvg(it.spark) : "";
-        var row = document.createElement("div"); row.className = "mrow";
+        var clickable = !opts.compact;
+        var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
+        var row = document.createElement("div");
+        row.className = "mrow" + (clickable ? " click" : "");
+        if (clickable) { row.setAttribute("data-mid", it.id); row.setAttribute("role", "button"); row.setAttribute("tabindex", "0"); }
         row.innerHTML =
           '<span class="mn">' + (spark ? spark : "") + esc(it.label_kr) + '</span>' +
           '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
-          '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + '</span>';
+          '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chev + '</span>';
         box.appendChild(row);
       });
     });
@@ -1002,125 +1138,158 @@
 
   /* ============================================================
      MARKET DETAIL CHART — within_country / cross_country
-     · y축·x축 표시, 미연동 시리즈는 선을 그리지 않는다(가짜 선 금지).
-     · 단위가 다른 비교(예: CPI vs 금리)는 정규화(기준일=100)로만.
+     · y축·x축·기간 표시. 미연동 시리즈는 선을 그리지 않는다(가짜 선 금지).
+     · CPI는 금리와 단위가 달라 같은 y축에 올리지 않고 별도 상태로 그린다.
+     · 모든 시계열은 데모 고정값(preview)이며 현재 체결값이 아니다.
      ============================================================ */
-  var DATES = ["6/1", "6/4", "6/7", "6/10", "6/12", "6/14", "6/16", "6/18", "6/20", "6/21", "6/22"];
-  /* 데모 시계열(%) — 실데이터가 무료로 잡히는 US 5Y/10Y만 보유. 나머지는 미연동(시리즈 없음). */
-  var SERIES = {
-    "us_2y": null, /* 공개 무료 심볼 없음 → 미연동 (선 미표시) */
-    "us_5y": { label: "US 5Y", color: "#5B8FCB", mode: "delayed_market", data: [4.05, 4.08, 4.10, 4.12, 4.15, 4.18, 4.20, 4.19, 4.22, 4.21, 4.22] },
-    "us_10y": { label: "US 10Y", color: "#3F6FA8", mode: "delayed_market", data: [4.20, 4.25, 4.31, 4.28, 4.35, 4.40, 4.38, 4.45, 4.42, 4.45, 4.46] },
-    "kr_10y": null, "eu_10y": null, "jp_10y": null,
-    "kr_5y": null, "eu_5y": null, "jp_5y": null, "kr_2y": null, "eu_2y": null, "jp_2y": null,
-    "us_cpi": null, "kr_cpi": null, "eu_cpi": null, "jp_cpi": null
+  var PERIODS = {
+    "1w": ["6/16", "6/17", "6/18", "6/19", "6/20", "6/21", "6/22"],
+    "1m": ["6/1", "6/4", "6/7", "6/10", "6/12", "6/14", "6/16", "6/18", "6/20", "6/21", "6/22"],
+    "3m": ["3/22", "4/7", "4/22", "5/7", "5/22", "6/7", "6/22"],
+    "1y": ["'25/7", "'25/9", "'25/11", "'26/1", "'26/3", "'26/5", "'26/6"]
+  };
+  /* 데모 고정 시계열. 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐, 그 외는 미연동(null). */
+  var YBASE = {
+    "us_2y": null,
+    "us_5y": [3.95, 3.98, 4.02, 4.05, 4.08, 4.10, 4.12, 4.15, 4.18, 4.20, 4.21, 4.22],
+    "us_10y": [4.10, 4.16, 4.20, 4.25, 4.28, 4.31, 4.35, 4.40, 4.42, 4.44, 4.45, 4.46],
+    "kr_2y": [3.05, 3.08, 3.07, 3.10, 3.12, 3.11, 3.14, 3.16, 3.15, 3.18, 3.20, 3.21],
+    "kr_5y": [3.28, 3.30, 3.33, 3.31, 3.35, 3.37, 3.36, 3.39, 3.41, 3.40, 3.42, 3.44],
+    "kr_10y": [3.42, 3.45, 3.48, 3.46, 3.50, 3.53, 3.52, 3.55, 3.57, 3.56, 3.58, 3.60],
+    "eu_2y": [2.55, 2.58, 2.57, 2.60, 2.62, 2.61, 2.64, 2.66, 2.65, 2.67, 2.69, 2.70],
+    "eu_5y": [2.72, 2.74, 2.77, 2.75, 2.79, 2.81, 2.80, 2.83, 2.85, 2.84, 2.86, 2.88],
+    "eu_10y": [2.90, 2.93, 2.96, 2.94, 2.98, 3.01, 3.00, 3.03, 3.05, 3.04, 3.06, 3.08],
+    "jp_2y": [0.62, 0.64, 0.66, 0.65, 0.68, 0.70, 0.69, 0.72, 0.74, 0.73, 0.75, 0.77],
+    "jp_5y": [0.95, 0.97, 0.99, 0.98, 1.01, 1.03, 1.02, 1.05, 1.07, 1.06, 1.08, 1.10],
+    "jp_10y": [1.30, 1.33, 1.36, 1.34, 1.38, 1.41, 1.40, 1.43, 1.45, 1.44, 1.46, 1.48],
+    "us_cpi": [3.4, 3.3, 3.2, 3.1, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7],
+    "kr_cpi": [3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5],
+    "eu_cpi": [2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3],
+    "jp_cpi": null
+  };
+  var YNAME = {
+    "us_2y": "US 2Y", "us_5y": "US 5Y", "us_10y": "US 10Y",
+    "kr_2y": "KR 2Y", "kr_5y": "KR 5Y", "kr_10y": "KR 10Y",
+    "eu_2y": "EU 2Y", "eu_5y": "EU 5Y", "eu_10y": "EU 10Y",
+    "jp_2y": "JP 2Y", "jp_5y": "JP 5Y", "jp_10y": "JP 10Y",
+    "us_cpi": "US CPI", "kr_cpi": "KR CPI", "eu_cpi": "EU CPI", "jp_cpi": "JP CPI"
   };
   var CC = { us: "US", kr: "KR", eu: "EU", jp: "JP" };
+  var MAT_COLOR = { "2y": "#9C7232", "5y": "#5B8FCB", "10y": "#3F6FA8", "cpi": "#3F6FA8" };
+  var CTRY_COLOR = { us: "#3F6FA8", kr: "#3C7A4E", eu: "#9C7232", jp: "#B85049" };
 
-  function seriesForView() {
-    var mode = (el("yieldModeSeg").querySelector("button.active") || {}).getAttribute
-      ? el("yieldModeSeg").querySelector("button.active").getAttribute("data-mode") : "within";
-    var keys = [], country, metric;
-    if (mode === "within") {
-      country = el("countrySel").value;
-      ["2y", "5y", "10y"].forEach(function (t) { keys.push({ key: country + "_" + t, name: CC[country] + " " + t.toUpperCase() }); });
-    } else {
-      metric = el("metricSel").value;
-      ["us", "kr", "eu", "jp"].forEach(function (c) { keys.push({ key: c + "_" + metric, name: CC[c] + " " + metric.toUpperCase() }); });
+  function resample(base, n) {
+    if (!base || !base.length) return [];
+    if (n >= base.length) return base.slice();
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(base[Math.round(i * (base.length - 1) / (n - 1))]);
+    return out;
+  }
+  function activeSeg(id, fallback) {
+    var seg = el(id); if (!seg) return fallback;
+    var b = seg.querySelector("button.active");
+    return b ? (b.getAttribute("data-mode") || b.getAttribute("data-period") || fallback) : fallback;
+  }
+
+  /* 공용 라인차트 — x축·y축·그리드·라벨 표시. drawn=[{name,color,data}] (그릴 시리즈만).
+     미연동 시리즈는 호출부에서 제외해 가짜 선을 막는다. */
+  function renderLineChart(svg, drawn, dates, opts) {
+    opts = opts || {};
+    var vb = (svg.getAttribute("viewBox") || "0 0 720 300").split(/\s+/).map(Number);
+    var W = vb[2], H = vb[3], padL = 48, padR = 16, padT = 16, padB = 34;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var allVals = [];
+    drawn.forEach(function (s) { s.data.forEach(function (v) { if (v != null) allVals.push(v); }); });
+    var yMin, yMax;
+    if (allVals.length) {
+      yMin = Math.min.apply(null, allVals); yMax = Math.max.apply(null, allVals);
+      var padY = (yMax - yMin) * 0.18 || Math.abs(yMax) * 0.05 || 0.5; yMin -= padY; yMax += padY;
+    } else { yMin = 0; yMax = 100; }
+    var n = dates.length;
+    function xAt(i) { return padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW); }
+    function yAt(v) { return padT + plotH - ((v - yMin) / ((yMax - yMin) || 1)) * plotH; }
+    var dec = opts.decimals == null ? 2 : opts.decimals;
+    var parts = ['<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#FCFDFF"></rect>'];
+    var TICKS = 4, t, val, y;
+    for (t = 0; t <= TICKS; t++) {
+      val = yMin + (yMax - yMin) * t / TICKS; y = yAt(val);
+      parts.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '" stroke="#EEF3F9"></line>');
+      parts.push('<text x="' + (padL - 8) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="#9AAAC1">' + val.toFixed(dec) + '</text>');
     }
-    return { mode: mode, metric: metric, keys: keys };
+    parts.push('<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
+    parts.push('<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
+    dates.forEach(function (d, i) {
+      if (n > 8 && i % 2 !== 0 && i !== n - 1) return;
+      parts.push('<text x="' + xAt(i).toFixed(1) + '" y="' + (padT + plotH + 18) + '" text-anchor="middle" font-size="10" fill="#9AAAC1">' + esc(d) + '</text>');
+    });
+    parts.push('<text x="6" y="' + (padT + 4) + '" font-size="9.5" fill="#9AAAC1">' + esc(opts.yLabel || "") + '</text>');
+    drawn.forEach(function (s) {
+      var dpath = s.data.map(function (v, i) { return (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1); }).join(" ");
+      parts.push('<path d="' + dpath + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>');
+      var li = s.data.length - 1;
+      parts.push('<circle cx="' + xAt(li).toFixed(1) + '" cy="' + yAt(s.data[li]).toFixed(1) + '" r="3" fill="' + s.color + '"></circle>');
+    });
+    if (!drawn.length) {
+      parts.push('<text x="' + (padL + plotW / 2) + '" y="' + (padT + plotH / 2) + '" text-anchor="middle" font-size="13" fill="#AEBBD0">' + esc(opts.emptyMsg || "표시할 시세 없음 (가짜 선 미표시)") + '</text>');
+    }
+    svg.innerHTML = parts.join("");
+  }
+
+  function buildYieldView() {
+    var mode = activeSeg("yieldModeSeg", "within");
+    var period = activeSeg("yieldPeriodSeg", "1m");
+    var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
+    var norm = el("normToggle").checked;
+    var specs = [], isCpi = false;
+    if (mode === "within") {
+      var ctry = el("countrySel").value;
+      ["2y", "5y", "10y"].forEach(function (m) { specs.push({ key: ctry + "_" + m, color: MAT_COLOR[m] }); });
+    } else {
+      var metric = el("metricSel").value; isCpi = metric === "cpi";
+      ["us", "kr", "eu", "jp"].forEach(function (c) { specs.push({ key: c + "_" + metric, color: CTRY_COLOR[c] }); });
+    }
+    var drawn = [], unavail = [];
+    specs.forEach(function (sp) {
+      var base = YBASE[sp.key];
+      if (base && base.length) {
+        var data = resample(base, n);
+        if (norm) { var b0 = data[0] || 1; data = data.map(function (v) { return v / b0 * 100; }); }
+        drawn.push({ name: YNAME[sp.key], color: sp.color, data: data });
+      } else { unavail.push(YNAME[sp.key]); }
+    });
+    return { mode: mode, isCpi: isCpi, norm: norm, dates: dates, drawn: drawn, unavail: unavail, period: period };
   }
 
   function drawYieldChart() {
     var svg = el("yieldChart"); if (!svg) return;
-    var view = seriesForView();
-    var norm = el("normToggle").checked;
-    var W = 720, H = 300, padL = 46, padR = 16, padT = 14, padB = 34;
-    var plotW = W - padL - padR, plotH = H - padT - padB;
-    var avail = [], unavail = [];
-    view.keys.forEach(function (k) {
-      var s = SERIES[k.key];
-      if (s && s.data && s.data.length) avail.push({ name: k.name, color: s.color, mode: s.mode, data: s.data });
-      else unavail.push(k.name);
+    var v = buildYieldView();
+    renderLineChart(svg, v.drawn, v.dates, {
+      yLabel: v.norm ? "지수(=100)" : (v.isCpi ? "CPI %" : "%"),
+      decimals: v.norm ? 0 : (v.isCpi ? 1 : 2),
+      emptyMsg: "선택한 시리즈는 미연동 — 표시할 시세 없음 (가짜 선 미표시)"
     });
-
-    /* 정규화: 각 시리즈를 기준일(첫 점)=100으로 재기준 */
-    var draw = avail.map(function (s) {
-      if (!norm) return s;
-      var base = s.data[0] || 1;
-      return { name: s.name, color: s.color, mode: s.mode, data: s.data.map(function (v) { return v / base * 100; }) };
-    });
-
-    var allVals = [];
-    draw.forEach(function (s) { s.data.forEach(function (v) { allVals.push(v); }); });
-    var yMin, yMax;
-    if (allVals.length) {
-      yMin = Math.min.apply(null, allVals); yMax = Math.max.apply(null, allVals);
-      var padY = (yMax - yMin) * 0.18 || 0.5; yMin -= padY; yMax += padY;
-    } else { yMin = 0; yMax = norm ? 110 : 5; }
-
-    function xAt(i, n) { return padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW); }
-    function yAt(v) { return padT + plotH - ((v - yMin) / ((yMax - yMin) || 1)) * plotH; }
-
-    var parts = [];
-    parts.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#FCFDFF"></rect>');
-    /* y grid + labels */
-    var TICKS = 4;
-    for (var t = 0; t <= TICKS; t++) {
-      var val = yMin + (yMax - yMin) * t / TICKS, y = yAt(val);
-      parts.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '" stroke="#EEF3F9"></line>');
-      parts.push('<text x="' + (padL - 8) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="#9AAAC1">' + val.toFixed(norm ? 0 : 2) + '</text>');
-    }
-    /* axes */
-    parts.push('<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
-    parts.push('<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
-    /* x labels */
-    DATES.forEach(function (d, i) {
-      if (i % 2 !== 0 && i !== DATES.length - 1) return;
-      var x = xAt(i, DATES.length);
-      parts.push('<text x="' + x.toFixed(1) + '" y="' + (padT + plotH + 18) + '" text-anchor="middle" font-size="10" fill="#9AAAC1">' + d + '</text>');
-    });
-    /* y axis title */
-    parts.push('<text x="' + (padL - 30) + '" y="' + (padT + 4) + '" font-size="9.5" fill="#9AAAC1">' + (norm ? "지수" : "%") + '</text>');
-    /* series */
-    draw.forEach(function (s) {
-      var n = s.data.length;
-      var dpath = s.data.map(function (v, i) { return (i ? "L" : "M") + xAt(i, n).toFixed(1) + " " + yAt(v).toFixed(1); }).join(" ");
-      parts.push('<path d="' + dpath + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>');
-      var lx = xAt(n - 1, n), ly = yAt(s.data[n - 1]);
-      parts.push('<circle cx="' + lx.toFixed(1) + '" cy="' + ly.toFixed(1) + '" r="3" fill="' + s.color + '"></circle>');
-    });
-    if (!draw.length) {
-      parts.push('<text x="' + (padL + plotW / 2) + '" y="' + (padT + plotH / 2) + '" text-anchor="middle" font-size="13" fill="#AEBBD0">선택한 시리즈는 미연동 — 표시할 시세 없음 (가짜 선 미표시)</text>');
-    }
-    svg.innerHTML = parts.join("");
-
-    /* legend */
     var leg = el("chartLegend"); leg.innerHTML = "";
-    draw.forEach(function (s) {
+    v.drawn.forEach(function (s) {
       leg.insertAdjacentHTML("beforeend", '<span class="it"><span class="sw" style="background:' + s.color + '"></span>' +
-        esc(s.name) + ' · ' + (DM[s.mode] ? DM[s.mode][0] : "지연") + (norm ? " (정규화)" : "") + ' · 데모</span>');
+        esc(s.name) + ' · 데모' + (v.norm ? " (정규화)" : "") + '</span>');
     });
-    unavail.forEach(function (nm) {
+    v.unavail.forEach(function (nm) {
       leg.insertAdjacentHTML("beforeend", '<span class="it off"><span class="sw"></span>' + esc(nm) + ' · 미연동</span>');
     });
-
-    /* note */
-    var note = el("chartNote");
-    var hasCpi = view.metric === "cpi" || view.keys.some(function (k) { return /_cpi$/.test(k.key); });
-    var msg = "";
-    if (norm) {
+    var note = el("chartNote"), msg;
+    if (v.isCpi) {
+      msg = "CPI(물가)는 금리와 단위·축이 다른 별도 비교입니다 — 금리와 같은 y축에 올리지 않습니다. " +
+        (v.norm ? "정규화(기준일=100) 추세입니다." : "국가 간 CPI 추세(%) 비교입니다.");
+    } else if (v.norm) {
       msg = "정규화 추세 · 기준일=100 · 절대 가격 비교 아님. 단위가 다른 지표 비교에 사용합니다.";
-    } else if (hasCpi) {
-      msg = "CPI(물가)는 금리와 단위가 다릅니다 — 같은 y축 절대값으로 비교하지 않습니다. 비교하려면 ‘정규화 추세(기준일=100)’를 켜세요.";
     } else {
-      msg = "공개·무료 지연 시세 기준 데모 시계열입니다. 현재 체결값이 아니며, 미연동 시리즈는 선을 그리지 않습니다.";
+      msg = "데모 고정 시계열 — 현재 체결값이 아닙니다. 프로덕션 무료 실데이터는 US 5Y·10Y(지연)뿐이며, 그 외 만기·국가·CPI는 미연동입니다.";
     }
-    if (unavail.length) msg += " 미연동: " + unavail.join(", ") + " (별도 소스/키 필요).";
+    if (v.unavail.length) msg += " 미연동(선 미표시): " + v.unavail.join(", ") + ".";
     note.textContent = msg;
   }
 
-  /* chart controls */
+  /* yield chart controls — mode / country / metric / normalize / period */
   (function () {
     var seg = el("yieldModeSeg");
     if (seg) seg.addEventListener("click", function (ev) {
@@ -1131,23 +1300,137 @@
       el("crossSel").classList.toggle("hidden", within);
       drawYieldChart();
     });
+    var pseg = el("yieldPeriodSeg");
+    if (pseg) pseg.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button"); if (!b) return;
+      [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
+      drawYieldChart();
+    });
     ["countrySel", "metricSel", "normToggle"].forEach(function (id) {
-      var n = el(id); if (n) n.addEventListener("change", drawYieldChart);
+      var nn = el(id); if (nn) nn.addEventListener("change", drawYieldChart);
     });
   })();
 
-  /* ---------- Hormuz time window (count stays honest: 미연동) ---------- */
+  /* ============================================================
+     MARKET DETAIL DRAWER — 행 클릭 → 상세(차트 + 기간 + 값/변동/상태/갱신).
+     데모 고정값이며 현재 체결값이 아니다. 미연동 종목은 선을 그리지 않는다.
+     ============================================================ */
+  (function () {
+    var ov = el("mktDrawerOv"); if (!ov) return;
+    var snap = el("marketSnapshot");
+    var ITEMS = {}; (MODEL.market_items || []).forEach(function (it) { ITEMS[it.id] = it; });
+    var UPD = { delayed_market: "지연 ~15분", proxy_market: "대용 · 일일", manual_or_reported: "보고 기준일",
+      unavailable: "미연동", policy_required: "정책/키 필요" };
+    var current = null;
+
+    function drawDrawerChart() {
+      var svg = el("dwChart"); if (!svg || !current) return;
+      var period = activeSeg("dwPeriodSeg", "1m");
+      var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
+      var base = current.spark || [];
+      if (current.value == null || base.length < 2) {
+        renderLineChart(svg, [], dates, { yLabel: "", emptyMsg: "미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
+        el("dwNote").textContent = "이 종목은 공개·무료 소스가 없어 미연동입니다 — 값/선을 생성하지 않습니다.";
+        return;
+      }
+      var data = resample(base, n);
+      var color = current.dir === "down" ? "#3C7A4E" : "#B85049";
+      renderLineChart(svg, [{ name: current.label_kr, color: color, data: data }], dates,
+        { yLabel: "추세(데모)", decimals: 0, emptyMsg: "" });
+      el("dwNote").textContent = "추세 방향 데모 시계열(상대값)입니다 — 현재 체결값·절대 가격이 아닙니다. data_mode: " +
+        (DM[current.data_mode] ? DM[current.data_mode][0] : "미연동") + ".";
+    }
+
+    function openDrawer(id) {
+      current = ITEMS[id]; if (!current) return;
+      el("dwTitle").textContent = current.label_kr + (current.unit ? " (" + current.unit + ")" : "");
+      el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기";
+      el("dwMode").innerHTML = dmBadge(current.data_mode);
+      var off = current.value == null;
+      var vEl = el("dwVal"); vEl.textContent = off ? "—" : current.value; vEl.className = "v num" + (off ? " off" : "");
+      var cEl = el("dwChg"); cEl.textContent = off ? "—" : (current.delta || "—");
+      cEl.style.color = off ? "" : (current.dir === "down" ? "#3C7A4E" : current.dir === "up" ? "#B85049" : "");
+      el("dwUpd").textContent = UPD[current.data_mode] || "미연동";
+      var pseg = el("dwPeriodSeg");
+      [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x.getAttribute("data-period") === "1m"); });
+      drawDrawerChart();
+      ov.classList.add("open");
+    }
+    function closeDrawer() { ov.classList.remove("open"); current = null; }
+
+    if (snap) {
+      snap.addEventListener("click", function (ev) {
+        var r = ev.target.closest(".mrow.click"); if (!r) return;
+        openDrawer(r.getAttribute("data-mid"));
+      });
+      snap.addEventListener("keydown", function (ev) {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        var r = ev.target.closest(".mrow.click"); if (!r) return;
+        ev.preventDefault(); openDrawer(r.getAttribute("data-mid"));
+      });
+    }
+    el("dwClose").addEventListener("click", closeDrawer);
+    ov.addEventListener("click", function (ev) { if (ev.target === ov) closeDrawer(); });
+    document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeDrawer(); });
+    var dpseg = el("dwPeriodSeg");
+    if (dpseg) dpseg.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button"); if (!b) return;
+      [].forEach.call(dpseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
+      drawDrawerChart();
+    });
+  })();
+
+  /* ---------- Hormuz preview (모든 값 데모 고정 · AIS 하한 추정 · 라이브 미연동) ----------
+     주의: 이 카드의 수치는 preview 데모 고정값이다. 라이브 AIS 통합이 아니며 프로덕션 값을 만들지 않는다. */
   (function () {
     var seg = el("hzTimeSeg"); if (!seg) return;
-    var WINLABEL = { "1h": "최근 1시간 AIS 관측 통과", "6h": "최근 6시간 AIS 관측 통과",
-      "24h": "최근 24시간 AIS 관측 통과", "7d": "최근 7일 AIS 관측 통과" };
+    var HZ = {
+      "1h":  { label: "최근 1시간 AIS 관측 통과",  count: "52",    transit: "38", waiting: "12", speed: "11.8", bars: [3, 4, 5, 4, 6, 5, 7, 6, 5, 6, 7, 8] },
+      "6h":  { label: "최근 6시간 AIS 관측 통과",  count: "310",   transit: "41", waiting: "10", speed: "11.2", bars: [20, 24, 22, 26, 28, 25, 30, 27, 29, 31, 28, 30] },
+      "24h": { label: "최근 24시간 AIS 관측 통과", count: "1,180", transit: "38", waiting: "12", speed: "11.4", bars: [40, 44, 48, 52, 58, 55, 60, 57, 62, 59, 63, 61] },
+      "7d":  { label: "최근 7일 AIS 관측 통과",    count: "8,420", transit: "36", waiting: "14", speed: "10.9", bars: [820, 910, 870, 960, 1010, 980, 1120, 1080, 1150, 1100, 1180, 1160] }
+    };
+    var VESSELS = [
+      { label: "유조선", color: "#3F6FA8", pct: 54 },
+      { label: "LNG선", color: "#3C7A4E", pct: 23 },
+      { label: "컨테이너·기타", color: "#9C7232", pct: 23 }
+    ];
+    function drawBars(arr) {
+      var svg = el("hzBars"); if (!svg) return;
+      var W = 320, H = 96, n = arr.length, gap = 4, bw = (W - (n - 1) * gap) / n;
+      var mx = Math.max.apply(null, arr) || 1, parts = [];
+      arr.forEach(function (v, i) {
+        var h = (v / mx) * (H - 8), x = i * (bw + gap), y = H - h;
+        parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="#9CC0E8"></rect>');
+      });
+      svg.innerHTML = parts.join("");
+    }
+    function drawVessels() {
+      var box = el("hzVessels"); if (!box) return; box.innerHTML = "";
+      VESSELS.forEach(function (v) {
+        var d = document.createElement("div"); d.className = "hz-vrow";
+        d.innerHTML = '<span class="vl">' + esc(v.label) + '</span>' +
+          '<span class="vb"><span style="width:' + v.pct + '%; background:' + v.color + '"></span></span>' +
+          '<span class="vp">' + v.pct + '%</span>';
+        box.appendChild(d);
+      });
+    }
+    function apply(win) {
+      var d = HZ[win] || HZ["24h"];
+      el("hzWindowLabel").textContent = d.label;
+      el("hzCount").textContent = d.count;
+      el("hzTransit").innerHTML = d.transit + ' <small>척</small>';
+      el("hzWaiting").innerHTML = d.waiting + ' <small>척</small>';
+      el("hzSpeed").innerHTML = d.speed + ' <small>kn</small>';
+      drawBars(d.bars);
+    }
     seg.addEventListener("click", function (ev) {
       var b = ev.target.closest("button"); if (!b) return;
       [].forEach.call(seg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
-      var lab = el("hzWindowLabel"); if (lab) lab.textContent = WINLABEL[b.getAttribute("data-win")] || lab.textContent;
-      /* 선박 수는 어떤 창에서도 위조하지 않는다 — 라이브 AIS 소스/키 미연동이므로 값 미생성. */
-      var c = el("hzCount"); if (c) c.textContent = "미연동";
+      apply(b.getAttribute("data-win"));
     });
+    drawVessels();
+    apply("24h");
   })();
 
   /* initial chart draw (panel hidden ok — viewBox scales) */
