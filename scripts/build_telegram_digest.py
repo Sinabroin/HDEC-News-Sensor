@@ -288,7 +288,8 @@ def format_digest_message(data: dict) -> str:
 
     P0-C1: 임원용으로 간결하게 — 제목/날짜/모드, 한 줄 시그널, 현황판 한 줄,
     Top 3 짧은 제목, live Macro Snapshot, 추정 안내 한 줄. 원문 URL이 있는 핵심
-    기사 제목만 HTML 링크로 만들고 상세는 '오늘 브리프 보기' 버튼(리포트)으로 넘긴다.
+    기사 제목만 HTML 링크로 만들고 상세는 '요약 대시보드 보기' / '전체 리포트 보기'
+    버튼으로 넘긴다.
     """
     news_mode = data.get("news_data_mode", "mock")
     # 헤더는 mock일 때만 데이터 출처를 명시한다(데이터 정직성: 데모를 실제 시장지표로 오인 방지).
@@ -391,7 +392,11 @@ def format_digest_message(data: dict) -> str:
             for v in macro["values"]))
         lines.append("※ 시장지표는 Yahoo Finance 참고값이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).")
 
-    lines += ["", "※ 원문·점수·거시경제·카테고리별 근거 기사는 '오늘 브리프 보기' 리포트에서 확인"]
+    lines += [
+        "",
+        "※ 요약은 '요약 대시보드 보기', 원문·점수·거시경제·카테고리별 근거는 "
+        "'전체 리포트 보기'에서 확인",
+    ]
     return _join_budgeted(lines)
 
 

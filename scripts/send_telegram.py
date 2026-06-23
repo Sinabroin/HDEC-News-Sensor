@@ -3,9 +3,11 @@
 MESSAGE env가 비어 있지 않으면 그 메시지를, 비어 있으면
 scripts/build_telegram_digest.py로 mock daily digest를 생성해 발송한다.
 
-REPORT_URL env가 설정돼 있으면 메시지에 "오늘 브리프 보기" inline URL 버튼을
-붙인다 (정적 리포트 페이지 — P0-B5). 없으면 기존 텍스트 전용 발송 그대로이며
-실패하지 않는다.
+REPORT_URL env가 설정돼 있으면 메시지에 "전체 리포트 보기" inline URL 버튼을
+붙인다 (정적 리포트 페이지 — P0-B5). DASHBOARD_URL env가 설정돼 있으면
+"요약 대시보드 보기" 버튼도 함께 붙인다. DASHBOARD_URL이 없고 REPORT_URL이
+/daily/latest.html 형태면 /daily/dashboard-latest.html로 파생한다. 둘 다 없으면
+기존 텍스트 전용 발송 그대로이며 실패하지 않는다.
 
 P0-C1.10 — 채널→1:1 봇 진입: TELEGRAM_BOT_USERNAME(또는 TELEGRAM_PERSONAL_BOT_URL)이
 설정돼 있으면 "개인 질의하기" inline URL 버튼을 추가로 붙인다. 이 버튼은 봇과의
@@ -13,10 +15,11 @@ P0-C1.10 — 채널→1:1 봇 진입: TELEGRAM_BOT_USERNAME(또는 TELEGRAM_PERS
 뿐, 실제 자연어 질의 응답은 inbound webhook/polling 구현(P1) 후 활성화된다.
 설정이 없으면 이 버튼은 안전하게 생략되고 발송은 실패하지 않는다.
 
-비밀값(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS)과 REPORT_URL/deep link 값은 어떤
-경우에도 출력하지 않는다 (정상 발송 경로) — 출력은 메시지 출처/길이, 링크 버튼
-사용 여부(true/false), 발송 집계뿐이다 (rules.md §4). --dry-run-payload만 검증용으로
-버튼 text/url을 출력하며, 이때도 토큰은 절대 읽거나 출력하지 않는다.
+비밀값(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS)과 REPORT_URL/DASHBOARD_URL/deep link
+값은 어떤 경우에도 출력하지 않는다 (정상 발송 경로) — 출력은 메시지 출처/길이,
+링크 버튼 사용 여부(true/false), 발송 집계뿐이다 (rules.md §4).
+--dry-run-payload만 검증용으로 버튼 text/url을 출력하며, 이때도 토큰은 절대
+읽거나 출력하지 않는다.
 
 P0-D3I — 사람 검토 / 수동 Send 게이트 (human-on-the-loop):
 이 스크립트는 기본적으로 임원 알림을 자동 발송하지 않는다. TELEGRAM_SEND_MODE가
@@ -39,8 +42,11 @@ from html import escape
 # (verify_telegram_digest.py가 이 관계를 검사한다).
 MAX_MESSAGE_LEN = 3500
 
-# 정적 리포트로 연결되는 inline 버튼 라벨 (REPORT_URL이 있을 때만 사용)
-BUTTON_TEXT = "오늘 브리프 보기"
+# 정적 리포트/대시보드로 연결되는 inline 버튼 라벨.
+SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
+FULL_REPORT_BUTTON_TEXT = "전체 리포트 보기"
+# 기존 verifier/import 호환용 이름 — 이제 전체 리포트 버튼을 가리킨다.
+BUTTON_TEXT = FULL_REPORT_BUTTON_TEXT
 # 1:1 봇 진입 deep link 버튼 (TELEGRAM_BOT_USERNAME/URL이 있을 때만 사용)
 PERSONAL_BUTTON_TEXT = "개인 질의하기"
 # deep link start 파라미터 — ASCII-safe 고정값 (비밀값 아님)
@@ -92,17 +98,46 @@ def resolve_message() -> tuple[str, str]:
     return build_digest_message(), "mock-digest"
 
 
-def resolve_report_url() -> str:
-    """REPORT_URL env에서 리포트 링크를 읽는다. 비어 있거나 http(s)가 아니면
-    빈 문자열을 반환해 텍스트 전용 발송으로 동작한다 (실패하지 않는다)."""
-    value = os.environ.get("REPORT_URL", "").strip()
+def _valid_url_from_env(env_name: str, warning_label: str) -> str:
+    """http(s) URL env를 안전하게 읽는다. 잘못된 값은 발송 실패가 아닌 버튼 생략."""
+    value = os.environ.get(env_name, "").strip()
     if not value:
         return ""
     if not value.lower().startswith(("https://", "http://")):
-        print("WARN: REPORT_URL format not recognized — report link disabled",
+        print(f"WARN: {env_name} format not recognized — {warning_label} disabled",
               file=sys.stderr)
         return ""
     return value
+
+
+def resolve_report_url() -> str:
+    """REPORT_URL env에서 전체 리포트 링크를 읽는다."""
+    return _valid_url_from_env("REPORT_URL", "full report link")
+
+
+def _derive_dashboard_url(report_url: str) -> str:
+    """REPORT_URL이 .../latest.html이면 같은 폴더의 dashboard-latest.html을 파생한다."""
+    if not report_url:
+        return ""
+    try:
+        parsed = urllib.parse.urlparse(report_url)
+    except ValueError:
+        return ""
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+    suffix = "/latest.html"
+    if not parsed.path.endswith(suffix):
+        return ""
+    path = parsed.path[: -len("latest.html")] + "dashboard-latest.html"
+    return urllib.parse.urlunparse(parsed._replace(path=path))
+
+
+def resolve_dashboard_url(report_url: str = "") -> str:
+    """DASHBOARD_URL env에서 요약 대시보드 링크를 읽고, 없으면 REPORT_URL에서 파생한다."""
+    configured = _valid_url_from_env("DASHBOARD_URL", "summary dashboard link")
+    if configured:
+        return configured
+    return _derive_dashboard_url(report_url or resolve_report_url())
 
 
 def resolve_personal_bot_url() -> str:
@@ -131,11 +166,12 @@ def resolve_personal_bot_url() -> str:
 
 
 def build_payload(chat_id: str, message: str, report_url: str,
-                  personal_url: str = "") -> dict:
-    """sendMessage payload. report_url/personal_url이 있으면 inline URL 버튼을 붙인다.
+                  personal_url: str = "", dashboard_url: str = "") -> dict:
+    """sendMessage payload. URL이 있으면 inline URL 버튼을 붙인다.
 
-    버튼 순서: [오늘 브리프 보기][개인 질의하기]. 둘 다 없으면 reply_markup을 넣지 않는다
-    (기존 텍스트 전용 동작 보존). 채널 메시지에서 임원이 리포트로 가거나 1:1 봇으로 진입한다.
+    버튼 순서: [요약 대시보드 보기][전체 리포트 보기][개인 질의하기].
+    전부 없으면 reply_markup을 넣지 않는다 (기존 텍스트 전용 동작 보존).
+    채널 메시지에서 임원이 요약 대시보드/전체 리포트로 가거나 1:1 봇으로 진입한다.
     """
     payload = {
         "chat_id": chat_id,
@@ -144,8 +180,10 @@ def build_payload(chat_id: str, message: str, report_url: str,
         "disable_web_page_preview": "true",
     }
     buttons = []
+    if dashboard_url:
+        buttons.append({"text": SUMMARY_BUTTON_TEXT, "url": dashboard_url})
     if report_url:
-        buttons.append({"text": BUTTON_TEXT, "url": report_url})
+        buttons.append({"text": FULL_REPORT_BUTTON_TEXT, "url": report_url})
     if personal_url:
         buttons.append({"text": PERSONAL_BUTTON_TEXT, "url": personal_url})
     if buttons:
@@ -158,12 +196,14 @@ def dry_run_payload(message: str) -> None:
     """발송 없이 inline 버튼 payload를 구성해 출력한다 (검증/문서용, 비밀값 불필요).
 
     토큰·chat id는 읽지도 출력하지도 않는다 — 버튼 text/url과 enabled 플래그만 출력한다.
-    REPORT_URL/deep link는 비밀값이 아니며, 이 모드는 버튼 계약을 눈으로/검증기로
-    확인하기 위한 것이다.
+    REPORT_URL/DASHBOARD_URL/deep link는 비밀값이 아니며, 이 모드는 버튼 계약을
+    눈으로/검증기로 확인하기 위한 것이다.
     """
     report_url = resolve_report_url()
+    dashboard_url = resolve_dashboard_url(report_url)
     personal_url = resolve_personal_bot_url()
-    payload = build_payload("DRY_RUN", message, report_url, personal_url)
+    payload = build_payload("DRY_RUN", message, report_url, personal_url, dashboard_url)
+    print(f"Summary dashboard link enabled: {'true' if dashboard_url else 'false'}")
     print(f"Report link enabled: {'true' if report_url else 'false'}")
     print(f"Personal bot link enabled: {'true' if personal_url else 'false'}")
     markup = payload.get("reply_markup")
@@ -203,10 +243,12 @@ def main() -> None:
 
     message, message_source = resolve_message()
     report_url = resolve_report_url()
+    dashboard_url = resolve_dashboard_url(report_url)
     personal_url = resolve_personal_bot_url()
     if len(message) > MAX_MESSAGE_LEN:
         message = message[: MAX_MESSAGE_LEN - 3] + "..."
     print(f"Message source: {message_source} ({len(message)} chars)")
+    print(f"Summary dashboard link enabled: {'true' if dashboard_url else 'false'}")
     print(f"Report link enabled: {'true' if report_url else 'false'}")
     print(f"Personal bot link enabled: {'true' if personal_url else 'false'}")
     print(f"Send mode: {send_mode}")
@@ -238,7 +280,7 @@ def main() -> None:
     failed = 0
 
     for chat_id in chat_ids:
-        payload = build_payload(chat_id, message, report_url, personal_url)
+        payload = build_payload(chat_id, message, report_url, personal_url, dashboard_url)
         data = urllib.parse.urlencode(payload).encode("utf-8")
         request = urllib.request.Request(url, data=data, method="POST")
 

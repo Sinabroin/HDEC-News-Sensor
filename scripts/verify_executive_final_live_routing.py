@@ -307,7 +307,8 @@ def check_sim(sim: dict | None) -> None:
         check(f"회귀: 다이제스트에 '{term}' 없음", term not in msg)
     check("회귀: 벌점 헤드라인 두 번 반복 안 됨", msg.count(PENALTY_MARK) <= 1,
           f"{msg.count(PENALTY_MARK)}회")
-    check("회귀: '오늘 브리프 보기' 리포트 버튼 안내 유지", "오늘 브리프 보기" in msg)
+    check("회귀: '요약 대시보드 보기'/'전체 리포트 보기' 안내 유지",
+          "요약 대시보드 보기" in msg and "전체 리포트 보기" in msg)
 
 
 # ---------- mock 정직성 + 회귀 ----------

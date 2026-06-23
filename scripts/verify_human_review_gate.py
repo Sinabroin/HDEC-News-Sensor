@@ -53,7 +53,7 @@ def _clean_env(**extra: str) -> dict:
     """발송 게이트 검사용 환경 — 외부 TELEGRAM_*/승인/메시지 오염을 제거하고 mock 고정."""
     env = {**os.environ, "APP_MODE": "mock"}
     for key in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS", "TELEGRAM_SEND_MODE",
-                "REVIEW_APPROVED", "CONFIRM_SEND", "REPORT_URL",
+                "REVIEW_APPROVED", "CONFIRM_SEND", "REPORT_URL", "DASHBOARD_URL",
                 "TELEGRAM_BOT_USERNAME", "TELEGRAM_PERSONAL_BOT_URL", "MESSAGE"):
         env.pop(key, None)
     env.update(extra)

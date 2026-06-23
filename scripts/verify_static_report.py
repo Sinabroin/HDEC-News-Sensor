@@ -19,17 +19,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT_BUILDER = ROOT / "scripts" / "build_static_report.py"
+DASHBOARD_BUILDER = ROOT / "scripts" / "build_static_dashboard.py"
 SENDER = ROOT / "scripts" / "send_telegram.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 COMMITTED_REPORT = ROOT / "docs" / "daily" / "latest.html"
+DASHBOARD_REPORT = ROOT / "docs" / "daily" / "dashboard-latest.html"
 NOJEKYLL = ROOT / "docs" / ".nojekyll"
 RADAR_DB = ROOT / "radar.db"
 
 # 존재하면 함께 돌리는 기존 verifier들 (앞 2개는 필수)
-REQUIRED_VERIFIERS = ["verify_telegram_digest.py", "verify_executive_brief.py"]
+REQUIRED_VERIFIERS = [
+    "verify_telegram_digest.py",
+    "verify_executive_brief.py",
+    "verify_dashboard_export.py",
+]
 OPTIONAL_VERIFIERS = ["verify_issue_clusters.py", "verify_executive_brief_quality.py"]
 
-BUTTON_TEXT = "오늘 브리프 보기"
+SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
+FULL_REPORT_BUTTON_TEXT = "전체 리포트 보기"
 TELEGRAM_API_HOST = "https://api.telegram.org"
 
 # 모드/신호 유무와 무관하게 항상 존재하는 구조 마커 (mock·live 공통).
@@ -94,7 +101,8 @@ def warn(message: str) -> None:
 def _clean_env(**extra: str) -> dict:
     env = {**os.environ, "APP_MODE": "mock"}
     for key in ("MESSAGE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS",
-                "DB_PATH", "REPORT_URL", "NEWS_MODE", "MACRO_MODE"):
+                "DB_PATH", "REPORT_URL", "DASHBOARD_URL", "NEWS_MODE",
+                "MACRO_MODE"):
         env.pop(key, None)
     env.update(extra)
     return env
@@ -141,17 +149,27 @@ def check_report_builder_source() -> None:
     check("리포트 빌더가 TELEGRAM 비밀값을 참조하지 않음", "TELEGRAM" not in src)
     check("리포트 빌더가 공유 brief 레이어를 재사용",
           "build_brief_via_mock_pipeline" in src)
+    dash_src = DASHBOARD_BUILDER.read_text(encoding="utf-8")
+    check("대시보드 export 빌더가 preview template을 재사용",
+          "dashboard_preview.html" in dash_src and "DEFAULT_OUTPUT" in dash_src)
+    check("대시보드 export 빌더가 전체 리포트 빌더와 분리됨",
+          'DEFAULT_OUTPUT = "docs/daily/dashboard-latest.html"' in dash_src
+          and "build_brief_via_mock_pipeline" not in dash_src)
 
 
 def check_sender_source() -> None:
     src = SENDER.read_text(encoding="utf-8")
     check("sender가 REPORT_URL env를 읽음 (하드코딩 아님)",
-          'os.environ.get("REPORT_URL"' in src)
+          '"REPORT_URL"' in src and "_valid_url_from_env" in src)
+    check("sender가 DASHBOARD_URL env를 읽음 (하드코딩 아님)",
+          '"DASHBOARD_URL"' in src and "_valid_url_from_env" in src)
     check("sender에 reply_markup/inline_keyboard 버튼 지원 존재",
           "reply_markup" in src and "inline_keyboard" in src)
     check("sender에 Telegram HTML parse_mode 지원 존재",
           '"parse_mode": "HTML"' in src)
-    check(f"sender 버튼 텍스트 '{BUTTON_TEXT}' 존재", BUTTON_TEXT in src)
+    check(f"sender 버튼 텍스트 '{SUMMARY_BUTTON_TEXT}' 존재", SUMMARY_BUTTON_TEXT in src)
+    check(f"sender 버튼 텍스트 '{FULL_REPORT_BUTTON_TEXT}' 존재",
+          FULL_REPORT_BUTTON_TEXT in src)
     # P0-C1.10: 1:1 봇 진입 버튼 '개인 질의하기' deep link 지원
     check("sender에 '개인 질의하기' 1:1 봇 버튼 지원 존재",
           "개인 질의하기" in src and "ask_today" in src)
@@ -173,6 +191,8 @@ def check_sender_source() -> None:
           not leaks, "; ".join(leaks))
     check("sender에 'Report link enabled' 안전 로그 존재",
           "Report link enabled" in src)
+    check("sender에 'Summary dashboard link enabled' 안전 로그 존재",
+          "Summary dashboard link enabled" in src)
 
 
 def check_workflow() -> None:
@@ -201,9 +221,12 @@ def check_workflow() -> None:
     check("workflow가 operator-latest.html을 operator 뷰로 빌드",
           "build_static_report.py --output docs/daily/operator-latest.html --audience operator"
           in text)
-    # commit step이 두 리포트 파일을 함께 add (operator 스냅샷 누락 방지).
-    check("commit step이 latest.html·operator-latest.html을 함께 add",
-          "git add docs/daily/latest.html docs/daily/operator-latest.html" in text)
+    check("workflow가 dashboard-latest.html 요약 대시보드를 빌드",
+          "build_static_dashboard.py --output docs/daily/dashboard-latest.html" in text)
+    # commit step이 세 리포트 파일을 함께 add (operator/dashboard 스냅샷 누락 방지).
+    check("commit step이 latest.html·operator-latest.html·dashboard-latest.html을 함께 add",
+          "git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html"
+          in text)
 
     report_lines = [line for line in text.splitlines()
                     if re.match(r"\s*REPORT_URL\s*:", line)]
@@ -213,6 +236,14 @@ def check_workflow() -> None:
         for line in report_lines)
     check("REPORT_URL이 vars/secrets로만 주입됨 (URL 하드코딩 없음)", ok,
           "; ".join(line.strip() for line in report_lines) or "REPORT_URL 라인 없음")
+    dashboard_lines = [line for line in text.splitlines()
+                       if re.match(r"\s*DASHBOARD_URL\s*:", line)]
+    ok = bool(dashboard_lines) and all(
+        ("vars.DASHBOARD_URL" in line or "secrets.DASHBOARD_URL" in line)
+        and "http" not in line.lower()
+        for line in dashboard_lines)
+    check("DASHBOARD_URL이 vars/secrets로만 주입됨 (URL 하드코딩 없음)", ok,
+          "; ".join(line.strip() for line in dashboard_lines) or "DASHBOARD_URL 라인 없음")
     check("workflow APP_MODE=mock 유지", "APP_MODE: mock" in text)
 
     try:
@@ -465,6 +496,15 @@ def check_committed_report() -> None:
     # 있다 — committed=True로 모드 인지 검사한다.
     _check_html_content(COMMITTED_REPORT.read_text(encoding="utf-8"), "커밋 HTML",
                         committed=True)
+    if check("docs/daily/dashboard-latest.html 존재 (요약 대시보드 스냅샷)",
+             DASHBOARD_REPORT.exists()):
+        dash = DASHBOARD_REPORT.read_text(encoding="utf-8")
+        latest = COMMITTED_REPORT.read_text(encoding="utf-8")
+        check("dashboard-latest는 latest.html을 대체하지 않음",
+              "dashboard-export:summary" in dash and dash != latest
+              and "dashboard-export:summary" not in latest)
+        check("dashboard-latest가 preview-model 요약 대시보드 구조 포함",
+              'id="preview-model"' in dash and "데모 데이터" in dash)
     check("docs/.nojekyll 존재 (Pages에서 Jekyll 비활성)", NOJEKYLL.exists())
 
 
@@ -509,6 +549,7 @@ def check_sender_paths() -> None:
 
 def check_report_url_paths() -> None:
     sample_url = "https://example.com/daily/latest.html"
+    sample_dashboard_url = "https://example.com/daily/dashboard-latest.html"
     resolver = ("import sys; sys.path.insert(0, 'scripts'); "
                 "from send_telegram import resolve_report_url; "
                 "print(repr(resolve_report_url()))")
@@ -532,31 +573,56 @@ def check_report_url_paths() -> None:
           proc.returncode == 0 and (proc.stdout or "").strip() == "''",
           (proc.stdout or "").strip())
 
+    dashboard_resolver = (
+        "import sys; sys.path.insert(0, 'scripts'); "
+        "from send_telegram import resolve_report_url, resolve_dashboard_url; "
+        "r = resolve_report_url(); print(repr(resolve_dashboard_url(r)))"
+    )
+    proc = subprocess.run([sys.executable, "-c", dashboard_resolver],
+                          capture_output=True, text=True, cwd=ROOT, timeout=120,
+                          env=_clean_env(REPORT_URL=sample_url))
+    check("DASHBOARD_URL 미설정 + 표준 REPORT_URL → dashboard-latest 파생",
+          proc.returncode == 0
+          and (proc.stdout or "").strip() == repr(sample_dashboard_url),
+          (proc.stdout or "").strip())
+
+    proc = subprocess.run([sys.executable, "-c", dashboard_resolver],
+                          capture_output=True, text=True, cwd=ROOT, timeout=120,
+                          env=_clean_env(REPORT_URL=sample_url,
+                                         DASHBOARD_URL=sample_dashboard_url))
+    check("DASHBOARD_URL 설정 → 그대로 사용",
+          proc.returncode == 0
+          and (proc.stdout or "").strip() == repr(sample_dashboard_url),
+          (proc.stdout or "").strip())
+
     payload_test = (
         "import sys, json; sys.path.insert(0, 'scripts'); "
-        "from send_telegram import build_payload, BUTTON_TEXT; "
+        "from send_telegram import build_payload, SUMMARY_BUTTON_TEXT, FULL_REPORT_BUTTON_TEXT; "
         "p1 = build_payload('123', 'msg', ''); "
         "print('no-button' if 'reply_markup' not in p1 else 'button'); "
-        f"p2 = build_payload('123', 'msg', '{sample_url}'); "
-        "rm = json.loads(p2['reply_markup']); btn = rm['inline_keyboard'][0][0]; "
-        "print(btn['text'] == BUTTON_TEXT); print(btn['url'])")
+        f"p2 = build_payload('123', 'msg', '{sample_url}', '', '{sample_dashboard_url}'); "
+        "buttons = json.loads(p2['reply_markup'])['inline_keyboard'][0]; "
+        "print(buttons[0]['text'] == SUMMARY_BUTTON_TEXT); print(buttons[0]['url']); "
+        "print(buttons[1]['text'] == FULL_REPORT_BUTTON_TEXT); print(buttons[1]['url'])")
     proc = subprocess.run([sys.executable, "-c", payload_test], capture_output=True,
                           text=True, cwd=ROOT, timeout=120, env=_clean_env())
     lines = (proc.stdout or "").strip().splitlines()
-    check("payload: REPORT_URL 없으면 버튼 없음 (기존 동작 보존)",
+    check("payload: 링크 URL 없으면 버튼 없음 (기존 동작 보존)",
           proc.returncode == 0 and lines and lines[0] == "no-button",
           "; ".join(lines[:1]))
-    check("payload: REPORT_URL 있으면 inline 버튼(reply_markup) 포함",
-          proc.returncode == 0 and len(lines) >= 3
-          and lines[1] == "True" and lines[2] == sample_url,
-          "; ".join(lines[1:3]))
+    check("payload: DASHBOARD_URL/REPORT_URL 있으면 A/B inline 버튼 포함",
+          proc.returncode == 0 and len(lines) >= 5
+          and lines[1] == "True" and lines[2] == sample_dashboard_url
+          and lines[3] == "True" and lines[4] == sample_url,
+          "; ".join(lines[1:5]))
 
     proc = run_script(SENDER, env=_clean_env(MESSAGE="fail fast check",
-                                             REPORT_URL=sample_url))
+                                             REPORT_URL=sample_url,
+                                             DASHBOARD_URL=sample_dashboard_url))
     combined = (proc.stdout or "") + (proc.stderr or "")
     check("비밀값 없으면 발송 전에 fail-fast 유지 (exit 1)",
           proc.returncode == 1 and "TELEGRAM_BOT_TOKEN is missing" in combined)
-    check("fail-fast 출력에 REPORT_URL 값/token/API URL 누출 없음",
+    check("fail-fast 출력에 REPORT_URL/DASHBOARD_URL 값/token/API URL 누출 없음",
           "example.com" not in combined and "api.telegram.org" not in combined
           and not TOKEN_SHAPE.search(combined))
 

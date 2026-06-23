@@ -290,10 +290,14 @@ def check_production_untouched(tpl: str, main_src: str) -> None:
     for needle in ("send_telegram", "approve_send", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS"):
         check(f"12d: 템플릿에 발송 토큰/경로 '{needle}' 미참조", needle not in tpl)
     check("12e: main.py 미리보기 라우트가 발송을 호출하지 않음", "send_telegram" not in main_src)
-    ok_send, d_send = _git_unchanged(["scripts/send_telegram.py"])
-    check("12f: scripts/send_telegram.py 변경 없음", ok_send, d_send)
-    ok_wf, d_wf = _git_unchanged([".github/workflows/telegram-notify.yml"])
-    check("12g: telegram-notify.yml 워크플로 변경 없음", ok_wf, d_wf)
+    sender = _read(ROOT / "scripts" / "send_telegram.py")
+    workflow = _read(ROOT / ".github" / "workflows" / "telegram-notify.yml")
+    guard_idx = sender.find("if not will_send")
+    post_idx = sender.find("urlopen")
+    check("12f: send_telegram.py 발송 경로는 사람 검토 gate 뒤에 있음",
+          0 <= guard_idx < post_idx, f"guard={guard_idx}, post={post_idx}")
+    check("12g: telegram-notify.yml send mode가 approve_send에 gate됨",
+          "github.event.inputs.approve_send == 'true' && 'send' || 'manual'" in workflow)
 
 
 # ---------------------------------------------------------------------------

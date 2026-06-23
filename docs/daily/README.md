@@ -1,8 +1,9 @@
 # docs/daily — 정적 Executive Daily Brief (P0-B5 · P0-C1.5)
 
 `latest.html`은 `scripts/build_static_report.py`가 생성하는 **정적 Executive Daily
-Brief**다. Telegram 다이제스트의 **"오늘 브리프 보기"** 버튼이 (REPORT_URL이 설정된
-경우) 게시된 이 페이지로 연결된다.
+Brief**다. `dashboard-latest.html`은 `scripts/build_static_dashboard.py`가 생성하는
+**정적 요약 대시보드 export**다. Telegram 다이제스트의 **"요약 대시보드 보기"** 버튼은
+`dashboard-latest.html`, **"전체 리포트 보기"** 버튼은 `latest.html`로 연결된다.
 
 이 파일은 두 가지 상태일 수 있다:
 
@@ -19,6 +20,7 @@ Brief**다. Telegram 다이제스트의 **"오늘 브리프 보기"** 버튼이 
 
 ```bash
 python3 scripts/build_static_report.py --output docs/daily/latest.html
+python3 scripts/build_static_dashboard.py --output docs/daily/dashboard-latest.html
 ```
 
 - mock 빌드는 외부 API/네트워크 호출 0건, 비밀값 불필요, 저장소 `radar.db`
@@ -36,7 +38,7 @@ Telegram Notify 워크플로의 **빈 메시지/예약 실행**은 발송 전 ve
 - live 수집이 실패/0건이면 작업 트리를 복원해 **가짜 live를 게시하지 않고**,
   정직하게 mock(데모) 라벨된 fallback 다이제스트를 발송한다.
 - **커스텀 메시지** 실행(workflow_dispatch에 메시지 입력)은 live를 강제하지 않고
-  입력 메시지를 그대로 발송한다 (REPORT_URL 버튼은 그대로 유지).
+  입력 메시지를 그대로 발송한다 (DASHBOARD_URL/REPORT_URL 버튼은 그대로 유지).
 
 수동으로 갱신하려면 로컬에서 재생성한 뒤 commit해도 된다.
 
@@ -51,10 +53,14 @@ Telegram Notify 워크플로의 **빈 메시지/예약 실행**은 발송 전 ve
    `https://<owner>.github.io/<repo>/daily/latest.html`
    (커스텀 도메인 사용 시 그 주소)
 5. GitHub → Settings → Secrets and variables → Actions → **Variables**에
-   `REPORT_URL` = 위 주소 추가 → 이후 Telegram 발송에 링크 버튼이 붙는다.
+   `REPORT_URL` = 위 `latest.html` 주소 추가 → 이후 Telegram 발송에
+   "전체 리포트 보기" 링크 버튼이 붙는다.
+6. 선택: `DASHBOARD_URL` =
+   `https://<owner>.github.io/<repo>/daily/dashboard-latest.html`
+   (커스텀 도메인도 동일 경로). 생략하면 sender가 표준 `REPORT_URL`에서 파생한다.
 
-`REPORT_URL`이 없으면 워크플로는 기존처럼 **텍스트 전용** 다이제스트를 발송한다
-(실패하지 않는다).
+`REPORT_URL`과 `DASHBOARD_URL`이 모두 없으면 워크플로는 기존처럼 **텍스트 전용**
+다이제스트를 발송한다(실패하지 않는다).
 
 ## 보안 주의
 
@@ -62,5 +68,5 @@ Telegram Notify 워크플로의 **빈 메시지/예약 실행**은 발송 전 ve
   mock 데모 데이터 또는 **공개 RSS 뉴스의 제목·요약·원문 URL과 public-safe 점수 언어**.
 - 비공개 유료 뉴스 본문·내부 민감 신호·운영자 메모는 공개 Pages에 올리지 않는다.
   그런 데이터 단계에서는 사내/비공개 호스팅으로 전환한다.
-- `latest.html`에는 비밀값·토큰·chat id·본문 전문이 절대 포함되지 않는다
+- `latest.html`/`dashboard-latest.html`에는 비밀값·토큰·chat id·본문 전문이 절대 포함되지 않는다
   (`scripts/verify_static_report.py`가 mock·live 모드 모두 검사한다).

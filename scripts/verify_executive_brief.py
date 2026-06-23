@@ -381,8 +381,9 @@ def check_digest() -> None:
         check("digest에 mock macro 고정값 수치 없음", not leaked, ", ".join(leaked))
         # P0-C1.12 — digest는 '시장지표 미연동' placeholder를 빼고 거시경제를 리포트로
         # 위임한다 (노이즈 제거). 가짜 macro 수치 금지는 위 검사로 유지된다.
-        check("digest가 미연동 placeholder 없이 거시경제를 리포트로 위임",
-              "시장지표 미연동" not in message and "리포트에서 확인" in message)
+        check("digest가 미연동 placeholder 없이 거시경제를 전체 리포트로 위임",
+              "시장지표 미연동" not in message
+              and "전체 리포트 보기" in message and "거시경제" in message)
 
     proc = run_script(DIGEST_BUILDER, "--json")
     if not check("digest --json 동작", proc.returncode == 0,

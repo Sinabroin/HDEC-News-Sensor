@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<!--dashboard-export:summary source=templates/dashboard_preview.html target=docs/daily/dashboard-latest.html-->
+<!--
+  HDEC Executive Radar — 대시보드 미리보기 (Dashboard Preview · NON-PRODUCTION)
+  ─────────────────────────────────────────────────────────────────────────────
+  · 출처: Claude Design "HDEC Executive Radar.dc.html" 시각 방향을 그대로 구현한 미리보기.
+  · 프로덕션 아님: docs/daily/latest.html · docs/daily/operator-latest.html · Telegram 발송과 무관.
+  · 데이터 정직성 하드룰(rules.md §1) 준수:
+      - 외부 URL/폰트/CDN 0건 (시스템 폰트 스택만 사용 — Pretendard CDN 미사용).
+      - 시장/AIS/소셜(초기신호) 실데이터를 위조하지 않는다.
+      - 실데이터가 없는 자리는 demo/mock/미연동/정책·키 필요로 정직하게 표기한다.
+      - 모든 시장 수치는 data_mode(지연/대용/보고/미연동)를 함께 노출하며 현재 체결값을 주장하지 않는다.
+  · 자기완결 정적 페이지: 네트워크/DB/발송/비밀값 0건. JSON island(#preview-model)는 기존
+    /api/brief · market_snapshot 계약(키 구조)을 그대로 미러링한 데모 데이터다(실데이터 아님).
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HDEC Executive Radar — 요약 대시보드</title>
+<style>
+  /* ===== 팔레트 (Claude Design 원본 값 보존: white / sky blue / soft navy) ===== */
+  :root{
+    --bg1:#EFF4FA; --bg2:#EAF1F8; --base:#EEF3F9;
+    --card:#FFFFFF; --line:#E4ECF6; --hair:#EDF2F8; --hair2:#F1F5FA;
+    --ink:#26344D; --ink2:#39496A; --ink3:#46557A; --ink4:#5E6E8C;
+    --mute:#7E8CA6; --mute2:#8B99B3; --mute3:#9AAAC1; --mute4:#AEBBD0; --mute5:#C5CFDF;
+    --sky:#3F6FA8; --sky2:#5B8FCB; --sky-tint:#EAF2FC; --sky-bd:#DCE8F6;
+    --red:#B85049; --red-tint:#FBEEEC; --red-bd:#E6C6C2;
+    --green:#3C7A4E; --green-tint:#EAF5EE; --green-bd:#CFE7D8;
+    --amber:#9C7232; --amber-tint:#FBF3E5; --amber-bd:#F0E3CB;
+    --shadow:0 2px 10px rgba(40,70,120,0.035);
+    --shadow-lg:0 6px 24px rgba(40,70,120,0.06);
+    --shadow-hero:0 6px 28px rgba(40,70,120,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 100%);
+    background-attachment:fixed;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",
+      "Malgun Gothic","Noto Sans KR",roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; color:#33415C; font-size:14px; line-height:1.5;
+  }
+  ::selection{background:#D6E6F7;}
+  .num{font-variant-numeric:tabular-nums lining-nums;}
+  a{color:var(--sky); text-decoration:none;}
+  .hidden{display:none !important;}
+  .wrap{max-width:1560px; margin:0 auto; padding:22px 30px 36px;}
+  .eyebrow{font-size:11.5px; font-weight:700; letter-spacing:0.14em; color:var(--sky2);}
+  @keyframes radarSweep{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  /* ===== 헤더 ===== */
+  header.top{display:flex; align-items:center; justify-content:space-between; gap:24px; padding:4px 4px 15px; flex-wrap:wrap;}
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand .mark{width:42px; height:42px; border-radius:12px; background:var(--sky-tint);
+    border:1px solid var(--sky-bd); display:flex; align-items:center; justify-content:center; flex:none;}
+  .brand .name{font-size:19px; font-weight:800; letter-spacing:-0.01em; color:var(--ink);}
+  .brand .name b{color:var(--sky); font-weight:800;}
+  .brand .sub{font-size:11.5px; font-weight:500; letter-spacing:0.16em; color:var(--mute3); margin-top:2px;}
+  .hbar{display:flex; align-items:stretch; gap:10px; flex-wrap:wrap;}
+  .stat{display:flex; align-items:center; gap:10px; padding:9px 15px; background:var(--card);
+    border:1px solid var(--line); border-radius:12px;}
+  .stat .k{font-size:10px; color:var(--mute3); font-weight:600; letter-spacing:0.04em;}
+  .stat .v{font-size:13px; font-weight:700; color:var(--ink2); margin-top:1px;}
+  .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .btn-op{display:flex; align-items:center; gap:10px; padding:7px 9px 7px 14px; background:var(--ink2);
+    border:none; border-radius:12px; cursor:pointer;}
+  .btn-op .t{font-size:13px; font-weight:700; color:#fff;}
+  .btn-op .av{width:28px; height:28px; border-radius:8px; background:#4C5E84; display:flex;
+    align-items:center; justify-content:center; color:#D7E2F2; font-size:12px; font-weight:700;}
+
+  /* ===== Executive Read Hero (golden: 2-col text + 신호 구성 카드) ===== */
+  .hero{position:relative; overflow:hidden; background:linear-gradient(135deg,#FFFFFF 0%,#F4F9FF 100%);
+    border:1px solid #E1EBF7; border-radius:20px; padding:23px 30px; box-shadow:var(--shadow-hero); margin-bottom:14px;
+    display:flex; align-items:center; gap:30px; justify-content:space-between;}
+  .hero .heromain{position:relative; min-width:0; flex:1; max-width:1010px;}
+  .hero h1{margin:0; font-size:30px; line-height:1.36; font-weight:800; letter-spacing:-0.02em; color:var(--ink); text-wrap:balance;}
+  .hero h1 .op{color:var(--green); border-bottom:2px solid var(--green-bd); padding-bottom:1px;}
+  .hero h1 .rk{color:var(--red); border-bottom:2px solid var(--red-bd); padding-bottom:1px;}
+  .hero .second{margin-top:13px; font-size:15.5px; font-weight:500; color:var(--ink3); max-width:64ch; line-height:1.55;}
+  .hero .second .op{color:var(--green); border-bottom:2px solid var(--green-bd); padding-bottom:1px; font-weight:600;}
+  .hero .second .rk{color:var(--red); border-bottom:2px solid var(--red-bd); padding-bottom:1px; font-weight:600;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; padding-top:20px; border-top:1px solid #ECF2F9;}
+  /* hero 신호 구성 카드 — golden 우측 카드 패리티 */
+  .herocard{flex:none; width:240px; background:var(--card); border:1px solid #E1EBF7; border-radius:14px;
+    padding:16px 18px; box-shadow:0 2px 12px rgba(40,70,120,0.05);}
+  .herocard .hc-t{font-size:10.5px; font-weight:800; letter-spacing:0.1em; color:var(--mute3); margin-bottom:13px;}
+  .herocard .hc-row{margin-bottom:11px;}
+  .herocard .hc-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:5px;}
+  .herocard .hc-l{font-size:11.5px; font-weight:600; color:var(--ink4);}
+  .herocard .hc-v{font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .herocard .hc-bar{height:5px; border-radius:3px; background:#EEF3F9; overflow:hidden;}
+  .herocard .hc-bar > span{display:block; height:100%; border-radius:3px;}
+  .herocard .hc-foot{margin-top:13px; padding-top:11px; border-top:1px solid var(--hair); display:flex; align-items:center; justify-content:space-between;}
+  .herocard .hc-foot .f{font-size:10.5px; color:var(--mute3); font-weight:600;}
+  @media (max-width:900px){ .hero{flex-direction:column; align-items:stretch; gap:18px;} .herocard{width:auto;} }
+  .chip{font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:999px;}
+  .chip.sky{color:var(--sky); background:var(--sky-tint); border:1px solid var(--sky-bd);}
+  .chip.amber{color:var(--amber); background:var(--amber-tint); border:1px solid var(--amber-bd);}
+  .chip.green{color:var(--green); background:var(--green-tint); border:1px solid var(--green-bd);}
+  .chip.red{color:var(--red); background:var(--red-tint); border:1px solid var(--red-bd);}
+
+  /* ===== Summary Metrics ===== */
+  .metrics{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:14px;}
+  .metric{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:15px 18px; box-shadow:var(--shadow); transition:box-shadow .16s ease, transform .16s ease;}
+  .metric:hover{box-shadow:var(--shadow-lg); transform:translateY(-1px);}
+  .metric .row{display:flex; align-items:center; gap:10px;}
+  .metric .ic{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none;}
+  .metric .lbl{font-size:12.5px; font-weight:600; color:var(--mute);}
+  .metric .val{font-size:32px; font-weight:800; line-height:1; letter-spacing:-0.02em; margin-top:10px;}
+  .metric .val.small{font-size:21px;}
+  .metric .desc{font-size:11.5px; font-weight:500; color:var(--mute3); margin-top:7px;}
+
+  /* ===== Main grid ===== */
+  .grid{display:grid; grid-template-columns:252px minmax(0,1fr) 388px; gap:16px; align-items:start;}
+  @media (max-width:1240px){ .grid{grid-template-columns:220px minmax(0,1fr);} aside.rail{grid-column:1 / -1;} }
+  @media (max-width:900px){ .grid{grid-template-columns:1fr;} aside.lens{position:static;} .metrics{grid-template-columns:repeat(2,1fr);} }
+
+  /* ===== Left lens nav ===== */
+  aside.lens{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:8px 10px 14px;
+    box-shadow:var(--shadow); position:sticky; top:20px;}
+  .lens .gtitle{padding:14px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.14em; color:var(--mute4);}
+  .lens .nav{display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; padding:10px 12px;
+    border:none; background:transparent; border-radius:11px; cursor:pointer; text-align:left; margin-bottom:1px;}
+  .lens .nav:hover{background:#F5F9FE;}
+  .lens .nav.active{background:var(--sky-tint);}
+  .lens .nav .l{display:flex; align-items:center; gap:10px; min-width:0;}
+  .lens .nav .ndot{width:7px; height:7px; border-radius:50%; flex:none; background:var(--mute5);}
+  .lens .nav .nlabel{font-size:13.5px; font-weight:600; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .lens .nav.active .nlabel{font-weight:700; color:var(--ink);}
+  .lens .nav .r{display:flex; align-items:center; gap:6px; flex:none;}
+  .lens .nav .ncount{font-size:12.5px; font-weight:700; color:var(--mute4);}
+  .lens .nav.active .ncount{color:var(--sky);}
+  .lens .nav .flag{font-size:9px; font-weight:800; letter-spacing:0.06em; color:#fff; padding:2px 5px; border-radius:5px;}
+
+  /* ===== Tabs ===== */
+  .tabs{display:inline-flex; background:#E8EFF8; border-radius:11px; padding:3px; gap:2px; flex-wrap:wrap;}
+  .tab{border:none; background:transparent; padding:8px 16px; border-radius:9px; font-size:13px; font-weight:700; color:var(--mute); cursor:pointer;}
+  .tab.active{background:var(--card); color:var(--ink); box-shadow:0 1px 4px rgba(40,70,120,0.08);}
+  .toolbar{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; padding:0 2px; flex-wrap:wrap;}
+  .toolbar .lensnote{font-size:12.5px; color:var(--mute3); font-weight:500;}
+  .toolbar .lensnote b{color:var(--ink2); font-weight:700;}
+  .sortpill{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; color:var(--ink4);
+    background:var(--card); border:1px solid var(--line); padding:8px 13px; border-radius:10px;}
+
+  /* ===== Section labels ===== */
+  .seclabel{display:flex; align-items:center; gap:12px; margin:4px 2px 9px;}
+  .seclabel .t{font-size:11px; font-weight:800; letter-spacing:0.12em;}
+  .seclabel .ln{height:1px; flex:1;}
+  .seclabel .c{font-size:11.5px; color:var(--mute4); font-weight:600;}
+  .seclabel.red .t{color:var(--red);} .seclabel.red .ln{background:linear-gradient(90deg,var(--red-bd),transparent);}
+  .seclabel.sky .t{color:var(--sky);} .seclabel.sky .ln{background:linear-gradient(90deg,var(--sky-bd),transparent);}
+  .seclabel.green .t{color:var(--green);} .seclabel.green .ln{background:linear-gradient(90deg,var(--green-bd),transparent);}
+  .seclabel.amber .t{color:var(--amber);} .seclabel.amber .ln{background:linear-gradient(90deg,var(--amber-bd),transparent);}
+
+  /* ===== Featured signal card ===== */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow);}
+  .featured{padding:20px 24px; box-shadow:var(--shadow-lg); margin-bottom:12px;}
+  .featured .head{display:flex; align-items:flex-start; justify-content:space-between; gap:24px;}
+  .tagrow{display:flex; align-items:center; gap:8px; margin-bottom:11px; flex-wrap:wrap;}
+  .tag{font-size:10.5px; font-weight:800; letter-spacing:0.04em; padding:3px 8px; border-radius:6px;}
+  .tag.red{color:var(--red); border:1px solid var(--red-bd); background:var(--red-tint);}
+  .tag.green{color:var(--green); border:1px solid var(--green-bd); background:var(--green-tint);}
+  .tag.amber{color:var(--amber); border:1px solid var(--amber-bd); background:var(--amber-tint);}
+  .tag.sky{color:var(--sky); border:1px solid var(--sky-bd); background:var(--sky-tint);}
+  .featured h2{margin:0; font-size:21px; line-height:1.4; font-weight:800; letter-spacing:-0.015em; color:var(--ink);}
+  .meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--mute2); font-weight:500;}
+  .meta b{font-weight:700; color:var(--ink4);}
+  .meta .sep{color:#D3DCEA;}
+  .trust{display:inline-flex; align-items:center; gap:5px; color:var(--sky); font-weight:700; background:var(--sky-tint); padding:2px 9px; border-radius:999px;}
+  .score{text-align:right; flex:none;}
+  .score .v{font-size:42px; font-weight:800; line-height:1; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;}
+  .score .v small{font-size:18px; font-weight:700; opacity:.55;}
+  .score .l{font-size:11.5px; font-weight:700; margin-top:6px;}
+  /* 요약 / 영향 / 액션 3행 (golden 패리티) */
+  .read{background:#F6FAFE; border:1px solid #E7F0FA; border-radius:12px; padding:12px 15px; margin-top:13px; display:flex; flex-direction:column; gap:6px;}
+  .read .rd{display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:1.5; color:#3F4D6B;}
+  .read .rd.act{color:var(--red); font-weight:700;}
+  .read .rdb{font-size:10px; font-weight:800; letter-spacing:0.02em; padding:3px 8px; border-radius:6px; flex:none; margin-top:1px; white-space:nowrap;}
+  .read .rdb.sum{color:var(--sky2); background:var(--sky-tint);}
+  .read .rdb.imp{color:var(--sky); background:var(--sky-tint);}
+  .read .rdb.act{color:#fff; background:var(--red);}
+  /* featured 렌즈 칩 행 (golden featuredLenses) */
+  .featlens{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:11px;}
+  .featlens .fllabel{font-size:10px; font-weight:700; letter-spacing:0.08em; color:var(--mute4); margin-right:2px;}
+  .featlens .flchip{font-size:11px; font-weight:600; color:#5E7193; background:#EFF4FA; border:1px solid #DEE8F4; padding:3px 9px; border-radius:999px;}
+  .idx{margin-top:14px;}
+  .idx .h{font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--mute4); margin-bottom:10px;}
+  .idxgrid{display:grid; grid-template-columns:repeat(6,1fr); gap:14px;}
+  @media (max-width:760px){ .idxgrid{grid-template-columns:repeat(3,1fr);} }
+  .idxitem .top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:7px;}
+  .idxitem .top .lbl{font-size:11.5px; color:var(--mute2); font-weight:600;}
+  .idxitem .top .val{font-size:13px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .bar{height:4px; border-radius:3px; background:#EAEFF6; overflow:hidden;}
+  .bar > span{display:block; height:100%; border-radius:3px;}
+  .cardfoot{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:14px; padding-top:13px; border-top:1px solid var(--hair); flex-wrap:wrap;}
+  .extlink{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--sky);}
+
+  /* ===== Compact rows ===== */
+  .rows{overflow:hidden;}
+  .srow{display:flex; align-items:center; gap:16px; padding:13px 20px; border-top:1px solid var(--hair); cursor:pointer;}
+  .srow:first-child{border-top:none;}
+  .srow:hover{background:#FAFCFE;}
+  .srow .stag{font-size:10px; font-weight:800; letter-spacing:0.03em; padding:3px 7px; border-radius:6px; flex:none; white-space:nowrap;}
+  .srow .body{min-width:0; flex:1;}
+  .srow .title{font-size:14.5px; font-weight:700; color:#2B3A57; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .srow .smeta{display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-top:6px; font-size:12px; color:var(--mute3); font-weight:500;}
+  .srow .sc{text-align:right; flex:none; display:flex; align-items:center; gap:14px;}
+  .srow .sc .v{font-size:20px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;}
+  .srow .sc .l{font-size:10.5px; font-weight:700; margin-top:4px;}
+  .morebtn{width:100%; padding:15px; background:#FAFCFE; border:none; border-top:1px solid var(--hair);
+    font-size:13px; font-weight:700; color:var(--ink4); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;}
+
+  /* ===== Right rail ===== */
+  aside.rail{display:flex; flex-direction:column; gap:14px; position:sticky; top:16px;}
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 18px; box-shadow:var(--shadow);}
+  .panel .ph{font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
+  .panel .ph small{font-size:11.5px; font-weight:600; color:var(--mute4);}
+  .panel .pnote{font-size:11px; color:var(--mute3); font-weight:500; line-height:1.5; margin:5px 0 11px;}
+  .railnote{font-size:10.5px; font-weight:700; letter-spacing:0.08em; color:var(--mute4); text-transform:uppercase; margin-bottom:8px;}
+
+  /* ===== Market rows + data_mode badges ===== */
+  .mgrp{display:flex; align-items:center; justify-content:space-between; margin:11px 0 7px;}
+  .mgrp .t{font-size:12px; font-weight:800; color:var(--sky2); letter-spacing:0.02em;}
+  .mgrp .m{font-size:10.5px; color:var(--mute4); font-weight:600;}
+  .mrow{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--hair2);}
+  .mrow .mn{font-size:13px; font-weight:600; color:var(--ink4); display:flex; align-items:center; gap:8px;}
+  .mrow .mv{font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; min-width:62px; color:var(--ink);}
+  .mrow .mv.off{color:var(--mute5);}
+  .mrow .md{display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:120px;}
+  .mrow .delta{font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .delta.up{color:var(--red);} .delta.down{color:var(--green);} .delta.flat{color:var(--mute5);}
+  .dm{font-size:10px; font-weight:700; padding:2px 6px; border-radius:5px; white-space:nowrap;}
+  .dm.delay{color:var(--mute); background:#EEF2F7;}
+  .dm.proxy{color:var(--amber); background:var(--amber-tint);}
+  .dm.report{color:var(--sky2); background:var(--sky-tint);}
+  .dm.unavail{color:var(--mute4); background:#F2F5F9;}
+  .dm.policy{color:var(--amber); background:var(--amber-tint);}
+  .dm.unverified{color:var(--mute); background:#EEF2F7;}
+  .dm.official{color:var(--green); background:var(--green-tint);}
+  .dm.tg{color:var(--sky); background:var(--sky-tint);}
+  .spark{width:54px; height:18px; flex:none;}
+  .disc{margin-top:16px; padding:11px 13px; background:#F7FAFD; border:1px solid var(--hair); border-radius:11px;
+    font-size:10.5px; line-height:1.6; color:var(--mute3); font-weight:500;}
+
+  /* ===== Market detail chart ===== */
+  .chartcard{padding:18px 20px;}
+  .chartctl{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:11px 0;}
+  .seg{display:inline-flex; background:#E8EFF8; border-radius:9px; padding:3px;}
+  .seg button{border:none; background:transparent; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:700; color:var(--mute); cursor:pointer;}
+  .seg button.active{background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(40,70,120,0.08);}
+  .selwrap{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink4); font-weight:600;}
+  select.sel{font:inherit; font-size:12px; font-weight:700; color:var(--ink2); border:1px solid var(--line);
+    background:var(--card); border-radius:8px; padding:6px 9px; cursor:pointer;}
+  .toggle{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--ink4); cursor:pointer; user-select:none;}
+  .chartbox{border:1px solid var(--hair); border-radius:12px; padding:8px 6px 4px; background:#FCFDFF;}
+  .legend{display:flex; flex-wrap:wrap; gap:12px; margin-top:10px;}
+  .legend .it{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; color:var(--ink4);}
+  .legend .sw{width:14px; height:3px; border-radius:2px;}
+  .legend .it.off{color:var(--mute4);}
+  .legend .it.off .sw{background:repeating-linear-gradient(90deg,var(--mute5) 0 3px,transparent 3px 6px); height:2px;}
+  .axisnote{font-size:11px; color:var(--mute3); font-weight:500; margin-top:8px; line-height:1.5;}
+
+  /* ===== Market universe: category cards + maturity/country chips ===== */
+  .mktcats{column-count:2; column-gap:12px; margin-top:9px;}
+  @media (max-width:760px){ .mktcats{column-count:1;} }
+  .mcat-card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:12px 14px 8px;
+    break-inside:avoid; -webkit-column-break-inside:avoid; margin:0 0 12px;}
+  .mcat-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:2px;}
+  .mcat-t{font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
+  .mcat-c{font-size:10.5px; font-weight:700; color:var(--mute4); flex:none;}
+  .men{font-size:10.5px; font-weight:600; color:var(--mute4); margin-left:5px;}
+  .chiprow{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:6px 0 8px;}
+  .chiprow .chiplabel{font-size:12px; font-weight:700; color:var(--mute3); flex:none;}
+  .chips-inline{display:flex; flex-wrap:wrap; gap:6px;}
+  .mtog{border:1px solid var(--line); background:var(--card); color:var(--ink4); font:inherit; font-size:12px; font-weight:700;
+    padding:5px 11px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center;}
+  .mtog:hover{background:#F4F9FE;}
+  .mtog.on{background:var(--sky-tint); border-color:var(--sky-bd); color:var(--sky);}
+  .mtog.off{color:var(--mute4); background:#F4F6FA; border-style:dashed; cursor:not-allowed;}
+  .mtog .x{font-size:9px; font-weight:800; margin-left:5px; opacity:.75; letter-spacing:0.02em;}
+  .expandbtn{border:none; background:transparent; color:var(--sky); font:inherit; font-size:12px; font-weight:700; cursor:pointer; padding:5px 4px;}
+  .seeall{width:100%; margin-top:12px; padding:9px; background:#F4F9FE; border:1px solid var(--sky-bd); border-radius:10px;
+    font-size:12px; font-weight:700; color:var(--sky); cursor:pointer;}
+  .seeall:hover{background:var(--sky-tint);}
+
+  /* ===== Hormuz card ===== */
+  .hz .row{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
+  .hz .big{font-size:30px; font-weight:800; color:var(--mute4); font-variant-numeric:tabular-nums; line-height:1;}
+  .hz .warn{font-size:11.5px; color:var(--ink3); line-height:1.6; margin-top:12px; background:#F7FAFD; border:1px solid var(--hair); border-radius:10px; padding:11px 13px;}
+  .hz .warn b{color:var(--amber); font-weight:700;}
+  .hz ul{margin:8px 0 0; padding-left:16px; color:var(--ink3); font-size:11.5px; line-height:1.7;}
+  /* Hormuz rich preview */
+  .hz-tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;}
+  @media (max-width:560px){ .hz-tiles{grid-template-columns:repeat(2,1fr);} }
+  .hz-tile{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:9px 11px;}
+  .hz-tile .k{font-size:10px; color:var(--mute3); font-weight:600; letter-spacing:0.02em;}
+  .hz-tile .v{font-size:17px; font-weight:800; color:var(--ink2); margin-top:4px; font-variant-numeric:tabular-nums;}
+  .hz-tile .v small{font-size:10px; font-weight:700; color:var(--mute4);}
+  .hz-sub{font-size:11px; font-weight:800; letter-spacing:0.08em; color:var(--mute4); margin:13px 0 8px; text-transform:uppercase;}
+  .hz-cols{display:grid; grid-template-columns:1.05fr 0.95fr; gap:14px; align-items:start;}
+  @media (max-width:640px){ .hz-cols{grid-template-columns:1fr;} }
+  .hz-bars{width:100%; height:96px;}
+  .hz-map{background:#F2F8FE; border:1px solid #E1ECF8; border-radius:12px; padding:6px;}
+  .hz-vrow{display:grid; grid-template-columns:88px 1fr 40px; align-items:center; gap:9px; margin-bottom:10px;}
+  .hz-vrow .vl{font-size:12px; font-weight:600; color:var(--ink4);}
+  .hz-vrow .vb{height:7px; border-radius:4px; background:#EAEFF6; overflow:hidden;}
+  .hz-vrow .vb span{display:block; height:100%; border-radius:4px;}
+  .hz-vrow .vp{font-size:11.5px; font-weight:700; color:var(--ink3); font-variant-numeric:tabular-nums; text-align:right;}
+  /* Hormuz operational card (D5-E3) */
+  .hz-head{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
+  .hz-subtitle{font-size:11.5px; color:var(--mute2); font-weight:500; margin-top:4px;}
+  .hz-badges{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:none;}
+  .hz-ctlrow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:14px 0 2px;}
+  .hz-hero{display:grid; grid-template-columns:1fr 0.92fr; gap:14px; align-items:stretch; margin-top:10px;}
+  @media (max-width:640px){ .hz-hero{grid-template-columns:1fr;} }
+  .hz-metric{background:linear-gradient(135deg,#F6FAFE 0%,#EAF3FF 100%); border:1px solid #E1ECF8; border-radius:14px;
+    padding:14px 16px; display:flex; flex-direction:column; justify-content:center;}
+  .hz-mlabel{font-size:11px; color:var(--mute2); font-weight:600; line-height:1.45;}
+  .hz-mval{display:flex; align-items:baseline; gap:7px; margin-top:10px;}
+  .hz-num{font-size:38px; font-weight:800; line-height:1; letter-spacing:-0.02em; color:var(--ink);}
+  .hz-unit{font-size:14px; font-weight:700; color:var(--mute2);}
+  .hz-delta{font-size:12.5px; font-weight:700; color:var(--sky); margin-top:9px; font-variant-numeric:tabular-nums;}
+  .hz-mnote{font-size:11px; color:var(--mute3); line-height:1.5; margin-top:10px;}
+  .hz-mnote b{color:var(--ink4); font-weight:700;}
+  .hz-mapwrap{display:flex; flex-direction:column;}
+  .hz-mapwrap .hz-map{flex:1; display:flex;}
+  .hz-maplabel{font-size:10.5px; color:var(--mute4); font-weight:500; margin-top:6px; text-align:center;}
+  .hz-fine{font-size:10.5px; color:var(--mute4); font-weight:500; line-height:1.55;}
+  .hz-warn{display:flex; gap:9px; align-items:flex-start; background:var(--amber-tint); border:1px solid var(--amber-bd);
+    border-radius:11px; padding:10px 13px; margin-top:12px; font-size:12px; color:#6E5A33; line-height:1.55;}
+  .hz-warn b{color:var(--amber); font-weight:800;}
+  .hz-warn .warn-ic{color:var(--amber); font-weight:800; flex:none;}
+
+  /* ===== Clickable market rows ===== */
+  .mrow.click{cursor:pointer; border-radius:9px; padding-left:8px; padding-right:8px; margin:0 -8px;}
+  .mrow.click:hover{background:#F4F9FE;}
+  .mrow .chev{display:flex; align-items:center; color:var(--mute5); flex:none;}
+  .clickhint{font-size:11px; color:var(--mute4); font-weight:600; margin:2px 0 6px;}
+
+  /* ===== Detail drawer / modal ===== */
+  .drawer-ov{position:fixed; inset:0; background:rgba(26,38,60,0.34); display:flex; justify-content:flex-end;
+    z-index:60; opacity:0; pointer-events:none; transition:opacity .18s ease;}
+  .drawer-ov.open{opacity:1; pointer-events:auto;}
+  .drawer{width:min(560px,95vw); height:100%; background:var(--card); border-left:1px solid var(--line);
+    box-shadow:-14px 0 44px rgba(40,70,120,0.20); padding:22px 24px 32px; overflow-y:auto;
+    transform:translateX(28px); transition:transform .2s ease;}
+  .drawer-ov.open .drawer{transform:translateX(0);}
+  .drawer-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
+  .drawer-head .dt{font-size:18px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
+  .drawer-head .dsub{font-size:12px; color:var(--mute3); font-weight:500; margin-top:3px;}
+  .drawer-close{border:1px solid var(--line); background:var(--card); border-radius:9px; width:32px; height:32px;
+    cursor:pointer; font-size:17px; line-height:1; color:var(--mute); flex:none;}
+  .drawer-close:hover{background:#F4F9FE; color:var(--ink3);}
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0;}
+  .kpi{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:11px 13px;}
+  .kpi .k{font-size:10px; color:var(--mute3); font-weight:600;}
+  .kpi .v{font-size:18px; font-weight:800; color:var(--ink); margin-top:4px; font-variant-numeric:tabular-nums;}
+  .kpi .v.off{color:var(--mute5); font-size:14px;}
+
+  /* ===== AI tab ===== */
+  .ai-radar{position:relative; height:200px; display:flex; align-items:center; justify-content:center;}
+  .themebar{margin-bottom:13px;}
+  .themebar .top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;}
+  .themebar .top .l{font-size:12.5px; font-weight:600; color:var(--ink4);}
+  .themebar .top .s{font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .themebar .bar{height:6px;}
+
+  /* ===== Early signal (rumor) tab ===== */
+  .esrow{display:flex; align-items:flex-start; gap:14px; padding:16px 0; border-top:1px solid var(--hair);}
+  .esrow:first-child{border-top:none;}
+  .essrc{font-size:10.5px; font-weight:800; letter-spacing:0.04em; padding:3px 8px; border-radius:6px; flex:none; white-space:nowrap;
+    color:var(--mute); background:#EEF2F7; border:1px solid #E1E8F1;}
+  .esrow .b{min-width:0; flex:1;}
+  .esrow .t{font-size:14px; font-weight:700; color:#2B3A57; line-height:1.45;}
+  .esrow .m{font-size:12px; color:var(--mute3); margin-top:6px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .esact{font-size:11.5px; font-weight:700; color:var(--sky); background:var(--sky-tint); border:1px solid var(--sky-bd);
+    padding:5px 11px; border-radius:8px; flex:none; align-self:center;}
+  .banner{display:flex; gap:10px; align-items:flex-start; background:#FBF8F1; border:1px solid var(--amber-bd);
+    border-radius:12px; padding:12px 15px; font-size:12.5px; color:#6E5A33; line-height:1.55; margin-bottom:13px;}
+  .banner b{color:var(--amber);}
+
+  /* ===== Lower sections ===== */
+  .lowerhead{margin:18px 2px 0;}
+  .lower{margin-top:11px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start;}
+  @media (max-width:980px){ .lower{grid-template-columns:1fr;} }
+  .lower .panel{align-self:start;}
+  .lensgrid{display:flex; flex-direction:column; gap:7px; margin-top:10px;}
+  .lensitem{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 11px;
+    border:1px solid var(--hair); border-radius:11px; background:#FCFDFF;}
+  .lensitem .l{font-size:13px; font-weight:700; color:var(--ink2);}
+  .lensitem .d{font-size:11px; color:var(--mute3); margin-top:2px;}
+  .lensitem .c{font-size:13px; font-weight:800; color:var(--sky); font-variant-numeric:tabular-nums; flex:none;}
+  .lensitem .c.zero{color:var(--mute4);}
+  .watch{display:flex; gap:11px; padding:10px 0; border-top:1px solid var(--hair);}
+  .watch:first-of-type{border-top:none;}
+  .watch .wn{width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; background:var(--sky-tint); color:var(--sky);}
+  .watch .wt{font-size:13.5px; font-weight:700; color:var(--ink2); line-height:1.4;}
+  .watch .wd{font-size:12px; color:var(--mute3); margin-top:3px; line-height:1.5;}
+
+  footer.bottom{margin-top:30px; text-align:center; font-size:11px; color:var(--mute4); font-weight:500; line-height:1.7;}
+  .previewflag{display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--amber);
+    background:var(--amber-tint); border:1px solid var(--amber-bd); border-radius:6px; padding:3px 9px; margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- =================== HEADER =================== -->
+  <header class="top">
+    <div class="brand">
+      <div class="mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#5B8FCB" stroke-width="1.4"></circle><circle cx="12" cy="12" r="4.5" stroke="#5B8FCB" stroke-width="1.4"></circle><circle cx="12" cy="12" r="1.6" fill="#3F6FA8"></circle></svg>
+      </div>
+      <div>
+        <div class="name">HDEC <b>EXECUTIVE RADAR</b></div>
+        <div class="sub">현대건설 임원용 외부 신호 브리프 · 대시보드 미리보기 (PREVIEW)</div>
+      </div>
+    </div>
+    <div class="hbar">
+      <div class="stat">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" stroke="#9AAAC1" stroke-width="1.4"></rect><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="#9AAAC1" stroke-width="1.4" stroke-linecap="round"></path></svg>
+        <div><div class="k">발행 KST</div><div class="v num" id="pubKst">2026·06·22 월 07:00</div></div>
+      </div>
+      <div class="stat">
+        <span class="dot" style="background:#C79248;"></span>
+        <div><div class="k">뉴스 데이터</div><div class="v">데모 mock</div></div>
+      </div>
+      <div class="stat">
+        <span class="dot" style="background:#9AAAC1;"></span>
+        <div><div class="k">수집 상태</div><div class="v">수동 · OFF</div></div>
+      </div>
+      <button class="btn-op" type="button" title="운영자 보기 (미리보기 — 동작 없음)">
+        <span class="t">운영자</span>
+        <span class="av">윤</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =================== EXECUTIVE READ HERO =================== -->
+  <section class="hero">
+    <div class="heromain">
+      <div class="eyebrow" style="display:inline-flex; align-items:center; gap:8px; margin-bottom:16px;">
+        <span style="width:18px; height:2px; background:#9CC0E8; border-radius:2px;"></span>오늘의 판단 · EXECUTIVE READ
+      </div>
+      <h1>AI 데이터센터·전력 인프라 투자와 건설현장 중대재해·안전 규제가 동시에 부각</h1>
+      <div class="second">중장기 에너지 인프라 <span class="op">수주 기회</span> &nbsp;/&nbsp; 단기 평판·자격 <span class="rk">리스크</span> 병존 — AI 데이터센터 EPC·전력 인프라 수주 기회 점검과 상반기 건설 중대재해에 따른 평판·수주 자격 점검이 함께 필요.</div>
+      <div class="chips">
+        <span class="chip sky">AI 데이터센터</span>
+        <span class="chip sky">전력 인프라</span>
+        <span class="chip amber">안전 규제</span>
+        <span class="chip green">수주 기회</span>
+        <span class="chip red">평판·자격 리스크</span>
+      </div>
+    </div>
+    <aside class="herocard" aria-label="오늘의 신호 구성 (데모)">
+      <div class="hc-t">오늘의 신호 구성 · 21건</div>
+      <div class="hc-row"><div class="hc-top"><span class="hc-l">즉시 확인 · 리스크</span><span class="hc-v num" style="color:#B85049;">5</span></div><div class="hc-bar"><span style="width:62%; background:#B85049;"></span></div></div>
+      <div class="hc-row"><div class="hc-top"><span class="hc-l">AI 관련</span><span class="hc-v num" style="color:#3C7A4E;">8</span></div><div class="hc-bar"><span style="width:100%; background:#3C7A4E;"></span></div></div>
+      <div class="hc-row"><div class="hc-top"><span class="hc-l">현대건설 직접 · 수주·해외</span><span class="hc-v num" style="color:#3F6FA8;">6</span></div><div class="hc-bar"><span style="width:75%; background:#3F6FA8;"></span></div></div>
+      <div class="hc-foot"><span class="f">발행 07:00 · 일일 1회</span><span class="dot" style="background:#4E916B;"></span></div>
+    </aside>
+  </section>
+
+  <!-- =================== SUMMARY METRICS =================== -->
+  <section class="metrics" id="metrics"><!-- JS가 #preview-model.metrics로 렌더 (정적 폴백 포함) -->
+    <div class="metric"><div class="row"><span class="ic" style="background:#FBEEEC; color:#B85049;">▲</span><span class="lbl">즉시 확인</span></div><div class="val num" style="color:#B85049;">3</div><div class="desc">운영자 점검 후보</div></div>
+    <div class="metric"><div class="row"><span class="ic" style="background:#FBF3E5; color:#9C7232;">◆</span><span class="lbl">리스크·규제</span></div><div class="val num" style="color:#9C7232;">2</div><div class="desc">중대재해·특별감독</div></div>
+    <div class="metric"><div class="row"><span class="ic" style="background:#EAF5EE; color:#3C7A4E;">◈</span><span class="lbl">AI 신호</span></div><div class="val num" style="color:#3C7A4E;">8</div><div class="desc">AI 관련 · 기사 상대 비중</div></div>
+    <div class="metric"><div class="row"><span class="ic" style="background:#EAF2FC; color:#3F6FA8;">■</span><span class="lbl">현대건설 직접</span></div><div class="val num" style="color:#3F6FA8;">1</div><div class="desc">직접 의사결정 신호</div></div>
+    <div class="metric"><div class="row"><span class="ic" style="background:#EEF2F7; color:#9AAAC1;">◑</span><span class="lbl">시장 모니터링</span></div><div class="val small num" style="color:#9AAAC1;">지연·대용</div><div class="desc">원자재·금속·유가·금리·환율 (데모)</div></div>
+  </section>
+
+  <!-- =================== MAIN GRID =================== -->
+  <div class="grid">
+
+    <!-- ---------- LEFT LENS NAV ---------- -->
+    <aside class="lens" id="lensnav"><!-- JS가 #preview-model.nav로 렌더 (정적 폴백 포함) -->
+      <div class="gtitle">기본 렌즈</div>
+      <button class="nav active" data-lens="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">21</span></span></button>
+      <button class="nav" data-lens="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
+      <button class="nav" data-lens="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
+      <button class="nav" data-lens="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">8</span></span></button>
+
+      <div class="gtitle">사업영역</div>
+      <button class="nav" data-lens="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-lens="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">3</span></span></button>
+      <button class="nav" data-lens="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">4</span></span></button>
+      <button class="nav" data-lens="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">5</span></span></button>
+      <button class="nav" data-lens="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-lens="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">5</span></span></button>
+      <button class="nav" data-lens="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">2</span></span></button>
+
+      <div class="gtitle">외부 생태계</div>
+      <button class="nav" data-lens="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-lens="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-lens="trust_companies"><span class="l"><span class="ndot"></span><span class="nlabel">신탁사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-lens="developers"><span class="l"><span class="ndot"></span><span class="nlabel">시행사·디벨로퍼</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-lens="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-lens="hormuz"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">호르무즈</span></span><span class="r"><span class="dm unavail" style="font-size:9px;">미연동</span></span></button>
+
+      <div class="gtitle">실행 범위</div>
+      <button class="nav" data-lens="domestic_site"><span class="l"><span class="ndot"></span><span class="nlabel">국내현장</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-lens="overseas_site"><span class="l"><span class="ndot"></span><span class="nlabel">해외현장</span></span><span class="r"><span class="ncount">3</span></span></button>
+      <button class="nav" data-lens="overseas_branch"><span class="l"><span class="ndot"></span><span class="nlabel">해외지사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-lens="overseas_subsidiary"><span class="l"><span class="ndot"></span><span class="nlabel">해외법인</span></span><span class="r"><span class="ncount">0</span></span></button>
+    </aside>
+
+    <!-- ---------- CENTER ---------- -->
+    <main style="min-width:0;">
+      <!-- TAB BAR -->
+      <div class="toolbar">
+        <div class="tabs" id="tabbar" role="tablist">
+          <button class="tab active" data-tab="news" role="tab">뉴스</button>
+          <button class="tab" data-tab="ai" role="tab">AI 신호</button>
+          <button class="tab" data-tab="market" role="tab">시장</button>
+          <button class="tab" data-tab="rumor" role="tab">초기신호</button>
+        </div>
+        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · 21 신호 <span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
+      </div>
+
+      <!-- ====== TAB: 뉴스 ====== -->
+      <section class="tabpanel" id="panel-news">
+        <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">3건</span></div>
+
+        <!-- FEATURED -->
+        <article class="card featured">
+          <div class="head">
+            <div style="min-width:0;">
+              <div class="tagrow"><span class="tag red">즉시</span><span class="tag green">기회</span></div>
+              <h2>현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정</h2>
+              <div class="meta"><b>한국경제</b><span class="sep">·</span><span>1시간 전</span><span class="sep">·</span><span>관련 10건</span><span class="sep">·</span><span>출처 5곳</span>
+                <span class="trust"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#3F6FA8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3F6FA8" stroke-width="1.6"></circle></svg>신뢰 출처</span>
+              </div>
+              <div class="featlens">
+                <span class="fllabel">렌즈</span>
+                <span class="flchip">플랜트</span><span class="flchip">New Energy</span><span class="flchip">글로벌</span>
+              </div>
+            </div>
+            <div class="score"><div class="v num" style="color:#B85049;">5.0<small> / 5</small></div><div class="l" style="color:#B85049;">즉시 확인</div></div>
+          </div>
+          <div class="read">
+            <div class="rd"><span class="rdb sum">요약</span><span>AI 데이터센터 EPC·전력 인프라 수주 기회 점검 (중장기 에너지 인프라).</span></div>
+            <div class="rd"><span class="rdb imp">영향</span><span>현대건설 연관 · 플랜트·New Energy·글로벌 다중 연계 · 직접 의사결정 신호.</span></div>
+            <div class="rd act"><span class="rdb act">액션</span><span>즉시 확인 후 사업·수주 라인 검토 배정.</span></div>
+          </div>
+          <div class="idx">
+            <div class="h">신호 지수 · 0–5</div>
+            <div class="idxgrid" id="idxgrid"></div>
+          </div>
+          <div class="cardfoot">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+              <a class="extlink" href="#" rel="noopener" onclick="return false;">원문 보기 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>
+              <span style="font-size:12px; color:var(--mute4);">연계 AI 관련 · 수주·해외</span>
+            </div>
+            <span style="font-size:11.5px; color:var(--mute4);" class="num">데모 · 키워드 ai_datacenter_power</span>
+          </div>
+        </article>
+
+        <!-- COMPACT ROWS -->
+        <div class="card rows" id="newsRows"></div>
+
+        <!-- SIGNAL INDEX (collapsed by default) -->
+        <details class="card" id="signalIndex" style="margin-top:14px;">
+          <summary style="list-style:none; cursor:pointer; padding:16px 22px; font-size:13px; font-weight:700; color:var(--ink4); display:flex; align-items:center; justify-content:space-between;">
+            <span>신호 인덱스 · 전체 21건 (기본 접힘)</span>
+            <span style="font-size:11.5px; color:var(--mute4); font-weight:600;">펼치기 ▾</span>
+          </summary>
+          <div style="padding:4px 22px 18px;" id="indexList"></div>
+        </details>
+      </section>
+
+      <!-- ====== TAB: AI 신호 ====== -->
+      <section class="tabpanel hidden" id="panel-ai">
+        <div class="banner">
+          <span>ⓘ</span>
+          <span><b>AI Radar</b> — AI·데이터센터 연계 신호만 모은 피드입니다. 아래 <b>테마 강도(%)</b>는
+          수집 기사 내 <b>상대 비중</b>이며, 전력·전력망 실측 데이터(발전량·계통·수요)가 아닙니다.</span>
+        </div>
+
+        <div class="card" style="padding:20px 22px; margin-bottom:12px;">
+          <div class="panel" style="border:none; box-shadow:none; padding:0;">
+            <div class="ph">AI Radar <small>· AI·데이터센터 테마 맵</small></div>
+            <div class="pnote">레이더는 기사 상대 비중 기반 데모 시각화입니다 — 전력/계통 실측이 아닙니다.</div>
+          </div>
+          <div class="ai-radar">
+            <svg viewBox="0 0 360 200" width="100%" height="200" preserveAspectRatio="xMidYMid meet">
+              <g transform="translate(180,110)">
+                <circle r="92" fill="none" stroke="#E6F0FB" stroke-width="1"></circle>
+                <circle r="62" fill="none" stroke="#E6F0FB" stroke-width="1"></circle>
+                <circle r="32" fill="none" stroke="#DCE9F8" stroke-width="1"></circle>
+                <line x1="-92" y1="0" x2="92" y2="0" stroke="#EEF3F9"></line>
+                <line x1="0" y1="-92" x2="0" y2="92" stroke="#EEF3F9"></line>
+                <polygon points="0,-78 66,-20 40,62 -44,58 -70,-16" fill="#5B8FCB" fill-opacity="0.12" stroke="#5B8FCB" stroke-width="1.4"></polygon>
+                <circle cx="0" cy="-78" r="3.4" fill="#3F6FA8"></circle>
+                <circle cx="66" cy="-20" r="3" fill="#3C7A4E"></circle>
+                <circle cx="40" cy="62" r="2.8" fill="#9C7232"></circle>
+                <circle cx="-44" cy="58" r="2.8" fill="#9C7232"></circle>
+                <circle cx="-70" cy="-16" r="2.8" fill="#3F6FA8"></circle>
+                <text x="0" y="-90" text-anchor="middle" font-size="9" fill="#7E8CA6">데이터센터</text>
+                <text x="84" y="-22" text-anchor="start" font-size="9" fill="#7E8CA6">전력 인프라</text>
+                <text x="52" y="78" text-anchor="middle" font-size="9" fill="#7E8CA6">SMR·원전</text>
+                <text x="-56" y="74" text-anchor="middle" font-size="9" fill="#7E8CA6">냉각·설비</text>
+                <text x="-90" y="-20" text-anchor="end" font-size="9" fill="#7E8CA6">스마트건설</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="card" style="padding:20px 22px; margin-bottom:12px;">
+          <div class="panel" style="border:none; box-shadow:none; padding:0; margin-bottom:14px;">
+            <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 · 전력 실측값 아님 (282건 기준)</small></div>
+            <div class="pnote">% = 수집 기사 중 해당 테마 언급 상대 비중입니다. 전력량·전력망 실측값이 아닙니다 (전력 실측값 아님).</div>
+          </div>
+          <div id="aiThemes"></div>
+        </div>
+
+        <div class="seclabel sky"><span class="t">AI 신호 피드 · AI ONLY</span><span class="ln"></span><span class="c">8건</span></div>
+        <div class="card rows" id="aiRows"></div>
+      </section>
+
+      <!-- ====== TAB: 시장 ====== -->
+      <section class="tabpanel hidden" id="panel-market">
+        <!-- 1) 정직성 스트립 -->
+        <div class="banner">
+          <span>ⓘ</span>
+          <span>모든 시세는 공개·무료 <b>지연</b> / 대용(proxy) / 보고 기반 참고용이며 <b>현재 체결값이 아닙니다</b>.
+          공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기). <b>NON-PRODUCTION PREVIEW</b>.</span>
+        </div>
+
+        <!-- 2) 카테고리 카드 — 원자재·금속 / 철강·건자재 / 유가·정제유 / 가스·LNG / 석탄 / 금리·물가 / 환율 -->
+        <div style="margin-bottom:8px;">
+          <div class="panel" style="border:none; box-shadow:none; padding:0 2px;">
+            <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
+            <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
+          </div>
+          <div class="clickhint" style="margin-top:8px;">↗ 행을 클릭하면 상세 차트(기간 1주·1개월·3개월·1년)가 열립니다 — 데모 미리보기.</div>
+          <div class="mktcats" id="marketCategories"></div>
+          <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
+            <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
+        </div>
+
+        <!-- 3) 상세 비교 차트 — 국가 내 / 국가 간 / 정규화 -->
+        <div class="card chartcard" style="margin-bottom:12px;">
+          <div class="panel" style="border:none; box-shadow:none; padding:0;">
+            <div class="ph">금리·물가 비교 <small>· 상세 차트 (전체 만기 · 정책/물가/스프레드)</small></div>
+            <div class="pnote">프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (데모 시계열 — 현재 체결값 아님). 미연동 만기/지표는 가짜 선을 그리지 않고 <b>소스 필요</b> 칩으로 표시하며, 단위가 다른 비교는 정규화(기준일=100)로만 표시합니다.</div>
+          </div>
+          <div class="chartctl">
+            <div class="seg" id="yieldModeSeg">
+              <button class="active" data-mode="within">국가 내 비교</button>
+              <button data-mode="cross">국가 간 비교</button>
+            </div>
+            <span class="selwrap" id="withinSel"><span>국가</span>
+              <select class="sel" id="countrySel">
+                <option value="us">미국 (US)</option>
+                <option value="kr">한국 (KR)</option>
+                <option value="eu">유로존 (EU/DE)</option>
+                <option value="jp">일본 (JP)</option>
+                <option value="uk">영국 (UK)</option>
+                <option value="cn">중국 (CN)</option>
+                <option value="ca">캐나다 (CA)</option>
+                <option value="au">호주 (AU)</option>
+              </select>
+            </span>
+            <span class="selwrap hidden" id="crossSel"><span>지표</span>
+              <select class="sel" id="metricSel">
+                <optgroup label="만기 (금리)">
+                  <option value="3m">3M</option>
+                  <option value="6m">6M</option>
+                  <option value="1y">1Y</option>
+                  <option value="2y">2Y</option>
+                  <option value="3y">3Y</option>
+                  <option value="5y">5Y</option>
+                  <option value="7y">7Y</option>
+                  <option value="10y" selected>10Y</option>
+                  <option value="20y">20Y</option>
+                  <option value="30y">30Y</option>
+                </optgroup>
+                <optgroup label="정책 · 물가 · 스프레드">
+                  <option value="base_rate">기준금리</option>
+                  <option value="cpi">CPI YoY</option>
+                  <option value="core_cpi">Core CPI YoY</option>
+                  <option value="ppi">PPI YoY</option>
+                  <option value="spread_10y_2y">10Y-2Y 스프레드</option>
+                  <option value="spread_10y_3m">10Y-3M 스프레드</option>
+                </optgroup>
+              </select>
+            </span>
+            <label class="toggle"><input type="checkbox" id="normToggle"> 정규화 추세 (기준일=100)</label>
+          </div>
+          <div class="chiprow" id="matChipRow">
+            <span class="chiplabel">만기</span>
+            <div class="chips-inline" id="matChips"></div>
+            <button class="expandbtn" id="matExpand" type="button">전체 만기 ▾</button>
+          </div>
+          <div class="chiprow hidden" id="ctryChipRow">
+            <span class="chiplabel">국가</span>
+            <div class="chips-inline" id="ctryChips"></div>
+          </div>
+          <div class="chartctl" style="margin-top:0;">
+            <span class="selwrap" style="color:var(--mute3);">기간</span>
+            <div class="seg" id="yieldPeriodSeg">
+              <button data-period="1w">1주</button>
+              <button class="active" data-period="1m">1개월</button>
+              <button data-period="3m">3개월</button>
+              <button data-period="1y">1년</button>
+            </div>
+          </div>
+          <div class="chartbox"><svg id="yieldChart" viewBox="0 0 720 300" width="100%" height="300" preserveAspectRatio="xMidYMid meet"></svg></div>
+          <div class="legend" id="chartLegend"></div>
+          <div class="axisnote" id="chartNote"></div>
+        </div>
+
+        <!-- Hormuz -->
+        <div class="card hz" style="padding:18px 20px; margin-bottom:12px;">
+          <div class="hz-head">
+            <div style="min-width:0;">
+              <div class="ph">호르무즈 해협 관찰 <small>· 선박 통항</small></div>
+              <div class="hz-subtitle">유가·LNG·플랜트·해외현장 연계 · 선박 통항</div>
+            </div>
+            <div class="hz-badges">
+              <span class="dm proxy" style="font-size:10.5px;">AIS 하한 추정 · proxy</span>
+              <span class="previewflag" style="margin:0;">데모 데이터</span>
+            </div>
+          </div>
+
+          <div class="hz-ctlrow">
+            <div class="seg" id="hzTimeSeg">
+              <button data-win="1h">1시간</button>
+              <button data-win="6h">6시간</button>
+              <button class="active" data-win="24h">24시간</button>
+              <button data-win="7d">7일</button>
+            </div>
+            <span class="dm policy" style="font-size:10px;">라이브 AIS 미연동 · 정책/키 필요</span>
+          </div>
+
+          <!-- hero: 핵심 통과 수 + 해협 모식도 -->
+          <div class="hz-hero">
+            <div class="hz-metric">
+              <div class="hz-mlabel" id="hzWindowLabel">최근 24시간 통과 · 게이트 통과 unique MMSI</div>
+              <div class="hz-mval"><span class="hz-num num" id="hzCount">212</span><span class="hz-unit">척</span></div>
+              <div class="hz-delta" id="hzDelta">▲ +12% · 평균 189 대비</div>
+              <div class="hz-mnote">게이트 통과 <b>unique MMSI</b> 기준 · <b>AIS 하한 추정</b> (실제보다 낮을 수 있음).</div>
+            </div>
+            <div class="hz-mapwrap">
+              <div class="hz-map">
+                <svg viewBox="0 0 240 150" width="100%" height="150" fill="none" aria-label="호르무즈 해협 모식도(개념 · 데모)" style="display:block;">
+                  <defs><linearGradient id="hzWater" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#EAF3FD"></stop><stop offset="1" stop-color="#DCEBFA"></stop></linearGradient></defs>
+                  <rect x="0" y="0" width="240" height="150" rx="8" fill="url(#hzWater)"></rect>
+                  <path d="M0 0 H240 V40 C188 36 150 12 96 18 C58 22 26 14 0 26 Z" fill="#E5EAD9"></path>
+                  <path d="M0 150 H240 V104 C190 110 150 124 100 120 C56 116 28 128 0 118 Z" fill="#E5EAD9"></path>
+                  <text x="40" y="22" font-size="8.5" fill="#7E8CA6">이란</text>
+                  <text x="150" y="138" font-size="8.5" fill="#7E8CA6">오만 / UAE</text>
+                  <line x1="120" y1="34" x2="120" y2="116" stroke="#B9CEE6" stroke-width="1" stroke-dasharray="3 3"></line>
+                  <rect x="112" y="60" width="16" height="34" rx="2" fill="#9CC0E8" fill-opacity="0.25" stroke="#5B8FCB" stroke-dasharray="2 2"></rect>
+                  <text x="120" y="54" text-anchor="middle" font-size="8" fill="#3F6FA8" font-weight="700">협해부</text>
+                  <path d="M16 80 H224" stroke="#5B8FCB" stroke-width="1.4" stroke-dasharray="6 5" opacity="0.7"></path>
+                  <polygon points="46,76 58,80 46,84" fill="#3F6FA8"></polygon>
+                  <polygon points="92,76 104,80 92,84" fill="#3C7A4E"></polygon>
+                  <polygon points="150,76 162,80 150,84" fill="#9C7232"></polygon>
+                  <polygon points="196,76 208,80 196,84" fill="#3F6FA8"></polygon>
+                </svg>
+              </div>
+              <div class="hz-maplabel">해협 모식도 · 협해부(게이트) 통과 관찰 (개념 · 데모)</div>
+            </div>
+          </div>
+
+          <!-- 현재 상태 타일 (창과 무관한 현재값 · 데모 고정) -->
+          <div class="hz-tiles">
+            <div class="hz-tile"><div class="k">현재 통항 중</div><div class="v" id="hzTransit">47 <small>척</small></div></div>
+            <div class="hz-tile"><div class="k">대기/정박</div><div class="v" id="hzWaiting">6 <small>척</small></div></div>
+            <div class="hz-tile"><div class="k">평균 속도</div><div class="v" id="hzSpeed">12.4 <small>kn</small></div></div>
+            <div class="hz-tile"><div class="k">AIS 신뢰도</div><div class="v" id="hzConf" style="font-size:15px;">중 · 부분</div></div>
+          </div>
+
+          <div class="hz-cols">
+            <div>
+              <div class="hz-sub">시간대별 통과 (데모)</div>
+              <svg class="hz-bars" id="hzBars" viewBox="0 0 320 96" preserveAspectRatio="none" aria-label="시간대별 통과 막대(데모)"></svg>
+              <div class="hz-fine" style="margin-top:4px;">막대는 시간대별 통과량 추세 데모 — 절대값 아님.</div>
+            </div>
+            <div>
+              <div class="hz-sub">선종 분포 (현재 통항 중 · 데모)</div>
+              <div id="hzVessels"></div>
+            </div>
+          </div>
+
+          <div class="hz-warn">
+            <span class="warn-ic">⚠</span>
+            <span><b>AIS 기반 하한 추정치입니다.</b> 위성 AIS 미포함 시 중앙부 통과 선박이 누락될 수 있으며 실제 통과량보다 낮을 수 있습니다.</span>
+          </div>
+          <div class="hz-fine" style="margin-top:8px;">데모 미리보기 고정값 · 라이브 AIS 통합이 아니며(미연동) 공개 AIS 소스/키 연동 전에는 프로덕션 값을 생성하지 않습니다.</div>
+        </div>
+
+        <!-- Hyundai E&C market reaction (참고) -->
+        <div class="card" style="padding:18px 22px;">
+          <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <div class="panel" style="border:none; box-shadow:none; padding:0;">
+              <div class="ph">현대건설 시장 반응 <small>· 참고용</small></div>
+              <div class="pnote">주가·거래 반응은 <b>참고</b>이며 <b>투자 판단 근거가 아닙니다</b>. 거래용 실시간 시세 아님.</div>
+            </div>
+            <span class="dm delay">지연</span>
+          </div>
+          <div class="mrow" style="margin-top:8px;">
+            <span class="mn">현대건설 (종가, 지연)</span>
+            <span class="mv off">참고만</span>
+            <span class="md"><span class="delta flat">방향성 참고</span><span class="dm delay">지연</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====== TAB: 초기신호 (검증 전 관찰 · 카더라 포함) ====== -->
+      <section class="tabpanel hidden" id="panel-rumor">
+        <div class="banner">
+          <span>⚠</span>
+          <span><b>초기신호 / 카더라</b>는 <b>확인된 뉴스가 아닙니다</b>. X · Truth Social · 승인 채널(Telegram) 관찰 항목으로,
+          검증 뉴스와 분리됩니다. <b>이 탭은 임원 자동 알림을 생성하지 않습니다.</b> 액션은 <b>뉴스 승격 검토</b> 또는 <b>근거 확인</b>뿐입니다.
+          비공개 대화 수집은 하지 않으며, 승인된 채널/그룹 관찰만 표시합니다.</span>
+        </div>
+
+        <div class="card" style="padding:8px 22px 14px;">
+          <div class="seclabel amber" style="margin-top:14px;"><span class="t">관찰 소스 · 검증 전</span><span class="ln"></span><span class="c">분리 표시</span></div>
+          <div id="earlyRows"></div>
+        </div>
+
+        <div class="card" style="padding:18px 22px; margin-top:14px;">
+          <div class="panel" style="border:none; box-shadow:none; padding:0;">
+            <div class="ph">소스 연동 상태 <small>· 정직성</small></div>
+            <div class="pnote">연동 키가 없으면 페이지를 깨뜨리지 않고 미연동/정책·키 필요 상태로 정직하게 표시합니다.</div>
+          </div>
+          <div class="mrow" style="margin-top:8px;"><span class="mn">X (엑스) 관찰</span><span class="mv off">—</span><span class="md"><span class="dm policy">정책/키 필요</span></span></div>
+          <div class="mrow"><span class="mn">Truth Social 관찰</span><span class="mv off">—</span><span class="md"><span class="dm policy">정책/키 필요</span></span></div>
+          <div class="mrow"><span class="mn">Telegram 승인 채널</span><span class="mv off">—</span><span class="md"><span class="dm tg">승인 채널 관찰</span></span></div>
+          <div class="disc">초기신호 소스는 미연동/정책·키 필요 상태이며 데이터를 위조하지 않습니다.
+            연동되더라도 검증 뉴스로 자동 승격하거나 임원 자동 알림을 보내지 않습니다.</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ---------- RIGHT RAIL (supporting context only) ---------- -->
+    <aside class="rail">
+      <div class="railnote">보조 컨텍스트 · SUPPORTING CONTEXT</div>
+
+      <div class="panel">
+        <div class="ph">시장 모니터링 <small>· 핵심 지표 요약</small></div>
+        <div class="pnote">대표 지표만 — 값이 아니라 추세 신호이며 <b>현재 체결값 아님</b>. 종목별 data_mode 확인. 전체 유니버스는 <b>시장</b> 탭.</div>
+        <div id="railMarket"></div>
+        <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
+          <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다.</div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 · 전력 실측값 아님</small></div>
+        <div class="pnote">최대 테마는 AI·데이터센터입니다. % = 기사 상대 비중이며 전력 실측값이 아닙니다. 자세히는 <b>AI 신호</b> 탭.</div>
+        <div id="railAi"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">언론이 키우는 이야기 <small>· 평판 렌즈</small></div>
+        <div class="pnote">282건 기준 · 상대 비중</div>
+        <div id="railNarrative"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- =================== LOWER SECTIONS =================== -->
+  <div class="seclabel sky lowerhead"><span class="t">부가 관찰 · SUPPORTING LENSES</span><span class="ln"></span><span class="c">사업 렌즈 · 생태계 관찰 · 다음 관찰</span></div>
+  <div class="lower">
+    <div class="panel">
+      <div class="ph">사업 렌즈 · Business Lens</div>
+      <div class="pnote">사업 부문(Layer-1) 커버리지 — 토픽 프로파일 재사용 (데모 카운트).</div>
+      <div class="lensgrid" id="businessLens"></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">생태계 관찰 · Ecosystem Watch</div>
+      <div class="pnote">외부 생태계 — 그룹사·경쟁사·신탁/시행·에너지·지정학 (데모 카운트).</div>
+      <div class="lensgrid" id="ecosystem"></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">다음 관찰 · What to Watch Next</div>
+      <div class="pnote">선행 점검 항목 — 미리보기 데모.</div>
+      <div id="watchNext"></div>
+    </div>
+  </div>
+
+  <footer class="bottom">
+    <div class="previewflag">NON-PRODUCTION PREVIEW</div><br>
+    HDEC Executive Radar · 대시보드 미리보기 — 참고용 브리프 (데모/mock 데이터).<br>
+    모든 시장 지표는 지연 / 대용 / 보고 / 미연동 기준이며 현재 체결값이 아닙니다. 프로덕션 일일 리포트(docs/daily)와 무관합니다.
+  </footer>
+</div>
+
+<!-- =================== MARKET DETAIL DRAWER (modal) ===================
+  시장 행 클릭 시 열리는 상세 드로어 — x/y축 차트 + 기간 버튼 + 값/변동/상태/갱신 + 주의문.
+  데모 고정값이며 현재 체결값이 아니다. 미연동 종목은 가짜 선을 그리지 않는다. -->
+<div class="drawer-ov" id="mktDrawerOv" role="dialog" aria-modal="true" aria-label="시장 상세">
+  <div class="drawer" id="mktDrawer">
+    <div class="drawer-head">
+      <div>
+        <div class="dt" id="dwTitle">—</div>
+        <div class="dsub" id="dwSub">상세 차트 · 데모 미리보기</div>
+      </div>
+      <button class="drawer-close" id="dwClose" type="button" aria-label="닫기">×</button>
+    </div>
+    <div style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span id="dwMode"></span>
+      <span class="previewflag" style="margin:0;">데모 데이터</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">현재값 (지연/대용)</div><div class="v num" id="dwVal">—</div></div>
+      <div class="kpi"><div class="k">변동</div><div class="v num" id="dwChg">—</div></div>
+      <div class="kpi"><div class="k">최근 업데이트</div><div class="v num" id="dwUpd" style="font-size:13px;">—</div></div>
+    </div>
+    <div class="chartctl" style="margin:4px 0 10px;">
+      <span class="selwrap" style="color:var(--mute3);">기간</span>
+      <div class="seg" id="dwPeriodSeg">
+        <button data-period="1w">1주</button>
+        <button class="active" data-period="1m">1개월</button>
+        <button data-period="3m">3개월</button>
+        <button data-period="1y">1년</button>
+      </div>
+    </div>
+    <div class="chartbox"><svg id="dwChart" viewBox="0 0 520 260" width="100%" height="260" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="axisnote" id="dwNote"></div>
+    <div class="disc" style="margin-top:14px;">공개·무료 또는 대용 데이터 기준이며 현재 체결값이 아닙니다.
+      미연동 종목은 값/선을 생성하지 않습니다 (데모 미리보기).</div>
+  </div>
+</div>
+
+<!-- =================== CONTRACT-SHAPED DEMO MODEL ===================
+  키 구조는 기존 계약을 미러링한다: /api/brief(briefing.build_brief) + market_snapshot.
+  값은 전부 데모(실데이터 아님)이며, 시장/AIS/소셜은 위조하지 않고 honest state로 둔다. -->
+<script type="application/json" id="preview-model">
+{
+  "meta": {"published_kst": "2026·06·22 월 07:00", "news_data_mode": "mock",
+           "collection": "수동 · OFF", "audience": "executive-preview", "demo": true},
+  "metric_indices": [
+    {"label": "현대건설 관련", "value": 5.0, "color": "#3F6FA8"},
+    {"label": "사업 기회", "value": 4.2, "color": "#3C7A4E"},
+    {"label": "리스크", "value": 0.3, "color": "#9AAAC1"},
+    {"label": "긴급도", "value": 2.5, "color": "#9C7232"},
+    {"label": "출처 신뢰", "value": 4.5, "color": "#3F6FA8"},
+    {"label": "반복·확산", "value": 4.0, "color": "#3F6FA8"}
+  ],
+  "news_rows": [
+    {"tag": "즉시", "tagClass": "red", "title": "상반기 건설업 중대재해 22% 증가… 고용부, 대형 건설사 특별감독 착수",
+     "source": "머니투데이", "time": "3시간 전", "related": "관련 2건", "sources": "출처 2곳",
+     "cat": "리스크", "catColor": "#B85049", "score": "4.6", "scoreLabel": "리스크", "scoreColor": "#B85049"},
+    {"tag": "검토 필요", "tagClass": "amber", "title": "정부, 데이터센터 전력계통 분산·SMR 연계 로드맵 발표",
+     "source": "전자신문", "time": "6시간 전", "related": "관련 7건", "sources": "출처 4곳",
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.7", "scoreLabel": "중요", "scoreColor": "#5E6E8C"},
+    {"tag": "검토 필요", "tagClass": "amber", "title": "사우디 LNG 플랜트 발주 재개… 국내 건설사 수주 경쟁 본격화",
+     "source": "연합뉴스", "time": "9시간 전", "related": "관련 4건", "sources": "출처 3곳",
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.6", "scoreLabel": "중요", "scoreColor": "#5E6E8C"}
+  ],
+  "ai_rows": [
+    {"tag": "AI", "tagClass": "green", "title": "현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정",
+     "source": "한국경제", "time": "1시간 전", "related": "관련 10건", "sources": "출처 5곳",
+     "cat": "기회", "catColor": "#3C7A4E", "score": "5.0", "scoreLabel": "즉시", "scoreColor": "#B85049"},
+    {"tag": "AI", "tagClass": "green", "title": "정부, 데이터센터 전력계통 분산·SMR 연계 로드맵 발표",
+     "source": "전자신문", "time": "6시간 전", "related": "관련 7건", "sources": "출처 4곳",
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.7", "scoreLabel": "중요", "scoreColor": "#5E6E8C"},
+    {"tag": "AI", "tagClass": "sky", "title": "데이터센터 냉각·전력설비 수요 급증… 건설·설비 EPC 발주 확대 전망",
+     "source": "전자신문", "time": "11시간 전", "related": "관련 5건", "sources": "출처 3곳",
+     "cat": "관찰", "catColor": "#3F6FA8", "score": "3.4", "scoreLabel": "관찰", "scoreColor": "#5E6E8C"}
+  ],
+  "ai_themes": [
+    {"label": "AI·데이터센터·전력", "share": 42, "color": "#3F6FA8"},
+    {"label": "SMR·원전 연계", "share": 23, "color": "#3C7A4E"},
+    {"label": "냉각·전력설비", "share": 19, "color": "#5B8FCB"},
+    {"label": "스마트건설·로봇", "share": 16, "color": "#9C7232"}
+  ],
+  "narrative": [
+    {"label": "AI·데이터센터·전력", "share": 42, "color": "#3F6FA8"},
+    {"label": "안전 규제·중대재해", "share": 27, "color": "#9C7232"},
+    {"label": "해외 수주·중동", "share": 19, "color": "#3C7A4E"}
+  ],
+  "rail_snapshot": ["usdkrw", "wti", "us_10y", "copper", "jpykrw"],
+  "market_items": [
+    {"id": "copper", "label_kr": "구리", "en": "Copper", "category": "base_metals", "value": "9,180",
+     "unit": "USD/t", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72]},
+    {"id": "aluminum", "label_kr": "알루미늄", "en": "Aluminum", "category": "base_metals", "value": "2,540",
+     "unit": "USD/t", "delta": "▼ 0.3%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,57,56,55,56,55,54,55,54]},
+    {"id": "nickel", "label_kr": "니켈", "en": "Nickel", "category": "base_metals", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "zinc", "label_kr": "아연", "en": "Zinc", "category": "base_metals", "value": "2,710",
+     "unit": "USD/t", "delta": "▲ 0.6%", "dir": "up", "data_mode": "proxy_market", "spark": [50,51,50,52,53,52,54,53,55,54,56,55]},
+    {"id": "iron_ore", "label_kr": "철광석", "en": "Iron ore", "category": "steel_materials", "value": "108.5",
+     "unit": "USD/t", "delta": "▼ 0.5%", "dir": "down", "data_mode": "proxy_market", "spark": [64,63,64,62,63,61,62,61,60,61,60,59]},
+    {"id": "hrc_steel", "label_kr": "열연강판", "en": "HRC steel", "category": "steel_materials", "value": "545",
+     "unit": "USD/t", "delta": "▲ 0.4%", "dir": "up", "data_mode": "proxy_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,54]},
+    {"id": "rebar", "label_kr": "철근(대용)", "en": "Rebar", "category": "steel_materials", "value": "62.1",
+     "unit": "pt", "delta": "▼ 0.4%", "dir": "down", "data_mode": "proxy_market", "spark": [66,65,66,64,63,64,62,63,62,61,62,62]},
+    {"id": "scrap_steel", "label_kr": "철스크랩", "en": "Scrap steel", "category": "steel_materials", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "cement", "label_kr": "국내 시멘트(보고)", "en": "Cement", "category": "steel_materials", "value": null,
+     "unit": "원/t", "delta": "", "dir": "flat", "data_mode": "manual_or_reported", "spark": []},
+    {"id": "lumber", "label_kr": "목재", "en": "Lumber", "category": "steel_materials", "value": "486",
+     "unit": "USD/MBF", "delta": "▲ 0.8%", "dir": "up", "data_mode": "delayed_market", "spark": [44,45,46,45,47,48,47,49,48,50,49,51]},
+    {"id": "bitumen", "label_kr": "아스팔트(역청)", "en": "Bitumen", "category": "steel_materials", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "wti", "label_kr": "WTI 원유", "en": "WTI", "category": "oil_refined", "value": "78.4",
+     "unit": "USD/bbl", "delta": "▲ 0.9%", "dir": "up", "data_mode": "delayed_market", "spark": [70,71,69,72,74,73,75,74,76,77,76,78]},
+    {"id": "brent", "label_kr": "브렌트유", "en": "Brent", "category": "oil_refined", "value": "82.1",
+     "unit": "USD/bbl", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [72,73,72,74,75,74,76,75,77,78,77,79]},
+    {"id": "dubai_crude", "label_kr": "두바이유", "en": "Dubai crude", "category": "oil_refined", "value": "80.6",
+     "unit": "USD/bbl", "delta": "▲ 0.6%", "dir": "up", "data_mode": "manual_or_reported", "spark": [71,72,71,73,74,73,75,74,76,75,77,76]},
+    {"id": "diesel_gasoil", "label_kr": "경유(가스오일)", "en": "Gasoil (Diesel)", "category": "oil_refined", "value": "96.4",
+     "unit": "USD/bbl", "delta": "▲ 0.5%", "dir": "up", "data_mode": "proxy_market", "spark": [60,61,60,62,63,62,64,63,65,64,66,65]},
+    {"id": "gasoline", "label_kr": "휘발유", "en": "Gasoline", "category": "oil_refined", "value": "2.34",
+     "unit": "USD/gal", "delta": "▲ 0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [54,55,54,56,57,56,58,57,59,58,60,59]},
+    {"id": "jet_kerosene", "label_kr": "항공유(등유)", "en": "Jet · Kerosene", "category": "oil_refined", "value": null,
+     "unit": "USD/bbl", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "bunker_fuel", "label_kr": "벙커유", "en": "Bunker fuel", "category": "oil_refined", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "lng_jkm", "label_kr": "LNG JKM", "en": "LNG JKM", "category": "gas_lng", "value": "12.4",
+     "unit": "USD/MMBtu", "delta": "▲ 1.1%", "dir": "up", "data_mode": "manual_or_reported", "spark": [40,41,42,41,43,44,43,45,44,46,45,47]},
+    {"id": "ttf_gas", "label_kr": "TTF 가스", "en": "TTF", "category": "gas_lng", "value": "34.5",
+     "unit": "EUR/MWh", "delta": "▼ 0.6%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,55,56,54,55,53,54,52,53]},
+    {"id": "henry_hub", "label_kr": "헨리허브 가스", "en": "Henry Hub", "category": "gas_lng", "value": "2.86",
+     "unit": "USD/MMBtu", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [36,37,36,38,39,38,40,39,41,40,42,41]},
+    {"id": "thermal_coal", "label_kr": "연료탄(보고)", "en": "Thermal coal", "category": "coal", "value": "118",
+     "unit": "USD/t", "delta": "▼ 0.4%", "dir": "down", "data_mode": "manual_or_reported", "spark": [62,61,62,60,61,59,60,59,58,59,58,57]},
+    {"id": "coking_coal", "label_kr": "원료탄", "en": "Coking coal", "category": "coal", "value": null,
+     "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "us_10y", "label_kr": "미 국채 10Y", "en": "US 10Y", "category": "rates_inflation", "value": "4.45",
+     "unit": "%", "delta": "▲ +3bp", "dir": "up", "data_mode": "delayed_market", "spark": [40,41,42,42,43,44,43,45,44,45,44,45]},
+    {"id": "us_5y", "label_kr": "미 국채 5Y", "en": "US 5Y", "category": "rates_inflation", "value": "4.22",
+     "unit": "%", "delta": "▲ +2bp", "dir": "up", "data_mode": "delayed_market", "spark": [38,39,40,40,41,42,42,41,43,42,43,42]},
+    {"id": "us_2y", "label_kr": "미 국채 2Y", "en": "US 2Y", "category": "rates_inflation", "value": null,
+     "unit": "%", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "kr_10y", "label_kr": "한국 국고 10Y", "en": "KR 10Y", "category": "rates_inflation", "value": null,
+     "unit": "%", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "us_cpi_row", "label_kr": "미 CPI(YoY)", "en": "US CPI", "category": "rates_inflation", "value": "2.7",
+     "unit": "%", "delta": "▼ 0.1%p", "dir": "down", "data_mode": "manual_or_reported", "spark": [48,47,46,45,45,44,43,43,42,42,41,41]},
+    {"id": "us_base_rate", "label_kr": "미 기준금리", "en": "US base rate", "category": "rates_inflation", "value": "4.50",
+     "unit": "%", "delta": "—", "dir": "flat", "data_mode": "manual_or_reported", "spark": [55,55,53,53,50,50,48,48,46,46,45,45]},
+    {"id": "usdkrw", "label_kr": "USD/KRW", "en": "", "category": "fx", "value": "1,536.8",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "delayed_market", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "jpykrw", "label_kr": "JPY/KRW (100)", "en": "", "category": "fx", "value": "9.74",
+     "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "delayed_market", "spark": [60,59,60,58,59,57,58,57,56,57,56,56]},
+    {"id": "eurkrw", "label_kr": "EUR/KRW", "en": "", "category": "fx", "value": "1,648.2",
+     "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [52,53,52,54,55,54,56,55,57,56,58,57]},
+    {"id": "cnykrw", "label_kr": "CNY/KRW", "en": "CNH/KRW", "category": "fx", "value": "211.4",
+     "unit": "원", "delta": "▲ +0.2%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,54]},
+    {"id": "gbpkrw", "label_kr": "GBP/KRW", "en": "", "category": "fx", "value": "1,952.0",
+     "unit": "원", "delta": "▲ +0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [46,47,46,48,49,48,50,49,51,50,52,51]},
+    {"id": "chfkrw", "label_kr": "CHF/KRW", "en": "", "category": "fx", "value": "1,712.3",
+     "unit": "원", "delta": "▲ +0.1%", "dir": "up", "data_mode": "proxy_market", "spark": [50,50,51,50,52,51,53,52,54,53,55,54]},
+    {"id": "cadkrw", "label_kr": "CAD/KRW", "en": "", "category": "fx", "value": "1,121.5",
+     "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "proxy_market", "spark": [56,55,56,54,55,53,54,53,52,53,52,51]},
+    {"id": "audkrw", "label_kr": "AUD/KRW", "en": "", "category": "fx", "value": "1,012.7",
+     "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "proxy_market", "spark": [44,45,44,46,47,46,48,47,49,48,50,49]},
+    {"id": "sgdkrw", "label_kr": "SGD/KRW", "en": "", "category": "fx", "value": "1,138.9",
+     "unit": "원", "delta": "▲ +0.2%", "dir": "up", "data_mode": "proxy_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,53]},
+    {"id": "hkdkrw", "label_kr": "HKD/KRW", "en": "", "category": "fx", "value": "196.3",
+     "unit": "원", "delta": "▲ +0.1%", "dir": "up", "data_mode": "proxy_market", "spark": [50,50,51,50,52,51,52,51,53,52,54,53]},
+    {"id": "twdkrw", "label_kr": "TWD/KRW", "en": "", "category": "fx", "value": null,
+     "unit": "원", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
+    {"id": "inrkrw", "label_kr": "INR/KRW", "en": "", "category": "fx", "value": "18.42",
+     "unit": "원", "delta": "▼ 0.1%", "dir": "down", "data_mode": "proxy_market", "spark": [54,53,54,52,53,51,52,51,50,51,50,49]},
+    {"id": "aedkrw", "label_kr": "AED/KRW", "en": "", "category": "fx", "value": "418.5",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "manual_or_reported", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "sarkrw", "label_kr": "SAR/KRW", "en": "", "category": "fx", "value": "409.8",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "manual_or_reported", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "qarkrw", "label_kr": "QAR/KRW", "en": "", "category": "fx", "value": "422.1",
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "manual_or_reported", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+    {"id": "dxy", "label_kr": "달러 인덱스(DXY)", "en": "DXY", "category": "fx", "value": "104.8",
+     "unit": "pt", "delta": "▲ +0.2%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,51,50,52,51,53,52,54,53]},
+    {"id": "eurusd", "label_kr": "EUR/USD", "en": "참고", "category": "fx", "value": "1.073",
+     "unit": "", "delta": "▼ 0.1%", "dir": "down", "data_mode": "delayed_market", "spark": [56,55,56,54,55,53,54,53,52,53,52,51]},
+    {"id": "usdjpy", "label_kr": "USD/JPY", "en": "참고", "category": "fx", "value": "157.8",
+     "unit": "", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [44,45,46,45,47,48,47,49,48,50,49,51]},
+    {"id": "usdcny", "label_kr": "USD/CNY", "en": "참고", "category": "fx", "value": "7.27",
+     "unit": "", "delta": "▲ +0.1%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,53]}
+  ],
+  "early_signals": [
+    {"src": "X (엑스)", "state": "unverified_social", "stateLabel": "확인 전",
+     "text": "중동 대형 발주처, AI 데이터센터 패키지 분할 발주 검토설 — 미확인 포스트 관찰",
+     "meta": "관찰 · 검증 전 · 출처 불명", "action": "근거 확인"},
+    {"src": "Truth Social", "state": "official_statement", "stateLabel": "공식 발언",
+     "text": "정책 당국자 공개 발언 — 에너지 인프라 투자 확대 시사 (공식 계정 발언)",
+     "meta": "공식 발언 · 뉴스 교차확인 필요", "action": "뉴스 승격 검토"},
+    {"src": "Telegram", "state": "telegram_observed", "stateLabel": "승인 채널 관찰",
+     "text": "승인된 산업 채널 관찰 — 국내 데이터센터 전력 인입 일정 지연 루머 (비공개 대화 수집 아님)",
+     "meta": "승인 채널 관찰 · 검증 전", "action": "근거 확인"}
+  ],
+  "business_lens": [
+    {"id": "civil_infrastructure", "label": "토목", "desc": "SOC·도로·철도·항만·교량·터널", "count": 2},
+    {"id": "building_housing", "label": "건축주택", "desc": "도시정비·분양·공사비·하자/품질", "count": 3},
+    {"id": "plant", "label": "플랜트", "desc": "원전·LNG·정유/석화·중동 EPC", "count": 4},
+    {"id": "new_energy", "label": "New Energy", "desc": "SMR·수소·전력망·데이터센터 전력", "count": 5},
+    {"id": "development_business", "label": "개발사업", "desc": "시행/디벨로퍼·PF·인허가", "count": 1},
+    {"id": "global_business", "label": "글로벌", "desc": "해외수주·중동·환율·지정학", "count": 5},
+    {"id": "safety_quality", "label": "안전·품질", "desc": "중대재해·특별감독·벌점·하자", "count": 2}
+  ],
+  "ecosystem": [
+    {"id": "hyundai_group", "label": "현대 그룹사", "desc": "범현대 인프라·에너지·공급망", "count": 0},
+    {"id": "competitor_contractors", "label": "경쟁 시공사", "desc": "주요 경쟁사 수주·리스크", "count": 1},
+    {"id": "trust_companies", "label": "신탁사", "desc": "정비사업·PF·책임준공", "count": 0},
+    {"id": "developers", "label": "시행사·디벨로퍼", "desc": "PF·분양·시공사 선정", "count": 0},
+    {"id": "oil_energy", "label": "유가·에너지", "desc": "유가·연료·발주환경 (지연/대용)", "count": 2},
+    {"id": "hormuz", "label": "호르무즈", "desc": "AIS 하한 추정 · 미연동", "count": null}
+  ],
+  "watch_next": [
+    {"n": "1", "title": "건설현장 중대재해 특별감독 대상·일정", "desc": "단기 평판·수주 자격 영향 — 국내현장 점검."},
+    {"n": "2", "title": "데이터센터 전력계통·SMR 로드맵 후속", "desc": "AI 데이터센터 EPC·전력 인프라 수주 기회 추적."},
+    {"n": "3", "title": "중동 LNG·플랜트 발주 일정 (호르무즈 연계)", "desc": "해외 발주환경 — AIS 미연동, 정책/키 연동 시 보강."}
+  ]
+}
+</script>
+
+<script>
+/* ============================================================================
+   대시보드 미리보기 — 인터랙션 + 차트 (Vanilla JS, 결정적 데모)
+   네트워크/발송/난수 0건. 정적 폴백 HTML 위에 progressive enhancement만 한다.
+   ========================================================================== */
+(function () {
+  "use strict";
+  var MODEL = {};
+  try { MODEL = JSON.parse(document.getElementById("preview-model").textContent); }
+  catch (e) { MODEL = {}; }
+
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+  function pct(v) { return (Number(v) / 5 * 100).toFixed(0) + "%"; }
+
+  var DM = {
+    delayed_market: ["지연", "delay"], proxy_market: ["대용", "proxy"],
+    manual_or_reported: ["보고", "report"], unavailable: ["미연동", "unavail"],
+    policy_required: ["정책/키 필요", "policy"], unverified_social: ["확인 전", "unverified"],
+    official_statement: ["공식 발언", "official"], telegram_observed: ["승인 채널 관찰", "tg"]
+  };
+  function dmBadge(mode) {
+    var d = DM[mode] || ["미연동", "unavail"];
+    return '<span class="dm ' + d[1] + '">' + d[0] + "</span>";
+  }
+
+  /* ---------- TABS ---------- */
+  var tabbar = el("tabbar");
+  if (tabbar) {
+    tabbar.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".tab"); if (!b) return;
+      var name = b.getAttribute("data-tab");
+      [].forEach.call(tabbar.querySelectorAll(".tab"), function (t) { t.classList.toggle("active", t === b); });
+      ["news", "ai", "market", "rumor"].forEach(function (p) {
+        var panel = el("panel-" + p); if (panel) panel.classList.toggle("hidden", p !== name);
+      });
+      if (name === "market") drawYieldChart();
+    });
+  }
+
+  /* ---------- LENS NAV ---------- */
+  var lensnav = el("lensnav");
+  var lensLabelByEl = {};
+  if (lensnav) {
+    [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
+      var lbl = n.querySelector(".nlabel"); lensLabelByEl[n.getAttribute("data-lens")] = lbl ? lbl.textContent : "";
+    });
+    lensnav.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".nav"); if (!b) return;
+      [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) { n.classList.toggle("active", n === b); });
+      var lab = el("activeLens"); if (lab) lab.textContent = lensLabelByEl[b.getAttribute("data-lens")] || "전체 종합";
+    });
+  }
+
+  /* ---------- FEATURED: signal indices ---------- */
+  (function () {
+    var box = el("idxgrid"); if (!box) return;
+    (MODEL.metric_indices || []).forEach(function (ix) {
+      var d = document.createElement("div"); d.className = "idxitem";
+      d.innerHTML = '<div class="top"><span class="lbl">' + esc(ix.label) + '</span>' +
+        '<span class="val" style="color:' + esc(ix.color) + '">' + esc(ix.value.toFixed ? ix.value.toFixed(1) : ix.value) + '</span></div>' +
+        '<div class="bar"><span style="width:' + pct(ix.value) + '; background:' + esc(ix.color) + '"></span></div>';
+      box.appendChild(d);
+    });
+  })();
+
+  /* ---------- compact signal rows ---------- */
+  function renderRows(targetId, rows) {
+    var box = el(targetId); if (!box) return;
+    box.innerHTML = "";
+    (rows || []).forEach(function (r) {
+      var a = document.createElement("div"); a.className = "srow";
+      a.innerHTML =
+        '<span class="stag tag ' + esc(r.tagClass) + '">' + esc(r.tag) + '</span>' +
+        '<div class="body"><div class="title">' + esc(r.title) + '</div>' +
+        '<div class="smeta"><b style="color:#7E8CA6">' + esc(r.source) + '</b><span class="sep">·</span>' +
+        '<span>' + esc(r.time) + '</span><span class="sep">·</span><span>' + esc(r.related) + '</span>' +
+        '<span class="sep">·</span><span>' + esc(r.sources) + '</span><span class="sep">·</span>' +
+        '<span style="color:' + esc(r.catColor) + '; font-weight:700">' + esc(r.cat) + '</span></div></div>' +
+        '<div class="sc"><div><div class="v" style="color:' + esc(r.scoreColor) + '">' + esc(r.score) + '</div>' +
+        '<div class="l" style="color:' + esc(r.scoreColor) + '">' + esc(r.scoreLabel) + '</div></div>' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>';
+      box.appendChild(a);
+    });
+    var more = document.createElement("button"); more.className = "morebtn"; more.type = "button";
+    more.innerHTML = '더보기 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#9AAAC1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    box.appendChild(more);
+  }
+  renderRows("newsRows", MODEL.news_rows);
+  renderRows("aiRows", MODEL.ai_rows);
+
+  /* ---------- signal index list (collapsed) ---------- */
+  (function () {
+    var box = el("indexList"); if (!box) return;
+    var all = (MODEL.news_rows || []).concat(MODEL.ai_rows || []);
+    all.forEach(function (r) {
+      var d = document.createElement("div");
+      d.style.cssText = "display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid #F1F5FA; font-size:12.5px;";
+      d.innerHTML = '<span style="color:#46557A; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(r.title) + '</span>' +
+        '<span class="num" style="color:' + esc(r.scoreColor) + '; font-weight:800; flex:none;">' + esc(r.score) + '</span>';
+      box.appendChild(d);
+    });
+  })();
+
+  /* ---------- theme bars (AI tab + rails) ---------- */
+  function renderThemes(targetId, items) {
+    var box = el(targetId); if (!box) return; box.innerHTML = "";
+    (items || []).forEach(function (n) {
+      var d = document.createElement("div"); d.className = "themebar";
+      d.innerHTML = '<div class="top"><span class="l">' + esc(n.label) + '</span>' +
+        '<span class="s" style="color:' + esc(n.color) + '">' + esc(n.share) + '%</span></div>' +
+        '<div class="bar"><span style="width:' + esc(n.share) + '%; background:' + esc(n.color) + '"></span></div>';
+      box.appendChild(d);
+    });
+  }
+  renderThemes("aiThemes", MODEL.ai_themes);
+  renderThemes("railAi", MODEL.ai_themes);
+  renderThemes("railNarrative", MODEL.narrative);
+
+  /* ---------- market snapshot rows + sparklines ---------- */
+  function sparkSvg(pts) {
+    if (!pts || pts.length < 2) return "";
+    var w = 54, h = 18, n = pts.length, mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts);
+    var rng = (mx - mn) || 1;
+    var d = pts.map(function (v, i) {
+      var x = (i / (n - 1)) * (w - 2) + 1, y = h - 1 - ((v - mn) / rng) * (h - 2);
+      return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+    }).join(" ");
+    var rising = pts[n - 1] >= pts[0];
+    return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" fill="none"><path d="' + d +
+      '" stroke="' + (rising ? "#B85049" : "#3C7A4E") + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+  }
+  var CAT_LABEL = {
+    base_metals: "원자재·금속", steel_materials: "철강·건자재", oil_refined: "유가·정제유",
+    gas_lng: "가스·LNG", coal: "석탄", rates_inflation: "금리·물가", fx: "환율"
+  };
+  var CAT_ORDER = ["base_metals", "steel_materials", "oil_refined", "gas_lng", "coal", "rates_inflation", "fx"];
+  function mrowHtml(it, clickable) {
+    var off = it.value == null;
+    var spark = (it.spark && it.spark.length) ? sparkSvg(it.spark) : "";
+    var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
+    var en = it.en ? ' <span class="men">' + esc(it.en) + '</span>' : "";
+    var attrs = clickable ? ' data-mid="' + esc(it.id) + '" role="button" tabindex="0"' : "";
+    return '<div class="mrow' + (clickable ? " click" : "") + '"' + attrs + '>' +
+      '<span class="mn">' + spark + esc(it.label_kr) + en + '</span>' +
+      '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
+      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chev + '</span></div>';
+  }
+  /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출. */
+  function renderCategoryCards() {
+    var box = el("marketCategories"); if (!box) return; box.innerHTML = "";
+    var items = MODEL.market_items || [];
+    CAT_ORDER.forEach(function (cat) {
+      var rows = items.filter(function (it) { return it.category === cat; });
+      if (!rows.length) return;
+      var conn = rows.filter(function (r) { return r.value != null; }).length;
+      var card = document.createElement("div"); card.className = "mcat-card";
+      var body = rows.map(function (it) { return mrowHtml(it, true); }).join("");
+      card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
+        '</span><span class="mcat-c">연동 ' + conn + '/' + rows.length + '</span></div>' + body;
+      box.appendChild(card);
+    });
+  }
+  /* 우측 레일 — 대표 4~6개만 요약(중복 금지). '전체 보기'로 시장 탭 이동. */
+  function renderRailSnapshot() {
+    var box = el("railMarket"); if (!box) return; box.innerHTML = "";
+    var byId = {}; (MODEL.market_items || []).forEach(function (it) { byId[it.id] = it; });
+    var ids = MODEL.rail_snapshot || ["usdkrw", "wti", "us_10y", "copper", "jpykrw"];
+    ids.forEach(function (id) { var it = byId[id]; if (it) box.insertAdjacentHTML("beforeend", mrowHtml(it, false)); });
+    var b = document.createElement("button"); b.type = "button"; b.className = "seeall"; b.id = "railSeeAll";
+    b.textContent = "시장 전체 보기 →"; box.appendChild(b);
+    b.addEventListener("click", function () {
+      var t = document.querySelector('.tab[data-tab="market"]'); if (t) t.click();
+      var p = el("panel-market"); if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+  renderCategoryCards();
+  renderRailSnapshot();
+
+  /* ---------- early signal rows ---------- */
+  (function () {
+    var box = el("earlyRows"); if (!box) return;
+    (MODEL.early_signals || []).forEach(function (s) {
+      var d = document.createElement("div"); d.className = "esrow";
+      d.innerHTML =
+        '<span class="essrc">' + esc(s.src) + '</span>' +
+        '<div class="b"><div class="t">' + esc(s.text) + '</div>' +
+        '<div class="m">' + dmBadge(s.state) + '<span>' + esc(s.meta) + '</span></div></div>' +
+        '<span class="esact">' + esc(s.action) + '</span>';
+      box.appendChild(d);
+    });
+  })();
+
+  /* ---------- business lens / ecosystem ---------- */
+  function renderLensList(targetId, items) {
+    var box = el(targetId); if (!box) return; box.innerHTML = "";
+    (items || []).forEach(function (it) {
+      var d = document.createElement("div"); d.className = "lensitem";
+      var c = it.count == null ? '<span class="dm unavail" style="font-size:9px;">미연동</span>'
+        : '<span class="c ' + (it.count ? "" : "zero") + '">' + it.count + '</span>';
+      d.innerHTML = '<div><div class="l">' + esc(it.label) + '</div><div class="d">' + esc(it.desc) + '</div></div>' + c;
+      box.appendChild(d);
+    });
+  }
+  renderLensList("businessLens", MODEL.business_lens);
+  renderLensList("ecosystem", MODEL.ecosystem);
+
+  /* ---------- watch next ---------- */
+  (function () {
+    var box = el("watchNext"); if (!box) return;
+    (MODEL.watch_next || []).forEach(function (w) {
+      var d = document.createElement("div"); d.className = "watch";
+      d.innerHTML = '<span class="wn">' + esc(w.n) + '</span><div><div class="wt">' + esc(w.title) + '</div>' +
+        '<div class="wd">' + esc(w.desc) + '</div></div>';
+      box.appendChild(d);
+    });
+  })();
+
+  /* ============================================================
+     MARKET DETAIL CHART — within_country / cross_country
+     · y축·x축·기간 표시. 미연동 시리즈는 선을 그리지 않는다(가짜 선 금지).
+     · CPI는 금리와 단위가 달라 같은 y축에 올리지 않고 별도 상태로 그린다.
+     · 모든 시계열은 데모 고정값(preview)이며 현재 체결값이 아니다.
+     ============================================================ */
+  var PERIODS = {
+    "1w": ["6/16", "6/17", "6/18", "6/19", "6/20", "6/21", "6/22"],
+    "1m": ["6/1", "6/4", "6/7", "6/10", "6/12", "6/14", "6/16", "6/18", "6/20", "6/21", "6/22"],
+    "3m": ["3/22", "4/7", "4/22", "5/7", "5/22", "6/7", "6/22"],
+    "1y": ["'25/7", "'25/9", "'25/11", "'26/1", "'26/3", "'26/5", "'26/6"]
+  };
+  /* 데모 고정 금리/물가 커브 (현재 체결값 아님). 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐.
+     여기 없는 (국가×만기/지표) 조합은 차트에서 가짜 선을 그리지 않고 '소스 필요' 칩으로 둔다.
+     스프레드(10Y-2Y/10Y-3M)는 보유 시리즈에서 계산한다 — 별도 가짜 데이터 없음. */
+  var YBASE = {
+    "us_3m": [5.30, 5.31, 5.30, 5.29, 5.30, 5.28, 5.27, 5.26, 5.25, 5.24, 5.23, 5.22],
+    "us_6m": [5.18, 5.17, 5.16, 5.15, 5.14, 5.13, 5.12, 5.11, 5.10, 5.09, 5.08, 5.07],
+    "us_1y": [4.98, 4.97, 4.96, 4.95, 4.94, 4.93, 4.92, 4.91, 4.90, 4.89, 4.88, 4.87],
+    "us_2y": [4.55, 4.58, 4.60, 4.62, 4.63, 4.65, 4.66, 4.68, 4.69, 4.70, 4.71, 4.72],
+    "us_3y": [4.30, 4.32, 4.34, 4.35, 4.36, 4.37, 4.38, 4.39, 4.40, 4.41, 4.42, 4.43],
+    "us_5y": [3.95, 3.98, 4.02, 4.05, 4.08, 4.10, 4.12, 4.15, 4.18, 4.20, 4.21, 4.22],
+    "us_7y": [4.05, 4.08, 4.12, 4.15, 4.18, 4.20, 4.22, 4.25, 4.27, 4.29, 4.30, 4.32],
+    "us_10y": [4.10, 4.16, 4.20, 4.25, 4.28, 4.31, 4.35, 4.40, 4.42, 4.44, 4.45, 4.46],
+    "us_20y": [4.40, 4.45, 4.50, 4.54, 4.58, 4.61, 4.64, 4.67, 4.69, 4.71, 4.72, 4.74],
+    "us_30y": [4.50, 4.55, 4.60, 4.64, 4.68, 4.71, 4.74, 4.77, 4.79, 4.81, 4.82, 4.84],
+    "kr_1y": [3.18, 3.17, 3.16, 3.15, 3.14, 3.13, 3.12, 3.11, 3.10, 3.10, 3.09, 3.08],
+    "kr_2y": [3.05, 3.08, 3.07, 3.10, 3.12, 3.11, 3.14, 3.16, 3.15, 3.18, 3.20, 3.21],
+    "kr_5y": [3.28, 3.30, 3.33, 3.31, 3.35, 3.37, 3.36, 3.39, 3.41, 3.40, 3.42, 3.44],
+    "kr_10y": [3.42, 3.45, 3.48, 3.46, 3.50, 3.53, 3.52, 3.55, 3.57, 3.56, 3.58, 3.60],
+    "kr_30y": [3.55, 3.57, 3.60, 3.59, 3.63, 3.65, 3.64, 3.67, 3.69, 3.68, 3.71, 3.73],
+    "eu_2y": [2.55, 2.58, 2.57, 2.60, 2.62, 2.61, 2.64, 2.66, 2.65, 2.67, 2.69, 2.70],
+    "eu_5y": [2.72, 2.74, 2.77, 2.75, 2.79, 2.81, 2.80, 2.83, 2.85, 2.84, 2.86, 2.88],
+    "eu_10y": [2.90, 2.93, 2.96, 2.94, 2.98, 3.01, 3.00, 3.03, 3.05, 3.04, 3.06, 3.08],
+    "eu_30y": [3.12, 3.15, 3.18, 3.16, 3.20, 3.23, 3.22, 3.25, 3.27, 3.26, 3.29, 3.31],
+    "jp_2y": [0.62, 0.64, 0.66, 0.65, 0.68, 0.70, 0.69, 0.72, 0.74, 0.73, 0.75, 0.77],
+    "jp_5y": [0.95, 0.97, 0.99, 0.98, 1.01, 1.03, 1.02, 1.05, 1.07, 1.06, 1.08, 1.10],
+    "jp_10y": [1.30, 1.33, 1.36, 1.34, 1.38, 1.41, 1.40, 1.43, 1.45, 1.44, 1.46, 1.48],
+    "uk_2y": [4.05, 4.07, 4.09, 4.10, 4.12, 4.13, 4.15, 4.16, 4.18, 4.19, 4.20, 4.22],
+    "uk_5y": [3.90, 3.92, 3.94, 3.95, 3.97, 3.98, 4.00, 4.01, 4.03, 4.04, 4.05, 4.07],
+    "uk_10y": [4.00, 4.02, 4.05, 4.04, 4.08, 4.10, 4.09, 4.12, 4.14, 4.13, 4.16, 4.18],
+    "cn_2y": [1.62, 1.61, 1.60, 1.59, 1.58, 1.57, 1.56, 1.55, 1.54, 1.53, 1.52, 1.51],
+    "cn_5y": [1.85, 1.84, 1.83, 1.82, 1.81, 1.80, 1.79, 1.78, 1.77, 1.76, 1.75, 1.74],
+    "cn_10y": [2.05, 2.04, 2.03, 2.02, 2.01, 2.00, 1.99, 1.98, 1.97, 1.96, 1.95, 1.94],
+    "ca_10y": [3.22, 3.24, 3.27, 3.26, 3.30, 3.32, 3.31, 3.34, 3.36, 3.35, 3.37, 3.39],
+    "au_10y": [4.15, 4.17, 4.20, 4.19, 4.23, 4.25, 4.24, 4.27, 4.29, 4.28, 4.31, 4.33],
+    "us_cpi": [3.4, 3.3, 3.2, 3.1, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7],
+    "kr_cpi": [3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5],
+    "eu_cpi": [2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3],
+    "jp_cpi": null,
+    "us_core_cpi": [3.8, 3.7, 3.6, 3.6, 3.5, 3.4, 3.4, 3.3, 3.3, 3.2, 3.2, 3.1],
+    "kr_core_cpi": [3.2, 3.1, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6],
+    "us_ppi": [2.6, 2.5, 2.6, 2.4, 2.5, 2.3, 2.4, 2.3, 2.2, 2.3, 2.2, 2.1],
+    "us_base_rate": [5.50, 5.50, 5.50, 5.25, 5.25, 5.00, 5.00, 4.75, 4.75, 4.50, 4.50, 4.50],
+    "kr_base_rate": [3.50, 3.50, 3.50, 3.50, 3.25, 3.25, 3.25, 3.00, 3.00, 3.00, 2.75, 2.75],
+    "eu_base_rate": [4.00, 4.00, 3.75, 3.75, 3.50, 3.50, 3.25, 3.25, 3.00, 3.00, 2.75, 2.75],
+    "jp_base_rate": [0.10, 0.10, 0.25, 0.25, 0.25, 0.25, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50]
+  };
+  var YNAME = {
+    "us_2y": "US 2Y", "us_5y": "US 5Y", "us_10y": "US 10Y",
+    "kr_2y": "KR 2Y", "kr_5y": "KR 5Y", "kr_10y": "KR 10Y",
+    "eu_2y": "EU 2Y", "eu_5y": "EU 5Y", "eu_10y": "EU 10Y",
+    "jp_2y": "JP 2Y", "jp_5y": "JP 5Y", "jp_10y": "JP 10Y"
+  };
+  var CC = { us: "US", kr: "KR", eu: "EU", jp: "JP", uk: "UK", cn: "CN", ca: "CA", au: "AU" };
+  var MAT_NAME = { "3m": "3M", "6m": "6M", "1y": "1Y", "2y": "2Y", "3y": "3Y", "5y": "5Y", "7y": "7Y", "10y": "10Y", "20y": "20Y", "30y": "30Y" };
+  var MACRO_NAME = { "base_rate": "기준금리", "cpi": "CPI", "core_cpi": "Core CPI", "ppi": "PPI", "spread_10y_2y": "10Y-2Y", "spread_10y_3m": "10Y-3M" };
+  var MAT_COLOR = {
+    "3m": "#7E8CA6", "6m": "#5E6E8C", "1y": "#46557A", "2y": "#9C7232", "3y": "#C79248",
+    "5y": "#5B8FCB", "7y": "#3F6FA8", "10y": "#26344D", "20y": "#3C7A4E", "30y": "#B85049",
+    "cpi": "#9C7232", "core_cpi": "#C79248", "ppi": "#5B8FCB", "base_rate": "#3F6FA8",
+    "spread_10y_2y": "#3C7A4E", "spread_10y_3m": "#B85049"
+  };
+  var CTRY_COLOR = { us: "#3F6FA8", kr: "#3C7A4E", eu: "#9C7232", jp: "#B85049", uk: "#5B8FCB", cn: "#26344D", ca: "#7E8CA6", au: "#C79248" };
+  var MAT_LIST = [
+    { id: "3m", name: "3M", core: false }, { id: "6m", name: "6M", core: false }, { id: "1y", name: "1Y", core: false },
+    { id: "2y", name: "2Y", core: true }, { id: "3y", name: "3Y", core: false }, { id: "5y", name: "5Y", core: true },
+    { id: "7y", name: "7Y", core: false }, { id: "10y", name: "10Y", core: true }, { id: "20y", name: "20Y", core: false }, { id: "30y", name: "30Y", core: false }
+  ];
+  var COUNTRY_LIST = [
+    { id: "us", name: "US" }, { id: "kr", name: "KR" }, { id: "eu", name: "EU" }, { id: "jp", name: "JP" },
+    { id: "uk", name: "UK" }, { id: "cn", name: "CN" }, { id: "ca", name: "CA" }, { id: "au", name: "AU" }
+  ];
+  var matSel = { "2y": true, "5y": true, "10y": true };
+  var matExpanded = false;
+  var ctrySel = { us: true, kr: true, eu: true, jp: true };
+  /* (국가, 지표) → 데모 시계열. 스프레드는 보유 시리즈에서 계산(가짜 데이터 없음). 없으면 null = 미연동. */
+  function seriesFor(c, m) {
+    if (m === "spread_10y_2y") {
+      var a = YBASE[c + "_10y"], b = YBASE[c + "_2y"];
+      return (a && b) ? a.map(function (v, i) { return Math.round((v - b[i]) * 100) / 100; }) : null;
+    }
+    if (m === "spread_10y_3m") {
+      var a2 = YBASE[c + "_10y"], b2 = YBASE[c + "_3m"];
+      return (a2 && b2) ? a2.map(function (v, i) { return Math.round((v - b2[i]) * 100) / 100; }) : null;
+    }
+    return YBASE[c + "_" + m] || null;
+  }
+  function nameFor(c, m) { return YNAME[c + "_" + m] || ((CC[c] || c) + " " + (MAT_NAME[m] || MACRO_NAME[m] || m)); }
+
+  function resample(base, n) {
+    if (!base || !base.length) return [];
+    if (n >= base.length) return base.slice();
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(base[Math.round(i * (base.length - 1) / (n - 1))]);
+    return out;
+  }
+  function activeSeg(id, fallback) {
+    var seg = el(id); if (!seg) return fallback;
+    var b = seg.querySelector("button.active");
+    return b ? (b.getAttribute("data-mode") || b.getAttribute("data-period") || fallback) : fallback;
+  }
+
+  /* 공용 라인차트 — x축·y축·그리드·라벨 표시. drawn=[{name,color,data}] (그릴 시리즈만).
+     미연동 시리즈는 호출부에서 제외해 가짜 선을 막는다. */
+  function renderLineChart(svg, drawn, dates, opts) {
+    opts = opts || {};
+    var vb = (svg.getAttribute("viewBox") || "0 0 720 300").split(/\s+/).map(Number);
+    var W = vb[2], H = vb[3], padL = 48, padR = 16, padT = 16, padB = 34;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var allVals = [];
+    drawn.forEach(function (s) { s.data.forEach(function (v) { if (v != null) allVals.push(v); }); });
+    var yMin, yMax;
+    if (allVals.length) {
+      yMin = Math.min.apply(null, allVals); yMax = Math.max.apply(null, allVals);
+      var padY = (yMax - yMin) * 0.18 || Math.abs(yMax) * 0.05 || 0.5; yMin -= padY; yMax += padY;
+    } else { yMin = 0; yMax = 100; }
+    var n = dates.length;
+    function xAt(i) { return padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW); }
+    function yAt(v) { return padT + plotH - ((v - yMin) / ((yMax - yMin) || 1)) * plotH; }
+    var dec = opts.decimals == null ? 2 : opts.decimals;
+    var parts = ['<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#FCFDFF"></rect>'];
+    var TICKS = 4, t, val, y;
+    for (t = 0; t <= TICKS; t++) {
+      val = yMin + (yMax - yMin) * t / TICKS; y = yAt(val);
+      parts.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '" stroke="#EEF3F9"></line>');
+      parts.push('<text x="' + (padL - 8) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="#9AAAC1">' + val.toFixed(dec) + '</text>');
+    }
+    parts.push('<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
+    parts.push('<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
+    dates.forEach(function (d, i) {
+      if (n > 8 && i % 2 !== 0 && i !== n - 1) return;
+      parts.push('<text x="' + xAt(i).toFixed(1) + '" y="' + (padT + plotH + 18) + '" text-anchor="middle" font-size="10" fill="#9AAAC1">' + esc(d) + '</text>');
+    });
+    parts.push('<text x="6" y="' + (padT + 4) + '" font-size="9.5" fill="#9AAAC1">' + esc(opts.yLabel || "") + '</text>');
+    drawn.forEach(function (s) {
+      var dpath = s.data.map(function (v, i) { return (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1); }).join(" ");
+      parts.push('<path d="' + dpath + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>');
+      var li = s.data.length - 1;
+      parts.push('<circle cx="' + xAt(li).toFixed(1) + '" cy="' + yAt(s.data[li]).toFixed(1) + '" r="3" fill="' + s.color + '"></circle>');
+    });
+    if (!drawn.length) {
+      parts.push('<text x="' + (padL + plotW / 2) + '" y="' + (padT + plotH / 2) + '" text-anchor="middle" font-size="13" fill="#AEBBD0">' + esc(opts.emptyMsg || "표시할 시세 없음 (가짜 선 미표시)") + '</text>');
+    }
+    svg.innerHTML = parts.join("");
+  }
+
+  function buildYieldView() {
+    var mode = activeSeg("yieldModeSeg", "within");
+    var period = activeSeg("yieldPeriodSeg", "1m");
+    var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
+    var norm = el("normToggle").checked;
+    var drawn = [], unavail = [], kind = "yield";
+    function pushSeries(label, color, base) {
+      if (base && base.length) {
+        var data = resample(base, n);
+        if (norm) { var b0 = data[0] || 1; data = data.map(function (v) { return v / b0 * 100; }); }
+        drawn.push({ name: label, color: color, data: data });
+      } else { unavail.push(label); }
+    }
+    if (mode === "within") {
+      var c = el("countrySel").value;
+      MAT_LIST.forEach(function (m) { if (matSel[m.id]) pushSeries(nameFor(c, m.id), MAT_COLOR[m.id], seriesFor(c, m.id)); });
+    } else {
+      var metric = el("metricSel").value;
+      kind = (metric === "cpi" || metric === "core_cpi" || metric === "ppi") ? "infl"
+        : (metric.indexOf("spread") === 0 ? "spread" : "yield");
+      COUNTRY_LIST.forEach(function (co) { if (ctrySel[co.id]) pushSeries(nameFor(co.id, metric), CTRY_COLOR[co.id], seriesFor(co.id, metric)); });
+    }
+    return { mode: mode, kind: kind, norm: norm, dates: dates, drawn: drawn, unavail: unavail, period: period };
+  }
+
+  function drawYieldChart() {
+    var svg = el("yieldChart"); if (!svg) return;
+    var v = buildYieldView();
+    var yLabel = v.norm ? "지수(=100)" : (v.kind === "infl" ? "물가 %" : (v.kind === "spread" ? "%p" : "%"));
+    renderLineChart(svg, v.drawn, v.dates, {
+      yLabel: yLabel, decimals: v.norm ? 0 : 2,
+      emptyMsg: "선택한 시리즈는 미연동/소스 필요 — 표시할 시세 없음 (가짜 선 미표시)"
+    });
+    var leg = el("chartLegend"); leg.innerHTML = "";
+    v.drawn.forEach(function (s) {
+      leg.insertAdjacentHTML("beforeend", '<span class="it"><span class="sw" style="background:' + s.color + '"></span>' +
+        esc(s.name) + ' · 데모' + (v.norm ? " (정규화)" : "") + '</span>');
+    });
+    v.unavail.forEach(function (nm) {
+      leg.insertAdjacentHTML("beforeend", '<span class="it off"><span class="sw"></span>' + esc(nm) + ' · 미연동</span>');
+    });
+    var note = el("chartNote"), msg;
+    if (v.kind === "infl") {
+      msg = "물가(CPI/Core CPI/PPI)는 금리와 단위·축이 다른 별도 비교입니다 — 금리와 같은 y축에 올리지 않습니다. " +
+        (v.norm ? "정규화(기준일=100) 추세입니다." : "국가 간 물가 추세(%) 비교입니다.");
+    } else if (v.norm) {
+      msg = "정규화 추세 · 기준일=100 · 절대 가격 비교 아님. 단위가 다른 지표 비교에 사용합니다.";
+    } else if (v.kind === "spread") {
+      msg = "장단기 금리차(스프레드 · %p) 데모 시계열 — 현재 체결값 아님. 음수이면 장단기 금리 역전 신호입니다.";
+    } else {
+      msg = "데모 시계열 — 현재 체결값 아님. 프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (예: US 2Y는 프로덕션 미연동이나 preview에선 데모 선으로 표시).";
+    }
+    if (v.unavail.length) msg += " 미연동(선 미표시 · 소스 필요): " + v.unavail.join(", ") + ".";
+    note.textContent = msg;
+  }
+
+  /* 만기/국가 멀티셀렉트 칩 — 가용 시리즈만 활성, 미연동은 비활성('소스 필요'/'미연동') 칩으로 노출 */
+  function renderMatChips() {
+    var box = el("matChips"); if (!box) return; box.innerHTML = "";
+    var c = el("countrySel").value;
+    MAT_LIST.forEach(function (m) {
+      if (!matExpanded && !m.core) return;
+      var avail = !!seriesFor(c, m.id);
+      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-mat", m.id);
+      b.className = "mtog " + (!avail ? "off" : (matSel[m.id] ? "on" : ""));
+      b.innerHTML = esc(m.name) + (!avail ? '<span class="x">소스 필요</span>' : "");
+      if (!avail) b.disabled = true;
+      box.appendChild(b);
+    });
+  }
+  function renderCtryChips() {
+    var box = el("ctryChips"); if (!box) return; box.innerHTML = "";
+    var metric = el("metricSel").value;
+    COUNTRY_LIST.forEach(function (co) {
+      var avail = !!seriesFor(co.id, metric);
+      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-ctry", co.id);
+      b.className = "mtog " + (!avail ? "off" : (ctrySel[co.id] ? "on" : ""));
+      b.innerHTML = esc(co.name) + (!avail ? '<span class="x">미연동</span>' : "");
+      if (!avail) b.disabled = true;
+      box.appendChild(b);
+    });
+  }
+  function selCount(o) { var k, n = 0; for (k in o) { if (o[k]) n++; } return n; }
+
+  /* yield chart controls — mode / country / metric / 만기·국가 칩 / 전체 만기 / normalize / period */
+  (function () {
+    function syncModeUI() {
+      var within = activeSeg("yieldModeSeg", "within") === "within";
+      el("withinSel").classList.toggle("hidden", !within);
+      el("crossSel").classList.toggle("hidden", within);
+      el("matChipRow").classList.toggle("hidden", !within);
+      el("ctryChipRow").classList.toggle("hidden", within);
+      if (within) renderMatChips(); else renderCtryChips();
+    }
+    var seg = el("yieldModeSeg");
+    if (seg) seg.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button"); if (!b) return;
+      [].forEach.call(seg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
+      syncModeUI(); drawYieldChart();
+    });
+    var pseg = el("yieldPeriodSeg");
+    if (pseg) pseg.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button"); if (!b) return;
+      [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
+      drawYieldChart();
+    });
+    var cs = el("countrySel"); if (cs) cs.addEventListener("change", function () { renderMatChips(); drawYieldChart(); });
+    var ms = el("metricSel"); if (ms) ms.addEventListener("change", function () { renderCtryChips(); drawYieldChart(); });
+    var nt = el("normToggle"); if (nt) nt.addEventListener("change", drawYieldChart);
+    var ex = el("matExpand");
+    if (ex) ex.addEventListener("click", function () {
+      matExpanded = !matExpanded; ex.textContent = matExpanded ? "간략히 ▴" : "전체 만기 ▾"; renderMatChips();
+    });
+    var mc = el("matChips");
+    if (mc) mc.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-mat]"); if (!b || b.disabled) return;
+      var id = b.getAttribute("data-mat");
+      if (matSel[id]) { if (selCount(matSel) <= 1) return; matSel[id] = false; } else { matSel[id] = true; }
+      renderMatChips(); drawYieldChart();
+    });
+    var cc = el("ctryChips");
+    if (cc) cc.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button[data-ctry]"); if (!b || b.disabled) return;
+      var id = b.getAttribute("data-ctry");
+      if (ctrySel[id]) { if (selCount(ctrySel) <= 1) return; ctrySel[id] = false; } else { ctrySel[id] = true; }
+      renderCtryChips(); drawYieldChart();
+    });
+    renderMatChips(); renderCtryChips(); syncModeUI();
+  })();
+
+  /* ============================================================
+     MARKET DETAIL DRAWER — 행 클릭 → 상세(차트 + 기간 + 값/변동/상태/갱신).
+     데모 고정값이며 현재 체결값이 아니다. 미연동 종목은 선을 그리지 않는다.
+     ============================================================ */
+  (function () {
+    var ov = el("mktDrawerOv"); if (!ov) return;
+    var snap = el("marketCategories");
+    var ITEMS = {}; (MODEL.market_items || []).forEach(function (it) { ITEMS[it.id] = it; });
+    var UPD = { delayed_market: "지연 ~15분", proxy_market: "대용 · 일일", manual_or_reported: "보고 기준일",
+      unavailable: "미연동", policy_required: "정책/키 필요" };
+    var current = null;
+
+    function drawDrawerChart() {
+      var svg = el("dwChart"); if (!svg || !current) return;
+      var period = activeSeg("dwPeriodSeg", "1m");
+      var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
+      var base = current.spark || [];
+      if (current.value == null || base.length < 2) {
+        renderLineChart(svg, [], dates, { yLabel: "", emptyMsg: "미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
+        el("dwNote").textContent = "이 종목은 공개·무료 소스가 없어 미연동입니다 — 값/선을 생성하지 않습니다.";
+        return;
+      }
+      var data = resample(base, n);
+      var color = current.dir === "down" ? "#3C7A4E" : "#B85049";
+      renderLineChart(svg, [{ name: current.label_kr, color: color, data: data }], dates,
+        { yLabel: "추세(데모)", decimals: 0, emptyMsg: "" });
+      el("dwNote").textContent = "추세 방향 데모 시계열(상대값)입니다 — 현재 체결값·절대 가격이 아닙니다. data_mode: " +
+        (DM[current.data_mode] ? DM[current.data_mode][0] : "미연동") + ".";
+    }
+
+    function openDrawer(id) {
+      current = ITEMS[id]; if (!current) return;
+      el("dwTitle").textContent = current.label_kr + (current.unit ? " (" + current.unit + ")" : "");
+      el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기";
+      el("dwMode").innerHTML = dmBadge(current.data_mode);
+      var off = current.value == null;
+      var vEl = el("dwVal"); vEl.textContent = off ? "—" : current.value; vEl.className = "v num" + (off ? " off" : "");
+      var cEl = el("dwChg"); cEl.textContent = off ? "—" : (current.delta || "—");
+      cEl.style.color = off ? "" : (current.dir === "down" ? "#3C7A4E" : current.dir === "up" ? "#B85049" : "");
+      el("dwUpd").textContent = UPD[current.data_mode] || "미연동";
+      var pseg = el("dwPeriodSeg");
+      [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x.getAttribute("data-period") === "1m"); });
+      drawDrawerChart();
+      ov.classList.add("open");
+    }
+    function closeDrawer() { ov.classList.remove("open"); current = null; }
+
+    if (snap) {
+      snap.addEventListener("click", function (ev) {
+        var r = ev.target.closest(".mrow.click"); if (!r) return;
+        openDrawer(r.getAttribute("data-mid"));
+      });
+      snap.addEventListener("keydown", function (ev) {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        var r = ev.target.closest(".mrow.click"); if (!r) return;
+        ev.preventDefault(); openDrawer(r.getAttribute("data-mid"));
+      });
+    }
+    el("dwClose").addEventListener("click", closeDrawer);
+    ov.addEventListener("click", function (ev) { if (ev.target === ov) closeDrawer(); });
+    document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeDrawer(); });
+    var dpseg = el("dwPeriodSeg");
+    if (dpseg) dpseg.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button"); if (!b) return;
+      [].forEach.call(dpseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
+      drawDrawerChart();
+    });
+  })();
+
+  /* ---------- Hormuz preview (모든 값 데모 고정 · AIS 하한 추정 · 라이브 미연동) ----------
+     주의: 이 카드의 수치는 preview 데모 고정값이다. 라이브 AIS 통합이 아니며 프로덕션 값을 만들지 않는다.
+     '현재 통항 중/대기·정박/평균 속도/신뢰도' 타일과 선종 분포는 현재 상태라 시간창과 무관하게 마크업 고정값을 유지한다.
+     시간창은 누적 통과 수(count) · 증감(delta) · 시간대 막대(bars)만 바꾼다. */
+  (function () {
+    var seg = el("hzTimeSeg"); if (!seg) return;
+    var HZ = {
+      "1h":  { label: "최근 1시간 통과 · 게이트 통과 unique MMSI",  count: "9",     delta: "▲ +6% · 평균 8 대비",    bars: [1, 2, 1, 2, 1, 2, 1, 2] },
+      "6h":  { label: "최근 6시간 통과 · 게이트 통과 unique MMSI",  count: "54",    delta: "▲ +9% · 평균 49 대비",   bars: [7, 9, 8, 10, 9, 11, 9, 10, 12, 9, 11, 10] },
+      "24h": { label: "최근 24시간 통과 · 게이트 통과 unique MMSI", count: "212",   delta: "▲ +12% · 평균 189 대비", bars: [6, 7, 5, 8, 9, 11, 13, 12, 10, 11, 9, 8, 7, 9, 11, 12, 13, 11, 9, 8, 10, 9, 8, 7] },
+      "7d":  { label: "최근 7일 통과 · 게이트 통과 unique MMSI",    count: "1,486", delta: "▼ 3% · 평균 1,530 대비", bars: [205, 224, 198, 236, 248, 214, 161] }
+    };
+    var VESSELS = [
+      { label: "유조선", color: "#3F6FA8", count: 31 },
+      { label: "LNG선", color: "#3C7A4E", count: 9 },
+      { label: "컨테이너·기타", color: "#9C7232", count: 7 }
+    ];
+    function drawBars(arr) {
+      var svg = el("hzBars"); if (!svg) return;
+      var W = 320, H = 96, n = arr.length, gap = n > 16 ? 2 : 4, bw = (W - (n - 1) * gap) / n;
+      var mx = Math.max.apply(null, arr) || 1, parts = [];
+      arr.forEach(function (v, i) {
+        var h = (v / mx) * (H - 8), x = i * (bw + gap), y = H - h;
+        parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="#9CC0E8"></rect>');
+      });
+      svg.innerHTML = parts.join("");
+    }
+    function drawVessels() {
+      var box = el("hzVessels"); if (!box) return; box.innerHTML = "";
+      var total = VESSELS.reduce(function (s, v) { return s + v.count; }, 0) || 1;
+      VESSELS.forEach(function (v) {
+        var w = (v.count / total * 100).toFixed(0);
+        var d = document.createElement("div"); d.className = "hz-vrow";
+        d.innerHTML = '<span class="vl">' + esc(v.label) + '</span>' +
+          '<span class="vb"><span style="width:' + w + '%; background:' + v.color + '"></span></span>' +
+          '<span class="vp">' + v.count + '척</span>';
+        box.appendChild(d);
+      });
+    }
+    function apply(win) {
+      var d = HZ[win] || HZ["24h"];
+      el("hzWindowLabel").textContent = d.label;
+      el("hzCount").textContent = d.count;
+      el("hzDelta").textContent = d.delta;
+      drawBars(d.bars);
+    }
+    seg.addEventListener("click", function (ev) {
+      var b = ev.target.closest("button"); if (!b) return;
+      [].forEach.call(seg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
+      apply(b.getAttribute("data-win"));
+    });
+    drawVessels();
+    apply("24h");
+  })();
+
+  /* initial chart draw (panel hidden ok — viewBox scales) */
+  drawYieldChart();
+})();
+</script>
+</body>
+</html>
