@@ -46,12 +46,12 @@
   .num{font-variant-numeric:tabular-nums lining-nums;}
   a{color:var(--sky); text-decoration:none;}
   .hidden{display:none !important;}
-  .wrap{max-width:1560px; margin:0 auto; padding:28px 32px 56px;}
+  .wrap{max-width:1560px; margin:0 auto; padding:22px 30px 36px;}
   .eyebrow{font-size:11.5px; font-weight:700; letter-spacing:0.14em; color:var(--sky2);}
   @keyframes radarSweep{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 
   /* ===== 헤더 ===== */
-  header.top{display:flex; align-items:center; justify-content:space-between; gap:24px; padding:6px 4px 22px; flex-wrap:wrap;}
+  header.top{display:flex; align-items:center; justify-content:space-between; gap:24px; padding:4px 4px 15px; flex-wrap:wrap;}
   .brand{display:flex; align-items:center; gap:14px;}
   .brand .mark{width:42px; height:42px; border-radius:12px; background:var(--sky-tint);
     border:1px solid var(--sky-bd); display:flex; align-items:center; justify-content:center; flex:none;}
@@ -72,7 +72,7 @@
 
   /* ===== Executive Read Hero (golden: 2-col text + 신호 구성 카드) ===== */
   .hero{position:relative; overflow:hidden; background:linear-gradient(135deg,#FFFFFF 0%,#F4F9FF 100%);
-    border:1px solid #E1EBF7; border-radius:20px; padding:28px 32px; box-shadow:var(--shadow-hero); margin-bottom:18px;
+    border:1px solid #E1EBF7; border-radius:20px; padding:23px 30px; box-shadow:var(--shadow-hero); margin-bottom:14px;
     display:flex; align-items:center; gap:30px; justify-content:space-between;}
   .hero .heromain{position:relative; min-width:0; flex:1; max-width:1010px;}
   .hero h1{margin:0; font-size:30px; line-height:1.36; font-weight:800; letter-spacing:-0.02em; color:var(--ink); text-wrap:balance;}
@@ -102,18 +102,18 @@
   .chip.red{color:var(--red); background:var(--red-tint); border:1px solid var(--red-bd);}
 
   /* ===== Summary Metrics ===== */
-  .metrics{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px;}
-  .metric{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); transition:box-shadow .16s ease, transform .16s ease;}
+  .metrics{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:14px;}
+  .metric{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:15px 18px; box-shadow:var(--shadow); transition:box-shadow .16s ease, transform .16s ease;}
   .metric:hover{box-shadow:var(--shadow-lg); transform:translateY(-1px);}
   .metric .row{display:flex; align-items:center; gap:10px;}
   .metric .ic{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none;}
   .metric .lbl{font-size:12.5px; font-weight:600; color:var(--mute);}
-  .metric .val{font-size:34px; font-weight:800; line-height:1; letter-spacing:-0.02em; margin-top:14px;}
-  .metric .val.small{font-size:22px;}
-  .metric .desc{font-size:11.5px; font-weight:500; color:var(--mute3); margin-top:9px;}
+  .metric .val{font-size:32px; font-weight:800; line-height:1; letter-spacing:-0.02em; margin-top:10px;}
+  .metric .val.small{font-size:21px;}
+  .metric .desc{font-size:11.5px; font-weight:500; color:var(--mute3); margin-top:7px;}
 
   /* ===== Main grid ===== */
-  .grid{display:grid; grid-template-columns:252px minmax(0,1fr) 388px; gap:18px; align-items:start;}
+  .grid{display:grid; grid-template-columns:252px minmax(0,1fr) 388px; gap:16px; align-items:start;}
   @media (max-width:1240px){ .grid{grid-template-columns:220px minmax(0,1fr);} aside.rail{grid-column:1 / -1;} }
   @media (max-width:900px){ .grid{grid-template-columns:1fr;} aside.lens{position:static;} .metrics{grid-template-columns:repeat(2,1fr);} }
 
@@ -145,7 +145,7 @@
     background:var(--card); border:1px solid var(--line); padding:8px 13px; border-radius:10px;}
 
   /* ===== Section labels ===== */
-  .seclabel{display:flex; align-items:center; gap:12px; margin:6px 2px 12px;}
+  .seclabel{display:flex; align-items:center; gap:12px; margin:4px 2px 9px;}
   .seclabel .t{font-size:11px; font-weight:800; letter-spacing:0.12em;}
   .seclabel .ln{height:1px; flex:1;}
   .seclabel .c{font-size:11.5px; color:var(--mute4); font-weight:600;}
@@ -156,7 +156,7 @@
 
   /* ===== Featured signal card ===== */
   .card{background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow);}
-  .featured{padding:24px 26px; box-shadow:var(--shadow-lg); margin-bottom:14px;}
+  .featured{padding:20px 24px; box-shadow:var(--shadow-lg); margin-bottom:12px;}
   .featured .head{display:flex; align-items:flex-start; justify-content:space-between; gap:24px;}
   .tagrow{display:flex; align-items:center; gap:8px; margin-bottom:11px; flex-wrap:wrap;}
   .tag{font-size:10.5px; font-weight:800; letter-spacing:0.04em; padding:3px 8px; border-radius:6px;}
@@ -174,7 +174,7 @@
   .score .v small{font-size:18px; font-weight:700; opacity:.55;}
   .score .l{font-size:11.5px; font-weight:700; margin-top:6px;}
   /* 요약 / 영향 / 액션 3행 (golden 패리티) */
-  .read{background:#F6FAFE; border:1px solid #E7F0FA; border-radius:12px; padding:13px 15px; margin-top:16px; display:flex; flex-direction:column; gap:7px;}
+  .read{background:#F6FAFE; border:1px solid #E7F0FA; border-radius:12px; padding:12px 15px; margin-top:13px; display:flex; flex-direction:column; gap:6px;}
   .read .rd{display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:1.5; color:#3F4D6B;}
   .read .rd.act{color:var(--red); font-weight:700;}
   .read .rdb{font-size:10px; font-weight:800; letter-spacing:0.02em; padding:3px 8px; border-radius:6px; flex:none; margin-top:1px; white-space:nowrap;}
@@ -185,21 +185,21 @@
   .featlens{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:11px;}
   .featlens .fllabel{font-size:10px; font-weight:700; letter-spacing:0.08em; color:var(--mute4); margin-right:2px;}
   .featlens .flchip{font-size:11px; font-weight:600; color:#5E7193; background:#EFF4FA; border:1px solid #DEE8F4; padding:3px 9px; border-radius:999px;}
-  .idx{margin-top:18px;}
-  .idx .h{font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--mute4); margin-bottom:12px;}
-  .idxgrid{display:grid; grid-template-columns:repeat(6,1fr); gap:18px;}
+  .idx{margin-top:14px;}
+  .idx .h{font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--mute4); margin-bottom:10px;}
+  .idxgrid{display:grid; grid-template-columns:repeat(6,1fr); gap:14px;}
   @media (max-width:760px){ .idxgrid{grid-template-columns:repeat(3,1fr);} }
   .idxitem .top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:7px;}
   .idxitem .top .lbl{font-size:11.5px; color:var(--mute2); font-weight:600;}
   .idxitem .top .val{font-size:13px; font-weight:800; font-variant-numeric:tabular-nums;}
   .bar{height:4px; border-radius:3px; background:#EAEFF6; overflow:hidden;}
   .bar > span{display:block; height:100%; border-radius:3px;}
-  .cardfoot{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:20px; padding-top:16px; border-top:1px solid var(--hair); flex-wrap:wrap;}
+  .cardfoot{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:14px; padding-top:13px; border-top:1px solid var(--hair); flex-wrap:wrap;}
   .extlink{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--sky);}
 
   /* ===== Compact rows ===== */
   .rows{overflow:hidden;}
-  .srow{display:flex; align-items:center; gap:16px; padding:17px 22px; border-top:1px solid var(--hair); cursor:pointer;}
+  .srow{display:flex; align-items:center; gap:16px; padding:13px 20px; border-top:1px solid var(--hair); cursor:pointer;}
   .srow:first-child{border-top:none;}
   .srow:hover{background:#FAFCFE;}
   .srow .stag{font-size:10px; font-weight:800; letter-spacing:0.03em; padding:3px 7px; border-radius:6px; flex:none; white-space:nowrap;}
@@ -213,18 +213,18 @@
     font-size:13px; font-weight:700; color:var(--ink4); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;}
 
   /* ===== Right rail ===== */
-  aside.rail{display:flex; flex-direction:column; gap:16px; position:sticky; top:20px;}
-  .panel{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 20px; box-shadow:var(--shadow);}
+  aside.rail{display:flex; flex-direction:column; gap:14px; position:sticky; top:16px;}
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 18px; box-shadow:var(--shadow);}
   .panel .ph{font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .panel .ph small{font-size:11.5px; font-weight:600; color:var(--mute4);}
-  .panel .pnote{font-size:11px; color:var(--mute3); font-weight:500; line-height:1.5; margin:6px 0 14px;}
+  .panel .pnote{font-size:11px; color:var(--mute3); font-weight:500; line-height:1.5; margin:5px 0 11px;}
   .railnote{font-size:10.5px; font-weight:700; letter-spacing:0.08em; color:var(--mute4); text-transform:uppercase; margin-bottom:8px;}
 
   /* ===== Market rows + data_mode badges ===== */
-  .mgrp{display:flex; align-items:center; justify-content:space-between; margin:14px 0 8px;}
+  .mgrp{display:flex; align-items:center; justify-content:space-between; margin:11px 0 7px;}
   .mgrp .t{font-size:12px; font-weight:800; color:var(--sky2); letter-spacing:0.02em;}
   .mgrp .m{font-size:10.5px; color:var(--mute4); font-weight:600;}
-  .mrow{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--hair2);}
+  .mrow{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--hair2);}
   .mrow .mn{font-size:13px; font-weight:600; color:var(--ink4); display:flex; align-items:center; gap:8px;}
   .mrow .mv{font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; min-width:62px; color:var(--ink);}
   .mrow .mv.off{color:var(--mute5);}
@@ -245,8 +245,8 @@
     font-size:10.5px; line-height:1.6; color:var(--mute3); font-weight:500;}
 
   /* ===== Market detail chart ===== */
-  .chartcard{padding:20px 22px;}
-  .chartctl{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:14px 0;}
+  .chartcard{padding:18px 20px;}
+  .chartctl{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:11px 0;}
   .seg{display:inline-flex; background:#E8EFF8; border-radius:9px; padding:3px;}
   .seg button{border:none; background:transparent; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:700; color:var(--mute); cursor:pointer;}
   .seg button.active{background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(40,70,120,0.08);}
@@ -263,9 +263,10 @@
   .axisnote{font-size:11px; color:var(--mute3); font-weight:500; margin-top:8px; line-height:1.5;}
 
   /* ===== Market universe: category cards + maturity/country chips ===== */
-  .mktcats{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; align-items:start; margin-top:10px;}
-  @media (max-width:760px){ .mktcats{grid-template-columns:1fr;} }
-  .mcat-card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:14px 16px 9px;}
+  .mktcats{column-count:2; column-gap:12px; margin-top:9px;}
+  @media (max-width:760px){ .mktcats{column-count:1;} }
+  .mcat-card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:12px 14px 8px;
+    break-inside:avoid; -webkit-column-break-inside:avoid; margin:0 0 12px;}
   .mcat-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:2px;}
   .mcat-t{font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .mcat-c{font-size:10.5px; font-weight:700; color:var(--mute4); flex:none;}
@@ -291,14 +292,14 @@
   .hz .warn b{color:var(--amber); font-weight:700;}
   .hz ul{margin:8px 0 0; padding-left:16px; color:var(--ink3); font-size:11.5px; line-height:1.7;}
   /* Hormuz rich preview */
-  .hz-tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+  .hz-tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;}
   @media (max-width:560px){ .hz-tiles{grid-template-columns:repeat(2,1fr);} }
-  .hz-tile{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:11px 12px;}
+  .hz-tile{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:9px 11px;}
   .hz-tile .k{font-size:10px; color:var(--mute3); font-weight:600; letter-spacing:0.02em;}
   .hz-tile .v{font-size:17px; font-weight:800; color:var(--ink2); margin-top:4px; font-variant-numeric:tabular-nums;}
   .hz-tile .v small{font-size:10px; font-weight:700; color:var(--mute4);}
-  .hz-sub{font-size:11px; font-weight:800; letter-spacing:0.08em; color:var(--mute4); margin:18px 0 10px; text-transform:uppercase;}
-  .hz-cols{display:grid; grid-template-columns:1.05fr 0.95fr; gap:18px; align-items:start;}
+  .hz-sub{font-size:11px; font-weight:800; letter-spacing:0.08em; color:var(--mute4); margin:13px 0 8px; text-transform:uppercase;}
+  .hz-cols{display:grid; grid-template-columns:1.05fr 0.95fr; gap:14px; align-items:start;}
   @media (max-width:640px){ .hz-cols{grid-template-columns:1fr;} }
   .hz-bars{width:100%; height:96px;}
   .hz-map{background:#F2F8FE; border:1px solid #E1ECF8; border-radius:12px; padding:6px;}
@@ -312,13 +313,13 @@
   .hz-subtitle{font-size:11.5px; color:var(--mute2); font-weight:500; margin-top:4px;}
   .hz-badges{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:none;}
   .hz-ctlrow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:14px 0 2px;}
-  .hz-hero{display:grid; grid-template-columns:1fr 0.92fr; gap:16px; align-items:stretch; margin-top:12px;}
+  .hz-hero{display:grid; grid-template-columns:1fr 0.92fr; gap:14px; align-items:stretch; margin-top:10px;}
   @media (max-width:640px){ .hz-hero{grid-template-columns:1fr;} }
   .hz-metric{background:linear-gradient(135deg,#F6FAFE 0%,#EAF3FF 100%); border:1px solid #E1ECF8; border-radius:14px;
-    padding:16px 18px; display:flex; flex-direction:column; justify-content:center;}
+    padding:14px 16px; display:flex; flex-direction:column; justify-content:center;}
   .hz-mlabel{font-size:11px; color:var(--mute2); font-weight:600; line-height:1.45;}
   .hz-mval{display:flex; align-items:baseline; gap:7px; margin-top:10px;}
-  .hz-num{font-size:44px; font-weight:800; line-height:1; letter-spacing:-0.02em; color:var(--ink);}
+  .hz-num{font-size:38px; font-weight:800; line-height:1; letter-spacing:-0.02em; color:var(--ink);}
   .hz-unit{font-size:14px; font-weight:700; color:var(--mute2);}
   .hz-delta{font-size:12.5px; font-weight:700; color:var(--sky); margin-top:9px; font-variant-numeric:tabular-nums;}
   .hz-mnote{font-size:11px; color:var(--mute3); line-height:1.5; margin-top:10px;}
@@ -328,7 +329,7 @@
   .hz-maplabel{font-size:10.5px; color:var(--mute4); font-weight:500; margin-top:6px; text-align:center;}
   .hz-fine{font-size:10.5px; color:var(--mute4); font-weight:500; line-height:1.55;}
   .hz-warn{display:flex; gap:9px; align-items:flex-start; background:var(--amber-tint); border:1px solid var(--amber-bd);
-    border-radius:11px; padding:11px 13px; margin-top:16px; font-size:12px; color:#6E5A33; line-height:1.55;}
+    border-radius:11px; padding:10px 13px; margin-top:12px; font-size:12px; color:#6E5A33; line-height:1.55;}
   .hz-warn b{color:var(--amber); font-weight:800;}
   .hz-warn .warn-ic{color:var(--amber); font-weight:800; flex:none;}
 
@@ -377,22 +378,22 @@
   .esact{font-size:11.5px; font-weight:700; color:var(--sky); background:var(--sky-tint); border:1px solid var(--sky-bd);
     padding:5px 11px; border-radius:8px; flex:none; align-self:center;}
   .banner{display:flex; gap:10px; align-items:flex-start; background:#FBF8F1; border:1px solid var(--amber-bd);
-    border-radius:12px; padding:13px 15px; font-size:12.5px; color:#6E5A33; line-height:1.55; margin-bottom:16px;}
+    border-radius:12px; padding:12px 15px; font-size:12.5px; color:#6E5A33; line-height:1.55; margin-bottom:13px;}
   .banner b{color:var(--amber);}
 
   /* ===== Lower sections ===== */
-  .lowerhead{margin:28px 2px 0;}
-  .lower{margin-top:13px; display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  .lowerhead{margin:18px 2px 0;}
+  .lower{margin-top:11px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start;}
   @media (max-width:980px){ .lower{grid-template-columns:1fr;} }
-  .lower .panel{height:100%;}
-  .lensgrid{display:flex; flex-direction:column; gap:9px; margin-top:12px;}
-  .lensitem{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px;
+  .lower .panel{align-self:start;}
+  .lensgrid{display:flex; flex-direction:column; gap:7px; margin-top:10px;}
+  .lensitem{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 11px;
     border:1px solid var(--hair); border-radius:11px; background:#FCFDFF;}
   .lensitem .l{font-size:13px; font-weight:700; color:var(--ink2);}
   .lensitem .d{font-size:11px; color:var(--mute3); margin-top:2px;}
   .lensitem .c{font-size:13px; font-weight:800; color:var(--sky); font-variant-numeric:tabular-nums; flex:none;}
   .lensitem .c.zero{color:var(--mute4);}
-  .watch{display:flex; gap:11px; padding:12px 0; border-top:1px solid var(--hair);}
+  .watch{display:flex; gap:11px; padding:10px 0; border-top:1px solid var(--hair);}
   .watch:first-of-type{border-top:none;}
   .watch .wn{width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
     font-size:12px; font-weight:800; background:var(--sky-tint); color:var(--sky);}
@@ -579,7 +580,7 @@
           수집 기사 내 <b>상대 비중</b>이며, 전력·전력망 실측 데이터(발전량·계통·수요)가 아닙니다.</span>
         </div>
 
-        <div class="card" style="padding:22px 24px; margin-bottom:14px;">
+        <div class="card" style="padding:20px 22px; margin-bottom:12px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0;">
             <div class="ph">AI Radar <small>· AI·데이터센터 테마 맵</small></div>
             <div class="pnote">레이더는 기사 상대 비중 기반 데모 시각화입니다 — 전력/계통 실측이 아닙니다.</div>
@@ -608,7 +609,7 @@
           </div>
         </div>
 
-        <div class="card" style="padding:22px 24px; margin-bottom:14px;">
+        <div class="card" style="padding:20px 22px; margin-bottom:12px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0; margin-bottom:14px;">
             <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 · 전력 실측값 아님 (282건 기준)</small></div>
             <div class="pnote">% = 수집 기사 중 해당 테마 언급 상대 비중입니다. 전력량·전력망 실측값이 아닙니다 (전력 실측값 아님).</div>
@@ -642,7 +643,7 @@
         </div>
 
         <!-- 3) 상세 비교 차트 — 국가 내 / 국가 간 / 정규화 -->
-        <div class="card chartcard" style="margin-bottom:14px;">
+        <div class="card chartcard" style="margin-bottom:12px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0;">
             <div class="ph">금리·물가 비교 <small>· 상세 차트 (전체 만기 · 정책/물가/스프레드)</small></div>
             <div class="pnote">프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (데모 시계열 — 현재 체결값 아님). 미연동 만기/지표는 가짜 선을 그리지 않고 <b>소스 필요</b> 칩으로 표시하며, 단위가 다른 비교는 정규화(기준일=100)로만 표시합니다.</div>
@@ -714,7 +715,7 @@
         </div>
 
         <!-- Hormuz -->
-        <div class="card hz" style="padding:20px 22px; margin-bottom:14px;">
+        <div class="card hz" style="padding:18px 20px; margin-bottom:12px;">
           <div class="hz-head">
             <div style="min-width:0;">
               <div class="ph">호르무즈 해협 관찰 <small>· 선박 통항</small></div>
