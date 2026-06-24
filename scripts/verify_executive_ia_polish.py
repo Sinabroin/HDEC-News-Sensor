@@ -304,7 +304,7 @@ def check_digest_ai_first() -> None:
         check(f"digest에 노이즈 용어 '{term}' 없음", term not in msg)
     # 거시경제는 전체 리포트로 위임만 (digest 본문이 거시로 시작하지 않는다)
     check("digest 거시경제 안내가 전체 리포트 위임 표현",
-          "전체 리포트 보기" in msg and "거시경제" in msg)
+          "상세 리포트 보기" in msg and "거시경제" in msg)
 
 
 # ---------- 대시보드 레이더 탭 ----------

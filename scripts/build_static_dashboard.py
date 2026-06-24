@@ -128,6 +128,127 @@ def _fmt_time(iso) -> str:
     return dt.astimezone(_KST).strftime("%m-%d %H:%M")
 
 
+# ── 출처 표시 보강 (D7-C) ──────────────────────────────────────────────────
+# live RSS가 출처를 'v.daum.net' 같은 집계 호스트로 주거나 비워서 briefing이 일반
+# '원문 경유'로 정규화하면, 임원 화면에 매체를 알 수 없게 된다. 그럴 때만 URL 도메인에서
+# 매체명을 끌어오고, 도메인도 매핑에 없으면 등록 도메인 자체를 보여준다(일반 라벨보다 구체적).
+# 가짜 매체명을 만들지 않는다 — 도메인은 사실이고, 식별된 매체명/집계 라벨은 그대로 둔다.
+_VIA_GENERIC = "원문 경유"
+_DOMAIN_RE = re.compile(r"^https?://([^/]+)", re.I)
+_DOMAIN_PUBLISHER = {
+    "yna.co.kr": "연합뉴스", "yonhapnews": "연합뉴스", "yonhapnewstv": "연합뉴스TV",
+    "chosunbiz.com": "조선비즈", "biz.chosun.com": "조선비즈", "chosun.com": "조선일보",
+    "joongang.co.kr": "중앙일보", "joins.com": "중앙일보", "donga.com": "동아일보",
+    "hani.co.kr": "한겨레", "khan.co.kr": "경향신문", "hankyung.com": "한국경제",
+    "mk.co.kr": "매일경제", "sedaily.com": "서울경제", "edaily.co.kr": "이데일리",
+    "mt.co.kr": "머니투데이", "fnnews.com": "파이낸셜뉴스", "etnews.com": "전자신문",
+    "zdnet.co.kr": "ZDNet Korea", "dt.co.kr": "디지털타임스", "newsis.com": "뉴시스",
+    "news1.kr": "뉴스1", "asiae.co.kr": "아시아경제", "heraldcorp.com": "헤럴드경제",
+    "seoul.co.kr": "서울신문", "kmib.co.kr": "국민일보", "munhwa.com": "문화일보",
+    "hankookilbo.com": "한국일보", "segye.com": "세계일보", "kookje.co.kr": "국제신문",
+    "imaeil.com": "매일신문", "businesspost.co.kr": "비즈니스포스트", "newspim.com": "뉴스핌",
+    "ajunews.com": "아주경제", "electimes.com": "전기신문", "ekn.kr": "에너지경제",
+    "cnews.co.kr": "건설경제", "kookbang.dema.mil.kr": "국방일보", "yna.kr": "연합뉴스",
+}
+
+
+def _domain_of(url) -> str:
+    """URL에서 등록 도메인(www. 제거, 포트 제거)을 추출 — urllib 미사용(소스 스캔 계약)."""
+    if not _is_http(url):
+        return ""
+    m = _DOMAIN_RE.match(str(url))
+    if not m:
+        return ""
+    host = m.group(1).lower().split(":")[0]
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def _publisher_from_url(url) -> str:
+    host = _domain_of(url)
+    if not host:
+        return ""
+    for key, name in _DOMAIN_PUBLISHER.items():
+        if key in host:
+            return name
+    return host  # 미식별 도메인은 도메인 자체 노출 (일반 '원문 경유'보다 구체적)
+
+
+def _better_source(sig) -> str:
+    """임원 표시용 출처 — 일반 '원문 경유'를 피하고 도메인 유래 매체명으로 보강 (D7-C).
+
+    식별된 매체명(연합뉴스 등)이나 집계 라벨('Daum 경유' 등)은 그대로 둔다. 일반 '원문 경유'
+    (미식별 호스트)일 때만 URL 도메인에서 매체명/도메인을 끌어온다. 가짜 매체명을 만들지 않는다.
+    """
+    disp = (sig.get("display_source") or "").strip()
+    if disp and disp != _VIA_GENERIC:
+        return disp
+    pub = _publisher_from_url(sig.get("url"))
+    if pub:
+        return pub
+    raw = (sig.get("source") or "").strip()
+    if raw and raw != _VIA_GENERIC:
+        return raw
+    return disp or raw or "출처 미상"
+
+
+# ── 근접 중복 제거 (D7-C) ──────────────────────────────────────────────────
+_NEAR_DUP_THRESHOLD = 0.7
+
+
+def _norm_tokens(title) -> set:
+    return set(re.findall(r"[가-힣A-Za-z0-9]+", str(title or "").lower()))
+
+
+def _title_overlap(a, b) -> float:
+    """두 제목의 토큰 겹침 비율(작은 쪽 기준) — 0~1."""
+    ta, tb = _norm_tokens(a), _norm_tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / min(len(ta), len(tb))
+
+
+def _drop_near_dups(signals) -> list:
+    """제목 토큰 겹침이 임계 이상인 근접 중복 제거(먼저 온 신호=상위 우선순위 유지).
+
+    호출 측이 점수/중요도 순으로 정렬해 넘기면 더 중요한 기사가 살아남는다. 정확 중복은
+    _dedup_signals(_key)가 이미 처리하므로, 여기서는 URL/제목이 미세하게 다른 재전송본을 본다.
+    """
+    kept = []
+    for s in signals or []:
+        t = s.get("title") or ""
+        if any(_title_overlap(t, k.get("title") or "") >= _NEAR_DUP_THRESHOLD for k in kept):
+            continue
+        kept.append(s)
+    return kept
+
+
+# ── 약한 현대건설-인접 오탐 가드 (D7-C) ─────────────────────────────────────
+# 'HD현대·현대차' 그룹사와 '현대건설기계'(HD현대 굴착기 자회사)는 사명만 비슷할 뿐
+# 현대건설(E&C)이 아니다. 제목에 현대건설 E&C 직접 사업이 함께 적시되지 않으면 HDEC 직접
+# hero 후보에서 제외한다(요약 대시보드의 대표 신호 보호). 함정: '현대건설기계'는 부분문자열로
+# '현대건설'을 포함하므로, 진짜 현대건설 판정은 negative lookahead로 '기계'를 배제해야 한다.
+_HDEC_FP_TOKENS = ("HD현대", "HD 현대", "현대건설기계", "HD건설기계", "HD 건설기계",
+                   "현대차", "현대자동차", "현대글로비스", "현대모비스", "현대중공업",
+                   "HD한국조선", "현대백화점", "현대해상", "현대카드", "현대오토에버",
+                   "현대트랜시스", "현대로템", "현대제철", "현대위아", "현대두산")
+# 진짜 현대건설(E&C) 직접 언급 — '현대건설기계'는 제외(부정형 lookahead).
+_HDEC_REAL_RE = re.compile(r"현대건설(?!기계)|현대 건설|현대엔지니어링|현대ENG|힐스테이트")
+
+
+def _is_weak_hdec_fp(sig) -> bool:
+    """현대건설과 무관한 'HD현대·현대차·현대건설기계' 류 사명 오탐인가 (featured hero 제외용).
+
+    FP 사명 토큰이 있어도, 같은 제목에 현대건설(E&C) 직접 언급이 함께 있으면 진짜 신호로 본다
+    (혼합 기사). '현대건설기계'만 있는 경우는 lookahead가 '현대건설' 매칭을 막아 오탐으로 판정.
+    """
+    title = sig.get("title") or ""
+    if not any(tok in title for tok in _HDEC_FP_TOKENS):
+        return False
+    return not _HDEC_REAL_RE.search(title)
+
+
 def _lens_for(sig) -> list:
     keys = set(_CATEGORY_LENS.get(sig.get("category"), []))
     keys.update(_SECTION_LENS.get(sig.get("radar_section"), []))
@@ -164,7 +285,7 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
     return {
         "tag": tag, "tagClass": tag_class,
         "title": sig.get("title") or "",
-        "source": sig.get("display_source") or sig.get("source") or "출처 미상",
+        "source": _better_source(sig),
         "time": _fmt_time(sig.get("published_at")),
         "related": related, "sources": sources,
         "cat": cat_label, "catColor": cat_color,
@@ -213,7 +334,9 @@ def _derive(brief: dict) -> dict:
     hdec = brief.get("hdec_direct_signals") or []
     new_issues = brief.get("top_new_issues") or []
 
-    featured_sig = (hdec or immediate or [None])[0]
+    # featured hero: 진짜 현대건설 직접 신호 우선 — 약한 'HD현대·현대차' 오탐은 건너뛴다(D7-C).
+    hdec_strong = [s for s in hdec if not _is_weak_hdec_fp(s)]
+    featured_sig = (hdec_strong or immediate or hdec or [None])[0]
     if featured_sig is None:
         pool0 = _dedup_signals(brief.get("ai_radar_signals"), brief.get("business_signals"),
                                brief.get("risk_regulation_signals"))
@@ -222,15 +345,20 @@ def _derive(brief: dict) -> dict:
     fkey = _key(featured_sig)
     new_keys = {_key(s) for s in new_issues}
 
-    ai_pool = [s for s in (brief.get("ai_radar_signals") or []) if _key(s) != fkey]
+    # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 6건).
+    ai_pool = _drop_near_dups([s for s in (brief.get("ai_radar_signals") or [])
+                               if _key(s) != fkey])
     ai_rows = [_row_from_signal(s) for s in ai_pool[:6]]
 
+    # 뉴스 풀: latest.html 가시 섹션에서 모음(즉시·현대건설·사업·리스크·경쟁·신규·거시) →
+    # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 9건.
     pool = _dedup_signals(immediate, hdec, brief.get("business_signals"),
                           brief.get("risk_regulation_signals"),
                           brief.get("competitor_supply_signals"),
                           new_issues, brief.get("macro_economy_signals"))
     pool = [s for s in pool if _key(s) != fkey]
     pool.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
+    pool = _drop_near_dups(pool)
     news_rows = [_row_from_signal(s, ["new"] if _key(s) in new_keys else [])
                  for s in pool[:9]]
 

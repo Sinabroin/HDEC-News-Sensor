@@ -2,8 +2,8 @@
 
 `latest.html`은 `scripts/build_static_report.py`가 생성하는 **정적 Executive Daily
 Brief**다. `dashboard-latest.html`은 `scripts/build_static_dashboard.py`가 생성하는
-**정적 요약 대시보드 export**다. Telegram 다이제스트의 **"요약 대시보드 보기"** 버튼은
-`dashboard-latest.html`, **"전체 리포트 보기"** 버튼은 `latest.html`로 연결된다.
+**정적 요약 대시보드 export**다. Telegram 다이제스트의 **"대시보드 보기"** 버튼은
+`dashboard-latest.html`, **"상세 리포트 보기"** 버튼은 `latest.html`로 연결된다.
 
 이 파일은 두 가지 상태일 수 있다:
 
@@ -54,7 +54,7 @@ Telegram Notify 워크플로의 **빈 메시지/예약 실행**은 발송 전 ve
    (커스텀 도메인 사용 시 그 주소)
 5. GitHub → Settings → Secrets and variables → Actions → **Variables**에
    `REPORT_URL` = 위 `latest.html` 주소 추가 → 이후 Telegram 발송에
-   "전체 리포트 보기" 링크 버튼이 붙는다.
+   "상세 리포트 보기" 링크 버튼이 붙는다.
 6. 선택: `DASHBOARD_URL` =
    `https://<owner>.github.io/<repo>/daily/dashboard-latest.html`
    (커스텀 도메인도 동일 경로). 생략하면 sender가 표준 `REPORT_URL`에서 파생한다.

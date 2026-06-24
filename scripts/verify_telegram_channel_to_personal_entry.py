@@ -1,6 +1,6 @@
 """P0-C1.10 검증기 — Telegram 채널→1:1 봇 진입(개인 질의하기) 버튼 회귀 검사.
 
-채널 일일 브리프 메시지에 "요약 대시보드 보기", "전체 리포트 보기",
+채널 일일 브리프 메시지에 "대시보드 보기", "상세 리포트 보기",
 "개인 질의하기"(1:1 봇 deep link) 버튼이 정직하고 안전하게 붙는지 결정적으로
 검사한다 (네트워크 0건, 비밀값 0건):
 
@@ -27,8 +27,8 @@ SENDER = ROOT / "scripts" / "send_telegram.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 README = ROOT / "README.md"
 
-SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
-REPORT_BUTTON_TEXT = "전체 리포트 보기"
+SUMMARY_BUTTON_TEXT = "대시보드 보기"
+REPORT_BUTTON_TEXT = "상세 리포트 보기"
 PERSONAL_BUTTON_TEXT = "개인 질의하기"
 START_PARAM = "ask_today"
 SAMPLE_REPORT_URL = "https://example.com/daily/latest.html"

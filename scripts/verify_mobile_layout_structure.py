@@ -25,8 +25,8 @@ OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
 SENDER = SCRIPTS / "send_telegram.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 
-SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
-REPORT_BUTTON_TEXT = "전체 리포트 보기"
+SUMMARY_BUTTON_TEXT = "대시보드 보기"
+REPORT_BUTTON_TEXT = "상세 리포트 보기"
 SAMPLE_REPORT_URL = "https://example.com/daily/latest.html"
 SAMPLE_DASHBOARD_URL = "https://example.com/daily/dashboard-latest.html"
 

@@ -151,7 +151,7 @@ def check_message_text(message: str) -> None:
         check("mock/미연동 macro면 digest에 Macro Snapshot/미연동 placeholder 없음",
               not section and "시장지표 미연동" not in message)
         check("digest가 거시경제를 전체 리포트로 위임",
-              "전체 리포트 보기" in message and "거시경제" in message)
+              "상세 리포트 보기" in message and "거시경제" in message)
 
 
 def check_json_mode() -> None:

@@ -41,8 +41,8 @@ OPTIONAL_VERIFIERS = [
     "verify_executive_brief_quality.py",
 ]
 
-SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
-FULL_REPORT_BUTTON_TEXT = "전체 리포트 보기"
+SUMMARY_BUTTON_TEXT = "대시보드 보기"
+FULL_REPORT_BUTTON_TEXT = "상세 리포트 보기"
 TELEGRAM_API_HOST = "https://api.telegram.org"
 
 # 모드/신호 유무와 무관하게 항상 존재하는 구조 마커 (mock·live 공통).

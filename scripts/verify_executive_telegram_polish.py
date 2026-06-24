@@ -11,7 +11,7 @@
 - 재무·자금조달(전환사채/금리 등) 기사가 AI Top/AI 레이더에 들어가지 않는다.
 - 현대건설 벌점 헤드라인이 다이제스트에 두 번 반복되지 않는다 (직접 vs 리스크).
 - 공급사 단독(가온전선)이 더 강한 AI/EPC/현대건설 신호를 밀어내지 않는다.
-- '요약 대시보드 보기' / '전체 리포트 보기' 버튼 안내가 유지된다
+- '대시보드 보기' / '상세 리포트 보기' 버튼 안내가 유지된다
   (개인 봇 버튼은 별도 검증기 소관).
 - mock 다이제스트가 정직하게 'mock 데이터 기반'으로 표기된다.
 
@@ -269,8 +269,8 @@ def check_pipeline(sim: dict | None) -> None:
         check(f"다이제스트에 '{term}' 없음", term not in msg)
     check("벌점 헤드라인 두 번 반복 안 됨 (직접 vs 리스크)",
           msg.count(PENALTY_MARK) <= 1, f"{msg.count(PENALTY_MARK)}회")
-    check("'요약 대시보드 보기'/'전체 리포트 보기' 안내 유지",
-          "요약 대시보드 보기" in msg and "전체 리포트 보기" in msg)
+    check("'대시보드 보기'/'상세 리포트 보기' 안내 유지",
+          "대시보드 보기" in msg and "상세 리포트 보기" in msg)
 
     # 재무 라우팅 (Phase 3) — f_fin은 Telegram AI Top에 안 들어가고 현대건설 직접으로 간다.
     # (radar는 캔드 토픽 때문에 ai로 둘 수 있으나, 의사결정·Telegram 라우팅은 임원 기준이다.)
@@ -317,7 +317,7 @@ def check_mock_digest() -> None:
     check("mock 다이제스트 AI 라벨 '[AI 관련]'",
           "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
     check("mock 다이제스트 거시경제 전체 리포트 위임",
-          "전체 리포트 보기" in msg and "거시경제" in msg)
+          "상세 리포트 보기" in msg and "거시경제" in msg)
     check("mock 다이제스트에 Macro Snapshot/미연동 placeholder 없음",
           "Macro Snapshot" not in msg and "시장지표 미연동" not in msg)
 

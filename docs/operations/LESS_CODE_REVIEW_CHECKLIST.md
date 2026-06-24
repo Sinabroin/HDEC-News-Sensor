@@ -55,8 +55,8 @@
 
 Telegram 또는 workflow를 만졌다면 다음 증거가 필요하다.
 
-- dry-run payload에 `"요약 대시보드 보기"`가 있고 target이 `dashboard-latest.html`인가.
-- dry-run payload에 `"전체 리포트 보기"`가 있고 target이 `latest.html`인가.
+- dry-run payload에 `"대시보드 보기"`가 있고 target이 `dashboard-latest.html`인가.
+- dry-run payload에 `"상세 리포트 보기"`가 있고 target이 `latest.html`인가.
 - human review/manual approval gate가 유지되는가.
 - 예약 workflow가 실제 send를 자동 실행하지 않는가.
 - 실제 Telegram 발송을 하지 않았는가.

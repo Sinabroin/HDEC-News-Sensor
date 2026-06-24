@@ -383,7 +383,7 @@ def check_digest() -> None:
         # 위임한다 (노이즈 제거). 가짜 macro 수치 금지는 위 검사로 유지된다.
         check("digest가 미연동 placeholder 없이 거시경제를 전체 리포트로 위임",
               "시장지표 미연동" not in message
-              and "전체 리포트 보기" in message and "거시경제" in message)
+              and "상세 리포트 보기" in message and "거시경제" in message)
 
     proc = run_script(DIGEST_BUILDER, "--json")
     if not check("digest --json 동작", proc.returncode == 0,

@@ -48,6 +48,8 @@ jobs:
           python3 scripts/verify_static_report.py
           python3 scripts/verify_dashboard_export.py
           python3 scripts/verify_dashboard_real_data.py
+          python3 scripts/verify_dashboard_article_quality.py
+          python3 scripts/verify_report_link_targets.py
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_score_explanation_ui.py
           python3 scripts/verify_live_news_ingestion.py
@@ -142,10 +144,10 @@ jobs:
           # 위 리포트 step이 남긴 snapshot 파일을 읽어 동일 시세를 쓴다(재fetch 없음 → 불일치 0).
           # 파일이 없으면(리포트 macro 실패 등) digest가 스스로 fetch하거나 미연동으로 강등한다.
           MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
-          # 설정돼 있으면 "요약 대시보드 보기" inline 버튼이 붙는다 (vars 우선, 없으면 secrets).
+          # 설정돼 있으면 "대시보드 보기" inline 버튼이 붙는다 (vars 우선, 없으면 secrets).
           # 없으면 send_telegram.py가 REPORT_URL의 /daily/latest.html에서 dashboard-latest.html을 파생한다.
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
-          # 설정돼 있으면 "전체 리포트 보기" inline 버튼이 붙는다 (vars 우선, 없으면 secrets).
+          # 설정돼 있으면 "상세 리포트 보기" inline 버튼이 붙는다 (vars 우선, 없으면 secrets).
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
           # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}

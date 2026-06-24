@@ -1,8 +1,8 @@
 """P0-B5/P0-B6 — 정적 Executive Daily Brief HTML 리포트 빌더.
 
 공유 briefing 레이어(scripts/build_executive_brief.py)의 brief 구조체를
-단일 정적 HTML 페이지로 렌더링한다. Telegram 다이제스트의 "전체 리포트 보기"
-버튼이 게시된 이 페이지(docs/daily/latest.html)로 연결된다. "요약 대시보드 보기"는
+단일 정적 HTML 페이지로 렌더링한다. Telegram 다이제스트의 "상세 리포트 보기"
+버튼이 게시된 이 페이지(docs/daily/latest.html)로 연결된다. "대시보드 보기"는
 별도 export(docs/daily/dashboard-latest.html)를 가리킨다.
 
 - 네트워크 호출 0건, 비밀값 접근 0건, 외부 CDN/스크립트/폰트 0건 (완전 standalone).

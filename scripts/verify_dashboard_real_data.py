@@ -16,7 +16,7 @@ Part B — real article data:
     summary dashboard; the two remain separate.
 
 Part A — Telegram button mapping is impossible to get wrong:
-  · '요약 대시보드 보기' → .../daily/dashboard-latest.html and '전체 리포트 보기' →
+  · '대시보드 보기' → .../daily/dashboard-latest.html and '상세 리포트 보기' →
     .../daily/latest.html across swapped / duplicated / missing env configs, with the
     correct button order. The pre-send guard blocks non-canonical targets.
 """
@@ -37,8 +37,8 @@ TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
 LATEST = ROOT / "docs" / "daily" / "latest.html"
 
-SUMMARY_LABEL = "요약 대시보드 보기"
-FULL_REPORT_LABEL = "전체 리포트 보기"
+SUMMARY_LABEL = "대시보드 보기"
+FULL_REPORT_LABEL = "상세 리포트 보기"
 BASE = "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/daily"
 DASH_URL = f"{BASE}/dashboard-latest.html"
 REPORT_URL = f"{BASE}/latest.html"

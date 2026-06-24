@@ -3,7 +3,7 @@
 
 Runs fully offline. It checks:
 - `docs/daily/dashboard-latest.html` exists and is generated from the preview template.
-- Telegram payload exposes "요약 대시보드 보기" and "전체 리포트 보기".
+- Telegram payload exposes "대시보드 보기" and "상세 리포트 보기".
 - The send path remains behind the human review gate.
 - `operator-latest.html` remains supported.
 - `latest.html` remains the full report and is not replaced by the dashboard export.
@@ -27,8 +27,8 @@ LATEST = ROOT / "docs" / "daily" / "latest.html"
 OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 
-SUMMARY_TEXT = "요약 대시보드 보기"
-FULL_REPORT_LABEL = "전체 리포트 보기"
+SUMMARY_TEXT = "대시보드 보기"
+FULL_REPORT_LABEL = "상세 리포트 보기"
 EXPORT_MARKER = "dashboard-export:summary"
 SAMPLE_REPORT_URL = "https://example.com/daily/latest.html"
 SAMPLE_DASHBOARD_URL = "https://example.com/daily/dashboard-latest.html"
@@ -176,9 +176,9 @@ def check_telegram_ab_payload() -> None:
     buttons = json.loads(payload["reply_markup"])["inline_keyboard"][0]
     labels = [b["text"] for b in buttons]
     urls = [b["url"] for b in buttons]
-    check("Telegram payload contains '요약 대시보드 보기'", SUMMARY_TEXT in labels,
+    check("Telegram payload contains '대시보드 보기'", SUMMARY_TEXT in labels,
           " / ".join(labels))
-    check("Telegram payload contains '전체 리포트 보기'", FULL_REPORT_LABEL in labels,
+    check("Telegram payload contains '상세 리포트 보기'", FULL_REPORT_LABEL in labels,
           " / ".join(labels))
     check("Telegram payload A/B button order: summary then full report",
           labels[:2] == [SUMMARY_TEXT, FULL_REPORT_LABEL], " / ".join(labels[:2]))

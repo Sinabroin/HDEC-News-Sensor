@@ -3,9 +3,9 @@
 MESSAGE env가 비어 있지 않으면 그 메시지를, 비어 있으면
 scripts/build_telegram_digest.py로 mock daily digest를 생성해 발송한다.
 
-REPORT_URL env가 설정돼 있으면 메시지에 "전체 리포트 보기" inline URL 버튼을
+REPORT_URL env가 설정돼 있으면 메시지에 "상세 리포트 보기" inline URL 버튼을
 붙인다 (정적 리포트 페이지 — P0-B5). DASHBOARD_URL env가 설정돼 있으면
-"요약 대시보드 보기" 버튼도 함께 붙인다. DASHBOARD_URL이 없고 REPORT_URL이
+"대시보드 보기" 버튼도 함께 붙인다. DASHBOARD_URL이 없고 REPORT_URL이
 /daily/latest.html 형태면 /daily/dashboard-latest.html로 파생한다. 둘 다 없으면
 기존 텍스트 전용 발송 그대로이며 실패하지 않는다.
 
@@ -42,10 +42,14 @@ from html import escape
 # (verify_telegram_digest.py가 이 관계를 검사한다).
 MAX_MESSAGE_LEN = 3500
 
-# 정적 리포트/대시보드로 연결되는 inline 버튼 라벨.
-SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
-FULL_REPORT_BUTTON_TEXT = "전체 리포트 보기"
-# 기존 verifier/import 호환용 이름 — 이제 전체 리포트 버튼을 가리킨다.
+# 정적 리포트/대시보드로 연결되는 inline 버튼 라벨 (D7-C에서 명확화).
+#   SUMMARY_BUTTON_TEXT='대시보드 보기'   = 요약 대시보드(.../daily/dashboard-latest.html)
+#   FULL_REPORT_BUTTON_TEXT='상세 리포트 보기' = 전체 리포트(.../daily/latest.html)
+# 즉, '대시보드 보기'=summary dashboard, '상세 리포트 보기'=full report. 라벨이 가리키는
+# 페이지 종류는 _normalize_report_targets가 파일명으로 강제하므로 절대 뒤바뀌지 않는다.
+SUMMARY_BUTTON_TEXT = "대시보드 보기"
+FULL_REPORT_BUTTON_TEXT = "상세 리포트 보기"
+# 기존 verifier/import 호환용 이름 — 이제 전체(상세) 리포트 버튼을 가리킨다.
 BUTTON_TEXT = FULL_REPORT_BUTTON_TEXT
 # 1:1 봇 진입 deep link 버튼 (TELEGRAM_BOT_USERNAME/URL이 있을 때만 사용)
 PERSONAL_BUTTON_TEXT = "개인 질의하기"
@@ -175,7 +179,7 @@ def resolve_personal_bot_url() -> str:
 
 
 # ── 라벨→대상 매핑 강제 (P0-D6-I — 버튼 타겟 뒤바뀜 회귀 방지) ──────────────────
-# '전체 리포트 보기'는 항상 전체 리포트(.../latest.html)를, '요약 대시보드 보기'는 항상
+# '상세 리포트 보기'는 항상 전체 리포트(.../latest.html)를, '대시보드 보기'는 항상
 # 요약 대시보드(.../dashboard-latest.html)를 가리켜야 한다. 운영자가 REPORT_URL /
 # DASHBOARD_URL 환경변수를 서로 바꿔 넣어도(설정 실수) 파일명으로 종류를 식별해 올바른
 # 버튼에 배치한다 — 라벨이 가리키는 페이지 종류가 절대 뒤바뀌지 않게. 둘 다 식별 불가한
@@ -183,7 +187,7 @@ def resolve_personal_bot_url() -> str:
 DASHBOARD_FILENAME = "dashboard-latest.html"
 FULL_REPORT_FILENAME = "latest.html"
 # preflight(발송 전 검증)가 요구하는 정식 경로 꼬리표 — 버튼이 반드시 이 경로로 끝나야 한다.
-# '요약 대시보드 보기'=.../daily/dashboard-latest.html, '전체 리포트 보기'=.../daily/latest.html.
+# '대시보드 보기'=.../daily/dashboard-latest.html, '상세 리포트 보기'=.../daily/latest.html.
 CANON_DASHBOARD_PATH_SUFFIX = "/daily/dashboard-latest.html"
 CANON_REPORT_PATH_SUFFIX = "/daily/latest.html"
 
@@ -218,7 +222,7 @@ def _derive_report_url(dashboard_url: str) -> str:
     """DASHBOARD_URL이 .../dashboard-latest.html이면 같은 폴더의 latest.html을 파생한다.
 
     `_derive_dashboard_url`의 역방향 — 운영자가 두 env를 모두 요약 대시보드로 넣었을 때
-    '전체 리포트 보기' 버튼이 요약 대시보드로 새는 것을 막기 위한 자가교정이다 (D7-B).
+    '상세 리포트 보기' 버튼이 요약 대시보드로 새는 것을 막기 위한 자가교정이다 (D7-B).
     """
     if not dashboard_url:
         return ""
@@ -319,13 +323,13 @@ def preflight_links() -> int:
     ab = [b["text"] for b in buttons
           if b["text"] in (SUMMARY_BUTTON_TEXT, FULL_REPORT_BUTTON_TEXT)]
     if ab[:2] == [FULL_REPORT_BUTTON_TEXT, SUMMARY_BUTTON_TEXT]:
-        errors.append("버튼 순서 뒤바뀜 — '전체 리포트 보기'가 '요약 대시보드 보기'보다 먼저")
+        errors.append("버튼 순서 뒤바뀜 — '상세 리포트 보기'가 '대시보드 보기'보다 먼저")
     if errors:
         for e in errors:
             print(f"PREFLIGHT FAIL: {e}", file=sys.stderr)
         return 1
-    print("PREFLIGHT OK: '요약 대시보드 보기'→dashboard-latest.html · "
-          "'전체 리포트 보기'→latest.html 매핑/순서 정상")
+    print("PREFLIGHT OK: '대시보드 보기'→dashboard-latest.html · "
+          "'상세 리포트 보기'→latest.html 매핑/순서 정상")
     return 0
 
 
@@ -333,12 +337,12 @@ def build_payload(chat_id: str, message: str, report_url: str,
                   personal_url: str = "", dashboard_url: str = "") -> dict:
     """sendMessage payload. URL이 있으면 inline URL 버튼을 붙인다.
 
-    버튼 순서: [요약 대시보드 보기][전체 리포트 보기][개인 질의하기].
+    버튼 순서: [대시보드 보기][상세 리포트 보기][개인 질의하기].
     전부 없으면 reply_markup을 넣지 않는다 (기존 텍스트 전용 동작 보존).
     채널 메시지에서 임원이 요약 대시보드/전체 리포트로 가거나 1:1 봇으로 진입한다.
 
     라벨→대상 매핑은 파일명으로 강제한다(_normalize_report_targets): REPORT_URL /
-    DASHBOARD_URL이 뒤바뀌어 와도 '전체 리포트 보기'=전체 리포트, '요약 대시보드 보기'
+    DASHBOARD_URL이 뒤바뀌어 와도 '상세 리포트 보기'=전체 리포트, '대시보드 보기'
     =요약 대시보드를 가리킨다.
     """
     report_url, dashboard_url = _normalize_report_targets(report_url, dashboard_url)

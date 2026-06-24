@@ -30,8 +30,8 @@ SENDER = ROOT / "scripts" / "send_telegram.py"
 DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
 LATEST = ROOT / "docs" / "daily" / "latest.html"
 
-SUMMARY_LABEL = "요약 대시보드 보기"
-FULL_REPORT_LABEL = "전체 리포트 보기"
+SUMMARY_LABEL = "대시보드 보기"
+FULL_REPORT_LABEL = "상세 리포트 보기"
 SAMPLE_REPORT_URL = "https://example.com/daily/latest.html"
 SAMPLE_DASHBOARD_URL = "https://example.com/daily/dashboard-latest.html"
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
@@ -239,8 +239,8 @@ def check_telegram_mapping() -> None:
     buttons = json.loads(payload["reply_markup"])["inline_keyboard"][0]
     labels = [b["text"] for b in buttons]
     urls = [b["url"] for b in buttons]
-    check("7a: '요약 대시보드 보기' 버튼 존재", SUMMARY_LABEL in labels, " / ".join(labels))
-    check("7b: '전체 리포트 보기' 버튼 존재", FULL_REPORT_LABEL in labels, " / ".join(labels))
+    check("7a: '대시보드 보기' 버튼 존재", SUMMARY_LABEL in labels, " / ".join(labels))
+    check("7b: '상세 리포트 보기' 버튼 존재", FULL_REPORT_LABEL in labels, " / ".join(labels))
     check("7c: 버튼 순서 = 요약 대시보드 → 전체 리포트",
           labels[:2] == [SUMMARY_LABEL, FULL_REPORT_LABEL], " / ".join(labels[:2]))
     check("7d: 요약→dashboard URL, 전체→report URL 매핑",

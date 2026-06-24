@@ -96,8 +96,8 @@ git log --oneline --decorate -8
 
 Telegram 관련 파일을 만졌다면 최소한 다음을 증명한다.
 
-- dry-run payload에서 `"요약 대시보드 보기"`는 `dashboard-latest.html`로 간다.
-- dry-run payload에서 `"전체 리포트 보기"`는 `latest.html`로 간다.
+- dry-run payload에서 `"대시보드 보기"`는 `dashboard-latest.html`로 간다.
+- dry-run payload에서 `"상세 리포트 보기"`는 `latest.html`로 간다.
 - send path는 여전히 human review/manual gate 뒤에 있다.
 - workflow가 예약 실행에서 무조건 send하지 않는다.
 - 실제 Telegram 발송은 하지 않는다.
