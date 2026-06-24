@@ -10,21 +10,26 @@
   --muted:#807a6d;--navy:#152740;--accent:#176a4c;--signal:#9a3b2e;
   --hairline:#ddd8cb;--hairline-2:#c8c2b2;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html{-webkit-text-size-adjust:100%;}
+*,*::before,*::after{box-sizing:border-box;}
+*{margin:0;padding:0;}
+html{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;}
 body{
+  max-width:100%;overflow-x:hidden;overflow-wrap:break-word;
   background:var(--paper);color:var(--ink);font-size:14px;line-height:1.6;
   font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif;
   border-top:4px solid var(--navy);
   background-image:linear-gradient(180deg,rgba(21,39,64,.05),rgba(21,39,64,0) 240px);
 }
-.page{max-width:760px;margin:0 auto;padding:26px 20px 44px;}
+.page{width:min(100%,760px);max-width:760px;margin:0 auto;padding:26px 20px 44px;}
 .num{font-variant-numeric:tabular-nums;}
+a,.sig h3,.sig .meta,.sig .spread,.cd-title,.cd-meta,.cd-why,.theme-name,
+.cat-row,.notes p,footer{overflow-wrap:anywhere;}
+table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse;}
 
 /* ---- masthead ---- */
 .masthead{border-bottom:2px solid var(--ink);padding-bottom:16px;position:relative;}
 .masthead::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:1px;background:var(--hairline-2);}
-.mast-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.mast-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;}
 .brand{font-size:11px;letter-spacing:.34em;font-weight:700;color:var(--navy);text-transform:uppercase;}
 .mode-pill{font-size:10px;letter-spacing:.18em;font-weight:600;color:var(--muted);
   border:1px solid var(--hairline-2);border-radius:2px;padding:3px 9px;white-space:nowrap;}
@@ -54,9 +59,10 @@ section{margin-top:26px;}
 .sec-h::after{content:"";flex:1;height:1px;background:var(--hairline-2);transform:translateY(-3px);}
 
 /* ---- 시그널 ---- */
-.sig{display:grid;grid-template-columns:36px 1fr;gap:0 4px;padding:15px 0 14px;
+.sig{display:grid;grid-template-columns:minmax(0,36px) minmax(0,1fr);gap:0 4px;padding:15px 0 14px;
   border-bottom:1px solid var(--hairline);}
 .sig:last-of-type{border-bottom:none;}
+.sig>div{min-width:0;}
 .sig .idx{font-size:15px;font-weight:750;color:var(--accent);letter-spacing:.04em;padding-top:2px;}
 .sig .labels{font-size:10.5px;letter-spacing:.12em;font-weight:700;color:var(--ink-soft);}
 .sig .labels .sep{color:var(--hairline-2);margin:0 6px;font-weight:400;}
@@ -80,15 +86,15 @@ section{margin-top:26px;}
 
 /* ---- 중요도 미터 + 점수 구성요소 ---- */
 .score-meter{margin-top:9px;}
-.score-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;}
+.score-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;min-width:0;}
 .score-head .score-num{font-weight:750;color:var(--navy);}
 .score-head .band{font-size:10.5px;font-weight:750;letter-spacing:.04em;color:var(--accent);}
 .meter{height:6px;background:var(--hairline);border-radius:3px;margin-top:4px;overflow:hidden;}
 .meter>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--navy));}
 .comps{display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;margin-top:9px;}
 .comp{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--ink-soft);}
-.comp .cl{flex:0 0 80px;color:var(--muted);}
-.comp .cbar{flex:1;height:3px;background:var(--hairline);border-radius:2px;overflow:hidden;}
+.comp .cl{flex:0 1 92px;color:var(--muted);min-width:0;}
+.comp .cbar{flex:1 1 40px;min-width:40px;height:3px;background:var(--hairline);border-radius:2px;overflow:hidden;}
 .comp .cbar i{display:block;height:100%;background:var(--accent);}
 .comp .cv{flex:0 0 22px;text-align:right;font-weight:650;color:var(--ink);}
 .caption{font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.55;}
@@ -105,11 +111,13 @@ section{margin-top:26px;}
 .duo{display:grid;grid-template-columns:1fr;gap:0 34px;}
 @media(min-width:660px){.duo{grid-template-columns:1.1fr 1fr;}.duo section{margin-top:26px;}}
 .theme-row{margin-top:11px;}
-.theme-name{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;font-weight:600;}
+.theme-name{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;font-weight:600;min-width:0;}
+.theme-name>span:first-child{min-width:0;}
 .theme-name .cnt{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;}
 .theme-bar{height:3px;background:var(--hairline);margin-top:5px;}
 .theme-bar span{display:block;height:100%;background:var(--accent);}
-.cat-row{display:flex;align-items:baseline;gap:8px;font-size:13px;padding:6.5px 0;}
+.cat-row{display:flex;align-items:baseline;gap:8px;font-size:13px;padding:6.5px 0;min-width:0;}
+.cat-row>span:first-child{min-width:0;}
 .cat-row .lead{flex:1;border-bottom:1px dotted var(--hairline-2);transform:translateY(-3px);}
 .cat-row .cnt{font-weight:650;color:var(--ink);}
 .cat-row .imm{font-size:10.5px;color:var(--signal);font-weight:700;letter-spacing:.06em;margin-left:5px;}
@@ -119,7 +127,7 @@ section{margin-top:26px;}
 details.cat-drill{border-bottom:1px solid var(--hairline);}
 details.cat-drill:first-of-type{border-top:1px solid var(--hairline-2);}
 details.cat-drill>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;
-  gap:9px;padding:11px 2px;}
+  gap:9px;padding:11px 2px;min-width:0;}
 details.cat-drill>summary::-webkit-details-marker{display:none;}
 details.cat-drill>summary::before{content:"▸";color:var(--muted);font-size:10px;
   flex:0 0 9px;transform:translateY(-1px);}
@@ -128,11 +136,11 @@ details.cat-drill[open]>summary::before{content:"▾";}
 .cd-count{color:var(--ink);font-size:12px;font-weight:650;white-space:nowrap;}
 .cd-imm{color:var(--signal);font-size:10px;font-weight:750;letter-spacing:.04em;white-space:nowrap;}
 .cd-flex{flex:1;}
-.cd-body{padding:1px 0 13px 17px;}
+.cd-body{padding:1px 0 13px 17px;min-width:0;}
 .cd-art{padding:9px 0;border-top:1px dashed var(--hairline);}
 .cd-art:first-child{border-top:none;}
-.cd-art-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
-.cd-title{font-size:13.5px;font-weight:600;line-height:1.46;}
+.cd-art-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-width:0;}
+.cd-title{display:block;font-size:13.5px;font-weight:600;line-height:1.46;min-width:0;}
 .cd-title a{color:inherit;text-decoration:none;border-bottom:1px solid var(--hairline-2);}
 .cd-title a:hover{border-bottom-color:var(--accent);}
 .cd-sc{font-size:11px;font-weight:750;color:var(--navy);white-space:nowrap;}
@@ -161,6 +169,7 @@ details.cat-drill[open]>summary::before{content:"▾";}
 .radar-tabs-ui{margin:18px 0 4px;}
 .radar-tab-input{position:absolute;opacity:0;pointer-events:none;}
 .topnav{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:7px;
+  max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
   margin:18px 0 8px;padding:7px 0;background:rgba(246,244,238,.96);
   border-bottom:1px solid var(--hairline);}
 .topnav label{font-size:11.5px;font-weight:650;letter-spacing:.02em;color:var(--navy);
@@ -192,7 +201,7 @@ section.radar.lead .sec-h{font-size:14px;}
 /* collapsed radar drawers (macro / evidence): native details with no open attribute */
 details.radar-section{margin-top:24px;border-top:1px solid var(--hairline-2);}
 details.radar-section>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;
-  gap:10px;padding:13px 2px 4px;}
+  gap:10px;padding:13px 2px 4px;min-width:0;}
 details.radar-section>summary::-webkit-details-marker{display:none;}
 details.radar-section>summary::before{content:"▸";color:var(--muted);font-size:11px;
   flex:0 0 10px;transform:translateY(-1px);}
@@ -205,7 +214,7 @@ details.radar-section>.rs-body{padding:4px 0 6px;}
 .risk-chip{display:inline-block;font-size:10px;font-weight:750;letter-spacing:.04em;
   color:var(--signal);border:1px solid var(--signal);border-radius:3px;padding:1px 7px;margin-right:7px;}
 .risk-pri{margin-top:9px;}
-.risk-pri .rp-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;}
+.risk-pri .rp-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;min-width:0;}
 .risk-pri .rp-num{font-weight:750;color:var(--signal);}
 .risk-pri .rp-lbl{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--signal);}
 .risk-pri .meter>span{background:linear-gradient(90deg,var(--signal),var(--navy));}
@@ -214,7 +223,7 @@ details.radar-section>.rs-body{padding:4px 0 6px;}
 details.score-acc{margin-top:9px;}
 details.score-acc>summary{list-style:none;cursor:pointer;}
 details.score-acc>summary::-webkit-details-marker{display:none;}
-details.score-acc>summary .score-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;}
+details.score-acc>summary .score-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;min-width:0;}
 details.score-acc>summary .more{font-size:10px;color:var(--muted);letter-spacing:.02em;}
 details.score-acc[open]>summary .more::after{content:" 접기";}
 details.score-acc:not([open])>summary .more::after{content:" 펼치기";}
@@ -223,6 +232,51 @@ details.score-acc:not([open])>summary .more::after{content:" 펼치기";}
 .notes{border-top:1px solid var(--hairline-2);margin-top:30px;padding-top:13px;}
 .notes p{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:3px;}
 footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;color:var(--muted);}
+@media(max-width:640px){
+  body{font-size:14.5px;line-height:1.65;border-top-width:3px;}
+  .page{padding:18px 14px 36px;}
+  .masthead{padding-bottom:12px;}
+  .mast-row{align-items:flex-start;flex-direction:column;gap:6px;}
+  .brand{letter-spacing:.16em;line-height:1.35;}
+  .mode-pill{align-self:flex-start;white-space:normal;line-height:1.35;padding:3px 8px;}
+  .masthead h1{font-size:24px;line-height:1.22;letter-spacing:0;margin-top:12px;}
+  .dateline{font-size:12px;line-height:1.5;}
+  .board{grid-template-columns:1fr;gap:9px;margin:16px 0 4px;}
+  .board .item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-top:7px;}
+  .board .n{font-size:22px;letter-spacing:0;}
+  .board .l{text-align:right;font-size:11px;}
+  .oneliner{padding:14px 14px 13px;margin:14px 0 6px;}
+  .oneliner .ovl{letter-spacing:.16em;}
+  .oneliner p{font-size:16px;line-height:1.62;letter-spacing:0;}
+  section{margin-top:22px;}
+  .sec-h{flex-wrap:wrap;gap:3px 8px;line-height:1.35;letter-spacing:0;}
+  .sec-h .tag{flex-basis:100%;white-space:normal;line-height:1.45;}
+  .sec-h::after{display:none;}
+  .topnav{top:0;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:14px 0 8px;padding:7px 0 9px;
+    scroll-snap-type:x proximity;}
+  .topnav label{flex:0 0 auto;font-size:11.5px;padding:6px 10px;scroll-snap-align:start;}
+  .sig{grid-template-columns:1fr;gap:4px;padding:14px 0;}
+  .sig .idx{font-size:12px;padding-top:0;}
+  .sig h3{font-size:15.5px;line-height:1.5;letter-spacing:0;}
+  .sig .meta,.sig .spread{line-height:1.55;}
+  .score-head,.risk-pri .rp-head,details.score-acc>summary .score-head{flex-wrap:wrap;gap:3px 8px;}
+  .score-head .score-num{max-width:100%;}
+  .comps{gap:6px;}
+  .comp{align-items:flex-start;gap:6px;}
+  .comp .cl{flex:0 1 96px;}
+  .duo,.macro-grid{grid-template-columns:1fr;}
+  .theme-name,.cat-row{flex-wrap:wrap;gap:4px 8px;}
+  .theme-name .cnt,.cat-row .cnt,.cat-row .imm{white-space:normal;}
+  .cat-row .lead{display:none;}
+  details.cat-drill>summary,details.radar-section>summary{align-items:flex-start;flex-wrap:wrap;
+    gap:5px 8px;padding:12px 0;}
+  .cd-flex{display:none;}
+  .cd-body{padding:2px 0 12px 0;}
+  .cd-art-head{flex-direction:column;align-items:flex-start;gap:3px;}
+  .cd-sc{white-space:normal;}
+  .macro-cell{padding:8px 10px;}
+  .notes{margin-top:24px;}
+}
 @media(min-width:700px){.page{padding:38px 40px 56px;}}
 </style>
 </head>
@@ -238,15 +292,15 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <p class="dateline num">2026-06-24 (KST) · 임원용 시그널 레이더 일일 브리프</p>
 </header>
 <section class="board" aria-label="데일리 현황판">
-<div class="item"><div class="n num">143</div><div class="l">수집·분석 기사</div></div>
-<div class="item immediate"><div class="n num">3</div><div class="l">즉시 알림 후보</div></div>
-<div class="item"><div class="n num">27</div><div class="l">중요 신호</div></div>
-<div class="item"><div class="n num">60</div><div class="l">관찰 신호</div></div>
-<div class="item"><div class="n num">53</div><div class="l">참고/제외</div></div>
+<div class="item"><div class="n num">68</div><div class="l">수집·분석 기사</div></div>
+<div class="item immediate"><div class="n num">0</div><div class="l">즉시 알림 후보</div></div>
+<div class="item"><div class="n num">5</div><div class="l">중요 신호</div></div>
+<div class="item"><div class="n num">26</div><div class="l">관찰 신호</div></div>
+<div class="item"><div class="n num">37</div><div class="l">참고/제외</div></div>
 </section>
 <section class="oneliner">
 <span class="ovl">오늘의 Executive Signal</span>
-<p>현대건설 연관 수주 신호와 경쟁사 스마트건설 행보 동시 부각 — 수주 경쟁력·시장 포지션 강화 기회·수주 경쟁 구도 악화 리스크 병존</p>
+<p>AI 데이터센터·전력 인프라 투자와 경쟁사 스마트건설 행보 동시 부각 — 중장기 에너지 인프라 수주 기회·수주 경쟁 구도 악화 리스크 병존</p>
 </section>
 <section class="radar-tabs-ui" aria-label="레이더 탭 필터">
 <input class="radar-tab-input" type="radio" name="radar-tab" id="radar-tab-hdec" aria-controls="hdec-radar" checked>
@@ -272,51 +326,51 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <span class="idx num">01</span>
 <div>
 
-<h3><a href="https://news.google.com/rss/articles/CBMid0FVX3lxTFBCYWNlSk9ucGNCNlV0ZUY1YTN3V3Q2d1QyNHpfUnEtUW1EU2lHZzV3NW1iTzItNV9DelE1SE1KaGFodUg1S2FQWkVlM2U0TmtmZjhpdWx1UkdPR2VqUEpmTkRfYm01OU5QclBnOFRCUkVjS0VZQTNB0gF3QVVfeXFMT0otVGp5MzVWSEN1ZU1TaEN1SG1BbjUyUlFnaFZqcWxjcFFYUldxX1I2S2tSZnJlT1dKcHRDU1V0WkxCelNqUWFoN1ZDTjA5VXUwNHV2Y0dlTE1BcXpIOUhXSzRPVzJIS2E3TXByX1luQ2p1ZVo5bnc?oc=5" target="_blank" rel="noopener noreferrer">서울시, &#x27;GTX 철근 누락&#x27; 현대건설 등 시공사에 벌점 부과 통보</a> ↗</h3>
-<p class="meta">MBC 뉴스 · <span class="srcq trust">신뢰 출처</span> · 현대건설 연관 · <span class="num">2026-06-12</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.6 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:53%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://news.google.com/rss/articles/CBMid0FVX3lxTFBCYWNlSk9ucGNCNlV0ZUY1YTN3V3Q2d1QyNHpfUnEtUW1EU2lHZzV3NW1iTzItNV9DelE1SE1KaGFodUg1S2FQWkVlM2U0TmtmZjhpdWx1UkdPR2VqUEpmTkRfYm01OU5QclBnOFRCUkVjS0VZQTNB0gF3QVVfeXFMT0otVGp5MzVWSEN1ZU1TaEN1SG1BbjUyUlFnaFZqcWxjcFFYUldxX1I2S2tSZnJlT1dKcHRDU1V0WkxCelNqUWFoN1ZDTjA5VXUwNHV2Y0dlTE1BcXpIOUhXSzRPVzJIS2E3TXByX1luQ2p1ZVo5bnc?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE1ySEtqZUF4NWgzc3IwcURlejljb0xacWtwTUc4QUpwUzg4MWRfZFZXQkd4VG8xZ2kwQTJacDVucHVpMVNqc2twd0ZPVGZuODE4WFgtenB3TmNjaXM?oc=5" target="_blank" rel="noopener noreferrer">현대엔지니어링, AI 기반 누수관리 기술 특허 출원</a> ↗</h3>
+<p class="meta">뉴스1 · <span class="srcq trust">신뢰 출처</span> · AI 데이터센터·전력 인프라 · <span class="num">2026-06-22</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 0.2 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:3%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:32%"></i></span><span class="cv num">1.6</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p>
+<p class="spread">↳ 관련 기사 41건 · 출처 36곳 · <a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE1ySEtqZUF4NWgzc3IwcURlejljb0xacWtwTUc4QUpwUzg4MWRfZFZXQkd4VG8xZ2kwQTJacDVucHVpMVNqc2twd0ZPVGZuODE4WFgtenB3TmNjaXM?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">02</span>
 <div>
 
-<h3><a href="https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606122251074630205" target="_blank" rel="noopener noreferrer">“그림엔 점 한 개, 글씨는 2개”…서울시, GTX-A 철근 누락 ‘설계사’...</a> ↗</h3>
-<p class="meta">대한경제 · <span class="srcq trust">신뢰 출처</span> · 현대건설 연관 · <span class="num">2026-06-15</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.6 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:53%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
+<h3><a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE1abnl0Rjh4RjdQVFlFU3RpdFltaERQVVdydDRWMUZpc2tOeHZmNlA4WThKbkI3R1NueHRHNUNGSlFxLWF0X3pPdjZjemJwR1E?oc=5" target="_blank" rel="noopener noreferrer">[단독] &#x27;철근누락&#x27; 현대건설 벌점 2점 통보…선분양·공공수주 경고등</a> ↗</h3>
+<p class="meta">Daum 경유 · 현대건설 연관 · <span class="num">2026-06-11</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.8 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:56%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:24%"></i></span><span class="cv num">1.2</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
 <p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606122251074630205" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<p class="spread">↳ 관련 기사 34건 · 출처 29곳 · <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE1abnl0Rjh4RjdQVFlFU3RpdFltaERQVVdydDRWMUZpc2tOeHZmNlA4WThKbkI3R1NueHRHNUNGSlFxLWF0X3pPdjZjemJwR1E?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">03</span>
 <div>
 
-<h3><a href="https://magazine.hankyung.com/business/article/202606156907b" target="_blank" rel="noopener noreferrer">[2026 100대 CEO]이한우 현대건설 대표, 원전부터 데이터센터 까지…에너...</a> ↗</h3>
-<p class="meta">한국경제 · <span class="srcq trust">신뢰 출처</span> · 현대건설 연관 · <span class="num">2026-06-23</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.2 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:64%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:90%"></i></span><span class="cv num">4.5</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p>
-<p class="spread">↳ 관련 기사 107건 · 출처 89곳 · <a href="https://magazine.hankyung.com/business/article/202606156907b" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE9TVXp2MzVTcXBqeDZEdlV4TDdpcVJFc284Y0N4ZGM3Q1B6MVV2alp2UElkOGdIZ2RQRG95MHR4Ql80T1pIX1BTOFNoaXV3azRfc0NGbVB4S25jUTZVOXFLYW1Udw?oc=5" target="_blank" rel="noopener noreferrer">홀텍, 英 SMR 프로젝트 제안서 제출…현대건설 청신호</a> ↗</h3>
+<p class="meta">더구루 · 현대건설 연관 · <span class="num">2026-06-23</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.0 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:59%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>유럽 원전 EPC 파이프라인·파트너십 점검</p>
+<p class="spread">↳ 관련 기사 39건 · 출처 34곳 · <a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE9TVXp2MzVTcXBqeDZEdlV4TDdpcVJFc284Y0N4ZGM3Q1B6MVV2alp2UElkOGdIZ2RQRG95MHR4Ql80T1pIX1BTOFNoaXV3azRfc0NGbVB4S25jUTZVOXFLYW1Udw?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">04</span>
 <div>
 
-<h3><a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE1ySEtqZUF4NWgzc3IwcURlejljb0xacWtwTUc4QUpwUzg4MWRfZFZXQkd4VG8xZ2kwQTJacDVucHVpMVNqc2twd0ZPVGZuODE4WFgtenB3TmNjaXM?oc=5" target="_blank" rel="noopener noreferrer">현대엔지니어링, AI 기반 누수관리 기술 특허 출원</a> ↗</h3>
-<p class="meta">뉴스1 · <span class="srcq trust">신뢰 출처</span> · AI 데이터센터·전력 인프라 · <span class="num">2026-06-22</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 0.2 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:3%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:32%"></i></span><span class="cv num">1.6</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p>
-<p class="spread">↳ 관련 기사 110건 · 출처 91곳 · <a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE1ySEtqZUF4NWgzc3IwcURlejljb0xacWtwTUc4QUpwUzg4MWRfZFZXQkd4VG8xZ2kwQTJacDVucHVpMVNqc2twd0ZPVGZuODE4WFgtenB3TmNjaXM?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMiS0FVX3lxTE81QThSeG5SSFl0cnB0NVNNQjdFVDZVQkUyUDZ2bkVSQlRtdTE0NldrajA2OUJYWW95Mm5XRXFVYkhFdGJTalBDbEx6Zw?oc=5" target="_blank" rel="noopener noreferrer">중노위, 현대엔지니어링 사용자성 인정…SK에코플랜트는 기각</a> ↗</h3>
+<p class="meta">Daum 경유 · 중동·해외 수주 환경 · <span class="num">2026-06-23</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 0.7 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:13%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>해외 발주 환경 변화 — 수주 전략·원가 관리 변수</p>
+<p class="spread">↳ 단독 신호 · <a href="https://news.google.com/rss/articles/CBMiS0FVX3lxTE81QThSeG5SSFl0cnB0NVNNQjdFVDZVQkUyUDZ2bkVSQlRtdTE0NldrajA2OUJYWW95Mm5XRXFVYkhFdGJTalBDbEx6Zw?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">05</span>
 <div>
 
-<h3><a href="https://www.sedaily.com/article/20059224?ref=naver" target="_blank" rel="noopener noreferrer">대우 건설 , 중동재건 태스크포스 구성</a> ↗</h3>
-<p class="meta">서울경제 · <span class="srcq trust">신뢰 출처</span> · 현대건설 연관 · <span class="num">2026-06-23</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 4.7 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:93%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:52%"></i></span><span class="cv num">2.6</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:30%"></i></span><span class="cv num">1.5</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:90%"></i></span><span class="cv num">4.5</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>해외 발주 환경 변화 — 수주 전략·원가 관리 변수</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://www.sedaily.com/article/20059224?ref=naver" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMif0FVX3lxTE5iSmlES01WWlVfSVVENHI2emhHQjdPNXc4N3VsZktCeG1hMUZXeTVwRDRiRkh1eG55dDU1dm1fX2pCSDdSX2RQdWM4VjZQUWRMaE5WWWZ4d3QzOFNQeEFFZlZvLU1OZjJUVDFPOC1PQVhJM0x2aGpXZGJUSzdCaDTSAXNBVV95cUxNQkV2M0NmdUpjeGV2Sy1ZejQ3QmZTbV9TWWl6T0pLY2VUVmdabHVaRkxSQlRQMUVFdy1acEtxYXlpekNPc0o3NU1ZN1lFVkZlakhmTWpyZlRBdlNfWTMyejJfTl8xbTFlNHdsTy16Z1dwczVB?oc=5" target="_blank" rel="noopener noreferrer">&#x27;원전 대박&#x27; 현대건설 3개의 암초…철근 누락, 싱가포르 뇌물, 尹 관저 논란</a> ↗</h3>
+<p class="meta">땅집고 · 현대건설 연관 · <span class="num">2026-06-21</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.9 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:58%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>유럽 원전 EPC 파이프라인·파트너십 점검</p>
+<p class="spread">↳ 관련 기사 34건 · 출처 29곳 · <a href="https://news.google.com/rss/articles/CBMif0FVX3lxTE5iSmlES01WWlVfSVVENHI2emhHQjdPNXc4N3VsZktCeG1hMUZXeTVwRDRiRkh1eG55dDU1dm1fX2pCSDdSX2RQdWM4VjZQUWRMaE5WWWZ4d3QzOFNQeEFFZlZvLU1OZjJUVDFPOC1PQVhJM0x2aGpXZGJUSzdCaDTSAXNBVV95cUxNQkV2M0NmdUpjeGV2Sy1ZejQ3QmZTbV9TWWl6T0pLY2VUVmdabHVaRkxSQlRQMUVFdy1acEtxYXlpekNPc0o3NU1ZN1lFVkZlakhmTWpyZlRBdlNfWTMyejJfTl8xbTFlNHdsTy16Z1dwczVB?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 </section>
 <section id="ai-radar" class="radar-panel radar" aria-label="AI 관련">
@@ -325,31 +379,11 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <span class="idx num">01</span>
 <div>
 
-<h3><a href="https://www.greened.kr/news/articleView.html?idxno=343056" target="_blank" rel="noopener noreferrer">건설 사들, AI 데이터센터 350조 시장 열린다…SK 초대형 프로젝트에 수...</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-23</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 4.0 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:79%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:16%"></i></span><span class="cv num">0.8</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<h3><a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE1Dd3RHb0FOMTM5RWdONFpneHFGN2FWTVlxSDAzTThZVlUyb2JlM29RZG5iSXNMaFNJNl9MWjBaRUdsYVpSZlFldnVycS1pbXlHMUdSejV0aEhXUlo4UG9xTmFXZ9IBbEFVX3lxTE9zdjVWNlVjSzNnSTVDdVYzd2xtcUU3SGNfWGtzN1FLN3hUWHo2RVhXR1k2WXVtWnFNRzN6OVdER2wzbGlqTWRXc0VDUlRvbDJYT1J1U2FNM1ZZcEFyNGNqRXhhYk1NcGNLRHpQcw?oc=5" target="_blank" rel="noopener noreferrer">[에코플랜트 밸류업]③ 데이터센터 EPC, &#x27;전력·냉각 기술&#x27;로 차별화</a> ↗</h3>
+<p class="meta">블로터 · AI 데이터센터·전력 인프라 · <span class="num">2026-06-19</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.5 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:49%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:78%"></i></span><span class="cv num">3.9</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
 <p class="why"><strong>왜 중요한가</strong>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p>
-<p class="spread">↳ 관련 기사 45건 · 출처 43곳 · <a href="https://www.greened.kr/news/articleView.html?idxno=343056" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">02</span>
-<div>
-
-<h3><a href="http://www.4th.kr/news/articleView.html?idxno=2113443" target="_blank" rel="noopener noreferrer">현대건설 , &#x27;석탄화력→SMR&#x27; 전환 기술 개발...남동발전과 맞손</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-19</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.1 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:62%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:14%"></i></span><span class="cv num">0.7</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>유럽 원전 EPC 파이프라인·파트너십 점검</p>
-<p class="spread">↳ 관련 기사 107건 · 출처 89곳 · <a href="http://www.4th.kr/news/articleView.html?idxno=2113443" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">03</span>
-<div>
-
-<h3><a href="https://magazine.hankyung.com/business/article/202606156907b" target="_blank" rel="noopener noreferrer">[2026 100대 CEO]이한우 현대건설 대표, 원전부터 데이터센터 까지…에너...</a> ↗</h3>
-<p class="meta">한국경제 · <span class="srcq trust">신뢰 출처</span> · 현대건설 연관 · <span class="num">2026-06-23</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.2 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:64%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:90%"></i></span><span class="cv num">4.5</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p>
-<p class="spread">↳ 관련 기사 107건 · 출처 89곳 · <a href="https://magazine.hankyung.com/business/article/202606156907b" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<p class="spread">↳ 관련 기사 41건 · 출처 36곳 · <a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE1Dd3RHb0FOMTM5RWdONFpneHFGN2FWTVlxSDAzTThZVlUyb2JlM29RZG5iSXNMaFNJNl9MWjBaRUdsYVpSZlFldnVycS1pbXlHMUdSejV0aEhXUlo4UG9xTmFXZ9IBbEFVX3lxTE9zdjVWNlVjSzNnSTVDdVYzd2xtcUU3SGNfWGtzN1FLN3hUWHo2RVhXR1k2WXVtWnFNRzN6OVdER2wzbGlqTWRXc0VDUlRvbDJYT1J1U2FNM1ZZcEFyNGNqRXhhYk1NcGNLRHpQcw?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 </section>
 <section id="biz-radar" class="radar-panel radar" aria-label="수주·해외·발주 환경">
@@ -358,51 +392,11 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <span class="idx num">01</span>
 <div>
 
-<h3><a href="https://www.mk.co.kr/article/12081104" target="_blank" rel="noopener noreferrer">[ 스마트 산업강국 함께하는 제조혁신 4.0] 복잡한 공조기 생산라인 하나...</a> ↗</h3>
-<p class="meta">매일경제 · <span class="srcq trust">신뢰 출처</span> · 현대건설 연관 · <span class="num">2026-06-23</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.8 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:57%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:24%"></i></span><span class="cv num">1.2</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:90%"></i></span><span class="cv num">4.5</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>현대건설 연관 언급 — 사업 영향 점검 대상</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://www.mk.co.kr/article/12081104" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">02</span>
-<div>
-
-<h3><a href="https://www.theguru.co.kr/news/article.html?no=103262" target="_blank" rel="noopener noreferrer">&quot;드디어 이란전 끝났다&quot; 건설 업계, 중동 재건 사업 기대감↑</a> ↗</h3>
-<p class="meta">더구루 · AI 데이터센터·전력 인프라 · <span class="num">2026-06-21</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 1.9 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:38%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:38%"></i></span><span class="cv num">1.9</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 3건 · 출처 4곳 · <a href="https://www.theguru.co.kr/news/article.html?no=103262" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">03</span>
-<div>
-
-<h3><a href="http://www.enewstoday.co.kr/news/articleView.html?idxno=2440594" target="_blank" rel="noopener noreferrer">韓 건설 사, 88조 &#x27;중동 재건&#x27; 수주 경쟁 본격화</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-22</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.7 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:73%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:48%"></i></span><span class="cv num">2.4</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:30%"></i></span><span class="cv num">1.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="http://www.enewstoday.co.kr/news/articleView.html?idxno=2440594" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">04</span>
-<div>
-
-<h3><a href="https://www.greened.kr/news/articleView.html?idxno=343083" target="_blank" rel="noopener noreferrer">이란 원유 제재 한시 해제…국내 건설 사, 원가 절감·재건 수주 기회될...</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-23</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.6 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:72%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:24%"></i></span><span class="cv num">1.2</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:58%"></i></span><span class="cv num">2.9</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://www.greened.kr/news/articleView.html?idxno=343083" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">05</span>
-<div>
-
-<h3><a href="https://www.sisajournal-e.com/news/articleView.html?idxno=421907" target="_blank" rel="noopener noreferrer">454兆 이란 재건시장 열린다는데···웃는 건설 사는 어디</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-22</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.3 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:66%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:40%"></i></span><span class="cv num">2.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://www.sisajournal-e.com/news/articleView.html?idxno=421907" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE1pNnhtN2YyRUxCdG01V1lQMk5NX20zQnIzbWQ4ZkNGQkMxWFBzbXI5UHdKb0FYNnBiXzg1NTlOZFhWbENMekxRTGtRMEZhWEJzVk8wT1hSdjlvSFZUNVFiMnk2OEZwS1ZK?oc=5" target="_blank" rel="noopener noreferrer">건설사들, AI 데이터센터 350조 시장 열린다…SK 초대형 프로젝트에 수주 기대감</a> ↗</h3>
+<p class="meta">녹색경제신문 · AI 데이터센터·전력 인프라 · <span class="num">2026-06-23</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 1.8 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:36%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:56%"></i></span><span class="cv num">2.8</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p>
+<p class="spread">↳ 관련 기사 24건 · 출처 24곳 · <a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE1pNnhtN2YyRUxCdG01V1lQMk5NX20zQnIzbWQ4ZkNGQkMxWFBzbXI5UHdKb0FYNnBiXzg1NTlOZFhWbENMekxRTGtRMEZhWEJzVk8wT1hSdjlvSFZUNVFiMnk2OEZwS1ZK?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 </section>
 <section id="risk-radar" class="radar-panel radar" aria-label="리스크·규제">
@@ -422,12 +416,12 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <span class="idx num">02</span>
 <div>
 <p class="labels"><span class="risk-chip">제재</span></p>
-<h3><a href="https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606231054289820388" target="_blank" rel="noopener noreferrer">도화, GTX-A 철근누락 벌점 반발 &quot;설계도서에는 하자 없었다&quot;</a> ↗</h3>
+<h3><a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE5Kd0pieFE0V1pMYnJ6U2FkVmU3NWxWUXhEZ2lJTEY3cFR6Y2Zua0NnUjZzMEJjUmc5RVhGQU94ODdzZWVGbkJuV0taUVMtUTI1UG1vLVBfRWh5NHFjbnJpRXQ3U1A0R2xyejZJek5sVGdzX1Z4?oc=5" target="_blank" rel="noopener noreferrer">도화, GTX-A 철근누락 벌점 반발 &quot;설계도서에는 하자 없었다&quot;</a> ↗</h3>
 <p class="meta">대한경제 · <span class="srcq trust">신뢰 출처</span> · 건설산업 일반 · <span class="num">2026-06-23</span></p>
 <div class="risk-pri"><div class="rp-head"><span class="rp-num num">리스크 우선도 3.8 / 5.0</span><span class="rp-lbl">제재</span></div><div class="meter"><span style="width:76%"></span></div></div>
 <details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 0.6 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:12%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
 <p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 단독 신호 · <a href="https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606231054289820388" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<p class="spread">↳ 단독 신호 · <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTE5Kd0pieFE0V1pMYnJ6U2FkVmU3NWxWUXhEZ2lJTEY3cFR6Y2Zua0NnUjZzMEJjUmc5RVhGQU94ODdzZWVGbkJuV0taUVMtUTI1UG1vLVBfRWh5NHFjbnJpRXQ3U1A0R2xyejZJek5sVGdzX1Z4?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">03</span>
@@ -443,24 +437,24 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <article class="sig">
 <span class="idx num">04</span>
 <div>
-<p class="labels"><span class="risk-chip">중대재해</span></p>
-<h3><a href="https://www.pointdaily.co.kr/news/articleView.html?idxno=308247" target="_blank" rel="noopener noreferrer">철근 누락에 사망사고까지...대형 건설 사 제재는 &#x27;하세월&#x27;</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-15</span></p>
-<div class="risk-pri"><div class="rp-head"><span class="rp-num num">리스크 우선도 4.3 / 5.0</span><span class="rp-lbl">중대재해</span></div><div class="meter"><span style="width:86%"></span></div></div>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.9 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:77%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:82%"></i></span><span class="cv num">4.1</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:66%"></i></span><span class="cv num">3.3</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://www.pointdaily.co.kr/news/articleView.html?idxno=308247" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<p class="labels"><span class="risk-chip">품질</span></p>
+<h3><a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBtVmFQUlQxS09icEFjTHJ0S2VBeGJ3TEZlbmVtbVEwQnNoNmQ2Vi1iQ3ZSUkdSUk9rS09HWHZYcEdrVi1uTnkzYjl5QzJPaE0?oc=5" target="_blank" rel="noopener noreferrer">현대건설, &#x27;아인 두바이&#x27; 공방…하자·공기지연 책임 상호 이견</a> ↗</h3>
+<p class="meta">Daum 경유 · 현대건설 연관 · <span class="num">2026-06-16</span></p>
+<div class="risk-pri"><div class="rp-head"><span class="rp-num num">리스크 우선도 3.6 / 5.0</span><span class="rp-lbl">품질</span></div><div class="meter"><span style="width:72%"></span></div></div>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.6 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:53%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>품질·하자 이슈 — 평판·보수비·수주 리스크 확인</p>
+<p class="spread">↳ 관련 기사 34건 · 출처 29곳 · <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBtVmFQUlQxS09icEFjTHJ0S2VBeGJ3TEZlbmVtbVEwQnNoNmQ2Vi1iQ3ZSUkdSUk9rS09HWHZYcEdrVi1uTnkzYjl5QzJPaE0?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">05</span>
 <div>
-<p class="labels"><span class="risk-chip">중대재해</span></p>
-<h3><a href="https://news.google.com/rss/articles/CBMifEFVX3lxTFA0bm4wX01BRW9ZYTFxNXY3SURNVXJPdFhmdjFybVRHTkRSam5RZHZoZlMzM3ctSjNaQVNSLTg0NmE5MjdZbE9Fcy1BendSTlJ3TUZWZmt5bGlYLXByZy1Sc0VXWlk3UEVzd0JuSVZuT3pTQkhkUHJPRzNtSGU?oc=5" target="_blank" rel="noopener noreferrer">잇따른 중대재해에 건설업계 노심초사…혹서기 대응 강화</a> ↗</h3>
-<p class="meta">한국금융신문 · 건설현장 안전·중대재해 · <span class="num">2026-06-18</span></p>
-<div class="risk-pri"><div class="rp-head"><span class="rp-num num">리스크 우선도 4.3 / 5.0</span><span class="rp-lbl">중대재해</span></div><div class="meter"><span style="width:86%"></span></div></div>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 1.4 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:28%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:28%"></i></span><span class="cv num">1.4</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:56%"></i></span><span class="cv num">2.8</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 단독 신호 · <a href="https://news.google.com/rss/articles/CBMifEFVX3lxTFA0bm4wX01BRW9ZYTFxNXY3SURNVXJPdFhmdjFybVRHTkRSam5RZHZoZlMzM3ctSjNaQVNSLTg0NmE5MjdZbE9Fcy1BendSTlJ3TUZWZmt5bGlYLXByZy1Sc0VXWlk3UEVzd0JuSVZuT3pTQkhkUHJPRzNtSGU?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+
+<h3><a href="https://news.google.com/rss/articles/CBMibEFVX3lxTE9JdVk2bTQ3NFd6cG1Sc1J0YVFCcGRleFRwdlFwaDlQUS1vT01Oa3dtcUFpUWJJWDhPa0JUMzJXM2o5WVlnQTc0NW9TdFE1dHZoV3ByUjBuaXRqazVPWTBDNXVxRDBxVzdIY3o1X9IBcEFVX3lxTFB2ekVhUmlVUTVpMWFLQXVacFlCSXR0Rm5QSW5sLXJTbUdKdzdhNjQ3OHdRUmE3eG9kdkhkT2VFR0NxODkyV1BoMWtTNVA5Qk1RV0phMWpRa1RPdUp6eFpIZlUzal8xOERlSEVBMDlZNHQ?oc=5" target="_blank" rel="noopener noreferrer">건설업계, &#x27;폭염 대응·안전관리&#x27; 본격화...&quot;더위와의 전쟁 시작됐다&quot;</a> ↗</h3>
+<p class="meta">반론보도닷컴 · 건설현장 안전·중대재해 · <span class="num">2026-06-09</span></p>
+<div class="risk-pri"><div class="rp-head"><span class="rp-num num">리스크 우선도 1.8 / 5.0</span><span class="rp-lbl">리스크</span></div><div class="meter"><span style="width:36%"></span></div></div>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 1.4 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:28%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:28%"></i></span><span class="cv num">1.4</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:36%"></i></span><span class="cv num">1.8</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:30%"></i></span><span class="cv num">1.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>규제·안전 관련 신호 — 사업 영향 점검 대상</p>
+<p class="spread">↳ 단독 신호 · <a href="https://news.google.com/rss/articles/CBMibEFVX3lxTE9JdVk2bTQ3NFd6cG1Sc1J0YVFCcGRleFRwdlFwaDlQUS1vT01Oa3dtcUFpUWJJWDhPa0JUMzJXM2o5WVlnQTc0NW9TdFE1dHZoV3ByUjBuaXRqazVPWTBDNXVxRDBxVzdIY3o1X9IBcEFVX3lxTFB2ekVhUmlVUTVpMWFLQXVacFlCSXR0Rm5QSW5sLXJTbUdKdzdhNjQ3OHdRUmE3eG9kdkhkT2VFR0NxODkyV1BoMWtTNVA5Qk1RV0phMWpRa1RPdUp6eFpIZlUzal8xOERlSEVBMDlZNHQ?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 </section>
 <section id="comp-radar" class="radar-panel radar" aria-label="경쟁사·공급망">
@@ -469,41 +463,31 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <span class="idx num">01</span>
 <div>
 
-<h3><a href="https://it.chosun.com/news/articleView.html?idxno=2023092164078" target="_blank" rel="noopener noreferrer">현대건설 ·포스코이앤씨, 안전 체계 아직 부족하다 [줌인IT]</a> ↗</h3>
-<p class="meta">원문 경유 · 현대건설 연관 · <span class="num">2026-06-17</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 4.0 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:81%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:24%"></i></span><span class="cv num">1.2</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:62%"></i></span><span class="cv num">3.1</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:66%"></i></span><span class="cv num">3.3</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://it.chosun.com/news/articleView.html?idxno=2023092164078" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5HeHNnUjJHcFQ5cG5NNWRYU2Iwb0hJUTY0TFVSdDNqNzB1SWRNb1R4eFBldG9lWHUySXhDZ1dwblkyV21maGdaVGJFbUkzTFdTNWZaNTlMM190NmhGa1VET3pxUnV4NmRsejB2UVNn?oc=5" target="_blank" rel="noopener noreferrer">무더위 속 건설현장 지킨다… 현대건설·SK에코플랜트, 온열질환 예방 총력</a> ↗</h3>
+<p class="meta">S저널 · 현대건설 연관 · <span class="num">2026-06-02</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.5 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:50%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>해외 발주 환경 변화 — 수주 전략·원가 관리 변수</p>
+<p class="spread">↳ 관련 기사 34건 · 출처 29곳 · <a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5HeHNnUjJHcFQ5cG5NNWRYU2Iwb0hJUTY0TFVSdDNqNzB1SWRNb1R4eFBldG9lWHUySXhDZ1dwblkyV21maGdaVGJFbUkzTFdTNWZaNTlMM190NmhGa1VET3pxUnV4NmRsejB2UVNn?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 <article class="sig">
 <span class="idx num">02</span>
 <div>
 
-<h3><a href="https://news.google.com/rss/articles/CBMibkFVX3lxTFAyUVN5eUxvdnFZc01pdVZSOEtTQ0JsYk5UVXdDYmJVQU1LQmYtaEJBcUEtTU1XOEN1ajg2QjdZamhwaHYzN01iOExiRFFQcEY0eVF5Z1U2RUxmd1djVE1XUmhEeFJXaXU2MTZON193?oc=5" target="_blank" rel="noopener noreferrer">대우건설, 데이터센터 속도…전담 TF 꾸리고 특별법 수혜 기대</a> ↗</h3>
-<p class="meta">아시아투데이 · AI 데이터센터·전력 인프라 · <span class="num">2026-06-21</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.5 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:50%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:62%"></i></span><span class="cv num">3.1</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:16%"></i></span><span class="cv num">0.8</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>입찰 자격·평판·안전관리 리스크 확인</p>
-<p class="spread">↳ 관련 기사 107건 · 출처 89곳 · <a href="https://news.google.com/rss/articles/CBMibkFVX3lxTFAyUVN5eUxvdnFZc01pdVZSOEtTQ0JsYk5UVXdDYmJVQU1LQmYtaEJBcUEtTU1XOEN1ajg2QjdZamhwaHYzN01iOExiRFFQcEY0eVF5Z1U2RUxmd1djVE1XUmhEeFJXaXU2MTZON193?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
-</div></article>
-<article class="sig">
-<span class="idx num">03</span>
-<div>
-
-<h3><a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5HeHNnUjJHcFQ5cG5NNWRYU2Iwb0hJUTY0TFVSdDNqNzB1SWRNb1R4eFBldG9lWHUySXhDZ1dwblkyV21maGdaVGJFbUkzTFdTNWZaNTlMM190NmhGa1VET3pxUnV4NmRsejB2UVNn?oc=5" target="_blank" rel="noopener noreferrer">무더위 속 건설현장 지킨다… 현대건설·SK에코플랜트, 온열질환 예방 총력</a> ↗</h3>
-<p class="meta">S저널 · 현대건설 연관 · <span class="num">2026-06-02</span></p>
-<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 2.5 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:50%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:20%"></i></span><span class="cv num">1.0</span></div></div></details>
-<p class="why"><strong>왜 중요한가</strong>해외 발주 환경 변화 — 수주 전략·원가 관리 변수</p>
-<p class="spread">↳ 관련 기사 95건 · 출처 79곳 · <a href="https://news.google.com/rss/articles/CBMibkFVX3lxTE5HeHNnUjJHcFQ5cG5NNWRYU2Iwb0hJUTY0TFVSdDNqNzB1SWRNb1R4eFBldG9lWHUySXhDZ1dwblkyV21maGdaVGJFbUkzTFdTNWZaNTlMM190NmhGa1VET3pxUnV4NmRsejB2UVNn?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
+<h3><a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE9ldzlHR2NudUxqSXp4MWs4eEwwTlNDUlFBc1l6Tk8tZzI3VmF1Wllna0trVTNWZFVKOU5LNVQybkx5UG1FbnJjTlZfM05oWnFSUG1CRVRFRGM1R2l1MHZlNG84eVVORnlfTTBkSW1kNjTSAXRBVV95cUxNczhOdC04blVxazBsVVFUMm43Qmc4UWFIZE5pejZpeUNIMUYtWkx3S0VQRnNrSFZiSTNoeFFZSzM2dF9KcjFUNk1VQ3dyc2lTajNFNHpiLUtlbzFuOEZQblZrSDFJOVB6bjIweF9SSWR3dkF3Ng?oc=5" target="_blank" rel="noopener noreferrer">현대건설·포스코이앤씨, 안전 체계 아직 부족하다 [줌인IT]</a> ↗</h3>
+<p class="meta">IT조선 · 현대건설 연관 · <span class="num">2026-06-17</span></p>
+<details class="score-acc"><summary><span class="score-head"><span class="score-num num">중요도 3.2 / 5.0</span><span class="more"></span></span><span class="meter"><span style="width:64%"></span></span></summary><div class="comps"><div class="comp"><span class="cl">현대건설 관련성</span><span class="cbar"><i style="width:100%"></i></span><span class="cv num">5.0</span></div><div class="comp"><span class="cl">사업기회</span><span class="cbar"><i style="width:0%"></i></span><span class="cv num">0.0</span></div><div class="comp"><span class="cl">리스크/규제</span><span class="cbar"><i style="width:36%"></i></span><span class="cv num">1.8</span></div><div class="comp"><span class="cl">긴급도</span><span class="cbar"><i style="width:10%"></i></span><span class="cv num">0.5</span></div><div class="comp"><span class="cl">출처 신뢰도</span><span class="cbar"><i style="width:60%"></i></span><span class="cv num">3.0</span></div><div class="comp"><span class="cl">반복/확산 신호</span><span class="cbar"><i style="width:80%"></i></span><span class="cv num">4.0</span></div></div></details>
+<p class="why"><strong>왜 중요한가</strong>현대건설 연관 언급 — 사업 영향 점검 대상</p>
+<p class="spread">↳ 관련 기사 34건 · 출처 29곳 · <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE9ldzlHR2NudUxqSXp4MWs4eEwwTlNDUlFBc1l6Tk8tZzI3VmF1Wllna0trVTNWZFVKOU5LNVQybkx5UG1FbnJjTlZfM05oWnFSUG1CRVRFRGM1R2l1MHZlNG84eVVORnlfTTBkSW1kNjTSAXRBVV95cUxNczhOdC04blVxazBsVVFUMm43Qmc4UWFIZE5pejZpeUNIMUYtWkx3S0VQRnNrSFZiSTNoeFFZSzM2dF9KcjFUNk1VQ3dyc2lTajNFNHpiLUtlbzFuOEZQblZrSDFJOVB6bjIweF9SSWR3dkF3Ng?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></p>
 </div></article>
 </section>
 <section id="macro" class="radar-panel radar macro-section" aria-label="거시경제">
 <h2 class="sec-h">거시경제<span class="tag">FX·금리·원자재 등</span></h2>
 <p class="radar-empty">거시경제 단독 신호 없음 — 아래 시장지표 상태 참고</p>
 <section aria-label="Macro Snapshot">
-<h2 class="sec-h">MACRO SNAPSHOT<span class="tag">출처 Yahoo Finance · 시장지표 참고시각 2026-06-24 09:01 (KST 기준)</span></h2>
+<h2 class="sec-h">MACRO SNAPSHOT<span class="tag">출처 Yahoo Finance · 시장지표 참고시각 2026-06-24 09:44 (KST 기준)</span></h2>
 <div class="macro-grid">
-<div class="macro-cell live"><div class="lbl">USD/KRW</div><div class="val num">1533.89원 <span class="dir-up">▲</span></div></div>
-<div class="macro-cell live"><div class="lbl">WTI</div><div class="val num">72.74달러 <span class="dir-down">▼</span></div></div>
+<div class="macro-cell live"><div class="lbl">USD/KRW</div><div class="val num">1535.58원 <span class="dir-up">▲</span></div></div>
+<div class="macro-cell live"><div class="lbl">WTI</div><div class="val num">72.82달러 <span class="dir-down">▼</span></div></div>
 <div class="macro-cell live"><div class="lbl">VIX</div><div class="val num">19.49pt <span class="dir-up">▲</span></div></div>
 <div class="macro-cell live"><div class="lbl">미 국채 10Y</div><div class="val num">4.49% <span class="dir-up">▲</span></div></div>
 <div class="macro-cell live"><div class="lbl">S&amp;P 500</div><div class="val num">7365.46pt <span class="dir-down">▼</span></div></div>
@@ -516,62 +500,60 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <h2 class="sec-h">전체 근거<span class="tag">테마·카테고리·근거 기사</span></h2>
 <div class="duo">
 <section aria-label="주요 테마"><h2 class="sec-h">주요 테마<span class="tag">테마 비중 · 100=최상위 테마</span></h2>
-<div class="theme-row"><div class="theme-name"><span>1. 현대건설 데이터센터</span><span class="cnt num">관련 기사 66건</span></div><div class="theme-bar"><span style="width:100%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>2. SMR 데이터센터</span><span class="cnt num">관련 기사 24건</span></div><div class="theme-bar"><span style="width:39%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>3. AI 데이터센터 전력</span><span class="cnt num">관련 기사 19건</span></div><div class="theme-bar"><span style="width:31%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>4. 건설 AI 스마트건설</span><span class="cnt num">관련 기사 10건</span></div><div class="theme-bar"><span style="width:18%"></span></div></div>
-<div class="theme-row"><div class="theme-name"><span>5. AI 전력수요 원전</span><span class="cnt num">관련 기사 8건</span></div><div class="theme-bar"><span style="width:15%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>1. 현대건설 데이터센터</span><span class="cnt num">관련 기사 18건</span></div><div class="theme-bar"><span style="width:100%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>2. SMR 데이터센터</span><span class="cnt num">관련 기사 11건</span></div><div class="theme-bar"><span style="width:54%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>3. AI 데이터센터 전력</span><span class="cnt num">관련 기사 10건</span></div><div class="theme-bar"><span style="width:51%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>4. AI 전력수요 원전</span><span class="cnt num">관련 기사 3건</span></div><div class="theme-bar"><span style="width:21%"></span></div></div>
+<div class="theme-row"><div class="theme-name"><span>5. 건설 AI 스마트건설</span><span class="cnt num">관련 기사 2건</span></div><div class="theme-bar"><span style="width:10%"></span></div></div>
 <p class="caption">테마 비중은 가장 큰 테마를 100으로 둔 상대값입니다 (관련 기사 수와 중요도 점수를 합산한 내부 정렬 값 기준).</p>
 </section>
 <section aria-label="카테고리 요약"><h2 class="sec-h">카테고리 요약</h2>
-<div class="cat-row"><span>현대건설 연관</span><span class="lead"></span><span class="cnt num">89건</span><span class="imm">즉시 3</span></div>
-<div class="cat-row"><span>AI 데이터센터·전력 인프라</span><span class="lead"></span><span class="cnt num">25건</span></div>
-<div class="cat-row"><span>건설산업 일반</span><span class="lead"></span><span class="cnt num">19건</span></div>
-<div class="cat-row"><span>건설현장 안전·중대재해</span><span class="lead"></span><span class="cnt num">6건</span></div>
+<div class="cat-row"><span>AI 데이터센터·전력 인프라</span><span class="lead"></span><span class="cnt num">24건</span></div>
+<div class="cat-row"><span>현대건설 연관</span><span class="lead"></span><span class="cnt num">19건</span></div>
+<div class="cat-row"><span>건설산업 일반</span><span class="lead"></span><span class="cnt num">17건</span></div>
+<div class="cat-row"><span>건설현장 안전·중대재해</span><span class="lead"></span><span class="cnt num">4건</span></div>
 <div class="cat-row"><span>경쟁 건설사 동향</span><span class="lead"></span><span class="cnt num">2건</span></div>
 <div class="cat-row"><span>중동·해외 수주 환경</span><span class="lead"></span><span class="cnt num">1건</span></div>
 <div class="cat-row"><span>스마트건설 기술</span><span class="lead"></span><span class="cnt num">1건</span></div>
 </section>
 </div>
 <section aria-label="카테고리별 근거 기사">
-<h2 class="sec-h">카테고리별 근거 기사<span class="tag">수집·분석 143건 · 모든 분류 기본 접힘</span></h2>
+<h2 class="sec-h">카테고리별 근거 기사<span class="tag">수집·분석 68건 · 모든 분류 기본 접힘</span></h2>
 <p class="cd-note">카테고리를 펼쳐 근거 기사를 확인하세요. (모든 분류는 기본 접힘 상태입니다.)</p>
 <p class="cd-note">카테고리별 근거 기사는 수집된 기사의 제목·출처·링크·중요도 기준 근거 목록입니다 (본문 전문은 저장하지 않습니다). 블로그·카페 등 비-뉴스 출처는 근거 목록에서 제외하며, 카테고리 총건수에는 포함해 감사 가능하게 둡니다.</p>
 <details class="cat-drill">
-<summary><span class="cd-label">현대건설 연관</span><span class="cd-count num">89건</span><span class="cd-imm">즉시 3</span><span class="cd-flex"></span></summary>
-<div class="cd-body">
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://biz.heraldcorp.com/article/10783557?ref=naver" target="_blank" rel="noopener noreferrer">현대 엔지니어링, AI 기반 지능형 누수관리 시스템·장치 특허 출원 ↗</a></span><span class="cd-sc num">중요도 1.9 / 5.0</span></div><p class="cd-meta">헤럴드경제 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-22</span></p><p class="cd-why">스마트건설 기술 확산 — 현장 적용성 모니터링</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="http://www.popcornnews.net/news/articleView.html?idxno=124309" target="_blank" rel="noopener noreferrer">중동 재건 시장, 국내 건설 사 특수 맞을까...속단은 아직 일러 ↗</a></span><span class="cd-sc num">중요도 3.1 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-19</span></p><p class="cd-why">입찰 자격·평판·안전관리 리스크 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE1abnl0Rjh4RjdQVFlFU3RpdFltaERQVVdydDRWMUZpc2tOeHZmNlA4WThKbkI3R1NueHRHNUNGSlFxLWF0X3pPdjZjemJwR1E?oc=5" target="_blank" rel="noopener noreferrer">[단독] &#x27;철근누락&#x27; 현대건설 벌점 2점 통보…선분양·공공수주 경고등 ↗</a></span><span class="cd-sc num">중요도 2.8 / 5.0</span></div><p class="cd-meta">Daum 경유 · <span class="num">2026-06-11</span></p><p class="cd-why">입찰 자격·평판·안전관리 리스크 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="http://www.inews24.com/view/1977610" target="_blank" rel="noopener noreferrer">건설 사 AI 도입 붐인데 &#x27;데이터 소유권&#x27; 여전히 미궁 ↗</a></span><span class="cd-sc num">중요도 2.5 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-19</span></p><p class="cd-why">스마트건설 기술 확산 — 현장 적용성 모니터링</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="http://www.newslock.co.kr/news/articleView.html?idxno=131436" target="_blank" rel="noopener noreferrer">[뉴스락 단독] 현대건설 , 지축 누수 논란에 벌점 확정…품질·안전관리... ↗</a></span><span class="cd-sc num">중요도 3.7 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-15</span></p><p class="cd-why">입찰 자격·평판·안전관리 리스크 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="http://www.4th.kr/news/articleView.html?idxno=2113373" target="_blank" rel="noopener noreferrer">서울시 &quot;MBC, 3억원 내라..GTX 철근 누락 왜곡 보도&quot; ↗</a></span><span class="cd-sc num">중요도 3.1 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-18</span></p><p class="cd-why">입찰 자격·평판·안전관리 리스크 확인</p></article>
-<p class="cd-more">외 83건</p>
-</div></details>
-<details class="cat-drill">
-<summary><span class="cd-label">AI 데이터센터·전력 인프라</span><span class="cd-count num">25건</span><span class="cd-flex"></span></summary>
+<summary><span class="cd-label">AI 데이터센터·전력 인프라</span><span class="cd-count num">24건</span><span class="cd-flex"></span></summary>
 <div class="cd-body">
 <article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMibEFVX3lxTE1SMkVfN1lndkJkOHNVNld0S1gtTDZMaE10Ul9SeWdkYmpKU0dlXzhxRGNHcHFrRlkzZ3dHMW44c3podzU4dENNNDJrN0dreC1HMDY0Q09FZWlIY0RFbnVnTl9zeTRyWm9JYXhCQQ?oc=5" target="_blank" rel="noopener noreferrer">[분석] 삼성물산, 건설사 미래 바꿀까… 데이터센터 짓는 이유는? ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">이코노미톡뉴스 · <span class="num">2026-05-04</span></p><p class="cd-why">AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBRVHpPdDE4Qkt6RVp5MWlCR1UxLVhtbEhvamd4aG0wZEZncTdMZHVzSzNBRnd6UG9YbDZadlRLdWtQYTZHWXBrM0YtM2ROems?oc=5" target="_blank" rel="noopener noreferrer">삼성물산, 데이터센터 글로벌 수주 본격화…AI 열풍 속 신성장 동력 가속 ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">Daum 경유 · <span class="num">2026-02-06</span></p><p class="cd-why">AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiRkFVX3lxTE9ld1FOWnQ0NWFoVVNpQjUtTmpvRzdfWEZodlJHOVFKLWtqNTVHdVB6Y2JqdDRxRmxqSjJ1QlNRY090bVNkTXc?oc=5" target="_blank" rel="noopener noreferrer">삼성물산, 데이터센터 글로벌 수주 본격화…AI 열풍 속 신성장 동력 가속 ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">Daum 경유 · <span class="num">2026-02-06</span></p><p class="cd-why">AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p></article>
 <article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMickFVX3lxTE93LXVPNXc0ZTc1REdtZmMyOEFKWW5LdExuOG9UamVmblhaYU5aLUNDeEM3dVJjZUlnTHE0MVdzaHdBclk3amEwQkhvdzdqdUFfUlBiTndsMjdyd19sWGhKeXk4aFN0QXNiaktTWXkwOThDQdIBdkFVX3lxTE9LYkVjeDBWQkVfd3RCTWNlNVp1NkpmS3pORnRQVXlELWdVMThJUUtIWi15NDVtcWN2YUNTeUhKcXZGUUFZYTk2Z0dKbmNNa1lWYkF4VkozSE10WEdRanFvb2tFbGRKZUduZ1FhMjdrems3Y0pfbXc?oc=5" target="_blank" rel="noopener noreferrer">“아파트 말고 데이터센터”···SK에코플랜트, ‘AI EPC’ 승부수 ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">시사저널e · <span class="num">2025-12-08</span></p><p class="cd-why">AI 데이터센터 EPC·전력 인프라 수주 기회 점검</p></article>
-<p class="cd-more">외 22건 · 직접 관련성 낮은 11건은 근거 목록에서 제외</p>
+<p class="cd-more">외 21건 · 직접 관련성 낮은 11건은 근거 목록에서 제외</p>
 </div></details>
 <details class="cat-drill">
-<summary><span class="cd-label">건설산업 일반</span><span class="cd-count num">19건</span><span class="cd-flex"></span></summary>
+<summary><span class="cd-label">현대건설 연관</span><span class="cd-count num">19건</span><span class="cd-flex"></span></summary>
 <div class="cd-body">
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE8xRkZOcnBjYWxrdERIVnJ2akE3SUlNNVhpUkNrelNlY2F6M1NWckluX2YwanR5V2pQTnZzQW9nTkFhVlB0UjZDNW90VjBuU2pEUE8ydF90NkhXSElBRTg2QU04bklRekll?oc=5" target="_blank" rel="noopener noreferrer">한국토지신탁, 중흥마을 재건축 예비사업시행자로 지정 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">한국주택경제신문 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiZEFVX3lxTE0xdmtNcWNneFEtenBSZUY5UHBWUmtCSzdQdUxUbGdJSm1QRGlCSWJUZVhMZnc0M1RHODBDYUFNVVBWVzdmdnRacXpfYm9oVTdtczdveTU4Z1BSN01SVDg4ZTVtZmo?oc=5" target="_blank" rel="noopener noreferrer">한국토지신탁, 부천 ‘중흥마을’ 재건축 예비사업시행자로 지정 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">매일일보 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://www.ajunews.com/view/20260617145116268" target="_blank" rel="noopener noreferrer">국토교통기술대전 24일 개막…자율주행·UAM·AI시티 한자리에 ↗</a></span><span class="cd-sc num">중요도 0.9 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-17</span></p><p class="cd-why">스마트건설 기술 확산 — 현장 적용성 모니터링</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://www.insightkorea.co.kr/news/articleView.html?idxno=248676" target="_blank" rel="noopener noreferrer">도시정비사업 시장 쏠림 가속…현대·GS·삼성, 20조 ‘싹쓸이’ ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">인사이트코리아 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://www.goodkyung.com/news/articleView.html?idxno=288445" target="_blank" rel="noopener noreferrer">[기획] 굴착기에 이식된 AI…두산밥캣·HD 건설 기계가 그리는 &#x27;작업자 없... ↗</a></span><span class="cd-sc num">중요도 0.7 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-24</span></p><p class="cd-why">스마트건설 기술 확산 — 현장 적용성 모니터링</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMia0FVX3lxTE93QWFaNmZ3SnpNRGxuVlBnMURsLW83UjdCYVNGMHRDVGMtSVkwS3FKbHEwZkRxY3A1LUFvbXpobW9hQU1LZk81YWJqMzFPN1hoOFZzLWxXREVfb2pIeUV6VXd6VGNobElzZTJV0gFrQVVfeXFMT3dBYVo2ZndKek1EbG5WUGcxRGwtbzdSN0JhU0YwdENUYy1JWTBLcUpscTBmRHFjcDUtQW9temhtb2FBTUtmTzVhYmozMU83WGg4VnMtbFdERV9vakh5RXpVd3pUY2hsSXNlMlU?oc=5" target="_blank" rel="noopener noreferrer">대신자산신탁, 장위동 정비사업 시동…추진위와 맞손 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">SR타임스 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiVEFVX3lxTE96VFBjcEFyRm9GOFh3cmFwZUtqS09GN1VFVnltSlF3VzkwWmt4cVRfYUxnYXJFbVRZZC1NX3BFaXFSTnloMlZhMlBmTjB2UmFJY2czYg?oc=5" target="_blank" rel="noopener noreferrer">[오늘의 주요공시] 효성중공업ㆍ현대건설ㆍ태영건설 등 ↗</a></span><span class="cd-sc num">중요도 2.6 / 5.0</span></div><p class="cd-meta">이투데이 · <span class="num">2026-06-23</span></p><p class="cd-why">현대건설 연관 언급 — 사업 영향 점검 대상</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiqgJBVV95cUxQT0o1c1hlcVBJUGZMc1FEQTlvUUdHVVRscHNuRHowbEV6SHpNbUdFMjFNNkpyTFNTd2RERElSYUd6UGp1NXNHN0FNenlnTGJSYVlVZkYtMC1hZ1F0UUxjbHFYQmhKTVNLam1MVDRwSnNmdXdrTFNlZFA0Qjk5TTB6WG54S1NsUzBRQkZ6Q040QjlaUE9xZF9xeTVKOGZOdDZtZ3p1M0hoeVlzcVdIWWZQMnk0dE9IZTdsN2RqWDRfRzZjNnlPTWdlWDUzc2Z4SGFsX095OTF5WEFUNm5nRFEyT2haZTd1cmFGUGJFM2lxVXZHV2c4R1hac29jZDNHZF9KX1AzTHpIenprWHpDaFNBTFVYRFhiNHhHcXRacWVBU21LNDBlUmZpTFpR?oc=5" target="_blank" rel="noopener noreferrer">’30년 현장 전문가’의 역설…’경질론’ 직면한 이한우 현대건설 대표 ↗</a></span><span class="cd-sc num">중요도 2.5 / 5.0</span></div><p class="cd-meta">뉴스필드 · <span class="num">2026-06-15</span></p><p class="cd-why">현대건설 연관 언급 — 사업 영향 점검 대상</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiZ0FVX3lxTE5KVi1JeE9nM0E4eTZYMTFwRXJfanJHWnNyQVZEcWFONnBxamZmcTVHVDl6Q2J3cnNXTGwzWGhlYjVVNU9PQ1FvTnFzdFZieFBCLS1mRlhfZUViTFBaMmFMOVZRRDlzbDA?oc=5" target="_blank" rel="noopener noreferrer">“국가공사도 이 정도인데”…현대건설 향한 불안, 아파트 현장으로 번졌다(2부) ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">세종의소리 · <span class="num">2026-06-01</span></p><p class="cd-why">현대건설 연관 언급 — 사업 영향 점검 대상</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiWkFVX3lxTE1QTmlzQ01tQ0FsTjhWZFRiNUFmNkVkdW9SdlVIVkp6c2k5aWlvY3lYZGRjSjU4a1phOXhmMW12dFl2NjF5MU9aWDROcnFPQUprZGhPQ1RnY0lZd9IBVEFVX3lxTE9fM3Frd0N4d181UGxRZVhjSDRWTTY3WUlIdWN2dzN4cEZKeVF4WlhiUmxJN3F4eGhGMTlfVXBsdS1WMHMxNWJsZ1Q3aHA2ekZ0ZDdZdQ?oc=5" target="_blank" rel="noopener noreferrer">1.5조 압구정5구역 놓고 소송전…현대건설 DL이앤씨 고소 ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">한국경제 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-04-14</span></p><p class="cd-why">입찰 자격·평판·안전관리 리스크 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiZEFVX3lxTE8zZUVXbjFLaXRqTEpJbUVCQWZrQzlDbVRnUmRFcHBESkpzbEZlX09VVEtGRlFTLTBKbGlLVkg1dno0N3NYMF84VXJ6R0hvVXhIMGw4XzN0RE5rS19Fa2dSWm9HWDM?oc=5" target="_blank" rel="noopener noreferrer">현대건설, 5.6조 압구정3 땄지만…조합과 땅 소유권 ‘분쟁’ ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">서울경제TV · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-04-21</span></p><p class="cd-why">현대건설 연관 언급 — 사업 영향 점검 대상</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMidkFVX3lxTFBMRlVnNXk5NG4zNy1mbTFDWktTWk5VV0dET1psTTZxWUZjS1huZDYwLXVBaFlvQkk2VFRmLXkwVEFLR2xCbEJ3S3lrTllFU1FZcHI1OVVkWi1vOU0wMzFWam1XWkJhaVZzNFdDby14UkZrMWk4bWfSAWZBVV95cUxPWi1DbkxyN0ZLdTQ0d0ZyYlJxWF9qSzRqdmtSZ1VtTzFSRmRIb254bFphcnpHVThMYTRqR1ozZ20yVDM0ZUE5dU9ZMHpXTGVXZVpfLUdDWlN5YmtUaFJyRjFILWRGSGc?oc=5" target="_blank" rel="noopener noreferrer">현대건설, ‘반포1 도정법 위반’ 대법 확정… “향후 입찰 참여는 문제 없을 전망” ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">동아일보 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2025-09-04</span></p><p class="cd-why">현대건설 연관 언급 — 사업 영향 점검 대상</p></article>
 <p class="cd-more">외 13건</p>
 </div></details>
 <details class="cat-drill">
-<summary><span class="cd-label">건설현장 안전·중대재해</span><span class="cd-count num">6건</span><span class="cd-flex"></span></summary>
+<summary><span class="cd-label">건설산업 일반</span><span class="cd-count num">17건</span><span class="cd-flex"></span></summary>
 <div class="cd-body">
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://www.smarttoday.co.kr/ko-kr/articles/108684" target="_blank" rel="noopener noreferrer">&#x27;1.5조 강남 알짜&#x27; 송파 오금 현대 수주전 본격화 ↗</a></span><span class="cd-sc num">중요도 1.1 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMibEFVX3lxTE9JdVk2bTQ3NFd6cG1Sc1J0YVFCcGRleFRwdlFwaDlQUS1vT01Oa3dtcUFpUWJJWDhPa0JUMzJXM2o5WVlnQTc0NW9TdFE1dHZoV3ByUjBuaXRqazVPWTBDNXVxRDBxVzdIY3o1X9IBcEFVX3lxTFB2ekVhUmlVUTVpMWFLQXVacFlCSXR0Rm5QSW5sLXJTbUdKdzdhNjQ3OHdRUmE3eG9kdkhkT2VFR0NxODkyV1BoMWtTNVA5Qk1RV0phMWpRa1RPdUp6eFpIZlUzal8xOERlSEVBMDlZNHQ?oc=5" target="_blank" rel="noopener noreferrer">건설업계, &#x27;폭염 대응·안전관리&#x27; 본격화...&quot;더위와의 전쟁 시작됐다&quot; ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">반론보도닷컴 · <span class="num">2026-06-09</span></p><p class="cd-why">참고 수준 산업 동향 — 직접 영향 제한적</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE8xRkZOcnBjYWxrdERIVnJ2akE3SUlNNVhpUkNrelNlY2F6M1NWckluX2YwanR5V2pQTnZzQW9nTkFhVlB0UjZDNW90VjBuU2pEUE8ydF90NkhXSElBRTg2QU04bklRekll?oc=5" target="_blank" rel="noopener noreferrer">한국토지신탁, 중흥마을 재건축 예비사업시행자로 지정 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">한국주택경제신문 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiZEFVX3lxTE0xdmtNcWNneFEtenBSZUY5UHBWUmtCSzdQdUxUbGdJSm1QRGlCSWJUZVhMZnc0M1RHODBDYUFNVVBWVzdmdnRacXpfYm9oVTdtczdveTU4Z1BSN01SVDg4ZTVtZmo?oc=5" target="_blank" rel="noopener noreferrer">한국토지신탁, 부천 ‘중흥마을’ 재건축 예비사업시행자로 지정 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">매일일보 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMic0FVX3lxTE04WUxDYms5RkJXWUluWE1uaFJSMkw2QkFSemdDaVhkSHpad0JBYmlnZDZkcl9NZnUwNjFwSUVJa1NSRExtNjFxcXhLRGlJZFpGRUVQMUdaanBjYUpETjkxNW9OcV8wZ0RUWFlKNk5EQndnd2vSAXdBVV95cUxOZi1CZlZyUTQtMWl0cHRhX1FnbDNhT1pyYnp4TVNqSkJMeEZFWjhrMU1XS1VQZTVVN2oxUmtNNlFyYVJCS2V4dEJ3MGV4S2EzeXZnZ1doOUstQUdtOEpKWmt2M1RwM015RlFCU19XdjY5ZVdXTFF6aw?oc=5" target="_blank" rel="noopener noreferrer">도시정비사업 시장 쏠림 가속…현대·GS·삼성, 20조 ‘싹쓸이’ ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">인사이트코리아 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMia0FVX3lxTE93QWFaNmZ3SnpNRGxuVlBnMURsLW83UjdCYVNGMHRDVGMtSVkwS3FKbHEwZkRxY3A1LUFvbXpobW9hQU1LZk81YWJqMzFPN1hoOFZzLWxXREVfb2pIeUV6VXd6VGNobElzZTJV0gFrQVVfeXFMT3dBYVo2ZndKek1EbG5WUGcxRGwtbzdSN0JhU0YwdENUYy1JWTBLcUpscTBmRHFjcDUtQW9temhtb2FBTUtmTzVhYmozMU83WGg4VnMtbFdERV9vakh5RXpVd3pUY2hsSXNlMlU?oc=5" target="_blank" rel="noopener noreferrer">대신자산신탁, 장위동 정비사업 시동…추진위와 맞손 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">SR타임스 · <span class="num">2026-06-23</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE5zREVjcExnS2J5OTVxOTVXTVRJcUtqejV1djZKaktsYXpPX0Nta20yeGowLWFESmVTSXNMOG5uM0FvaFVUS1ptTlNnNDNQaUhnMk1CeVFXMXBrZm9FUENHb2FxUWYxdndF?oc=5" target="_blank" rel="noopener noreferrer">대한토지신탁, 차입형 줄이고 정비사업 확대…건전성 시험대 ↗</a></span><span class="cd-sc num">중요도 0.5 / 5.0</span></div><p class="cd-meta">원문 경유 · <span class="num">2026-06-22</span></p><p class="cd-why">국내 정비사업 점유율·경쟁사 추격 구도 확인</p></article>
+<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiYEFVX3lxTFBlU1pkUmM3Z1haY3pXZmFwemc0X3dEX1htNDd4cmhUbVlrQWxSTVdMZFduRkJNVmQzQVp4MW50OFpfNzBHY2ZuUGYyNkhqb2h2LWREa19EN3NNSUpQQUwxTg?oc=5" target="_blank" rel="noopener noreferrer">한국자산신탁, 민간 최초 노후계획도시 사업시행자 지정 ↗</a></span><span class="cd-sc num">중요도 0.4 / 5.0</span></div><p class="cd-meta">아시아경제 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-04-28</span></p><p class="cd-why">참고 수준 산업 동향 — 직접 영향 제한적</p></article>
+<p class="cd-more">외 11건</p>
+</div></details>
+<details class="cat-drill">
+<summary><span class="cd-label">건설현장 안전·중대재해</span><span class="cd-count num">4건</span><span class="cd-flex"></span></summary>
+<div class="cd-body">
 <article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiVkFVX3lxTFAtbThoWE56UEVEZEVQc1FYOWJ1QmVyeS1sd2phNWM4UC1lOHA3MHBzRXEzTkR2ODVZUzVUTk4xV0V6VXRPTzhkVUc3Nl8tUk4xQTYzMWJn?oc=5" target="_blank" rel="noopener noreferrer">외국인 노동자 안전교육 의무화…건설현장 전자카드 설치도 법률로 강화 ↗</a></span><span class="cd-sc num">중요도 1.4 / 5.0</span></div><p class="cd-meta">헤럴드경제 · <span class="srcq trust">신뢰 출처</span> · <span class="num">2026-06-18</span></p><p class="cd-why">참고 수준 산업 동향 — 직접 영향 제한적</p></article>
 <article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5aYnZlbmZFdnByQmhyMWt1RUdSMWxaVFQtcWVSNEs3U2d4OHNDbEtyaW1kckcwdUp5ZGMybWdFMlJLaFMyNmlpN04xbDdCS2FBdDhqSkV1TmhwQ2ZpSFdqcWM1UmhOeVdmbUVqVjBmQ2U?oc=5" target="_blank" rel="noopener noreferrer">[특별기고-김해현]지금 왜, 건설사에게 안전보건경영시스템이 필요한가 ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">안전신문 · <span class="num">2026-02-06</span></p><p class="cd-why">참고 수준 산업 동향 — 직접 영향 제한적</p></article>
 <article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE9fbW5iS2N4U3pQcV9zdlpOdGtTZWRmakljSW1xaUlWRTU1WXNGNFBtZWNxNWc3ajZ6YV9iYlZXNjgxY1VyZ09VYnpOejF6bGYxREp6QW1uYXdiT3ZJTGRCeGVXTm1HbWF5OXhhWXlEc20?oc=5" target="_blank" rel="noopener noreferrer">이랜드건설, 수원서 또 사망사고…&#x27;반복된 참사&#x27;에도 개선 없었나? ↗</a></span><span class="cd-sc num">중요도 1.0 / 5.0</span></div><p class="cd-meta">비즈중앙 · <span class="num">2026-02-14</span></p><p class="cd-why">입찰 자격·평판·안전관리 리스크 확인</p></article>
@@ -586,7 +568,8 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <details class="cat-drill">
 <summary><span class="cd-label">중동·해외 수주 환경</span><span class="cd-count num">1건</span><span class="cd-flex"></span></summary>
 <div class="cd-body">
-<article class="cd-art"><div class="cd-art-head"><span class="cd-title"><a href="https://news.google.com/rss/articles/CBMiS0FVX3lxTE81QThSeG5SSFl0cnB0NVNNQjdFVDZVQkUyUDZ2bkVSQlRtdTE0NldrajA2OUJYWW95Mm5XRXFVYkhFdGJTalBDbEx6Zw?oc=5" target="_blank" rel="noopener noreferrer">중노위, 현대엔지니어링 사용자성 인정…SK에코플랜트는 기각 ↗</a></span><span class="cd-sc num">중요도 0.7 / 5.0</span></div><p class="cd-meta">Daum 경유 · <span class="num">2026-06-23</span></p><p class="cd-why">해외 발주 환경 변화 — 수주 전략·원가 관리 변수</p></article>
+<p class="cd-empty">표시 가능한 뉴스 출처 근거가 없습니다 (블로그·카페 등 비-뉴스 출처만 수집됨).</p>
+<p class="cd-more">외 1건</p>
 </div></details>
 <details class="cat-drill">
 <summary><span class="cd-label">스마트건설 기술</span><span class="cd-count num">1건</span><span class="cd-flex"></span></summary>
@@ -607,40 +590,10 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <span class="cd-title">GTX 삼성역 철근 누락·벌점·공공수주 제한 가능성</span>
 <span class="cd-sc num">즉시 확인 후보</span>
 </div>
-<p class="cd-meta">기사 7 / 출처 4 · 대한경제 / 원문 경유 / MBC 뉴스 / Daum 경유</p>
-<p class="cd-why"><strong>영향</strong> 공공수주 · 입찰자격 · 평판 · 품질관리 · 안전관리 · 선분양/사업일정</p>
-<p class="cd-why"><strong>확인 필요</strong> 서울시 / 국토부 / 고용부 / 공시/공식자료</p>
-<p class="cd-why"><strong>근거</strong> <a href="https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606122251074630205" target="_blank" rel="noopener noreferrer">“그림엔 점 한 개, 글씨는 2개”…서울시, GTX-A 철근 누락 ‘설계사’...</a> ↗ / <a href="https://www.pointdaily.co.kr/news/articleView.html?idxno=308247" target="_blank" rel="noopener noreferrer">철근 누락에 사망사고까지...대형 건설 사 제재는 &#x27;하세월&#x27;</a> ↗ / <a href="http://www.4th.kr/news/articleView.html?idxno=2113373" target="_blank" rel="noopener noreferrer">서울시 &quot;MBC, 3억원 내라..GTX 철근 누락 왜곡 보도&quot;</a> ↗ / <a href="https://news.google.com/rss/articles/CBMid0FVX3lxTFBCYWNlSk9ucGNCNlV0ZUY1YTN3V3Q2d1QyNHpfUnEtUW1EU2lHZzV3NW1iTzItNV9DelE1SE1KaGFodUg1S2FQWkVlM2U0TmtmZjhpdWx1UkdPR2VqUEpmTkRfYm01OU5QclBnOFRCUkVjS0VZQTNB0gF3QVVfeXFMT0otVGp5MzVWSEN1ZU1TaEN1SG1BbjUyUlFnaFZqcWxjcFFYUldxX1I2S2tSZnJlT1dKcHRDU1V0WkxCelNqUWFoN1ZDTjA5VXUwNHV2Y0dlTE1BcXpIOUhXSzRPVzJIS2E3TXByX1luQ2p1ZVo5bnc?oc=5" target="_blank" rel="noopener noreferrer">서울시, &#x27;GTX 철근 누락&#x27; 현대건설 등 시공사에 벌점 부과 통보</a> ↗ / <a href="https://realty.chosun.com/site/data/html_dir/2026/06/19/2026061902064.html" target="_blank" rel="noopener noreferrer">&#x27;원전 대박&#x27; 현대건설 3개의 암초…철근 누락, 싱가포르 뇌물, 尹 관저 ...</a> ↗</p>
-</article>
-<article class="cd-art">
-<div class="cd-art-head">
-<span class="cd-title">건설사 벌점·입찰제한 제도 변화</span>
-<span class="cd-sc num">즉시 확인 후보</span>
-</div>
-<p class="cd-meta">기사 2 / 출처 2 · 대한전문건설신문 / 원문 경유</p>
-<p class="cd-why"><strong>영향</strong> 입찰자격 · 평판</p>
+<p class="cd-meta">기사 2 / 출처 2 · MBC 뉴스 / Daum 경유</p>
+<p class="cd-why"><strong>영향</strong> 공공수주 · 입찰자격 · 평판 · 품질관리 · 선분양/사업일정</p>
 <p class="cd-why"><strong>확인 필요</strong> 서울시 / 국토부 / 공시/공식자료</p>
-<p class="cd-why"><strong>근거</strong> <a href="https://news.google.com/rss/articles/CBMiaEFVX3lxTE02T3lzYmZ1bXlxWUhTdVJob1lUZDN0ZXVYM0RWZHM4SGRxMDVfcC1rTmo0SjF5TWF1ck5wVFF4R1VPVFNYR2RDYkJQZThvTFZGTTF4QWYwSnlFZEFNbFBUVW9qT2V2WUw20gFsQVVfeXFMUEJ3RThTT2FMbm5vUXhMWFhLaFFkaTRXUTZwXzF5cnRFY0FGcHk3MGh5akE4WFg5c0lNNVRMcmZCcGp4TzZ0WUpzY3k2N1oybWZkUDFTTmJWdlVFQXVXVUV2T0t4U2FMRGFwa3R0?oc=5" target="_blank" rel="noopener noreferrer">[단독] 건설업계 벌점도 양극화?···중소·중견업체에 집중</a> ↗ / <a href="https://www.kukinews.com/article/view/kuk202606160137" target="_blank" rel="noopener noreferrer">[단독] 서울시 건설 공사 부실 벌점 , 상반기에만 17건</a> ↗</p>
-</article>
-<article class="cd-art">
-<div class="cd-art-head">
-<span class="cd-title">지축 누수·벌점·품질관리 리스크</span>
-<span class="cd-sc num">당일 검토</span>
-</div>
-<p class="cd-meta">기사 2 / 출처 1 · 원문 경유</p>
-<p class="cd-why"><strong>영향</strong> 입찰자격 · 평판 · 품질관리 · 안전관리</p>
-<p class="cd-why"><strong>확인 필요</strong> 서울시 / 국토부 / 공시/공식자료</p>
-<p class="cd-why"><strong>근거</strong> <a href="http://www.newslock.co.kr/news/articleView.html?idxno=131436" target="_blank" rel="noopener noreferrer">[뉴스락 단독] 현대건설 , 지축 누수 논란에 벌점 확정…품질·안전관리...</a> ↗ / <a href="http://www.newslock.co.kr/news/articleView.html?idxno=131607" target="_blank" rel="noopener noreferrer">[뉴스락 단독] 물난리 빼고 벌점 깎아준 고양시… 현대건설 지축역 &#x27;설...</a> ↗</p>
-</article>
-<article class="cd-art">
-<div class="cd-art-head">
-<span class="cd-title">벌점·입찰제한 — 현대건설 ·포스코이앤씨, 안전 체계 아직 부족하다 [줌인IT]</span>
-<span class="cd-sc num">당일 검토</span>
-</div>
-<p class="cd-meta">기사 1 / 출처 1 · 원문 경유</p>
-<p class="cd-why"><strong>영향</strong> 공공수주 · 입찰자격 · 평판 · 안전관리</p>
-<p class="cd-why"><strong>확인 필요</strong> 서울시 / 국토부 / 공시/공식자료</p>
-<p class="cd-why"><strong>근거</strong> <a href="https://it.chosun.com/news/articleView.html?idxno=2023092164078" target="_blank" rel="noopener noreferrer">현대건설 ·포스코이앤씨, 안전 체계 아직 부족하다 [줌인IT]</a> ↗</p>
+<p class="cd-why"><strong>근거</strong> <a href="https://news.google.com/rss/articles/CBMid0FVX3lxTFBCYWNlSk9ucGNCNlV0ZUY1YTN3V3Q2d1QyNHpfUnEtUW1EU2lHZzV3NW1iTzItNV9DelE1SE1KaGFodUg1S2FQWkVlM2U0TmtmZjhpdWx1UkdPR2VqUEpmTkRfYm01OU5QclBnOFRCUkVjS0VZQTNB0gF3QVVfeXFMT0otVGp5MzVWSEN1ZU1TaEN1SG1BbjUyUlFnaFZqcWxjcFFYUldxX1I2S2tSZnJlT1dKcHRDU1V0WkxCelNqUWFoN1ZDTjA5VXUwNHV2Y0dlTE1BcXpIOUhXSzRPVzJIS2E3TXByX1luQ2p1ZVo5bnc?oc=5" target="_blank" rel="noopener noreferrer">서울시, &#x27;GTX 철근 누락&#x27; 현대건설 등 시공사에 벌점 부과 통보</a> ↗ / <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTE1abnl0Rjh4RjdQVFlFU3RpdFltaERQVVdydDRWMUZpc2tOeHZmNlA4WThKbkI3R1NueHRHNUNGSlFxLWF0X3pPdjZjemJwR1E?oc=5" target="_blank" rel="noopener noreferrer">[단독] &#x27;철근누락&#x27; 현대건설 벌점 2점 통보…선분양·공공수주 경고등</a> ↗</p>
 </article>
 <article class="cd-art">
 <div class="cd-art-head">
@@ -652,13 +605,43 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
 <p class="cd-why"><strong>확인 필요</strong> 공시/공식자료</p>
 <p class="cd-why"><strong>근거</strong> <a href="https://news.google.com/rss/articles/CBMicEFVX3lxTE5rdjdYb3pOQU5NYURsbGRqY2hIS253MkZEaGZZWkczVFVQOGFaQ1hCMlVzcE9LbGxuNXRYQWVmQW5hU0RWQXJ0eTJVVXQ5MHRDN25IQzIzeFgzdXhDVXM0YmFNYlhndkZKMnI1T1FiR0TSAXRBVV95cUxOTjg4UWdxbWh1NHlETGZ3U25GQnJhcjFOdHF1UU1ZRWxKbmg4WXY4aTZlM0xGeXlFa0ZTVzdqUjdyR2h0bHh0YlRBdk95ZGt3SXVvbDd5TTBGcnktTEFRYm5GZTA5bHdYWWZTLXpfa0NMV25ScQ?oc=5" target="_blank" rel="noopener noreferrer">현대건설, 두바이 랜드마크 손배 분쟁…해외 프로젝트 부담 커지나</a> ↗ / <a href="https://news.google.com/rss/articles/CBMiT0FVX3lxTFBtVmFQUlQxS09icEFjTHJ0S2VBeGJ3TEZlbmVtbVEwQnNoNmQ2Vi1iQ3ZSUkdSUk9rS09HWHZYcEdrVi1uTnkzYjl5QzJPaE0?oc=5" target="_blank" rel="noopener noreferrer">현대건설, &#x27;아인 두바이&#x27; 공방…하자·공기지연 책임 상호 이견</a> ↗</p>
 </article>
+<article class="cd-art">
+<div class="cd-art-head">
+<span class="cd-title">소송·분쟁 — 1.5조 압구정5구역 놓고 소송전…현대건설 DL이앤씨 고소</span>
+<span class="cd-sc num">당일 검토</span>
+</div>
+<p class="cd-meta">기사 1 / 출처 1 · 한국경제</p>
+<p class="cd-why"><strong>영향</strong> 평판</p>
+<p class="cd-why"><strong>확인 필요</strong> 공시/공식자료</p>
+<p class="cd-why"><strong>근거</strong> <a href="https://news.google.com/rss/articles/CBMiWkFVX3lxTE1QTmlzQ01tQ0FsTjhWZFRiNUFmNkVkdW9SdlVIVkp6c2k5aWlvY3lYZGRjSjU4a1phOXhmMW12dFl2NjF5MU9aWDROcnFPQUprZGhPQ1RnY0lZd9IBVEFVX3lxTE9fM3Frd0N4d181UGxRZVhjSDRWTTY3WUlIdWN2dzN4cEZKeVF4WlhiUmxJN3F4eGhGMTlfVXBsdS1WMHMxNWJsZ1Q3aHA2ekZ0ZDdZdQ?oc=5" target="_blank" rel="noopener noreferrer">1.5조 압구정5구역 놓고 소송전…현대건설 DL이앤씨 고소</a> ↗</p>
+</article>
+<article class="cd-art">
+<div class="cd-art-head">
+<span class="cd-title">품질·하자 — 현대엔지니어링, AI 기반 누수관리 기술 특허 출원</span>
+<span class="cd-sc num">모니터링</span>
+</div>
+<p class="cd-meta">기사 1 / 출처 1 · 뉴스1</p>
+<p class="cd-why"><strong>영향</strong> 평판 · 품질관리</p>
+<p class="cd-why"><strong>확인 필요</strong> 공식자료</p>
+<p class="cd-why"><strong>근거</strong> <a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE1ySEtqZUF4NWgzc3IwcURlejljb0xacWtwTUc4QUpwUzg4MWRfZFZXQkd4VG8xZ2kwQTJacDVucHVpMVNqc2twd0ZPVGZuODE4WFgtenB3TmNjaXM?oc=5" target="_blank" rel="noopener noreferrer">현대엔지니어링, AI 기반 누수관리 기술 특허 출원</a> ↗</p>
+</article>
+<article class="cd-art">
+<div class="cd-art-head">
+<span class="cd-title">현대건설 연관 리스크 — 현대건설, ‘반포1 도정법 위반’ 대법 확정… “향후 입찰 참여는 문제 없을 전망”</span>
+<span class="cd-sc num">모니터링</span>
+</div>
+<p class="cd-meta">기사 1 / 출처 1 · 동아일보</p>
+<p class="cd-why"><strong>영향</strong> 입찰자격 · 평판</p>
+<p class="cd-why"><strong>확인 필요</strong> 공시/공식자료</p>
+<p class="cd-why"><strong>근거</strong> <a href="https://news.google.com/rss/articles/CBMidkFVX3lxTFBMRlVnNXk5NG4zNy1mbTFDWktTWk5VV0dET1psTTZxWUZjS1huZDYwLXVBaFlvQkk2VFRmLXkwVEFLR2xCbEJ3S3lrTllFU1FZcHI1OVVkWi1vOU0wMzFWam1XWkJhaVZzNFdDby14UkZrMWk4bWfSAWZBVV95cUxPWi1DbkxyN0ZLdTQ0d0ZyYlJxWF9qSzRqdmtSZ1VtTzFSRmRIb254bFphcnpHVThMYTRqR1ozZ20yVDM0ZUE5dU9ZMHpXTGVXZVpfLUdDWlN5YmtUaFJyRjFILWRGSGc?oc=5" target="_blank" rel="noopener noreferrer">현대건설, ‘반포1 도정법 위반’ 대법 확정… “향후 입찰 참여는 문제 없을 전망”</a> ↗</p>
+</article>
 </div></details></section>
 <div class="notes">
 <p>※ 자동 생성 브리프입니다. 관련 기사 수는 제목·주제 기준 추정값이며 동일 사건 클러스터 확정값이 아닙니다.</p>
-<p>※ 데이터 출처 — 뉴스: 자동 수집 · 시장지표: Yahoo Finance · 참고시각 2026-06-24 09:01 (KST 기준)</p>
+<p>※ 데이터 출처 — 뉴스: 자동 수집 · 시장지표: Yahoo Finance · 참고시각 2026-06-24 09:44 (KST 기준)</p>
 <p>※ 시장지표는 참고용이며 거래용 실시간 시세가 아닙니다 (투자 판단 근거 아님).</p>
 </div>
-<footer class="num">생성 2026-06-24 09:01 KST · HDEC Executive Radar</footer>
+<footer class="num">생성 2026-06-24 09:44 KST · HDEC Executive Radar</footer>
 </div>
 </body>
 </html>

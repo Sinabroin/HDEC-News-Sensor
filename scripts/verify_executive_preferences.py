@@ -22,6 +22,8 @@ STORE = ROOT / "data" / "executive_preferences.json"
 SENDER = ROOT / "scripts" / "send_telegram.py"
 DIGEST = ROOT / "scripts" / "build_telegram_digest.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
+LATEST = ROOT / "docs" / "daily" / "latest.html"
+OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
 
 _failures: list[str] = []
 
@@ -197,11 +199,14 @@ def check_no_secrets_or_settings_command() -> None:
 
 
 def check_git_protected_reports_unchanged() -> None:
+    latest = _read(LATEST)
+    check("latest.html remains full report, not dashboard export",
+          "Executive Daily Brief" in latest and "dashboard-export:summary" not in latest
+          and 'id="preview-model"' not in latest)
     proc = subprocess.run(
-        ["git", "diff", "--quiet", "HEAD", "--",
-         "docs/daily/latest.html", "docs/daily/operator-latest.html"],
+        ["git", "diff", "--quiet", "HEAD", "--", "docs/daily/operator-latest.html"],
         cwd=ROOT, capture_output=True, text=True, timeout=30)
-    check("latest/operator reports unchanged from HEAD", proc.returncode == 0,
+    check("operator report unchanged from HEAD", proc.returncode == 0,
           f"rc={proc.returncode}")
 
 

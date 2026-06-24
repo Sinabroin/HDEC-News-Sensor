@@ -6,7 +6,7 @@ Runs fully offline. It checks:
 - Telegram payload exposes "요약 대시보드 보기" and "전체 리포트 보기".
 - The send path remains behind the human review gate.
 - `operator-latest.html` remains supported.
-- `latest.html` is not replaced by the dashboard export.
+- `latest.html` remains the full report and is not replaced by the dashboard export.
 """
 
 import json
@@ -144,8 +144,9 @@ def check_committed_dashboard() -> None:
     check("operator-latest.html 존재 및 운영자 뷰 유지",
           bool(operator) and ("운영자" in operator or "operator" in operator.lower()))
 
-    ok, detail = _git_unchanged(["docs/daily/latest.html"])
-    check("docs/daily/latest.html HEAD 대비 변경 없음", ok, detail)
+    check("docs/daily/latest.html는 dashboard export로 교체되지 않음",
+          "Executive Daily Brief" in latest and EXPORT_MARKER not in latest
+          and 'id="preview-model"' not in latest)
     ok, detail = _git_unchanged(["docs/daily/operator-latest.html"])
     check("docs/daily/operator-latest.html HEAD 대비 변경 없음", ok, detail)
 
