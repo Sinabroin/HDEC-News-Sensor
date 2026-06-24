@@ -1,0 +1,192 @@
+{
+  "version": 1,
+  "note": "중앙 렌즈 쿼리 정책 — 요약 대시보드(scripts/build_static_dashboard.py)와 라이브 수집기(app/live_collector.py)가 공유하는 단일 소스. 렌즈 우선(lens-first) 수집을 위한 쿼리/키워드/연동 상태를 한곳에서 정의한다. 가짜 기사/값 생성 없음: collect 쿼리는 NEWS_MODE=live 공개 RSS 경로에서만 사용되고, mock은 data/mock_articles.json만 읽는다.",
+  "collection_status": {
+    "query": "전용 수집 쿼리 연동 — live에서 렌즈 쿼리로 수집",
+    "keyword": "키워드 태깅 — 다른 쿼리로 수집된 기사에서 매칭",
+    "derived": "등급/신규 판정에서 파생 — 별도 수집 쿼리 아님",
+    "unconfigured": "전용 수집 소스 미연동 — 가짜 결과를 만들지 않음"
+  },
+  "lenses": {
+    "now": {
+      "label": "즉시 확인",
+      "query": "즉시 알림 후보·즉시 확인 등급에서 파생",
+      "keywords": [],
+      "supported": true,
+      "collection": "derived",
+      "collect": [],
+      "note": ""
+    },
+    "new": {
+      "label": "신규 이슈",
+      "query": "금일 처음 관측된 신규 신호에서 파생",
+      "keywords": [],
+      "supported": true,
+      "collection": "derived",
+      "collect": [],
+      "note": ""
+    },
+    "ai": {
+      "label": "AI 신호",
+      "query": "현대건설 AI·데이터센터·스마트건설·로봇·SMR 수집 쿼리",
+      "keywords": [],
+      "supported": true,
+      "collection": "query",
+      "collect": ["현대건설 AI 데이터센터", "스마트건설 로봇 AI 건설", "데이터센터 전력 SMR 발주"],
+      "note": ""
+    },
+    "civil_infrastructure": {
+      "label": "토목",
+      "query": "철도·도로·교량·터널·SOC·GTX·민자사업 수집 쿼리",
+      "keywords": ["토목", "철도", "광역철도", "GTX", "도로", "교량", "터널", "SOC", "민자사업"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["GTX 광역철도 발주", "SOC 도로 교량 터널 발주", "철도 인프라 수주"],
+      "note": ""
+    },
+    "building_housing": {
+      "label": "건축주택",
+      "query": "도시정비·재건축·재개발·분양·공사비 수집 쿼리",
+      "keywords": ["건축", "주택", "정비", "분양", "공사비", "재건축", "재개발", "도시정비"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["도시정비 재건축 재개발", "분양 주택시장", "공사비 정비사업 갈등"],
+      "note": ""
+    },
+    "plant": {
+      "label": "플랜트",
+      "query": "원전·LNG·EPC·정유·석화·SMR + 중동 플랜트 수집 쿼리",
+      "keywords": ["플랜트", "LNG", "원전", "EPC", "정유", "석유화학", "발전소", "SMR"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["LNG 플랜트 발주", "원전 EPC 수주", "중동 정유 석유화학 플랜트"],
+      "note": ""
+    },
+    "new_energy": {
+      "label": "New Energy",
+      "query": "SMR·수소·전력망·데이터센터 전력·신재생 수집 쿼리",
+      "keywords": ["SMR", "수소", "전력망", "데이터센터", "신재생", "태양광", "풍력", "전력 인프라", "ESS"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["SMR 수소 전력망", "데이터센터 전력 신재생", "태양광 ESS 전력 인프라"],
+      "note": ""
+    },
+    "development_business": {
+      "label": "개발사업",
+      "query": "PF·복합개발·도시개발·민간투자·부동산개발 수집 쿼리",
+      "keywords": ["PF", "PFV", "복합개발", "도시개발", "민간투자", "부동산개발"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["부동산개발 PF 사업", "복합개발 도시개발", "민간투자 개발사업"],
+      "note": ""
+    },
+    "global_business": {
+      "label": "글로벌",
+      "query": "해외수주·중동·사우디·UAE·카타르·네옴 수집 쿼리",
+      "keywords": ["중동", "해외", "글로벌", "사우디", "UAE", "카타르", "네옴", "체코", "유럽", "수출", "해외수주"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["해외건설 수주", "중동 사우디 네옴 발주", "해외 인프라 프로젝트"],
+      "note": ""
+    },
+    "safety_quality": {
+      "label": "안전·품질",
+      "query": "중대재해·특별감독·산업안전·품질·하자 수집 쿼리",
+      "keywords": ["안전", "중대재해", "특별감독", "규제", "벌점", "산업안전", "품질", "하자"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["건설 중대재해 특별감독", "산업안전 건설현장", "건설 품질 하자 관리"],
+      "note": ""
+    },
+    "hyundai_group": {
+      "label": "현대 그룹사",
+      "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 수집 쿼리",
+      "keywords": ["현대차", "현대자동차", "현대모비스", "현대글로비스", "현대제철", "현대중공업", "HD현대", "현대로템", "현대오토에버", "현대위아", "현대트랜시스", "현대건설기계"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["현대제철 실적", "HD현대 수주", "현대차그룹 투자"],
+      "note": "현대건설(E&C)·현대엔지니어링 직접 렌즈와 분리 — 계열사 기사만 매칭하며 약한 사명 오탐(현대건설기계 등)은 직접 렌즈에서 제외."
+    },
+    "competitor_contractors": {
+      "label": "경쟁 시공사",
+      "query": "삼성물산·DL이앤씨·대우건설·GS건설·포스코이앤씨 등 수주 수집 쿼리",
+      "keywords": ["삼성물산", "DL이앤씨", "대우건설", "GS건설", "포스코이앤씨", "HDC현산", "롯데건설", "SK에코플랜트", "경쟁", "수주 경쟁"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["삼성물산 대우건설 수주", "GS건설 DL이앤씨 수주", "포스코이앤씨 롯데건설 수주"],
+      "note": ""
+    },
+    "trust_companies": {
+      "label": "신탁사",
+      "query": "부동산신탁·책임준공·리츠·토지/자산신탁 수집 쿼리",
+      "keywords": ["신탁", "리츠", "REITs", "책임준공", "토지신탁", "자산신탁", "한국토지신탁", "코람코", "KB부동산신탁"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["부동산신탁 책임준공", "토지신탁 자산신탁", "리츠 정비사업 신탁"],
+      "note": "정비/PF 기사 내 매칭 중심 — 약한 매칭은 제외."
+    },
+    "developers": {
+      "label": "시행사·디벨로퍼",
+      "query": "디벨로퍼·시행사·부동산개발사 수집 쿼리",
+      "keywords": ["시행사", "디벨로퍼", "부동산개발사", "엠디엠", "피데스개발", "DS네트웍스"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["디벨로퍼 시행사 분양", "부동산개발사 PF", "복합개발 시행"],
+      "note": "부분문자열 오탐 방지 — '시행령' 등에 걸리지 않게 '시행사'만 매칭."
+    },
+    "oil_energy": {
+      "label": "유가·에너지",
+      "query": "유가·WTI·브렌트·두바이유·LNG 수집 쿼리 (시세는 지연/대용)",
+      "keywords": ["유가", "원유", "WTI", "브렌트", "두바이유", "연료", "정제유", "가스"],
+      "supported": true,
+      "collection": "query",
+      "collect": ["국제 유가 WTI 브렌트", "두바이유 중동 발주", "LNG 가스 가격"],
+      "note": "시장 시세는 지연/대용 — 뉴스 신호와 병행."
+    },
+    "overseas_site": {
+      "label": "해외현장",
+      "query": "해외 현장·해외 EPC·해외 프로젝트 수집 쿼리 (해외수주 신호 연계)",
+      "keywords": [],
+      "supported": true,
+      "collection": "query",
+      "collect": ["해외 건설현장 프로젝트", "해외 EPC 현장 리스크"],
+      "note": "해외수주·중동 발주 신호(글로벌)와 연계 분류."
+    },
+    "hormuz": {
+      "label": "호르무즈",
+      "query": "호르무즈 해협 AIS 통항",
+      "keywords": [],
+      "supported": false,
+      "collection": "unconfigured",
+      "collect": [],
+      "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집(시세·통항은 데모)."
+    },
+    "domestic_site": {
+      "label": "국내현장",
+      "query": "국내 현장 단위 소스",
+      "keywords": [],
+      "supported": false,
+      "collection": "unconfigured",
+      "collect": [],
+      "note": "현장 단위 전용 소스 미연동 — 즉시·리스크 신호에서 간접 연계만, 가짜 결과를 만들지 않음."
+    },
+    "overseas_branch": {
+      "label": "해외지사",
+      "query": "해외지사 단위 소스",
+      "keywords": [],
+      "supported": false,
+      "collection": "unconfigured",
+      "collect": [],
+      "note": "해외지사 단위 전용 소스 미연동 — 연동 시 보강 예정."
+    },
+    "overseas_subsidiary": {
+      "label": "해외법인",
+      "query": "해외법인 단위 소스",
+      "keywords": [],
+      "supported": false,
+      "collection": "unconfigured",
+      "collect": [],
+      "note": "해외법인 단위 전용 소스 미연동 — 연동 시 보강 예정."
+    }
+  }
+}

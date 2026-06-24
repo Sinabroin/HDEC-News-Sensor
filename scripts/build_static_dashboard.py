@@ -8,11 +8,17 @@ the same collected articles as `docs/daily/latest.html` — both derive from the
 shared brief object (`build_executive_brief.build_brief_via_mock_pipeline`).
 
 Honesty contract is preserved:
-- This file itself reads no secrets, opens no socket, and touches no env directly. The
+- This file itself reads no secrets, opens no socket directly, and touches no env. The
   shared brief pipeline owns collection — mock mode uses a temp DB + mock articles, and
   `NEWS_MODE=live` (workflow) collects public RSS, exactly like `build_static_report.py`.
-- Only the news/AI article rows + the featured hero become real. The market / AIS /
-  early-signal / theme blocks stay demo (지연/대용/보고/미연동) and keep their labels.
+- Only the news/AI article rows + the featured hero become real. The market snapshot block
+  stays demo (지연/대용/보고/미연동) EXCEPT the per-period history of supported headline items
+  (USD/KRW·JPY/KRW·WTI·Brent·Copper·US 5Y/10Y), which by default is a **deterministic demo
+  fixture** (distinct 1주/1개월/3개월/1년 windows) and, only with `--market-mode live`, is
+  replaced by **public delayed quotes** fetched by the `app/market_history` leaf (the leaf
+  owns the network; this builder reads no process env and imports no network module). US 2Y
+  / KR 10Y have no free source → stay 히스토리 미연동(non-clickable). AIS / early-signal /
+  theme blocks stay demo and keep their labels.
 - In live mode the news section is labelled '자동 수집 기사' (real); in mock it stays
   '데모 데이터'. Market preview stays demo in both. The full daily report remains
   `docs/daily/latest.html` and is never replaced by this export.
@@ -28,10 +34,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
+for _p in (ROOT, SCRIPTS_DIR):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
+# 중앙 렌즈 쿼리 정책(단일 소스) — leaf는 app.config/DB/네트워크를 건드리지 않아 bootstrap
+# 전에 import해도 안전하다(config의 DB_PATH 캐시 트랩 회피). 정책=대시보드+수집기 공유.
+from app import lens_queries  # noqa: E402
+# 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
+# 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
+from app import market_history  # noqa: E402
 
 SOURCE_TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 DEFAULT_OUTPUT = "docs/daily/dashboard-latest.html"
@@ -77,10 +90,12 @@ _SECTION_LENS = {
     "macro": ["oil_energy"],
     "hdec_direct": [],
 }
-# category_label/제목 키워드 → 추가 렌즈 (보수적 보강 — 매핑 불완전 시 fallback)
+# category_label/제목 키워드 → 추가 렌즈 (보수적 보강 — 매핑 불완전 시 fallback).
+# 단일 소스는 data/lens_queries.json(app.lens_queries)이며, 아래는 정책 로드 실패 시의
+# fallback이다 — 둘 다 동일 계약(부분문자열 오탐 금지)을 따른다.
 # 함정: 부분문자열 오탐 금지 — '시행'은 '시행령/시행규칙'에 걸리므로 '시행사'만 쓴다.
 # 그룹사/신탁/시행 렌즈는 수집된 기사 본문/제목에서만 매칭한다(없으면 0건=정직 빈 상태).
-_KEYWORD_LENS = [
+_KEYWORD_LENS_FALLBACK = [
     (("토목", "철도", "광역철도", "도로", "교량", "터널", "SOC"), "civil_infrastructure"),
     (("건축", "주택", "정비", "분양", "공사비", "재건축", "재개발"), "building_housing"),
     (("플랜트", "LNG", "원전", "EPC", "정유", "석유화학", "발전소", "SMR"), "plant"),
@@ -96,6 +111,9 @@ _KEYWORD_LENS = [
     (("신탁", "리츠", "REITs", "책임준공", "토지신탁", "자산신탁"), "trust_companies"),
     (("시행사", "디벨로퍼", "부동산개발", "PFV"), "developers"),
 ]
+# 중앙 정책(data/lens_queries.json)에서 키워드→렌즈 매핑을 로드 — 대시보드 태깅과
+# 라이브 수집 쿼리가 같은 소스를 공유한다. 로드 실패 시에만 위 fallback을 쓴다.
+_KEYWORD_LENS = lens_queries.keyword_lens_pairs() or _KEYWORD_LENS_FALLBACK
 
 # opportunity_or_risk → (cat 라벨, catColor, tag class)
 _KIND = {
@@ -336,37 +354,56 @@ def _ai_category(sig) -> tuple:
     return _AI_DEFAULT
 
 
-def _ai_relevance(sig) -> str:
-    """현대건설 관련성 — 저장된 분류 필드에서만 파생(생성 라벨/가짜 사실 금지).
+# AI 신호 → 임원 액션 유형 (5종). 일반 문구가 아니라 의사결정 액션으로 고정 매핑한다.
+_AI_ACTION = {
+    "dc_power": "수주기획 검토",
+    "field_auto": "현장 PoC 후보",
+    "safety_ai": "안전품질 검토",
+    "market_ai": "모니터링",
+    "internal": "기술검토",
+}
 
-    '직접 연관'은 executive_section==hdec_direct(직접 분류)에만 쓴다 — hdec_bucket(전략
-    implication)이 있다고 직접이라 과장하지 않는다(예: MS·아마존 SMR은 직접 아님=간접 연계).
+
+def _ai_relevance(sig) -> tuple:
+    """현대건설 관련성 (유형, 문구) — 저장된 분류 필드에서만 파생(생성 라벨/가짜 사실 금지).
+
+    유형은 direct/indirect/competitor/market 4종. '직접(direct)'은 executive_section==
+    hdec_direct(직접 분류)에만 쓴다 — hdec_bucket(전략 implication)이 있다고 직접이라
+    과장하지 않는다(예: MS·아마존 SMR은 직접 아님 = 간접 연계 indirect).
     """
     cat = sig.get("category_label") or "건설산업 AI"
     if sig.get("executive_section") == "hdec_direct":
-        return "현대건설 직접 연관 — " + cat
+        return "direct", "현대건설 직접 연관 — " + cat
     if sig.get("is_competitor"):
-        return "경쟁사 동향 — 수주 경쟁·기술 격차 점검"
+        return "competitor", "경쟁사 동향 — 수주 경쟁·기술 격차 점검"
     if sig.get("radar_section") == "business_overseas" \
             or sig.get("executive_section") == "business_overseas":
-        return "해외 발주환경 — 수주 기회 연계 점검"
+        return "market", "해외 발주환경 — 수주 기회 연계 점검"
     if sig.get("hdec_bucket"):
-        return "현대건설 사업 연계 — " + cat + " (간접 영향)"
-    return cat + " — 수주·사업 기회 관련성 점검"
+        return "indirect", "현대건설 사업 연계 — " + cat + " (간접 영향)"
+    return "market", cat + " — 수주·사업 기회 관련성 점검"
 
 
 def _ai_enrich(row: dict, sig: dict) -> dict:
-    """AI 행에 임원 실행 정보 부착(왜 중요/현대건설 관련성/예상 액션/카테고리). raw 파생만."""
+    """AI 행에 임원 실행 정보 부착(왜 중요/현대건설 관련성·유형/예상 액션·유형/카테고리).
+
+    예상 액션은 카테고리에서 5종 액션 유형(수주기획 검토/기술검토/현장 PoC 후보/안전품질
+    검토/모니터링)으로 고정 매핑한다 — 경쟁사 관련성은 모니터링으로 덮어쓴다. raw 파생만.
+    """
     cat_key, cat_label = _ai_category(sig)
     why = (sig.get("one_line_reason") or sig.get("implication")
            or sig.get("category_label") or "AI·데이터센터 연계 신호").strip()
-    action = (sig.get("action_label") or "내용 확인 후 담당 라인 검토").strip()
+    rel_type, rel_text = _ai_relevance(sig)
+    action = _AI_ACTION.get(cat_key, "모니터링")
+    if rel_type == "competitor":
+        action = "모니터링"                       # 경쟁사 동향은 수주 경쟁 모니터링이 우선
     if cat_key == "internal":
-        action = f"{action} · 내부 적용 담당 (배정 필요)"
+        action = f"{action} · 내부 적용 담당 배정 필요"
     row["aiCategory"] = cat_key
     row["aiCategoryLabel"] = cat_label
     row["why"] = why
-    row["relevance"] = _ai_relevance(sig)
+    row["relevance"] = rel_text
+    row["relevanceType"] = rel_type
     row["action"] = action
     return row
 
@@ -531,15 +568,67 @@ def _inject_featured(html: str, featured_html: str) -> str:
     return new
 
 
-def _inject_model(html: str, parts: dict, news_mode: str) -> str:
+def _fmt_market_value(value, decimals: int) -> str:
+    """시세값을 천단위 구분 + 소수 자리로 포맷 (표시용 — 시세 자체는 바꾸지 않는다)."""
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if decimals <= 0:
+        return f"{int(round(num)):,}"
+    return f"{num:,.{decimals}f}"
+
+
+def _overlay_market_history(model: dict, market_mode: str) -> None:
+    """live 모드에서 지원 종목의 기간 히스토리(+표시 현재값/변동)를 공개 시세(지연) 실측으로 교체.
+
+    mock(기본)에서는 템플릿의 결정적 데모 픽스처를 그대로 둔다 — 네트워크 0건. live에서 일부
+    심볼이 실패하면 그 종목은 데모로 남는다(history_data_mode=mock_demo) — live로 위장하지 않는다.
+    표시 현재값/변동을 히스토리 끝점과 일치시켜 차트·값이 어긋나지 않게 한다('지연·체결값 아님' 유지).
+    """
+    if (market_mode or "mock").strip().lower() != "live":
+        return
+    entries = market_history.history_for_model(mode="live")
+    by_id = {it.get("id"): it for it in model.get("market_items") or []}
+    for item_id, entry in entries.items():
+        it = by_id.get(item_id)
+        if not it or entry.get("history_data_mode") != market_history.LIVE_MODE:
+            continue  # 실측 성공분만 교체(실패분은 데모 유지 = 정직)
+        hist = entry["history"]
+        it["history"] = hist
+        it["history_source"] = entry["history_source"]
+        it["history_data_mode"] = entry["history_data_mode"]
+        it["history_updated_at"] = entry["history_updated_at"]
+        it["history_decimals"] = entry["history_decimals"]
+        latest = hist["1w"][-1]
+        it["value"] = _fmt_market_value(latest, entry["history_decimals"])
+        ref = hist["1m"][0] if hist.get("1m") else None
+        if ref:
+            pct = (latest - ref) / ref * 100
+            if pct > 0.05:
+                it["dir"], it["delta"] = "up", f"▲ +{pct:.1f}%"
+            elif pct < -0.05:
+                it["dir"], it["delta"] = "down", f"▼ {abs(pct):.1f}%"
+            else:
+                it["dir"], it["delta"] = "flat", "—"
+
+
+def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock") -> str:
     m = re.search(r'(<script type="application/json" id="preview-model">)(.*?)(</script>)',
                   html, re.S)
     if not m:
         print("ERROR: preview-model JSON island을 찾지 못함", file=sys.stderr)
         raise SystemExit(1)
     model = json.loads(m.group(2))
+    _overlay_market_history(model, market_mode)
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
+    # 중앙 정책(data/lens_queries.json)에서 lens_policy를 주입 — 생성 대시보드의 렌즈 정책·
+    # 연동 상태(collection)가 단일 소스에서 나오게 한다(템플릿 정적 정책을 덮어씀).
+    # 빈 상태 설명(emptyDescHtml)이 이 정책을 읽어 렌즈별 정직 안내를 만든다.
+    policy = lens_queries.policy_for_model()
+    if policy:
+        model["lens_policy"] = policy
     if parts["metric_indices"]:
         model["metric_indices"] = parts["metric_indices"]
     meta = dict(model.get("meta") or {})
@@ -594,8 +683,12 @@ def _update_honesty(html: str, news_mode: str) -> str:
     return html
 
 
-def render_dashboard_html(brief: dict) -> str:
-    """공유 brief를 standalone 요약 대시보드 HTML로 렌더 (실기사 데이터 주입)."""
+def render_dashboard_html(brief: dict, market_mode: str = "mock") -> str:
+    """공유 brief를 standalone 요약 대시보드 HTML로 렌더 (실기사 데이터 주입).
+
+    market_mode="live"이면 지원 종목의 기간 히스토리를 공개 시세(지연) 실측으로 교체한다
+    (네트워크는 market_history leaf가 소유). 기본 mock은 결정적 데모 픽스처(네트워크 0건).
+    """
     try:
         html = SOURCE_TEMPLATE.read_text(encoding="utf-8")
     except OSError as exc:
@@ -618,7 +711,7 @@ def render_dashboard_html(brief: dict) -> str:
     parts = _derive(brief)
     if parts["featured_sig"]:
         html = _inject_featured(html, _render_featured(parts["featured_sig"], parts["featured_row"]))
-    html = _inject_model(html, parts, news_mode)
+    html = _inject_model(html, parts, news_mode, market_mode)
     html = _update_nav_counts(html, parts["nav_counts"])
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
                                   len(parts["news_rows"]) + len(parts["ai_rows"]))
@@ -673,10 +766,13 @@ def main(argv: list[str] | None = None) -> int:
                        help="기계 검증용 메타데이터 JSON을 출력한다")
     group.add_argument("--output", metavar="PATH",
                        help=f"HTML 파일을 PATH에 생성한다 (예: {DEFAULT_OUTPUT})")
+    parser.add_argument("--market-mode", choices=("mock", "live"), default="mock",
+                        help="시장 기간 히스토리 출처: mock=결정적 데모 픽스처(기본, 네트워크 0건), "
+                             "live=공개 시세(지연) 실측(market_history leaf가 네트워크 소유)")
     args = parser.parse_args(argv)
 
     brief = build_brief_via_mock_pipeline()
-    html = render_dashboard_html(brief)
+    html = render_dashboard_html(brief, market_mode=args.market_mode)
 
     if args.json:
         print(json.dumps(dashboard_metadata(html, brief), ensure_ascii=False, indent=2))
@@ -687,7 +783,7 @@ def main(argv: list[str] | None = None) -> int:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(html, encoding="utf-8")
         print(f"dashboard written: {out_path} ({len(html)} chars) "
-              f"news_data_mode={brief.get('news_data_mode')}")
+              f"news_data_mode={brief.get('news_data_mode')} market_mode={args.market_mode}")
         return 0
 
     print(format_summary(html, brief))

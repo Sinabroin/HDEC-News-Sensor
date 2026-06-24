@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config, source_quality, topic_profiles
+from app import config, lens_queries, source_quality, topic_profiles
 
 KST = timezone(timedelta(hours=9))
 
@@ -167,6 +167,48 @@ def _merge_topic_profile_groups(groups: list[dict], cfg: dict) -> list[dict]:
     return groups + profile_groups
 
 
+def _merge_lens_query_groups(groups: list[dict], cfg: dict) -> list[dict]:
+    """중앙 렌즈 정책(app.lens_queries)의 렌즈 쿼리 그룹을 기본 소스에 합친다 (P0-D7-E).
+
+    토픽 프로파일과 동일 패턴 — 렌즈 우선(lens-first) 수집: supported 렌즈의 collect 쿼리를
+    수집 유니버스에 넣어, 빈 렌즈가 '수집 안 함'이 아니라 '쿼리는 돌렸으나 결과 없음'이 되게
+    한다. 미연동 렌즈(collect 없음)는 제외된다 — 가짜 수집을 만들지 않는다.
+
+    이미 다른 그룹에 있는 쿼리는 제외(폭증 방지), 보수적 per-query 캡, default 백필 그룹 앞에
+    끼워 넣는다. group["name"]='lens:<id>'라 query_audit이 렌즈 출처를 자동으로 담는다.
+    custom sources_path로 호출되면 fetch_all이 이 함수를 거치지 않는다(계약 보존).
+    """
+    existing = {q.strip().casefold()
+                for g in groups for q in (g.get("queries") or [])}
+    default_per_query = int(cfg.get("max_per_query", 4))
+    lens_groups: list[dict] = []
+    for group in lens_queries.collection_query_groups():
+        queries, seen = [], set()
+        for query in group.get("queries") or []:
+            key = query.strip().casefold()
+            if not key or key in existing or key in seen:
+                continue
+            seen.add(key)
+            queries.append(query)
+        if not queries:
+            continue
+        existing.update(seen)
+        lens_groups.append({
+            "name": group["name"],
+            "label": group.get("label") or group["name"],
+            "queries": queries,
+            # 보수적 per-query 2건 — 기존 그룹 캡은 바꾸지 않는다. 그룹 총량은 쿼리 수 기준.
+            "max_per_query": min(2, default_per_query),
+            "max_total": max(1, len(queries) * 2),
+        })
+    if not lens_groups:
+        return groups
+    for i, group in enumerate(groups):
+        if group.get("name") == "default":
+            return groups[:i] + lens_groups + groups[i:]
+    return groups + lens_groups
+
+
 def _fetch(url: str, timeout: int) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (public RSS)
@@ -266,6 +308,8 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     # custom sources_path(테스트/대체 설정)는 넘긴 설정만 그대로 쓴다.
     if sources_path is None:
         query_groups = _merge_topic_profile_groups(query_groups, cfg)
+        # P0-D7-E: 중앙 렌즈 정책의 렌즈 쿼리 그룹을 합쳐 렌즈 우선 수집을 한다(단일 소스 공유).
+        query_groups = _merge_lens_query_groups(query_groups, cfg)
     if not query_groups:
         return []
 

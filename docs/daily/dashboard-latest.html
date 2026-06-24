@@ -255,6 +255,8 @@
   .seg{display:inline-flex; background:#E8EFF8; border-radius:9px; padding:3px;}
   .seg button{border:none; background:transparent; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:700; color:var(--mute); cursor:pointer;}
   .seg button.active{background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(40,70,120,0.08);}
+  .seg.disabled{opacity:.55;}                       /* 기간 컨트롤 비활성 — 실측 히스토리 미연동 */
+  .seg.disabled button{cursor:not-allowed;}
   .selwrap{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink4); font-weight:600;}
   select.sel{font:inherit; font-size:12px; font-weight:700; color:var(--ink2); border:1px solid var(--line);
     background:var(--card); border-radius:8px; padding:6px 9px; cursor:pointer;}
@@ -517,22 +519,22 @@
     <aside class="lens" id="lensnav"><!-- JS가 #preview-model.nav로 렌더 (정적 폴백 포함) -->
       <div class="gtitle">기본 렌즈</div>
       <button class="nav active" data-filter="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">10</span></span></button>
-      <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
-      <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">4</span></span></button>
+      <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">2</span></span></button>
 
       <div class="gtitle">사업영역</div>
-      <button class="nav" data-filter="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">1</span></span></button>
-      <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">2</span></span></button>
-      <button class="nav" data-filter="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">5</span></span></button>
-      <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">5</span></span></button>
+      <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">4</span></span></button>
+      <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">6</span></span></button>
 
       <div class="gtitle">외부 생태계</div>
-      <button class="nav" data-filter="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-filter="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="trust_companies"><span class="l"><span class="ndot"></span><span class="nlabel">신탁사</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="developers"><span class="l"><span class="ndot"></span><span class="nlabel">시행사·디벨로퍼</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">0</span></span></button>
@@ -560,10 +562,10 @@
 
       <!-- ====== TAB: 뉴스 ====== -->
       <section class="tabpanel" id="panel-news">
-        <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">3건</span></div>
+        <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">0건</span></div>
 
         <!-- FEATURED -->
-        <article class="card featured" data-lens="safety_quality" data-category="관찰"><div class="head"><div style="min-width:0;"><div class="tagrow"><span class="tag sky">참고</span><span class="tag sky">관찰</span></div><h2>도화, GTX-A 철근누락 벌점 반발 &quot;설계도서에는 하자 없었다&quot;</h2><div class="meta"><b>대한경제</b><span class="sep">·</span><span>06-24 06:22</span><span class="sep">·</span><span>관련 100건</span><span class="sep">·</span><span>출처 75곳</span><span class="trust"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#3F6FA8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3F6FA8" stroke-width="1.6"></circle></svg>신뢰 출처</span></div><div class="featlens"><span class="fllabel">렌즈</span><span class="flchip">안전·품질</span></div></div><div class="score"><div class="v num" style="color:#5E6E8C;">2.7<small> / 5</small></div><div class="l" style="color:#5E6E8C;">관찰</div></div></div><div class="read"><div class="rd"><span class="rdb sum">요약</span><span>입찰 자격·평판·안전관리 리스크 확인</span></div><div class="rd"><span class="rdb imp">영향</span><span>현대건설 연관 · 관찰 신호 · 의사결정 관련도 점검</span></div><div class="rd act"><span class="rdb act">액션</span><span>검토 필요</span></div></div><div class="idx"><div class="h">신호 지수 · 0–5</div><div class="idxgrid" id="idxgrid"></div></div><div class="cardfoot"><div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;"><a class="extlink" href="https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606231054289820388" target="_blank" rel="noopener noreferrer">원문 보기 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></a><span style="font-size:12px; color:var(--mute4);">연계 현대건설 연관</span></div><span style="font-size:11.5px; color:var(--mute4);" class="num">자동 분류 · hdec</span></div></article>
+        <article class="card featured" data-lens="ai new_energy plant" data-category="관찰"><div class="head"><div style="min-width:0;"><div class="tagrow"><span class="tag sky">참고</span><span class="tag sky">관찰</span></div><h2>AI로 누수 사전 감지…현대엔지니어링, 2건 특허 출원</h2><div class="meta"><b>연합뉴스</b><span class="sep">·</span><span>06-22 09:21</span><span class="sep">·</span><span>관련 28건</span><span class="sep">·</span><span>출처 24곳</span><span class="trust"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#3F6FA8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3F6FA8" stroke-width="1.6"></circle></svg>신뢰 출처</span></div><div class="featlens"><span class="fllabel">렌즈</span><span class="flchip">AI 신호</span><span class="flchip">New Energy</span><span class="flchip">플랜트</span></div></div><div class="score"><div class="v num" style="color:#5E6E8C;">1.0<small> / 5</small></div><div class="l" style="color:#5E6E8C;">관찰</div></div></div><div class="read"><div class="rd"><span class="rdb sum">요약</span><span>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</span></div><div class="rd"><span class="rdb imp">영향</span><span>AI 데이터센터·전력 인프라 · 관찰 신호 · 의사결정 관련도 점검</span></div><div class="rd act"><span class="rdb act">액션</span><span>추적 필요</span></div></div><div class="idx"><div class="h">신호 지수 · 0–5</div><div class="idxgrid" id="idxgrid"></div></div><div class="cardfoot"><div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;"><a class="extlink" href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE53TmFVZDVmMzJ3V2p1dGhtY05PLVFGYjhQWXBhUjIyRm1nR19KcjgtWWZvRjd1M1Z0NDRaVWNkbnEyOE9ZbWdCRkg0WmYyV3dSXy1iYWdFR2VXdWvSAWBBVV95cUxQMFY1dExaUUhFOU1QUzdzNWZnTGozQ3Nhb2xtaXh4LXd6dFpIbWNXRzl1Sjd3Rk9CNl9PR1FUVF9Pd2lOVjRhbDlsTlBUTkRVTGNqUXpHVHkxN2VaUWh0VFg?oc=5" target="_blank" rel="noopener noreferrer">원문 보기 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></a><span style="font-size:12px; color:var(--mute4);">연계 AI 데이터센터·전력 인프라</span></div><span style="font-size:11.5px; color:var(--mute4);" class="num">자동 분류 · dc_power</span></div></article>
 
         <!-- COMPACT ROWS -->
         <div class="card rows" id="newsRows"></div>
@@ -578,7 +580,7 @@
         <!-- SIGNAL INDEX (collapsed by default) -->
         <details class="card" id="signalIndex" style="margin-top:14px;">
           <summary style="list-style:none; cursor:pointer; padding:16px 22px; font-size:13px; font-weight:700; color:var(--ink4); display:flex; align-items:center; justify-content:space-between;">
-            <span>신호 인덱스 · 전체 13건 (기본 접힘)</span>
+            <span>신호 인덱스 · 전체 11건 (기본 접힘)</span>
             <span style="font-size:11.5px; color:var(--mute4); font-weight:600;">펼치기 ▾</span>
           </summary>
           <div style="padding:4px 22px 18px;" id="indexList"></div>
@@ -596,7 +598,7 @@
         </div>
 
         <!-- 실행가능 AI 신호: 카테고리별 · 왜 중요/현대건설 관련성/예상 액션/관련 렌즈 (JS 렌더) -->
-        <div class="seclabel sky"><span class="t">AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">4건</span></div>
+        <div class="seclabel sky"><span class="t">AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">2건</span></div>
         <div class="pnote" style="margin:-2px 2px 12px;">각 신호 = <b>왜 중요한가 · 현대건설 관련성 · 예상 액션 · 관련 렌즈</b>. 실질적 AI 사업 신호가 없으면 그대로 표기합니다 (과장 없음).</div>
         <div id="aiRows"></div>
         <div class="emptylens hidden" id="aiEmpty" role="status" aria-live="polite">
@@ -660,7 +662,7 @@
             <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
             <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
           </div>
-          <div class="clickhint" style="margin-top:8px;">↗ 행을 클릭하면 상세 차트가 열립니다 — 데모 미리보기. 기간 버튼(1주·1개월·3개월·1년)은 표시 구간 라벨만 바꾸는 데모이며 기간별 실측 히스토리는 미연동입니다.</div>
+          <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·미 국채 10Y). 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
           <div class="mktcats" id="marketCategories"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
             <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
@@ -732,7 +734,7 @@
               <button data-period="3m">3개월</button>
               <button data-period="1y">1년</button>
             </div>
-            <span class="dm unavail" style="font-size:10px;">기간 버튼은 데모 고정 추세 · 기간별 실측 히스토리 미연동 (3개월·1년 동일 데모 추세)</span>
+            <span class="dm" style="font-size:10px;">기간별 데모 창(window) · 1주·1개월·3개월·1년이 서로 다른 구간 · 현재 체결값 아님</span>
           </div>
           <div class="chartbox"><svg id="yieldChart" viewBox="0 0 720 300" width="100%" height="300" preserveAspectRatio="xMidYMid meet"></svg></div>
           <div class="legend" id="chartLegend"></div>
@@ -950,7 +952,7 @@
         <button data-period="3m">3개월</button>
         <button data-period="1y">1년</button>
       </div>
-      <span class="dm unavail" style="font-size:10px;">기간 버튼은 데모 고정 추세 · 기간별 실측 히스토리 미연동</span>
+      <span class="dm" id="dwPeriodNote" style="font-size:10px;">기간 창(window) · 1주·1개월·3개월·1년 · 현재 체결값 아님</span>
     </div>
     <div class="chartbox"><svg id="dwChart" viewBox="0 0 520 260" width="100%" height="260" preserveAspectRatio="xMidYMid meet"></svg></div>
     <div class="axisnote" id="dwNote"></div>
@@ -974,129 +976,149 @@
   "lens_policy": {
     "now": {
       "label": "즉시 확인",
-      "query": "즉시 알림 후보·즉시 확인 등급 신호",
+      "query": "즉시 알림 후보·즉시 확인 등급에서 파생",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "derived"
     },
     "new": {
       "label": "신규 이슈",
-      "query": "금일 처음 관측된 신규 신호",
+      "query": "금일 처음 관측된 신규 신호에서 파생",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "derived"
     },
     "ai": {
       "label": "AI 신호",
-      "query": "현대건설 AI·데이터센터·스마트건설·로봇·SMR 쿼리",
+      "query": "현대건설 AI·데이터센터·스마트건설·로봇·SMR 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "civil_infrastructure": {
       "label": "토목",
-      "query": "철도·도로·교량·터널·SOC 키워드 매칭",
+      "query": "철도·도로·교량·터널·SOC·GTX·민자사업 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "building_housing": {
       "label": "건축주택",
-      "query": "도시정비·분양·공사비·재건축·재개발 키워드 매칭",
+      "query": "도시정비·재건축·재개발·분양·공사비 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "plant": {
       "label": "플랜트",
-      "query": "원전·LNG·EPC·정유·SMR + 중동 플랜트 수주 쿼리",
+      "query": "원전·LNG·EPC·정유·석화·SMR + 중동 플랜트 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "new_energy": {
       "label": "New Energy",
-      "query": "SMR·수소·전력망·데이터센터 전력 키워드 매칭",
+      "query": "SMR·수소·전력망·데이터센터 전력·신재생 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "development_business": {
       "label": "개발사업",
-      "query": "시행·PFV·부동산개발 키워드 매칭",
+      "query": "PF·복합개발·도시개발·민간투자·부동산개발 수집 쿼리",
       "supported": true,
-      "note": "전용 수집 쿼리 제한적 — 키워드 매칭 기반."
+      "note": "",
+      "collection": "query"
     },
     "global_business": {
       "label": "글로벌",
-      "query": "해외건설·중동·사우디·네옴 수주 쿼리",
+      "query": "해외수주·중동·사우디·UAE·카타르·네옴 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "safety_quality": {
       "label": "안전·품질",
-      "query": "중대재해·특별감독·벌점·영업정지 리스크 쿼리",
+      "query": "중대재해·특별감독·산업안전·품질·하자 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "hyundai_group": {
       "label": "현대 그룹사",
-      "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 키워드 매칭",
-      "supported": false,
-      "note": "전용 수집 쿼리 미구성 — 현대건설 직접 렌즈와 분리. 계열사 기사 동시 언급 시에만 노출."
+      "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 수집 쿼리",
+      "supported": true,
+      "note": "현대건설(E&C)·현대엔지니어링 직접 렌즈와 분리 — 계열사 기사만 매칭하며 약한 사명 오탐(현대건설기계 등)은 직접 렌즈에서 제외.",
+      "collection": "query"
     },
     "competitor_contractors": {
       "label": "경쟁 시공사",
-      "query": "수주 경쟁·경쟁 시공사 키워드 매칭",
+      "query": "삼성물산·DL이앤씨·대우건설·GS건설·포스코이앤씨 등 수주 수집 쿼리",
       "supported": true,
-      "note": ""
+      "note": "",
+      "collection": "query"
     },
     "trust_companies": {
       "label": "신탁사",
-      "query": "신탁·책임준공·리츠·토지/자산신탁 키워드 매칭",
-      "supported": false,
-      "note": "전용 수집 쿼리 미구성 — 정비/PF 기사 내 매칭 시에만 노출."
+      "query": "부동산신탁·책임준공·리츠·토지/자산신탁 수집 쿼리",
+      "supported": true,
+      "note": "정비/PF 기사 내 매칭 중심 — 약한 매칭은 제외.",
+      "collection": "query"
     },
     "developers": {
       "label": "시행사·디벨로퍼",
-      "query": "시행사·디벨로퍼·PFV·부동산개발 키워드 매칭",
-      "supported": false,
-      "note": "전용 수집 쿼리 미구성 — 정비/분양 기사 내 매칭 시에만 노출."
+      "query": "디벨로퍼·시행사·부동산개발사 수집 쿼리",
+      "supported": true,
+      "note": "부분문자열 오탐 방지 — '시행령' 등에 걸리지 않게 '시행사'만 매칭.",
+      "collection": "query"
     },
     "oil_energy": {
       "label": "유가·에너지",
-      "query": "유가·원유·WTI·연료 + 환율/유가 쿼리 (지연/대용)",
+      "query": "유가·WTI·브렌트·두바이유·LNG 수집 쿼리 (시세는 지연/대용)",
       "supported": true,
-      "note": ""
-    },
-    "hormuz": {
-      "label": "호르무즈",
-      "query": "호르무즈 해협 AIS",
-      "supported": false,
-      "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집."
-    },
-    "domestic_site": {
-      "label": "국내현장",
-      "query": "국내 현장 노출(즉시·리스크 신호 연계)",
-      "supported": false,
-      "note": "전용 수집 쿼리 미구성 — 현장 단위 소스 연동 시 보강 예정."
+      "note": "시장 시세는 지연/대용 — 뉴스 신호와 병행.",
+      "collection": "query"
     },
     "overseas_site": {
       "label": "해외현장",
-      "query": "해외수주·중동 발주 신호 연계",
+      "query": "해외 현장·해외 EPC·해외 프로젝트 수집 쿼리 (해외수주 신호 연계)",
       "supported": true,
-      "note": ""
+      "note": "해외수주·중동 발주 신호(글로벌)와 연계 분류.",
+      "collection": "query"
+    },
+    "hormuz": {
+      "label": "호르무즈",
+      "query": "호르무즈 해협 AIS 통항",
+      "supported": false,
+      "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집(시세·통항은 데모).",
+      "collection": "unconfigured"
+    },
+    "domestic_site": {
+      "label": "국내현장",
+      "query": "국내 현장 단위 소스",
+      "supported": false,
+      "note": "현장 단위 전용 소스 미연동 — 즉시·리스크 신호에서 간접 연계만, 가짜 결과를 만들지 않음.",
+      "collection": "unconfigured"
     },
     "overseas_branch": {
       "label": "해외지사",
       "query": "해외지사 단위 소스",
       "supported": false,
-      "note": "전용 수집 소스 미연동 — 연동 시 보강 예정."
+      "note": "해외지사 단위 전용 소스 미연동 — 연동 시 보강 예정.",
+      "collection": "unconfigured"
     },
     "overseas_subsidiary": {
       "label": "해외법인",
       "query": "해외법인 단위 소스",
       "supported": false,
-      "note": "전용 수집 소스 미연동 — 연동 시 보강 예정."
+      "note": "해외법인 단위 전용 소스 미연동 — 연동 시 보강 예정.",
+      "collection": "unconfigured"
     }
   },
   "metric_indices": [
     {
       "label": "현대건설 관련성",
-      "value": 5.0,
+      "value": 1.6,
       "color": "#3F6FA8"
     },
     {
@@ -1106,214 +1128,136 @@
     },
     {
       "label": "리스크/규제",
-      "value": 1.0,
+      "value": 0.0,
       "color": "#9AAAC1"
     },
     {
       "label": "긴급도",
-      "value": 1.0,
+      "value": 0.5,
       "color": "#9C7232"
     },
     {
       "label": "출처 신뢰도",
-      "value": 3.0,
+      "value": 4.5,
       "color": "#3F6FA8"
     },
     {
       "label": "반복/확산 신호",
-      "value": 1.0,
+      "value": 4.0,
       "color": "#3C7A4E"
     }
   ],
   "news_rows": [
-    {
-      "tag": "즉시",
-      "tagClass": "red",
-      "title": "건설 업계, AI인프라ㆍ 원전 전문 '핀셋 채용'",
-      "source": "대한경제",
-      "time": "06-25 06:22",
-      "related": "관련 42건",
-      "sources": "출처 36곳",
-      "cat": "관찰",
-      "catColor": "#3F6FA8",
-      "score": "5.0",
-      "scoreLabel": "즉시",
-      "scoreColor": "#B85049",
-      "lens": [
-        "ai",
-        "now",
-        "plant"
-      ],
-      "url": "https://www.dnews.co.kr/uhtml/view.jsp?idxno=202606241702536040656"
-    },
-    {
-      "tag": "즉시",
-      "tagClass": "red",
-      "title": "정부·기업, ‘중동 재건사업’ 뭉친다…“에너지·인프라 투자 예상”",
-      "source": "에너지경제",
-      "time": "06-24 14:54",
-      "related": "관련 100건",
-      "sources": "출처 75곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "4.8",
-      "scoreLabel": "즉시",
-      "scoreColor": "#B85049",
-      "lens": [
-        "global_business",
-        "now",
-        "overseas_site"
-      ],
-      "url": "https://www.ekn.kr/web/view.php?key=20260624024386121"
-    },
-    {
-      "tag": "즉시",
-      "tagClass": "red",
-      "title": "재건 시장 열린다…대우 건설 , 중동재건 태스크포스 구성",
-      "source": "서울경제",
-      "time": "06-24 07:46",
-      "related": "관련 101건",
-      "sources": "출처 76곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "4.7",
-      "scoreLabel": "즉시",
-      "scoreColor": "#B85049",
-      "lens": [
-        "global_business",
-        "now",
-        "overseas_site"
-      ],
-      "url": "https://www.sedaily.com/article/20059310?ref=naver"
-    },
-    {
-      "tag": "검토 필요",
-      "tagClass": "amber",
-      "title": "현대건설 기계, 英 ‘힐헤드 2026’서 신형 HX210 굴착기 공개… 글로벌 ...",
-      "source": "g-enews.com",
-      "time": "06-25 07:58",
-      "related": "관련 109건",
-      "sources": "출처 80곳",
-      "cat": "리스크",
-      "catColor": "#B85049",
-      "score": "4.0",
-      "scoreLabel": "리스크",
-      "scoreColor": "#B85049",
-      "lens": [
-        "global_business",
-        "new",
-        "safety_quality"
-      ],
-      "url": "https://www.g-enews.com/view.php?ud=2026062507543832280c8c1c064d_1"
-    },
-    {
-      "tag": "검토 필요",
-      "tagClass": "amber",
-      "title": "철근 누락에 사망사고까지...대형 건설 사 제재는 '하세월'",
-      "source": "pointdaily.co.kr",
-      "time": "06-15 17:28",
-      "related": "관련 100건",
-      "sources": "출처 75곳",
-      "cat": "리스크",
-      "catColor": "#B85049",
-      "score": "3.9",
-      "scoreLabel": "리스크",
-      "scoreColor": "#B85049",
-      "lens": [
-        "safety_quality"
-      ],
-      "url": "https://www.pointdaily.co.kr/news/articleView.html?idxno=308247"
-    },
-    {
-      "tag": "검토 필요",
-      "tagClass": "amber",
-      "title": "[뉴스락 단독] 현대건설 , 지축 누수 논란에 벌점 확정…품질·안전관리...",
-      "source": "newslock.co.kr",
-      "time": "06-15 14:10",
-      "related": "관련 100건",
-      "sources": "출처 75곳",
-      "cat": "리스크",
-      "catColor": "#B85049",
-      "score": "3.7",
-      "scoreLabel": "리스크",
-      "scoreColor": "#B85049",
-      "lens": [
-        "safety_quality"
-      ],
-      "url": "http://www.newslock.co.kr/news/articleView.html?idxno=131436"
-    },
-    {
-      "tag": "검토 필요",
-      "tagClass": "amber",
-      "title": "원전주 조정은 끝이 아닌 숨고르기…“수주 가시성이 관건”",
-      "source": "이데일리",
-      "time": "06-25 07:52",
-      "related": "관련 115건",
-      "sources": "출처 85곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "3.5",
-      "scoreLabel": "중요",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "ai",
-        "plant"
-      ],
-      "url": "https://www.edaily.co.kr/news/newspath.asp?newsid=02519046645485328"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "'디에이치·자이·래미안' 반년 새 재개발·재건축 20조 삼켰다",
-      "source": "비즈워치",
-      "time": "06-25 06:36",
-      "related": "관련 102건",
-      "sources": "출처 76곳",
-      "cat": "관찰",
-      "catColor": "#3F6FA8",
-      "score": "3.3",
-      "scoreLabel": "관찰",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "building_housing",
-        "global_business",
-        "overseas_site"
-      ],
-      "url": "https://news.bizwatch.co.kr/article/real_estate/2026/06/23/0036"
-    },
     {
       "tag": "참고",
       "tagClass": "sky",
       "title": "현대건설·포스코이앤씨, 안전 체계 아직 부족하다 [줌인IT]",
       "source": "IT조선",
       "time": "06-17 14:45",
-      "related": "관련 100건",
-      "sources": "출처 75곳",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
       "cat": "관찰",
       "catColor": "#3F6FA8",
       "score": "3.2",
       "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
+        "competitor_contractors",
         "global_business",
         "overseas_site",
         "safety_quality"
       ],
-      "url": "https://it.chosun.com/news/articleView.html?idxno=2023092164078"
-    }
-  ],
-  "ai_rows": [
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9ldzlHR2NudUxqSXp4MWs4eEwwTlNDUlFBc1l6Tk8tZzI3VmF1Wllna0trVTNWZFVKOU5LNVQybkx5UG1FbnJjTlZfM05oWnFSUG1CRVRFRGM1R2l1MHZlNG84eVVORnlfTTBkSW1kNjTSAXRBVV95cUxNczhOdC04blVxazBsVVFUMm43Qmc4UWFIZE5pejZpeUNIMUYtWkx3S0VQRnNrSFZiSTNoeFFZSzM2dF9KcjFUNk1VQ3dyc2lTajNFNHpiLUtlbzFuOEZQblZrSDFJOVB6bjIweF9SSWR3dkF3Ng?oc=5"
+    },
     {
       "tag": "참고",
       "tagClass": "sky",
-      "title": "현대건설 , '석탄화력→SMR' 전환 기술 개발...남동발전과 맞손",
-      "source": "4th.kr",
-      "time": "06-19 16:52",
-      "related": "관련 113건",
-      "sources": "출처 84곳",
+      "title": "현대건설 美 원전 파트너 페르미 경영 분란 계속…前 CEO, 現 경영진 압박",
+      "source": "더구루",
+      "time": "06-22 08:36",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
       "cat": "관찰",
       "catColor": "#3F6FA8",
-      "score": "3.1",
+      "score": "2.9",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "global_business",
+        "overseas_site",
+        "plant"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9zZEZxbEhsRlplandmUk9rak1VQl9YVTA0dm4xdjEycFRXcEhGVDItQVowRVNzcGlpN2ZoS25CZkQ4eGdUMk5rcV9iRl9pYWZKdHVHU0ZwTW5uQVlQNEE?oc=5"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "강남에서만 4조치 일감 얻은 삼성물산, 현대건설 제치고 업계 1위 노린다",
+      "source": "더구루",
+      "time": "06-22 10:29",
+      "related": "관련 25건",
+      "sources": "출처 21곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "2.8",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "competitor_contractors",
+        "global_business",
+        "overseas_site"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1tOEZ5SDlIOTAyWjNTQWJzblJRbHEtTnpiSDFHSXVwd09WaTNObnVTUm5KT1M2ZXoyQktsVnZCWEYwUkg2Y2RraTQyXzFNU1JXUUc0MG40aTdoVmNCMDhFTXhONA?oc=5"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "서울시, 'GTX 삼성역 철근누락' 현대건설 등에 벌점 부과 통보",
+      "source": "연합뉴스",
+      "time": "06-11 16:00",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "2.8",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "civil_infrastructure",
+        "safety_quality"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE5VSHlmUW1UanQwak1yZ2dwaE0zc2NxclRPQWNPZEg5MVNPdC1ldldNYW1XaHdRbHg0Q3l2NjZfOUs0ZzF4ME9TT2wwTHZoZzBPRE9KT1lPR21heWPSAWBBVV95cUxNLTdORzRuVTgwN3hCZjBKUTBWVERqUXVkT1lGTk92M1dqYlAwRFpQSTlpaDhHMW80eG5qOGtRWkVDWEx5dkFGV1AyVHhvck0wNFM3NXJfVzg2MVVMOHdIN0w?oc=5"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "[단독]현대건설, GTX-A 철근 누락 벌점에 이의신청 안 한다…\"보강에 총력\"",
+      "source": "Daum 경유",
+      "time": "06-24 14:08",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "2.7",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "civil_infrastructure",
+        "safety_quality"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE1FcW5RcnZ6YjVHUkljY0NnbWlIWl84QkFZVVV6Z0JWNkQyN2FLWWpyVUxXcmFvSlRnR2trTUxpUl9GS0tLaGtOTkQtbTNKdkE?oc=5"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "AI 전력난에 SMR 발주전 본격화…두산에너빌리티 성장 기대 강화",
+      "source": "포인트데일리",
+      "time": "06-16 16:08",
+      "related": "관련 8건",
+      "sources": "출처 9곳",
+      "cat": "기회",
+      "catColor": "#3C7A4E",
+      "score": "2.7",
       "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
@@ -1321,49 +1265,80 @@
         "new_energy",
         "plant"
       ],
-      "url": "http://www.4th.kr/news/articleView.html?idxno=2113443",
-      "aiCategory": "dc_power",
-      "aiCategoryLabel": "AI·데이터센터·전력 인프라",
-      "why": "유럽 원전 EPC 파이프라인·파트너십 점검",
-      "relevance": "현대건설 직접 연관 — 현대건설 연관",
-      "action": "추적 필요"
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE01aHZGbHluWHdwTUh3YktFdjREeURKdy1zVXRpREdBQmtNWjI5a3B4VWJJLS0zWERIdFFibC1tVkdkTkxFZG02LWNsY3haX0NlTXYxcHlXV01FYUx4M0NwS0JrN1BVVDZQaEEyT3F3dmvSAXRBVV95cUxOajNrbDhYWTE0cExhRlpYZnNBb1N3ajBJLUFNRXpydmhTUndGTUozZDZGX2VSZlJfVmVvdHV2aF80MnptNUZzVkU1V2hhQ3N3VjRURTQxWU9peGlFWTdJRXZRV21EUkszVmgyUkJSNko3bnllcQ?oc=5"
     },
     {
       "tag": "참고",
       "tagClass": "sky",
-      "title": "[에코플랜트 밸류업]③ 데이터센터 EPC, '전력·냉각 기술'로 차별화",
-      "source": "블로터",
-      "time": "06-19 12:38",
-      "related": "관련 115건",
-      "sources": "출처 85곳",
+      "title": "서울시, 'GTX 철근 누락' 현대건설 등 시공사에 벌점 부과 통보",
+      "source": "MBC 뉴스",
+      "time": "06-12 16:00",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "2.6",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "civil_infrastructure",
+        "safety_quality"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMid0FVX3lxTFBCYWNlSk9ucGNCNlV0ZUY1YTN3V3Q2d1QyNHpfUnEtUW1EU2lHZzV3NW1iTzItNV9DelE1SE1KaGFodUg1S2FQWkVlM2U0TmtmZjhpdWx1UkdPR2VqUEpmTkRfYm01OU5QclBnOFRCUkVjS0VZQTNB0gF3QVVfeXFMT0otVGp5MzVWSEN1ZU1TaEN1SG1BbjUyUlFnaFZqcWxjcFFYUldxX1I2S2tSZnJlT1dKcHRDU1V0WkxCelNqUWFoN1ZDTjA5VXUwNHV2Y0dlTE1BcXpIOUhXSzRPVzJIS2E3TXByX1luQ2p1ZVo5bnc?oc=5"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "현대건설, '아인 두바이' 공방…하자·공기지연 책임 상호 이견",
+      "source": "Daum 경유",
+      "time": "06-16 11:41",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "2.6",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "safety_quality"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiRkFVX3lxTFBHbWlVYzhLSDZZb1NrMnFOTjV0Znc0SzBoRm45amQwSjMyRlplbHRmYk5OZG5nOTJTQnd4dkctVWRYSEJQSUE?oc=5"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "HD현대일렉트릭-현대건설, 글로벌 품질-ESG 성과 달성",
+      "source": "통신일보",
+      "time": "06-04 08:15",
+      "related": "관련 24건",
+      "sources": "출처 20곳",
       "cat": "관찰",
       "catColor": "#3F6FA8",
       "score": "2.5",
       "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
-        "ai",
-        "new_energy",
-        "plant"
+        "global_business",
+        "hyundai_group",
+        "new",
+        "overseas_site",
+        "safety_quality"
       ],
-      "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1Dd3RHb0FOMTM5RWdONFpneHFGN2FWTVlxSDAzTThZVlUyb2JlM29RZG5iSXNMaFNJNl9MWjBaRUdsYVpSZlFldnVycS1pbXlHMUdSejV0aEhXUlo4UG9xTmFXZ9IBbEFVX3lxTE9zdjVWNlVjSzNnSTVDdVYzd2xtcUU3SGNfWGtzN1FLN3hUWHo2RVhXR1k2WXVtWnFNRzN6OVdER2wzbGlqTWRXc0VDUlRvbDJYT1J1U2FNM1ZZcEFyNGNqRXhhYk1NcGNLRHpQcw?oc=5",
-      "aiCategory": "dc_power",
-      "aiCategoryLabel": "AI·데이터센터·전력 인프라",
-      "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
-      "relevance": "현대건설 사업 연계 — AI 데이터센터·전력 인프라 (간접 영향)",
-      "action": "추적 필요"
-    },
+      "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE40NnNPdkx5OTVYQnpIZjhfQmFRa0Z5aUNKbUZ6UlFLWHRiOUhBVm5HRkYxaDRQcFN3bG9wYnhFUzQ1dk93dzFVQlVPMjlXY0huUFVibll2ZW9wZ1BiYnNyRndJdw?oc=5"
+    }
+  ],
+  "ai_rows": [
     {
       "tag": "참고",
       "tagClass": "sky",
-      "title": "김욱수 자이C&A 대표 “데이터센터 시장 정조준…EPC 역량으로 승부”",
-      "source": "디지털데일리",
-      "time": "06-24 10:30",
-      "related": "관련 114건",
-      "sources": "출처 85곳",
-      "cat": "관찰",
-      "catColor": "#3F6FA8",
-      "score": "1.3",
+      "title": "건설사들, AI 데이터센터 350조 시장 열린다…SK 초대형 프로젝트에 수주 기대감",
+      "source": "녹색경제신문",
+      "time": "06-23 09:57",
+      "related": "관련 9건",
+      "sources": "출처 10곳",
+      "cat": "기회",
+      "catColor": "#3C7A4E",
+      "score": "1.8",
       "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
@@ -1371,35 +1346,39 @@
         "new_energy",
         "plant"
       ],
-      "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE9fdEJkQzlaUVByTzJ4akRmRHZHS2xRM3lMenU1b2sybllJellmYXdtTGFRUnhxLXFGLW50YzRvWGsxM3NtLUI0WENqUVl4Y3A1SlNIV3ozeldxMWs4TFB0ZG1WRkM?oc=5",
+      "url": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE1pNnhtN2YyRUxCdG01V1lQMk5NX20zQnIzbWQ4ZkNGQkMxWFBzbXI5UHdKb0FYNnBiXzg1NTlOZFhWbENMekxRTGtRMEZhWEJzVk8wT1hSdjlvSFZUNVFiMnk2OEZwS1ZK?oc=5",
       "aiCategory": "dc_power",
       "aiCategoryLabel": "AI·데이터센터·전력 인프라",
       "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
       "relevance": "현대건설 사업 연계 — AI 데이터센터·전력 인프라 (간접 영향)",
-      "action": "추적 필요"
+      "relevanceType": "indirect",
+      "action": "수주기획 검토"
     },
     {
-      "tag": "검토 필요",
-      "tagClass": "amber",
-      "title": "자율주행· 건설 로봇·AI시티 한자리에…국토교통 미래기술 총출동[르포...",
-      "source": "news.mtn.co.kr",
-      "time": "06-25 06:10",
-      "related": "관련 109건",
-      "sources": "출처 80곳",
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "“AI가 데이터센터 결로·누수 잡는다”…현대엔지니어링, 지능형 관리 특허",
+      "source": "디지털데일리",
+      "time": "06-22 10:26",
+      "related": "관련 28건",
+      "sources": "출처 24곳",
       "cat": "관찰",
       "catColor": "#3F6FA8",
-      "score": "4.0",
-      "scoreLabel": "중요",
+      "score": "0.9",
+      "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
-        "ai"
+        "ai",
+        "new_energy",
+        "plant"
       ],
-      "url": "https://news.mtn.co.kr/news-detail/2026062416435071089",
-      "aiCategory": "field_auto",
-      "aiCategoryLabel": "현장 생산성·자동화",
-      "why": "스마트건설 기술 확산 — 현장 적용성 모니터링",
-      "relevance": "현대건설 직접 연관 — 현대건설 연관",
-      "action": "검토 필요"
+      "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTFB3QU5SSW5CdjU2WjB5TFFVaDJPMFZ5cXVFLTFzYUp4bU1UQjkwTXRGcFNQMVc4SmRwZjk4UzVJbjJZM05YSGVIc1A0cFpyazJLSW8wRDdXOFVXM0lvbEpaUmFn?oc=5",
+      "aiCategory": "dc_power",
+      "aiCategoryLabel": "AI·데이터센터·전력 인프라",
+      "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
+      "relevance": "현대건설 직접 연관 — AI 데이터센터·전력 인프라",
+      "relevanceType": "direct",
+      "action": "수주기획 검토"
     }
   ],
   "ai_themes": [
@@ -1454,10 +1433,10 @@
       "label_kr": "구리",
       "en": "Copper",
       "category": "base_metals",
-      "value": "9,180",
+      "value": "13,181",
       "unit": "USD/t",
-      "delta": "▲ 1.2%",
-      "dir": "up",
+      "delta": "▼ 5.7%",
+      "dir": "down",
       "data_mode": "delayed_market",
       "spark": [
         60,
@@ -1472,7 +1451,74 @@
         69,
         71,
         72
-      ]
+      ],
+      "history": {
+        "1w": [
+          14306,
+          14289,
+          14053,
+          14014,
+          13539,
+          13181
+        ],
+        "1m": [
+          13982,
+          14024,
+          13900,
+          14101,
+          14020,
+          14383,
+          14660,
+          14288,
+          14354,
+          13809,
+          13954,
+          13895,
+          13777,
+          13799,
+          14177,
+          14291,
+          14306,
+          14289,
+          14053,
+          14014,
+          13539,
+          13181
+        ],
+        "3m": [
+          12189,
+          12399,
+          12672,
+          13456,
+          13280,
+          13078,
+          13777,
+          13782,
+          13982,
+          14383,
+          13895,
+          14306,
+          13181
+        ],
+        "1y": [
+          10730,
+          12706,
+          9732,
+          10593,
+          11168,
+          11666,
+          12807,
+          12998,
+          12766,
+          13456,
+          13868,
+          13181
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-25",
+      "history_decimals": 0
     },
     {
       "id": "aluminum",
@@ -1677,10 +1723,10 @@
       "label_kr": "WTI 원유",
       "en": "WTI",
       "category": "oil_refined",
-      "value": "78.4",
+      "value": "70.1",
       "unit": "USD/bbl",
-      "delta": "▲ 0.9%",
-      "dir": "up",
+      "delta": "▼ 27.4%",
+      "dir": "down",
       "data_mode": "delayed_market",
       "spark": [
         70,
@@ -1695,17 +1741,84 @@
         77,
         76,
         78
-      ]
+      ],
+      "history": {
+        "1w": [
+          76.1,
+          76.8,
+          76.6,
+          74.8,
+          73.2,
+          70.1
+        ],
+        "1m": [
+          96.6,
+          93.9,
+          88.7,
+          88.9,
+          87.4,
+          92.2,
+          93.8,
+          96.0,
+          93.0,
+          90.5,
+          91.3,
+          88.2,
+          90.0,
+          87.7,
+          84.9,
+          80.8,
+          76.1,
+          76.8,
+          76.6,
+          74.8,
+          73.2,
+          70.1
+        ],
+        "3m": [
+          90.3,
+          100.1,
+          97.9,
+          83.8,
+          94.4,
+          101.9,
+          95.4,
+          105.4,
+          96.6,
+          92.2,
+          88.2,
+          76.1,
+          70.1
+        ],
+        "1y": [
+          64.4,
+          65.2,
+          64.2,
+          62.4,
+          61.0,
+          59.7,
+          56.0,
+          64.0,
+          93.5,
+          83.8,
+          98.3,
+          70.1
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-25",
+      "history_decimals": 1
     },
     {
       "id": "brent",
       "label_kr": "브렌트유",
       "en": "Brent",
       "category": "oil_refined",
-      "value": "82.1",
+      "value": "73.3",
       "unit": "USD/bbl",
-      "delta": "▲ 0.7%",
-      "dir": "up",
+      "delta": "▼ 29.2%",
+      "dir": "down",
       "data_mode": "delayed_market",
       "spark": [
         72,
@@ -1720,7 +1833,74 @@
         78,
         77,
         79
-      ]
+      ],
+      "history": {
+        "1w": [
+          79.0,
+          79.6,
+          79.8,
+          77.9,
+          77.1,
+          73.3
+        ],
+        "1m": [
+          103.5,
+          99.6,
+          94.3,
+          93.7,
+          92.1,
+          95.0,
+          96.0,
+          97.8,
+          95.0,
+          93.1,
+          94.2,
+          91.4,
+          93.1,
+          90.4,
+          87.3,
+          83.2,
+          79.0,
+          79.6,
+          79.8,
+          77.9,
+          77.1,
+          73.3
+        ],
+        "3m": [
+          102.2,
+          101.2,
+          95.9,
+          90.4,
+          105.3,
+          108.2,
+          101.3,
+          109.3,
+          103.5,
+          95.0,
+          91.4,
+          79.0,
+          73.3
+        ],
+        "1y": [
+          67.1,
+          68.4,
+          68.1,
+          67.0,
+          65.1,
+          63.3,
+          60.0,
+          68.8,
+          100.2,
+          90.4,
+          105.0,
+          73.3
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-25",
+      "history_decimals": 1
     },
     {
       "id": "dubai_crude",
@@ -1938,10 +2118,10 @@
       "label_kr": "미 국채 10Y",
       "en": "US 10Y",
       "category": "rates_inflation",
-      "value": "4.45",
+      "value": "4.40",
       "unit": "%",
-      "delta": "▲ +3bp",
-      "dir": "up",
+      "delta": "▼ 3.7%",
+      "dir": "down",
       "data_mode": "delayed_market",
       "spark": [
         40,
@@ -1956,17 +2136,84 @@
         45,
         44,
         45
-      ]
+      ],
+      "history": {
+        "1w": [
+          4.49,
+          4.47,
+          4.43,
+          4.46,
+          4.45,
+          4.4
+        ],
+        "1m": [
+          4.57,
+          4.59,
+          4.56,
+          4.49,
+          4.48,
+          4.45,
+          4.45,
+          4.47,
+          4.45,
+          4.49,
+          4.48,
+          4.54,
+          4.55,
+          4.53,
+          4.54,
+          4.46,
+          4.49,
+          4.47,
+          4.43,
+          4.46,
+          4.45,
+          4.4
+        ],
+        "3m": [
+          4.33,
+          4.34,
+          4.34,
+          4.28,
+          4.29,
+          4.42,
+          4.36,
+          4.48,
+          4.57,
+          4.45,
+          4.54,
+          4.49,
+          4.4
+        ],
+        "1y": [
+          4.29,
+          4.42,
+          4.24,
+          4.15,
+          4.1,
+          4.06,
+          4.14,
+          4.2,
+          4.28,
+          4.31,
+          4.62,
+          4.4
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-24",
+      "history_decimals": 2
     },
     {
       "id": "us_5y",
       "label_kr": "미 국채 5Y",
       "en": "US 5Y",
       "category": "rates_inflation",
-      "value": "4.22",
+      "value": "4.18",
       "unit": "%",
-      "delta": "▲ +2bp",
-      "dir": "up",
+      "delta": "▼ 0.9%",
+      "dir": "down",
       "data_mode": "delayed_market",
       "spark": [
         38,
@@ -1981,7 +2228,74 @@
         42,
         43,
         42
-      ]
+      ],
+      "history": {
+        "1w": [
+          4.21,
+          4.19,
+          4.15,
+          4.23,
+          4.22,
+          4.18
+        ],
+        "1m": [
+          4.22,
+          4.26,
+          4.26,
+          4.18,
+          4.18,
+          4.16,
+          4.15,
+          4.19,
+          4.18,
+          4.21,
+          4.19,
+          4.28,
+          4.28,
+          4.25,
+          4.26,
+          4.19,
+          4.21,
+          4.19,
+          4.15,
+          4.23,
+          4.22,
+          4.18
+        ],
+        "3m": [
+          3.95,
+          3.98,
+          3.98,
+          3.9,
+          3.91,
+          4.07,
+          4.0,
+          4.13,
+          4.22,
+          4.16,
+          4.28,
+          4.21,
+          4.18
+        ],
+        "1y": [
+          3.86,
+          3.98,
+          3.7,
+          3.73,
+          3.72,
+          3.62,
+          3.69,
+          3.74,
+          3.87,
+          3.91,
+          4.28,
+          4.18
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-24",
+      "history_decimals": 2
     },
     {
       "id": "us_2y",
@@ -2062,9 +2376,9 @@
       "label_kr": "USD/KRW",
       "en": "",
       "category": "fx",
-      "value": "1,536.8",
+      "value": "1,548.2",
       "unit": "원",
-      "delta": "▲ +0.5%",
+      "delta": "▲ +2.8%",
       "dir": "up",
       "data_mode": "delayed_market",
       "spark": [
@@ -2080,17 +2394,84 @@
         58,
         59,
         60
-      ]
+      ],
+      "history": {
+        "1w": [
+          1525.4,
+          1537.6,
+          1531.3,
+          1539.1,
+          1535.2,
+          1548.2
+        ],
+        "1m": [
+          1505.4,
+          1503.1,
+          1495.3,
+          1506.8,
+          1511.3,
+          1516.6,
+          1530.1,
+          1533.1,
+          1554.5,
+          1528.9,
+          1525.8,
+          1525.1,
+          1517.4,
+          1509.5,
+          1513.3,
+          1511.0,
+          1525.4,
+          1537.6,
+          1531.3,
+          1539.1,
+          1535.2,
+          1548.2
+        ],
+        "3m": [
+          1516.1,
+          1507.8,
+          1476.8,
+          1485.8,
+          1472.0,
+          1474.0,
+          1493.0,
+          1507.8,
+          1505.4,
+          1516.6,
+          1525.1,
+          1525.4,
+          1548.2
+        ],
+        "1y": [
+          1353.8,
+          1388.3,
+          1384.4,
+          1401.8,
+          1429.0,
+          1471.8,
+          1455.2,
+          1440.9,
+          1484.9,
+          1469.3,
+          1504.4,
+          1548.2
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-25",
+      "history_decimals": 1
     },
     {
       "id": "jpykrw",
       "label_kr": "JPY/KRW (100)",
       "en": "",
       "category": "fx",
-      "value": "9.74",
+      "value": "9.55",
       "unit": "원",
-      "delta": "▼ 0.2%",
-      "dir": "down",
+      "delta": "▲ +1.0%",
+      "dir": "up",
       "data_mode": "delayed_market",
       "spark": [
         60,
@@ -2105,7 +2486,74 @@
         57,
         56,
         56
-      ]
+      ],
+      "history": {
+        "1w": [
+          9.5,
+          9.53,
+          9.49,
+          9.52,
+          9.5,
+          9.55
+        ],
+        "1m": [
+          9.46,
+          9.41,
+          9.38,
+          9.46,
+          9.47,
+          9.48,
+          9.57,
+          9.58,
+          9.69,
+          9.54,
+          9.51,
+          9.5,
+          9.48,
+          9.44,
+          9.43,
+          9.42,
+          9.5,
+          9.53,
+          9.49,
+          9.52,
+          9.5,
+          9.55
+        ],
+        "3m": [
+          9.48,
+          9.44,
+          9.28,
+          9.32,
+          9.23,
+          9.35,
+          9.47,
+          9.48,
+          9.46,
+          9.48,
+          9.5,
+          9.5,
+          9.55
+        ],
+        "1y": [
+          9.34,
+          9.35,
+          9.43,
+          9.53,
+          9.27,
+          9.47,
+          9.2,
+          9.43,
+          9.34,
+          9.25,
+          9.46,
+          9.55
+        ]
+      },
+      "history_source": "Yahoo Finance (지연)",
+      "history_data_mode": "delayed_market",
+      "history_updated_at": "2026-06-25",
+      "history_decimals": 2
     },
     {
       "id": "eurkrw",
@@ -2551,25 +2999,25 @@
       "id": "civil_infrastructure",
       "label": "토목",
       "desc": "SOC·도로·철도·항만·교량·터널",
-      "count": 0
+      "count": 3
     },
     {
       "id": "building_housing",
       "label": "건축주택",
       "desc": "도시정비·분양·공사비·하자/품질",
-      "count": 1
+      "count": 0
     },
     {
       "id": "plant",
       "label": "플랜트",
       "desc": "원전·LNG·정유/석화·중동 EPC",
-      "count": 2
+      "count": 3
     },
     {
       "id": "new_energy",
       "label": "New Energy",
       "desc": "SMR·수소·전력망·데이터센터 전력",
-      "count": 0
+      "count": 2
     },
     {
       "id": "development_business",
@@ -2581,13 +3029,13 @@
       "id": "global_business",
       "label": "글로벌",
       "desc": "해외수주·중동·환율·지정학",
-      "count": 5
+      "count": 4
     },
     {
       "id": "safety_quality",
       "label": "안전·품질",
       "desc": "중대재해·특별감독·벌점·하자",
-      "count": 5
+      "count": 6
     }
   ],
   "ecosystem": [
@@ -2595,13 +3043,13 @@
       "id": "hyundai_group",
       "label": "현대 그룹사",
       "desc": "범현대 인프라·에너지·공급망",
-      "count": 0
+      "count": 1
     },
     {
       "id": "competitor_contractors",
       "label": "경쟁 시공사",
       "desc": "주요 경쟁사 수주·리스크",
-      "count": 0
+      "count": 2
     },
     {
       "id": "trust_companies",
@@ -2748,9 +3196,15 @@
       return '표시할 신호가 없습니다 — <b>전체 종합</b>으로 돌아가세요.' +
         (live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>');
     }
-    var head = live
-      ? '<b>' + esc(p.label) + '</b> 렌즈는 오늘 수집된 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).'
-      : '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
+    var unconfigured = (p.collection === "unconfigured") || (p.supported === false);
+    var head;
+    if (unconfigured) {                                 // 전용 소스 미연동 — '수집했으나 없음'과 구분
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 전용 수집 쿼리가 구성되지 않았습니다 (가짜 결과를 만들지 않음).';
+    } else if (live) {                                  // 쿼리는 돌렸으나 금일 매칭 결과 없음
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 쿼리를 수집했으나 오늘 해당 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).';
+    } else {                                            // mock 데모 표본에 없음
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
+    }
     var pol = ' 수집 쿼리: ' + esc(p.query) + '.';
     var note = p.note ? ' ' + esc(p.note) : '';
     var tail = live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>';
@@ -2939,16 +3393,25 @@
     gas_lng: "가스·LNG", coal: "석탄", rates_inflation: "금리·물가", fx: "환율"
   };
   var CAT_ORDER = ["base_metals", "steel_materials", "oil_refined", "gas_lng", "coal", "rates_inflation", "fx"];
+  function isClickable(it) {
+    // 기간 히스토리(1주/1개월/3개월/1년)가 연동된 종목만 클릭/차트를 허용 — 미연동은 비클릭.
+    return !!(it.history && it.history["1m"] && it.history["1m"].length >= 2);
+  }
   function mrowHtml(it, clickable) {
     var off = it.value == null;
-    var spark = (it.spark && it.spark.length) ? sparkSvg(it.spark) : "";
+    // 미니 스파크라인은 연동된 1개월 히스토리(있으면)에서, 없으면 기존 데모 스파크에서 그린다.
+    var miniPts = (it.history && it.history["1m"] && it.history["1m"].length) ? it.history["1m"] : (it.spark || []);
+    var spark = (miniPts && miniPts.length) ? sparkSvg(miniPts) : "";
     var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
+    // 비클릭 행은 빈 차트를 열지 않으므로 사유를 명시한다(오해 방지):
+    // 값 자체가 없으면 '차트 없음', 값은 있으나 기간 히스토리가 없으면 '히스토리 미연동'.
+    var nochart = !clickable ? '<span class="dm unavail" style="font-size:9px; margin-left:4px;">' + (off ? "차트 없음" : "히스토리 미연동") + '</span>' : "";
     var en = it.en ? ' <span class="men">' + esc(it.en) + '</span>' : "";
     var attrs = clickable ? ' data-mid="' + esc(it.id) + '" role="button" tabindex="0"' : "";
     return '<div class="mrow' + (clickable ? " click" : "") + '"' + attrs + '>' +
       '<span class="mn">' + spark + esc(it.label_kr) + en + '</span>' +
       '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
-      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chev + '</span></div>';
+      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + nochart + chev + '</span></div>';
   }
   /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출. */
   function renderCategoryCards() {
@@ -2959,7 +3422,7 @@
       if (!rows.length) return;
       var conn = rows.filter(function (r) { return r.value != null; }).length;
       var card = document.createElement("div"); card.className = "mcat-card";
-      var body = rows.map(function (it) { return mrowHtml(it, true); }).join("");
+      var body = rows.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
       card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
         '</span><span class="mcat-c">연동 ' + conn + '/' + rows.length + '</span></div>' + body;
       box.appendChild(card);
@@ -3031,15 +3494,24 @@
      · CPI는 금리와 단위가 달라 같은 y축에 올리지 않고 별도 상태로 그린다.
      · 모든 시계열은 데모 고정값(preview)이며 현재 체결값이 아니다.
      ============================================================ */
-  var PERIODS = {
-    "1w": ["6/16", "6/17", "6/18", "6/19", "6/20", "6/21", "6/22"],
-    "1m": ["6/1", "6/4", "6/7", "6/10", "6/12", "6/14", "6/16", "6/18", "6/20", "6/21", "6/22"],
-    "3m": ["3/22", "4/7", "4/22", "5/7", "5/22", "6/7", "6/22"],
-    "1y": ["'25/7", "'25/9", "'25/11", "'26/1", "'26/3", "'26/5", "'26/6"]
-  };
-  /* 기간 버튼은 공유 데모 시리즈를 리샘플해 표시 구간 라벨만 바꾼다(별도 기간 데이터 없음).
-     따라서 3개월·1년은 동일 데모 추세이며, 실측 히스토리는 연동하지 않는다 — 정직 표기. */
-  var PERIOD_DEMO_NOTE = " 기간 버튼은 표시 구간 라벨만 바꾸는 데모이며(3개월·1년 동일 추세), 기간별 실측 히스토리는 미연동입니다.";
+  /* 기간 축 라벨 — 특정 날짜를 단정하지 않는 상대 창(window) 라벨(데모/실측 공통).
+     히스토리 배열 길이에 맞춰 생성하므로 1주/1개월/3개월/1년이 서로 다른 구간을 가리킨다. */
+  function relLabels(period, n) {
+    if (!n || n < 1) return [];
+    var unit = period === "1w" ? "일" : period === "1m" ? "일" : period === "3m" ? "주" : "개월";
+    var out = [];
+    for (var i = 0; i < n; i++) { var back = n - 1 - i; out.push(back === 0 ? "현재" : ("-" + back + unit)); }
+    return out;
+  }
+  /* 금리 비교 차트의 기간별 창 — 데모 베이스의 꼬리 구간(tail window)을 길이로 잘라 서로 다른
+     구간을 만든다. 같은 추세를 길이만 늘리는 resample이 아니라 실제 부분 구간 선택이다. */
+  var YIELD_WIN = { "1w": 4, "1m": 6, "3m": 9, "1y": 12 };
+  function periodWindow(base, period) {
+    if (!base || !base.length) return [];
+    var keep = YIELD_WIN[period] || base.length;
+    return base.slice(Math.max(0, base.length - keep));
+  }
+  var PERIOD_DEMO_NOTE = " 기간 버튼(1주·1개월·3개월·1년)은 각각 다른 기간 창을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 현재 체결값이 아닙니다.";
   /* 데모 고정 금리/물가 커브 (현재 체결값 아님). 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐.
      여기 없는 (국가×만기/지표) 조합은 차트에서 가짜 선을 그리지 않고 '소스 필요' 칩으로 둔다.
      스프레드(10Y-2Y/10Y-3M)는 보유 시리즈에서 계산한다 — 별도 가짜 데이터 없음. */
@@ -3128,13 +3600,6 @@
   }
   function nameFor(c, m) { return YNAME[c + "_" + m] || ((CC[c] || c) + " " + (MAT_NAME[m] || MACRO_NAME[m] || m)); }
 
-  function resample(base, n) {
-    if (!base || !base.length) return [];
-    if (n >= base.length) return base.slice();
-    var out = [];
-    for (var i = 0; i < n; i++) out.push(base[Math.round(i * (base.length - 1) / (n - 1))]);
-    return out;
-  }
   function activeSeg(id, fallback) {
     var seg = el(id); if (!seg) return fallback;
     var b = seg.querySelector("button.active");
@@ -3188,12 +3653,13 @@
   function buildYieldView() {
     var mode = activeSeg("yieldModeSeg", "within");
     var period = activeSeg("yieldPeriodSeg", "1m");
-    var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
+    var n = YIELD_WIN[period] || 12;
+    var dates = relLabels(period, n);
     var norm = el("normToggle").checked;
     var drawn = [], unavail = [], kind = "yield";
     function pushSeries(label, color, base) {
       if (base && base.length) {
-        var data = resample(base, n);
+        var data = periodWindow(base, period);
         if (norm) { var b0 = data[0] || 1; data = data.map(function (v) { return v / b0 * 100; }); }
         drawn.push({ name: label, color: color, data: data });
       } else { unavail.push(label); }
@@ -3288,7 +3754,7 @@
     });
     var pseg = el("yieldPeriodSeg");
     if (pseg) pseg.addEventListener("click", function (ev) {
-      var b = ev.target.closest("button"); if (!b) return;
+      var b = ev.target.closest("button"); if (!b) return;   // 기간 창 전환(1주·1개월·3개월·1년 = 서로 다른 구간)
       [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
       drawYieldChart();
     });
@@ -3328,26 +3794,37 @@
       unavailable: "미연동", policy_required: "정책/키 필요" };
     var current = null;
 
+    function periodLabel(p) { return { "1w": "1주", "1m": "1개월", "3m": "3개월", "1y": "1년" }[p] || p; }
     function drawDrawerChart() {
       var svg = el("dwChart"); if (!svg || !current) return;
       var period = activeSeg("dwPeriodSeg", "1m");
-      var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
-      var base = current.spark || [];
-      if (current.value == null || base.length < 2) {
-        renderLineChart(svg, [], dates, { yLabel: "", emptyMsg: "미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
-        el("dwNote").textContent = "이 종목은 공개·무료 소스가 없어 미연동입니다 — 값/선을 생성하지 않습니다.";
+      var hist = (current.history && current.history[period]) || [];
+      var noteEl = el("dwPeriodNote");
+      // 이 종목/기간에 히스토리가 없으면 빈 차트 대신 정직 메시지(가짜 선 금지).
+      if (!hist || hist.length < 2) {
+        renderLineChart(svg, [], relLabels(period, 7),
+          { yLabel: "", emptyMsg: periodLabel(period) + " 히스토리 미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
+        el("dwNote").textContent = "이 종목은 " + periodLabel(period) + " 기간 히스토리가 미연동입니다 — 값/선을 생성하지 않습니다(소스 필요).";
+        if (noteEl) noteEl.textContent = "선택 기간 미연동 · 현재 체결값 아님";
         return;
       }
-      var data = resample(base, n);
+      var dates = relLabels(period, hist.length);
+      var last = hist[hist.length - 1];
+      var dec = current.history_decimals != null ? current.history_decimals
+        : (Math.abs(last) < 20 ? 2 : Math.abs(last) < 1000 ? 1 : 0);
       var color = current.dir === "down" ? "#3C7A4E" : "#B85049";
-      renderLineChart(svg, [{ name: current.label_kr, color: color, data: data }], dates,
-        { yLabel: "추세(데모)", decimals: 0, emptyMsg: "" });
-      el("dwNote").textContent = "추세 방향 데모 시계열(상대값)입니다 — 현재 체결값·절대 가격이 아닙니다. data_mode: " +
-        (DM[current.data_mode] ? DM[current.data_mode][0] : "미연동") + "." + PERIOD_DEMO_NOTE;
+      renderLineChart(svg, [{ name: current.label_kr, color: color, data: hist }], dates,
+        { yLabel: (current.unit || "추세"), decimals: dec, emptyMsg: "" });
+      var srcLabel = current.history_data_mode === "delayed_market" ? "공개 시세(지연) 실측" : "결정적 데모 추세";
+      el("dwNote").textContent = periodLabel(period) + " 기간 창 — " + srcLabel +
+        " · 현재 체결값·절대 체결가가 아닙니다. 기간(1주·1개월·3개월·1년)마다 서로 다른 구간을 표시합니다.";
+      if (noteEl) noteEl.textContent = periodLabel(period) + " · " + srcLabel + " · 현재 체결값 아님";
     }
 
     function openDrawer(id) {
-      current = ITEMS[id]; if (!current) return;
+      current = ITEMS[id];
+      // 기간 히스토리가 연동된 종목만 상세 차트를 연다(빈 차트 방지). 행도 비클릭이지만 방어적으로 막는다.
+      if (!current || !(current.history && current.history["1m"] && current.history["1m"].length >= 2)) { current = null; return; }
       el("dwTitle").textContent = current.label_kr + (current.unit ? " (" + current.unit + ")" : "");
       el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기";
       el("dwMode").innerHTML = dmBadge(current.data_mode);
@@ -3379,7 +3856,7 @@
     document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeDrawer(); });
     var dpseg = el("dwPeriodSeg");
     if (dpseg) dpseg.addEventListener("click", function (ev) {
-      var b = ev.target.closest("button"); if (!b) return;
+      var b = ev.target.closest("button"); if (!b) return;   // 기간 창 전환(1주·1개월·3개월·1년 = 서로 다른 구간)
       [].forEach.call(dpseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
       drawDrawerChart();
     });

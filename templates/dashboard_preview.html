@@ -253,6 +253,8 @@
   .seg{display:inline-flex; background:#E8EFF8; border-radius:9px; padding:3px;}
   .seg button{border:none; background:transparent; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:700; color:var(--mute); cursor:pointer;}
   .seg button.active{background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(40,70,120,0.08);}
+  .seg.disabled{opacity:.55;}                       /* 기간 컨트롤 비활성 — 실측 히스토리 미연동 */
+  .seg.disabled button{cursor:not-allowed;}
   .selwrap{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink4); font-weight:600;}
   select.sel{font:inherit; font-size:12px; font-weight:700; color:var(--ink2); border:1px solid var(--line);
     background:var(--card); border-radius:8px; padding:6px 9px; cursor:pointer;}
@@ -689,7 +691,7 @@
             <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
             <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
           </div>
-          <div class="clickhint" style="margin-top:8px;">↗ 행을 클릭하면 상세 차트가 열립니다 — 데모 미리보기. 기간 버튼(1주·1개월·3개월·1년)은 표시 구간 라벨만 바꾸는 데모이며 기간별 실측 히스토리는 미연동입니다.</div>
+          <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·미 국채 10Y). 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
           <div class="mktcats" id="marketCategories"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
             <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
@@ -761,7 +763,7 @@
               <button data-period="3m">3개월</button>
               <button data-period="1y">1년</button>
             </div>
-            <span class="dm unavail" style="font-size:10px;">기간 버튼은 데모 고정 추세 · 기간별 실측 히스토리 미연동 (3개월·1년 동일 데모 추세)</span>
+            <span class="dm" style="font-size:10px;">기간별 데모 창(window) · 1주·1개월·3개월·1년이 서로 다른 구간 · 현재 체결값 아님</span>
           </div>
           <div class="chartbox"><svg id="yieldChart" viewBox="0 0 720 300" width="100%" height="300" preserveAspectRatio="xMidYMid meet"></svg></div>
           <div class="legend" id="chartLegend"></div>
@@ -979,7 +981,7 @@
         <button data-period="3m">3개월</button>
         <button data-period="1y">1년</button>
       </div>
-      <span class="dm unavail" style="font-size:10px;">기간 버튼은 데모 고정 추세 · 기간별 실측 히스토리 미연동</span>
+      <span class="dm" id="dwPeriodNote" style="font-size:10px;">기간 창(window) · 1주·1개월·3개월·1년 · 현재 체결값 아님</span>
     </div>
     <div class="chartbox"><svg id="dwChart" viewBox="0 0 520 260" width="100%" height="260" preserveAspectRatio="xMidYMid meet"></svg></div>
     <div class="axisnote" id="dwNote"></div>
@@ -996,26 +998,26 @@
   "meta": {"published_kst": "2026·06·22 월 07:00", "news_data_mode": "mock",
            "collection": "수동 · OFF", "audience": "executive-preview", "demo": true},
   "lens_policy": {
-    "now": {"label": "즉시 확인", "query": "즉시 알림 후보·즉시 확인 등급 신호", "supported": true, "note": ""},
-    "new": {"label": "신규 이슈", "query": "금일 처음 관측된 신규 신호", "supported": true, "note": ""},
-    "ai": {"label": "AI 신호", "query": "현대건설 AI·데이터센터·스마트건설·로봇·SMR 쿼리", "supported": true, "note": ""},
-    "civil_infrastructure": {"label": "토목", "query": "철도·도로·교량·터널·SOC 키워드 매칭", "supported": true, "note": ""},
-    "building_housing": {"label": "건축주택", "query": "도시정비·분양·공사비·재건축·재개발 키워드 매칭", "supported": true, "note": ""},
-    "plant": {"label": "플랜트", "query": "원전·LNG·EPC·정유·SMR + 중동 플랜트 수주 쿼리", "supported": true, "note": ""},
-    "new_energy": {"label": "New Energy", "query": "SMR·수소·전력망·데이터센터 전력 키워드 매칭", "supported": true, "note": ""},
-    "development_business": {"label": "개발사업", "query": "시행·PFV·부동산개발 키워드 매칭", "supported": true, "note": "전용 수집 쿼리 제한적 — 키워드 매칭 기반."},
-    "global_business": {"label": "글로벌", "query": "해외건설·중동·사우디·네옴 수주 쿼리", "supported": true, "note": ""},
-    "safety_quality": {"label": "안전·품질", "query": "중대재해·특별감독·벌점·영업정지 리스크 쿼리", "supported": true, "note": ""},
-    "hyundai_group": {"label": "현대 그룹사", "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 키워드 매칭", "supported": false, "note": "전용 수집 쿼리 미구성 — 현대건설 직접 렌즈와 분리. 계열사 기사 동시 언급 시에만 노출."},
-    "competitor_contractors": {"label": "경쟁 시공사", "query": "수주 경쟁·경쟁 시공사 키워드 매칭", "supported": true, "note": ""},
-    "trust_companies": {"label": "신탁사", "query": "신탁·책임준공·리츠·토지/자산신탁 키워드 매칭", "supported": false, "note": "전용 수집 쿼리 미구성 — 정비/PF 기사 내 매칭 시에만 노출."},
-    "developers": {"label": "시행사·디벨로퍼", "query": "시행사·디벨로퍼·PFV·부동산개발 키워드 매칭", "supported": false, "note": "전용 수집 쿼리 미구성 — 정비/분양 기사 내 매칭 시에만 노출."},
-    "oil_energy": {"label": "유가·에너지", "query": "유가·원유·WTI·연료 + 환율/유가 쿼리 (지연/대용)", "supported": true, "note": ""},
-    "hormuz": {"label": "호르무즈", "query": "호르무즈 해협 AIS", "supported": false, "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집."},
-    "domestic_site": {"label": "국내현장", "query": "국내 현장 노출(즉시·리스크 신호 연계)", "supported": false, "note": "전용 수집 쿼리 미구성 — 현장 단위 소스 연동 시 보강 예정."},
-    "overseas_site": {"label": "해외현장", "query": "해외수주·중동 발주 신호 연계", "supported": true, "note": ""},
-    "overseas_branch": {"label": "해외지사", "query": "해외지사 단위 소스", "supported": false, "note": "전용 수집 소스 미연동 — 연동 시 보강 예정."},
-    "overseas_subsidiary": {"label": "해외법인", "query": "해외법인 단위 소스", "supported": false, "note": "전용 수집 소스 미연동 — 연동 시 보강 예정."}
+    "now": {"label": "즉시 확인", "query": "즉시 알림 후보·즉시 확인 등급에서 파생", "supported": true, "note": "", "collection": "derived"},
+    "new": {"label": "신규 이슈", "query": "금일 처음 관측된 신규 신호에서 파생", "supported": true, "note": "", "collection": "derived"},
+    "ai": {"label": "AI 신호", "query": "현대건설 AI·데이터센터·스마트건설·로봇·SMR 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "civil_infrastructure": {"label": "토목", "query": "철도·도로·교량·터널·SOC·GTX·민자사업 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "building_housing": {"label": "건축주택", "query": "도시정비·재건축·재개발·분양·공사비 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "plant": {"label": "플랜트", "query": "원전·LNG·EPC·정유·석화·SMR + 중동 플랜트 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "new_energy": {"label": "New Energy", "query": "SMR·수소·전력망·데이터센터 전력·신재생 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "development_business": {"label": "개발사업", "query": "PF·복합개발·도시개발·민간투자·부동산개발 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "global_business": {"label": "글로벌", "query": "해외수주·중동·사우디·UAE·카타르·네옴 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "safety_quality": {"label": "안전·품질", "query": "중대재해·특별감독·산업안전·품질·하자 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "hyundai_group": {"label": "현대 그룹사", "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 수집 쿼리", "supported": true, "note": "현대건설(E&C)·현대엔지니어링 직접 렌즈와 분리 — 계열사 기사만 매칭하며 약한 사명 오탐(현대건설기계 등)은 직접 렌즈에서 제외.", "collection": "query"},
+    "competitor_contractors": {"label": "경쟁 시공사", "query": "삼성물산·DL이앤씨·대우건설·GS건설·포스코이앤씨 등 수주 수집 쿼리", "supported": true, "note": "", "collection": "query"},
+    "trust_companies": {"label": "신탁사", "query": "부동산신탁·책임준공·리츠·토지/자산신탁 수집 쿼리", "supported": true, "note": "정비/PF 기사 내 매칭 중심 — 약한 매칭은 제외.", "collection": "query"},
+    "developers": {"label": "시행사·디벨로퍼", "query": "디벨로퍼·시행사·부동산개발사 수집 쿼리", "supported": true, "note": "부분문자열 오탐 방지 — '시행령' 등에 걸리지 않게 '시행사'만 매칭.", "collection": "query"},
+    "oil_energy": {"label": "유가·에너지", "query": "유가·WTI·브렌트·두바이유·LNG 수집 쿼리 (시세는 지연/대용)", "supported": true, "note": "시장 시세는 지연/대용 — 뉴스 신호와 병행.", "collection": "query"},
+    "overseas_site": {"label": "해외현장", "query": "해외 현장·해외 EPC·해외 프로젝트 수집 쿼리 (해외수주 신호 연계)", "supported": true, "note": "해외수주·중동 발주 신호(글로벌)와 연계 분류.", "collection": "query"},
+    "hormuz": {"label": "호르무즈", "query": "호르무즈 해협 AIS 통항", "supported": false, "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집(시세·통항은 데모).", "collection": "unconfigured"},
+    "domestic_site": {"label": "국내현장", "query": "국내 현장 단위 소스", "supported": false, "note": "현장 단위 전용 소스 미연동 — 즉시·리스크 신호에서 간접 연계만, 가짜 결과를 만들지 않음.", "collection": "unconfigured"},
+    "overseas_branch": {"label": "해외지사", "query": "해외지사 단위 소스", "supported": false, "note": "해외지사 단위 전용 소스 미연동 — 연동 시 보강 예정.", "collection": "unconfigured"},
+    "overseas_subsidiary": {"label": "해외법인", "query": "해외법인 단위 소스", "supported": false, "note": "해외법인 단위 전용 소스 미연동 — 연동 시 보강 예정.", "collection": "unconfigured"}
   },
   "metric_indices": [
     {"label": "현대건설 관련", "value": 5.0, "color": "#3F6FA8"},
@@ -1087,7 +1089,7 @@
   "rail_snapshot": ["usdkrw", "wti", "us_10y", "copper", "jpykrw"],
   "market_items": [
     {"id": "copper", "label_kr": "구리", "en": "Copper", "category": "base_metals", "value": "9,180",
-     "unit": "USD/t", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72]},
+     "unit": "USD/t", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72], "history": {"1w":[9120,9153,9161,9147,9170,9153,9180],"1m":[9060,9069,9057,9001,9097,9052,9025,9020,9038,9051,9062,9100,9148,9087,9109,9164,9135,9195,9165,9211,9162,9180],"3m":[8757,8915,8830,8749,8771,8841,8887,9063,8899,9017,9063,9059,9180],"1y":[7955,8308,8540,8048,8201,8647,8945,8613,8627,8670,9392,9180]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 0},
     {"id": "aluminum", "label_kr": "알루미늄", "en": "Aluminum", "category": "base_metals", "value": "2,540",
      "unit": "USD/t", "delta": "▼ 0.3%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,57,56,55,56,55,54,55,54]},
     {"id": "nickel", "label_kr": "니켈", "en": "Nickel", "category": "base_metals", "value": null,
@@ -1109,9 +1111,9 @@
     {"id": "bitumen", "label_kr": "아스팔트(역청)", "en": "Bitumen", "category": "steel_materials", "value": null,
      "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "wti", "label_kr": "WTI 원유", "en": "WTI", "category": "oil_refined", "value": "78.4",
-     "unit": "USD/bbl", "delta": "▲ 0.9%", "dir": "up", "data_mode": "delayed_market", "spark": [70,71,69,72,74,73,75,74,76,77,76,78]},
+     "unit": "USD/bbl", "delta": "▲ 0.9%", "dir": "up", "data_mode": "delayed_market", "spark": [70,71,69,72,74,73,75,74,76,77,76,78], "history": {"1w":[77.9,78.2,78.1,78.3,78.3,78.3,78.4],"1m":[77.1,76.8,77.4,77.5,77.7,77.4,77.3,77.9,77.5,77.5,77.9,77.9,78.0,78.3,77.5,78.2,78.0,77.8,77.7,78.4,78.0,78.4],"3m":[74.3,74.8,74.8,75.9,75.4,76.9,75.9,77.7,77.0,77.2,78.7,79.0,78.4],"1y":[67.8,71.6,68.8,71.3,71.7,74.0,74.5,76.5,78.0,75.9,75.9,78.4]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "brent", "label_kr": "브렌트유", "en": "Brent", "category": "oil_refined", "value": "82.1",
-     "unit": "USD/bbl", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [72,73,72,74,75,74,76,75,77,78,77,79]},
+     "unit": "USD/bbl", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [72,73,72,74,75,74,76,75,77,78,77,79], "history": {"1w":[81.7,81.7,81.6,81.9,81.8,82.0,82.1],"1m":[81.0,80.8,80.5,80.5,81.1,80.6,81.1,81.6,80.9,81.6,81.6,81.2,81.4,81.8,82.0,82.1,81.6,81.5,81.6,81.9,81.7,82.1],"3m":[77.4,79.8,80.1,78.9,79.7,81.1,81.1,79.3,79.8,81.3,82.4,80.9,82.1],"1y":[71.3,73.8,76.2,75.7,74.6,74.9,79.2,80.0,78.4,79.7,80.4,82.1]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "dubai_crude", "label_kr": "두바이유", "en": "Dubai crude", "category": "oil_refined", "value": "80.6",
      "unit": "USD/bbl", "delta": "▲ 0.6%", "dir": "up", "data_mode": "manual_or_reported", "spark": [71,72,71,73,74,73,75,74,76,75,77,76]},
     {"id": "diesel_gasoil", "label_kr": "경유(가스오일)", "en": "Gasoil (Diesel)", "category": "oil_refined", "value": "96.4",
@@ -1133,9 +1135,9 @@
     {"id": "coking_coal", "label_kr": "원료탄", "en": "Coking coal", "category": "coal", "value": null,
      "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "us_10y", "label_kr": "미 국채 10Y", "en": "US 10Y", "category": "rates_inflation", "value": "4.45",
-     "unit": "%", "delta": "▲ +3bp", "dir": "up", "data_mode": "delayed_market", "spark": [40,41,42,42,43,44,43,45,44,45,44,45]},
+     "unit": "%", "delta": "▲ +3bp", "dir": "up", "data_mode": "delayed_market", "spark": [40,41,42,42,43,44,43,45,44,45,44,45], "history": {"1w":[4.43,4.43,4.43,4.45,4.44,4.44,4.45],"1m":[4.37,4.39,4.36,4.4,4.38,4.41,4.42,4.41,4.42,4.41,4.38,4.42,4.44,4.39,4.4,4.43,4.44,4.43,4.47,4.44,4.43,4.45],"3m":[4.18,4.3,4.35,4.33,4.33,4.33,4.42,4.34,4.41,4.43,4.37,4.43,4.45],"1y":[4.05,3.98,3.96,4.12,4.16,4.3,4.26,4.4,4.43,4.34,4.49,4.45]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 2},
     {"id": "us_5y", "label_kr": "미 국채 5Y", "en": "US 5Y", "category": "rates_inflation", "value": "4.22",
-     "unit": "%", "delta": "▲ +2bp", "dir": "up", "data_mode": "delayed_market", "spark": [38,39,40,40,41,42,42,41,43,42,43,42]},
+     "unit": "%", "delta": "▲ +2bp", "dir": "up", "data_mode": "delayed_market", "spark": [38,39,40,40,41,42,42,41,43,42,43,42], "history": {"1w":[4.2,4.19,4.21,4.21,4.22,4.21,4.22],"1m":[4.15,4.13,4.17,4.15,4.16,4.17,4.15,4.16,4.15,4.16,4.18,4.18,4.2,4.19,4.19,4.21,4.2,4.19,4.23,4.21,4.21,4.22],"3m":[4.09,4.04,4.06,4.09,4.07,4.11,4.13,4.11,4.22,4.23,4.2,4.17,4.22],"1y":[3.6,3.64,3.78,3.97,3.77,4.03,3.97,4.2,3.99,4.22,4.04,4.22]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 2},
     {"id": "us_2y", "label_kr": "미 국채 2Y", "en": "US 2Y", "category": "rates_inflation", "value": null,
      "unit": "%", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "kr_10y", "label_kr": "한국 국고 10Y", "en": "KR 10Y", "category": "rates_inflation", "value": null,
@@ -1145,9 +1147,9 @@
     {"id": "us_base_rate", "label_kr": "미 기준금리", "en": "US base rate", "category": "rates_inflation", "value": "4.50",
      "unit": "%", "delta": "—", "dir": "flat", "data_mode": "manual_or_reported", "spark": [55,55,53,53,50,50,48,48,46,46,45,45]},
     {"id": "usdkrw", "label_kr": "USD/KRW", "en": "", "category": "fx", "value": "1,536.8",
-     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "delayed_market", "spark": [50,51,52,53,52,54,55,56,57,58,59,60]},
+     "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "delayed_market", "spark": [50,51,52,53,52,54,55,56,57,58,59,60], "history": {"1w":[1526.5,1531.0,1527.5,1534.4,1535.3,1533.2,1536.8],"1m":[1515.9,1514.2,1517.2,1516.0,1523.2,1517.9,1510.2,1515.2,1520.5,1526.0,1525.1,1528.6,1522.7,1532.2,1519.5,1531.8,1527.8,1524.3,1536.7,1541.2,1528.6,1536.8],"3m":[1464.1,1482.5,1480.8,1487.3,1468.9,1486.2,1486.1,1530.1,1508.6,1536.6,1537.1,1529.4,1536.8],"1y":[1326.6,1365.5,1436.4,1405.4,1374.3,1463.6,1493.5,1475.0,1492.5,1520.5,1499.6,1536.8]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "jpykrw", "label_kr": "JPY/KRW (100)", "en": "", "category": "fx", "value": "9.74",
-     "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "delayed_market", "spark": [60,59,60,58,59,57,58,57,56,57,56,56]},
+     "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "delayed_market", "spark": [60,59,60,58,59,57,58,57,56,57,56,56], "history": {"1w":[9.69,9.68,9.69,9.72,9.73,9.73,9.74],"1m":[9.53,9.52,9.64,9.6,9.66,9.64,9.61,9.64,9.58,9.66,9.7,9.6,9.64,9.66,9.67,9.64,9.68,9.76,9.72,9.7,9.78,9.74],"3m":[9.4,9.2,9.43,9.42,9.32,9.48,9.52,9.48,9.74,9.7,9.52,9.78,9.74],"1y":[8.72,8.94,8.45,8.88,8.73,9.43,8.93,9.57,9.12,9.55,9.73,9.74]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 2},
     {"id": "eurkrw", "label_kr": "EUR/KRW", "en": "", "category": "fx", "value": "1,648.2",
      "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [52,53,52,54,55,54,56,55,57,56,58,57]},
     {"id": "cnykrw", "label_kr": "CNY/KRW", "en": "CNH/KRW", "category": "fx", "value": "211.4",
@@ -1319,9 +1321,15 @@
       return '표시할 신호가 없습니다 — <b>전체 종합</b>으로 돌아가세요.' +
         (live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>');
     }
-    var head = live
-      ? '<b>' + esc(p.label) + '</b> 렌즈는 오늘 수집된 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).'
-      : '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
+    var unconfigured = (p.collection === "unconfigured") || (p.supported === false);
+    var head;
+    if (unconfigured) {                                 // 전용 소스 미연동 — '수집했으나 없음'과 구분
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 전용 수집 쿼리가 구성되지 않았습니다 (가짜 결과를 만들지 않음).';
+    } else if (live) {                                  // 쿼리는 돌렸으나 금일 매칭 결과 없음
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 쿼리를 수집했으나 오늘 해당 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).';
+    } else {                                            // mock 데모 표본에 없음
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
+    }
     var pol = ' 수집 쿼리: ' + esc(p.query) + '.';
     var note = p.note ? ' ' + esc(p.note) : '';
     var tail = live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>';
@@ -1510,16 +1518,25 @@
     gas_lng: "가스·LNG", coal: "석탄", rates_inflation: "금리·물가", fx: "환율"
   };
   var CAT_ORDER = ["base_metals", "steel_materials", "oil_refined", "gas_lng", "coal", "rates_inflation", "fx"];
+  function isClickable(it) {
+    // 기간 히스토리(1주/1개월/3개월/1년)가 연동된 종목만 클릭/차트를 허용 — 미연동은 비클릭.
+    return !!(it.history && it.history["1m"] && it.history["1m"].length >= 2);
+  }
   function mrowHtml(it, clickable) {
     var off = it.value == null;
-    var spark = (it.spark && it.spark.length) ? sparkSvg(it.spark) : "";
+    // 미니 스파크라인은 연동된 1개월 히스토리(있으면)에서, 없으면 기존 데모 스파크에서 그린다.
+    var miniPts = (it.history && it.history["1m"] && it.history["1m"].length) ? it.history["1m"] : (it.spark || []);
+    var spark = (miniPts && miniPts.length) ? sparkSvg(miniPts) : "";
     var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
+    // 비클릭 행은 빈 차트를 열지 않으므로 사유를 명시한다(오해 방지):
+    // 값 자체가 없으면 '차트 없음', 값은 있으나 기간 히스토리가 없으면 '히스토리 미연동'.
+    var nochart = !clickable ? '<span class="dm unavail" style="font-size:9px; margin-left:4px;">' + (off ? "차트 없음" : "히스토리 미연동") + '</span>' : "";
     var en = it.en ? ' <span class="men">' + esc(it.en) + '</span>' : "";
     var attrs = clickable ? ' data-mid="' + esc(it.id) + '" role="button" tabindex="0"' : "";
     return '<div class="mrow' + (clickable ? " click" : "") + '"' + attrs + '>' +
       '<span class="mn">' + spark + esc(it.label_kr) + en + '</span>' +
       '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
-      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chev + '</span></div>';
+      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + nochart + chev + '</span></div>';
   }
   /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출. */
   function renderCategoryCards() {
@@ -1530,7 +1547,7 @@
       if (!rows.length) return;
       var conn = rows.filter(function (r) { return r.value != null; }).length;
       var card = document.createElement("div"); card.className = "mcat-card";
-      var body = rows.map(function (it) { return mrowHtml(it, true); }).join("");
+      var body = rows.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
       card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
         '</span><span class="mcat-c">연동 ' + conn + '/' + rows.length + '</span></div>' + body;
       box.appendChild(card);
@@ -1602,15 +1619,24 @@
      · CPI는 금리와 단위가 달라 같은 y축에 올리지 않고 별도 상태로 그린다.
      · 모든 시계열은 데모 고정값(preview)이며 현재 체결값이 아니다.
      ============================================================ */
-  var PERIODS = {
-    "1w": ["6/16", "6/17", "6/18", "6/19", "6/20", "6/21", "6/22"],
-    "1m": ["6/1", "6/4", "6/7", "6/10", "6/12", "6/14", "6/16", "6/18", "6/20", "6/21", "6/22"],
-    "3m": ["3/22", "4/7", "4/22", "5/7", "5/22", "6/7", "6/22"],
-    "1y": ["'25/7", "'25/9", "'25/11", "'26/1", "'26/3", "'26/5", "'26/6"]
-  };
-  /* 기간 버튼은 공유 데모 시리즈를 리샘플해 표시 구간 라벨만 바꾼다(별도 기간 데이터 없음).
-     따라서 3개월·1년은 동일 데모 추세이며, 실측 히스토리는 연동하지 않는다 — 정직 표기. */
-  var PERIOD_DEMO_NOTE = " 기간 버튼은 표시 구간 라벨만 바꾸는 데모이며(3개월·1년 동일 추세), 기간별 실측 히스토리는 미연동입니다.";
+  /* 기간 축 라벨 — 특정 날짜를 단정하지 않는 상대 창(window) 라벨(데모/실측 공통).
+     히스토리 배열 길이에 맞춰 생성하므로 1주/1개월/3개월/1년이 서로 다른 구간을 가리킨다. */
+  function relLabels(period, n) {
+    if (!n || n < 1) return [];
+    var unit = period === "1w" ? "일" : period === "1m" ? "일" : period === "3m" ? "주" : "개월";
+    var out = [];
+    for (var i = 0; i < n; i++) { var back = n - 1 - i; out.push(back === 0 ? "현재" : ("-" + back + unit)); }
+    return out;
+  }
+  /* 금리 비교 차트의 기간별 창 — 데모 베이스의 꼬리 구간(tail window)을 길이로 잘라 서로 다른
+     구간을 만든다. 같은 추세를 길이만 늘리는 resample이 아니라 실제 부분 구간 선택이다. */
+  var YIELD_WIN = { "1w": 4, "1m": 6, "3m": 9, "1y": 12 };
+  function periodWindow(base, period) {
+    if (!base || !base.length) return [];
+    var keep = YIELD_WIN[period] || base.length;
+    return base.slice(Math.max(0, base.length - keep));
+  }
+  var PERIOD_DEMO_NOTE = " 기간 버튼(1주·1개월·3개월·1년)은 각각 다른 기간 창을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 현재 체결값이 아닙니다.";
   /* 데모 고정 금리/물가 커브 (현재 체결값 아님). 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐.
      여기 없는 (국가×만기/지표) 조합은 차트에서 가짜 선을 그리지 않고 '소스 필요' 칩으로 둔다.
      스프레드(10Y-2Y/10Y-3M)는 보유 시리즈에서 계산한다 — 별도 가짜 데이터 없음. */
@@ -1699,13 +1725,6 @@
   }
   function nameFor(c, m) { return YNAME[c + "_" + m] || ((CC[c] || c) + " " + (MAT_NAME[m] || MACRO_NAME[m] || m)); }
 
-  function resample(base, n) {
-    if (!base || !base.length) return [];
-    if (n >= base.length) return base.slice();
-    var out = [];
-    for (var i = 0; i < n; i++) out.push(base[Math.round(i * (base.length - 1) / (n - 1))]);
-    return out;
-  }
   function activeSeg(id, fallback) {
     var seg = el(id); if (!seg) return fallback;
     var b = seg.querySelector("button.active");
@@ -1759,12 +1778,13 @@
   function buildYieldView() {
     var mode = activeSeg("yieldModeSeg", "within");
     var period = activeSeg("yieldPeriodSeg", "1m");
-    var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
+    var n = YIELD_WIN[period] || 12;
+    var dates = relLabels(period, n);
     var norm = el("normToggle").checked;
     var drawn = [], unavail = [], kind = "yield";
     function pushSeries(label, color, base) {
       if (base && base.length) {
-        var data = resample(base, n);
+        var data = periodWindow(base, period);
         if (norm) { var b0 = data[0] || 1; data = data.map(function (v) { return v / b0 * 100; }); }
         drawn.push({ name: label, color: color, data: data });
       } else { unavail.push(label); }
@@ -1859,7 +1879,7 @@
     });
     var pseg = el("yieldPeriodSeg");
     if (pseg) pseg.addEventListener("click", function (ev) {
-      var b = ev.target.closest("button"); if (!b) return;
+      var b = ev.target.closest("button"); if (!b) return;   // 기간 창 전환(1주·1개월·3개월·1년 = 서로 다른 구간)
       [].forEach.call(pseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
       drawYieldChart();
     });
@@ -1899,26 +1919,37 @@
       unavailable: "미연동", policy_required: "정책/키 필요" };
     var current = null;
 
+    function periodLabel(p) { return { "1w": "1주", "1m": "1개월", "3m": "3개월", "1y": "1년" }[p] || p; }
     function drawDrawerChart() {
       var svg = el("dwChart"); if (!svg || !current) return;
       var period = activeSeg("dwPeriodSeg", "1m");
-      var dates = PERIODS[period] || PERIODS["1m"], n = dates.length;
-      var base = current.spark || [];
-      if (current.value == null || base.length < 2) {
-        renderLineChart(svg, [], dates, { yLabel: "", emptyMsg: "미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
-        el("dwNote").textContent = "이 종목은 공개·무료 소스가 없어 미연동입니다 — 값/선을 생성하지 않습니다.";
+      var hist = (current.history && current.history[period]) || [];
+      var noteEl = el("dwPeriodNote");
+      // 이 종목/기간에 히스토리가 없으면 빈 차트 대신 정직 메시지(가짜 선 금지).
+      if (!hist || hist.length < 2) {
+        renderLineChart(svg, [], relLabels(period, 7),
+          { yLabel: "", emptyMsg: periodLabel(period) + " 히스토리 미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
+        el("dwNote").textContent = "이 종목은 " + periodLabel(period) + " 기간 히스토리가 미연동입니다 — 값/선을 생성하지 않습니다(소스 필요).";
+        if (noteEl) noteEl.textContent = "선택 기간 미연동 · 현재 체결값 아님";
         return;
       }
-      var data = resample(base, n);
+      var dates = relLabels(period, hist.length);
+      var last = hist[hist.length - 1];
+      var dec = current.history_decimals != null ? current.history_decimals
+        : (Math.abs(last) < 20 ? 2 : Math.abs(last) < 1000 ? 1 : 0);
       var color = current.dir === "down" ? "#3C7A4E" : "#B85049";
-      renderLineChart(svg, [{ name: current.label_kr, color: color, data: data }], dates,
-        { yLabel: "추세(데모)", decimals: 0, emptyMsg: "" });
-      el("dwNote").textContent = "추세 방향 데모 시계열(상대값)입니다 — 현재 체결값·절대 가격이 아닙니다. data_mode: " +
-        (DM[current.data_mode] ? DM[current.data_mode][0] : "미연동") + "." + PERIOD_DEMO_NOTE;
+      renderLineChart(svg, [{ name: current.label_kr, color: color, data: hist }], dates,
+        { yLabel: (current.unit || "추세"), decimals: dec, emptyMsg: "" });
+      var srcLabel = current.history_data_mode === "delayed_market" ? "공개 시세(지연) 실측" : "결정적 데모 추세";
+      el("dwNote").textContent = periodLabel(period) + " 기간 창 — " + srcLabel +
+        " · 현재 체결값·절대 체결가가 아닙니다. 기간(1주·1개월·3개월·1년)마다 서로 다른 구간을 표시합니다.";
+      if (noteEl) noteEl.textContent = periodLabel(period) + " · " + srcLabel + " · 현재 체결값 아님";
     }
 
     function openDrawer(id) {
-      current = ITEMS[id]; if (!current) return;
+      current = ITEMS[id];
+      // 기간 히스토리가 연동된 종목만 상세 차트를 연다(빈 차트 방지). 행도 비클릭이지만 방어적으로 막는다.
+      if (!current || !(current.history && current.history["1m"] && current.history["1m"].length >= 2)) { current = null; return; }
       el("dwTitle").textContent = current.label_kr + (current.unit ? " (" + current.unit + ")" : "");
       el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기";
       el("dwMode").innerHTML = dmBadge(current.data_mode);
@@ -1950,7 +1981,7 @@
     document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeDrawer(); });
     var dpseg = el("dwPeriodSeg");
     if (dpseg) dpseg.addEventListener("click", function (ev) {
-      var b = ev.target.closest("button"); if (!b) return;
+      var b = ev.target.closest("button"); if (!b) return;   // 기간 창 전환(1주·1개월·3개월·1년 = 서로 다른 구간)
       [].forEach.call(dpseg.querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); });
       drawDrawerChart();
     });

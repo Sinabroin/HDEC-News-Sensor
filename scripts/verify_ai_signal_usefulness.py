@@ -31,6 +31,9 @@ CATEGORY_LABELS = [
     "AI·데이터센터·전력 인프라", "현장 생산성·자동화",
     "안전·품질 리스크", "경쟁사·발주처 AI 움직임", "내부 적용 후보",
 ]
+# 예상 액션 5종(의사결정 액션) + 관련성 4유형 — 일반 문구가 아닌 고정 유형으로 검증.
+ACTION_TYPES = {"수주기획 검토", "기술검토", "현장 PoC 후보", "안전품질 검토", "모니터링"}
+REL_TYPES = {"direct", "indirect", "competitor", "market"}
 
 _failures = []
 
@@ -74,6 +77,8 @@ def check_builder_enrichment() -> None:
           "_ai_category" in builder and "_AI_CATEGORIES" in builder)
     check("1b: 빌더에 AI 행 enrichment(_ai_enrich) 존재",
           "_ai_enrich" in builder and '"aiCategory"' in builder)
+    check("1b2: 빌더가 액션 유형(5종)·관련성 유형을 매핑(_AI_ACTION/relevanceType)",
+          "_AI_ACTION" in builder and "relevanceType" in builder)
     with tempfile.TemporaryDirectory(prefix="hdec_ai_") as tmp:
         out = Path(tmp) / "dashboard-latest.html"
         proc = subprocess.run([sys.executable, str(BUILDER), "--output", str(out)],
@@ -99,6 +104,18 @@ def check_builder_enrichment() -> None:
         # 행은 실기사 링크에 연결(가짜 지표가 아니라 기사 신호)
         check("1h: AI 신호가 실기사(http url)에 연결 — 발명된 지표 아님",
               all(str(r.get("url", "")).startswith("http") for r in ai))
+        # 예상 액션이 5종 액션 유형 안에 있음(internal은 ' · 내부 적용 담당 배정 필요' 접미 허용).
+        bad_act = sorted({r.get("action") for r in ai
+                          if (str(r.get("action") or "").split(" · ")[0].strip())
+                          not in ACTION_TYPES})
+        check("1i: 예상 액션이 5종 의사결정 액션 유형 안에 있음",
+              not bad_act, f"미정의: {bad_act}" if bad_act else "ok")
+        rtypes = {r.get("relevanceType") for r in ai}
+        check("1j: 관련성 유형이 direct/indirect/competitor/market 안에 있음",
+              bool(rtypes) and rtypes <= REL_TYPES, f"유형: {sorted(rtypes)}")
+        # 과장 금지: 모든 신호가 '직접(direct)'으로 분류되지 않는다(간접/경쟁/시장 구분).
+        check("1k: 관련성이 전부 '직접'으로 과장되지 않음",
+              rtypes != {"direct"}, f"유형: {sorted(rtypes)}")
 
 
 # ---------------------------------------------------------------------------
