@@ -404,6 +404,17 @@
   footer.bottom{margin-top:30px; text-align:center; font-size:11px; color:var(--mute4); font-weight:500; line-height:1.7;}
   .previewflag{display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--amber);
     background:var(--amber-tint); border:1px solid var(--amber-bd); border-radius:6px; padding:3px 9px; margin-bottom:8px;}
+
+  /* ===== 모바일: 사이드 패널 sticky 해제 — 본문 카드 가림 방지 (D6-I 회귀 수정) =====
+     단일 컬럼이 되는 모바일에서 aside.lens / aside.rail이 position:sticky로 남으면
+     스크롤 시 패널이 상단에 고정돼 그 아래로 흘러가는 뉴스 카드(featured/rows/details)를
+     덮어버린다. 위쪽 @media(max-width:900px)의 aside.lens{position:static}은 base 규칙
+     aside.lens{position:sticky}(뒤에 선언)에 source-order로 밀려 무효였다. 패널 base
+     정의 뒤에 두어 모바일에서 두 패널 모두 정상 흐름(static)으로 확실히 되돌린다.
+     데스크톱(>900px)의 sticky 사이드바 동작은 그대로 유지된다. */
+  @media (max-width:900px){
+    aside.lens, aside.rail{position:static; top:auto; z-index:auto;}
+  }
 </style>
 </head>
 <body>

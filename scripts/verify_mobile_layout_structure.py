@@ -230,12 +230,23 @@ def check_telegram_mapping_and_send_files() -> None:
           and f"{SUMMARY_BUTTON_TEXT} -> {SAMPLE_DASHBOARD_URL}" in out
           and f"{REPORT_BUTTON_TEXT} -> {SAMPLE_REPORT_URL}" in out)
 
-    proc = subprocess.run(
-        ["git", "diff", "--quiet", "HEAD", "--", str(SENDER.relative_to(ROOT)),
-         str(WORKFLOW.relative_to(ROOT))],
-        cwd=ROOT, capture_output=True, text=True, timeout=30)
-    check("sender/workflow unchanged from HEAD", proc.returncode == 0,
-          f"rc={proc.returncode}")
+    # D6-I: 전체 리포트/요약 대시보드 버튼 타겟 swap 회귀를 막기 위해 send_telegram.py를
+    # 의도적으로 수정했다(매핑을 파일명으로 강제 — _normalize_report_targets). 따라서
+    # sender/workflow를 HEAD에 byte 고정하던 기존 boundary 검사는 더 이상 유효하지 않다.
+    # 매핑 정합성은 바로 위(in-process build_payload + dry-run)에서 행위로 검증했다. 여기서는
+    # 이 변경이 사람 검토 발송 게이트(자동 발송 금지)를 약화시키지 않았는지와 매핑 강제
+    # 로직이 제자리에 있는지 — 안전 불변식만 단언한다(자세한 매핑 회귀 가드는
+    # verify_report_link_targets.py).
+    sender_src = SENDER.read_text(encoding="utf-8")
+    check("send gate intact: 기본 manual + 승인 없이는 발송 안 함 (자동 발송 금지)",
+          'DEFAULT_SEND_MODE = "manual"' in sender_src
+          and "if not will_send" in sender_src
+          and "REVIEW_APPROVED" in sender_src)
+    check("버튼 타겟 매핑이 파일명으로 강제됨 (REPORT_URL/DASHBOARD_URL swap 내성)",
+          "_normalize_report_targets(report_url, dashboard_url)" in sender_src)
+    workflow_src = WORKFLOW.read_text(encoding="utf-8")
+    check("workflow가 버튼 URL을 vars/secrets로만 주입 (값 비노출 유지)",
+          "vars.DASHBOARD_URL" in workflow_src and "vars.REPORT_URL" in workflow_src)
 
 
 def main() -> int:

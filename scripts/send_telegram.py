@@ -165,6 +165,52 @@ def resolve_personal_bot_url() -> str:
     return f"{TELEGRAM_DEEP_LINK_PREFIX}{username}?start={PERSONAL_START_PARAM}"
 
 
+# ── 라벨→대상 매핑 강제 (P0-D6-I — 버튼 타겟 뒤바뀜 회귀 방지) ──────────────────
+# '전체 리포트 보기'는 항상 전체 리포트(.../latest.html)를, '요약 대시보드 보기'는 항상
+# 요약 대시보드(.../dashboard-latest.html)를 가리켜야 한다. 운영자가 REPORT_URL /
+# DASHBOARD_URL 환경변수를 서로 바꿔 넣어도(설정 실수) 파일명으로 종류를 식별해 올바른
+# 버튼에 배치한다 — 라벨이 가리키는 페이지 종류가 절대 뒤바뀌지 않게. 둘 다 식별 불가한
+# 커스텀 URL이면 설정값을 그대로 둔다(임의 URL은 건드리지 않는다).
+DASHBOARD_FILENAME = "dashboard-latest.html"
+FULL_REPORT_FILENAME = "latest.html"
+
+
+def _url_path(url: str) -> str:
+    """URL path를 소문자로 돌려준다(파일명 식별용). 빈/잘못된 값은 빈 문자열."""
+    if not url:
+        return ""
+    try:
+        return urllib.parse.urlparse(url).path.lower()
+    except ValueError:
+        return ""
+
+
+def _is_dashboard_target(url: str) -> bool:
+    """요약 대시보드 export(.../dashboard-latest.html)를 가리키는 URL인가."""
+    return _url_path(url).endswith(DASHBOARD_FILENAME)
+
+
+def _is_full_report_target(url: str) -> bool:
+    """전체 리포트(.../latest.html, dashboard-latest.html은 제외)를 가리키는 URL인가."""
+    path = _url_path(url)
+    return path.endswith(FULL_REPORT_FILENAME) and not path.endswith(DASHBOARD_FILENAME)
+
+
+def _normalize_report_targets(report_url: str, dashboard_url: str) -> tuple[str, str]:
+    """(전체 리포트 URL, 요약 대시보드 URL)을 라벨 의미에 맞게 정렬해 돌려준다.
+
+    REPORT_URL / DASHBOARD_URL이 서로 뒤바뀌어 설정돼도, 두 URL의 파일명으로 종류가
+    각각 분명히 식별되면 올바른 자리로 교정한다('전체 리포트 보기'↔'요약 대시보드 보기'
+    swap 방지 — D6-I 회귀). 종류를 단정할 수 없는 커스텀 URL이면 설정값을 그대로 둔다.
+    """
+    candidates = [u for u in (report_url, dashboard_url) if u]
+    dash = [u for u in candidates if _is_dashboard_target(u)]
+    full = [u for u in candidates if _is_full_report_target(u)]
+    if len(dash) == 1 and len(full) == 1 and dash[0] != full[0]:
+        return full[0], dash[0]
+    return report_url, dashboard_url
+
+
 def build_payload(chat_id: str, message: str, report_url: str,
                   personal_url: str = "", dashboard_url: str = "") -> dict:
     """sendMessage payload. URL이 있으면 inline URL 버튼을 붙인다.
@@ -172,7 +218,12 @@ def build_payload(chat_id: str, message: str, report_url: str,
     버튼 순서: [요약 대시보드 보기][전체 리포트 보기][개인 질의하기].
     전부 없으면 reply_markup을 넣지 않는다 (기존 텍스트 전용 동작 보존).
     채널 메시지에서 임원이 요약 대시보드/전체 리포트로 가거나 1:1 봇으로 진입한다.
+
+    라벨→대상 매핑은 파일명으로 강제한다(_normalize_report_targets): REPORT_URL /
+    DASHBOARD_URL이 뒤바뀌어 와도 '전체 리포트 보기'=전체 리포트, '요약 대시보드 보기'
+    =요약 대시보드를 가리킨다.
     """
+    report_url, dashboard_url = _normalize_report_targets(report_url, dashboard_url)
     payload = {
         "chat_id": chat_id,
         "text": message,
