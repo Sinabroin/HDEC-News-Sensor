@@ -78,6 +78,8 @@ _SECTION_LENS = {
     "hdec_direct": [],
 }
 # category_label/제목 키워드 → 추가 렌즈 (보수적 보강 — 매핑 불완전 시 fallback)
+# 함정: 부분문자열 오탐 금지 — '시행'은 '시행령/시행규칙'에 걸리므로 '시행사'만 쓴다.
+# 그룹사/신탁/시행 렌즈는 수집된 기사 본문/제목에서만 매칭한다(없으면 0건=정직 빈 상태).
 _KEYWORD_LENS = [
     (("토목", "철도", "광역철도", "도로", "교량", "터널", "SOC"), "civil_infrastructure"),
     (("건축", "주택", "정비", "분양", "공사비", "재건축", "재개발"), "building_housing"),
@@ -87,6 +89,12 @@ _KEYWORD_LENS = [
     (("유가", "원유", "WTI", "브렌트", "연료", "정제유"), "oil_energy"),
     (("안전", "중대재해", "특별감독", "규제", "벌점", "산업안전"), "safety_quality"),
     (("경쟁", "수주 경쟁"), "competitor_contractors"),
+    # 범현대 그룹사 — 현대건설(E&C)·현대엔지니어링은 제외(HDEC 직접 렌즈 오염 방지).
+    (("현대차", "현대자동차", "현대모비스", "현대글로비스", "현대제철", "현대중공업",
+      "HD현대", "현대로템", "현대오토에버", "현대위아", "현대트랜시스", "현대건설기계"),
+     "hyundai_group"),
+    (("신탁", "리츠", "REITs", "책임준공", "토지신탁", "자산신탁"), "trust_companies"),
+    (("시행사", "디벨로퍼", "부동산개발", "PFV"), "developers"),
 ]
 
 # opportunity_or_risk → (cat 라벨, catColor, tag class)
@@ -295,6 +303,74 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
     }
 
 
+# ── AI 신호 실행가능성 분류 (D7-D) ──────────────────────────────────────────
+# 임원 의사결정용 AI 신호 카테고리. 일반 '테마 %'가 아니라 실무 렌즈로 분류한다.
+# 첫 매칭 우선(대부분 데이터센터·전력). raw 제목/category_label만 본다(가짜 값 생성 금지).
+_AI_CATEGORIES = [
+    ("dc_power", "AI·데이터센터·전력 인프라",
+     ("데이터센터", "전력", "송배전", "송전", "변전", "계통", "전력망", "그리드",
+      "SMR", "원전", "LNG", "발전", "EPC", "냉각", "전력 인프라")),
+    ("field_auto", "현장 생산성·자동화",
+     ("로봇", "스마트건설", "자동화", "BIM", "모듈러", "공정", "생산성", "무인", "드론", "OSC")),
+    ("safety_ai", "안전·품질 리스크",
+     ("안전", "품질", "점검", "모니터링", "사고", "예측", "감리", "검측", "중대재해")),
+    ("market_ai", "경쟁사·발주처 AI 움직임",
+     ("경쟁", "발주처", "발주", "조달", "입찰", "삼성", "GS건설", "대우", "DL", "포스코")),
+]
+_AI_DEFAULT = ("internal", "내부 적용 후보")
+# 카테고리별 한 줄 의미(왜 보는가) — 신호가 없을 때도 카테고리 자체는 노출하기 위함.
+_AI_CATEGORY_DESC = {
+    "dc_power": "데이터센터 전력수요 → 원전·SMR·LNG·전력망·EPC 수주 기회",
+    "field_auto": "현장 로봇·스마트건설 → 공정·원가·안전 자동화 적용",
+    "safety_ai": "AI 점검·모니터링·사고 예측 → 안전·품질 리스크 저감",
+    "market_ai": "경쟁사 도입·발주처 조달 수요 → 수주 경쟁·기술 격차",
+    "internal": "현대건설 내부 적용 가능성 — 담당 라인 배정 검토",
+}
+
+
+def _ai_category(sig) -> tuple:
+    text = f"{sig.get('title') or ''} {sig.get('category_label') or ''}"
+    for key, label, words in _AI_CATEGORIES:
+        if any(w in text for w in words):
+            return key, label
+    return _AI_DEFAULT
+
+
+def _ai_relevance(sig) -> str:
+    """현대건설 관련성 — 저장된 분류 필드에서만 파생(생성 라벨/가짜 사실 금지).
+
+    '직접 연관'은 executive_section==hdec_direct(직접 분류)에만 쓴다 — hdec_bucket(전략
+    implication)이 있다고 직접이라 과장하지 않는다(예: MS·아마존 SMR은 직접 아님=간접 연계).
+    """
+    cat = sig.get("category_label") or "건설산업 AI"
+    if sig.get("executive_section") == "hdec_direct":
+        return "현대건설 직접 연관 — " + cat
+    if sig.get("is_competitor"):
+        return "경쟁사 동향 — 수주 경쟁·기술 격차 점검"
+    if sig.get("radar_section") == "business_overseas" \
+            or sig.get("executive_section") == "business_overseas":
+        return "해외 발주환경 — 수주 기회 연계 점검"
+    if sig.get("hdec_bucket"):
+        return "현대건설 사업 연계 — " + cat + " (간접 영향)"
+    return cat + " — 수주·사업 기회 관련성 점검"
+
+
+def _ai_enrich(row: dict, sig: dict) -> dict:
+    """AI 행에 임원 실행 정보 부착(왜 중요/현대건설 관련성/예상 액션/카테고리). raw 파생만."""
+    cat_key, cat_label = _ai_category(sig)
+    why = (sig.get("one_line_reason") or sig.get("implication")
+           or sig.get("category_label") or "AI·데이터센터 연계 신호").strip()
+    action = (sig.get("action_label") or "내용 확인 후 담당 라인 검토").strip()
+    if cat_key == "internal":
+        action = f"{action} · 내부 적용 담당 (배정 필요)"
+    row["aiCategory"] = cat_key
+    row["aiCategoryLabel"] = cat_label
+    row["why"] = why
+    row["relevance"] = _ai_relevance(sig)
+    row["action"] = action
+    return row
+
+
 def _metric_indices(sig) -> list:
     comps = sig.get("score_components") or []
     out = []
@@ -346,9 +422,10 @@ def _derive(brief: dict) -> dict:
     new_keys = {_key(s) for s in new_issues}
 
     # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 6건).
+    # 각 행에 임원 실행 정보(왜/관련성/액션/카테고리) 부착 → 일반 테마 % 아닌 의사결정 신호.
     ai_pool = _drop_near_dups([s for s in (brief.get("ai_radar_signals") or [])
                                if _key(s) != fkey])
-    ai_rows = [_row_from_signal(s) for s in ai_pool[:6]]
+    ai_rows = [_ai_enrich(_row_from_signal(s), s) for s in ai_pool[:6]]
 
     # 뉴스 풀: latest.html 가시 섹션에서 모음(즉시·현대건설·사업·리스크·경쟁·신규·거시) →
     # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 9건.
@@ -366,11 +443,11 @@ def _derive(brief: dict) -> dict:
     panel_rows = ([featured_row] if featured_row else []) + news_rows
     lens_counts = _lens_counts(panel_rows)
 
-    nav_counts = dict(lens_counts)
+    # 모든 콘텐츠 렌즈를 실제 카운트(없으면 0)로 채운다 — 정적 데모 값(예: domestic_site=2)이
+    # 남아 '수집된 것처럼' 보이는 오해를 막는다(빈 렌즈는 0으로 정직 표기 + 빈 상태가 설명).
+    nav_counts = {k: lens_counts.get(k, 0) for k in VALID_LENS}
     nav_counts["all"] = len(panel_rows)
     nav_counts["ai"] = len(ai_rows)
-    nav_counts.setdefault("now", lens_counts.get("now", 0))
-    nav_counts.setdefault("new", lens_counts.get("new", 0))
 
     return {
         "featured_sig": featured_sig,
@@ -498,8 +575,8 @@ def _update_section_counts(html: str, immediate_n: int, ai_n: int, index_n: int)
         '<span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">3건</span>',
         f'<span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">{immediate_n}건</span>')
     html = html.replace(
-        'AI 신호 피드 · AI ONLY</span><span class="ln"></span><span class="c">8건</span>',
-        f'AI 신호 피드 · AI ONLY</span><span class="ln"></span><span class="c">{ai_n}건</span>')
+        'AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">8건</span>',
+        f'AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">{ai_n}건</span>')
     html = html.replace('신호 인덱스 · 전체 21건 (기본 접힘)',
                         f'신호 인덱스 · 전체 {index_n}건 (기본 접힘)')
     return html

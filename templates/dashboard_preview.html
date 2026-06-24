@@ -400,6 +400,18 @@
   .lensitem[data-filter]:hover{background:#F5F9FE; border-color:#DCE9F8;}
   .lensitem.active{background:var(--sky-tint); border-color:#CFE0F4;}
   /* ===== Empty state (선택 렌즈에 표시할 데모 신호 없음) ===== */
+  /* AI 사업·운영 신호 카드 (실행가능 신호 — 카테고리 칩 + 왜/관련성/액션/렌즈) */
+  .aisig{padding:15px 18px; margin-bottom:12px;}
+  .aisig .aitop{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
+  .aisig .aicat{font-size:10px; font-weight:800; letter-spacing:0.03em; color:var(--sky);
+    background:var(--sky-tint); border:1px solid var(--sky-bd); padding:3px 9px; border-radius:999px; white-space:nowrap;}
+  .aisig h4{font-size:14.5px; font-weight:800; color:var(--ink); line-height:1.45; margin:9px 0 3px;}
+  .aisig .aimeta{font-size:11.5px; color:var(--mute3); display:flex; flex-wrap:wrap; gap:5px; align-items:center;}
+  .aisig .aimeta .sep{color:var(--mute5);}
+  .aisig .aisc{flex:none; text-align:right; min-width:42px;}
+  .aisig .aisc .v{font-size:17px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .aisig .aisc .l{font-size:10px; font-weight:700; margin-top:1px;}
+  .aisig .ailink{margin-top:9px; font-size:12px;}
   .emptylens{background:var(--card); border:1px dashed var(--line); border-radius:14px;
     padding:34px 22px; text-align:center; margin-top:4px;}
   .emptylens .el-ico{font-size:22px; color:var(--mute4); line-height:1;}
@@ -589,7 +601,7 @@
         <div class="emptylens hidden" id="newsEmpty" role="status" aria-live="polite">
           <div class="el-ico">◍</div>
           <div class="el-title">선택한 렌즈에 표시할 신호가 없습니다</div>
-          <div class="el-desc">이 렌즈는 데모 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
+          <div class="el-desc" id="newsEmptyDesc">이 렌즈는 데모 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
         </div>
 
         <!-- SIGNAL INDEX (collapsed by default) -->
@@ -606,13 +618,27 @@
       <section class="tabpanel hidden" id="panel-ai">
         <div class="banner">
           <span>ⓘ</span>
-          <span><b>AI Radar</b> — AI·데이터센터 연계 신호만 모은 피드입니다. 아래 <b>테마 강도(%)</b>는
-          수집 기사 내 <b>상대 비중</b>이며, 전력·전력망 실측 데이터(발전량·계통·수요)가 아닙니다.</span>
+          <span><b>AI 사업·운영 신호</b> — 임원 의사결정용. 각 신호에 <b>왜 중요한가 · 현대건설 관련성 ·
+          예상 액션 · 관련 렌즈</b>를 함께 보여 줍니다. 카테고리: 데이터센터·전력 / 현장 생산성·자동화 /
+          안전·품질 리스크 / 경쟁사·발주처 / 내부 적용 후보. 하단 <b>AI Radar</b> 테마 분포는 기사
+          <b>상대 비중</b> 참고용이며 전력 실측 데이터가 아닙니다.</span>
         </div>
 
+        <!-- 실행가능 AI 신호: 카테고리별 · 왜 중요/현대건설 관련성/예상 액션/관련 렌즈 (JS 렌더) -->
+        <div class="seclabel sky"><span class="t">AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">8건</span></div>
+        <div class="pnote" style="margin:-2px 2px 12px;">각 신호 = <b>왜 중요한가 · 현대건설 관련성 · 예상 액션 · 관련 렌즈</b>. 실질적 AI 사업 신호가 없으면 그대로 표기합니다 (과장 없음).</div>
+        <div id="aiRows"></div>
+        <div class="emptylens hidden" id="aiEmpty" role="status" aria-live="polite">
+          <div class="el-ico">◍</div>
+          <div class="el-title">선택한 렌즈에 표시할 AI 신호가 없습니다</div>
+          <div class="el-desc" id="aiEmptyDesc">AI 피드에는 해당 렌즈와 겹치는 데모 기사가 없습니다 — <b>전체 종합</b> 또는 <b>AI 신호</b> 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
+        </div>
+
+        <!-- 참고: 테마 분포 (기사 상대 비중 · 전력 실측값 아님) — 실측 데이터가 아닌 보조 시각화 -->
+        <div class="seclabel sky" style="margin-top:18px;"><span class="t">참고 · AI Radar 테마 분포</span><span class="ln"></span><span class="c">상대 비중</span></div>
         <div class="card" style="padding:20px 22px; margin-bottom:12px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0;">
-            <div class="ph">AI Radar <small>· AI·데이터센터 테마 맵</small></div>
+            <div class="ph">AI Radar <small>· AI·데이터센터 테마 맵 (참고)</small></div>
             <div class="pnote">레이더는 기사 상대 비중 기반 데모 시각화입니다 — 전력/계통 실측이 아닙니다.</div>
           </div>
           <div class="ai-radar">
@@ -646,14 +672,6 @@
           </div>
           <div id="aiThemes"></div>
         </div>
-
-        <div class="seclabel sky"><span class="t">AI 신호 피드 · AI ONLY</span><span class="ln"></span><span class="c">8건</span></div>
-        <div class="card rows" id="aiRows"></div>
-        <div class="emptylens hidden" id="aiEmpty" role="status" aria-live="polite">
-          <div class="el-ico">◍</div>
-          <div class="el-title">선택한 렌즈에 표시할 AI 신호가 없습니다</div>
-          <div class="el-desc">AI 피드에는 해당 렌즈와 겹치는 데모 기사가 없습니다 — <b>전체 종합</b> 또는 <b>AI 신호</b> 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
-        </div>
       </section>
 
       <!-- ====== TAB: 시장 ====== -->
@@ -671,7 +689,7 @@
             <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
             <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
           </div>
-          <div class="clickhint" style="margin-top:8px;">↗ 행을 클릭하면 상세 차트(기간 1주·1개월·3개월·1년)가 열립니다 — 데모 미리보기.</div>
+          <div class="clickhint" style="margin-top:8px;">↗ 행을 클릭하면 상세 차트가 열립니다 — 데모 미리보기. 기간 버튼(1주·1개월·3개월·1년)은 표시 구간 라벨만 바꾸는 데모이며 기간별 실측 히스토리는 미연동입니다.</div>
           <div class="mktcats" id="marketCategories"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
             <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
@@ -743,6 +761,7 @@
               <button data-period="3m">3개월</button>
               <button data-period="1y">1년</button>
             </div>
+            <span class="dm unavail" style="font-size:10px;">기간 버튼은 데모 고정 추세 · 기간별 실측 히스토리 미연동 (3개월·1년 동일 데모 추세)</span>
           </div>
           <div class="chartbox"><svg id="yieldChart" viewBox="0 0 720 300" width="100%" height="300" preserveAspectRatio="xMidYMid meet"></svg></div>
           <div class="legend" id="chartLegend"></div>
@@ -960,6 +979,7 @@
         <button data-period="3m">3개월</button>
         <button data-period="1y">1년</button>
       </div>
+      <span class="dm unavail" style="font-size:10px;">기간 버튼은 데모 고정 추세 · 기간별 실측 히스토리 미연동</span>
     </div>
     <div class="chartbox"><svg id="dwChart" viewBox="0 0 520 260" width="100%" height="260" preserveAspectRatio="xMidYMid meet"></svg></div>
     <div class="axisnote" id="dwNote"></div>
@@ -975,6 +995,28 @@
 {
   "meta": {"published_kst": "2026·06·22 월 07:00", "news_data_mode": "mock",
            "collection": "수동 · OFF", "audience": "executive-preview", "demo": true},
+  "lens_policy": {
+    "now": {"label": "즉시 확인", "query": "즉시 알림 후보·즉시 확인 등급 신호", "supported": true, "note": ""},
+    "new": {"label": "신규 이슈", "query": "금일 처음 관측된 신규 신호", "supported": true, "note": ""},
+    "ai": {"label": "AI 신호", "query": "현대건설 AI·데이터센터·스마트건설·로봇·SMR 쿼리", "supported": true, "note": ""},
+    "civil_infrastructure": {"label": "토목", "query": "철도·도로·교량·터널·SOC 키워드 매칭", "supported": true, "note": ""},
+    "building_housing": {"label": "건축주택", "query": "도시정비·분양·공사비·재건축·재개발 키워드 매칭", "supported": true, "note": ""},
+    "plant": {"label": "플랜트", "query": "원전·LNG·EPC·정유·SMR + 중동 플랜트 수주 쿼리", "supported": true, "note": ""},
+    "new_energy": {"label": "New Energy", "query": "SMR·수소·전력망·데이터센터 전력 키워드 매칭", "supported": true, "note": ""},
+    "development_business": {"label": "개발사업", "query": "시행·PFV·부동산개발 키워드 매칭", "supported": true, "note": "전용 수집 쿼리 제한적 — 키워드 매칭 기반."},
+    "global_business": {"label": "글로벌", "query": "해외건설·중동·사우디·네옴 수주 쿼리", "supported": true, "note": ""},
+    "safety_quality": {"label": "안전·품질", "query": "중대재해·특별감독·벌점·영업정지 리스크 쿼리", "supported": true, "note": ""},
+    "hyundai_group": {"label": "현대 그룹사", "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 키워드 매칭", "supported": false, "note": "전용 수집 쿼리 미구성 — 현대건설 직접 렌즈와 분리. 계열사 기사 동시 언급 시에만 노출."},
+    "competitor_contractors": {"label": "경쟁 시공사", "query": "수주 경쟁·경쟁 시공사 키워드 매칭", "supported": true, "note": ""},
+    "trust_companies": {"label": "신탁사", "query": "신탁·책임준공·리츠·토지/자산신탁 키워드 매칭", "supported": false, "note": "전용 수집 쿼리 미구성 — 정비/PF 기사 내 매칭 시에만 노출."},
+    "developers": {"label": "시행사·디벨로퍼", "query": "시행사·디벨로퍼·PFV·부동산개발 키워드 매칭", "supported": false, "note": "전용 수집 쿼리 미구성 — 정비/분양 기사 내 매칭 시에만 노출."},
+    "oil_energy": {"label": "유가·에너지", "query": "유가·원유·WTI·연료 + 환율/유가 쿼리 (지연/대용)", "supported": true, "note": ""},
+    "hormuz": {"label": "호르무즈", "query": "호르무즈 해협 AIS", "supported": false, "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집."},
+    "domestic_site": {"label": "국내현장", "query": "국내 현장 노출(즉시·리스크 신호 연계)", "supported": false, "note": "전용 수집 쿼리 미구성 — 현장 단위 소스 연동 시 보강 예정."},
+    "overseas_site": {"label": "해외현장", "query": "해외수주·중동 발주 신호 연계", "supported": true, "note": ""},
+    "overseas_branch": {"label": "해외지사", "query": "해외지사 단위 소스", "supported": false, "note": "전용 수집 소스 미연동 — 연동 시 보강 예정."},
+    "overseas_subsidiary": {"label": "해외법인", "query": "해외법인 단위 소스", "supported": false, "note": "전용 수집 소스 미연동 — 연동 시 보강 예정."}
+  },
   "metric_indices": [
     {"label": "현대건설 관련", "value": 5.0, "color": "#3F6FA8"},
     {"label": "사업 기회", "value": 4.2, "color": "#3C7A4E"},
@@ -1256,8 +1298,34 @@
     });
     var emptyId = panelId === "panel-news" ? "newsEmpty"
       : panelId === "panel-ai" ? "aiEmpty" : null;
-    if (emptyId) { var e = el(emptyId); if (e) e.classList.toggle("hidden", shown > 0); }
+    if (emptyId) {
+      var e = el(emptyId);
+      if (e) {
+        e.classList.toggle("hidden", shown > 0);
+        if (shown === 0) {                              // 렌즈별 정직 빈 상태 설명 (수집 정책 + mock/live)
+          var descEl = el(emptyId + "Desc");
+          if (descEl) descEl.innerHTML = emptyDescHtml(key);
+        }
+      }
+    }
     return shown;
+  }
+  /* 렌즈별 정직 빈 상태 — 일반 '데모 데이터'가 아니라 어떤 수집 정책의 렌즈가 왜 비었는지 설명.
+     live면 '금일 수집 결과 없음(데모 아님)', mock이면 '데모 표본 없음'으로 구분한다. */
+  function emptyDescHtml(key) {
+    var p = (MODEL.lens_policy || {})[key];
+    var live = !!(MODEL.meta && MODEL.meta.news_data_mode === "live");
+    if (!p || key === "all") {
+      return '표시할 신호가 없습니다 — <b>전체 종합</b>으로 돌아가세요.' +
+        (live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>');
+    }
+    var head = live
+      ? '<b>' + esc(p.label) + '</b> 렌즈는 오늘 수집된 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).'
+      : '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
+    var pol = ' 수집 쿼리: ' + esc(p.query) + '.';
+    var note = p.note ? ' ' + esc(p.note) : '';
+    var tail = live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>';
+    return head + pol + note + ' <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요.' + tail;
   }
   function applyLens(key, opts) {
     activeLensKey = key;
@@ -1332,7 +1400,63 @@
     box.appendChild(more);
   }
   renderRows("newsRows", MODEL.news_rows);
-  renderRows("aiRows", MODEL.ai_rows);
+
+  /* ---------- AI 사업·운영 신호 (카테고리별 실행가능 카드: 왜/관련성/액션/렌즈) ----------
+     일반 테마 % 가 아니라 의사결정 신호. 빌더가 각 행에 aiCategory/why/relevance/action을
+     부착(raw 파생). 신호가 없으면 '오늘 실질적 AI 사업 신호 없음'으로 정직 표기(과장 없음). */
+  var AI_CAT_ORDER = ["dc_power", "field_auto", "safety_ai", "market_ai", "internal"];
+  var AI_CAT_LABEL = {
+    dc_power: "AI·데이터센터·전력 인프라", field_auto: "현장 생산성·자동화",
+    safety_ai: "안전·품질 리스크", market_ai: "경쟁사·발주처 AI 움직임", internal: "내부 적용 후보"
+  };
+  function renderAiSignals(targetId, rows) {
+    var box = el(targetId); if (!box) return; box.innerHTML = "";
+    rows = (rows || []).slice();
+    if (!rows.length) {
+      box.innerHTML = '<div class="emptylens" style="margin:0;"><div class="el-ico">◍</div>' +
+        '<div class="el-title">오늘 실질적 AI 사업 신호 없음</div>' +
+        '<div class="el-desc">금일 수집분에 임원 의사결정용 AI·데이터센터·자동화 신호가 없습니다 — 과장하지 않습니다. ' +
+        '<span class="previewflag" style="margin-left:4px;">데모 데이터</span></div></div>';
+      return;
+    }
+    var order = {}; AI_CAT_ORDER.forEach(function (k, i) { order[k] = i; });
+    rows.sort(function (a, b) {                          // 카테고리 순 그룹핑(동일 카테고리 내 순서 보존)
+      return (order[a.aiCategory] == null ? 99 : order[a.aiCategory]) -
+             (order[b.aiCategory] == null ? 99 : order[b.aiCategory]);
+    });
+    rows.forEach(function (r) {
+      var chips = (r.lens || []).filter(function (k) { return k !== "now" && k !== "new"; })
+        .map(function (k) { return '<span class="flchip">' + esc(lensLabel(k)) + '</span>'; }).join("");
+      var rowUrl = (r.url && /^https?:\/\//.test(r.url)) ? r.url : "";
+      var link = rowUrl
+        ? '<a class="srowlink" href="' + esc(rowUrl) + '" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a>'
+        : '<span class="srownolink">원문 링크 없음</span>';
+      var d = document.createElement("article"); d.className = "card aisig";
+      d.setAttribute("data-lens", (r.lens || []).join(" "));
+      d.setAttribute("data-category", r.cat || "");
+      d.innerHTML =
+        '<div class="aitop"><div style="min-width:0;">' +
+          '<span class="aicat">' + esc(r.aiCategoryLabel || AI_CAT_LABEL[r.aiCategory] || "AI 신호") + '</span>' +
+          '<span class="tag ' + esc(r.tagClass) + '" style="margin-left:6px;">' + esc(r.tag) + '</span>' +
+          '<h4>' + esc(r.title) + '</h4>' +
+          '<div class="aimeta"><b style="color:#7E8CA6">' + esc(r.source) + '</b><span class="sep">·</span>' +
+            '<span>' + esc(r.time) + '</span><span class="sep">·</span><span>' + esc(r.related) + '</span>' +
+            '<span class="sep">·</span><span>' + esc(r.sources) + '</span></div>' +
+        '</div>' +
+        '<div class="aisc"><div class="v" style="color:' + esc(r.scoreColor) + '">' + esc(r.score) +
+          '<small> / 5</small></div><div class="l" style="color:' + esc(r.scoreColor) + '">' + esc(r.scoreLabel) + '</div></div>' +
+        '</div>' +
+        '<div class="read">' +
+          '<div class="rd"><span class="rdb sum">왜 중요</span><span>' + esc(r.why || "") + '</span></div>' +
+          '<div class="rd"><span class="rdb imp">현대건설 관련성</span><span>' + esc(r.relevance || "") + '</span></div>' +
+          '<div class="rd act"><span class="rdb act">예상 액션</span><span>' + esc(r.action || "") + '</span></div>' +
+        '</div>' +
+        '<div class="featlens"><span class="fllabel">관련 렌즈</span>' + (chips || '<span class="flchip">전체</span>') + '</div>' +
+        '<div class="ailink">' + link + '</div>';
+      box.appendChild(d);
+    });
+  }
+  renderAiSignals("aiRows", MODEL.ai_rows);
 
   /* ---------- 초기 렌즈 카운트 (전체 종합 = 표시 가능한 뉴스 신호 수) ---------- */
   (function () {
@@ -1484,6 +1608,9 @@
     "3m": ["3/22", "4/7", "4/22", "5/7", "5/22", "6/7", "6/22"],
     "1y": ["'25/7", "'25/9", "'25/11", "'26/1", "'26/3", "'26/5", "'26/6"]
   };
+  /* 기간 버튼은 공유 데모 시리즈를 리샘플해 표시 구간 라벨만 바꾼다(별도 기간 데이터 없음).
+     따라서 3개월·1년은 동일 데모 추세이며, 실측 히스토리는 연동하지 않는다 — 정직 표기. */
+  var PERIOD_DEMO_NOTE = " 기간 버튼은 표시 구간 라벨만 바꾸는 데모이며(3개월·1년 동일 추세), 기간별 실측 히스토리는 미연동입니다.";
   /* 데모 고정 금리/물가 커브 (현재 체결값 아님). 프로덕션 무료 실데이터는 US 5Y/10Y(지연)뿐.
      여기 없는 (국가×만기/지표) 조합은 차트에서 가짜 선을 그리지 않고 '소스 필요' 칩으로 둔다.
      스프레드(10Y-2Y/10Y-3M)는 보유 시리즈에서 계산한다 — 별도 가짜 데이터 없음. */
@@ -1682,6 +1809,7 @@
       msg = "데모 시계열 — 현재 체결값 아님. 프로덕션 무료 실데이터 연동 여부와 별개로, preview에서는 컴포넌트 상태 검증용 데모 선을 표시합니다 (예: US 2Y는 프로덕션 미연동이나 preview에선 데모 선으로 표시).";
     }
     if (v.unavail.length) msg += " 미연동(선 미표시 · 소스 필요): " + v.unavail.join(", ") + ".";
+    msg += PERIOD_DEMO_NOTE;
     note.textContent = msg;
   }
 
@@ -1786,7 +1914,7 @@
       renderLineChart(svg, [{ name: current.label_kr, color: color, data: data }], dates,
         { yLabel: "추세(데모)", decimals: 0, emptyMsg: "" });
       el("dwNote").textContent = "추세 방향 데모 시계열(상대값)입니다 — 현재 체결값·절대 가격이 아닙니다. data_mode: " +
-        (DM[current.data_mode] ? DM[current.data_mode][0] : "미연동") + ".";
+        (DM[current.data_mode] ? DM[current.data_mode][0] : "미연동") + "." + PERIOD_DEMO_NOTE;
     }
 
     function openDrawer(id) {
