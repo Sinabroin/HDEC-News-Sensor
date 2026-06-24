@@ -158,9 +158,15 @@ def check_report_builder_source() -> None:
     dash_src = DASHBOARD_BUILDER.read_text(encoding="utf-8")
     check("대시보드 export 빌더가 preview template을 재사용",
           "dashboard_preview.html" in dash_src and "DEFAULT_OUTPUT" in dash_src)
-    check("대시보드 export 빌더가 전체 리포트 빌더와 분리됨",
+    # D7-B: 요약 대시보드는 이제 공유 brief에서 실기사 데이터를 주입한다(전체 리포트와 동일
+    # 출처). 따라서 brief 레이어 공유는 의도된 설계이며, '분리'의 의미는 출력 대상(요약
+    # 대시보드)과 '전체 리포트 빌더를 감싸지 않음'으로 검사한다. 네트워크/비밀값 미접근은
+    # verify_dashboard_export / verify_dashboard_real_data의 소스 스캔이 별도로 보장한다.
+    check("대시보드 export 빌더가 전체 리포트 빌더와 분리됨 (출력=요약 대시보드, report 빌더 미사용)",
           'DEFAULT_OUTPUT = "docs/daily/dashboard-latest.html"' in dash_src
-          and "build_brief_via_mock_pipeline" not in dash_src)
+          and "import build_static_report" not in dash_src
+          and "from build_static_report" not in dash_src
+          and "render_report_html" not in dash_src)
 
 
 def check_sender_source() -> None:

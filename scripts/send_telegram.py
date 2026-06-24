@@ -133,11 +133,20 @@ def _derive_dashboard_url(report_url: str) -> str:
 
 
 def resolve_dashboard_url(report_url: str = "") -> str:
-    """DASHBOARD_URL env에서 요약 대시보드 링크를 읽고, 없으면 REPORT_URL에서 파생한다."""
+    """DASHBOARD_URL env에서 요약 대시보드 링크를 읽고, 없으면 REPORT_URL에서 파생한다.
+
+    DASHBOARD_URL이 설정돼 있어도 그것이 전체 리포트(.../latest.html)를 가리키는
+    오설정이면 신뢰하지 않고, REPORT_URL의 .../latest.html에서 요약 대시보드를 파생한다
+    (운영자가 두 env를 같은 페이지로 넣는 실수 자가교정 — D7-B). 식별 불가한 커스텀 URL은
+    그대로 둔다(정규화/preflight가 최종 판정).
+    """
     configured = _valid_url_from_env("DASHBOARD_URL", "summary dashboard link")
-    if configured:
+    if configured and _is_dashboard_target(configured):
         return configured
-    return _derive_dashboard_url(report_url or resolve_report_url())
+    derived = _derive_dashboard_url(report_url or resolve_report_url())
+    if derived:
+        return derived
+    return configured
 
 
 def resolve_personal_bot_url() -> str:
@@ -173,6 +182,10 @@ def resolve_personal_bot_url() -> str:
 # 커스텀 URL이면 설정값을 그대로 둔다(임의 URL은 건드리지 않는다).
 DASHBOARD_FILENAME = "dashboard-latest.html"
 FULL_REPORT_FILENAME = "latest.html"
+# preflight(발송 전 검증)가 요구하는 정식 경로 꼬리표 — 버튼이 반드시 이 경로로 끝나야 한다.
+# '요약 대시보드 보기'=.../daily/dashboard-latest.html, '전체 리포트 보기'=.../daily/latest.html.
+CANON_DASHBOARD_PATH_SUFFIX = "/daily/dashboard-latest.html"
+CANON_REPORT_PATH_SUFFIX = "/daily/latest.html"
 
 
 def _url_path(url: str) -> str:
@@ -196,19 +209,124 @@ def _is_full_report_target(url: str) -> bool:
     return path.endswith(FULL_REPORT_FILENAME) and not path.endswith(DASHBOARD_FILENAME)
 
 
+def _path_endswith(url: str, suffix: str) -> bool:
+    """URL path가 정식 경로 꼬리표로 끝나는가 (preflight 강검증용)."""
+    return _url_path(url).endswith(suffix.lower())
+
+
+def _derive_report_url(dashboard_url: str) -> str:
+    """DASHBOARD_URL이 .../dashboard-latest.html이면 같은 폴더의 latest.html을 파생한다.
+
+    `_derive_dashboard_url`의 역방향 — 운영자가 두 env를 모두 요약 대시보드로 넣었을 때
+    '전체 리포트 보기' 버튼이 요약 대시보드로 새는 것을 막기 위한 자가교정이다 (D7-B).
+    """
+    if not dashboard_url:
+        return ""
+    try:
+        parsed = urllib.parse.urlparse(dashboard_url)
+    except ValueError:
+        return ""
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+    suffix = "/dashboard-latest.html"
+    if not parsed.path.endswith(suffix):
+        return ""
+    path = parsed.path[: -len("dashboard-latest.html")] + "latest.html"
+    return urllib.parse.urlunparse(parsed._replace(path=path))
+
+
+def _first_target(urls, predicate) -> str:
+    """urls 중 predicate를 만족하는 첫 URL (없으면 빈 문자열)."""
+    for u in urls:
+        if u and predicate(u):
+            return u
+    return ""
+
+
 def _normalize_report_targets(report_url: str, dashboard_url: str) -> tuple[str, str]:
     """(전체 리포트 URL, 요약 대시보드 URL)을 라벨 의미에 맞게 정렬해 돌려준다.
 
-    REPORT_URL / DASHBOARD_URL이 서로 뒤바뀌어 설정돼도, 두 URL의 파일명으로 종류가
-    각각 분명히 식별되면 올바른 자리로 교정한다('전체 리포트 보기'↔'요약 대시보드 보기'
-    swap 방지 — D6-I 회귀). 종류를 단정할 수 없는 커스텀 URL이면 설정값을 그대로 둔다.
+    버튼 타겟 뒤바뀜을 '불가능'하게 만드는 단일 정규화 지점 (D6-I → D7-B 강화):
+      · 뒤바뀜  : REPORT_URL/DASHBOARD_URL이 서로 바뀌어 와도 파일명으로 종류를 식별해 교정.
+      · 중복    : 둘 다 .../latest.html(또는 둘 다 .../dashboard-latest.html)처럼 같은 페이지로
+                  설정돼도, 식별된 한쪽에서 형제 URL을 파생해 두 버튼이 충돌하지 않게 한다.
+      · 누락    : 한쪽만 식별되면 나머지를 파생한다.
+    두 URL 모두 종류를 단정할 수 없는 커스텀 URL이면 설정값을 그대로 둔다(임의 URL 비건드림 —
+    이 경우 발송 전 preflight가 정식 경로 위반으로 막는다).
     """
-    candidates = [u for u in (report_url, dashboard_url) if u]
-    dash = [u for u in candidates if _is_dashboard_target(u)]
-    full = [u for u in candidates if _is_full_report_target(u)]
-    if len(dash) == 1 and len(full) == 1 and dash[0] != full[0]:
-        return full[0], dash[0]
+    full = _first_target([report_url, dashboard_url], _is_full_report_target)
+    dash = _first_target([report_url, dashboard_url], _is_dashboard_target)
+    if full and not dash:
+        dash = _derive_dashboard_url(full)
+    elif dash and not full:
+        full = _derive_report_url(dash)
+    if full or dash:
+        return full, dash
     return report_url, dashboard_url
+
+
+def resolve_button_targets() -> tuple[str, str]:
+    """(요약 대시보드 URL, 전체 리포트 URL)을 env에서 정규화해 돌려준다 — 발송/검증 공용 진실원.
+
+    REPORT_URL/DASHBOARD_URL의 뒤바뀜·중복·누락을 자가교정한 '정식 타겟'이다. build_payload·
+    dry-run·preflight·실제 발송이 모두 이 결과(또는 동등한 build_payload 정규화)를 쓴다.
+    """
+    report_url = resolve_report_url()
+    dashboard_url = resolve_dashboard_url(report_url)
+    report_url, dashboard_url = _normalize_report_targets(report_url, dashboard_url)
+    return dashboard_url, report_url
+
+
+def button_target_errors(summary_url: str, report_url: str) -> list[str]:
+    """버튼 타겟이 라벨 의미(정식 경로)에 맞는지 검사. 잘못된 타겟마다 사람이 읽을 오류 메시지.
+
+    빈 URL(버튼 미표시)은 통과시킨다 — 텍스트 전용 발송을 막지 않기 위함. 표시될 버튼이
+    잘못된 페이지를 가리키거나 두 버튼이 같은 URL이면 오류를 반환한다 (발송 차단 사유).
+    """
+    errors = []
+    if summary_url and not _path_endswith(summary_url, CANON_DASHBOARD_PATH_SUFFIX):
+        errors.append(f"'{SUMMARY_BUTTON_TEXT}' 타겟이 {CANON_DASHBOARD_PATH_SUFFIX}로 끝나지 "
+                      f"않음: {_url_path(summary_url) or summary_url}")
+    if report_url and not _path_endswith(report_url, CANON_REPORT_PATH_SUFFIX):
+        errors.append(f"'{FULL_REPORT_BUTTON_TEXT}' 타겟이 {CANON_REPORT_PATH_SUFFIX}로 끝나지 "
+                      f"않음: {_url_path(report_url) or report_url}")
+    if summary_url and report_url and summary_url == report_url:
+        errors.append(f"'{SUMMARY_BUTTON_TEXT}'와 '{FULL_REPORT_BUTTON_TEXT}'가 같은 URL을 "
+                      "가리킴 (요약↔전체 충돌)")
+    return errors
+
+
+def preflight_links() -> int:
+    """발송 전 버튼 타겟 검증 (워크플로의 실제 send와 동일 env에서 호출).
+
+    토큰/호스트는 출력하지 않고 버튼 라벨 + URL pathname만 출력한다(비밀값 0건). 실제 발송과
+    동일하게 build_payload로 버튼을 구성해 라벨→타겟 매핑·순서를 검사하고, 위반이 있으면
+    1을 반환해 워크플로 step을 실패시킨다(→ 뒤의 send step이 절대 실행되지 않음).
+    """
+    dashboard_url, report_url = resolve_button_targets()
+    payload = build_payload("PREFLIGHT", "preflight", report_url, "", dashboard_url)
+    markup = payload.get("reply_markup")
+    buttons = json.loads(markup)["inline_keyboard"][0] if markup else []
+    print("Telegram 버튼 preflight (pathname only · 토큰/호스트 비노출):")
+    if buttons:
+        for b in buttons:
+            print(f"  button: {b['text']} -> {_url_path(b['url']) or '(no path)'}")
+    else:
+        print("  button: (none — 링크 버튼 없는 텍스트 전용 발송)")
+    by_label = {b["text"]: b["url"] for b in buttons}
+    errors = button_target_errors(
+        by_label.get(SUMMARY_BUTTON_TEXT, ""), by_label.get(FULL_REPORT_BUTTON_TEXT, ""))
+    ab = [b["text"] for b in buttons
+          if b["text"] in (SUMMARY_BUTTON_TEXT, FULL_REPORT_BUTTON_TEXT)]
+    if ab[:2] == [FULL_REPORT_BUTTON_TEXT, SUMMARY_BUTTON_TEXT]:
+        errors.append("버튼 순서 뒤바뀜 — '전체 리포트 보기'가 '요약 대시보드 보기'보다 먼저")
+    if errors:
+        for e in errors:
+            print(f"PREFLIGHT FAIL: {e}", file=sys.stderr)
+        return 1
+    print("PREFLIGHT OK: '요약 대시보드 보기'→dashboard-latest.html · "
+          "'전체 리포트 보기'→latest.html 매핑/순서 정상")
+    return 0
 
 
 def build_payload(chat_id: str, message: str, report_url: str,
@@ -250,8 +368,7 @@ def dry_run_payload(message: str) -> None:
     REPORT_URL/DASHBOARD_URL/deep link는 비밀값이 아니며, 이 모드는 버튼 계약을
     눈으로/검증기로 확인하기 위한 것이다.
     """
-    report_url = resolve_report_url()
-    dashboard_url = resolve_dashboard_url(report_url)
+    dashboard_url, report_url = resolve_button_targets()
     personal_url = resolve_personal_bot_url()
     payload = build_payload("DRY_RUN", message, report_url, personal_url, dashboard_url)
     print(f"Summary dashboard link enabled: {'true' if dashboard_url else 'false'}")
@@ -261,6 +378,9 @@ def dry_run_payload(message: str) -> None:
     if markup:
         for btn in json.loads(markup)["inline_keyboard"][0]:
             print(f"button: {btn['text']} -> {btn['url']}")
+        # 라벨→경로 매핑을 한눈에 (pathname only — 비밀값 아님, 매핑 확인 전용).
+        for btn in json.loads(markup)["inline_keyboard"][0]:
+            print(f"button path: {btn['text']} -> {_url_path(btn['url'])}")
     else:
         print("button: (none)")
 
@@ -271,6 +391,11 @@ def main() -> None:
     if argv and argv[0] == "--dry-run-payload":
         dry_run_payload(argv[1] if len(argv) > 1 else "dry-run")
         return
+
+    # --preflight: 발송 전 버튼 타겟 검증만 수행 (워크플로의 send step과 동일 env에서 호출).
+    # 토큰/발송 없이 라벨→경로 매핑·순서를 검사하고, 위반 시 비정상 종료해 send를 막는다.
+    if argv and argv[0] == "--preflight":
+        raise SystemExit(preflight_links())
 
     send_mode = resolve_send_mode()
     approved = review_approved()
@@ -293,8 +418,8 @@ def main() -> None:
     recipient_count = len(chat_ids)
 
     message, message_source = resolve_message()
-    report_url = resolve_report_url()
-    dashboard_url = resolve_dashboard_url(report_url)
+    # 정식 버튼 타겟(뒤바뀜·중복·누락 자가교정) — 발송도 dry-run/preflight와 같은 진실원을 쓴다.
+    dashboard_url, report_url = resolve_button_targets()
     personal_url = resolve_personal_bot_url()
     if len(message) > MAX_MESSAGE_LEN:
         message = message[: MAX_MESSAGE_LEN - 3] + "..."
@@ -324,6 +449,14 @@ def main() -> None:
         return
 
     # send 모드 + 운영자 승인 + 자격증명 확보 — 여기서만 실제 발송한다.
+    # 발송 직전 마지막 안전장치(preflight와 동일 검사): 버튼 타겟이 라벨과 어긋나면 발송하지
+    # 않는다. 정식 경로 위반(요약↔전체 뒤바뀜·중복·커스텀 URL)이면 '발송됨' 위장 없이 멈춘다.
+    target_errors = button_target_errors(dashboard_url, report_url)
+    if target_errors:
+        for err in target_errors:
+            print(f"ERROR: 버튼 타겟 검증 실패 — {err}", file=sys.stderr)
+        fail("Telegram 버튼 타겟이 라벨과 불일치 — 발송 중단 (요약↔전체 링크 오설정)")
+
     print("Send status: approved — 운영자 승인 확인 · 실제 발송 진행")
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 

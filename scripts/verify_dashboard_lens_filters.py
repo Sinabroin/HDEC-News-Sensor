@@ -163,28 +163,48 @@ def check_empty_and_mobile(tpl: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5 · dashboard-latest.html는 템플릿에서 재생성됨
+# 5 · dashboard-latest.html는 빌더가 생성 (실기사 데이터 주입 · 손수 편집 아님)
 # ---------------------------------------------------------------------------
+
+def _interaction_script(html: str) -> str:
+    """preview-model(JSON)을 제외한 인터랙션 <script> 블록 (빌더가 손대지 않는 동작 코드)."""
+    blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
+    return blocks[-1] if blocks else ""
+
 
 def check_regenerated(tpl: str) -> None:
     if not check("5a: docs/daily/dashboard-latest.html 존재", DASHBOARD.exists()):
         return
     committed = _read(DASHBOARD)
-    # 재생성된 산출물에 신규 필터 토큰이 반영되어 있어야 함
+    # 재생성된 산출물에 신규 필터 토큰 + 빌더 마커가 반영되어 있어야 함
     for tok in ('data-filter="all"', 'id="newsEmpty"', "function applyLens",
-                'a.setAttribute("data-lens"'):
-        check(f"5b: 재생성된 대시보드에 필터 토큰 '{tok}'", tok in committed)
-    # 빌더를 다시 돌려 커밋본과 1:1 동일한지(=템플릿에서 재생성됨) 확인
+                'a.setAttribute("data-lens"', "dashboard-export:summary"):
+        check(f"5b: 재생성된 대시보드에 필터/빌더 토큰 '{tok}'", tok in committed)
+    # 빌더는 실기사 데이터를 주입하므로(live면 커밋본=live) 전체 byte-identity는 쓰지 않는다.
+    # 대신 '손수 편집 아님' 보장: 빌더가 건드리지 않는 인터랙션 JS 블록이 템플릿과 byte-identical.
+    committed_js = _interaction_script(committed)
+    tpl_js = _interaction_script(tpl)
+    check("5c: 인터랙션 JS 블록이 템플릿과 byte-identical (동작 코드 손수 편집 아님)",
+          bool(committed_js) and committed_js == tpl_js,
+          "동일" if committed_js == tpl_js else "JS 블록 drift 감지")
+    # 빌더를 mock으로 다시 돌려 결정적 산출물이 실기사 구조를 갖는지 확인 (데모 표본 아님).
     with tempfile.TemporaryDirectory(prefix="hdec_lens_") as tmp:
         out = Path(tmp) / "dashboard-latest.html"
         proc = subprocess.run([sys.executable, str(BUILDER), "--output", str(out)],
-                              cwd=ROOT, capture_output=True, text=True, timeout=120)
+                              cwd=ROOT, capture_output=True, text=True, timeout=300)
         ok = proc.returncode == 0 and out.exists()
-        if check("5c: builder --output 동작", ok, (proc.stderr or "")[-200:]):
+        if check("5d: builder --output 동작", ok, (proc.stderr or "")[-200:]):
             regen = out.read_text(encoding="utf-8")
-            check("5d: 커밋된 dashboard-latest.html == 템플릿 재생성본 (drift 없음)",
-                  regen == committed,
-                  "동일" if regen == committed else f"Δ{abs(len(regen)-len(committed))} chars")
+            model = _model(regen)
+            rows = model.get("news_rows") or []
+            tpl_rows = _model(tpl).get("news_rows") or []
+            check("5e: 재생성 대시보드 news_rows가 실기사(>=6, url 보유)",
+                  len(rows) >= 6 and all(str(r.get("url", "")).startswith("http") for r in rows),
+                  f"{len(rows)}행")
+            check("5f: 재생성 news_rows가 템플릿 데모 표본과 다름 (실데이터 주입 증명)",
+                  rows != tpl_rows)
+            check("5g: 재생성 인터랙션 JS도 템플릿과 동일 (빌더는 데이터만 주입)",
+                  _interaction_script(regen) == tpl_js)
 
 
 # ---------------------------------------------------------------------------

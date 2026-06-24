@@ -47,6 +47,7 @@ jobs:
           python3 scripts/verify_executive_brief_quality.py
           python3 scripts/verify_static_report.py
           python3 scripts/verify_dashboard_export.py
+          python3 scripts/verify_dashboard_real_data.py
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_score_explanation_ui.py
           python3 scripts/verify_live_news_ingestion.py
@@ -149,6 +150,8 @@ jobs:
           # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
         run: |
+          # 발송 전 버튼 타겟 검증 (동일 env). 요약↔전체 링크가 어긋나면 여기서 실패해 send 차단.
+          python3 scripts/send_telegram.py --preflight
           python3 scripts/send_telegram.py
 
       # 경로 1b: live 수집 실패 → mock(데모)으로 정직 라벨된 fallback 다이제스트 발송.
@@ -166,6 +169,8 @@ jobs:
           # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
         run: |
+          # 발송 전 버튼 타겟 검증 (동일 env). 요약↔전체 링크가 어긋나면 여기서 실패해 send 차단.
+          python3 scripts/send_telegram.py --preflight
           python3 scripts/send_telegram.py
 
       # 경로 2: 커스텀 메시지 — live를 강제하지 않고 입력 메시지를 그대로 발송한다.
@@ -184,4 +189,6 @@ jobs:
           # 설정돼 있으면 "개인 질의하기" 1:1 봇 deep link 버튼이 붙는다 (P0-C1.10, 비밀값 아님).
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
         run: |
+          # 발송 전 버튼 타겟 검증 (동일 env). 요약↔전체 링크가 어긋나면 여기서 실패해 send 차단.
+          python3 scripts/send_telegram.py --preflight
           python3 scripts/send_telegram.py
