@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--dashboard-export:summary source=templates/dashboard_preview.html target=docs/daily/dashboard-latest.html-->
-<!--news-data-mode:mock-->
+<!--news-data-mode:live-->
 <!--
   HDEC Executive Radar — 대시보드 미리보기 (Dashboard Preview · NON-PRODUCTION)
   ─────────────────────────────────────────────────────────────────────────────
@@ -517,22 +517,22 @@
     <aside class="lens" id="lensnav"><!-- JS가 #preview-model.nav로 렌더 (정적 폴백 포함) -->
       <div class="gtitle">기본 렌즈</div>
       <button class="nav active" data-filter="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">10</span></span></button>
-      <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
-      <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">5</span></span></button>
+      <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">4</span></span></button>
 
       <div class="gtitle">사업영역</div>
       <button class="nav" data-filter="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">9</span></span></button>
-      <button class="nav" data-filter="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">4</span></span></button>
+      <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-filter="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">7</span></span></button>
-      <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">4</span></span></button>
+      <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">8</span></span></button>
 
       <div class="gtitle">외부 생태계</div>
       <button class="nav" data-filter="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-filter="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="trust_companies"><span class="l"><span class="ndot"></span><span class="nlabel">신탁사</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="developers"><span class="l"><span class="ndot"></span><span class="nlabel">시행사·디벨로퍼</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">1</span></span></button>
@@ -540,7 +540,7 @@
 
       <div class="gtitle">실행 범위</div>
       <button class="nav" data-filter="domestic_site"><span class="l"><span class="ndot"></span><span class="nlabel">국내현장</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-filter="overseas_site"><span class="l"><span class="ndot"></span><span class="nlabel">해외현장</span></span><span class="r"><span class="ncount">6</span></span></button>
+      <button class="nav" data-filter="overseas_site"><span class="l"><span class="ndot"></span><span class="nlabel">해외현장</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="overseas_branch"><span class="l"><span class="ndot"></span><span class="nlabel">해외지사</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="overseas_subsidiary"><span class="l"><span class="ndot"></span><span class="nlabel">해외법인</span></span><span class="r"><span class="ncount">0</span></span></button>
     </aside>
@@ -555,15 +555,15 @@
           <button class="tab" data-tab="market" role="tab">시장</button>
           <button class="tab" data-tab="rumor" role="tab">초기신호</button>
         </div>
-        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · <b id="lensCount">21</b>건 표시 <span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
+        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · <b id="lensCount">21</b>건 표시 <span class="previewflag" style="margin:0 0 0 8px;">자동 수집 기사</span></div>
       </div>
 
       <!-- ====== TAB: 뉴스 ====== -->
       <section class="tabpanel" id="panel-news">
-        <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">3건</span></div>
+        <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">2건</span></div>
 
         <!-- FEATURED -->
-        <article class="card featured" data-lens="ai global_business new_energy now plant" data-category="기회"><div class="head"><div style="min-width:0;"><div class="tagrow"><span class="tag red">즉시</span><span class="tag green">기회</span></div><h2>현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정</h2><div class="meta"><b>한국경제</b><span class="sep">·</span><span>06-11 08:30</span><span class="sep">·</span><span>관련 10건</span><span class="sep">·</span><span>출처 5곳</span><span class="trust"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#3F6FA8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3F6FA8" stroke-width="1.6"></circle></svg>신뢰 출처</span></div><div class="featlens"><span class="fllabel">렌즈</span><span class="flchip">AI 신호</span><span class="flchip">글로벌</span><span class="flchip">New Energy</span></div></div><div class="score"><div class="v num" style="color:#B85049;">5.0<small> / 5</small></div><div class="l" style="color:#B85049;">즉시</div></div></div><div class="read"><div class="rd"><span class="rdb sum">요약</span><span>AI 데이터센터 EPC·전력 인프라 수주 기회 점검</span></div><div class="rd"><span class="rdb imp">영향</span><span>현대건설 연관 · 기회 신호 · 의사결정 관련도 점검</span></div><div class="rd act"><span class="rdb act">액션</span><span>즉시 확인</span></div></div><div class="idx"><div class="h">신호 지수 · 0–5</div><div class="idxgrid" id="idxgrid"></div></div><div class="cardfoot"><div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;"><a class="extlink" href="https://example.com/mock-002" target="_blank" rel="noopener noreferrer">원문 보기 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></a><span style="font-size:12px; color:var(--mute4);">연계 현대건설 연관</span></div><span style="font-size:11.5px; color:var(--mute4);" class="num">자동 분류 · hdec</span></div></article>
+        <article class="card featured" data-lens="safety_quality" data-category="관찰"><div class="head"><div style="min-width:0;"><div class="tagrow"><span class="tag amber">검토 필요</span><span class="tag sky">관찰</span></div><h2>인도 굴착기 월간 1위 올라선 HD 건설 기계, 맞춤형으로 속도</h2><div class="meta"><b>파이낸셜뉴스</b><span class="sep">·</span><span>06-24 11:31</span><span class="sep">·</span><span>관련 90건</span><span class="sep">·</span><span>출처 75곳</span><span class="trust"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#3F6FA8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3F6FA8" stroke-width="1.6"></circle></svg>신뢰 출처</span></div><div class="featlens"><span class="fllabel">렌즈</span><span class="flchip">안전·품질</span></div></div><div class="score"><div class="v num" style="color:#5E6E8C;">3.7<small> / 5</small></div><div class="l" style="color:#5E6E8C;">중요</div></div></div><div class="read"><div class="rd"><span class="rdb sum">요약</span><span>입찰 자격·평판·안전관리 리스크 확인</span></div><div class="rd"><span class="rdb imp">영향</span><span>현대건설 연관 · 관찰 신호 · 의사결정 관련도 점검</span></div><div class="rd act"><span class="rdb act">액션</span><span>검토 필요</span></div></div><div class="idx"><div class="h">신호 지수 · 0–5</div><div class="idxgrid" id="idxgrid"></div></div><div class="cardfoot"><div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;"><a class="extlink" href="http://www.fnnews.com/news/202606240828162493" target="_blank" rel="noopener noreferrer">원문 보기 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></a><span style="font-size:12px; color:var(--mute4);">연계 현대건설 연관</span></div><span style="font-size:11.5px; color:var(--mute4);" class="num">자동 분류 · hdec</span></div></article>
 
         <!-- COMPACT ROWS -->
         <div class="card rows" id="newsRows"></div>
@@ -578,7 +578,7 @@
         <!-- SIGNAL INDEX (collapsed by default) -->
         <details class="card" id="signalIndex" style="margin-top:14px;">
           <summary style="list-style:none; cursor:pointer; padding:16px 22px; font-size:13px; font-weight:700; color:var(--ink4); display:flex; align-items:center; justify-content:space-between;">
-            <span>신호 인덱스 · 전체 14건 (기본 접힘)</span>
+            <span>신호 인덱스 · 전체 13건 (기본 접힘)</span>
             <span style="font-size:11.5px; color:var(--mute4); font-weight:600;">펼치기 ▾</span>
           </summary>
           <div style="padding:4px 22px 18px;" id="indexList"></div>
@@ -596,7 +596,7 @@
         </div>
 
         <!-- 실행가능 AI 신호: 카테고리별 · 왜 중요/현대건설 관련성/예상 액션/관련 렌즈 (JS 렌더) -->
-        <div class="seclabel sky"><span class="t">AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">5건</span></div>
+        <div class="seclabel sky"><span class="t">AI 사업·운영 신호 · AI ONLY</span><span class="ln"></span><span class="c">4건</span></div>
         <div class="pnote" style="margin:-2px 2px 12px;">각 신호 = <b>왜 중요한가 · 현대건설 관련성 · 예상 액션 · 관련 렌즈</b>. 실질적 AI 사업 신호가 없으면 그대로 표기합니다 (과장 없음).</div>
         <div id="aiRows"></div>
         <div class="emptylens hidden" id="aiEmpty" role="status" aria-live="polite">
@@ -966,10 +966,10 @@
 {
   "meta": {
     "published_kst": "2026·06·22 월 07:00",
-    "news_data_mode": "mock",
-    "collection": "수동 · 데모",
+    "news_data_mode": "live",
+    "collection": "자동 수집 (live)",
     "audience": "executive-preview",
-    "demo": true
+    "demo": false
   },
   "lens_policy": {
     "now": {
@@ -1101,22 +1101,22 @@
     },
     {
       "label": "사업기회",
-      "value": 4.2,
+      "value": 0.0,
       "color": "#3C7A4E"
     },
     {
       "label": "리스크/규제",
-      "value": 0.3,
+      "value": 1.0,
       "color": "#9AAAC1"
     },
     {
       "label": "긴급도",
-      "value": 2.5,
+      "value": 1.0,
       "color": "#9C7232"
     },
     {
       "label": "출처 신뢰도",
-      "value": 4.5,
+      "value": 3.0,
       "color": "#3F6FA8"
     },
     {
@@ -1129,238 +1129,195 @@
     {
       "tag": "즉시",
       "tagClass": "red",
-      "title": "AI 데이터센터 전력수요 급증, 원전·송배전 인프라 투자 확대",
-      "source": "연합뉴스",
-      "time": "06-11 09:00",
-      "related": "관련 7건",
-      "sources": "출처 5곳",
+      "title": "중동 재건사업, 정부·기업 뭉친다…“에너지·인프라 투자 예상”",
+      "source": "에너지경제",
+      "time": "06-24 14:54",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
       "cat": "기회",
       "catColor": "#3C7A4E",
-      "score": "5.0",
+      "score": "4.8",
       "scoreLabel": "즉시",
       "scoreColor": "#B85049",
       "lens": [
-        "ai",
-        "new_energy",
+        "global_business",
         "now",
-        "plant"
+        "overseas_site"
       ],
-      "url": "https://example.com/mock-001"
+      "url": "https://www.ekn.kr/web/view.php?key=20260624024386121"
     },
     {
       "tag": "즉시",
       "tagClass": "red",
-      "title": "정부, 전력망 특별법 시행령 확정… 데이터센터 송배전 투자 22조원",
+      "title": "재건 시장 열린다…대우 건설 , 중동재건 태스크포스 구성",
       "source": "서울경제",
-      "time": "06-10 10:00",
-      "related": "관련 10건",
-      "sources": "출처 5곳",
+      "time": "06-24 07:46",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
       "cat": "기회",
       "catColor": "#3C7A4E",
-      "score": "5.0",
+      "score": "4.7",
       "scoreLabel": "즉시",
       "scoreColor": "#B85049",
       "lens": [
-        "ai",
-        "new_energy",
+        "global_business",
         "now",
-        "plant",
-        "safety_quality"
+        "overseas_site"
       ],
-      "url": "https://example.com/mock-004"
+      "url": "https://www.sedaily.com/article/20059310?ref=naver"
     },
     {
       "tag": "검토 필요",
       "tagClass": "amber",
-      "title": "국제유가 배럴당 95달러 돌파… 중동 발주처 플랜트 투자 재개 움직임",
-      "source": "연합뉴스",
-      "time": "06-10 14:00",
-      "related": "관련 3건",
-      "sources": "출처 3곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "3.7",
-      "scoreLabel": "중요",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "global_business",
-        "oil_energy",
-        "overseas_site",
-        "plant"
-      ],
-      "url": "https://example.com/mock-007"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "원/달러 환율 1,480원 돌파… 해외건설 수주 원가 부담 가중",
-      "source": "한국경제",
-      "time": "06-10 16:40",
-      "related": "관련 3건",
-      "sources": "출처 3곳",
-      "cat": "관찰",
-      "catColor": "#3F6FA8",
-      "score": "3.5",
-      "scoreLabel": "관찰",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "global_business",
-        "overseas_site",
-        "plant"
-      ],
-      "url": "https://example.com/mock-006"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "달러 강세 장기화 조짐… 중동 플랜트 발주환경과 해외 원가에 영향",
-      "source": "조선비즈",
-      "time": "06-09 16:10",
-      "related": "관련 3건",
-      "sources": "출처 3곳",
-      "cat": "관찰",
-      "catColor": "#3F6FA8",
-      "score": "3.1",
-      "scoreLabel": "관찰",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "global_business",
-        "overseas_site",
-        "plant"
-      ],
-      "url": "https://example.com/mock-028"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "해외건설 수주 상반기 200억달러 육박… 중동 비중 60%",
-      "source": "한국경제",
-      "time": "06-11 08:00",
-      "related": "관련 3건",
-      "sources": "출처 3곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "3.0",
-      "scoreLabel": "관찰",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "global_business",
-        "overseas_site",
-        "plant"
-      ],
-      "url": "https://example.com/mock-025"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "건설현장 AI 영상인식 안전관리 의무화 추진… 중대재해 감축 목표",
-      "source": "연합뉴스",
-      "time": "06-10 08:50",
-      "related": "관련 5건",
-      "sources": "출처 4곳",
-      "cat": "리스크",
-      "catColor": "#B85049",
-      "score": "2.9",
-      "scoreLabel": "리스크",
-      "scoreColor": "#B85049",
-      "lens": [
-        "safety_quality"
-      ],
-      "url": "https://example.com/mock-021"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "글로벌 공급망 재편 가속… 원자재 확보 경쟁에 플랜트 자재 조달 비상",
-      "source": "서울경제",
-      "time": "06-09 09:20",
-      "related": "단독 신호",
-      "sources": "출처 1곳",
-      "cat": "관찰",
-      "catColor": "#3F6FA8",
-      "score": "2.8",
-      "scoreLabel": "관찰",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "competitor_contractors",
-        "global_business",
-        "overseas_site",
-        "plant"
-      ],
-      "url": "https://example.com/mock-010"
-    },
-    {
-      "tag": "참고",
-      "tagClass": "sky",
-      "title": "체코 신규 원전 2호기 본계약 체결… 팀코리아 유럽 수주 확대",
-      "source": "연합뉴스",
-      "time": "06-10 07:30",
-      "related": "단독 신호",
-      "sources": "출처 1곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "2.5",
-      "scoreLabel": "관찰",
-      "scoreColor": "#5E6E8C",
-      "lens": [
-        "ai",
-        "global_business",
-        "new",
-        "new_energy",
-        "overseas_site",
-        "plant"
-      ],
-      "url": "https://example.com/mock-026"
-    }
-  ],
-  "ai_rows": [
-    {
-      "tag": "즉시",
-      "tagClass": "red",
-      "title": "MS·아마존, SMR 전력 구매 계약 확대… AI 데이터센터 전력 확보 경쟁",
-      "source": "매일경제",
-      "time": "06-10 18:20",
-      "related": "관련 7건",
-      "sources": "출처 5곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "5.0",
-      "scoreLabel": "즉시",
-      "scoreColor": "#B85049",
-      "lens": [
-        "ai",
-        "competitor_contractors",
-        "new_energy",
-        "now",
-        "plant"
-      ],
-      "url": "https://example.com/mock-003",
-      "aiCategory": "dc_power",
-      "aiCategoryLabel": "AI·데이터센터·전력 인프라",
-      "why": "자본시장 관찰 신호 — 사업 의사결정 핵심도 낮음",
-      "relevance": "현대건설 사업 연계 — AI 데이터센터·전력 인프라 (간접 영향)",
-      "action": "즉시 확인"
-    },
-    {
-      "tag": "검토 필요",
-      "tagClass": "amber",
-      "title": "글로벌 데이터센터 EPC 발주 사상 최대… 전력·냉각 시공 능력이 수주 좌우",
-      "source": "전자신문",
-      "time": "06-11 07:10",
-      "related": "관련 10건",
-      "sources": "출처 5곳",
+      "title": "15년 만의 원전 발주에 중동 재건 기대감까지… 건설 업계 '들썩'",
+      "source": "thepublic.kr",
+      "time": "06-22 11:08",
+      "related": "관련 95건",
+      "sources": "출처 79곳",
       "cat": "기회",
       "catColor": "#3C7A4E",
       "score": "4.5",
       "scoreLabel": "중요",
       "scoreColor": "#5E6E8C",
       "lens": [
-        "ai",
         "global_business",
+        "plant",
+        "safety_quality"
+      ],
+      "url": "https://www.thepublic.kr/news/articleView.html?idxno=308543"
+    },
+    {
+      "tag": "검토 필요",
+      "tagClass": "amber",
+      "title": "현대건설 ·포스코이앤씨, 안전 체계 아직 부족하다 [줌인IT]",
+      "source": "조선일보",
+      "time": "06-17 20:42",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
+      "cat": "리스크",
+      "catColor": "#B85049",
+      "score": "4.0",
+      "scoreLabel": "리스크",
+      "scoreColor": "#B85049",
+      "lens": [
+        "safety_quality"
+      ],
+      "url": "https://it.chosun.com/news/articleView.html?idxno=2023092164078"
+    },
+    {
+      "tag": "검토 필요",
+      "tagClass": "amber",
+      "title": "철근 누락에 사망사고까지...대형 건설 사 제재는 '하세월'",
+      "source": "pointdaily.co.kr",
+      "time": "06-15 17:28",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
+      "cat": "리스크",
+      "catColor": "#B85049",
+      "score": "3.9",
+      "scoreLabel": "리스크",
+      "scoreColor": "#B85049",
+      "lens": [
+        "safety_quality"
+      ],
+      "url": "https://www.pointdaily.co.kr/news/articleView.html?idxno=308247"
+    },
+    {
+      "tag": "검토 필요",
+      "tagClass": "amber",
+      "title": "이란 원유 제재 한시 해제…국내 건설 사, 원가 절감·재건 수주 기회될...",
+      "source": "greened.kr",
+      "time": "06-23 12:38",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
+      "cat": "리스크",
+      "catColor": "#B85049",
+      "score": "3.6",
+      "scoreLabel": "리스크",
+      "scoreColor": "#B85049",
+      "lens": [
+        "oil_energy",
+        "safety_quality"
+      ],
+      "url": "https://www.greened.kr/news/articleView.html?idxno=343083"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "대우 건설 , 중동재건 TF 신설..이란 재진출 채비",
+      "source": "4th.kr",
+      "time": "06-23 11:36",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
+      "cat": "기회",
+      "catColor": "#3C7A4E",
+      "score": "3.5",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "global_business",
+        "safety_quality"
+      ],
+      "url": "http://www.4th.kr/news/articleView.html?idxno=2113569"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "454兆 이란 재건시장 열린다는데···웃는 건설 사는 어디",
+      "source": "sisajournal-e.com",
+      "time": "06-22 17:08",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
+      "cat": "리스크",
+      "catColor": "#B85049",
+      "score": "3.3",
+      "scoreLabel": "리스크",
+      "scoreColor": "#B85049",
+      "lens": [
+        "new",
+        "safety_quality"
+      ],
+      "url": "https://www.sisajournal-e.com/news/articleView.html?idxno=421907"
+    },
+    {
+      "tag": "참고",
+      "tagClass": "sky",
+      "title": "서울시, 'GTX 철근 누락' 현대건설 등 시공사에 벌점 부과 통보",
+      "source": "MBC 뉴스",
+      "time": "06-12 16:00",
+      "related": "관련 90건",
+      "sources": "출처 75곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "2.6",
+      "scoreLabel": "관찰",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "safety_quality"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMid0FVX3lxTFBCYWNlSk9ucGNCNlV0ZUY1YTN3V3Q2d1QyNHpfUnEtUW1EU2lHZzV3NW1iTzItNV9DelE1SE1KaGFodUg1S2FQWkVlM2U0TmtmZjhpdWx1UkdPR2VqUEpmTkRfYm01OU5QclBnOFRCUkVjS0VZQTNB0gF3QVVfeXFMT0otVGp5MzVWSEN1ZU1TaEN1SG1BbjUyUlFnaFZqcWxjcFFYUldxX1I2S2tSZnJlT1dKcHRDU1V0WkxCelNqUWFoN1ZDTjA5VXUwNHV2Y0dlTE1BcXpIOUhXSzRPVzJIS2E3TXByX1luQ2p1ZVo5bnc?oc=5"
+    }
+  ],
+  "ai_rows": [
+    {
+      "tag": "검토 필요",
+      "tagClass": "amber",
+      "title": "AI 데이터센터發 전력수요 폭증…美 EPC 시장, 원전·LNG 중심으로 재편",
+      "source": "재외동포신문",
+      "time": "06-23 18:35",
+      "related": "관련 40건",
+      "sources": "출처 38곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "4.5",
+      "scoreLabel": "중요",
+      "scoreColor": "#5E6E8C",
+      "lens": [
+        "ai",
         "new_energy",
         "plant"
       ],
-      "url": "https://example.com/mock-005",
+      "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE9kNTI1ZmphSVN1aEo0cVFQVVZWaTh0Y2ozVmppcVZhc0UtdkVwYjdjb19KV2xudEZZMkpybTJoZ21rbHNEVGQ3emc5MmVpN2NuMlRPOHQ5YmRldVRvWndqTGtsYm45ZHJJWmdxYQ?oc=5",
       "aiCategory": "dc_power",
       "aiCategoryLabel": "AI·데이터센터·전력 인프라",
       "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
@@ -1370,14 +1327,14 @@
     {
       "tag": "검토 필요",
       "tagClass": "amber",
-      "title": "정부, AI 인프라 고도화에 5년간 30조 투입… 에너지·전력망 패키지 지원",
-      "source": "전자신문",
-      "time": "06-11 07:40",
-      "related": "관련 6건",
-      "sources": "출처 5곳",
+      "title": "불황 뚫는 'AI 인프라'… 현대 제철, 데이터센터 ·ESS 특수 노린다",
+      "source": "the-biz.co.kr",
+      "time": "06-24 09:30",
+      "related": "관련 49건",
+      "sources": "출처 45곳",
       "cat": "관찰",
       "catColor": "#3F6FA8",
-      "score": "3.6",
+      "score": "3.9",
       "scoreLabel": "중요",
       "scoreColor": "#5E6E8C",
       "lens": [
@@ -1385,50 +1342,49 @@
         "new_energy",
         "plant"
       ],
-      "url": "https://example.com/mock-027",
+      "url": "http://www.the-biz.co.kr/news/articleView.html?idxno=723137",
       "aiCategory": "dc_power",
       "aiCategoryLabel": "AI·데이터센터·전력 인프라",
-      "why": "유럽 원전 EPC 파이프라인·파트너십 점검",
+      "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
       "relevance": "현대건설 사업 연계 — AI 데이터센터·전력 인프라 (간접 영향)",
       "action": "검토 필요"
     },
     {
       "tag": "참고",
       "tagClass": "sky",
-      "title": "DL이앤씨, 수도권 데이터센터 신축 공사 수주… 비주택 포트폴리오 강화",
-      "source": "매일경제",
-      "time": "06-10 11:20",
-      "related": "관련 6건",
-      "sources": "출처 5곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
+      "title": "현대건설 , '석탄화력→SMR' 전환 기술 개발...남동발전과 맞손",
+      "source": "4th.kr",
+      "time": "06-19 16:52",
+      "related": "관련 105건",
+      "sources": "출처 88곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
       "score": "3.1",
       "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
         "ai",
-        "building_housing",
         "new_energy",
         "plant"
       ],
-      "url": "https://example.com/mock-018",
+      "url": "http://www.4th.kr/news/articleView.html?idxno=2113443",
       "aiCategory": "dc_power",
       "aiCategoryLabel": "AI·데이터센터·전력 인프라",
-      "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
-      "relevance": "경쟁사 동향 — 수주 경쟁·기술 격차 점검",
+      "why": "유럽 원전 EPC 파이프라인·파트너십 점검",
+      "relevance": "현대건설 직접 연관 — 현대건설 연관",
       "action": "추적 필요"
     },
     {
       "tag": "참고",
       "tagClass": "sky",
-      "title": "북미 빅테크, 동남아 데이터센터에 12조원 투자… 전력 확보가 최대 변수",
-      "source": "매일경제",
-      "time": "06-10 15:30",
-      "related": "관련 7건",
-      "sources": "출처 5곳",
-      "cat": "기회",
-      "catColor": "#3C7A4E",
-      "score": "2.6",
+      "title": "김욱수 자이C&A 대표 “데이터센터 시장 정조준…EPC 역량으로 승부”",
+      "source": "디지털데일리",
+      "time": "06-24 10:30",
+      "related": "관련 105건",
+      "sources": "출처 88곳",
+      "cat": "관찰",
+      "catColor": "#3F6FA8",
+      "score": "1.3",
       "scoreLabel": "관찰",
       "scoreColor": "#5E6E8C",
       "lens": [
@@ -1436,7 +1392,7 @@
         "new_energy",
         "plant"
       ],
-      "url": "https://example.com/mock-029",
+      "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE9fdEJkQzlaUVByTzJ4akRmRHZHS2xRM3lMenU1b2sybllJellmYXdtTGFRUnhxLXFGLW50YzRvWGsxM3NtLUI0WENqUVl4Y3A1SlNIV3ozeldxMWs4TFB0ZG1WRkM?oc=5",
       "aiCategory": "dc_power",
       "aiCategoryLabel": "AI·데이터센터·전력 인프라",
       "why": "AI 데이터센터 EPC·전력 인프라 수주 기회 점검",
@@ -2605,13 +2561,13 @@
       "id": "plant",
       "label": "플랜트",
       "desc": "원전·LNG·정유/석화·중동 EPC",
-      "count": 9
+      "count": 1
     },
     {
       "id": "new_energy",
       "label": "New Energy",
       "desc": "SMR·수소·전력망·데이터센터 전력",
-      "count": 4
+      "count": 0
     },
     {
       "id": "development_business",
@@ -2623,13 +2579,13 @@
       "id": "global_business",
       "label": "글로벌",
       "desc": "해외수주·중동·환율·지정학",
-      "count": 7
+      "count": 4
     },
     {
       "id": "safety_quality",
       "label": "안전·품질",
       "desc": "중대재해·특별감독·벌점·하자",
-      "count": 2
+      "count": 8
     }
   ],
   "ecosystem": [
@@ -2643,7 +2599,7 @@
       "id": "competitor_contractors",
       "label": "경쟁 시공사",
       "desc": "주요 경쟁사 수주·리스크",
-      "count": 1
+      "count": 0
     },
     {
       "id": "trust_companies",
