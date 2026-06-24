@@ -103,6 +103,9 @@ curl http://localhost:8000/api/settings/topics
   코드 트리(`app/ data/ templates/`) 기준 금지 문자열 0건이 통과 조건이며,
   스펙 문서(rules.md, PRD.md 등)에 등장하는 금지어 정의 자체는 검출 대상이 아니다.
 - `OPENAI_API_KEY`가 없어도 `/api/sense/run`이 성공해야 한다 (P0-A는 rule-based only).
+- 작업 방식 체크: `docs/operations/AGENT_WORKFLOW_RULES.md`와
+  `docs/operations/LESS_CODE_REVIEW_CHECKLIST.md`를 따른다. 핵심은 기존 소유 경로를
+  먼저 찾고, 불필요한 코드는 줄이며, 실제 회귀를 잡는 좁은 verifier로 증명하는 것이다.
 
 ## 8. 프로젝트 구조 (도메인 소유 — CLAUDE.md §4)
 
