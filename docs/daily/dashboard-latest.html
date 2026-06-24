@@ -394,6 +394,15 @@
   .lensitem .d{font-size:11px; color:var(--mute3); margin-top:2px;}
   .lensitem .c{font-size:13px; font-weight:800; color:var(--sky); font-variant-numeric:tabular-nums; flex:none;}
   .lensitem .c.zero{color:var(--mute4);}
+  .lensitem[data-filter]{cursor:pointer; transition:background .12s, border-color .12s;}
+  .lensitem[data-filter]:hover{background:#F5F9FE; border-color:#DCE9F8;}
+  .lensitem.active{background:var(--sky-tint); border-color:#CFE0F4;}
+  /* ===== Empty state (선택 렌즈에 표시할 데모 신호 없음) ===== */
+  .emptylens{background:var(--card); border:1px dashed var(--line); border-radius:14px;
+    padding:34px 22px; text-align:center; margin-top:4px;}
+  .emptylens .el-ico{font-size:22px; color:var(--mute4); line-height:1;}
+  .emptylens .el-title{font-size:14px; font-weight:800; color:var(--ink3); margin-top:10px;}
+  .emptylens .el-desc{font-size:12.5px; color:var(--mute3); margin-top:7px; line-height:1.65;}
   .watch{display:flex; gap:11px; padding:10px 0; border-top:1px solid var(--hair);}
   .watch:first-of-type{border-top:none;}
   .watch .wn{width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center; justify-content:center;
@@ -491,33 +500,33 @@
     <!-- ---------- LEFT LENS NAV ---------- -->
     <aside class="lens" id="lensnav"><!-- JS가 #preview-model.nav로 렌더 (정적 폴백 포함) -->
       <div class="gtitle">기본 렌즈</div>
-      <button class="nav active" data-lens="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">21</span></span></button>
-      <button class="nav" data-lens="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
-      <button class="nav" data-lens="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
-      <button class="nav" data-lens="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">8</span></span></button>
+      <button class="nav active" data-filter="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">21</span></span></button>
+      <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
+      <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">8</span></span></button>
 
       <div class="gtitle">사업영역</div>
-      <button class="nav" data-lens="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">2</span></span></button>
-      <button class="nav" data-lens="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">3</span></span></button>
-      <button class="nav" data-lens="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">4</span></span></button>
-      <button class="nav" data-lens="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">5</span></span></button>
-      <button class="nav" data-lens="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">1</span></span></button>
-      <button class="nav" data-lens="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">5</span></span></button>
-      <button class="nav" data-lens="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-filter="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-filter="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">4</span></span></button>
+      <button class="nav" data-filter="new_energy"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">New Energy</span></span><span class="r"><span class="ncount">5</span></span></button>
+      <button class="nav" data-filter="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">5</span></span></button>
+      <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">2</span></span></button>
 
       <div class="gtitle">외부 생태계</div>
-      <button class="nav" data-lens="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-lens="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">1</span></span></button>
-      <button class="nav" data-lens="trust_companies"><span class="l"><span class="ndot"></span><span class="nlabel">신탁사</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-lens="developers"><span class="l"><span class="ndot"></span><span class="nlabel">시행사·디벨로퍼</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-lens="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">2</span></span></button>
-      <button class="nav" data-lens="hormuz"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">호르무즈</span></span><span class="r"><span class="dm unavail" style="font-size:9px;">미연동</span></span></button>
+      <button class="nav" data-filter="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="competitor_contractors"><span class="l"><span class="ndot"></span><span class="nlabel">경쟁 시공사</span></span><span class="r"><span class="ncount">1</span></span></button>
+      <button class="nav" data-filter="trust_companies"><span class="l"><span class="ndot"></span><span class="nlabel">신탁사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="developers"><span class="l"><span class="ndot"></span><span class="nlabel">시행사·디벨로퍼</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-filter="hormuz"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">호르무즈</span></span><span class="r"><span class="dm unavail" style="font-size:9px;">미연동</span></span></button>
 
       <div class="gtitle">실행 범위</div>
-      <button class="nav" data-lens="domestic_site"><span class="l"><span class="ndot"></span><span class="nlabel">국내현장</span></span><span class="r"><span class="ncount">2</span></span></button>
-      <button class="nav" data-lens="overseas_site"><span class="l"><span class="ndot"></span><span class="nlabel">해외현장</span></span><span class="r"><span class="ncount">3</span></span></button>
-      <button class="nav" data-lens="overseas_branch"><span class="l"><span class="ndot"></span><span class="nlabel">해외지사</span></span><span class="r"><span class="ncount">0</span></span></button>
-      <button class="nav" data-lens="overseas_subsidiary"><span class="l"><span class="ndot"></span><span class="nlabel">해외법인</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="domestic_site"><span class="l"><span class="ndot"></span><span class="nlabel">국내현장</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <button class="nav" data-filter="overseas_site"><span class="l"><span class="ndot"></span><span class="nlabel">해외현장</span></span><span class="r"><span class="ncount">3</span></span></button>
+      <button class="nav" data-filter="overseas_branch"><span class="l"><span class="ndot"></span><span class="nlabel">해외지사</span></span><span class="r"><span class="ncount">0</span></span></button>
+      <button class="nav" data-filter="overseas_subsidiary"><span class="l"><span class="ndot"></span><span class="nlabel">해외법인</span></span><span class="r"><span class="ncount">0</span></span></button>
     </aside>
 
     <!-- ---------- CENTER ---------- -->
@@ -530,7 +539,7 @@
           <button class="tab" data-tab="market" role="tab">시장</button>
           <button class="tab" data-tab="rumor" role="tab">초기신호</button>
         </div>
-        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · 21 신호 <span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
+        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · <b id="lensCount">21</b>건 표시 <span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
       </div>
 
       <!-- ====== TAB: 뉴스 ====== -->
@@ -538,7 +547,7 @@
         <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">3건</span></div>
 
         <!-- FEATURED -->
-        <article class="card featured">
+        <article class="card featured" data-lens="ai now plant new_energy global_business overseas_site" data-category="기회">
           <div class="head">
             <div style="min-width:0;">
               <div class="tagrow"><span class="tag red">즉시</span><span class="tag green">기회</span></div>
@@ -573,6 +582,13 @@
 
         <!-- COMPACT ROWS -->
         <div class="card rows" id="newsRows"></div>
+
+        <!-- EMPTY STATE (선택 렌즈에 표시할 데모 신호가 없을 때) -->
+        <div class="emptylens hidden" id="newsEmpty" role="status" aria-live="polite">
+          <div class="el-ico">◍</div>
+          <div class="el-title">선택한 렌즈에 표시할 신호가 없습니다</div>
+          <div class="el-desc">이 렌즈는 데모 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
+        </div>
 
         <!-- SIGNAL INDEX (collapsed by default) -->
         <details class="card" id="signalIndex" style="margin-top:14px;">
@@ -631,6 +647,11 @@
 
         <div class="seclabel sky"><span class="t">AI 신호 피드 · AI ONLY</span><span class="ln"></span><span class="c">8건</span></div>
         <div class="card rows" id="aiRows"></div>
+        <div class="emptylens hidden" id="aiEmpty" role="status" aria-live="polite">
+          <div class="el-ico">◍</div>
+          <div class="el-title">선택한 렌즈에 표시할 AI 신호가 없습니다</div>
+          <div class="el-desc">AI 피드에는 해당 렌즈와 겹치는 데모 기사가 없습니다 — <b>전체 종합</b> 또는 <b>AI 신호</b> 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
+        </div>
       </section>
 
       <!-- ====== TAB: 시장 ====== -->
@@ -963,24 +984,50 @@
   "news_rows": [
     {"tag": "즉시", "tagClass": "red", "title": "상반기 건설업 중대재해 22% 증가… 고용부, 대형 건설사 특별감독 착수",
      "source": "머니투데이", "time": "3시간 전", "related": "관련 2건", "sources": "출처 2곳",
-     "cat": "리스크", "catColor": "#B85049", "score": "4.6", "scoreLabel": "리스크", "scoreColor": "#B85049"},
+     "cat": "리스크", "catColor": "#B85049", "score": "4.6", "scoreLabel": "리스크", "scoreColor": "#B85049",
+     "lens": ["now", "safety_quality", "domestic_site"]},
     {"tag": "검토 필요", "tagClass": "amber", "title": "정부, 데이터센터 전력계통 분산·SMR 연계 로드맵 발표",
      "source": "전자신문", "time": "6시간 전", "related": "관련 7건", "sources": "출처 4곳",
-     "cat": "기회", "catColor": "#3C7A4E", "score": "3.7", "scoreLabel": "중요", "scoreColor": "#5E6E8C"},
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.7", "scoreLabel": "중요", "scoreColor": "#5E6E8C",
+     "lens": ["ai", "new_energy", "plant"]},
     {"tag": "검토 필요", "tagClass": "amber", "title": "사우디 LNG 플랜트 발주 재개… 국내 건설사 수주 경쟁 본격화",
      "source": "연합뉴스", "time": "9시간 전", "related": "관련 4건", "sources": "출처 3곳",
-     "cat": "기회", "catColor": "#3C7A4E", "score": "3.6", "scoreLabel": "중요", "scoreColor": "#5E6E8C"}
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.6", "scoreLabel": "중요", "scoreColor": "#5E6E8C",
+     "lens": ["plant", "global_business", "overseas_site"]},
+    {"tag": "검토 필요", "tagClass": "amber", "title": "GTX-D·E 광역철도 기본계획 확정… 대형 토목·인프라 발주 가시화",
+     "source": "국토교통부", "time": "12시간 전", "related": "관련 3건", "sources": "출처 3곳",
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.3", "scoreLabel": "중요", "scoreColor": "#5E6E8C",
+     "lens": ["civil_infrastructure", "domestic_site"]},
+    {"tag": "검토 필요", "tagClass": "sky", "title": "도시정비 공사비 인상 갈등 확산… 정비사업 시공계약 재협상 잇따라",
+     "source": "한국경제", "time": "14시간 전", "related": "관련 5건", "sources": "출처 3곳",
+     "cat": "관찰", "catColor": "#3F6FA8", "score": "3.0", "scoreLabel": "관찰", "scoreColor": "#5E6E8C",
+     "lens": ["building_housing", "domestic_site"]},
+    {"tag": "검토 필요", "tagClass": "amber", "title": "경쟁 대형 건설사, 카타르 LNG 플랜트 단독 수주… 중동 수주 경쟁 심화",
+     "source": "연합뉴스", "time": "16시간 전", "related": "관련 4건", "sources": "출처 3곳",
+     "cat": "리스크", "catColor": "#B85049", "score": "3.1", "scoreLabel": "리스크", "scoreColor": "#B85049",
+     "lens": ["competitor_contractors", "global_business", "overseas_site", "plant"]},
+    {"tag": "참고", "tagClass": "sky", "title": "국제 유가 배럴당 80달러 상회 지속… 중동 발주환경·연료비 변동성 확대",
+     "source": "연합뉴스", "time": "18시간 전", "related": "관련 3건", "sources": "출처 2곳",
+     "cat": "관찰", "catColor": "#3F6FA8", "score": "2.6", "scoreLabel": "관찰", "scoreColor": "#5E6E8C",
+     "lens": ["oil_energy", "global_business"]},
+    {"tag": "검토 필요", "tagClass": "amber", "title": "현대건설, UAE 바라카 원전 정비·운영지원 계약 연장 협의 착수",
+     "source": "전자신문", "time": "20시간 전", "related": "관련 4건", "sources": "출처 3곳",
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.2", "scoreLabel": "중요", "scoreColor": "#5E6E8C",
+     "lens": ["overseas_site", "global_business", "new_energy", "plant"]}
   ],
   "ai_rows": [
     {"tag": "AI", "tagClass": "green", "title": "현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정",
      "source": "한국경제", "time": "1시간 전", "related": "관련 10건", "sources": "출처 5곳",
-     "cat": "기회", "catColor": "#3C7A4E", "score": "5.0", "scoreLabel": "즉시", "scoreColor": "#B85049"},
+     "cat": "기회", "catColor": "#3C7A4E", "score": "5.0", "scoreLabel": "즉시", "scoreColor": "#B85049",
+     "lens": ["ai", "now", "plant", "new_energy", "global_business", "overseas_site"]},
     {"tag": "AI", "tagClass": "green", "title": "정부, 데이터센터 전력계통 분산·SMR 연계 로드맵 발표",
      "source": "전자신문", "time": "6시간 전", "related": "관련 7건", "sources": "출처 4곳",
-     "cat": "기회", "catColor": "#3C7A4E", "score": "3.7", "scoreLabel": "중요", "scoreColor": "#5E6E8C"},
+     "cat": "기회", "catColor": "#3C7A4E", "score": "3.7", "scoreLabel": "중요", "scoreColor": "#5E6E8C",
+     "lens": ["ai", "new_energy", "plant"]},
     {"tag": "AI", "tagClass": "sky", "title": "데이터센터 냉각·전력설비 수요 급증… 건설·설비 EPC 발주 확대 전망",
      "source": "전자신문", "time": "11시간 전", "related": "관련 5건", "sources": "출처 3곳",
-     "cat": "관찰", "catColor": "#3F6FA8", "score": "3.4", "scoreLabel": "관찰", "scoreColor": "#5E6E8C"}
+     "cat": "관찰", "catColor": "#3F6FA8", "score": "3.4", "scoreLabel": "관찰", "scoreColor": "#5E6E8C",
+     "lens": ["ai", "new_energy", "plant"]}
   ],
   "ai_themes": [
     {"label": "AI·데이터센터·전력", "share": 42, "color": "#3F6FA8"},
@@ -1157,29 +1204,85 @@
 
   /* ---------- TABS ---------- */
   var tabbar = el("tabbar");
+  var FILTER_TABS = ["news", "ai"];            // 렌즈 필터가 적용되는 피드 탭
+  function activeTabName() {
+    var t = tabbar && tabbar.querySelector(".tab.active");
+    return t ? t.getAttribute("data-tab") : "news";
+  }
+  function activateTab(name) {
+    if (!tabbar) return;
+    [].forEach.call(tabbar.querySelectorAll(".tab"), function (t) {
+      t.classList.toggle("active", t.getAttribute("data-tab") === name);
+    });
+    ["news", "ai", "market", "rumor"].forEach(function (p) {
+      var panel = el("panel-" + p); if (panel) panel.classList.toggle("hidden", p !== name);
+    });
+    if (name === "market") drawYieldChart();
+  }
   if (tabbar) {
     tabbar.addEventListener("click", function (ev) {
       var b = ev.target.closest(".tab"); if (!b) return;
-      var name = b.getAttribute("data-tab");
-      [].forEach.call(tabbar.querySelectorAll(".tab"), function (t) { t.classList.toggle("active", t === b); });
-      ["news", "ai", "market", "rumor"].forEach(function (p) {
-        var panel = el("panel-" + p); if (panel) panel.classList.toggle("hidden", p !== name);
-      });
-      if (name === "market") drawYieldChart();
+      activateTab(b.getAttribute("data-tab"));
     });
   }
 
-  /* ---------- LENS NAV ---------- */
+  /* ---------- LENS FILTER (좌측 네비 + 우측 레일 공통, 결정적) ----------
+     렌즈를 선택하면 data-lens 태그가 일치하는 카드/신호만 보이고, 일치가 없으면
+     빈 상태를 노출한다. '전체 종합'(all)은 전체로 되돌린다. 네트워크/난수 0건. */
   var lensnav = el("lensnav");
   var lensLabelByEl = {};
+  var activeLensKey = "all";
   if (lensnav) {
     [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
-      var lbl = n.querySelector(".nlabel"); lensLabelByEl[n.getAttribute("data-lens")] = lbl ? lbl.textContent : "";
+      var lbl = n.querySelector(".nlabel");
+      lensLabelByEl[n.getAttribute("data-filter")] = lbl ? lbl.textContent : "";
     });
+  }
+  function lensLabel(key) { return lensLabelByEl[key] || "전체 종합"; }
+  function filterPanel(panelId, key) {
+    var panel = el(panelId); if (!panel) return 0;
+    var shown = 0;
+    [].forEach.call(panel.querySelectorAll("[data-lens]"), function (it) {
+      var tags = (it.getAttribute("data-lens") || "").split(/\s+/);
+      var match = key === "all" || tags.indexOf(key) !== -1;
+      it.classList.toggle("hidden", !match);
+      if (match) shown++;
+    });
+    // 데모 '더보기'는 전체 종합에서만 노출 (필터 중에는 숨김)
+    [].forEach.call(panel.querySelectorAll(".morebtn"), function (m) {
+      m.classList.toggle("hidden", key !== "all");
+    });
+    var emptyId = panelId === "panel-news" ? "newsEmpty"
+      : panelId === "panel-ai" ? "aiEmpty" : null;
+    if (emptyId) { var e = el(emptyId); if (e) e.classList.toggle("hidden", shown > 0); }
+    return shown;
+  }
+  function applyLens(key, opts) {
+    activeLensKey = key;
+    var newsShown = filterPanel("panel-news", key);
+    filterPanel("panel-ai", key);
+    if (lensnav) [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
+      n.classList.toggle("active", n.getAttribute("data-filter") === key);
+    });
+    [].forEach.call(document.querySelectorAll(".lensitem[data-filter]"), function (it) {
+      it.classList.toggle("active", it.getAttribute("data-filter") === key);
+    });
+    var lab = el("activeLens"); if (lab) lab.textContent = lensLabel(key);
+    var cnt = el("lensCount"); if (cnt) cnt.textContent = newsShown;
+    if (opts && opts.scroll && window.matchMedia
+        && window.matchMedia("(max-width:900px)").matches) {
+      var main = document.querySelector("main");           // 모바일: 선택 후 본문 노출
+      if (main && main.scrollIntoView) main.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  function selectLens(key) {
+    if (FILTER_TABS.indexOf(activeTabName()) === -1) activateTab("news");
+    applyLens(key, { scroll: true });
+  }
+  if (lensnav) {
     lensnav.addEventListener("click", function (ev) {
       var b = ev.target.closest(".nav"); if (!b) return;
-      [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) { n.classList.toggle("active", n === b); });
-      var lab = el("activeLens"); if (lab) lab.textContent = lensLabelByEl[b.getAttribute("data-lens")] || "전체 종합";
+      selectLens(b.getAttribute("data-filter"));
     });
   }
 
@@ -1201,6 +1304,8 @@
     box.innerHTML = "";
     (rows || []).forEach(function (r) {
       var a = document.createElement("div"); a.className = "srow";
+      a.setAttribute("data-lens", (r.lens || []).join(" "));
+      a.setAttribute("data-category", r.cat || "");
       a.innerHTML =
         '<span class="stag tag ' + esc(r.tagClass) + '">' + esc(r.tag) + '</span>' +
         '<div class="body"><div class="title">' + esc(r.title) + '</div>' +
@@ -1219,6 +1324,12 @@
   }
   renderRows("newsRows", MODEL.news_rows);
   renderRows("aiRows", MODEL.ai_rows);
+
+  /* ---------- 초기 렌즈 카운트 (전체 종합 = 표시 가능한 뉴스 신호 수) ---------- */
+  (function () {
+    var p = el("panel-news"), cnt = el("lensCount");
+    if (p && cnt) cnt.textContent = p.querySelectorAll("[data-lens]").length;
+  })();
 
   /* ---------- signal index list (collapsed) ---------- */
   (function () {
@@ -1327,10 +1438,15 @@
     var box = el(targetId); if (!box) return; box.innerHTML = "";
     (items || []).forEach(function (it) {
       var d = document.createElement("div"); d.className = "lensitem";
+      if (it.id) d.setAttribute("data-filter", it.id);
       var c = it.count == null ? '<span class="dm unavail" style="font-size:9px;">미연동</span>'
         : '<span class="c ' + (it.count ? "" : "zero") + '">' + it.count + '</span>';
       d.innerHTML = '<div><div class="l">' + esc(it.label) + '</div><div class="d">' + esc(it.desc) + '</div></div>' + c;
       box.appendChild(d);
+    });
+    box.addEventListener("click", function (ev) {              // 우측 레일도 동일 필터 구동
+      var item = ev.target.closest(".lensitem[data-filter]"); if (!item) return;
+      selectLens(item.getAttribute("data-filter"));
     });
   }
   renderLensList("businessLens", MODEL.business_lens);
