@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""D6-F verifier — full report mobile readability and link identity.
+"""D6-G verifier — mobile evidence layout structure.
 
-Checks the generated Executive Daily Brief HTML/CSS without sending Telegram:
-- 390px phone safeguards: viewport, no body overflow, wrapping, compact header.
-- Mobile layout rules: single-column grids, compact non-sticky tabs, table scroll fallback.
-- Published latest.html remains the full report and uses builder CSS.
-- dashboard-latest.html remains the separate summary dashboard.
-- Telegram A/B labels still map summary -> dashboard and full report -> latest.
+Checks the full report generator/output without sending Telegram:
+- mobile evidence controls are compact drawers, not a dominant article blocker
+- mobile evidence articles appear before the full category inventory
+- mobile CSS disables sticky/fixed tab behavior and forces single-column flow
+- latest/dashboard identity and Telegram A/B URL mapping remain intact
 """
 
 import json
@@ -23,6 +22,8 @@ REPORT_BUILDER = SCRIPTS / "build_static_report.py"
 LATEST = ROOT / "docs" / "daily" / "latest.html"
 DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
 OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
+SENDER = SCRIPTS / "send_telegram.py"
+WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 
 SUMMARY_BUTTON_TEXT = "요약 대시보드 보기"
 REPORT_BUTTON_TEXT = "전체 리포트 보기"
@@ -64,19 +65,14 @@ def _clean_env(**extra: str) -> dict[str, str]:
     return env
 
 
-def _run(args: list[str], timeout: int = 300) -> subprocess.CompletedProcess:
+def _run(args: list[str], timeout: int = 300,
+         env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(args, cwd=ROOT, capture_output=True, text=True,
-                          env=_clean_env(), timeout=timeout)
+                          env=env or _clean_env(), timeout=timeout)
 
 
 def _style_block(html: str) -> str:
     match = re.search(r"<style>(.*?)</style>", html, re.S)
-    return match.group(1) if match else ""
-
-
-def _selector_block(css: str, selector: str) -> str:
-    pattern = re.escape(selector) + r"\{([^}]*)\}"
-    match = re.search(pattern, css, re.S)
     return match.group(1) if match else ""
 
 
@@ -96,75 +92,88 @@ def _mobile_block(css: str) -> str:
     return css[start + len(marker):pos - 1] if depth == 0 else ""
 
 
-def _large_fixed_widths(css: str) -> list[str]:
-    issues: list[str] = []
-    for prop in ("width", "min-width"):
-        pattern = rf"(?:(?<=\{{)|(?<=;))\s*{prop}\s*:\s*(\d+)px"
-        for match in re.finditer(pattern, css):
-            value = int(match.group(1))
-            if value > 390:
-                issues.append(f"{prop}:{value}px")
-    for match in re.finditer(r"flex\s*:\s*0\s+0\s+(\d+)px", css):
-        value = int(match.group(1))
-        if value > 300:
-            issues.append(f"flex-basis:{value}px")
-    return issues
-
-
-def check_generated_mobile_css() -> None:
-    with tempfile.TemporaryDirectory(prefix="hdec_mobile_report_") as tmp:
+def _build_temp_report() -> str:
+    with tempfile.TemporaryDirectory(prefix="hdec_mobile_layout_") as tmp:
         out = Path(tmp) / "daily" / "latest.html"
         proc = _run([
             sys.executable, str(REPORT_BUILDER), "--output", str(out),
             "--audience", "executive",
         ])
         ok = proc.returncode == 0 and out.exists()
-        check("report builder regenerates executive latest.html", ok,
+        check("report builder regenerates executive report", ok,
               (proc.stderr or "").strip()[-200:])
-        if not ok:
-            return
-        html = out.read_text(encoding="utf-8")
+        return out.read_text(encoding="utf-8") if ok else ""
 
+
+def _position_order(html: str, needles: list[str]) -> tuple[bool, str]:
+    positions = [html.find(needle) for needle in needles]
+    ok = all(pos >= 0 for pos in positions) and positions == sorted(positions)
+    return ok, " -> ".join(str(pos) for pos in positions)
+
+
+def _mobile_stream_block(html: str) -> str:
+    start = html.find('<section class="mobile-evidence-stream"')
+    if start < 0:
+        return ""
+    end = html.find('<section class="category-drill-section"', start)
+    return html[start:end if end >= 0 else len(html)]
+
+
+def check_generated_mobile_structure() -> None:
+    html = _build_temp_report()
+    if not html:
+        return
     css = _style_block(html)
     mobile = _mobile_block(css)
-    check("generated report has viewport meta",
-          '<meta name="viewport" content="width=device-width, initial-scale=1">' in html)
-    check("generated report has full-report identity",
+
+    check("generated latest remains full report",
           "Executive Daily Brief" in html and "dashboard-export:summary" not in html
           and 'id="preview-model"' not in html)
-    check("CSS includes pseudo-element border-box reset",
-          "*,*::before,*::after{box-sizing:border-box;}" in css)
-    check("html/body guard against horizontal overflow",
-          "max-width:100%" in _selector_block(css, "html")
-          and "overflow-x:hidden" in _selector_block(css, "html")
-          and "overflow-x:hidden" in _selector_block(css, "body"))
-    check("long titles/URLs wrap safely", "overflow-wrap:anywhere" in css)
-    check("table content can scroll inside container",
-          "table{display:block;max-width:100%;overflow-x:auto" in css)
-    check("mobile media query exists", bool(mobile))
-    check("mobile status board collapses to one column",
-          ".board{grid-template-columns:1fr" in mobile)
-    check("mobile signal cards collapse to one column",
-          ".sig{grid-template-columns:1fr" in mobile)
-    check("mobile macro grid collapses to one column",
-          ".duo,.macro-grid{grid-template-columns:1fr" in mobile)
-    check("mobile header is compact",
-          ".masthead h1{font-size:24px" in mobile
-          and ".page{padding:18px 14px 36px" in mobile)
-    check("mobile tabs are compact and non-sticky",
-          ".topnav{position:static;top:auto;z-index:auto;flex-wrap:wrap;overflow-x:visible" in mobile
-          and ".topnav label{flex:0 1 auto" in mobile)
-    check("mobile evidence rows stack score below title",
-          ".cd-art-head{flex-direction:column" in mobile)
-    check("mobile evidence flow exposes articles before full category drawer",
+    check("desktop evidence overview is structurally separate",
+          '<div class="evidence-overview-desktop">' in html)
+    check("mobile lens filter is a closed details drawer",
           '<details class="evidence-mobile-filter">' in html
-          and '<section class="mobile-evidence-stream"' in html
-          and '<details class="mobile-category-drill">' in html
-          and html.find('<section class="mobile-evidence-stream"')
-          < html.find('<details class="mobile-category-drill">'))
-    fixed = _large_fixed_widths(css)
-    check("no fixed large width/min-width that can force 390px overflow",
-          not fixed, ", ".join(fixed[:8]))
+          and "필터/렌즈 보기" in html)
+    check("mobile representative evidence stream exists",
+          '<section class="mobile-evidence-stream"' in html
+          and "대표 근거 기사" in html)
+    check("mobile full category list is a closed drawer",
+          '<details class="mobile-category-drill">' in html
+          and "전체 카테고리 목록 보기" in html)
+    ok, detail = _position_order(html, [
+        '<details class="evidence-mobile-filter">',
+        '<section class="mobile-evidence-stream"',
+        '<details class="mobile-category-drill">',
+    ])
+    check("mobile flow is filter drawer -> articles -> full category drawer", ok, detail)
+
+    stream = _mobile_stream_block(html)
+    check("mobile stream contains article content before category inventory",
+          '<article class="cd-art">' in stream or "표시 가능한 대표 근거" in stream)
+    check("mobile details drawers are not open by default",
+          '<details class="evidence-mobile-filter" open' not in html
+          and '<details class="mobile-category-drill" open' not in html)
+
+    check("mobile media query exists", bool(mobile))
+    check("mobile tabs are not sticky/fixed overlays",
+          ".topnav{position:static;top:auto;z-index:auto" in mobile
+          and "position:fixed" not in mobile
+          and "position:sticky" not in mobile)
+    check("mobile tab controls wrap in normal flow",
+          "flex-wrap:wrap;overflow-x:visible" in mobile
+          and ".topnav label{flex:0 1 auto" in mobile)
+    check("mobile hides desktop lens/category overview",
+          ".evidence-overview-desktop,.category-drill-desktop{display:none" in mobile)
+    check("mobile shows compact lens drawer",
+          ".evidence-mobile-filter{display:block" in mobile)
+    check("mobile shows article stream before category drawer",
+          ".mobile-evidence-stream{display:block" in mobile)
+    check("mobile full category inventory stays behind drawer",
+          ".mobile-category-drill{display:block" in mobile)
+    check("mobile evidence layout is single-column",
+          ".duo,.macro-grid{grid-template-columns:1fr" in mobile
+          and ".evidence-mobile-filter .duo{grid-template-columns:1fr" in mobile
+          and "grid-template-columns:1.1fr 1fr" not in mobile)
 
 
 def check_published_outputs() -> None:
@@ -181,6 +190,10 @@ def check_published_outputs() -> None:
           and 'id="preview-model"' not in latest)
     check("latest.html CSS is synchronized with report builder",
           latest_css.strip() == build_static_report._CSS.strip())
+    check("published latest contains mobile article-first evidence flow",
+          '<details class="evidence-mobile-filter">' in latest
+          and '<section class="mobile-evidence-stream"' in latest
+          and '<details class="mobile-category-drill">' in latest)
     check("docs/daily/dashboard-latest.html remains summary dashboard",
           "dashboard-export:summary" in dashboard and 'id="preview-model"' in dashboard
           and dashboard != latest)
@@ -189,7 +202,7 @@ def check_published_outputs() -> None:
           and ("운영자" in operator or "operator" in operator.lower()))
 
 
-def check_telegram_mapping() -> None:
+def check_telegram_mapping_and_send_files() -> None:
     sys.path.insert(0, str(SCRIPTS))
     import send_telegram
 
@@ -205,26 +218,31 @@ def check_telegram_mapping() -> None:
           labels[1] == REPORT_BUTTON_TEXT and urls[1] == SAMPLE_REPORT_URL,
           f"{labels[1:2]} -> {urls[1:2]}")
 
-    proc = subprocess.run(
-        [sys.executable, str(SCRIPTS / "send_telegram.py"), "--dry-run-payload", "test"],
-        cwd=ROOT, capture_output=True, text=True,
+    proc = _run(
+        [sys.executable, str(SENDER), "--dry-run-payload", "test"],
         env=_clean_env(REPORT_URL=SAMPLE_REPORT_URL,
                        DASHBOARD_URL=SAMPLE_DASHBOARD_URL),
         timeout=120,
     )
     out = (proc.stdout or "") + (proc.stderr or "")
-    check("dry-run payload preserves Telegram A/B labels",
-          proc.returncode == 0 and SUMMARY_BUTTON_TEXT in out and REPORT_BUTTON_TEXT in out)
     check("dry-run payload preserves Telegram URL mapping",
-          f"{SUMMARY_BUTTON_TEXT} -> {SAMPLE_DASHBOARD_URL}" in out
+          proc.returncode == 0
+          and f"{SUMMARY_BUTTON_TEXT} -> {SAMPLE_DASHBOARD_URL}" in out
           and f"{REPORT_BUTTON_TEXT} -> {SAMPLE_REPORT_URL}" in out)
+
+    proc = subprocess.run(
+        ["git", "diff", "--quiet", "HEAD", "--", str(SENDER.relative_to(ROOT)),
+         str(WORKFLOW.relative_to(ROOT))],
+        cwd=ROOT, capture_output=True, text=True, timeout=30)
+    check("sender/workflow unchanged from HEAD", proc.returncode == 0,
+          f"rc={proc.returncode}")
 
 
 def main() -> int:
-    print(f"== verify_mobile_report_readability @ {ROOT} ==")
-    check_generated_mobile_css()
+    print(f"== verify_mobile_layout_structure @ {ROOT} ==")
+    check_generated_mobile_structure()
     check_published_outputs()
-    check_telegram_mapping()
+    check_telegram_mapping_and_send_files()
 
     if _failures:
         print(f"\nRESULT: FAIL ({len(_failures)} failed)")

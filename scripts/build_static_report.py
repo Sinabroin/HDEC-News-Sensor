@@ -150,6 +150,8 @@ section{margin-top:26px;}
 /* ---- 테마 / 카테고리 ---- */
 .duo{display:grid;grid-template-columns:1fr;gap:0 34px;}
 @media(min-width:660px){.duo{grid-template-columns:1.1fr 1fr;}.duo section{margin-top:26px;}}
+.evidence-overview-desktop{display:block;}
+.evidence-mobile-filter,.mobile-evidence-stream,.mobile-category-drill{display:none;}
 .theme-row{margin-top:11px;}
 .theme-name{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;font-weight:600;min-width:0;}
 .theme-name>span:first-child{min-width:0;}
@@ -163,6 +165,7 @@ section{margin-top:26px;}
 .cat-row .imm{font-size:10.5px;color:var(--signal);font-weight:700;letter-spacing:.06em;margin-left:5px;}
 
 /* ---- 카테고리별 근거 기사 (드릴다운, JS 없이 <details>만) ---- */
+.category-drill-desktop{display:block;}
 .cd-note{font-size:11px;color:var(--muted);margin:9px 0 4px;line-height:1.55;}
 details.cat-drill{border-bottom:1px solid var(--hairline);}
 details.cat-drill:first-of-type{border-top:1px solid var(--hairline-2);}
@@ -292,9 +295,11 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
   .sec-h{flex-wrap:wrap;gap:3px 8px;line-height:1.35;letter-spacing:0;}
   .sec-h .tag{flex-basis:100%;white-space:normal;line-height:1.45;}
   .sec-h::after{display:none;}
-  .topnav{top:0;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:14px 0 8px;padding:7px 0 9px;
-    scroll-snap-type:x proximity;}
-  .topnav label{flex:0 0 auto;font-size:11.5px;padding:6px 10px;scroll-snap-align:start;}
+  .topnav{position:static;top:auto;z-index:auto;flex-wrap:wrap;overflow-x:visible;gap:6px;
+    margin:12px 0 8px;padding:6px 0 8px;scroll-snap-type:none;}
+  .topnav label{flex:0 1 auto;font-size:11px;line-height:1.25;padding:5px 8px;
+    white-space:normal;scroll-snap-align:none;}
+  .radar-panels{min-height:0;}
   .sig{grid-template-columns:1fr;gap:4px;padding:14px 0;}
   .sig .idx{font-size:12px;padding-top:0;}
   .sig h3{font-size:15.5px;line-height:1.5;letter-spacing:0;}
@@ -305,6 +310,26 @@ footer{margin-top:26px;text-align:center;font-size:10px;letter-spacing:.18em;col
   .comp{align-items:flex-start;gap:6px;}
   .comp .cl{flex:0 1 96px;}
   .duo,.macro-grid{grid-template-columns:1fr;}
+  .evidence-overview-desktop,.category-drill-desktop{display:none;}
+  .evidence-mobile-filter{display:block;margin:10px 0 12px;border:1px solid var(--hairline-2);
+    border-radius:3px;background:rgba(253,252,249,.58);}
+  .evidence-mobile-filter>summary,.mobile-category-drill>summary{list-style:none;cursor:pointer;
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 11px;
+    min-width:0;}
+  .evidence-mobile-filter>summary::-webkit-details-marker,
+  .mobile-category-drill>summary::-webkit-details-marker{display:none;}
+  .evidence-mobile-filter>summary::before,.mobile-category-drill>summary::before{content:"▸";
+    color:var(--muted);font-size:10px;flex:0 0 9px;transform:translateY(-1px);}
+  .evidence-mobile-filter[open]>summary::before,.mobile-category-drill[open]>summary::before{content:"▾";}
+  .lens-label{flex:1 1 auto;font-size:12.5px;font-weight:750;color:var(--ink);min-width:0;}
+  .lens-meta{flex:0 1 auto;font-size:10.5px;color:var(--muted);font-weight:600;white-space:normal;text-align:right;}
+  .lens-body{padding:0 11px 10px;}
+  .evidence-mobile-filter .duo{grid-template-columns:1fr;gap:0;}
+  .mobile-evidence-stream{display:block;margin-top:14px;padding-top:2px;border-top:1px solid var(--hairline-2);}
+  .mobile-evidence-stream .cd-art{padding:11px 0;}
+  .mobile-category-drill{display:block;margin-top:16px;border-top:1px solid var(--hairline-2);
+    border-bottom:1px solid var(--hairline);}
+  .mobile-category-body{padding:0 0 6px;}
   .theme-name,.cat-row{flex-wrap:wrap;gap:4px 8px;}
   .theme-name .cnt,.cat-row .cnt,.cat-row .imm{white-space:normal;}
   .cat-row .lead{display:none;}
@@ -499,6 +524,8 @@ def _render_category_article(art: dict) -> str:
     title = _display(art.get("title") or "")
     title_html = (_source_link(url, f"{title} ↗") if _is_http(url) else escape(title))
     meta = [escape(_display(art.get("display_source") or art.get("source") or "출처 미상"))]
+    if art.get("category_label"):
+        meta.append(escape(_display(art.get("category_label"))))
     sq = art.get("source_quality")
     if sq in ("trusted", "low"):
         cls = "srcq trust" if sq == "trusted" else "srcq low"
@@ -518,20 +545,10 @@ def _render_category_article(art: dict) -> str:
     return "".join(parts)
 
 
-def _render_category_drilldown(brief: dict) -> list[str]:
-    """카테고리별 근거 기사 섹션 — 네이티브 <details>/<summary>만 사용 (JS·CDN 0건).
-
-    수집·분석된 기사를 카테고리별로 펼쳐 근거(제목·출처·중요도·원문 링크)를 감사할 수
-    있게 한다. 본문 전문은 싣지 않는다 (brief 파생 요약만 렌더링).
-    """
+def _render_category_drill_items(brief: dict) -> list[str]:
+    """카테고리별 근거 기사 목록 본문 — desktop/mobile 컨테이너에서 재사용."""
     sections = brief.get("category_sections") or []
-    total = sum(s.get("total_count", 0) for s in sections)
-    body = ['<section aria-label="카테고리별 근거 기사">',
-            '<h2 class="sec-h">카테고리별 근거 기사'
-            f'<span class="tag">수집·분석 {total}건 · 모든 분류 기본 접힘</span></h2>']
-    if not sections:
-        body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p></section>')
-        return body
+    body: list[str] = []
     # 모든 카테고리는 기본 접힘 — 운영자가 필요한 분류만 펼쳐 근거를 확인한다 (자동 펼침 없음).
     body.append('<p class="cd-note">카테고리를 펼쳐 근거 기사를 확인하세요. '
                 '(모든 분류는 기본 접힘 상태입니다.)</p>')
@@ -555,6 +572,35 @@ def _render_category_drilldown(brief: dict) -> list[str]:
         if sec.get("note"):
             body.append(f'<p class="cd-more">{escape(sec["note"])}</p>')
         body.append('</div></details>')
+    return body
+
+
+def _render_category_drilldown(brief: dict) -> list[str]:
+    """카테고리별 근거 기사 섹션 — 모바일에서는 전체 분류 목록을 별도 drawer로 접는다.
+
+    수집·분석된 기사를 카테고리별로 펼쳐 근거(제목·출처·중요도·원문 링크)를 감사할 수
+    있게 한다. 본문 전문은 싣지 않는다 (brief 파생 요약만 렌더링).
+    """
+    sections = brief.get("category_sections") or []
+    total = sum(s.get("total_count", 0) for s in sections)
+    body = ['<section class="category-drill-section" aria-label="카테고리별 근거 기사">',
+            '<h2 class="sec-h">카테고리별 근거 기사'
+            f'<span class="tag">수집·분석 {total}건 · 모든 분류 기본 접힘</span></h2>']
+    if not sections:
+        body.append('<p class="macro-note">집계된 카테고리가 없습니다.</p></section>')
+        return body
+
+    drill_items = _render_category_drill_items(brief)
+    body.append('<div class="category-drill-desktop">')
+    body += drill_items
+    body.append('</div>')
+    body.append('<details class="mobile-category-drill">')
+    body.append(
+        '<summary><span class="lens-label">전체 카테고리 목록 보기</span>'
+        f'<span class="lens-meta num">{len(sections)}개 분류 · {total}건</span></summary>')
+    body.append('<div class="mobile-category-body">')
+    body += drill_items
+    body.append('</div></details>')
     body.append('</section>')
     return body
 
@@ -931,6 +977,67 @@ def _render_categories_block(brief: dict) -> list[str]:
     return out
 
 
+def _render_evidence_overview(brief: dict) -> list[str]:
+    out = ['<div class="duo">']
+    out += _render_themes_block(brief)
+    out += _render_categories_block(brief)
+    out.append('</div>')
+    return out
+
+
+def _render_mobile_evidence_filter(brief: dict) -> list[str]:
+    theme_count = len(brief.get("theme_rankings") or [])
+    category_count = len(brief.get("category_counts") or [])
+    out = [
+        '<details class="evidence-mobile-filter">',
+        '<summary><span class="lens-label">필터/렌즈 보기</span>'
+        f'<span class="lens-meta num">테마 {theme_count} · 카테고리 {category_count}</span></summary>',
+        '<div class="lens-body">',
+    ]
+    out += _render_evidence_overview(brief)
+    out.append('</div></details>')
+    return out
+
+
+def _article_sort_key(art: dict) -> tuple[float, str, str]:
+    try:
+        score = float(art.get("final_score") or 0)
+    except (TypeError, ValueError):
+        score = 0.0
+    return (score, str(art.get("published_at") or ""), str(art.get("title") or ""))
+
+
+def _collect_mobile_evidence_articles(brief: dict, limit: int = 6) -> list[dict]:
+    seen: set[str] = set()
+    articles: list[dict] = []
+    for sec in brief.get("category_sections") or []:
+        category = _display(sec.get("category_label") or "")
+        for art in sec.get("top_articles") or []:
+            key = str(art.get("url") or art.get("title") or "").strip()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            item = dict(art)
+            if category and not item.get("category_label"):
+                item["category_label"] = category
+            articles.append(item)
+    articles.sort(key=_article_sort_key, reverse=True)
+    return articles[:limit]
+
+
+def _render_mobile_evidence_stream(brief: dict) -> list[str]:
+    articles = _collect_mobile_evidence_articles(brief)
+    out = ['<section class="mobile-evidence-stream" aria-label="대표 근거 기사">',
+           '<h2 class="sec-h">대표 근거 기사'
+           '<span class="tag">모바일 우선 표시 · 상위 근거</span></h2>']
+    if articles:
+        out += [_render_category_article(art) for art in articles]
+    else:
+        out.append('<p class="cd-empty">표시 가능한 대표 근거 기사가 없습니다.</p>')
+    out.append('</section>')
+    return out
+
+
 def _render_macro_panel(brief: dict, signals: list) -> list[str]:
     out = ['<section id="macro" class="radar-panel radar macro-section" aria-label="거시경제">',
            '<h2 class="sec-h">거시경제'
@@ -949,10 +1056,11 @@ def _render_evidence_panel(brief: dict, audience: str = "operator") -> list[str]
     out = ['<section id="evidence" class="radar-panel radar evidence-section" aria-label="전체 근거">',
            '<h2 class="sec-h">전체 근거'
            f'<span class="tag">{escape(tag)}</span></h2>',
-           '<div class="duo">']
-    out += _render_themes_block(brief)
-    out += _render_categories_block(brief)
+           '<div class="evidence-overview-desktop">']
+    out += _render_evidence_overview(brief)
     out.append('</div>')
+    out += _render_mobile_evidence_filter(brief)
+    out += _render_mobile_evidence_stream(brief)
     out += _render_category_drilldown(brief)
     if not executive:
         out += _render_audit_sections(brief)

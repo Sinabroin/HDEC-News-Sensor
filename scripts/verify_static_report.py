@@ -36,6 +36,7 @@ REQUIRED_VERIFIERS = [
 OPTIONAL_VERIFIERS = [
     "verify_executive_preferences.py",
     "verify_mobile_report_readability.py",
+    "verify_mobile_layout_structure.py",
     "verify_issue_clusters.py",
     "verify_executive_brief_quality.py",
 ]
