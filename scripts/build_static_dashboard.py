@@ -366,6 +366,48 @@ def _is_hyundai_group_relevant(text: str) -> bool:
     )
 
 
+# 해외지사 렌즈(D7-L) — 해외 영업·지역본부·현지 사무소·해외 네트워크 등 해외 '조직/거점'
+# 신호만 분류한다. 단순 해외 프로젝트/수주(해외현장·글로벌 렌즈 소관)는 조직/사무소/지사
+# 마커가 없으면 분류하지 않는다. raw 제목만 본다(injected category_label로 새지 않게).
+# STRONG 토큰은 그 자체로 해외 조직 신호라 해외 마커가 불필요하고, GENERIC 토큰(지사/지점/
+# 사무소)은 부분문자열 오탐(복지사/은행 지점/회계 사무소)을 막기 위해 해외 마커가 함께일 때만.
+_OVERSEAS_ORG_STRONG = (
+    "해외지사", "해외 지사", "중동지역본부", "지역본부", "해외영업", "해외 영업",
+    "해외 네트워크", "해외사업본부", "해외사업 조직", "현지 사무소", "현지사무소",
+    "해외 사무소", "해외건설협회", "현지지사",
+    "overseas office", "regional office", "country office", "local office", "branch office",
+)
+_OVERSEAS_ORG_GENERIC = ("지사", "지점", "사무소", "주재원")
+
+
+def _is_overseas_branch_relevant(title: str) -> bool:
+    """해외 조직/거점(지사·지역본부·해외영업·현지 사무소) 신호인가 — raw 제목 기준."""
+    t = title or ""
+    if any(w in t for w in _OVERSEAS_ORG_STRONG):
+        return True
+    return any(w in t for w in _OVERSEAS_ORG_GENERIC) and _has_overseas_marker(t)
+
+
+# 해외법인 렌즈(D7-L) — 실제 해외 법인·현지법인·현지 자회사 등 '법인격' 신호만 분류한다.
+# generic 해외 프로젝트/수주(EPC/수주 단어만)로는 분류하지 않는다 — 법인/자회사 마커가
+# 있어야 한다. raw 제목만 본다. 부분문자열 오탐(법인세/법인카드)을 피해 '해외법인/현지법인'
+# 복합어 또는 '자회사/법인 설립'(+해외 마커)만 인정한다(bare '법인'은 쓰지 않는다).
+_OVERSEAS_ENTITY_STRONG = (
+    "해외법인", "해외 법인", "현지법인", "현지 법인", "해외 자회사", "현지 자회사",
+    "해외법인장", "현지법인장", "법인장", "현지화 법인",
+    "overseas subsidiary", "local entity", "local corporation", "local subsidiary",
+)
+_OVERSEAS_ENTITY_GENERIC = ("자회사", "법인 설립", "법인설립", "subsidiary")
+
+
+def _is_overseas_subsidiary_relevant(title: str) -> bool:
+    """실제 해외 법인격(해외법인·현지법인·현지 자회사·법인장) 신호인가 — raw 제목 기준."""
+    t = title or ""
+    if any(w in t for w in _OVERSEAS_ENTITY_STRONG):
+        return True
+    return any(w in t for w in _OVERSEAS_ENTITY_GENERIC) and _has_overseas_marker(t)
+
+
 def _lens_for(sig) -> list:
     keys = set(_CATEGORY_LENS.get(sig.get("category"), []))
     keys.update(_SECTION_LENS.get(sig.get("radar_section"), []))
@@ -381,9 +423,25 @@ def _lens_for(sig) -> list:
     # '글로벌'에 섞이지 않게 한다(가짜가 아니라 정밀화 · 다른 렌즈 태그는 유지).
     # 함정: category_label은 섹션 설명("중동·해외 수주 환경")이라 항상 해외어를 포함한다 →
     # 기사 고유성 판정은 raw 제목만 본다(섹션 라벨로 도메스틱 기사가 글로벌에 새지 않게).
-    if not _has_overseas_marker(sig.get("title") or ""):
+    raw_title = sig.get("title") or ""
+    if not _has_overseas_marker(raw_title):
         keys.discard("global_business")
         keys.discard("overseas_site")
+    # 해외지사/해외법인 렌즈(D7-L) — 조직/법인격 마커가 raw 제목에 있을 때만 분류한다. broad
+    # 키워드(EPC/수주/법인)로 들어온 generic 해외 프로젝트 오탐을 제거하고, 실제 해외 조직/
+    # 법인 신호는 키워드 매핑 누락과 무관하게 정확히 태깅한다(hyundai_group과 동일 패턴).
+    if _is_overseas_branch_relevant(raw_title):
+        keys.add("overseas_branch")
+    else:
+        keys.discard("overseas_branch")
+    if _is_overseas_subsidiary_relevant(raw_title):
+        keys.add("overseas_subsidiary")
+    else:
+        keys.discard("overseas_subsidiary")
+    # AI 렌즈(D7-L) — 섹션/카테고리(injected)로 'ai'가 붙어도 raw 제목에 직접 AI/데이터센터
+    # 인프라 근거가 없으면 제외한다(안전/규제 기사의 category 오염 차단). 근거가 있을 때만 유지.
+    if "ai" in keys and not _has_ai_evidence(raw_title, sig.get("source") or ""):
+        keys.discard("ai")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
     return sorted(keys & VALID_LENS)
@@ -457,6 +515,36 @@ _AI_CATEGORY_DESC = {
     "market_ai": "경쟁사 도입·발주처 조달 수요 → 수주 경쟁·기술 격차",
     "internal": "현대건설 내부 적용 가능성 — 담당 라인 배정 검토",
 }
+
+
+# AI 직접 근거 게이트 (D7-L) — 렌즈/뱅크의 'ai' 태그는 raw 제목(+출처)의 직접 AI/데이터센터
+# 인프라 근거에서만 나온다. injected category_label 단독으로는 분류하지 않는다 — 안전/규제
+# 기사가 category 오염으로 AI에 새거나, 제목엔 없고 주입 토픽에만 '데이터센터'가 있는 곁다리
+# 기사가 AI로 분류되는 것을 막는다. 가짜 값 생성 없음(있는 토큰만 본다).
+_AI_TOKEN_RE = re.compile(r"(?<![A-Za-z])AI(?![A-Za-z])")  # 대문자 standalone 'AI'
+_AI_DIRECT_TERMS = (
+    "인공지능", "스마트건설", "스마트 건설", "디지털트윈", "디지털 트윈", "BIM",
+    "건설로봇", "건설 로봇", "시공로봇", "현장 로봇", "자율시공", "건설 자동화",
+    "머신러닝", "딥러닝", "생성형",
+)
+_AI_DC_TERMS = ("데이터센터", "데이터 센터", "data center", "datacenter")
+# 데이터센터는 곁다리 단독 언급이 아니라 전력/냉각/건설·발주 인프라 맥락이 함께 있어야 AI 신호.
+_AI_DC_INFRA = (
+    "전력", "송전", "송배전", "변전", "계통", "전력망", "그리드", "냉각", "쿨링",
+    "epc", "건설", "시공", "수주", "발주", "공사", "신축", "투자", "smr", "원전",
+    "발전", "인프라", "부지",
+)
+
+
+def _has_ai_evidence(title: str, source: str = "") -> bool:
+    """raw 제목(+출처)에 직접 AI/데이터센터 인프라 근거가 있는가 (injected label 미사용)."""
+    raw = f"{title or ''} {source or ''}"
+    if _AI_TOKEN_RE.search(raw):
+        return True
+    if any(t in raw for t in _AI_DIRECT_TERMS):
+        return True
+    low = raw.lower()
+    return any(t in low for t in _AI_DC_TERMS) and any(t in low for t in _AI_DC_INFRA)
 
 
 def _ai_category(sig) -> tuple:
@@ -755,8 +843,11 @@ def _build_lens_banks(full_pool: list, ai_rows: list, now_rows: list,
         for lens in row.get("lens") or []:
             add_row(lens, row)
 
+    # AI 뱅크는 직접 근거가 있는 행만 담는다(D7-L) — AI 탭(ai_rows)은 surface_contracts가
+    # 소유하되, 뱅크에 들어가는 행은 raw 제목 근거를 한 번 더 통과시켜 곁다리 오염을 막는다.
     for row in ai_rows or []:
-        add_row("ai", row)
+        if _has_ai_evidence(row.get("title") or "", row.get("source") or ""):
+            add_row("ai", row)
 
     for row in now_rows or []:
         add_row("now", row)

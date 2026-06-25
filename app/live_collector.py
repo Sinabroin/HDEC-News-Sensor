@@ -33,6 +33,22 @@ USER_AGENT = "HDEC-Executive-Radar/0.1 (+public-rss; non-crawling)"
 DEFAULT_TIMEOUT = 8
 SNIPPET_MAX_LEN = 500
 
+# P0-D7-L: 우선순위 렌즈 그룹은 normal 루프(그룹 순서대로 전역 budget 소진) 전에 얕은
+# preflight 패스를 받는다 — 앞선 고-volume 그룹이 전역 max_total을 다 써버려도 이 그룹들이
+# news_query_audit에서 조용히 굶지(starve) 않고 반드시 등장하게 한다. preflight는 per-group
+# 소량 budget으로 bounded(len(PRIORITY)×budget)이며, 그다음 normal 루프가 dedup으로 중복을
+# 막고 남은 budget을 그룹 순서대로 돌린다(가짜 수집 없음 — 빈 결과는 audit에 빈/스킵으로 남는다).
+PRIORITY_LENS_GROUPS = (
+    "lens:hyundai_group", "lens:ai", "lens:global_business",
+    "lens:overseas_site", "lens:overseas_branch", "lens:overseas_subsidiary",
+    "lens:hormuz",
+)
+PREFLIGHT_MAX_PER_QUERY = 3
+PREFLIGHT_GROUP_BUDGET = 8
+# 대시보드 live 수집은 설정된 렌즈 그룹이 충분히 돌도록 전역 상한의 하한을 둔다 — 여전히
+# bounded(per-group/per-query 캡 + dedup 유지)이며 cfg가 더 크면 cfg 값을 따른다(폭주 방지).
+DASHBOARD_MIN_MAX_TOTAL = 120
+
 # X(엑스) 계열은 Day-1 전체 금지 — URL/출처에 이 토큰이 있으면 수집 자체를 건너뛴다.
 # 금지 호스트 토큰은 코드 트리 grep 규약에 걸리지 않게 조각으로 조립한다 (verifier와 동일).
 _FORBIDDEN_HOST_TOKENS = ("".join(("twit", "ter.com")), "x.com", "t.co", "api.x")
@@ -292,6 +308,72 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
     return rows
 
 
+def _emit_audit(query_audit, group, query, status, fetched, added, pass_label) -> None:
+    """audit 행 1건 기록(쿼리 실패/빈 결과도 가시화). pass_label로 preflight/main을 구분한다."""
+    if query_audit is None:
+        return
+    query_audit.append({
+        "provider": PROVIDER,
+        "group": group.get("name") if isinstance(group, dict) else group,
+        "query": query,
+        "status": status,
+        "fetched_count": fetched,
+        "added_count": added,
+        "pass": pass_label,
+    })
+
+
+def _collect_group(group, *, max_per_query, group_budget, global_cap, timeout, cfg,
+                   collected_at, seen_urls, seen_queries, results,
+                   filtered_out, filtered_urls, query_audit, pass_label) -> int:
+    """한 그룹의 fresh 쿼리를 group_budget(및 global_cap)까지 수집한다 (P0-D7-L).
+
+    쿼리마다 audit 행을 남기고(ok/empty/error) URL·쿼리 dedup을 적용한다. 이 그룹이 남긴
+    audit 행 개수를 반환한다(0이면 호출자가 placeholder를 넣어 '굶음'이 보이지 않게 막는다).
+    네트워크/파싱 실패는 해당 query만 건너뛴다 — 가짜 값을 만들지 않는다.
+    """
+    emitted = 0
+    added_total = 0
+    for query in group["queries"]:
+        if len(results) >= global_cap or added_total >= group_budget:
+            break
+        query_key = query.strip().lower()
+        if query_key in seen_queries:
+            continue
+        seen_queries.add(query_key)
+        url = _build_google_news_url(query, cfg)
+        try:
+            xml_text = _fetch(url, timeout)
+        except Exception:  # noqa: BLE001 — 네트워크/HTTP 오류는 query 단위로 무시
+            _emit_audit(query_audit, group, query, "error", 0, 0, pass_label)
+            emitted += 1
+            continue
+        sink = [] if filtered_out is not None else None
+        parsed = _parse_items(xml_text, query, collected_at, max_per_query, sink)
+        added = 0
+        for row in parsed:
+            if row["url"] in seen_urls:
+                continue
+            seen_urls.add(row["url"])
+            results.append(row)
+            added += 1
+            added_total += 1
+            if len(results) >= global_cap or added_total >= group_budget:
+                break
+        _emit_audit(query_audit, group, query, "ok" if parsed else "empty",
+                    len(parsed), added, pass_label)
+        emitted += 1
+        if sink:  # 제외 항목을 URL 기준 dedup해 누적 (수집된 기사와 겹치면 제외)
+            for item in sink:
+                u = item.get("url")
+                if not u or u in filtered_urls or u in seen_urls:
+                    continue
+                filtered_urls.add(u)
+                if len(filtered_out) < global_cap:
+                    filtered_out.append(item)
+    return emitted
+
+
 def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
               filtered_out: list | None = None,
               query_audit: list | None = None) -> list[dict]:
@@ -314,65 +396,51 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     if not query_groups:
         return []
 
+    # 전역 상한: cfg 값을 따르되, 기본 production 소스(custom sources_path 아님)일 때는
+    # 설정된 렌즈 그룹이 굶지 않도록 하한(DASHBOARD_MIN_MAX_TOTAL)을 보장한다. custom 설정은
+    # 호출자가 넘긴 max_total을 그대로 존중한다(테스트 계약 보존).
     max_total = int(cfg.get("max_total", 40))
+    if sources_path is None:
+        max_total = max(max_total, DASHBOARD_MIN_MAX_TOTAL)
     collected_at = datetime.now(KST).isoformat(timespec="seconds")
 
     seen_urls, results = set(), []
     filtered_urls = set()
     seen_queries = set()
+    common = dict(timeout=timeout, cfg=cfg, collected_at=collected_at,
+                  seen_urls=seen_urls, seen_queries=seen_queries, results=results,
+                  filtered_out=filtered_out, filtered_urls=filtered_urls,
+                  query_audit=query_audit)
+
+    # 1) 우선순위 preflight (기본 소스일 때만) — 우선순위 렌즈 그룹을 PRIORITY 순서로 얕게
+    #    돌려 전역 budget 소진 전에 audit 가시성을 확보한다. preflight는 group_budget으로
+    #    bounded(len(PRIORITY)×budget)이며 모든 우선순위 그룹이 audit에 등장한다(빈/스킵이어도
+    #    placeholder 행을 남긴다 — '구성됨'과 '실제 검색됨'을 분리해 보여준다).
+    if sources_path is None:
+        by_name = {g["name"]: g for g in query_groups}
+        preflight_cap = min(max_total,
+                            len(PRIORITY_LENS_GROUPS) * PREFLIGHT_GROUP_BUDGET)
+        for name in PRIORITY_LENS_GROUPS:
+            group = by_name.get(name)
+            if group is None:
+                # 설정에 없으면 placeholder로라도 audit에 남겨 '미구성'을 가시화한다.
+                _emit_audit(query_audit, {"name": name}, "", "unconfigured", 0, 0,
+                            "preflight")
+                continue
+            emitted = _collect_group(
+                group, max_per_query=PREFLIGHT_MAX_PER_QUERY,
+                group_budget=PREFLIGHT_GROUP_BUDGET, global_cap=preflight_cap,
+                pass_label="preflight", **common)
+            if emitted == 0:
+                # fresh 쿼리가 없었던 경우(전부 dedup/캡)에도 그룹은 audit에 보여야 한다.
+                _emit_audit(query_audit, group, "", "skipped", 0, 0, "preflight")
+
+    # 2) Normal 패스 — 모든 그룹을 순서대로 전역 max_total까지. preflight에서 본 쿼리/URL은
+    #    dedup으로 건너뛰므로 중복 수집이 없다.
     for group in query_groups:
-        group_count = 0
-        for query in group["queries"]:
-            if len(results) >= max_total or group_count >= group["max_total"]:
-                break
-            query_key = query.strip().lower()
-            if query_key in seen_queries:
-                continue
-            seen_queries.add(query_key)
-            url = _build_google_news_url(query, cfg)
-            try:
-                xml_text = _fetch(url, timeout)
-            except Exception:  # noqa: BLE001 — 네트워크/HTTP 오류는 query 단위로 무시
-                if query_audit is not None:
-                    query_audit.append({
-                        "provider": PROVIDER,
-                        "group": group["name"],
-                        "query": query,
-                        "status": "error",
-                        "fetched_count": 0,
-                        "added_count": 0,
-                    })
-                continue
-            sink = [] if filtered_out is not None else None
-            parsed = _parse_items(
-                xml_text, query, collected_at, group["max_per_query"], sink)
-            added = 0
-            for row in parsed:
-                if row["url"] in seen_urls:
-                    continue
-                seen_urls.add(row["url"])
-                results.append(row)
-                added += 1
-                group_count += 1
-                if len(results) >= max_total or group_count >= group["max_total"]:
-                    break
-            if query_audit is not None:
-                query_audit.append({
-                    "provider": PROVIDER,
-                    "group": group["name"],
-                    "query": query,
-                    "status": "ok" if parsed else "empty",
-                    "fetched_count": len(parsed),
-                    "added_count": added,
-                })
-            if sink:  # 제외 항목을 URL 기준 dedup해 누적 (수집된 기사와 겹치면 제외)
-                for item in sink:
-                    u = item.get("url")
-                    if not u or u in filtered_urls or u in seen_urls:
-                        continue
-                    filtered_urls.add(u)
-                    if len(filtered_out) < max_total:
-                        filtered_out.append(item)
+        _collect_group(group, max_per_query=group["max_per_query"],
+                       group_budget=group["max_total"], global_cap=max_total,
+                       pass_label="main", **common)
         if len(results) >= max_total:
             break
     return results
