@@ -65,6 +65,7 @@ VALID_LENS = {
 NEWS_ROW_CAP = 20
 LENS_BANK_CAP = 10
 AI_BANK_CAP = 8
+NOW_BANK_CAP = 6
 
 # lens 키 → 한국어 라벨 (featured 칩용). nav 라벨과 일치.
 _LENS_LABEL = {
@@ -157,6 +158,59 @@ def _fmt_time(iso) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(_KST).strftime("%m-%d %H:%M")
+
+
+def _score_value(sig) -> float:
+    try:
+        return float(sig.get("final_score") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _published_rank(sig) -> float:
+    raw = sig.get("published_at")
+    if not raw:
+        return 0.0
+    try:
+        dt = datetime.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return 0.0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp()
+
+
+def _is_strict_immediate(sig) -> bool:
+    return sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인"
+
+
+def _is_hdec_direct(sig) -> bool:
+    return sig.get("executive_section") == "hdec_direct" or sig.get("radar_section") == "hdec_direct"
+
+
+def _is_risk_signal(sig) -> bool:
+    return (
+        sig.get("opportunity_or_risk") == "리스크"
+        or sig.get("radar_section") == "risk_regulation"
+        or sig.get("category") == "safety"
+    )
+
+
+def _signal_rank_key(sig, immediate_basis: str = "") -> tuple:
+    """Score-first ordering for visible rows and lens banks.
+
+    Tie-breaks keep actual instant alerts, HDEC direct, risk/safety, and newer rows ahead
+    without letting a lower-scored featured/reference row jump the queue.
+    """
+    basis_rank = 1 if immediate_basis == "strict_instant" or _is_strict_immediate(sig) else 0
+    return (
+        -_score_value(sig),
+        -basis_rank,
+        -int(_is_hdec_direct(sig)),
+        -int(_is_risk_signal(sig)),
+        -_published_rank(sig),
+        sig.get("title") or "",
+    )
 
 
 # ── 출처 표시 보강 (D7-C) ──────────────────────────────────────────────────
@@ -292,6 +346,26 @@ def _has_overseas_marker(text: str) -> bool:
     return any(m in (text or "") for m in _OVERSEAS_MARKERS)
 
 
+_HYUNDAI_GROUP_TERMS = (
+    "현대엔지니어링", "현대ENG", "현대로템", "현대제철", "HD현대", "HD 현대",
+    "HD현대일렉트릭", "현대일렉트릭", "현대글로비스", "현대모비스", "현대차그룹",
+    "현대자동차그룹", "현대차", "현대자동차",
+)
+_HYUNDAI_GROUP_CONTEXT = (
+    "건설", "인프라", "플랜트", "EPC", "수주", "철도", "도시철도", "고속철",
+    "철강", "철근", "H형강", "전력", "전력기기", "변압기", "데이터센터", "물류",
+    "투자", "에너지", "원전", "SMR", "공급망", "설비", "특허", "기술", "O&M",
+)
+
+
+def _is_hyundai_group_relevant(text: str) -> bool:
+    """현대 그룹사 렌즈는 사명과 건설·인프라 맥락이 같이 있을 때만 매칭한다."""
+    blob = text or ""
+    return any(t in blob for t in _HYUNDAI_GROUP_TERMS) and any(
+        c in blob for c in _HYUNDAI_GROUP_CONTEXT
+    )
+
+
 def _lens_for(sig) -> list:
     keys = set(_CATEGORY_LENS.get(sig.get("category"), []))
     keys.update(_SECTION_LENS.get(sig.get("radar_section"), []))
@@ -299,6 +373,10 @@ def _lens_for(sig) -> list:
     for words, lens in _KEYWORD_LENS:
         if any(w in text for w in words):
             keys.add(lens)
+    if _is_hyundai_group_relevant(text):
+        keys.add("hyundai_group")
+    else:
+        keys.discard("hyundai_group")
     # 해외 마커가 없으면 글로벌/해외현장 렌즈에서 제외 — 국내 기업뉴스가 섹션 분류만으로
     # '글로벌'에 섞이지 않게 한다(가짜가 아니라 정밀화 · 다른 렌즈 태그는 유지).
     # 함정: category_label은 섹션 설명("중동·해외 수주 환경")이라 항상 해외어를 포함한다 →
@@ -339,6 +417,8 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "radar_section": sig.get("radar_section") or "",
         "executive_section": sig.get("executive_section") or "",
         "category": sig.get("category") or "",
+        "published_at": sig.get("published_at") or "",
+        "source_quality": sig.get("source_quality") or "",
     }
     return {
         "tag": tag, "tagClass": tag_class,
@@ -563,19 +643,109 @@ def _bank_counts(lens_banks: dict) -> dict:
     return {k: len(v or []) for k, v in (lens_banks or {}).items()}
 
 
-def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
+def _decorate_immediate_row(row: dict, basis: str) -> dict:
+    row["immediate_basis"] = basis
+    row["immediateBasisLabel"] = (
+        "엄격 즉시 알림" if basis == "strict_instant" else "즉시 확인 후보"
+    )
+    row["lens"] = sorted(set(row.get("lens") or []) | {"now"})
+    if basis == "executive_review_candidate" and row.get("tag") != "즉시":
+        row["tag"] = "후보"
+        row["tagClass"] = "amber"
+    return row
+
+
+def _is_executive_review_candidate(sig: dict, new_keys: set) -> bool:
+    if not _is_http(sig.get("url")):
+        return False
+    title = sig.get("title") or ""
+    urgent_terms = (
+        "중대재해", "특별감독", "벌점", "입찰제한", "영업정지", "철근", "누락",
+        "하자", "공기지연", "소송", "공방", "리스크", "봉쇄", "차질", "급등",
+        "발주", "수주", "단독",
+    )
+    return (
+        _score_value(sig) >= 2.5
+        or _is_hdec_direct(sig)
+        or _is_risk_signal(sig)
+        or _key(sig) in new_keys
+        or any(term in title for term in urgent_terms)
+    )
+
+
+def _build_now_bank(brief: dict, new_keys: set, ref_date, base_pool: list) -> tuple[list, dict]:
+    """Build the immediate lens honestly.
+
+    Strict `top_immediate_signals` win. Only when no strict displayable rows exist do we
+    expose real executive-review candidates, marked as candidates rather than alerts.
+    """
+    strict_raw = brief.get("top_immediate_signals") or []
+    strict_pool = [s for s in _dedup_signals(strict_raw) if _is_http(s.get("url"))]
+    strict_pool.sort(key=lambda s: _signal_rank_key(s, "strict_instant"))
+    strict_pool = _drop_near_dups(strict_pool)
+
+    basis = "strict_instant"
+    selected = strict_pool
+    if not selected:
+        fallback = _dedup_signals(
+            brief.get("hdec_direct_signals"),
+            brief.get("risk_regulation_signals"),
+            brief.get("top_new_issues"),
+            brief.get("business_signals"),
+            base_pool,
+        )
+        fallback = [s for s in fallback if _is_executive_review_candidate(s, new_keys)]
+        fallback.sort(key=lambda s: _signal_rank_key(s, "executive_review_candidate"))
+        selected = _drop_near_dups(fallback)
+        basis = "executive_review_candidate"
+
+    rows, seen_titles = [], set()
+    for sig in selected:
+        if len(rows) >= NOW_BANK_CAP:
+            break
+        extra = ["now"] + (["new"] if _key(sig) in new_keys else [])
+        row = _decorate_immediate_row(
+            _enrich_row(_row_from_signal(sig, extra), sig, ref_date),
+            basis,
+        )
+        title_key = (row.get("title") or "").strip()
+        if not title_key or title_key in seen_titles:
+            continue
+        rows.append(row)
+        seen_titles.add(title_key)
+
+    status = {
+        "strict_count": len(strict_raw),
+        "strict_displayable_count": len(strict_pool),
+        "fallback_count": len(rows) if basis == "executive_review_candidate" else 0,
+        "bank_count": len(rows),
+    }
+    return rows, status
+
+
+def _build_lens_banks(full_pool: list, ai_rows: list, now_rows: list,
                       new_keys: set, ref_date) -> dict:
     """렌즈별 전용 row bank를 full brief 신호에서 만든다(렌즈당 최대 LENS_BANK_CAP건).
 
     전역 news_rows와 별도 큐다. exact title 중복만 제거하고, URL 없는 신호는 카드 원문 링크
     계약을 지키기 위해 제외한다. 행 자체는 _row_from_signal/_enrich_row에서만 파생한다.
     """
-    fkey = _key(featured_sig)
-    ordered = [s for s in full_pool if _key(s) != fkey and _is_http(s.get("url"))]
-    ordered.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
+    ordered = [s for s in full_pool if _is_http(s.get("url"))]
+    ordered.sort(key=_signal_rank_key)
+    ordered = _drop_near_dups(ordered)
 
     banks = {k: [] for k in VALID_LENS}
     titles = {k: set() for k in VALID_LENS}
+
+    def add_row(lens: str, row: dict) -> None:
+        if lens not in banks:
+            return
+        title_key = (row.get("title") or "").strip()
+        if not title_key or title_key in titles[lens]:
+            return
+        banks[lens].append(row)
+        titles[lens].add(title_key)
+
     for sig in ordered:
         row = _enrich_row(_row_from_signal(sig, ["new"] if _key(sig) in new_keys else []),
                           sig, ref_date)
@@ -583,37 +753,33 @@ def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
         if not title_key:
             continue
         for lens in row.get("lens") or []:
-            cap = AI_BANK_CAP if lens == "ai" else LENS_BANK_CAP
-            if lens not in banks or len(banks[lens]) >= cap:
-                continue
-            if title_key in titles[lens]:
-                continue
-            banks[lens].append(row)
-            titles[lens].add(title_key)
-
-    if featured_sig and _is_http(featured_sig.get("url")):
-        featured_row = _enrich_row(_row_from_signal(
-            featured_sig, ["new"] if _key(featured_sig) in new_keys else []),
-            featured_sig, ref_date)
-        ftitle = (featured_row.get("title") or "").strip()
-        for lens in featured_row.get("lens") or []:
-            if lens not in banks:
-                continue
-            # 대표 카드만 가진 렌즈도 전용 bank가 비지 않게 하되, 이미 다른 rows가 있으면
-            # 메인 카드와 중복 노출하지 않는다.
-            if not banks[lens] and ftitle:
-                banks[lens].append(featured_row)
-                titles[lens].add(ftitle)
+            add_row(lens, row)
 
     for row in ai_rows or []:
-        title_key = (row.get("title") or "").strip()
-        if not title_key or title_key in titles.get("ai", set()):
-            continue
-        if len(banks.get("ai", [])) >= AI_BANK_CAP:
-            break
-        banks["ai"].append(row)
-        titles["ai"].add(title_key)
+        add_row("ai", row)
 
+    for row in now_rows or []:
+        add_row("now", row)
+
+    caps = {k: LENS_BANK_CAP for k in VALID_LENS}
+    caps["ai"] = AI_BANK_CAP
+    caps["now"] = NOW_BANK_CAP
+    for lens, rows in list(banks.items()):
+        def row_score(row: dict) -> float:
+            try:
+                return float(row.get("score") or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        rows.sort(key=lambda r: (
+            -row_score(r),
+            -int(r.get("immediate_basis") == "strict_instant"),
+            -int((r.get("provenance") or {}).get("executive_section") == "hdec_direct"),
+            -int((r.get("provenance") or {}).get("radar_section") == "risk_regulation"
+                 or r.get("cat") == "리스크"),
+            r.get("title") or "",
+        ))
+        banks[lens] = rows[:caps.get(lens, LENS_BANK_CAP)]
     banks = {k: v for k, v in banks.items() if v}
     return banks
 
@@ -623,18 +789,28 @@ def _derive(brief: dict) -> dict:
     immediate = brief.get("top_immediate_signals") or []
     hdec = brief.get("hdec_direct_signals") or []
     new_issues = brief.get("top_new_issues") or []
-
-    # featured hero: 진짜 현대건설 직접 신호 우선 — 약한 'HD현대·현대차' 오탐은 건너뛴다(D7-C).
-    hdec_strong = [s for s in hdec if not _is_weak_hdec_fp(s)]
-    featured_sig = (hdec_strong or immediate or hdec or [None])[0]
-    if featured_sig is None:
-        pool0 = _dedup_signals(brief.get("ai_radar_signals"), brief.get("business_signals"),
-                               brief.get("risk_regulation_signals"))
-        pool0.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
-        featured_sig = pool0[0] if pool0 else None
-    fkey = _key(featured_sig)
     new_keys = {_key(s) for s in new_issues}
     ref_date = _ref_date(brief)  # 신선도 라벨 기준일(brief 기준일) — 가짜 날짜 없음
+
+    # 전체 종합 가시 풀: score-first 정렬을 먼저 끝낸 뒤 featured를 고른다. 즉, featured는
+    # 순위 표시용 카드일 뿐 낮은 점수 행을 상단에 끼워 넣는 예외가 아니다.
+    overall_pool = _dedup_signals(immediate, hdec, brief.get("business_signals"),
+                                  brief.get("risk_regulation_signals"),
+                                  brief.get("competitor_supply_signals"),
+                                  new_issues, brief.get("macro_economy_signals"))
+    overall_pool = [s for s in overall_pool if _is_http(s.get("url"))]
+    overall_pool.sort(key=_signal_rank_key)
+    overall_pool = _drop_near_dups(overall_pool)
+    featured_candidates = [s for s in overall_pool if not _is_weak_hdec_fp(s)]
+    if not featured_candidates:
+        fallback = _dedup_signals(brief.get("ai_radar_signals"),
+                                  brief.get("business_signals"),
+                                  brief.get("risk_regulation_signals"))
+        fallback = [s for s in fallback if _is_http(s.get("url")) and not _is_weak_hdec_fp(s)]
+        fallback.sort(key=_signal_rank_key)
+        featured_candidates = _drop_near_dups(fallback)
+    featured_sig = featured_candidates[0] if featured_candidates else None
+    fkey = _key(featured_sig)
 
     # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 AI_BANK_CAP건).
     # 각 행에 임원 실행 정보(왜/관련성/액션/카테고리) 부착 → 일반 테마 % 아닌 의사결정 신호.
@@ -645,23 +821,18 @@ def _derive(brief: dict) -> dict:
     ai_rows = [_enrich_row(_ai_enrich(_row_from_signal(s), s), s, ref_date)
                for s in selected_ai_pool]
 
-    # 뉴스 풀: latest.html 가시 섹션에서 모음(즉시·현대건설·사업·리스크·경쟁·신규·거시) →
-    # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 NEWS_ROW_CAP건.
-    pool = _dedup_signals(immediate, hdec, brief.get("business_signals"),
-                          brief.get("risk_regulation_signals"),
-                          brief.get("competitor_supply_signals"),
-                          new_issues, brief.get("macro_economy_signals"))
-    pool = [s for s in pool if _key(s) != fkey and _key(s) not in selected_ai_keys]
-    pool.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
-    pool = _drop_near_dups(pool)
+    # 뉴스 풀: featured/AI와 정확 중복을 제거한 뒤 이미 score-first 정렬된 순서를 유지한다.
+    pool = [s for s in overall_pool if _key(s) != fkey and _key(s) not in selected_ai_keys]
     news_rows = [_enrich_row(_row_from_signal(s, ["new"] if _key(s) in new_keys else []),
                              s, ref_date)
                  for s in pool[:NEWS_ROW_CAP]]
 
-    featured_row = _row_from_signal(featured_sig) if featured_sig else None
+    featured_row = (_enrich_row(_row_from_signal(featured_sig), featured_sig, ref_date)
+                    if featured_sig else None)
     panel_rows = ([featured_row] if featured_row else []) + news_rows
     lens_counts = _lens_counts(panel_rows)
-    lens_banks = _build_lens_banks(_brief_signal_pool(brief), featured_sig, ai_rows,
+    now_rows, immediate_status = _build_now_bank(brief, new_keys, ref_date, overall_pool)
+    lens_banks = _build_lens_banks(_brief_signal_pool(brief), ai_rows, now_rows,
                                    new_keys, ref_date)
     bank_counts = _bank_counts(lens_banks)
 
@@ -681,7 +852,8 @@ def _derive(brief: dict) -> dict:
         "lens_counts": lens_counts,
         "bank_counts": bank_counts,
         "nav_counts": nav_counts,
-        "immediate_n": lens_counts.get("now", 0),
+        "immediate_n": bank_counts.get("now", 0),
+        "immediate_status": immediate_status,
     }
 
 
@@ -811,6 +983,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
     model["lens_banks"] = parts["lens_banks"]
+    model["immediate_status"] = parts.get("immediate_status") or {}
     # 중앙 정책(data/lens_queries.json)에서 lens_policy를 주입 — 생성 대시보드의 렌즈 정책·
     # 연동 상태(collection)가 단일 소스에서 나오게 한다(템플릿 정적 정책을 덮어씀).
     # 빈 상태 설명(emptyDescHtml)이 이 정책을 읽어 렌즈별 정직 안내를 만든다.

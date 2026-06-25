@@ -182,8 +182,8 @@ def check_source_caps(collector: str, builder: str) -> None:
           "min(32, max(12, len(queries) * 4))" in collector)
     check("2c: dashboard lens bank cap is 10",
           "LENS_BANK_CAP = 10" in builder
-          and 'cap = AI_BANK_CAP if lens == "ai" else LENS_BANK_CAP' in builder
-          and "len(banks[lens]) >= cap" in builder)
+          and 'caps["ai"] = AI_BANK_CAP' in builder
+          and "banks[lens] = rows[:caps.get(lens, LENS_BANK_CAP)]" in builder)
     check("2d: dashboard global news_rows cap is 20",
           "NEWS_ROW_CAP = 20" in builder and "pool[:NEWS_ROW_CAP]" in builder)
 

@@ -319,9 +319,10 @@ def check_helpers_unit() -> None:
           not any(b._is_weak_hdec_fp({"title": t}) for t in fp_false))
     # featured 가드: hdec_direct에 약한 오탐이 먼저 와도 진짜 현대건설을 featured로
     brief = {"hdec_direct_signals": [
-                {"title": "HD현대건설기계 굴착기 수출", "final_score": 4.0, "article_id": "fp"},
+                {"title": "HD현대건설기계 굴착기 수출", "final_score": 4.0,
+                 "article_id": "fp", "url": "https://news.example.com/fp"},
                 {"title": "현대건설, 네옴 AI 데이터센터 EPC 수주", "final_score": 3.5,
-                 "article_id": "real"}],
+                 "article_id": "real", "url": "https://news.example.com/real"}],
              "top_immediate_signals": [], "top_new_issues": [], "ai_radar_signals": []}
     feat = (b._derive(brief).get("featured_sig") or {}).get("title", "")
     check("6g: featured 선택이 약한 오탐을 건너뛰고 현대건설 신호를 고름",

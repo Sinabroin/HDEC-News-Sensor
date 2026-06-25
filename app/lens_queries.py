@@ -22,6 +22,11 @@ _DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "lens_queries.jso
 
 # 대시보드 모델 lens_policy에 노출하는 필드 (keywords/collect 같은 내부 필드는 제외).
 _MODEL_FIELDS = ("label", "query", "supported", "note", "collection")
+_COLLECTION_GROUP_PRIORITY = {
+    # D7-J: keep Hyundai Group lens query audit visible even when the global live
+    # collector cap is reached by earlier high-volume lenses.
+    "hyundai_group": -100,
+}
 
 
 def _load() -> dict:
@@ -83,7 +88,10 @@ def collection_query_groups() -> list:
     collect가 비어 있어 제외된다 — 가짜 수집을 만들지 않는다.
     """
     groups = []
-    for key, spec in _lenses().items():
+    lens_items = list(enumerate(_lenses().items()))
+    lens_items.sort(key=lambda item: (_COLLECTION_GROUP_PRIORITY.get(item[1][0], 0),
+                                      item[0]))
+    for _idx, (key, spec) in lens_items:
         if not isinstance(spec, dict) or not spec.get("supported"):
             continue
         queries = [q for q in (spec.get("collect") or []) if isinstance(q, str) and q.strip()]

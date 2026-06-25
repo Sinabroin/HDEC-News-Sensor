@@ -1009,7 +1009,7 @@
     "development_business": {"label": "개발사업", "query": "PF·복합개발·도시개발·민간투자·부동산개발 수집 쿼리", "supported": true, "note": "", "collection": "query"},
     "global_business": {"label": "글로벌", "query": "해외수주·중동·사우디·UAE·카타르·네옴 수집 쿼리", "supported": true, "note": "", "collection": "query"},
     "safety_quality": {"label": "안전·품질", "query": "중대재해·특별감독·산업안전·품질·하자 수집 쿼리", "supported": true, "note": "", "collection": "query"},
-    "hyundai_group": {"label": "현대 그룹사", "query": "현대차·현대모비스·현대제철·HD현대 등 범현대 계열 수집 쿼리", "supported": true, "note": "현대건설(E&C)·현대엔지니어링 직접 렌즈와 분리 — 계열사 기사만 매칭하며 약한 사명 오탐(현대건설기계 등)은 직접 렌즈에서 제외.", "collection": "query"},
+    "hyundai_group": {"label": "현대 그룹사", "query": "현대엔지니어링·현대로템·현대제철·HD현대일렉트릭 등 인프라 연관 수집 쿼리", "supported": true, "note": "현대건설(E&C) 직접 렌즈와 분리하되 현대엔지니어링 등 그룹사 인프라·플랜트·전력·철강·물류 맥락은 매칭한다. 순수 자동차·소비재 기사에는 매칭하지 않는다.", "collection": "query"},
     "competitor_contractors": {"label": "경쟁 시공사", "query": "삼성물산·DL이앤씨·대우건설·GS건설·포스코이앤씨 등 수주 수집 쿼리", "supported": true, "note": "", "collection": "query"},
     "trust_companies": {"label": "신탁사", "query": "부동산신탁·책임준공·리츠·토지/자산신탁 수집 쿼리", "supported": true, "note": "정비/PF 기사 내 매칭 중심 — 약한 매칭은 제외.", "collection": "query"},
     "developers": {"label": "시행사·디벨로퍼", "query": "디벨로퍼·시행사·부동산개발사 수집 쿼리", "supported": true, "note": "부분문자열 오탐 방지 — '시행령' 등에 걸리지 않게 '시행사'만 매칭.", "collection": "query"},
@@ -1270,6 +1270,7 @@
   var lensLabelByEl = {};
   var activeLensKey = "all";
   var LENS_BANKS = MODEL.lens_banks || {};
+  var IMMEDIATE_STATUS = MODEL.immediate_status || {};
   function hasBankRows(key) {
     return !!(LENS_BANKS[key] && LENS_BANKS[key].length);
   }
@@ -1373,7 +1374,17 @@
     var lab = el("activeLens"); if (lab) lab.textContent = lensLabel(key);
     var cnt = el("lensCount"); if (cnt) cnt.textContent = bankRows ? bankRows.length : newsShown;
     var qn = el("lensQueueNote");
-    if (qn) qn.classList.toggle("hidden", !(bankRows && key !== "all"));
+    if (qn) {
+      if (key === "now" && bankRows
+          && Number(IMMEDIATE_STATUS.strict_displayable_count || IMMEDIATE_STATUS.strict_count || 0) === 0
+          && Number(IMMEDIATE_STATUS.fallback_count || 0) > 0) {
+        qn.textContent = "엄격 즉시 알림 0건 · 운영자 점검 후보 " +
+          Number(IMMEDIATE_STATUS.fallback_count || bankRows.length) + "건";
+      } else {
+        qn.textContent = "렌즈별 전용 수집 결과 · 전체 종합과 별도 큐";
+      }
+      qn.classList.toggle("hidden", !(bankRows && key !== "all"));
+    }
     if (opts && opts.scroll && window.matchMedia
         && window.matchMedia("(max-width:900px)").matches) {
       var main = document.querySelector("main");           // 모바일: 선택 후 본문 노출
@@ -1498,6 +1509,13 @@
     return '<span class="sep">·</span><span class="whychip" style="color:#26344D; font-weight:700">해외 · ' +
       esc(why) + '</span>';
   }
+  function basisChip(r) {
+    if (!r || !r.immediate_basis) return "";
+    var label = r.immediate_basis === "strict_instant" ? "엄격 즉시 알림" : "즉시 확인 후보";
+    var color = r.immediate_basis === "strict_instant" ? "#B85049" : "#9C7232";
+    return '<span class="sep">·</span><span class="basischip" style="color:' + color +
+      '; font-weight:800">' + esc(label) + '</span>';
+  }
   function renderRows(targetId, rows) {
     var box = el(targetId); if (!box) return;
     box.innerHTML = "";
@@ -1518,7 +1536,7 @@
         '<span>' + esc(r.time) + '</span><span class="sep">·</span><span>' + esc(r.related) + '</span>' +
         '<span class="sep">·</span><span>' + esc(r.sources) + '</span><span class="sep">·</span>' +
         '<span style="color:' + esc(r.catColor) + '; font-weight:700">' + esc(r.cat) + '</span>' +
-        freshChip(r.freshness) + whyChip(r.whyGlobal) + '</div>' +
+        freshChip(r.freshness) + whyChip(r.whyGlobal) + basisChip(r) + '</div>' +
         rowLink + '</div>' +
         '<div class="sc"><div><div class="v" style="color:' + esc(r.scoreColor) + '">' + esc(r.score) + '</div>' +
         '<div class="l" style="color:' + esc(r.scoreColor) + '">' + esc(r.scoreLabel) + '</div></div>' +

@@ -199,7 +199,9 @@ def check_mapping_and_fp(builder: str) -> None:
         check(f"4a: 중앙 정책이 '{lens}' 렌즈에 키워드 매핑 보유", bool(kw.get(lens)))
     # 약한 현대건설 오탐 가드가 존재하고 featured hero 선택에 사용됨
     check("4b: 약한 현대건설 오탐 가드(_is_weak_hdec_fp) 존재 + hero 선택에 사용",
-          "_is_weak_hdec_fp" in builder and "hdec_strong" in builder)
+          "_is_weak_hdec_fp" in builder
+          and "featured_candidates = [s for s in overall_pool if not _is_weak_hdec_fp(s)]"
+          in builder)
     check("4c: 진짜 현대건설 판별이 '현대건설기계'를 배제(negative lookahead)",
           "현대건설(?!기계)" in builder)
     # 그룹사 사명(현대차)은 hyundai_group 렌즈로 매핑되고 별도 HDEC-직접 키가 없다
