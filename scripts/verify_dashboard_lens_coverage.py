@@ -15,7 +15,8 @@ Checks:
   · the live collector reuses the same policy (lens-first collection query groups),
   · empty-state text is lens-specific (mock/live/unconfigured wording), not generic demo,
   · core lenses are mapped via the config; FP guard keeps 현대건설기계/현대차 out of direct,
-  · the generated model's lens_policy carries collection status and core lenses are not all 0,
+  · the generated model's lens_policy carries collection status, lens_banks exist, and core
+    lens bank counts are not all 0,
   · filters still work and no fake article rows are made (every row has a real http url).
 """
 
@@ -213,6 +214,8 @@ def check_filters_and_rows(tpl: str) -> None:
     check("5a: 렌즈 필터 동작 유지(applyLens/filterPanel/selectLens)",
           "function applyLens" in tpl and "function filterPanel" in tpl
           and "function selectLens" in tpl)
+    check("5a-2: 렌즈 필터가 lens_banks 전용 큐를 사용",
+          "MODEL.lens_banks" in tpl and "bankRows || MODEL.news_rows" in tpl)
     with tempfile.TemporaryDirectory(prefix="hdec_cov_") as tmp:
         out = Path(tmp) / "dashboard-latest.html"
         proc = subprocess.run([sys.executable, str(BUILDER), "--output", str(out)],
@@ -222,24 +225,25 @@ def check_filters_and_rows(tpl: str) -> None:
             return
         gen = out.read_text(encoding="utf-8")
         model = _model(gen)
-        rows = (model.get("news_rows") or []) + (model.get("ai_rows") or [])
+        banks = model.get("lens_banks") or {}
+        bank_rows = [r for rows in banks.values() for r in (rows or [])]
+        rows = (model.get("news_rows") or []) + (model.get("ai_rows") or []) + bank_rows
         check("5c: 모든 행이 실기사(title + http url) — 가짜 행 없음",
               bool(rows) and all(r.get("title") and str(r.get("url", "")).startswith("http")
                                  for r in rows), f"{len(rows)}행")
+        check("5c-2: 생성 모델에 lens_banks 존재 + bank 행 provenance 보유",
+              bool(banks) and bank_rows and all(r.get("provenance") for r in bank_rows),
+              f"banks={len(banks)}, bank_rows={len(bank_rows)}")
         # 생성 모델의 lens_policy가 중앙 정책에서 와 collection 상태를 담는다.
         gpol = model.get("lens_policy") or {}
         check("5d: 생성 모델 lens_policy가 collection 상태 포함",
               bool(gpol) and all("collection" in v for v in gpol.values()),
               f"{len(gpol)} 엔트리")
         # 핵심 렌즈가 전부 0이 아님(데이터 있음) — 개별 0은 빈 상태가 정직 설명.
-        actual = {}
-        for r in rows:
-            for l in r.get("lens") or []:
-                actual[l] = actual.get(l, 0) + 1
+        actual = {k: len(v or []) for k, v in banks.items()}
         core_total = sum(actual.get(k, 0) for k in CORE_MAPPED)
         check("5e: 핵심 비즈니스 렌즈가 전부 0이 아님(수집 신호 존재)",
               core_total > 0, f"core 합계 {core_total}")
-        # featured 카드는 모델 행과 별도이므로, 0이어야 할 렌즈만 엄격 검사(stale 값 방지)
         navc = {}
         for line in gen.split("\n"):
             mm = re.search(r'data-filter="([^"]+)"', line)
@@ -250,6 +254,9 @@ def check_filters_and_rows(tpl: str) -> None:
                  if k in CORE_MAPPED and actual.get(k, 0) == 0 and v != 0]
         check("5f: 빈 렌즈의 nav 카운트가 0 (정적 데모 stale 값 없음)",
               not stale, f"stale: {stale}" if stale else "ok")
+        clipped = [k for k in CORE_MAPPED if actual.get(k, 0) > 0 and navc.get(k) == 0]
+        check("5g: bank_count>0 핵심 렌즈는 nav 0으로 숨지 않음",
+              not clipped, f"clipped: {clipped}" if clipped else "ok")
 
 
 def main() -> int:

@@ -8,6 +8,7 @@ actually filters visible article cards when a lens/category is selected:
   · lens nav items carry `data-filter` attributes (the filter control),
   · article cards carry `data-lens` + category tags (the content the filter matches),
   · vanilla-JS click handler + applyLens/selectLens filtering exists,
+  · lens-specific views render MODEL.lens_banks instead of only filtering global top rows,
   · `전체 종합` resets the filter to all cards,
   · an empty state exists for lenses with no matching demo article,
   · `dashboard-latest.html` is byte-for-byte regenerated from the template,
@@ -139,6 +140,9 @@ def check_filter_js(tpl: str) -> None:
           'el("activeLens")' in tpl and 'el("lensCount")' in tpl)
     check("3f: 좌측 nav active 상태 동기화(시각적으로 명확)",
           'n.classList.toggle("active", n.getAttribute("data-filter") === key)' in tpl)
+    check("3g: specific lens selection renders lens_banks before filtering",
+          "MODEL.lens_banks" in tpl and "hasBankRows" in tpl
+          and "bankRows || MODEL.news_rows" in tpl)
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +201,7 @@ def check_regenerated(tpl: str) -> None:
             regen = out.read_text(encoding="utf-8")
             model = _model(regen)
             rows = model.get("news_rows") or []
+            banks = model.get("lens_banks") or {}
             tpl_rows = _model(tpl).get("news_rows") or []
             check("5e: 재생성 대시보드 news_rows가 실기사(>=6, url 보유)",
                   len(rows) >= 6 and all(str(r.get("url", "")).startswith("http") for r in rows),
@@ -205,6 +210,10 @@ def check_regenerated(tpl: str) -> None:
                   rows != tpl_rows)
             check("5g: 재생성 인터랙션 JS도 템플릿과 동일 (빌더는 데이터만 주입)",
                   _interaction_script(regen) == tpl_js)
+            check("5h: 재생성 모델에 lens_banks가 있고 bank rows가 real url 보유",
+                  bool(banks) and all(str(r.get("url", "")).startswith("http")
+                                      for bank in banks.values() for r in (bank or [])),
+                  f"{len(banks)} banks")
 
 
 # ---------------------------------------------------------------------------

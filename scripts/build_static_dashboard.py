@@ -101,7 +101,8 @@ _KEYWORD_LENS_FALLBACK = [
     (("플랜트", "LNG", "원전", "EPC", "정유", "석유화학", "발전소", "SMR"), "plant"),
     (("SMR", "수소", "전력망", "데이터센터", "신재생", "태양광", "풍력", "전력 인프라"), "new_energy"),
     (("중동", "해외", "글로벌", "사우디", "UAE", "카타르", "네옴", "체코", "유럽", "수출"), "global_business"),
-    (("유가", "원유", "WTI", "브렌트", "연료", "정제유"), "oil_energy"),
+    (("유가", "국제유가", "원유", "WTI", "브렌트", "두바이유", "LNG", "연료", "정제유",
+      "정제마진", "가스", "호르무즈", "에너지"), "oil_energy"),
     (("안전", "중대재해", "특별감독", "규제", "벌점", "산업안전"), "safety_quality"),
     (("경쟁", "수주 경쟁"), "competitor_contractors"),
     # 범현대 그룹사 — 현대건설(E&C)·현대엔지니어링은 제외(HDEC 직접 렌즈 오염 방지).
@@ -327,6 +328,14 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
     sources = (f"출처 {spread.get('source_count')}곳"
                if spread.get("source_count") else "출처 1곳")
     lens = sorted(set(_lens_for(sig)) | ({l for l in extra_lens} & VALID_LENS))
+    provenance = {
+        "source": "executive_brief",
+        "article_id": sig.get("article_id") or "",
+        "source_type": sig.get("source_type") or "",
+        "radar_section": sig.get("radar_section") or "",
+        "executive_section": sig.get("executive_section") or "",
+        "category": sig.get("category") or "",
+    }
     return {
         "tag": tag, "tagClass": tag_class,
         "title": sig.get("title") or "",
@@ -337,6 +346,7 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "score": score_str, "scoreLabel": score_label, "scoreColor": score_color,
         "lens": lens,
         "url": sig.get("url") if _is_http(sig.get("url")) else "",
+        "provenance": provenance,
     }
 
 
@@ -512,12 +522,88 @@ def _dedup_signals(*lists) -> list:
     return out
 
 
+def _brief_signal_pool(brief: dict) -> list:
+    """brief 전체에서 기사형 dict를 순회 수집한다.
+
+    news_rows는 큐레이션 상위 피드로 유지하지만, 렌즈 전용 bank는 full brief에 들어온
+    기사형 신호 전체를 써야 top-N 클리핑 때문에 렌즈가 비는 일이 없다.
+    """
+    seen, out = set(), []
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("title") and (node.get("url") or node.get("source")):
+                k = _key(node)
+                if k and k not in seen:
+                    seen.add(k)
+                    out.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(brief)
+    return out
+
+
 def _lens_counts(rows) -> dict:
     counts = {}
     for r in rows:
         for l in r.get("lens") or []:
             counts[l] = counts.get(l, 0) + 1
     return counts
+
+
+def _bank_counts(lens_banks: dict) -> dict:
+    return {k: len(v or []) for k, v in (lens_banks or {}).items()}
+
+
+def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
+                      new_keys: set, ref_date) -> dict:
+    """렌즈별 전용 row bank를 full brief 신호에서 만든다(렌즈당 최대 6건).
+
+    전역 news_rows와 별도 큐다. exact title 중복만 제거하고, URL 없는 신호는 카드 원문 링크
+    계약을 지키기 위해 제외한다. 행 자체는 _row_from_signal/_enrich_row에서만 파생한다.
+    """
+    fkey = _key(featured_sig)
+    ordered = [s for s in full_pool if _key(s) != fkey and _is_http(s.get("url"))]
+    ordered.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
+
+    banks = {k: [] for k in VALID_LENS if k != "ai"}
+    titles = {k: set() for k in VALID_LENS if k != "ai"}
+    for sig in ordered:
+        row = _enrich_row(_row_from_signal(sig, ["new"] if _key(sig) in new_keys else []),
+                          sig, ref_date)
+        title_key = (row.get("title") or "").strip()
+        if not title_key:
+            continue
+        for lens in row.get("lens") or []:
+            if lens == "ai" or lens not in banks or len(banks[lens]) >= 6:
+                continue
+            if title_key in titles[lens]:
+                continue
+            banks[lens].append(row)
+            titles[lens].add(title_key)
+
+    if featured_sig and _is_http(featured_sig.get("url")):
+        featured_row = _enrich_row(_row_from_signal(
+            featured_sig, ["new"] if _key(featured_sig) in new_keys else []),
+            featured_sig, ref_date)
+        ftitle = (featured_row.get("title") or "").strip()
+        for lens in featured_row.get("lens") or []:
+            if lens == "ai" or lens not in banks:
+                continue
+            # 대표 카드만 가진 렌즈도 전용 bank가 비지 않게 하되, 이미 다른 rows가 있으면
+            # 메인 카드와 중복 노출하지 않는다.
+            if not banks[lens] and ftitle:
+                banks[lens].append(featured_row)
+                titles[lens].add(ftitle)
+
+    banks = {k: v for k, v in banks.items() if v}
+    if ai_rows:
+        banks["ai"] = ai_rows[:6]
+    return banks
 
 
 def _derive(brief: dict) -> dict:
@@ -546,7 +632,7 @@ def _derive(brief: dict) -> dict:
                for s in ai_pool[:6]]
 
     # 뉴스 풀: latest.html 가시 섹션에서 모음(즉시·현대건설·사업·리스크·경쟁·신규·거시) →
-    # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 9건.
+    # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 12건.
     pool = _dedup_signals(immediate, hdec, brief.get("business_signals"),
                           brief.get("risk_regulation_signals"),
                           brief.get("competitor_supply_signals"),
@@ -556,25 +642,30 @@ def _derive(brief: dict) -> dict:
     pool = _drop_near_dups(pool)
     news_rows = [_enrich_row(_row_from_signal(s, ["new"] if _key(s) in new_keys else []),
                              s, ref_date)
-                 for s in pool[:9]]
+                 for s in pool[:12]]
 
     featured_row = _row_from_signal(featured_sig) if featured_sig else None
     panel_rows = ([featured_row] if featured_row else []) + news_rows
     lens_counts = _lens_counts(panel_rows)
+    lens_banks = _build_lens_banks(_brief_signal_pool(brief), featured_sig, ai_rows,
+                                   new_keys, ref_date)
+    bank_counts = _bank_counts(lens_banks)
 
     # 모든 콘텐츠 렌즈를 실제 카운트(없으면 0)로 채운다 — 정적 데모 값(예: domestic_site=2)이
     # 남아 '수집된 것처럼' 보이는 오해를 막는다(빈 렌즈는 0으로 정직 표기 + 빈 상태가 설명).
-    nav_counts = {k: lens_counts.get(k, 0) for k in VALID_LENS}
+    nav_counts = {k: bank_counts.get(k, 0) for k in VALID_LENS}
     nav_counts["all"] = len(panel_rows)
-    nav_counts["ai"] = len(ai_rows)
+    nav_counts["ai"] = bank_counts.get("ai", len(ai_rows))
 
     return {
         "featured_sig": featured_sig,
         "featured_row": featured_row,
         "news_rows": news_rows,
         "ai_rows": ai_rows,
+        "lens_banks": lens_banks,
         "metric_indices": _metric_indices(featured_sig) if featured_sig else [],
         "lens_counts": lens_counts,
+        "bank_counts": bank_counts,
         "nav_counts": nav_counts,
         "immediate_n": lens_counts.get("now", 0),
     }
@@ -705,6 +796,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     _overlay_market_history(model, market_mode)
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
+    model["lens_banks"] = parts["lens_banks"]
     # 중앙 정책(data/lens_queries.json)에서 lens_policy를 주입 — 생성 대시보드의 렌즈 정책·
     # 연동 상태(collection)가 단일 소스에서 나오게 한다(템플릿 정적 정책을 덮어씀).
     # 빈 상태 설명(emptyDescHtml)이 이 정책을 읽어 렌즈별 정직 안내를 만든다.
@@ -718,7 +810,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     meta["demo"] = news_mode != "live"
     meta["collection"] = "자동 수집 (live)" if news_mode == "live" else "수동 · 데모"
     model["meta"] = meta
-    counts = parts["lens_counts"]
+    counts = parts["bank_counts"]
     for grp in ("business_lens", "ecosystem"):
         for it in model.get(grp) or []:
             if it.get("id") == "hormuz":
@@ -819,6 +911,7 @@ def dashboard_metadata(html: str, brief: dict) -> dict:
         "news_data_mode": brief.get("news_data_mode"),
         "news_row_count": len(parts["news_rows"]),
         "ai_row_count": len(parts["ai_rows"]),
+        "lens_bank_count": sum(len(v or []) for v in parts["lens_banks"].values()),
         "featured_title": (parts["featured_sig"] or {}).get("title"),
         "uses_real_articles": bool(parts["news_rows"]) and bool(parts["featured_sig"]),
     }
@@ -831,7 +924,7 @@ def format_summary(html: str, brief: dict) -> str:
         f"[source] {meta['source_template']}",
         f"[default_output] {meta['default_output']}",
         f"[news_data_mode] {meta['news_data_mode']} · news_rows={meta['news_row_count']} "
-        f"· ai_rows={meta['ai_row_count']}",
+        f"· ai_rows={meta['ai_row_count']} · lens_bank_rows={meta['lens_bank_count']}",
         f"[featured] {meta['featured_title']}",
         f"[html_chars] {meta['html_chars']}",
         "[contract] 실기사 주입(brief 공유) · 시장/AIS 데모 라벨 유지 · 전체 리포트=latest.html",

@@ -88,8 +88,15 @@ def _clean_env():
 
 
 def _global_rows(html: str) -> list:
-    """global_business 렌즈로 태그된 행(featured 카드 + news_rows)."""
+    """global_business 렌즈로 태그된 visible lens rows.
+
+    D7-H 이후 selected Global view renders lens_banks.global_business. Older/template
+    fallback still supports featured + news_rows filtering.
+    """
     model = _model(html)
+    bank = (model.get("lens_banks") or {}).get("global_business") or []
+    if bank:
+        return list(bank)
     rows = []
     fm = re.search(r'class="card featured"[^>]*data-lens="([^"]*)"', html)
     if fm and "global_business" in fm.group(1).split():
@@ -163,12 +170,18 @@ def check_brief_provenance() -> None:
         return
     brief = json.loads(proc.stdout)
     titles = set()
-    for key in ("top_immediate_signals", "top_new_issues", "hdec_direct_signals",
-                "ai_radar_signals", "business_signals", "risk_regulation_signals",
-                "competitor_supply_signals", "macro_economy_signals"):
-        for s in brief.get(key) or []:
-            if s.get("title"):
-                titles.add(s["title"])
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("title") and (node.get("url") or node.get("source")):
+                titles.add(node["title"])
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(brief)
     with tempfile.TemporaryDirectory(prefix="hdec_global_") as tmp:
         out = Path(tmp) / "d.html"
         p2 = subprocess.run([sys.executable, str(BUILDER), "--output", str(out)],

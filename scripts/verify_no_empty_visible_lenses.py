@@ -10,7 +10,7 @@ faked with a non-zero count and never filled with fabricated/irrelevant articles
 Checks:
   · the partition mechanism exists (partitionLensNav + "연동 대기 렌즈" group + data-waiting),
     and essentials (전체/즉시/신규/AI) are the ONLY lenses exempt from the move,
-  · nav counts are CONSISTENT with the model (count == #rows tagged with that lens) — no stale
+  · nav counts are CONSISTENT with lens_banks (count == #bank rows for that lens) — no stale
     static demo counts, no fabricated non-zero counts,
   · every primary (count>0) lens therefore has ≥1 real row; every 0-count non-essential lens
     is moved to waiting (so no empty primary lens remains),
@@ -114,28 +114,20 @@ def check_mechanism(tpl: str) -> None:
 # 2 · nav 카운트가 모델과 일치(스테일/가짜 카운트 없음) → 빈 primary 렌즈 없음
 # ---------------------------------------------------------------------------
 
-def _actual_counts(html: str, model: dict) -> dict:
-    """nav 카운트의 진실 원천 = featured 카드 + news_rows 의 lens 태그 합(빌더 _lens_counts와 동일).
+def _actual_counts(_html: str, model: dict) -> dict:
+    """nav 카운트의 진실 원천 = lens_banks.
 
-    빌더는 panel_rows=[featured]+news_rows 로 카운트하므로 featured 카드(서버 렌더 HTML)의
-    data-lens 도 포함해야 정확히 일치한다.
+    D7-H 이후 특정 렌즈는 global news_rows를 필터링하지 않고 full brief 기반 전용 bank를
+    렌더한다. 따라서 비핵심 nav 카운트도 bank row 수와 일치해야 한다.
     """
-    counts = {}
-    fm = re.search(r'class="card featured"[^>]*data-lens="([^"]*)"', html)
-    if fm:
-        for l in fm.group(1).split():
-            counts[l] = counts.get(l, 0) + 1
-    for r in (model.get("news_rows") or []):
-        for l in r.get("lens") or []:
-            counts[l] = counts.get(l, 0) + 1
-    return counts
+    return {k: len(v or []) for k, v in (model.get("lens_banks") or {}).items()}
 
 
 def check_consistency(html: str, where: str) -> None:
     model = _model(html)
     nav = _nav_counts(html)
     actual = _actual_counts(html, model)
-    # 비핵심 렌즈: nav 정적 카운트 == 실제 행 태그 카운트 (스테일/가짜 없음).
+    # 비핵심 렌즈: nav 정적 카운트 == 실제 bank 카운트 (스테일/가짜 없음).
     stale = []
     for key, navc in nav.items():
         if key in ESSENTIALS or navc is None:
@@ -171,12 +163,17 @@ def _brief_titles() -> set:
         return set()
     brief = json.loads(proc.stdout)
     titles = set()
-    for key in ("top_immediate_signals", "top_new_issues", "hdec_direct_signals",
-                "ai_radar_signals", "business_signals", "risk_regulation_signals",
-                "competitor_supply_signals", "macro_economy_signals"):
-        for s in brief.get(key) or []:
-            if s.get("title"):
-                titles.add(s["title"])
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("title") and (node.get("url") or node.get("source")):
+                titles.add(node["title"])
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(brief)
     return titles
 
 
@@ -192,7 +189,8 @@ def check_rows_real() -> None:
         built = out.read_text(encoding="utf-8")
         check_consistency(built, "mock-build")  # 생성 산출물에서 카운트 일치(빌더가 실카운트 기입)
         model = _model(built)
-        rows = (model.get("news_rows") or []) + (model.get("ai_rows") or [])
+        bank_rows = [r for rows in (model.get("lens_banks") or {}).values() for r in (rows or [])]
+        rows = (model.get("news_rows") or []) + (model.get("ai_rows") or []) + bank_rows
         check("3b: 행 다수(>=6)", len(rows) >= 6, f"{len(rows)}행")
         # 모든 행이 title + source + http url (가짜/빈 행 없음)
         bad = [r.get("title") for r in rows
@@ -200,6 +198,9 @@ def check_rows_real() -> None:
                or not str(r.get("url", "")).startswith("http")]
         check("3c: 모든 행이 실제 title·source·http url 보유(가짜 행 없음)",
               not bad, f"불완전: {bad[:2]}" if bad else f"{len(rows)}행")
+        bad_prov = [r.get("title") for r in bank_rows if not r.get("provenance")]
+        check("3c-2: 모든 lens_banks 행이 provenance 보유",
+              not bad_prov, f"provenance 누락: {bad_prov[:2]}" if bad_prov else "ok")
         # 모든 행 제목이 공유 brief 섹션에 존재 → 강제/날조 행 아님(동일 출처 provenance)
         bt = _brief_titles()
         if check("3d: brief 제목 수집(>0)", bool(bt), f"{len(bt)}건"):

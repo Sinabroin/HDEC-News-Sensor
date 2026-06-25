@@ -141,6 +141,7 @@
   .toolbar{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; padding:0 2px; flex-wrap:wrap;}
   .toolbar .lensnote{font-size:12.5px; color:var(--mute3); font-weight:500;}
   .toolbar .lensnote b{color:var(--ink2); font-weight:700;}
+  .toolbar .lensqueue{display:inline-block; margin-left:8px; color:var(--mute4); font-size:11.5px;}
   .sortpill{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; color:var(--ink4);
     background:var(--card); border:1px solid var(--line); padding:8px 13px; border-radius:10px;}
 
@@ -555,7 +556,7 @@
           <button class="tab" data-tab="market" role="tab">시장</button>
           <button class="tab" data-tab="rumor" role="tab">초기신호</button>
         </div>
-        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · <b id="lensCount">21</b>건 표시 <span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
+        <div class="lensnote">렌즈 <b id="activeLens">전체 종합</b> · <b id="lensCount">21</b>건 표시 <span id="lensQueueNote" class="lensqueue hidden">렌즈별 전용 수집 결과 · 전체 종합과 별도 큐</span><span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span></div>
       </div>
 
       <!-- ====== TAB: 뉴스 ====== -->
@@ -1268,6 +1269,21 @@
   var lensnav = el("lensnav");
   var lensLabelByEl = {};
   var activeLensKey = "all";
+  var LENS_BANKS = MODEL.lens_banks || {};
+  function hasBankRows(key) {
+    return !!(LENS_BANKS[key] && LENS_BANKS[key].length);
+  }
+  function bankCount(key) {
+    return hasBankRows(key) ? LENS_BANKS[key].length : 0;
+  }
+  function modelCountForLens(key) {
+    if (key === "all") {
+      return ((MODEL.news_rows || []).length +
+        (document.querySelector('.card.featured[data-lens]') ? 1 : 0));
+    }
+    if (key === "ai") return bankCount("ai") || (MODEL.ai_rows || []).length;
+    return bankCount(key);
+  }
   if (lensnav) {
     [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
       var lbl = n.querySelector(".nlabel");
@@ -1315,6 +1331,8 @@
     var head;
     if (unconfigured) {                                 // 전용 소스 미연동 — '수집했으나 없음'과 구분
       head = '<b>' + esc(p.label) + '</b> 렌즈는 전용 수집 쿼리가 구성되지 않았습니다 (가짜 결과를 만들지 않음).';
+    } else if (key === "oil_energy" && live) {
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 시장 탭에서 시세는 연동됨 / 뉴스 신호는 금일 없음.';
     } else if (live) {                                  // 쿼리는 돌렸으나 금일 매칭 결과 없음
       head = '<b>' + esc(p.label) + '</b> 렌즈는 쿼리를 수집했으나 오늘 해당 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).';
     } else {                                            // mock 데모 표본에 없음
@@ -1327,6 +1345,8 @@
   }
   function applyLens(key, opts) {
     activeLensKey = key;
+    var bankRows = key !== "all" && hasBankRows(key) ? LENS_BANKS[key] : null;
+    renderRows("newsRows", bankRows || MODEL.news_rows);
     var newsShown = filterPanel("panel-news", key);
     filterPanel("panel-ai", key);
     if (lensnav) [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
@@ -1336,7 +1356,9 @@
       it.classList.toggle("active", it.getAttribute("data-filter") === key);
     });
     var lab = el("activeLens"); if (lab) lab.textContent = lensLabel(key);
-    var cnt = el("lensCount"); if (cnt) cnt.textContent = newsShown;
+    var cnt = el("lensCount"); if (cnt) cnt.textContent = bankRows ? bankRows.length : newsShown;
+    var qn = el("lensQueueNote");
+    if (qn) qn.classList.toggle("hidden", !(bankRows && key !== "all"));
     if (opts && opts.scroll && window.matchMedia
         && window.matchMedia("(max-width:900px)").matches) {
       var main = document.querySelector("main");           // 모바일: 선택 후 본문 노출
@@ -1359,6 +1381,16 @@
      AI)는 0이어도 항상 표시. 그 외 0건(또는 미연동) 렌즈는 하단 '연동 대기 렌즈'로 옮기고
      숫자 대신 '연동 대기'/'미연동' 배지를 단다. 가짜 카운트를 만들지 않는다(0=정직). */
   var ESSENTIAL_LENS = { all: 1, now: 1, "new": 1, ai: 1 };
+  function syncNavCountsFromBanks() {
+    if (!lensnav) return;
+    [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (b) {
+      var key = b.getAttribute("data-filter");
+      var cEl = b.querySelector(".ncount");
+      if (!cEl) return;
+      var count = modelCountForLens(key);
+      if (key === "all" || key === "ai" || hasBankRows(key)) cEl.textContent = count;
+    });
+  }
   function hideEmptyGroupTitles(nav) {
     var kids = [].slice.call(nav.children);
     kids.forEach(function (node, i) {
@@ -1375,6 +1407,7 @@
   }
   function partitionLensNav() {
     if (!lensnav) return;
+    syncNavCountsFromBanks();
     var btns = [].slice.call(lensnav.querySelectorAll(".nav[data-filter]"));
     var waiting = [];
     btns.forEach(function (b) {
@@ -1382,11 +1415,18 @@
       if (ESSENTIAL_LENS[key]) return;                 // 핵심 렌즈는 항상 기본 사이드바 유지
       var cEl = b.querySelector(".ncount");
       var unconf = !!b.querySelector(".dm.unavail");    // 이미 미연동 배지(예: 호르무즈)
-      var count = cEl ? (parseInt(cEl.textContent, 10) || 0) : 0;
+      var count = hasBankRows(key) ? bankCount(key)
+        : (cEl ? (parseInt(cEl.textContent, 10) || 0) : 0);
       if (count > 0 && !unconf) return;                 // 결과 있는 렌즈는 기본 사이드바 유지
       b.setAttribute("data-waiting", "1");
       var r = b.querySelector(".r");
-      if (r && !unconf) r.innerHTML = '<span class="dm unavail" style="font-size:9px;">연동 대기</span>';
+      if (r && !unconf) {
+        if (key === "oil_energy") {
+          r.innerHTML = '<span class="dm delay" style="font-size:9px;" title="시장 탭에서 시세는 연동됨 / 뉴스 신호는 금일 없음">시세 연동</span>';
+        } else {
+          r.innerHTML = '<span class="dm unavail" style="font-size:9px;">연동 대기</span>';
+        }
+      }
       waiting.push(b);
     });
     if (!waiting.length) return;
