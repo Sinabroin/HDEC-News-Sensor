@@ -30,6 +30,7 @@ IMPORTANT_LENSES = [
     "building_housing", "development_business", "trust_companies",
     "developers", "domestic_site", "hyundai_group",
 ]
+SIDEBAR_BANK_LENSES = IMPORTANT_LENSES + ["oil_energy"]
 ESSENTIALS = {"all", "now", "new", "ai"}
 MAX_MODEL_BYTES = 650_000
 
@@ -96,6 +97,14 @@ def _nav_counts(html: str) -> dict:
     return counts
 
 
+def _nav_buttons(html: str) -> dict:
+    buttons = {}
+    for m in re.finditer(r'<button\b[^>]*class="nav[^"]*"[^>]*data-filter="([^"]+)"'
+                         r'[\s\S]*?</button>', html):
+        buttons[m.group(1)] = m.group(0)
+    return buttons
+
+
 def _build() -> tuple[dict, str, dict]:
     env = _env()
     with tempfile.TemporaryDirectory(prefix="hdec_lens_banks_") as tmp:
@@ -149,6 +158,7 @@ def check_banks(brief: dict, html: str, model: dict, mode: str) -> None:
     displayable = _displayable_counts(signals)
     bankc = _bank_counts(model)
     navc = _nav_counts(html)
+    nav_buttons = _nav_buttons(html)
     policy = model.get("lens_policy") or {}
 
     check("1a: preview-model has lens_banks", isinstance(banks, dict) and bool(banks),
@@ -180,6 +190,31 @@ def check_banks(brief: dict, html: str, model: dict, mode: str) -> None:
     check("1d: banked lenses are not waiting/unconfigured in primary nav",
           not waiting_with_bank,
           f"wrong waiting: {waiting_with_bank}" if waiting_with_bank else "ok")
+
+    bad_sidebar = []
+    for key in SIDEBAR_BANK_LENSES:
+        bcount = bankc.get(key, 0)
+        if bcount <= 0:
+            continue
+        btn = nav_buttons.get(key, "")
+        exact_count = f'<span class="ncount">{bcount}</span>'
+        if not btn:
+            bad_sidebar.append(f"{key}:missing nav")
+        elif ("연동 대기" in btn or "dm unavail" in btn
+              or "data-waiting" in btn or exact_count not in btn):
+            bad_sidebar.append(f"{key}:bank={bcount} nav={btn[:160]}")
+    check("1e: banked sidebar lenses show numeric counts, not waiting badges",
+          not bad_sidebar,
+          f"bad sidebar: {bad_sidebar[:3]}" if bad_sidebar else "ok")
+
+    false_waiting_badges = []
+    for key, btn in nav_buttons.items():
+        waiting_badge = ("연동 대기" in btn or "dm unavail" in btn or "data-waiting" in btn)
+        if key not in ESSENTIALS and bankc.get(key, 0) > 0 and waiting_badge:
+            false_waiting_badges.append(key)
+    check("1f: waiting badges appear only on true no-bank/unconfigured nav items",
+          not false_waiting_badges,
+          f"false waiting badges: {false_waiting_badges}" if false_waiting_badges else "ok")
 
     bad_rows = []
     dup_titles = []
@@ -224,6 +259,8 @@ def check_banks(brief: dict, html: str, model: dict, mode: str) -> None:
         and "bankRows || MODEL.news_rows" in tpl
         and "function applyLens" in tpl
         and "function filterPanel" in tpl
+        and "function setNavCount" in tpl
+        and 'removeAttribute("data-waiting")' in tpl
     )
     check("4a: lens filters use lens_banks while preserving existing filter functions",
           filter_ok)

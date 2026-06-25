@@ -1284,6 +1284,13 @@
     if (key === "ai") return bankCount("ai") || (MODEL.ai_rows || []).length;
     return bankCount(key);
   }
+  function setNavCount(b, count) {
+    var r = b.querySelector(".r");
+    if (!r) return;
+    var flag = r.querySelector(".flag");
+    r.innerHTML = (flag ? flag.outerHTML : '') + '<span class="ncount">' + count + '</span>';
+    b.removeAttribute("data-waiting");
+  }
   if (lensnav) {
     [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
       var lbl = n.querySelector(".nlabel");
@@ -1385,10 +1392,8 @@
     if (!lensnav) return;
     [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (b) {
       var key = b.getAttribute("data-filter");
-      var cEl = b.querySelector(".ncount");
-      if (!cEl) return;
       var count = modelCountForLens(key);
-      if (key === "all" || key === "ai" || hasBankRows(key)) cEl.textContent = count;
+      if (key === "all" || key === "ai" || hasBankRows(key)) setNavCount(b, count);
     });
   }
   function hideEmptyGroupTitles(nav) {
@@ -1413,10 +1418,13 @@
     btns.forEach(function (b) {
       var key = b.getAttribute("data-filter");
       if (ESSENTIAL_LENS[key]) return;                 // 핵심 렌즈는 항상 기본 사이드바 유지
+      if (hasBankRows(key)) {
+        setNavCount(b, bankCount(key));
+        return;                                        // 전용 bank가 있으면 stale 대기 배지를 무시
+      }
       var cEl = b.querySelector(".ncount");
       var unconf = !!b.querySelector(".dm.unavail");    // 이미 미연동 배지(예: 호르무즈)
-      var count = hasBankRows(key) ? bankCount(key)
-        : (cEl ? (parseInt(cEl.textContent, 10) || 0) : 0);
+      var count = cEl ? (parseInt(cEl.textContent, 10) || 0) : 0;
       if (count > 0 && !unconf) return;                 // 결과 있는 렌즈는 기본 사이드바 유지
       b.setAttribute("data-waiting", "1");
       var r = b.querySelector(".r");

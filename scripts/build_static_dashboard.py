@@ -821,14 +821,23 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
 
 
 def _update_nav_counts(html: str, counts: dict) -> str:
-    """좌측 nav의 정적 카운트 배지를 실제 분포로 갱신 (hormuz는 '미연동' 배지 유지)."""
+    """좌측 nav의 정적 카운트 배지를 실제 분포로 갱신.
+
+    기존 템플릿/배포본에 대기 배지처럼 .ncount가 없는 우측 슬롯이 있어도,
+    실제 bank count가 있는 렌즈는 생성 시점에 숫자 배지로 복구한다.
+    """
     out = []
     for line in html.split("\n"):
         mm = re.search(r'data-filter="([^"]+)"', line)
-        if mm and 'class="ncount"' in line and mm.group(1) in counts:
+        if mm and mm.group(1) in counts:
             value = counts[mm.group(1)]
-            line = re.sub(r'(<span class="ncount">)\d+(</span>)',
-                          lambda x: f'{x.group(1)}{value}{x.group(2)}', line, count=1)
+            if 'class="ncount"' in line:
+                line = re.sub(r'(<span class="ncount">)\d+(</span>)',
+                              lambda x: f'{x.group(1)}{value}{x.group(2)}', line, count=1)
+            elif value > 0:
+                line = re.sub(r'<span class="r">.*?</span></button>',
+                              f'<span class="r"><span class="ncount">{value}</span></span></button>',
+                              line, count=1)
         out.append(line)
     return "\n".join(out)
 
