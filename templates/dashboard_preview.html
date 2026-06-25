@@ -1662,21 +1662,99 @@
     // 기간 히스토리(1주/1개월/3개월/1년)가 연동된 종목만 클릭/차트를 허용 — 미연동은 비클릭.
     return !!(it.history && it.history["1m"] && it.history["1m"].length >= 2);
   }
+  /* 한 종목·기간에 그릴 수 있는 실데이터(≥2 숫자점) 히스토리가 있는지 — 가짜 선/빈 차트 방지. */
+  function hasPeriodHistory(it, period) {
+    if (!it || !it.history) return false;
+    var arr = it.history[period];
+    if (!arr || arr.length < 2) return false;
+    var n = 0;
+    for (var i = 0; i < arr.length; i++) { if (typeof arr[i] === "number" && isFinite(arr[i])) n++; }
+    return n >= 2;
+  }
+  /* 시장 행 단일 상태 계약 — 표시(배지/차트/클릭)는 전부 이 상태에서만 파생한다(중복·모순 배지 금지).
+     · hasValue       : 현재값이 숫자(미연동 아님)
+     · chartable      : 1개월 실데이터 히스토리 보유(클릭·상세 차트 허용)
+     · isCurrentOnly  : 값은 있으나 기간 히스토리 없음 → 차트 없음(비클릭)
+     · isUnavailable  : 값 자체 없음 → '—' · 미연동(차트·스파크라인 없음)
+     · isProxy        : 대용(proxy) 종목(글로벌 벤치마크 · 국내 현물가 아님) */
+  function marketState(it) {
+    var v = it.value;
+    var hasValue = v != null && v !== "" && v !== "—";
+    var chartable = isClickable(it);
+    return {
+      hasValue: hasValue,
+      isProxy: !!it.proxy || it.data_mode === "proxy_market",
+      chartable: chartable,
+      isCurrentOnly: hasValue && !chartable,
+      isUnavailable: !hasValue
+    };
+  }
+  /* ---------- nice y-axis ticks (등간격 · 1/2/2.5/5/10×10^n) ----------
+     축 라벨을 보기 좋은 '깔끔한' 등간격 값으로 만든다(예: 4.56/4.12/3.68 → 4.6/4.4/4.2/4.0).
+     데이터가 전부 같은 값이면 그 값을 중심으로 작은 대칭 구간을 만든다(0으로 나눔 방지). */
+  var NICE_STEPS = [1, 2, 2.5, 5, 10];
+  function niceStep(rough) {
+    if (!(rough > 0) || !isFinite(rough)) return 1;
+    var exp = Math.floor(Math.log(rough) / Math.LN10);
+    var base = Math.pow(10, exp);
+    var frac = rough / base;                 // [1,10)
+    for (var i = 0; i < NICE_STEPS.length; i++) {
+      if (frac <= NICE_STEPS[i] + 1e-9) return NICE_STEPS[i] * base;
+    }
+    return 10 * base;
+  }
+  function niceTicks(lo, hi, want) {
+    want = want || 5;                        // 목표 4~5개 등간격 눈금
+    if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 1; }
+    if (hi < lo) { var t = lo; lo = hi; hi = t; }
+    if (hi - lo < 1e-12) {                    // 전부 동일 값 → 중심 대칭 작은 구간
+      var pad0 = Math.abs(lo) > 1e-9 ? Math.abs(lo) * 0.05 : 1;
+      lo -= pad0; hi += pad0;
+    } else {                                  // 선이 가장자리에 붙지 않게 살짝 패딩
+      var m = (hi - lo) * 0.04; lo -= m; hi += m;
+    }
+    var step = niceStep((hi - lo) / Math.max(1, want - 1));
+    var start = Math.floor(lo / step) * step;
+    var end = Math.ceil(hi / step) * step;
+    var ticks = [];
+    for (var v = start; v <= end + step * 0.5; v += step) {
+      ticks.push(Math.abs(v) < step * 1e-9 ? 0 : v);   // -0 → 0
+    }
+    return { min: start, max: end, step: step, ticks: ticks };
+  }
+  function tickDecimals(step) {
+    // step를 정확히 표기할 최소 소수 자리 — 2.5×10^n(0.25/2.5/0.025…)도 라벨이 등간격으로 보이게.
+    if (!(step > 0) || !isFinite(step)) return 0;
+    for (var d = 0; d <= 6; d++) {
+      var scaled = step * Math.pow(10, d);
+      if (Math.abs(scaled - Math.round(scaled)) < 1e-9) return d;
+    }
+    return 6;
+  }
+  function fmtTick(v, dec) {
+    var s = (typeof v === "number" && isFinite(v) ? v : 0).toFixed(dec);
+    var parts = s.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");   // 천단위 구분
+    return parts.join(".");
+  }
   function mrowHtml(it, clickable) {
-    var off = it.value == null;
-    // 미니 스파크라인은 연동된 1개월 히스토리(있으면)에서, 없으면 기존 데모 스파크에서 그린다.
-    var miniPts = (it.history && it.history["1m"] && it.history["1m"].length) ? it.history["1m"] : (it.spark || []);
-    var spark = (miniPts && miniPts.length) ? sparkSvg(miniPts) : "";
+    var st = marketState(it);
+    // 미니 스파크라인은 실데이터(연동 기간 히스토리)가 있을 때만 — 값만 있는/미연동 행에 가짜 미니 차트를 그리지 않는다.
+    var spark = st.chartable ? sparkSvg(it.history["1m"]) : "";
     var chev = clickable ? '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#C5CFDF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : "";
-    // 비클릭 행은 빈 차트를 열지 않으므로 사유를 명시한다(오해 방지):
-    // 값 자체가 없으면 '차트 없음', 값은 있으나 기간 히스토리가 없으면 '히스토리 미연동'.
-    var nochart = !clickable ? '<span class="dm unavail" style="font-size:9px; margin-left:4px;">' + (off ? "차트 없음" : "히스토리 미연동") + '</span>' : "";
+    // 차트 상태 배지는 data_mode 배지(지연/대용/보고/미연동)와 중복되지 않게 단 하나만 붙인다:
+    //  · chartable      → chevron만(텍스트 배지 없음)
+    //  · 값 있음·차트 X  → '차트 없음' (예: 대용 + 차트 없음 = 대용 현재값 · 기간 차트 미연동 — 허용 조합)
+    //  · 값 없음         → 추가 배지 없음(data_mode 배지가 이미 '미연동/보고', 값은 '—' → '미연동 + 차트 없음' 중복 제거)
+    var chartTag = st.isCurrentOnly
+      ? '<span class="dm unavail" style="font-size:9px; margin-left:4px;" title="기간 히스토리 미연동 — 상세 차트 없음">차트 없음</span>'
+      : "";
     var en = it.en ? ' <span class="men">' + esc(it.en) + '</span>' : "";
     var attrs = clickable ? ' data-mid="' + esc(it.id) + '" role="button" tabindex="0"' : "";
     return '<div class="mrow' + (clickable ? " click" : "") + '"' + attrs + '>' +
       '<span class="mn">' + spark + esc(it.label_kr) + en + '</span>' +
-      '<span class="mv ' + (off ? "off" : "") + '">' + (off ? "—" : esc(it.value)) + '</span>' +
-      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (off ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + nochart + chev + '</span></div>';
+      '<span class="mv ' + (st.isUnavailable ? "off" : "") + '">' + (st.isUnavailable ? "—" : esc(it.value)) + '</span>' +
+      '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (st.isUnavailable ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chartTag + chev + '</span></div>';
   }
   /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출. */
   function renderCategoryCards() {
@@ -1876,26 +1954,39 @@
   function renderLineChart(svg, drawn, dates, opts) {
     opts = opts || {};
     var vb = (svg.getAttribute("viewBox") || "0 0 720 300").split(/\s+/).map(Number);
-    var W = vb[2], H = vb[3], padL = 48, padR = 16, padT = 16, padB = 34;
+    var W = vb[2], H = vb[3], padL = 52, padR = 16, padT = 16, padB = 34;
     var plotW = W - padL - padR, plotH = H - padT - padB;
+    function isNum(v) { return typeof v === "number" && isFinite(v); }
+    // 시리즈 가드: 숫자점 <2개면(빈 히스토리·단일점·비숫자) 그리지 않는다 — 깨진 SVG·0으로 나눔 방지.
+    var clean = [];
+    (drawn || []).forEach(function (s) {
+      if (!s || !s.data) return;
+      var nums = 0;
+      for (var i = 0; i < s.data.length; i++) { if (isNum(s.data[i])) nums++; }
+      if (nums >= 2) clean.push(s);
+    });
+    var parts = ['<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#FCFDFF"></rect>'];
+    if (!clean.length) {                       // 그릴 실데이터 없음 → 빈 상태(가짜 선 금지)
+      parts.push('<text x="' + (padL + plotW / 2) + '" y="' + (padT + plotH / 2) +
+        '" text-anchor="middle" font-size="13" fill="#AEBBD0">' +
+        esc(opts.emptyMsg || "표시할 시세 없음 (가짜 선 미표시)") + '</text>');
+      svg.innerHTML = parts.join("");
+      return;
+    }
     var allVals = [];
-    drawn.forEach(function (s) { s.data.forEach(function (v) { if (v != null) allVals.push(v); }); });
-    var yMin, yMax;
-    if (allVals.length) {
-      yMin = Math.min.apply(null, allVals); yMax = Math.max.apply(null, allVals);
-      var padY = (yMax - yMin) * 0.18 || Math.abs(yMax) * 0.05 || 0.5; yMin -= padY; yMax += padY;
-    } else { yMin = 0; yMax = 100; }
+    clean.forEach(function (s) { s.data.forEach(function (v) { if (isNum(v)) allVals.push(v); }); });
+    var rawMin = Math.min.apply(null, allVals), rawMax = Math.max.apply(null, allVals);
+    var tk = niceTicks(rawMin, rawMax, 5);     // 등간격 nice 눈금 + 패딩 도메인(가장자리 붙음 방지)
+    var yMin = tk.min, yMax = tk.max;
+    var dec = tickDecimals(tk.step);           // 라벨 소수 자리는 step에서 파생(일관 · 깔끔)
     var n = dates.length;
     function xAt(i) { return padL + (n <= 1 ? 0 : (i / (n - 1)) * plotW); }
     function yAt(v) { return padT + plotH - ((v - yMin) / ((yMax - yMin) || 1)) * plotH; }
-    var dec = opts.decimals == null ? 2 : opts.decimals;
-    var parts = ['<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#FCFDFF"></rect>'];
-    var TICKS = 4, t, val, y;
-    for (t = 0; t <= TICKS; t++) {
-      val = yMin + (yMax - yMin) * t / TICKS; y = yAt(val);
+    tk.ticks.forEach(function (val) {           // 등간격 눈금선 + 라벨(천단위 구분)
+      var y = yAt(val);
       parts.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '" stroke="#EEF3F9"></line>');
-      parts.push('<text x="' + (padL - 8) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="#9AAAC1">' + val.toFixed(dec) + '</text>');
-    }
+      parts.push('<text x="' + (padL - 8) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="#9AAAC1">' + esc(fmtTick(val, dec)) + '</text>');
+    });
     parts.push('<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
     parts.push('<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" stroke="#C5CFDF"></line>');
     dates.forEach(function (d, i) {
@@ -1903,15 +1994,16 @@
       parts.push('<text x="' + xAt(i).toFixed(1) + '" y="' + (padT + plotH + 18) + '" text-anchor="middle" font-size="10" fill="#9AAAC1">' + esc(d) + '</text>');
     });
     parts.push('<text x="6" y="' + (padT + 4) + '" font-size="9.5" fill="#9AAAC1">' + esc(opts.yLabel || "") + '</text>');
-    drawn.forEach(function (s) {
-      var dpath = s.data.map(function (v, i) { return (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1); }).join(" ");
-      parts.push('<path d="' + dpath + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>');
-      var li = s.data.length - 1;
-      parts.push('<circle cx="' + xAt(li).toFixed(1) + '" cy="' + yAt(s.data[li]).toFixed(1) + '" r="3" fill="' + s.color + '"></circle>');
+    clean.forEach(function (s) {
+      var dpath = "", pen = false, lastI = -1;
+      s.data.forEach(function (v, i) {
+        if (!isNum(v)) { pen = false; return; }  // 비숫자점은 건너뛰되(선 끊김) 인덱스/날짜 정렬 유지 — 0으로 채우지 않는다
+        dpath += (pen ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1) + " ";
+        pen = true; lastI = i;
+      });
+      if (dpath) parts.push('<path d="' + dpath.trim() + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>');
+      if (lastI >= 0) parts.push('<circle cx="' + xAt(lastI).toFixed(1) + '" cy="' + yAt(s.data[lastI]).toFixed(1) + '" r="3" fill="' + s.color + '"></circle>');
     });
-    if (!drawn.length) {
-      parts.push('<text x="' + (padL + plotW / 2) + '" y="' + (padT + plotH / 2) + '" text-anchor="middle" font-size="13" fill="#AEBBD0">' + esc(opts.emptyMsg || "표시할 시세 없음 (가짜 선 미표시)") + '</text>');
-    }
     svg.innerHTML = parts.join("");
   }
 
@@ -2065,10 +2157,10 @@
       var period = activeSeg("dwPeriodSeg", "1m");
       var hist = (current.history && current.history[period]) || [];
       var noteEl = el("dwPeriodNote");
-      // 이 종목/기간에 히스토리가 없으면 빈 차트 대신 정직 메시지(가짜 선 금지).
-      if (!hist || hist.length < 2) {
+      // 기간 전환마다 선택 기간의 실데이터 히스토리(≥2 숫자점)를 재평가 — 없으면 빈 차트 대신 정직 메시지(가짜 선 금지).
+      if (!hasPeriodHistory(current, period)) {
         renderLineChart(svg, [], relLabels(period, 7),
-          { yLabel: "", emptyMsg: periodLabel(period) + " 히스토리 미연동 — 표시할 시세 없음 (가짜 선 미표시)" });
+          { yLabel: "", emptyMsg: "선택한 지표는 " + periodLabel(period) + " 기간의 히스토리 차트가 없습니다 (가짜 선 미표시)." });
         el("dwNote").textContent = "이 종목은 " + periodLabel(period) + " 기간 히스토리가 미연동입니다 — 값/선을 생성하지 않습니다(소스 필요).";
         if (noteEl) noteEl.textContent = "선택 기간 미연동 · 현재 체결값 아님";
         return;
