@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "note": "내부 워치리스트 템플릿(예시 더미 행만). 실제 내부 현장/프로젝트/조직 목록은 data/private/site_watchlist.local.json 에 두며 그 파일은 gitignored 되어 절대 커밋되지 않는다. 이 example 파일에는 더미 예시만 담고 실제 스크린샷 전체 목록을 넣지 않는다. 실제 목록 생성은 scripts/prepare_site_watchlist_from_text.py 로 로컬에서 만든다.",
+  "items": [
+    {
+      "id": "domestic_civil_example",
+      "name": "GTX-B 예시",
+      "aliases": ["광역철도 예시"],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "example_template"
+    },
+    {
+      "id": "domestic_building_example",
+      "name": "데이터센터 예시",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "example_template"
+    },
+    {
+      "id": "overseas_plant_example",
+      "name": "해외 플랜트 예시",
+      "aliases": [],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "example_template"
+    }
+  ]
+}

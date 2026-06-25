@@ -45,6 +45,10 @@ from app import lens_queries  # noqa: E402
 # 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
+# 사이트 워치리스트(leaf, P0-D7-M) — 사내 제공 현장/프로젝트명을 제목에서 매칭해 scope/business
+# 렌즈를 단다. 공개 빌드(SITE_WATCHLIST_PATH 미설정)는 공개 샘플만 보고 비공개 목록을 노출하지
+# 않는다 — 제목이 이미 언급한 프로젝트만 태깅하며, 매칭 없는 항목은 모델/HTML에 들어가지 않는다.
+from app import site_watchlist  # noqa: E402
 
 SOURCE_TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 DEFAULT_OUTPUT = "docs/daily/dashboard-latest.html"
@@ -442,6 +446,16 @@ def _lens_for(sig) -> list:
     # 인프라 근거가 없으면 제외한다(안전/규제 기사의 category 오염 차단). 근거가 있을 때만 유지.
     if "ai" in keys and not _has_ai_evidence(raw_title, sig.get("source") or ""):
         keys.discard("ai")
+    # 사이트 워치리스트(D7-M) — raw 제목이 워치리스트 프로젝트명/별칭을 직접 언급하면 그 항목의
+    # scope(국내/해외현장·해외지사·해외법인)와 business 렌즈(토목/건축주택/플랜트/New Energy)를
+    # 더한다. 운영자 워치리스트가 권위 있는 분류라 위의 generic 게이트 discard 이후에 적용한다.
+    for match in site_watchlist.classify_site_lenses(raw_title):
+        scope = match.get("scope")
+        biz = match.get("business_lens")
+        if scope in VALID_LENS:
+            keys.add(scope)
+        if biz and biz in VALID_LENS:
+            keys.add(biz)
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
     return sorted(keys & VALID_LENS)
@@ -478,6 +492,15 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "published_at": sig.get("published_at") or "",
         "source_quality": sig.get("source_quality") or "",
     }
+    # 사이트 워치리스트 매칭 provenance(D7-M) — 제목이 워치리스트 프로젝트명을 실제로 언급한
+    # 행에만 가벼운 출처를 단다. 전체 비공개 목록은 모델에 넣지 않는다(매칭된 항목만, 첫 매칭).
+    site_matches = site_watchlist.classify_site_lenses(sig.get("title") or "")
+    if site_matches:
+        m = site_matches[0]
+        provenance["site_watch_match"] = True
+        provenance["site_watch_scope"] = m.get("scope") or ""
+        provenance["site_watch_business_lens"] = m.get("business_lens") or ""
+        provenance["site_watch_id"] = m.get("id") or ""
     return {
         "tag": tag, "tagClass": tag_class,
         "title": sig.get("title") or "",

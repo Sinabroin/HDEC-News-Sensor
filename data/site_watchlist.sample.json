@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "note": "공개 샘플 워치리스트 — 플레이스홀더 또는 이미 공개된 예시 항목만 담는다. 실제 내부 현장/프로젝트/조직 전체 목록은 여기에 넣지 않는다(프라이버시). 운영자는 data/private/site_watchlist.local.json(gitignored)에 내부 목록을 두고 SITE_WATCHLIST_PATH로 주입한다. 이 샘플은 스키마 예시와 공개 빌드 분류 구조 확인용이며, 어떤 항목도 가짜 기사/카운트를 만들지 않는다.",
+  "schema": {
+    "id": "고유 슬러그",
+    "name": "프로젝트/조직 정식 명칭",
+    "aliases": ["검색 별칭들"],
+    "scope": "domestic_site | overseas_site | overseas_branch | overseas_subsidiary",
+    "business_lens": "civil_infrastructure | building_housing | plant | new_energy (지사/법인은 생략)",
+    "org_unit": "담당 본부/부서",
+    "tier": "1=매 실행 검색, 2/3=날짜별 회전",
+    "public_safe": "공개해도 되는 항목인지",
+    "source": "출처 표기"
+  },
+  "items": [
+    {
+      "id": "domestic_civil_gtx_b_sample",
+      "name": "수도권광역급행철도 B노선",
+      "aliases": ["GTX-B", "GTX B노선"],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": true,
+      "source": "public_sample"
+    },
+    {
+      "id": "domestic_building_dc_sample",
+      "name": "데이터센터 신축 예시 현장",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": true,
+      "source": "public_sample"
+    },
+    {
+      "id": "domestic_new_energy_sample",
+      "name": "해상풍력 발전사업 예시",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "new_energy",
+      "org_unit": "NewEnergy사업부",
+      "tier": 2,
+      "public_safe": true,
+      "source": "public_sample"
+    },
+    {
+      "id": "overseas_civil_neom_sample",
+      "name": "사우디 네옴 프로젝트",
+      "aliases": ["NEOM"],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 1,
+      "public_safe": true,
+      "source": "public_sample"
+    },
+    {
+      "id": "overseas_plant_sample",
+      "name": "해외 플랜트 예시 프로젝트",
+      "aliases": [],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 3,
+      "public_safe": true,
+      "source": "public_sample"
+    },
+    {
+      "id": "overseas_subsidiary_america_sample",
+      "name": "Hyundai America Inc.",
+      "aliases": [],
+      "scope": "overseas_subsidiary",
+      "org_unit": "해외법인",
+      "tier": 2,
+      "public_safe": true,
+      "source": "public_sample"
+    }
+  ]
+}

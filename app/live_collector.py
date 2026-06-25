@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config, lens_queries, source_quality, topic_profiles
+from app import config, lens_queries, site_watchlist, source_quality, topic_profiles
 
 KST = timezone(timedelta(hours=9))
 
@@ -41,12 +41,22 @@ SNIPPET_MAX_LEN = 500
 PRIORITY_LENS_GROUPS = (
     "lens:hyundai_group", "lens:ai", "lens:global_business",
     "lens:overseas_site", "lens:overseas_branch", "lens:overseas_subsidiary",
-    "lens:hormuz",
+    "lens:hormuz", "lens:civil_infrastructure",
 )
 PREFLIGHT_MAX_PER_QUERY = 3
 PREFLIGHT_GROUP_BUDGET = 8
+# P0-D7-M: 사이트 워치리스트 preflight — 내부(private) 현장/프로젝트 목록이 SITE_WATCHLIST_PATH로
+# 주입됐을 때만 site:* 그룹이 등장한다(공개 빌드에서는 no-op). bounded: per-query 2건, 그룹당 10건.
+# 사이트 수집은 운영자가 명시적으로 켠 것이므로 전역 cap에 additive headroom으로 얹는다(아래
+# effective_cap). 공개 빌드는 site 그룹이 0개라 total이 늘지 않는다(CI 게이트 동작 불변).
+SITE_PREFLIGHT_MAX_PER_QUERY = 2
+SITE_PREFLIGHT_GROUP_BUDGET = 10
 # 대시보드 live 수집은 설정된 렌즈 그룹이 충분히 돌도록 전역 상한의 하한을 둔다 — 여전히
 # bounded(per-group/per-query 캡 + dedup 유지)이며 cfg가 더 크면 cfg 값을 따른다(폭주 방지).
+# 공개 빌드 total은 이 값으로 고정한다: 토목(civil)은 우선순위 preflight에서 수집하므로 total을
+# 늘릴 필요가 없고, total을 키우면 분류 파급으로 oil_energy 등 경계 렌즈의 수집-깊이 게이트
+# (verify_lens_search_depth 3f)가 회귀한다. 별도 2차 비즈니스 렌즈 preflight도 같은 이유로
+# 제외한다 — 건축주택/플랜트/New Energy는 분류로 이미 충분히 채워진다(분리 수집 시 total 증가).
 DASHBOARD_MIN_MAX_TOTAL = 120
 
 # X(엑스) 계열은 Day-1 전체 금지 — URL/출처에 이 토큰이 있으면 수집 자체를 건너뛴다.
@@ -404,6 +414,16 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
         max_total = max(max_total, DASHBOARD_MIN_MAX_TOTAL)
     collected_at = datetime.now(KST).isoformat(timespec="seconds")
 
+    # P0-D7-M: 사이트 워치리스트 preflight는 우선순위/main 예산을 잠식하지 않도록 전역 cap에
+    # additive headroom으로 더한다(기본 소스일 때만). 사이트 그룹은 내부(private) 워치리스트가
+    # SITE_WATCHLIST_PATH로 주입됐을 때만 비어 있지 않다(env 게이팅) — 공개 빌드는 0개이므로
+    # effective_cap == max_total 로 total이 늘지 않는다(다른 렌즈 수집 깊이/게이트 불변).
+    by_name = {g["name"]: g for g in query_groups}
+    site_groups = []
+    if sources_path is None:
+        site_groups = site_watchlist.collection_query_groups()
+    effective_cap = max_total + len(site_groups) * SITE_PREFLIGHT_GROUP_BUDGET
+
     seen_urls, results = set(), []
     filtered_urls = set()
     seen_queries = set()
@@ -412,13 +432,12 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
                   filtered_out=filtered_out, filtered_urls=filtered_urls,
                   query_audit=query_audit)
 
-    # 1) 우선순위 preflight (기본 소스일 때만) — 우선순위 렌즈 그룹을 PRIORITY 순서로 얕게
-    #    돌려 전역 budget 소진 전에 audit 가시성을 확보한다. preflight는 group_budget으로
-    #    bounded(len(PRIORITY)×budget)이며 모든 우선순위 그룹이 audit에 등장한다(빈/스킵이어도
+    # 1) 우선순위 preflight (기본 소스일 때만) — 우선순위 렌즈 그룹(토목 포함)을 PRIORITY
+    #    순서로 얕게 돌려 전역 budget 소진 전에 audit 가시성을 확보한다. preflight는 group_budget
+    #    으로 bounded(len(PRIORITY)×budget)이며 모든 우선순위 그룹이 audit에 등장한다(빈/스킵이어도
     #    placeholder 행을 남긴다 — '구성됨'과 '실제 검색됨'을 분리해 보여준다).
     if sources_path is None:
-        by_name = {g["name"]: g for g in query_groups}
-        preflight_cap = min(max_total,
+        preflight_cap = min(effective_cap,
                             len(PRIORITY_LENS_GROUPS) * PREFLIGHT_GROUP_BUDGET)
         for name in PRIORITY_LENS_GROUPS:
             group = by_name.get(name)
@@ -435,12 +454,22 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
                 # fresh 쿼리가 없었던 경우(전부 dedup/캡)에도 그룹은 audit에 보여야 한다.
                 _emit_audit(query_audit, group, "", "skipped", 0, 0, "preflight")
 
-    # 2) Normal 패스 — 모든 그룹을 순서대로 전역 max_total까지. preflight에서 본 쿼리/URL은
-    #    dedup으로 건너뛰므로 중복 수집이 없다.
+        # 1b) 사이트 워치리스트 preflight — private 목록이 있을 때만(env 게이팅). 없으면 site_groups
+        #     가 비어 있어 no-op이며 audit에 site:* 그룹이 등장하지 않는다(가짜로 '돌았다' 주장 안 함).
+        for group in site_groups:
+            emitted = _collect_group(
+                group, max_per_query=SITE_PREFLIGHT_MAX_PER_QUERY,
+                group_budget=SITE_PREFLIGHT_GROUP_BUDGET, global_cap=effective_cap,
+                pass_label="site", **common)
+            if emitted == 0:
+                _emit_audit(query_audit, group, "", "skipped", 0, 0, "site")
+
+    # 2) Normal 패스 — 모든 그룹을 순서대로 전역 cap(effective_cap)까지. preflight에서 본
+    #    쿼리/URL은 dedup으로 건너뛰므로 중복 수집이 없다.
     for group in query_groups:
         _collect_group(group, max_per_query=group["max_per_query"],
-                       group_budget=group["max_total"], global_cap=max_total,
+                       group_budget=group["max_total"], global_cap=effective_cap,
                        pass_label="main", **common)
-        if len(results) >= max_total:
+        if len(results) >= effective_cap:
             break
     return results

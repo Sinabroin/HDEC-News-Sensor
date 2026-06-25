@@ -54,9 +54,12 @@ from scripts.build_static_dashboard import (  # noqa: E402
 )
 
 # Step 7이 명시한 우선순위 렌즈 그룹 — audit에 반드시 등장해야 한다(빈 결과여도).
+# P0-D7-M: 토목(civil_infrastructure)을 우선순위에 추가한다 — '토목 1건' 근본원인이 civil
+# 렌즈 쿼리 그룹이 전역 budget 소진으로 굶어 audit에 안 나온 것(D7-L overseas와 동일 패턴).
 REQUIRED_PRIORITY = (
     "lens:ai", "lens:overseas_branch", "lens:overseas_subsidiary",
     "lens:overseas_site", "lens:global_business", "lens:hyundai_group",
+    "lens:civil_infrastructure",
 )
 
 _failures = []
@@ -105,8 +108,9 @@ def check_collector_static() -> None:
           and isinstance(getattr(lc, "PRIORITY_LENS_GROUPS", None), tuple))
     pri = set(getattr(lc, "PRIORITY_LENS_GROUPS", ()) or ())
     missing = [g for g in REQUIRED_PRIORITY if g not in pri]
-    check("1b: PRIORITY_LENS_GROUPS가 ai/해외지사/해외법인/해외현장/글로벌/현대그룹사 포함",
-          not missing, f"누락: {missing}" if missing else "6/6 포함")
+    check("1b: PRIORITY_LENS_GROUPS가 ai/해외지사/해외법인/해외현장/글로벌/현대그룹사/토목 포함",
+          not missing,
+          f"누락: {missing}" if missing else f"{len(REQUIRED_PRIORITY)}/{len(REQUIRED_PRIORITY)} 포함")
     check("1c: hormuz도 우선순위에 포함(지정학 커버리지)", "lens:hormuz" in pri)
     # preflight 메커니즘: 얕은 패스(per-group budget) + audit pass 라벨.
     check("1d: 우선순위 preflight 패스 존재(_collect_group + pass_label='preflight')",
