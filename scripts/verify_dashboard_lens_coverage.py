@@ -105,12 +105,18 @@ def check_central_policy(tpl: str) -> None:
     missing = [f for f in nav if f not in pol]
     check("0d: 중앙 정책이 모든 nav 렌즈를 커버", not missing,
           f"누락: {missing}" if missing else f"{len(nav)} 렌즈")
-    # 수집 쿼리 그룹은 collector-supported 렌즈만(미연동 렌즈 제외) — 가짜 수집 금지.
+    # 수집 쿼리 그룹은 query 컬렉션 렌즈만 포함한다 — unconfigured는 제외하고,
+    # 새로 구성한 호르무즈/해외지사/해외법인은 포함되어야 한다.
     names = {g.get("name") for g in groups}
-    check("0e: 수집 쿼리 그룹이 supported 렌즈만 포함(미연동 제외)",
-          "lens:hormuz" not in names and "lens:overseas_branch" not in names
-          and any(n and n.startswith("lens:") for n in names),
-          f"{len(groups)} 그룹")
+    required = {f"lens:{k}" for k, v in pol.items() if v.get("collection") == "query"}
+    forbidden = {f"lens:{k}" for k, v in pol.items()
+                 if v.get("collection") == "unconfigured" or v.get("supported") is False}
+    missing = sorted(required - names)
+    bad = sorted(names & forbidden)
+    check("0e: 수집 쿼리 그룹이 query 렌즈만 포함(unconfigured 제외)",
+          not missing and not bad and any(n and n.startswith("lens:") for n in names),
+          f"missing={missing}, forbidden={bad}" if (missing or bad)
+          else f"{len(groups)} 그룹")
 
 
 # ---------------------------------------------------------------------------
@@ -171,8 +177,8 @@ def check_empty_state(tpl: str) -> None:
     check("3a: 렌즈별 빈 상태 함수(emptyDescHtml) 존재", "function emptyDescHtml" in tpl)
     check("3b: 빈 상태가 lens_policy를 사용(렌즈별)", "MODEL.lens_policy" in tpl)
     check("3c: 빈 상태가 수집 쿼리를 노출", "수집 쿼리" in tpl)
-    check("3d: 빈 상태가 live=금일 수집 결과 없음 / mock=데모 표본을 구분",
-          "금일 수집 결과 없음" in tpl and "데모 표본" in tpl)
+    check("3d: 빈 상태가 live=금일 공개뉴스 매칭 결과 없음 / mock=데모 표본을 구분",
+          "금일 공개뉴스 매칭 결과 없음" in tpl and "데모 표본" in tpl)
     check("3e: 빈 상태가 미연동(전용 수집 쿼리 미구성)을 별도 표기",
           "전용 수집 쿼리가 구성되지" in tpl and "collection" in tpl)
     check("3f: 빈 상태 desc에 렌즈별 주입 지점(newsEmptyDesc/aiEmptyDesc) 존재",

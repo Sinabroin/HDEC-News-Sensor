@@ -62,6 +62,10 @@ VALID_LENS = {
     "overseas_subsidiary",
 }
 
+NEWS_ROW_CAP = 20
+LENS_BANK_CAP = 10
+AI_BANK_CAP = 8
+
 # lens 키 → 한국어 라벨 (featured 칩용). nav 라벨과 일치.
 _LENS_LABEL = {
     "now": "즉시 확인", "new": "신규 이슈", "ai": "AI 신호",
@@ -561,7 +565,7 @@ def _bank_counts(lens_banks: dict) -> dict:
 
 def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
                       new_keys: set, ref_date) -> dict:
-    """렌즈별 전용 row bank를 full brief 신호에서 만든다(렌즈당 최대 6건).
+    """렌즈별 전용 row bank를 full brief 신호에서 만든다(렌즈당 최대 LENS_BANK_CAP건).
 
     전역 news_rows와 별도 큐다. exact title 중복만 제거하고, URL 없는 신호는 카드 원문 링크
     계약을 지키기 위해 제외한다. 행 자체는 _row_from_signal/_enrich_row에서만 파생한다.
@@ -570,8 +574,8 @@ def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
     ordered = [s for s in full_pool if _key(s) != fkey and _is_http(s.get("url"))]
     ordered.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
 
-    banks = {k: [] for k in VALID_LENS if k != "ai"}
-    titles = {k: set() for k in VALID_LENS if k != "ai"}
+    banks = {k: [] for k in VALID_LENS}
+    titles = {k: set() for k in VALID_LENS}
     for sig in ordered:
         row = _enrich_row(_row_from_signal(sig, ["new"] if _key(sig) in new_keys else []),
                           sig, ref_date)
@@ -579,7 +583,8 @@ def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
         if not title_key:
             continue
         for lens in row.get("lens") or []:
-            if lens == "ai" or lens not in banks or len(banks[lens]) >= 6:
+            cap = AI_BANK_CAP if lens == "ai" else LENS_BANK_CAP
+            if lens not in banks or len(banks[lens]) >= cap:
                 continue
             if title_key in titles[lens]:
                 continue
@@ -592,7 +597,7 @@ def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
             featured_sig, ref_date)
         ftitle = (featured_row.get("title") or "").strip()
         for lens in featured_row.get("lens") or []:
-            if lens == "ai" or lens not in banks:
+            if lens not in banks:
                 continue
             # 대표 카드만 가진 렌즈도 전용 bank가 비지 않게 하되, 이미 다른 rows가 있으면
             # 메인 카드와 중복 노출하지 않는다.
@@ -600,9 +605,16 @@ def _build_lens_banks(full_pool: list, featured_sig: dict | None, ai_rows: list,
                 banks[lens].append(featured_row)
                 titles[lens].add(ftitle)
 
+    for row in ai_rows or []:
+        title_key = (row.get("title") or "").strip()
+        if not title_key or title_key in titles.get("ai", set()):
+            continue
+        if len(banks.get("ai", [])) >= AI_BANK_CAP:
+            break
+        banks["ai"].append(row)
+        titles["ai"].add(title_key)
+
     banks = {k: v for k, v in banks.items() if v}
-    if ai_rows:
-        banks["ai"] = ai_rows[:6]
     return banks
 
 
@@ -624,25 +636,27 @@ def _derive(brief: dict) -> dict:
     new_keys = {_key(s) for s in new_issues}
     ref_date = _ref_date(brief)  # 신선도 라벨 기준일(brief 기준일) — 가짜 날짜 없음
 
-    # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 6건).
+    # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 AI_BANK_CAP건).
     # 각 행에 임원 실행 정보(왜/관련성/액션/카테고리) 부착 → 일반 테마 % 아닌 의사결정 신호.
     ai_pool = _drop_near_dups([s for s in (brief.get("ai_radar_signals") or [])
                                if _key(s) != fkey])
+    selected_ai_pool = ai_pool[:AI_BANK_CAP]
+    selected_ai_keys = {_key(s) for s in selected_ai_pool}
     ai_rows = [_enrich_row(_ai_enrich(_row_from_signal(s), s), s, ref_date)
-               for s in ai_pool[:6]]
+               for s in selected_ai_pool]
 
     # 뉴스 풀: latest.html 가시 섹션에서 모음(즉시·현대건설·사업·리스크·경쟁·신규·거시) →
-    # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 12건.
+    # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 NEWS_ROW_CAP건.
     pool = _dedup_signals(immediate, hdec, brief.get("business_signals"),
                           brief.get("risk_regulation_signals"),
                           brief.get("competitor_supply_signals"),
                           new_issues, brief.get("macro_economy_signals"))
-    pool = [s for s in pool if _key(s) != fkey]
+    pool = [s for s in pool if _key(s) != fkey and _key(s) not in selected_ai_keys]
     pool.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
     pool = _drop_near_dups(pool)
     news_rows = [_enrich_row(_row_from_signal(s, ["new"] if _key(s) in new_keys else []),
                              s, ref_date)
-                 for s in pool[:12]]
+                 for s in pool[:NEWS_ROW_CAP]]
 
     featured_row = _row_from_signal(featured_sig) if featured_sig else None
     panel_rows = ([featured_row] if featured_row else []) + news_rows
@@ -813,24 +827,29 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     counts = parts["bank_counts"]
     for grp in ("business_lens", "ecosystem"):
         for it in model.get(grp) or []:
-            if it.get("id") == "hormuz":
-                continue  # 미연동 유지 (count=null → '미연동' 배지)
-            it["count"] = counts.get(it.get("id"), 0)
+            pol = policy.get(it.get("id"), {})
+            if pol.get("collection") == "unconfigured" or pol.get("supported") is False:
+                it["count"] = None  # 미연동 유지 (count=null → '미연동' 배지)
+            else:
+                it["count"] = counts.get(it.get("id"), 0)
     new_json = json.dumps(model, ensure_ascii=False, indent=2)
     return html[:m.start()] + m.group(1) + "\n" + new_json + "\n" + m.group(3) + html[m.end():]
 
 
-def _update_nav_counts(html: str, counts: dict) -> str:
+def _update_nav_counts(html: str, counts: dict, policy: dict | None = None) -> str:
     """좌측 nav의 정적 카운트 배지를 실제 분포로 갱신.
 
     기존 템플릿/배포본에 대기 배지처럼 .ncount가 없는 우측 슬롯이 있어도,
-    실제 bank count가 있는 렌즈는 생성 시점에 숫자 배지로 복구한다.
+    실제 bank count가 있는 렌즈는 생성 시점에 숫자 배지로 복구한다. configured query
+    렌즈의 0건은 미연동이 아니라 '금일 없음'으로 표기한다.
     """
+    policy = policy or {}
     out = []
     for line in html.split("\n"):
         mm = re.search(r'data-filter="([^"]+)"', line)
         if mm and mm.group(1) in counts:
-            value = counts[mm.group(1)]
+            key = mm.group(1)
+            value = counts[key]
             if 'class="ncount"' in line:
                 line = re.sub(r'(<span class="ncount">)\d+(</span>)',
                               lambda x: f'{x.group(1)}{value}{x.group(2)}', line, count=1)
@@ -838,6 +857,18 @@ def _update_nav_counts(html: str, counts: dict) -> str:
                 line = re.sub(r'<span class="r">.*?</span></button>',
                               f'<span class="r"><span class="ncount">{value}</span></span></button>',
                               line, count=1)
+            else:
+                pol = policy.get(key) or {}
+                unconfigured = (pol.get("collection") == "unconfigured"
+                                or pol.get("supported") is False)
+                if not unconfigured:
+                    line = re.sub(
+                        r'<span class="r">.*?</span></button>',
+                        '<span class="r"><span class="dm delay" style="font-size:9px;" '
+                        'title="금일 공개뉴스 매칭 결과 없음">금일 없음</span></span></button>',
+                        line,
+                        count=1,
+                    )
         out.append(line)
     return "\n".join(out)
 
@@ -895,7 +926,7 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock") -> str:
     if parts["featured_sig"]:
         html = _inject_featured(html, _render_featured(parts["featured_sig"], parts["featured_row"]))
     html = _inject_model(html, parts, news_mode, market_mode)
-    html = _update_nav_counts(html, parts["nav_counts"])
+    html = _update_nav_counts(html, parts["nav_counts"], lens_queries.policy_for_model())
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
                                   len(parts["news_rows"]) + len(parts["ai_rows"]))
     html = _update_honesty(html, news_mode)

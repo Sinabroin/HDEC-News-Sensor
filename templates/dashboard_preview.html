@@ -537,7 +537,7 @@
       <button class="nav" data-filter="trust_companies"><span class="l"><span class="ndot"></span><span class="nlabel">신탁사</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="developers"><span class="l"><span class="ndot"></span><span class="nlabel">시행사·디벨로퍼</span></span><span class="r"><span class="ncount">0</span></span></button>
       <button class="nav" data-filter="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">2</span></span></button>
-      <button class="nav" data-filter="hormuz"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">호르무즈</span></span><span class="r"><span class="dm unavail" style="font-size:9px;">미연동</span></span></button>
+      <button class="nav" data-filter="hormuz"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">호르무즈</span></span><span class="r"><span class="ncount">0</span></span></button>
 
       <div class="gtitle">실행 범위</div>
       <button class="nav" data-filter="domestic_site"><span class="l"><span class="ndot"></span><span class="nlabel">국내현장</span></span><span class="r"><span class="ncount">2</span></span></button>
@@ -1015,10 +1015,10 @@
     "developers": {"label": "시행사·디벨로퍼", "query": "디벨로퍼·시행사·부동산개발사 수집 쿼리", "supported": true, "note": "부분문자열 오탐 방지 — '시행령' 등에 걸리지 않게 '시행사'만 매칭.", "collection": "query"},
     "oil_energy": {"label": "유가·에너지", "query": "유가·WTI·브렌트·두바이유·LNG 수집 쿼리 (시세는 지연/대용)", "supported": true, "note": "시장 시세는 지연/대용 — 뉴스 신호와 병행.", "collection": "query"},
     "overseas_site": {"label": "해외현장", "query": "해외 현장·해외 EPC·해외 프로젝트 수집 쿼리 (해외수주 신호 연계)", "supported": true, "note": "해외수주·중동 발주 신호(글로벌)와 연계 분류.", "collection": "query"},
-    "hormuz": {"label": "호르무즈", "query": "호르무즈 해협 AIS 통항", "supported": false, "note": "라이브 AIS 미연동 — 정책/키 연동 전 미수집(시세·통항은 데모).", "collection": "unconfigured"},
-    "domestic_site": {"label": "국내현장", "query": "국내 현장 단위 소스", "supported": false, "note": "현장 단위 전용 소스 미연동 — 즉시·리스크 신호에서 간접 연계만, 가짜 결과를 만들지 않음.", "collection": "unconfigured"},
-    "overseas_branch": {"label": "해외지사", "query": "해외지사 단위 소스", "supported": false, "note": "해외지사 단위 전용 소스 미연동 — 연동 시 보강 예정.", "collection": "unconfigured"},
-    "overseas_subsidiary": {"label": "해외법인", "query": "해외법인 단위 소스", "supported": false, "note": "해외법인 단위 전용 소스 미연동 — 연동 시 보강 예정.", "collection": "unconfigured"}
+    "hormuz": {"label": "호르무즈", "query": "호르무즈 해협 원유·LNG·해상운송·지정학 리스크 수집 쿼리", "supported": true, "note": "AIS 통항 직접 수치는 여전히 정책/키 필요 — 공개 뉴스 신호만 수집.", "collection": "query"},
+    "domestic_site": {"label": "국내현장", "query": "건설현장·착공·준공·공사중단·안전사고·공정 지연·민원·인허가 수집 쿼리", "supported": true, "note": "현장 단위 공개 뉴스 쿼리 — 공개 RSS의 현장 키워드만 매칭(가짜 결과 없음).", "collection": "query"},
+    "overseas_branch": {"label": "해외지사", "query": "해외지사·해외영업 네트워크·현지지사 수주 수집 쿼리", "supported": true, "note": "공개 뉴스의 해외지사·해외영업 신호만 수집.", "collection": "query"},
+    "overseas_subsidiary": {"label": "해외법인", "query": "해외법인·현지법인·해외 자회사 EPC 수주 수집 쿼리", "supported": true, "note": "공개 뉴스의 해외법인·현지법인 신호만 수집.", "collection": "query"}
   },
   "metric_indices": [
     {"label": "현대건설 관련", "value": 5.0, "color": "#3F6FA8"},
@@ -1202,7 +1202,7 @@
     {"id": "trust_companies", "label": "신탁사", "desc": "정비사업·PF·책임준공", "count": 0},
     {"id": "developers", "label": "시행사·디벨로퍼", "desc": "PF·분양·시공사 선정", "count": 0},
     {"id": "oil_energy", "label": "유가·에너지", "desc": "유가·연료·발주환경 (지연/대용)", "count": 2},
-    {"id": "hormuz", "label": "호르무즈", "desc": "AIS 하한 추정 · 미연동", "count": null}
+    {"id": "hormuz", "label": "호르무즈", "desc": "공개뉴스 수집 · AIS 직접 수치 별도", "count": 0}
   ],
   "watch_next": [
     {"n": "1", "title": "건설현장 중대재해 특별감독 대상·일정", "desc": "단기 평판·수주 자격 영향 — 국내현장 점검."},
@@ -1290,6 +1290,14 @@
     var flag = r.querySelector(".flag");
     r.innerHTML = (flag ? flag.outerHTML : '') + '<span class="ncount">' + count + '</span>';
     b.removeAttribute("data-waiting");
+    b.removeAttribute("data-empty");
+  }
+  function lensPolicy(key) {
+    return (MODEL.lens_policy || {})[key] || {};
+  }
+  function isUnconfiguredLens(key) {
+    var p = lensPolicy(key);
+    return p.collection === "unconfigured" || p.supported === false;
   }
   if (lensnav) {
     [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
@@ -1339,9 +1347,9 @@
     if (unconfigured) {                                 // 전용 소스 미연동 — '수집했으나 없음'과 구분
       head = '<b>' + esc(p.label) + '</b> 렌즈는 전용 수집 쿼리가 구성되지 않았습니다 (가짜 결과를 만들지 않음).';
     } else if (key === "oil_energy" && live) {
-      head = '<b>' + esc(p.label) + '</b> 렌즈는 시장 탭에서 시세는 연동됨 / 뉴스 신호는 금일 없음.';
-    } else if (live) {                                  // 쿼리는 돌렸으나 금일 매칭 결과 없음
-      head = '<b>' + esc(p.label) + '</b> 렌즈는 쿼리를 수집했으나 오늘 해당 기사가 없습니다 (데모 아님 · 금일 수집 결과 없음).';
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 시장 탭 시세는 연동되어 있으나 금일 공개뉴스 매칭 결과 없음.';
+    } else if (live) {                                  // 쿼리는 돌렸으나 금일 공개뉴스 매칭 결과 없음
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 금일 공개뉴스 매칭 결과 없음 (데모 아님 · 쿼리 수집 완료).';
     } else {                                            // mock 데모 표본에 없음
       head = '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
     }
@@ -1383,10 +1391,10 @@
     });
   }
 
-  /* ---------- 빈 렌즈 분리: count==0 비핵심 렌즈를 '연동 대기 렌즈' 그룹으로 이동 ----------
+  /* ---------- 빈 렌즈 분리: count==0 비핵심 렌즈를 하단 그룹으로 이동 ----------
      제품 규칙(D7-G Part B): 기본 사이드바에 0건 렌즈를 남기지 않는다. 핵심 렌즈(전체/즉시/신규/
-     AI)는 0이어도 항상 표시. 그 외 0건(또는 미연동) 렌즈는 하단 '연동 대기 렌즈'로 옮기고
-     숫자 대신 '연동 대기'/'미연동' 배지를 단다. 가짜 카운트를 만들지 않는다(0=정직). */
+     AI)는 0이어도 항상 표시. collection=query 렌즈의 0건은 '금일 없음', unconfigured만
+     '연동 대기/미연동'으로 표기한다. 가짜 카운트를 만들지 않는다(0=정직). */
   var ESSENTIAL_LENS = { all: 1, now: 1, "new": 1, ai: 1 };
   function syncNavCountsFromBanks() {
     if (!lensnav) return;
@@ -1405,7 +1413,8 @@
       for (var j = i + 1; j < kids.length; j++) {
         if (kids[j].classList && kids[j].classList.contains("gtitle")) break;
         if (kids[j].classList && kids[j].classList.contains("nav")
-            && !kids[j].getAttribute("data-waiting")) { hasPrimary = true; break; }
+            && !kids[j].getAttribute("data-waiting")
+            && !kids[j].getAttribute("data-empty")) { hasPrimary = true; break; }
       }
       node.style.display = hasPrimary ? "" : "none";
     });
@@ -1414,6 +1423,7 @@
     if (!lensnav) return;
     syncNavCountsFromBanks();
     var btns = [].slice.call(lensnav.querySelectorAll(".nav[data-filter]"));
+    var empty = [];
     var waiting = [];
     btns.forEach(function (b) {
       var key = b.getAttribute("data-filter");
@@ -1423,26 +1433,38 @@
         return;                                        // 전용 bank가 있으면 stale 대기 배지를 무시
       }
       var cEl = b.querySelector(".ncount");
-      var unconf = !!b.querySelector(".dm.unavail");    // 이미 미연동 배지(예: 호르무즈)
+      var p = lensPolicy(key);
+      var unconf = isUnconfiguredLens(key)
+        || (!p.collection && !!b.querySelector(".dm.unavail"));
       var count = cEl ? (parseInt(cEl.textContent, 10) || 0) : 0;
       if (count > 0 && !unconf) return;                 // 결과 있는 렌즈는 기본 사이드바 유지
-      b.setAttribute("data-waiting", "1");
       var r = b.querySelector(".r");
-      if (r && !unconf) {
-        if (key === "oil_energy") {
-          r.innerHTML = '<span class="dm delay" style="font-size:9px;" title="시장 탭에서 시세는 연동됨 / 뉴스 신호는 금일 없음">시세 연동</span>';
-        } else {
-          r.innerHTML = '<span class="dm unavail" style="font-size:9px;">연동 대기</span>';
+      if (unconf) {
+        b.setAttribute("data-waiting", "1");
+        if (r) r.innerHTML = '<span class="dm unavail" style="font-size:9px;">연동 대기</span>';
+        waiting.push(b);
+      } else {
+        b.setAttribute("data-empty", "1");
+        if (r) {
+          r.innerHTML = '<span class="dm delay" style="font-size:9px;" title="금일 공개뉴스 매칭 결과 없음">금일 없음</span>';
         }
+        empty.push(b);
       }
-      waiting.push(b);
     });
-    if (!waiting.length) return;
-    var gt = document.createElement("div");
-    gt.className = "gtitle"; gt.id = "lensWaitingTitle";
-    gt.textContent = "연동 대기 렌즈";
-    lensnav.appendChild(gt);
-    waiting.forEach(function (b) { lensnav.appendChild(b); });
+    if (empty.length) {
+      var et = document.createElement("div");
+      et.className = "gtitle"; et.id = "lensEmptyTitle";
+      et.textContent = "금일 공개뉴스 매칭 없음";
+      lensnav.appendChild(et);
+      empty.forEach(function (b) { lensnav.appendChild(b); });
+    }
+    if (waiting.length) {
+      var gt = document.createElement("div");
+      gt.className = "gtitle"; gt.id = "lensWaitingTitle";
+      gt.textContent = "연동 대기 렌즈";
+      lensnav.appendChild(gt);
+      waiting.forEach(function (b) { lensnav.appendChild(b); });
+    }
     hideEmptyGroupTitles(lensnav);
   }
   partitionLensNav();

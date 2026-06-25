@@ -197,9 +197,10 @@ def _merge_lens_query_groups(groups: list[dict], cfg: dict) -> list[dict]:
             "name": group["name"],
             "label": group.get("label") or group["name"],
             "queries": queries,
-            # 보수적 per-query 2건 — 기존 그룹 캡은 바꾸지 않는다. 그룹 총량은 쿼리 수 기준.
-            "max_per_query": min(2, default_per_query),
-            "max_total": max(1, len(queries) * 2),
+            # 렌즈 전용 그룹은 대시보드 bank를 채울 수 있도록만 확장한다.
+            # 전역 cfg max_total guard는 fetch 루프에서 그대로 적용된다.
+            "max_per_query": max(3, min(4, default_per_query)),
+            "max_total": min(32, max(12, len(queries) * 4)),
         })
     if not lens_groups:
         return groups
