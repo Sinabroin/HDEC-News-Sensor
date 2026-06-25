@@ -275,6 +275,18 @@ def _is_weak_hdec_fp(sig) -> bool:
     return not _HDEC_REAL_RE.search(title)
 
 
+# 해외 마커(글로벌/해외현장 렌즈 정밀화용, D7-G Part C) — 명시적 해외 지시어가 없는 행은
+# 섹션/카테고리 분류만으로 '글로벌'에 섞이지 않게 한다(국내 일반 기업뉴스 오염 방지).
+_OVERSEAS_MARKERS = ("중동", "해외", "사우디", "UAE", "카타르", "네옴", "오만", "이라크",
+                     "두바이", "아부다비", "체코", "유럽", "폴란드", "인도네시아", "베트남",
+                     "글로벌", "수출", "팀코리아", "싱가포", "美", "미국", "일본", "인도",
+                     "국제유가", "달러", "EPC")
+
+
+def _has_overseas_marker(text: str) -> bool:
+    return any(m in (text or "") for m in _OVERSEAS_MARKERS)
+
+
 def _lens_for(sig) -> list:
     keys = set(_CATEGORY_LENS.get(sig.get("category"), []))
     keys.update(_SECTION_LENS.get(sig.get("radar_section"), []))
@@ -282,6 +294,13 @@ def _lens_for(sig) -> list:
     for words, lens in _KEYWORD_LENS:
         if any(w in text for w in words):
             keys.add(lens)
+    # 해외 마커가 없으면 글로벌/해외현장 렌즈에서 제외 — 국내 기업뉴스가 섹션 분류만으로
+    # '글로벌'에 섞이지 않게 한다(가짜가 아니라 정밀화 · 다른 렌즈 태그는 유지).
+    # 함정: category_label은 섹션 설명("중동·해외 수주 환경")이라 항상 해외어를 포함한다 →
+    # 기사 고유성 판정은 raw 제목만 본다(섹션 라벨로 도메스틱 기사가 글로벌에 새지 않게).
+    if not _has_overseas_marker(sig.get("title") or ""):
+        keys.discard("global_business")
+        keys.discard("overseas_site")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
     return sorted(keys & VALID_LENS)
@@ -408,6 +427,66 @@ def _ai_enrich(row: dict, sig: dict) -> dict:
     return row
 
 
+# ── 신선도 라벨 + 글로벌 '왜 중요' (D7-G Part B/C) ───────────────────────────
+# 신선도: 표시 행의 실제 published_at를 brief 기준일과 비교해 오늘/최근 7일/최근 30일로 라벨한다.
+# 오래된 기사를 '오늘'로 위장하지 않는다(가짜 날짜 생성 금지) — 31일 초과는 라벨을 생략한다.
+def _ref_date(brief: dict):
+    raw = (brief.get("date_kst") or "").strip()
+    try:
+        return datetime.fromisoformat(raw[:10]).date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _freshness(published_at, ref_date) -> str:
+    if not published_at or ref_date is None:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(published_at))
+    except (TypeError, ValueError):
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    days = (ref_date - dt.astimezone(_KST).date()).days
+    if days <= 0:
+        return "오늘"
+    if days <= 7:
+        return "최근 7일"
+    if days <= 31:
+        return "최근 30일"
+    return ""  # 31일 초과는 '최근'으로 위장하지 않는다
+
+
+# 글로벌(해외사업) 렌즈 행의 '왜 중요' — 첫 매칭 우선. 특징적인 거시 동인(환율/공급망/원가)을
+# 먼저 보고('수주'는 해외기사에 흔해 후순위), 그 외 발주/경쟁/수주로 분류한다. raw 제목/라벨만.
+_GLOBAL_WHY_RULES = [
+    (("환율", "원/달러", "달러 강세", "원화", "강달러", "환리스크"), "환율 부담"),
+    (("호르무즈", "전쟁", "지정학", "제재", "봉쇄", "물류", "차단", "분쟁", "공급망"), "공급망 리스크"),
+    (("유가", "원유", "원자재", "원가", "공사비", "자재", "철강", "구리", "LNG", "가스"), "원가 부담"),
+    (("경쟁", "삼성물산", "대우건설", "GS건설", "DL이앤씨", "포스코이앤씨"), "경쟁사 동향"),
+    (("발주 재개", "입찰", "예산 편성", "발주환경"), "발주 재개"),
+    (("수주", "낙찰", "계약", "MOU", "수주전", "따냈", "선정", "발주처", "발주"), "수주 기회"),
+]
+
+
+def _global_why(sig) -> str:
+    text = f"{sig.get('title') or ''} {sig.get('category_label') or ''}"
+    for words, why in _GLOBAL_WHY_RULES:
+        if any(w in text for w in words):
+            return why
+    return "해외사업 영향"
+
+
+def _enrich_row(row: dict, sig: dict, ref_date) -> dict:
+    """행에 신선도 라벨(있을 때만) + 글로벌 렌즈 '왜 중요'(global_business 태그일 때만) 부착."""
+    fresh = _freshness(sig.get("published_at"), ref_date)
+    if fresh:
+        row["freshness"] = fresh
+    if "global_business" in (row.get("lens") or []):
+        row["whyGlobal"] = _global_why(sig)
+    return row
+
+
 def _metric_indices(sig) -> list:
     comps = sig.get("score_components") or []
     out = []
@@ -457,12 +536,14 @@ def _derive(brief: dict) -> dict:
         featured_sig = pool0[0] if pool0 else None
     fkey = _key(featured_sig)
     new_keys = {_key(s) for s in new_issues}
+    ref_date = _ref_date(brief)  # 신선도 라벨 기준일(brief 기준일) — 가짜 날짜 없음
 
     # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 6건).
     # 각 행에 임원 실행 정보(왜/관련성/액션/카테고리) 부착 → 일반 테마 % 아닌 의사결정 신호.
     ai_pool = _drop_near_dups([s for s in (brief.get("ai_radar_signals") or [])
                                if _key(s) != fkey])
-    ai_rows = [_ai_enrich(_row_from_signal(s), s) for s in ai_pool[:6]]
+    ai_rows = [_enrich_row(_ai_enrich(_row_from_signal(s), s), s, ref_date)
+               for s in ai_pool[:6]]
 
     # 뉴스 풀: latest.html 가시 섹션에서 모음(즉시·현대건설·사업·리스크·경쟁·신규·거시) →
     # 섹션 우선순위(앞쪽=중요)로 모은 뒤 점수 안정 정렬 → 근접 중복 제거 → 상위 9건.
@@ -473,7 +554,8 @@ def _derive(brief: dict) -> dict:
     pool = [s for s in pool if _key(s) != fkey]
     pool.sort(key=lambda s: float(s.get("final_score") or 0), reverse=True)
     pool = _drop_near_dups(pool)
-    news_rows = [_row_from_signal(s, ["new"] if _key(s) in new_keys else [])
+    news_rows = [_enrich_row(_row_from_signal(s, ["new"] if _key(s) in new_keys else []),
+                             s, ref_date)
                  for s in pool[:9]]
 
     featured_row = _row_from_signal(featured_sig) if featured_sig else None

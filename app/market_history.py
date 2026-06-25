@@ -83,11 +83,35 @@ _SUPPORTED = [
     _Spec("copper", "HG=F", 9180.0, 0, 2204.62, 1000, 30000, "USD/t"),
     _Spec("us_5y", "^FVX", 4.22, 2, 1.0, 0, 25, "%"),
     _Spec("us_10y", "^TNX", 4.45, 2, 1.0, 0, 25, "%"),
+    # ── D7-G: 카테고리별 커버리지 확대 — 공개·무료 Yahoo chart로 실제 히스토리를 받는 종목만
+    # 추가한다(심볼은 test-fetch로 검증, 가짜 심볼 없음). PROXY_IDS는 글로벌 벤치마크라 정확한
+    # 국내 현물가가 아니며 템플릿이 '대용(proxy)'으로 표기한다(여기선 시계열만 공급).
+    # 원자재·금속: 알루미늄(COMEX Aluminum, USD/t).
+    _Spec("aluminum", "ALI=F", 2620.0, 0, 1.0, 1000, 6000, "USD/t"),
+    # 철강·건자재: 철광석(62% CFR China TSI)·열연강판(미 Midwest HRC) — 둘 다 글로벌 벤치마크 대용.
+    _Spec("iron_ore", "TIO=F", 100.5, 1, 1.0, 30, 400, "USD/t"),
+    _Spec("hrc_steel", "HRC=F", 1193.0, 0, 1.0, 200, 3000, "USD/t"),
+    # 석탄: 연료탄(API2 ARA, ARGUS-McCloskey) — 국내 도입가 아닌 유럽 인도 벤치마크 대용.
+    _Spec("thermal_coal", "MTF=F", 105.0, 0, 1.0, 30, 600, "USD/t"),
+    # 유가·정제유: 휘발유(RBOB, USD/gal)·경유(난방유 HO×42 = USD/bbl 환산 대용).
+    _Spec("gasoline", "RB=F", 2.34, 2, 1.0, 0.5, 10, "USD/gal"),
+    _Spec("diesel_gasoil", "HO=F", 130.4, 1, 42.0, 30, 400, "USD/bbl"),
+    # 가스·LNG: 헨리허브(USD/MMBtu)·TTF(EUR/MWh).
+    _Spec("henry_hub", "NG=F", 2.86, 2, 1.0, 0.5, 30, "USD/MMBtu"),
+    _Spec("ttf_gas", "TTF=F", 34.5, 1, 1.0, 5, 200, "EUR/MWh"),
+    # 환율: EUR/KRW·GBP/KRW (공개 무료 Yahoo FX).
+    _Spec("eurkrw", "EURKRW=X", 1648.2, 1, 1.0, 800, 4000, "원"),
+    _Spec("gbpkrw", "GBPKRW=X", 2034.9, 1, 1.0, 800, 4000, "원"),
 ]
 _BY_ID = {s.id: s for s in _SUPPORTED}
 
+# 글로벌 벤치마크라 정확한 국내 현물가가 아닌(대용) 연동 종목 — 템플릿이 '대용(proxy)'으로
+# 표기한다(히스토리는 실측이되 국내 현물가 주장 금지). 검증 헬퍼가 참조한다.
+PROXY_IDS = ("iron_ore", "hrc_steel", "thermal_coal", "diesel_gasoil")
+
 # 공개 무료 소스가 없어 기간 히스토리를 연동하지 않는 종목(정직: 소스 필요).
 # US 2Y·KR 10Y는 Yahoo 무료 심볼이 없어 비연동으로 둔다(가짜 값/가짜 선 미생성).
+# 니켈·아연(ZNC=F는 신뢰 불가한 ALTSYMBOL)·원료탄 등은 신뢰 가능한 무료 심볼이 없어 비연동.
 SOURCE_NEEDED_IDS = ("us_2y", "kr_10y")
 
 

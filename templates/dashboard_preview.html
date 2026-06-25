@@ -691,7 +691,7 @@
             <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
             <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
           </div>
-          <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·미 국채 10Y). 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
+          <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·알루미늄·휘발유·헨리허브·EUR/KRW·미 국채 10Y). <b>대용(proxy)</b> 종목(철광석·열연강판·연료탄·경유)은 글로벌 벤치마크라 정확한 국내 현물가가 아닙니다. 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
           <div class="mktcats" id="marketCategories"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
             <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
@@ -1090,16 +1090,13 @@
   "market_items": [
     {"id": "copper", "label_kr": "구리", "en": "Copper", "category": "base_metals", "value": "9,180",
      "unit": "USD/t", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72], "history": {"1w":[9120,9153,9161,9147,9170,9153,9180],"1m":[9060,9069,9057,9001,9097,9052,9025,9020,9038,9051,9062,9100,9148,9087,9109,9164,9135,9195,9165,9211,9162,9180],"3m":[8757,8915,8830,8749,8771,8841,8887,9063,8899,9017,9063,9059,9180],"1y":[7955,8308,8540,8048,8201,8647,8945,8613,8627,8670,9392,9180]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 0},
-    {"id": "aluminum", "label_kr": "알루미늄", "en": "Aluminum", "category": "base_metals", "value": "2,540",
-     "unit": "USD/t", "delta": "▼ 0.3%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,57,56,55,56,55,54,55,54]},
+    {"id": "aluminum", "label_kr": "알루미늄", "en": "Aluminum", "category": "base_metals", "value": "2,620", "unit": "USD/t", "delta": "▼ 0.3%", "dir": "down", "data_mode": "delayed_market", "spark": [58, 57, 58, 56, 57, 56, 55, 56, 55, 54, 55, 54], "history": {"1w": [2607, 2605, 2607, 2610, 2611, 2620, 2620], "1m": [2558, 2590, 2563, 2588, 2590, 2594, 2601, 2586, 2585, 2598, 2600, 2592, 2600, 2593, 2616, 2601, 2608, 2611, 2610, 2607, 2625, 2620], "3m": [2484, 2488, 2482, 2502, 2531, 2523, 2559, 2547, 2550, 2592, 2623, 2628, 2620], "1y": [2276, 2279, 2328, 2388, 2332, 2541, 2511, 2519, 2450, 2492, 2590, 2620]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 0},
     {"id": "nickel", "label_kr": "니켈", "en": "Nickel", "category": "base_metals", "value": null,
      "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "zinc", "label_kr": "아연", "en": "Zinc", "category": "base_metals", "value": "2,710",
      "unit": "USD/t", "delta": "▲ 0.6%", "dir": "up", "data_mode": "proxy_market", "spark": [50,51,50,52,53,52,54,53,55,54,56,55]},
-    {"id": "iron_ore", "label_kr": "철광석", "en": "Iron ore", "category": "steel_materials", "value": "108.5",
-     "unit": "USD/t", "delta": "▼ 0.5%", "dir": "down", "data_mode": "proxy_market", "spark": [64,63,64,62,63,61,62,61,60,61,60,59]},
-    {"id": "hrc_steel", "label_kr": "열연강판", "en": "HRC steel", "category": "steel_materials", "value": "545",
-     "unit": "USD/t", "delta": "▲ 0.4%", "dir": "up", "data_mode": "proxy_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,54]},
+    {"id": "iron_ore", "label_kr": "철광석", "en": "Iron ore", "category": "steel_materials", "value": "100.5", "unit": "USD/t", "delta": "▼ 0.5%", "dir": "down", "data_mode": "proxy_market", "spark": [64, 63, 64, 62, 63, 61, 62, 61, 60, 61, 60, 59], "history": {"1w": [99.9, 100.0, 100.1, 100.2, 100.3, 100.4, 100.5], "1m": [99.0, 98.2, 98.6, 99.5, 98.6, 99.1, 98.8, 99.2, 99.3, 100.0, 100.0, 99.9, 99.3, 99.6, 100.4, 100.5, 99.5, 99.6, 100.0, 99.7, 100.3, 100.5], "3m": [97.5, 95.7, 95.9, 96.4, 98.3, 98.9, 98.8, 97.6, 98.3, 100.2, 101.3, 98.9, 100.5], "1y": [85.0, 88.2, 91.1, 92.7, 92.6, 94.7, 97.9, 96.5, 95.2, 97.5, 101.1, 100.5]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1, "proxy": true, "proxy_note": "62% Fe CFR China(TSI) 글로벌 벤치마크 · 정확한 국내 현물가 아님"},
+    {"id": "hrc_steel", "label_kr": "열연강판", "en": "HRC steel", "category": "steel_materials", "value": "1,193", "unit": "USD/t", "delta": "▲ 0.4%", "dir": "up", "data_mode": "proxy_market", "spark": [48, 49, 48, 50, 49, 51, 50, 52, 51, 53, 52, 54], "history": {"1w": [1188, 1186, 1186, 1191, 1192, 1190, 1193], "1m": [1173, 1178, 1172, 1176, 1170, 1171, 1178, 1181, 1185, 1176, 1175, 1187, 1179, 1191, 1193, 1184, 1188, 1189, 1194, 1193, 1187, 1193], "3m": [1126, 1154, 1146, 1161, 1176, 1154, 1177, 1153, 1181, 1178, 1172, 1170, 1193], "1y": [1082, 1102, 1050, 1114, 1151, 1090, 1151, 1119, 1158, 1123, 1225, 1193]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 0, "proxy": true, "proxy_note": "미 Midwest HRC 선물 · 정확한 국내 현물가 아님"},
     {"id": "rebar", "label_kr": "철근(대용)", "en": "Rebar", "category": "steel_materials", "value": "62.1",
      "unit": "pt", "delta": "▼ 0.4%", "dir": "down", "data_mode": "proxy_market", "spark": [66,65,66,64,63,64,62,63,62,61,62,62]},
     {"id": "scrap_steel", "label_kr": "철스크랩", "en": "Scrap steel", "category": "steel_materials", "value": null,
@@ -1116,22 +1113,17 @@
      "unit": "USD/bbl", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [72,73,72,74,75,74,76,75,77,78,77,79], "history": {"1w":[81.7,81.7,81.6,81.9,81.8,82.0,82.1],"1m":[81.0,80.8,80.5,80.5,81.1,80.6,81.1,81.6,80.9,81.6,81.6,81.2,81.4,81.8,82.0,82.1,81.6,81.5,81.6,81.9,81.7,82.1],"3m":[77.4,79.8,80.1,78.9,79.7,81.1,81.1,79.3,79.8,81.3,82.4,80.9,82.1],"1y":[71.3,73.8,76.2,75.7,74.6,74.9,79.2,80.0,78.4,79.7,80.4,82.1]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "dubai_crude", "label_kr": "두바이유", "en": "Dubai crude", "category": "oil_refined", "value": "80.6",
      "unit": "USD/bbl", "delta": "▲ 0.6%", "dir": "up", "data_mode": "manual_or_reported", "spark": [71,72,71,73,74,73,75,74,76,75,77,76]},
-    {"id": "diesel_gasoil", "label_kr": "경유(가스오일)", "en": "Gasoil (Diesel)", "category": "oil_refined", "value": "96.4",
-     "unit": "USD/bbl", "delta": "▲ 0.5%", "dir": "up", "data_mode": "proxy_market", "spark": [60,61,60,62,63,62,64,63,65,64,66,65]},
-    {"id": "gasoline", "label_kr": "휘발유", "en": "Gasoline", "category": "oil_refined", "value": "2.34",
-     "unit": "USD/gal", "delta": "▲ 0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [54,55,54,56,57,56,58,57,59,58,60,59]},
+    {"id": "diesel_gasoil", "label_kr": "경유(가스오일)", "en": "Gasoil (Diesel)", "category": "oil_refined", "value": "130.4", "unit": "USD/bbl", "delta": "▲ 0.5%", "dir": "up", "data_mode": "proxy_market", "spark": [60, 61, 60, 62, 63, 62, 64, 63, 65, 64, 66, 65], "history": {"1w": [129.8, 129.9, 130.0, 130.3, 129.9, 130.1, 130.4], "1m": [127.2, 128.8, 127.8, 129.2, 127.9, 128.6, 129.0, 128.3, 128.5, 128.9, 128.9, 129.1, 129.8, 128.8, 129.2, 130.0, 130.6, 129.6, 130.5, 130.8, 130.0, 130.4], "3m": [125.9, 124.0, 126.1, 124.1, 124.6, 125.0, 129.4, 129.3, 130.2, 127.6, 129.6, 131.8, 130.4], "1y": [119.6, 120.3, 115.6, 122.5, 118.3, 123.5, 128.2, 126.0, 125.3, 127.4, 129.8, 130.4]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1, "proxy": true, "proxy_note": "미 난방유(ULSD) 환산 대용 · 정확한 국내 경유 현물가 아님"},
+    {"id": "gasoline", "label_kr": "휘발유", "en": "Gasoline", "category": "oil_refined", "value": "2.34", "unit": "USD/gal", "delta": "▲ 0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [54, 55, 54, 56, 57, 56, 58, 57, 59, 58, 60, 59], "history": {"1w": [2.33, 2.33, 2.33, 2.34, 2.34, 2.34, 2.34], "1m": [2.29, 2.3, 2.3, 2.3, 2.3, 2.31, 2.31, 2.31, 2.32, 2.31, 2.33, 2.33, 2.32, 2.32, 2.33, 2.33, 2.32, 2.34, 2.32, 2.34, 2.34, 2.34], "3m": [2.23, 2.27, 2.24, 2.28, 2.29, 2.31, 2.25, 2.27, 2.3, 2.28, 2.35, 2.31, 2.34], "1y": [2.06, 2.16, 2.14, 2.06, 2.16, 2.22, 2.16, 2.25, 2.25, 2.33, 2.33, 2.34]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 2},
     {"id": "jet_kerosene", "label_kr": "항공유(등유)", "en": "Jet · Kerosene", "category": "oil_refined", "value": null,
      "unit": "USD/bbl", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "bunker_fuel", "label_kr": "벙커유", "en": "Bunker fuel", "category": "oil_refined", "value": null,
      "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "lng_jkm", "label_kr": "LNG JKM", "en": "LNG JKM", "category": "gas_lng", "value": "12.4",
      "unit": "USD/MMBtu", "delta": "▲ 1.1%", "dir": "up", "data_mode": "manual_or_reported", "spark": [40,41,42,41,43,44,43,45,44,46,45,47]},
-    {"id": "ttf_gas", "label_kr": "TTF 가스", "en": "TTF", "category": "gas_lng", "value": "34.5",
-     "unit": "EUR/MWh", "delta": "▼ 0.6%", "dir": "down", "data_mode": "proxy_market", "spark": [58,57,58,56,55,56,54,55,53,54,52,53]},
-    {"id": "henry_hub", "label_kr": "헨리허브 가스", "en": "Henry Hub", "category": "gas_lng", "value": "2.86",
-     "unit": "USD/MMBtu", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [36,37,36,38,39,38,40,39,41,40,42,41]},
-    {"id": "thermal_coal", "label_kr": "연료탄(보고)", "en": "Thermal coal", "category": "coal", "value": "118",
-     "unit": "USD/t", "delta": "▼ 0.4%", "dir": "down", "data_mode": "manual_or_reported", "spark": [62,61,62,60,61,59,60,59,58,59,58,57]},
+    {"id": "ttf_gas", "label_kr": "TTF 가스", "en": "TTF", "category": "gas_lng", "value": "34.5", "unit": "EUR/MWh", "delta": "▼ 0.6%", "dir": "down", "data_mode": "delayed_market", "spark": [58, 57, 58, 56, 55, 56, 54, 55, 53, 54, 52, 53], "history": {"1w": [34.2, 34.3, 34.4, 34.4, 34.4, 34.4, 34.5], "1m": [34.1, 34.0, 33.7, 34.0, 33.9, 34.1, 33.9, 34.2, 33.9, 34.4, 34.3, 34.2, 34.3, 34.4, 34.4, 34.4, 34.4, 34.2, 34.4, 34.6, 34.4, 34.5], "3m": [33.3, 33.0, 33.6, 33.0, 33.6, 33.2, 34.2, 34.4, 34.5, 34.1, 34.6, 34.9, 34.5], "1y": [29.9, 30.2, 31.8, 32.6, 30.6, 32.8, 32.2, 32.9, 34.7, 32.8, 34.0, 34.5]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
+    {"id": "henry_hub", "label_kr": "헨리허브 가스", "en": "Henry Hub", "category": "gas_lng", "value": "2.86", "unit": "USD/MMBtu", "delta": "▲ 0.7%", "dir": "up", "data_mode": "delayed_market", "spark": [36, 37, 36, 38, 39, 38, 40, 39, 41, 40, 42, 41], "history": {"1w": [2.84, 2.85, 2.85, 2.86, 2.86, 2.86, 2.86], "1m": [2.83, 2.8, 2.82, 2.82, 2.81, 2.81, 2.83, 2.84, 2.83, 2.82, 2.83, 2.82, 2.82, 2.84, 2.84, 2.86, 2.85, 2.84, 2.86, 2.84, 2.87, 2.86], "3m": [2.73, 2.71, 2.76, 2.78, 2.73, 2.78, 2.76, 2.79, 2.79, 2.81, 2.84, 2.83, 2.86], "1y": [2.46, 2.5, 2.55, 2.66, 2.77, 2.66, 2.6, 2.75, 2.68, 2.9, 2.77, 2.86]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 2},
+    {"id": "thermal_coal", "label_kr": "연료탄(보고)", "en": "Thermal coal", "category": "coal", "value": "105", "unit": "USD/t", "delta": "▼ 0.4%", "dir": "down", "data_mode": "proxy_market", "spark": [62, 61, 62, 60, 61, 59, 60, 59, 58, 59, 58, 57], "history": {"1w": [104, 104, 104, 105, 105, 105, 105], "1m": [103, 103, 103, 103, 104, 104, 104, 104, 104, 104, 104, 104, 105, 104, 104, 105, 105, 105, 105, 105, 104, 105], "3m": [101, 99, 101, 103, 101, 101, 102, 104, 103, 105, 104, 104, 105], "1y": [89, 94, 95, 99, 95, 99, 100, 102, 105, 101, 103, 105]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 0, "proxy": true, "proxy_note": "API2(ARA) 벤치마크 · 정확한 국내 도입가 아님"},
     {"id": "coking_coal", "label_kr": "원료탄", "en": "Coking coal", "category": "coal", "value": null,
      "unit": "USD/t", "delta": "", "dir": "flat", "data_mode": "unavailable", "spark": []},
     {"id": "us_10y", "label_kr": "미 국채 10Y", "en": "US 10Y", "category": "rates_inflation", "value": "4.45",
@@ -1150,12 +1142,10 @@
      "unit": "원", "delta": "▲ +0.5%", "dir": "up", "data_mode": "delayed_market", "spark": [50,51,52,53,52,54,55,56,57,58,59,60], "history": {"1w":[1526.5,1531.0,1527.5,1534.4,1535.3,1533.2,1536.8],"1m":[1515.9,1514.2,1517.2,1516.0,1523.2,1517.9,1510.2,1515.2,1520.5,1526.0,1525.1,1528.6,1522.7,1532.2,1519.5,1531.8,1527.8,1524.3,1536.7,1541.2,1528.6,1536.8],"3m":[1464.1,1482.5,1480.8,1487.3,1468.9,1486.2,1486.1,1530.1,1508.6,1536.6,1537.1,1529.4,1536.8],"1y":[1326.6,1365.5,1436.4,1405.4,1374.3,1463.6,1493.5,1475.0,1492.5,1520.5,1499.6,1536.8]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "jpykrw", "label_kr": "JPY/KRW (100)", "en": "", "category": "fx", "value": "9.74",
      "unit": "원", "delta": "▼ 0.2%", "dir": "down", "data_mode": "delayed_market", "spark": [60,59,60,58,59,57,58,57,56,57,56,56], "history": {"1w":[9.69,9.68,9.69,9.72,9.73,9.73,9.74],"1m":[9.53,9.52,9.64,9.6,9.66,9.64,9.61,9.64,9.58,9.66,9.7,9.6,9.64,9.66,9.67,9.64,9.68,9.76,9.72,9.7,9.78,9.74],"3m":[9.4,9.2,9.43,9.42,9.32,9.48,9.52,9.48,9.74,9.7,9.52,9.78,9.74],"1y":[8.72,8.94,8.45,8.88,8.73,9.43,8.93,9.57,9.12,9.55,9.73,9.74]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 2},
-    {"id": "eurkrw", "label_kr": "EUR/KRW", "en": "", "category": "fx", "value": "1,648.2",
-     "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [52,53,52,54,55,54,56,55,57,56,58,57]},
+    {"id": "eurkrw", "label_kr": "EUR/KRW", "en": "", "category": "fx", "value": "1,648.2", "unit": "원", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [52, 53, 52, 54, 55, 54, 56, 55, 57, 56, 58, 57], "history": {"1w": [1636.0, 1637.6, 1641.1, 1646.0, 1646.1, 1647.9, 1648.2], "1m": [1622.2, 1610.8, 1615.0, 1627.2, 1632.1, 1618.0, 1625.7, 1638.8, 1624.9, 1632.4, 1639.6, 1630.8, 1627.2, 1632.8, 1633.3, 1644.9, 1636.3, 1633.8, 1650.8, 1641.3, 1640.0, 1648.2], "3m": [1561.2, 1557.1, 1609.4, 1598.4, 1623.5, 1621.0, 1609.1, 1623.5, 1603.4, 1637.4, 1658.5, 1618.8, 1648.2], "1y": [1399.9, 1513.2, 1462.3, 1515.7, 1464.4, 1506.1, 1507.9, 1537.0, 1563.3, 1603.7, 1633.6, 1648.2]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "cnykrw", "label_kr": "CNY/KRW", "en": "CNH/KRW", "category": "fx", "value": "211.4",
      "unit": "원", "delta": "▲ +0.2%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,54]},
-    {"id": "gbpkrw", "label_kr": "GBP/KRW", "en": "", "category": "fx", "value": "1,952.0",
-     "unit": "원", "delta": "▲ +0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [46,47,46,48,49,48,50,49,51,50,52,51]},
+    {"id": "gbpkrw", "label_kr": "GBP/KRW", "en": "", "category": "fx", "value": "2,034.9", "unit": "원", "delta": "▲ +0.4%", "dir": "up", "data_mode": "delayed_market", "spark": [46, 47, 46, 48, 49, 48, 50, 49, 51, 50, 52, 51], "history": {"1w": [2021.9, 2020.9, 2026.3, 2028.1, 2028.0, 2030.0, 2034.9], "1m": [2009.0, 2011.4, 1994.5, 1996.4, 2002.2, 2009.6, 2012.0, 2020.0, 2016.3, 2012.5, 2017.4, 2023.1, 2019.2, 2008.4, 2015.3, 2027.3, 2034.4, 2034.3, 2033.3, 2020.8, 2028.9, 2034.9], "3m": [1943.0, 1979.3, 1988.7, 1942.2, 1972.4, 1967.4, 1998.8, 1996.3, 2004.8, 2014.2, 2030.5, 2023.0, 2034.9], "1y": [1767.9, 1849.6, 1809.6, 1791.3, 1890.0, 1936.5, 1892.8, 1876.9, 1994.7, 1961.1, 1973.2, 2034.9]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 1},
     {"id": "chfkrw", "label_kr": "CHF/KRW", "en": "", "category": "fx", "value": "1,712.3",
      "unit": "원", "delta": "▲ +0.1%", "dir": "up", "data_mode": "proxy_market", "spark": [50,50,51,50,52,51,53,52,54,53,55,54]},
     {"id": "cadkrw", "label_kr": "CAD/KRW", "en": "", "category": "fx", "value": "1,121.5",
@@ -1364,6 +1354,51 @@
     });
   }
 
+  /* ---------- 빈 렌즈 분리: count==0 비핵심 렌즈를 '연동 대기 렌즈' 그룹으로 이동 ----------
+     제품 규칙(D7-G Part B): 기본 사이드바에 0건 렌즈를 남기지 않는다. 핵심 렌즈(전체/즉시/신규/
+     AI)는 0이어도 항상 표시. 그 외 0건(또는 미연동) 렌즈는 하단 '연동 대기 렌즈'로 옮기고
+     숫자 대신 '연동 대기'/'미연동' 배지를 단다. 가짜 카운트를 만들지 않는다(0=정직). */
+  var ESSENTIAL_LENS = { all: 1, now: 1, "new": 1, ai: 1 };
+  function hideEmptyGroupTitles(nav) {
+    var kids = [].slice.call(nav.children);
+    kids.forEach(function (node, i) {
+      if (!node.classList || !node.classList.contains("gtitle")
+          || node.id === "lensWaitingTitle") return;
+      var hasPrimary = false;
+      for (var j = i + 1; j < kids.length; j++) {
+        if (kids[j].classList && kids[j].classList.contains("gtitle")) break;
+        if (kids[j].classList && kids[j].classList.contains("nav")
+            && !kids[j].getAttribute("data-waiting")) { hasPrimary = true; break; }
+      }
+      node.style.display = hasPrimary ? "" : "none";
+    });
+  }
+  function partitionLensNav() {
+    if (!lensnav) return;
+    var btns = [].slice.call(lensnav.querySelectorAll(".nav[data-filter]"));
+    var waiting = [];
+    btns.forEach(function (b) {
+      var key = b.getAttribute("data-filter");
+      if (ESSENTIAL_LENS[key]) return;                 // 핵심 렌즈는 항상 기본 사이드바 유지
+      var cEl = b.querySelector(".ncount");
+      var unconf = !!b.querySelector(".dm.unavail");    // 이미 미연동 배지(예: 호르무즈)
+      var count = cEl ? (parseInt(cEl.textContent, 10) || 0) : 0;
+      if (count > 0 && !unconf) return;                 // 결과 있는 렌즈는 기본 사이드바 유지
+      b.setAttribute("data-waiting", "1");
+      var r = b.querySelector(".r");
+      if (r && !unconf) r.innerHTML = '<span class="dm unavail" style="font-size:9px;">연동 대기</span>';
+      waiting.push(b);
+    });
+    if (!waiting.length) return;
+    var gt = document.createElement("div");
+    gt.className = "gtitle"; gt.id = "lensWaitingTitle";
+    gt.textContent = "연동 대기 렌즈";
+    lensnav.appendChild(gt);
+    waiting.forEach(function (b) { lensnav.appendChild(b); });
+    hideEmptyGroupTitles(lensnav);
+  }
+  partitionLensNav();
+
   /* ---------- FEATURED: signal indices ---------- */
   (function () {
     var box = el("idxgrid"); if (!box) return;
@@ -1377,6 +1412,22 @@
   })();
 
   /* ---------- compact signal rows ---------- */
+  // 신선도 칩 — 빌더가 published_at 기준으로 라벨(오늘/최근 7일/최근 30일)을 부착한다.
+  // 오래된 기사를 '오늘'로 위장하지 않기 위함(롤링 백필 행 정직 표기). 값이 없으면 미표시.
+  var FRESH_COLOR = { "오늘": "#3C7A4E", "최근 7일": "#3F6FA8", "최근 30일": "#9C7232" };
+  function freshChip(fresh) {
+    if (!fresh) return "";
+    var c = FRESH_COLOR[fresh] || "#7E8CA6";
+    return '<span class="sep">·</span><span class="frchip" style="color:' + c +
+      '; font-weight:700">' + esc(fresh) + '</span>';
+  }
+  // 글로벌(해외사업) 렌즈 '왜 중요' 칩 — 수주 기회/원가 부담/환율 부담/공급망 리스크/발주 재개/경쟁사 동향.
+  // 빌더가 해외 마커 기사에만 부착(raw 파생). 일반 국내 기사에는 없음.
+  function whyChip(why) {
+    if (!why) return "";
+    return '<span class="sep">·</span><span class="whychip" style="color:#26344D; font-weight:700">해외 · ' +
+      esc(why) + '</span>';
+  }
   function renderRows(targetId, rows) {
     var box = el(targetId); if (!box) return;
     box.innerHTML = "";
@@ -1396,7 +1447,8 @@
         '<div class="smeta"><b style="color:#7E8CA6">' + esc(r.source) + '</b><span class="sep">·</span>' +
         '<span>' + esc(r.time) + '</span><span class="sep">·</span><span>' + esc(r.related) + '</span>' +
         '<span class="sep">·</span><span>' + esc(r.sources) + '</span><span class="sep">·</span>' +
-        '<span style="color:' + esc(r.catColor) + '; font-weight:700">' + esc(r.cat) + '</span></div>' +
+        '<span style="color:' + esc(r.catColor) + '; font-weight:700">' + esc(r.cat) + '</span>' +
+        freshChip(r.freshness) + whyChip(r.whyGlobal) + '</div>' +
         rowLink + '</div>' +
         '<div class="sc"><div><div class="v" style="color:' + esc(r.scoreColor) + '">' + esc(r.score) + '</div>' +
         '<div class="l" style="color:' + esc(r.scoreColor) + '">' + esc(r.scoreLabel) + '</div></div>' +
@@ -1951,7 +2003,9 @@
       // 기간 히스토리가 연동된 종목만 상세 차트를 연다(빈 차트 방지). 행도 비클릭이지만 방어적으로 막는다.
       if (!current || !(current.history && current.history["1m"] && current.history["1m"].length >= 2)) { current = null; return; }
       el("dwTitle").textContent = current.label_kr + (current.unit ? " (" + current.unit + ")" : "");
-      el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기";
+      // 대용(proxy) 종목은 글로벌 벤치마크라 정확한 국내 현물가가 아님을 명시(과장 금지).
+      el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기"
+        + (current.proxy ? " · 대용(proxy) · " + (current.proxy_note || "정확한 국내 현물가 아님") : "");
       el("dwMode").innerHTML = dmBadge(current.data_mode);
       var off = current.value == null;
       var vEl = el("dwVal"); vEl.textContent = off ? "—" : current.value; vEl.className = "v num" + (off ? " off" : "");
