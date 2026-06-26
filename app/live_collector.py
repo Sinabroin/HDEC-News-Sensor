@@ -40,6 +40,10 @@ SNIPPET_MAX_LEN = 500
 # 막고 남은 budget을 그룹 순서대로 돌린다(가짜 수집 없음 — 빈 결과는 audit에 빈/스킵으로 남는다).
 PRIORITY_LENS_GROUPS = (
     "lens:hyundai_group", "lens:ai", "lens:global_business",
+    "trust_companies", "developers",
+    "value_chain:ai_hyperscaler_infra", "value_chain:ai_datacenter_power_cooling",
+    "value_chain:ai_chip_supply_chain", "value_chain:ai_semiconductor_cluster",
+    "value_chain:developer_trust_finance",
     "lens:overseas_site", "lens:overseas_branch", "lens:overseas_subsidiary",
     "lens:hormuz", "lens:civil_infrastructure",
 )

@@ -23,7 +23,7 @@ briefing.py가 build_brief에서 호출하는 표시 전용 분류기다:
 
 import json
 
-from app import article_quality
+from app import ai_value_chain, article_quality
 
 # ---- radar_section 키 (단일 소스) ----
 AI = "ai"
@@ -205,10 +205,12 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
             _hits(raw, RISK_REG_WEAK) and _hits(raw, INDUSTRY_KEYWORDS)):
         return RISK
 
-    # AI는 raw에 직접 AI 인프라 증거가 있을 때만. AI_KEYWORDS는 의도적으로 단독 'ai'·bare
-    # '원전/로봇/자동화'를 제외하므로, AI_NEGATIVE_GUARD(전환사채·종전 등)는 직접 AI 인프라
-    # 증거(데이터센터·SMR 등)가 raw에 함께 있지 않는 한 구조적으로 AI가 될 수 없다.
-    if _hits(raw, AI_KEYWORDS):
+    # AI는 raw에 직접 AI 인프라/칩/반도체 공급망/스마트건설 증거가 있을 때만. 단순 앱·
+    # 챗봇 기능 업데이트 같은 generic AI는 value-chain classifier가 tier5/generic으로
+    # 내려 dashboard 상위 AI 신호가 되지 않는다.
+    vc = ai_value_chain.classify_ai_value_chain(
+        row.get("title") or "", row.get("source") or "", row.get("snippet") or "")
+    if ai_value_chain.is_executive_ai_candidate(vc) or _hits(raw, AI_KEYWORDS):
         return AI
 
     has_macro = _hits(raw, MACRO_KEYWORDS)

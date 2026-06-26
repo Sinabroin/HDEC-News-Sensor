@@ -17,7 +17,7 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from app import (
-    article_quality, config, db, decision_relevance, insight, macro_snapshot,
+    ai_value_chain, article_quality, config, db, decision_relevance, insight, macro_snapshot,
     market_snapshot, radar, risk_events, scoring, source_quality, surface_contracts,
     topic_profiles,
 )
@@ -383,6 +383,7 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "rank": rank,
         "article_id": row["id"],
         "title": row["title"],
+        "snippet": row.get("snippet") or "",
         "source": row.get("source") or "출처 미상",
         # 임원 표시용 출처 — 집계 호스트(v.daum.net 등)는 'Daum 경유'로 정규화 (P0-C1.11).
         # raw source 필드는 위에 그대로 보존한다 (내부/감사용).
@@ -412,6 +413,12 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "spread": spread,
         "url": row.get("url"),
     }
+    vc = ai_value_chain.classify_ai_value_chain(
+        row.get("title") or "", row.get("source") or "", row.get("snippet") or "")
+    entry["is_ai_value_chain"] = vc["is_ai_value_chain"]
+    entry["ai_value_chain_layer"] = vc["ai_value_chain_layer"]
+    entry["hdec_relevance_tier"] = vc["hdec_relevance_tier"]
+    entry["ai_value_chain_reason"] = vc["reason"]
     # 임원 의사결정 관련성 (P0-C1.12) — primary/secondary 임원 섹션 + 티어/사유.
     # 표시·랭킹 가드레일이며 점수/등급을 재계산하지 않는다 (decision_relevance가 단일 소유).
     if decision:
@@ -848,7 +855,8 @@ def _supplement_ai_tab(ai_entries: list[dict],
         if entry.get("article_id") in seen_ids:
             continue
         decision = surface_contracts.decide_ai_supplement(
-            {"title": entry.get("title") or ""})
+            {"title": entry.get("title") or "", "source": entry.get("source") or "",
+             "snippet": entry.get("snippet") or ""})
         if decision.eligible:
             candidates.append((decision.tier, order, entry))
     candidates.sort(key=lambda c: (c[0], c[1]))
@@ -1754,8 +1762,13 @@ def build_brief(pipeline_counts: dict | None = None,
         d = decisions[r["id"]]
         prof = _top_exposure_profile(r, d)
         flags = prof["top_exposure_flags"]
+        vc = ai_value_chain.classify_ai_value_chain(
+            r.get("title") or "", r.get("source") or "", r.get("snippet") or "")
+        vc_key = ai_value_chain.hdec_relevance_sort_key(vc)
         return (
             prof["top_exposure_penalty"],
+            vc_key[0],
+            vc_key[1],
             1 if d.get("supplier_only") else 0,
             0 if (d.get("hdec_direct") or "direct_project_signal" in flags) else 1,
             -(r.get("final_score") or 0),

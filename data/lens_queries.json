@@ -7,6 +7,90 @@
     "derived": "등급/신규 판정에서 파생 — 별도 수집 쿼리 아님",
     "unconfigured": "전용 수집 소스 미연동 — 가짜 결과를 만들지 않음"
   },
+  "collection_groups": {
+    "ai_hyperscaler_infra": {
+      "name": "value_chain:ai_hyperscaler_infra",
+      "label": "AI 하이퍼스케일러 인프라",
+      "enabled": true,
+      "collect": [
+        "OpenAI AI chip",
+        "오픈AI 자체 AI 칩",
+        "OpenAI Broadcom chip",
+        "OpenAI data center power",
+        "OpenAI AI data center",
+        "Anthropic Claude AI data center",
+        "앤트로픽 클로드 AI 데이터센터",
+        "Anthropic AI infrastructure",
+        "Microsoft AI data center power",
+        "Amazon AWS AI data center power",
+        "Google AI data center power",
+        "Meta AI data center power",
+        "Oracle AI data center",
+        "하이퍼스케일러 AI 데이터센터 전력"
+      ]
+    },
+    "ai_datacenter_power_cooling": {
+      "name": "value_chain:ai_datacenter_power_cooling",
+      "label": "AI 데이터센터 전력·냉각",
+      "enabled": true,
+      "collect": [
+        "AI 데이터센터 전력 인프라",
+        "AI 데이터센터 냉각",
+        "AI 데이터센터 EPC",
+        "AI 데이터센터 부지",
+        "AI 데이터센터 송전 변전",
+        "AI 데이터센터 버스덕트 케이블",
+        "AI 데이터센터 SMR 원전",
+        "AI 데이터센터 가스발전",
+        "데이터센터 전력망 투자"
+      ]
+    },
+    "ai_chip_supply_chain": {
+      "name": "value_chain:ai_chip_supply_chain",
+      "label": "AI 칩·반도체 공급망",
+      "enabled": true,
+      "collect": [
+        "AI 칩 자체 개발",
+        "custom AI chip Broadcom",
+        "TSMC AI chip price",
+        "AI 반도체 파운드리",
+        "HBM AI 데이터센터",
+        "SK하이닉스 HBM 데이터센터",
+        "삼성전자 AI 반도체 파운드리",
+        "Micron Anthropic AI infrastructure"
+      ]
+    },
+    "ai_semiconductor_cluster": {
+      "name": "value_chain:ai_semiconductor_cluster",
+      "label": "반도체 클러스터 인프라",
+      "enabled": true,
+      "collect": [
+        "반도체 클러스터 전력 인프라",
+        "용인 반도체 클러스터 전력"
+      ]
+    },
+    "developer_trust_finance": {
+      "name": "value_chain:developer_trust_finance",
+      "label": "시행사·신탁사 PF",
+      "enabled": true,
+      "collect": [
+        "부동산 시행사 PF",
+        "시행사 건설사 수주",
+        "디벨로퍼 개발사업 PF",
+        "신탁사 책임준공",
+        "부동산신탁 PF 리스크",
+        "책임준공 신탁 건설사",
+        "책준 신탁사 건설",
+        "한국토지신탁 개발사업",
+        "한국토지신탁 정비사업",
+        "한국자산신탁 책임준공",
+        "코람코 부동산신탁 개발사업",
+        "교보자산신탁 책임준공",
+        "무궁화신탁 개발사업",
+        "대한토지신탁 PF"
+      ]
+    }
+  },
   "lenses": {
     "now": {
       "label": "즉시 확인",

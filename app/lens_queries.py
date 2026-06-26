@@ -26,6 +26,11 @@ _COLLECTION_GROUP_PRIORITY = {
     # D7-J: keep Hyundai Group lens query audit visible even when the global live
     # collector cap is reached by earlier high-volume lenses.
     "hyundai_group": -100,
+    "value_chain:ai_hyperscaler_infra": -80,
+    "value_chain:ai_datacenter_power_cooling": -79,
+    "value_chain:ai_chip_supply_chain": -78,
+    "value_chain:ai_semiconductor_cluster": -77,
+    "value_chain:developer_trust_finance": -76,
 }
 
 
@@ -41,6 +46,11 @@ def _load() -> dict:
 def _lenses() -> dict:
     lenses = _load().get("lenses")
     return lenses if isinstance(lenses, dict) else {}
+
+
+def _extra_collection_groups() -> dict:
+    groups = _load().get("collection_groups")
+    return groups if isinstance(groups, dict) else {}
 
 
 def policy_for_model() -> dict:
@@ -99,6 +109,26 @@ def collection_query_groups() -> list:
             continue
         groups.append({
             "name": f"lens:{key}",
+            "label": spec.get("label") or key,
+            "queries": queries,
+        })
+    extra_items = list(enumerate(_extra_collection_groups().items()))
+
+    def _extra_priority(item):
+        idx, (key, spec) = item
+        name = spec.get("name") if isinstance(spec, dict) else None
+        return (_COLLECTION_GROUP_PRIORITY.get(name or f"value_chain:{key}", 0), idx)
+
+    extra_items.sort(key=_extra_priority)
+    for _idx, (key, spec) in extra_items:
+        if not isinstance(spec, dict) or spec.get("enabled") is False:
+            continue
+        queries = [q for q in (spec.get("collect") or []) if isinstance(q, str) and q.strip()]
+        if not queries:
+            continue
+        name = spec.get("name") or f"value_chain:{key}"
+        groups.append({
+            "name": name,
             "label": spec.get("label") or key,
             "queries": queries,
         })

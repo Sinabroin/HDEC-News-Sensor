@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "note": "AI 밸류체인 분류 정책 — 엔진/정책 분리(P0-D7-S2). app/ai_value_chain.py는 결정적 분류 로직(엔진)만 두고, 도메인 키워드(정책)는 전부 이 파일에서 로드한다. 가짜 매칭 금지: 이 파일이 없거나 깨지면 엔진은 빈 키워드로 최소 no-match(전부 irrelevant) 동작한다. layers=선언 매니페스트, term_groups=분류 키워드, lens_mapping=레이어별 기본 대시보드 렌즈(조건부 정밀화는 엔진 로직), tier_policy=현대건설 관련성 티어 설명.",
+  "layers": [
+    "hyperscaler_model",
+    "custom_ai_chip",
+    "ai_semiconductor_supply",
+    "ai_datacenter_power",
+    "ai_datacenter_cooling",
+    "ai_datacenter_construction",
+    "semiconductor_cluster_infra",
+    "development_finance",
+    "smart_construction_ai",
+    "generic_ai",
+    "irrelevant"
+  ],
+  "term_groups": {
+    "hdec_terms": [
+      "현대건설", "현대 건설", "현대엔지니어링", "현대ENG", "현대 ENG",
+      "Hyundai E&C", "Hyundai Engineering", "힐스테이트", "디에이치", "HDEC",
+      "현대그룹", "현대차그룹", "현대자동차그룹"
+    ],
+    "hyperscaler_terms": [
+      "OpenAI", "오픈AI", "오픈 AI", "Anthropic", "앤트로픽", "Claude", "클로드",
+      "Google", "구글", "Microsoft", "마이크로소프트", "Amazon", "AWS",
+      "Meta", "메타", "Oracle", "오라클", "xAI"
+    ],
+    "chip_terms": [
+      "NVIDIA", "엔비디아", "AMD", "Broadcom", "브로드컴", "TSMC", "파운드리",
+      "ASIC", "AI chip", "AI 칩", "AI칩", "자체 AI 칩", "자체 AI칩",
+      "custom AI chip", "HBM", "SK하이닉스", "SK 하이닉스", "삼성전자",
+      "Micron", "마이크론", "메모리", "전력반도체", "AI 반도체", "반도체"
+    ],
+    "custom_chip_terms": [
+      "자체 AI 칩", "자체 AI칩", "custom AI chip", "ASIC", "Broadcom", "브로드컴",
+      "AI 칩 직접", "AI칩 직접", "AI 칩 자체", "AI칩 자체"
+    ],
+    "datacenter_terms": [
+      "AI 데이터센터", "데이터센터", "데이터 센터", "data center", "datacenter", "IDC"
+    ],
+    "power_terms": [
+      "전력", "전력망", "전력 인프라", "송전", "송배전", "변전", "계통",
+      "그리드", "grid", "power", "transformer", "변압기"
+    ],
+    "cooling_terms": ["냉각", "쿨링", "cooling", "수처리", "액침", "수냉"],
+    "construction_terms": [
+      "EPC", "시공", "건설", "공사", "신축", "발주", "수주", "계약", "capex",
+      "투자", "부지", "입지", "토지", "site", "land", "시설", "임대", "lease",
+      "자금 조달", "자금조달", "financing", "확장", "착공", "준공"
+    ],
+    "energy_plant_terms": ["SMR", "소형모듈원자로", "원전", "가스발전", "LNG", "발전소"],
+    "cable_terms": ["케이블", "전선", "버스덕트", "busduct", "bus duct"],
+    "semiconductor_cluster_terms": [
+      "반도체 클러스터", "semiconductor cluster", "용인 반도체", "팹", "fab",
+      "공장", "라인 증설", "증설", "파운드리 투자", "생산시설", "산단"
+    ],
+    "developer_terms": [
+      "시행사", "디벨로퍼", "개발사업", "부동산개발", "부동산 개발", "PF",
+      "브릿지론", "본PF", "프로젝트 파이낸싱", "리츠", "REITs"
+    ],
+    "developer_lens_terms": [
+      "시행사", "디벨로퍼", "부동산개발", "부동산 개발", "PF", "브릿지론",
+      "본PF", "프로젝트 파이낸싱"
+    ],
+    "trust_terms": [
+      "신탁사", "부동산신탁", "책임준공", "책준", "한국토지신탁", "한국자산신탁",
+      "코람코", "교보자산신탁", "무궁화신탁", "대한토지신탁", "토지신탁", "자산신탁"
+    ],
+    "pipeline_terms": [
+      "시공사", "건설사", "수주", "착공", "준공", "공사비", "인허가", "부실",
+      "리스크", "연체", "정비사업", "개발사업", "도시개발", "물류", "주택",
+      "데이터센터", "반도체", "클러스터"
+    ],
+    "smart_construction_terms": [
+      "AI 로봇", "AI로봇", "주차로봇", "건설로봇", "건설 로봇", "현장 AI",
+      "건설 AI", "스마트건설", "스마트 건설", "BIM", "디지털트윈", "디지털 트윈",
+      "안전관리 AI", "영상인식", "자율시공", "자동화", "로보틱스"
+    ],
+    "generic_ai_terms": [
+      "인공지능", "생성형 AI", "챗봇", "chatbot", "모델", "model", "LLM",
+      "클로드", "Claude", "GPT", "앱", "기능 업데이트"
+    ],
+    "stock_noise_terms": [
+      "주가", "급등", "급락", "관련주", "테마주", "수혜주", "ETF", "코인",
+      "토큰", "비트코인", "종목", "매수", "목표가", "증시", "시총"
+    ],
+    "housing_terms": ["아파트", "주택", "디에이치", "힐스테이트", "주거", "공동주택"],
+    "global_terms": [
+      "OpenAI", "Anthropic", "Claude", "Google", "Microsoft", "Amazon", "AWS",
+      "Meta", "Oracle", "xAI", "미국", "북미", "글로벌", "해외", "싱가포르",
+      "일본", "유럽", "사우디", "UAE", "오픈AI", "앤트로픽", "클로드", "구글",
+      "마이크로소프트", "아마존", "메타", "오라클"
+    ],
+    "custom_chip_markers": ["직접", "자체", "Broadcom", "브로드컴", "AI chip", "AI 칩", "AI칩"],
+    "semi_infra_markers": ["인프라", "부지", "토지"],
+    "smart_ai_markers": ["AI", "로봇", "BIM", "디지털트윈", "영상인식"],
+    "chip_supply_markers": ["HBM", "파운드리", "메모리", "AI 반도체"],
+    "model_markers": ["클로드", "Claude", "GPT", "챗봇", "모델"],
+    "dc_power_plant_markers": ["EPC", "발전", "플랜트"],
+    "dc_cooling_plant_markers": ["EPC", "설비", "플랜트"],
+    "dc_construction_dev_markers": ["부지", "입지", "토지", "자금", "PF", "개발", "임대", "시설"],
+    "dc_construction_epc_markers": ["EPC", "시공", "건설", "공사", "수주", "발주"],
+    "semi_cluster_plant_markers": ["fab", "팹", "공장", "EPC", "플랜트", "전력"],
+    "safety_quality_markers": ["안전", "품질", "영상인식", "안전관리"]
+  },
+  "lens_mapping": {
+    "hyperscaler_model": [],
+    "custom_ai_chip": ["ai"],
+    "ai_semiconductor_supply": ["ai"],
+    "ai_datacenter_power": ["ai", "new_energy"],
+    "ai_datacenter_cooling": ["ai", "new_energy"],
+    "ai_datacenter_construction": ["ai"],
+    "semiconductor_cluster_infra": ["ai", "civil_infrastructure", "new_energy"],
+    "development_finance": ["development_business"],
+    "smart_construction_ai": ["ai"],
+    "generic_ai": [],
+    "irrelevant": []
+  },
+  "lens_mapping_note": "각 레이어의 무조건(base) 대시보드 렌즈. global_business/plant/developers/trust_companies/building_housing/safety_quality 등 문맥 조건부 렌즈는 엔진(recommended_lenses)이 term_groups 기준으로 정밀화해 추가한다 — 'by context / when relevant'. development_finance의 developers·trust_companies는 조건부라 base에 넣지 않는다.",
+  "tier_policy": {
+    "1": "현대건설 직접 — AI/데이터센터/칩·반도체 공급/스마트건설/반도체 클러스터 직접 연관",
+    "2": "하이퍼스케일러 데이터센터 — 전력·냉각·capex·부지·EPC 등 건설 발주 가능 AI 인프라",
+    "3": "AI 칩·HBM·반도체 공급망·반도체 클러스터 인프라 (건설 영향 잠재)",
+    "4": "시행사·신탁사·PF 건설 파이프라인",
+    "5": "일반 AI·저관련 (대시보드 상위 AI 신호 아님)"
+  }
+}

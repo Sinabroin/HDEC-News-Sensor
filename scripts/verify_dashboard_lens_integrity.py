@@ -27,7 +27,8 @@ deterministic regardless of mock/live data):
   · irrelevant consumer product  → no lens → excluded.
   · AI parking robot apartment   → lens includes building_housing AND ai.
   · generic residential article  → conservative construction lens (building_housing), not empty.
-  · pure non-construction AI      → not tagged ai (gate prevents over-tagging) → excluded.
+  · generic chatbot/app update   → not tagged ai (gate prevents over-tagging) → excluded.
+  · AI semiconductor supply      → ai lens (value-chain coverage), not fake construction lens.
 """
 
 import json
@@ -189,10 +190,10 @@ def check_synthetic() -> None:
     check("C3: 정밀렌즈 없는 주거 기사 → 폴백 building_housing(빈 렌즈 방지)",
           c3 == {"building_housing"} and bsd._has_dashboard_lens(resi), f"lens={sorted(c3)}")
 
-    # C4: 비건설 순수 AI → ai 미태깅(과태깅 방지) → 제외.
-    pure_ai = _syn("삼성전자, AI 반도체 신제품 공개")
+    # C4: generic AI app/model update → ai 미태깅(과태깅 방지) → 제외.
+    pure_ai = _syn("오픈AI 챗봇 앱 기능 업데이트")
     c4 = set(bsd._lens_for(pure_ai))
-    check("C4: 비건설 순수 AI → ai 미태깅 + 콘텐츠 렌즈 없음(제외)",
+    check("C4: generic AI 앱 업데이트 → ai 미태깅 + 콘텐츠 렌즈 없음(제외)",
           "ai" not in c4 and not bsd._has_dashboard_lens(pure_ai), f"lens={sorted(c4)}")
 
     # C6: 이미 정밀 렌즈가 있는 기사는 주거어가 있어도 building_housing 폴백을 받지 않는다
@@ -201,6 +202,13 @@ def check_synthetic() -> None:
     c6 = set(bsd._lens_for(precise))
     check("C6: 정밀렌즈 보유 기사는 building_housing 폴백 비적용(plant 유지)",
           "plant" in c6 and "building_housing" not in c6, f"lens={sorted(c6)}")
+
+    # C7: AI 반도체 공급망은 새 가치사슬 범위로 AI 렌즈에 들어온다. 단 전력/클러스터/EPC
+    # 맥락이 없으면 건설 렌즈를 가짜로 붙이지 않는다.
+    semi = _syn("삼성전자, AI 반도체 신제품 공개")
+    c7 = set(bsd._lens_for(semi))
+    check("C7: AI 반도체 공급망 → ai 렌즈, 무근거 건설 렌즈 없음",
+          c7 == {"ai"} and bsd._has_dashboard_lens(semi), f"lens={sorted(c7)}")
 
 
 def main() -> int:

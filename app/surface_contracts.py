@@ -7,6 +7,8 @@ explicit placeholders so future migrations have a central contract boundary.
 
 from dataclasses import asdict, dataclass, field
 
+from app import ai_value_chain
+
 
 @dataclass
 class SurfaceDecision:
@@ -294,6 +296,21 @@ def decide_ai_tab(article: dict) -> SurfaceDecision:
             matched_terms=title_exclusions,
         )
 
+    vc = ai_value_chain.classify_ai_value_chain(
+        title, article.get("source") or "", snippet)
+    if ai_value_chain.is_executive_ai_candidate(vc):
+        layer = vc["ai_value_chain_layer"]
+        tier = int(vc["hdec_relevance_tier"])
+        return SurfaceDecision(
+            surface="ai_tab",
+            eligible=True,
+            reason_code=f"ai_tab.accept.value_chain.tier{tier}.{layer}",
+            public_reason="AI 밸류체인·현대건설 관련 실행 신호",
+            operator_note=vc["reason"],
+            matched_terms=[layer],
+            tier=tier,
+        )
+
     if not strong_title:
         return _decision(
             eligible=False,
@@ -340,20 +357,42 @@ def decide_ai_supplement(article: dict) -> SurfaceDecision:
     title = article.get("title") or ""
     primary = _matches(title, AI_SUPPLEMENT_PRIMARY_PATTERNS)
     reject = _matches(title, AI_SUPPLEMENT_REJECT_PATTERNS)
+    vc = ai_value_chain.classify_ai_value_chain(
+        title, article.get("source") or "", article.get("snippet") or "")
 
-    if reject or not primary:
+    if reject:
         return SurfaceDecision(
             surface="ai_tab_supplement",
             eligible=False,
-            reason_code=("ai_tab.supplement.reject.mixed_or_stock_noise"
-                         if reject else
-                         "ai_tab.supplement.reject.not_ai_primary"),
+            reason_code="ai_tab.supplement.reject.mixed_or_stock_noise",
             public_reason="AI 탭 보충 기준 미충족",
-            operator_note=("mixed business / stock noise in title"
-                           if reject else
-                           "no AI/DC/smart-construction primary signal in title"),
+            operator_note="mixed business / stock noise in title",
             severity="review",
-            matched_terms=reject or [],
+            matched_terms=reject,
+        )
+
+    if not primary and ai_value_chain.is_executive_ai_candidate(vc):
+        tier = int(vc["hdec_relevance_tier"])
+        return SurfaceDecision(
+            surface="ai_tab_supplement",
+            eligible=True,
+            reason_code=f"ai_tab.supplement.accept.value_chain.tier{tier}",
+            public_reason="AI 밸류체인 보충 신호",
+            operator_note=vc["reason"],
+            severity="info",
+            matched_terms=[vc["ai_value_chain_layer"]],
+            tier=tier,
+        )
+
+    if not primary:
+        return SurfaceDecision(
+            surface="ai_tab_supplement",
+            eligible=False,
+            reason_code="ai_tab.supplement.reject.not_ai_primary",
+            public_reason="AI 탭 보충 기준 미충족",
+            operator_note="no AI/DC/smart-construction primary signal in title",
+            severity="review",
+            matched_terms=[],
         )
 
     has_dc = bool(_matches(title, AI_SUPPLEMENT_DC_TERMS))

@@ -41,7 +41,7 @@ for _p in (ROOT, SCRIPTS_DIR):
 from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 # 중앙 렌즈 쿼리 정책(단일 소스) — leaf는 app.config/DB/네트워크를 건드리지 않아 bootstrap
 # 전에 import해도 안전하다(config의 DB_PATH 캐시 트랩 회피). 정책=대시보드+수집기 공유.
-from app import lens_queries  # noqa: E402
+from app import ai_value_chain, lens_queries  # noqa: E402
 # 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
@@ -389,7 +389,10 @@ def _is_weak_hdec_fp(sig) -> bool:
 _OVERSEAS_MARKERS = ("중동", "해외", "사우디", "UAE", "카타르", "네옴", "오만", "이라크",
                      "두바이", "아부다비", "체코", "유럽", "폴란드", "인도네시아", "베트남",
                      "글로벌", "수출", "팀코리아", "싱가포", "美", "미국", "일본", "인도",
-                     "국제유가", "달러", "EPC")
+                     "국제유가", "달러", "EPC", "OpenAI", "오픈AI", "Anthropic", "앤트로픽",
+                     "Claude", "클로드", "Google", "구글", "Microsoft", "마이크로소프트",
+                     "Amazon", "AWS", "Meta", "메타", "Oracle", "오라클", "xAI",
+                     "Broadcom", "브로드컴", "NVIDIA", "엔비디아", "TSMC")
 
 
 def _has_overseas_marker(text: str) -> bool:
@@ -461,7 +464,12 @@ def _is_overseas_subsidiary_relevant(title: str) -> bool:
 def _lens_for(sig) -> list:
     keys = set(_CATEGORY_LENS.get(sig.get("category"), []))
     keys.update(_SECTION_LENS.get(sig.get("radar_section"), []))
-    text = f"{sig.get('title') or ''} {sig.get('category_label') or ''}"
+    raw_title = sig.get("title") or ""
+    raw_source = sig.get("source") or ""
+    raw_snippet = sig.get("snippet") or ""
+    value_chain = ai_value_chain.classify_ai_value_chain(raw_title, raw_source, raw_snippet)
+    keys.update(ai_value_chain.recommended_lenses(raw_title, raw_source, raw_snippet))
+    text = f"{raw_title} {sig.get('category_label') or ''}"
     for words, lens in _KEYWORD_LENS:
         if any(w in text for w in words):
             keys.add(lens)
@@ -473,8 +481,11 @@ def _lens_for(sig) -> list:
     # '글로벌'에 섞이지 않게 한다(가짜가 아니라 정밀화 · 다른 렌즈 태그는 유지).
     # 함정: category_label은 섹션 설명("중동·해외 수주 환경")이라 항상 해외어를 포함한다 →
     # 기사 고유성 판정은 raw 제목만 본다(섹션 라벨로 도메스틱 기사가 글로벌에 새지 않게).
-    raw_title = sig.get("title") or ""
     if not _has_overseas_marker(raw_title):
+        keys.discard("global_business")
+        keys.discard("overseas_site")
+    if value_chain.get("ai_value_chain_layer") == ai_value_chain.LAYER_GENERIC_AI:
+        keys.discard("ai")
         keys.discard("global_business")
         keys.discard("overseas_site")
     # 해외지사/해외법인 렌즈(D7-L) — 조직/법인격 마커가 raw 제목에 있을 때만 분류한다. broad
@@ -490,7 +501,9 @@ def _lens_for(sig) -> list:
         keys.discard("overseas_subsidiary")
     # AI 렌즈(D7-L) — 섹션/카테고리(injected)로 'ai'가 붙어도 raw 제목에 직접 AI/데이터센터
     # 인프라 근거가 없으면 제외한다(안전/규제 기사의 category 오염 차단). 근거가 있을 때만 유지.
-    if "ai" in keys and not _has_ai_evidence(raw_title, sig.get("source") or ""):
+    if ("ai" in keys
+            and not _has_ai_evidence(raw_title, raw_source, raw_snippet)
+            and value_chain.get("ai_value_chain_layer") != ai_value_chain.LAYER_CUSTOM_CHIP):
         keys.discard("ai")
     # 사이트 워치리스트(D7-M) — raw 제목이 워치리스트 프로젝트명/별칭을 직접 언급하면 그 항목의
     # scope(국내/해외현장·해외지사·해외법인)와 business 렌즈(토목/건축주택/플랜트/New Energy)를
@@ -511,7 +524,7 @@ def _lens_for(sig) -> list:
         keys.add("building_housing")
     # 건설-AI 보강(D7-Q) — 제목에 직접 AI 근거가 있고 콘텐츠 렌즈가 이미 있으면(건설/주거 등)
     # 'ai'를 더한다. 순수 비건설 AI 노이즈는 콘텐츠 렌즈가 없어 태깅되지 않는다(과태깅 방지).
-    if (keys - _STATE_LENS) and _has_ai_evidence(raw_title, sig.get("source") or ""):
+    if (keys - _STATE_LENS) and _has_ai_evidence(raw_title, raw_source, raw_snippet):
         keys.add("ai")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
@@ -548,6 +561,8 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
                if spread.get("related_count") else "단독 신호")
     sources = (f"출처 {spread.get('source_count')}곳"
                if spread.get("source_count") else "출처 1곳")
+    value_chain = ai_value_chain.classify_ai_value_chain(
+        sig.get("title") or "", sig.get("source") or "", sig.get("snippet") or "")
     lens = sorted(set(_lens_for(sig)) | ({l for l in extra_lens} & VALID_LENS))
     provenance = {
         "source": "executive_brief",
@@ -558,6 +573,10 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "category": sig.get("category") or "",
         "published_at": sig.get("published_at") or "",
         "source_quality": sig.get("source_quality") or "",
+        "is_ai_value_chain": value_chain["is_ai_value_chain"],
+        "ai_value_chain_layer": value_chain["ai_value_chain_layer"],
+        "hdec_relevance_tier": value_chain["hdec_relevance_tier"],
+        "ai_value_chain_reason": value_chain["reason"],
     }
     # 사이트 워치리스트 매칭 provenance(D7-M/D7-N) — 제목이 워치리스트 프로젝트명을 실제로
     # 언급한 행에만 출처를 단다. 전체 비공개 목록은 모델에 넣지 않는다(매칭된 항목만). 한 제목이
@@ -598,6 +617,9 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
 # 임원 의사결정용 AI 신호 카테고리. 일반 '테마 %'가 아니라 실무 렌즈로 분류한다.
 # 첫 매칭 우선(대부분 데이터센터·전력). raw 제목/category_label만 본다(가짜 값 생성 금지).
 _AI_CATEGORIES = [
+    ("chip_supply", "AI 칩·반도체 공급망",
+     ("AI 칩", "AI칩", "반도체", "HBM", "파운드리", "Broadcom", "브로드컴",
+      "NVIDIA", "엔비디아", "TSMC", "마이크론", "Micron", "SK하이닉스", "삼성전자")),
     ("dc_power", "AI·데이터센터·전력 인프라",
      ("데이터센터", "전력", "송배전", "송전", "변전", "계통", "전력망", "그리드",
       "SMR", "원전", "LNG", "발전", "EPC", "냉각", "전력 인프라")),
@@ -611,6 +633,7 @@ _AI_CATEGORIES = [
 _AI_DEFAULT = ("internal", "내부 적용 후보")
 # 카테고리별 한 줄 의미(왜 보는가) — 신호가 없을 때도 카테고리 자체는 노출하기 위함.
 _AI_CATEGORY_DESC = {
+    "chip_supply": "AI 칩·HBM·파운드리 → 반도체 클러스터·전력·하이테크 EPC 연계",
     "dc_power": "데이터센터 전력수요 → 원전·SMR·LNG·전력망·EPC 수주 기회",
     "field_auto": "현장 로봇·스마트건설 → 공정·원가·안전 자동화 적용",
     "safety_ai": "AI 점검·모니터링·사고 예측 → 안전·품질 리스크 저감",
@@ -623,7 +646,7 @@ _AI_CATEGORY_DESC = {
 # 인프라 근거에서만 나온다. injected category_label 단독으로는 분류하지 않는다 — 안전/규제
 # 기사가 category 오염으로 AI에 새거나, 제목엔 없고 주입 토픽에만 '데이터센터'가 있는 곁다리
 # 기사가 AI로 분류되는 것을 막는다. 가짜 값 생성 없음(있는 토큰만 본다).
-_AI_TOKEN_RE = re.compile(r"(?<![A-Za-z])AI(?![A-Za-z])")  # 대문자 standalone 'AI'
+_AI_TOKEN_RE = re.compile(r"(?<![A-Za-z가-힣])AI(?![A-Za-z가-힣])")  # 대문자 standalone 'AI'
 _AI_DIRECT_TERMS = (
     "인공지능", "스마트건설", "스마트 건설", "디지털트윈", "디지털 트윈", "BIM",
     "건설로봇", "건설 로봇", "시공로봇", "현장 로봇", "자율시공", "건설 자동화",
@@ -638,9 +661,12 @@ _AI_DC_INFRA = (
 )
 
 
-def _has_ai_evidence(title: str, source: str = "") -> bool:
+def _has_ai_evidence(title: str, source: str = "", snippet: str = "") -> bool:
     """raw 제목(+출처)에 직접 AI/데이터센터 인프라 근거가 있는가 (injected label 미사용)."""
-    raw = f"{title or ''} {source or ''}"
+    vc = ai_value_chain.classify_ai_value_chain(title or "", source or "", snippet or "")
+    if ai_value_chain.is_executive_ai_candidate(vc):
+        return True
+    raw = f"{title or ''} {source or ''} {snippet or ''}"
     if _AI_TOKEN_RE.search(raw):
         return True
     if any(t in raw for t in _AI_DIRECT_TERMS):
@@ -650,6 +676,23 @@ def _has_ai_evidence(title: str, source: str = "") -> bool:
 
 
 def _ai_category(sig) -> tuple:
+    layer = sig.get("ai_value_chain_layer") or ai_value_chain.classify_ai_value_chain(
+        sig.get("title") or "", sig.get("source") or "", sig.get("snippet") or ""
+    )["ai_value_chain_layer"]
+    if layer in {
+            ai_value_chain.LAYER_CUSTOM_CHIP,
+            ai_value_chain.LAYER_SEMI_SUPPLY,
+            ai_value_chain.LAYER_SEMI_CLUSTER,
+    }:
+        return "chip_supply", "AI 칩·반도체 공급망"
+    if layer in {
+            ai_value_chain.LAYER_DC_POWER,
+            ai_value_chain.LAYER_DC_COOLING,
+            ai_value_chain.LAYER_DC_CONSTRUCTION,
+    }:
+        return "dc_power", "AI·데이터센터·전력 인프라"
+    if layer == ai_value_chain.LAYER_SMART_CONSTRUCTION:
+        return "field_auto", "현장 생산성·자동화"
     text = f"{sig.get('title') or ''} {sig.get('category_label') or ''}"
     for key, label, words in _AI_CATEGORIES:
         if any(w in text for w in words):
@@ -659,6 +702,7 @@ def _ai_category(sig) -> tuple:
 
 # AI 신호 → 임원 액션 유형 (5종). 일반 문구가 아니라 의사결정 액션으로 고정 매핑한다.
 _AI_ACTION = {
+    "chip_supply": "전략 모니터링",
     "dc_power": "수주기획 검토",
     "field_auto": "현장 PoC 후보",
     "safety_ai": "안전품질 검토",
@@ -702,8 +746,13 @@ def _ai_enrich(row: dict, sig: dict) -> dict:
         action = "모니터링"                       # 경쟁사 동향은 수주 경쟁 모니터링이 우선
     if cat_key == "internal":
         action = f"{action} · 내부 적용 담당 배정 필요"
+    value_chain = ai_value_chain.classify_ai_value_chain(
+        sig.get("title") or "", sig.get("source") or "", sig.get("snippet") or "")
     row["aiCategory"] = cat_key
     row["aiCategoryLabel"] = cat_label
+    row["aiValueChainLayer"] = value_chain["ai_value_chain_layer"]
+    row["hdecRelevanceTier"] = value_chain["hdec_relevance_tier"]
+    row["aiValueChainReason"] = value_chain["reason"]
     row["why"] = why
     row["relevance"] = rel_text
     row["relevanceType"] = rel_type
@@ -966,14 +1015,36 @@ def _build_lens_banks(full_pool: list, ai_rows: list, now_rows: list,
             except (TypeError, ValueError):
                 return 0.0
 
-        rows.sort(key=lambda r: (
-            -row_score(r),
-            -int(r.get("immediate_basis") == "strict_instant"),
-            -int((r.get("provenance") or {}).get("executive_section") == "hdec_direct"),
-            -int((r.get("provenance") or {}).get("radar_section") == "risk_regulation"
-                 or r.get("cat") == "리스크"),
-            r.get("title") or "",
-        ))
+        def tier(row: dict) -> int:
+            try:
+                return int((row.get("provenance") or {}).get("hdec_relevance_tier") or 9)
+            except (TypeError, ValueError):
+                return 9
+
+        if lens == "ai":
+            rows.sort(key=lambda r: (
+                tier(r),
+                -int(r.get("immediate_basis") == "strict_instant"),
+                -int((r.get("provenance") or {}).get("executive_section") == "hdec_direct"),
+                -row_score(r),
+                r.get("title") or "",
+            ))
+        elif lens in {"developers", "trust_companies", "development_business"}:
+            rows.sort(key=lambda r: (
+                tier(r),
+                -row_score(r),
+                -int(r.get("immediate_basis") == "strict_instant"),
+                r.get("title") or "",
+            ))
+        else:
+            rows.sort(key=lambda r: (
+                -row_score(r),
+                -int(r.get("immediate_basis") == "strict_instant"),
+                -int((r.get("provenance") or {}).get("executive_section") == "hdec_direct"),
+                -int((r.get("provenance") or {}).get("radar_section") == "risk_regulation"
+                     or r.get("cat") == "리스크"),
+                r.get("title") or "",
+            ))
         banks[lens] = rows[:caps.get(lens, LENS_BANK_CAP)]
     banks = {k: v for k, v in banks.items() if v}
     return banks
