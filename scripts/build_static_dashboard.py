@@ -65,6 +65,13 @@ VALID_LENS = {
     "oil_energy", "hormuz", "domestic_site", "overseas_site", "overseas_branch",
     "overseas_subsidiary",
 }
+# 상태 렌즈(노출 상태일 뿐 콘텐츠 분류가 아님) — 대시보드 제외/콘텐츠 판정 시 구분한다.
+_STATE_LENS = {"now", "new"}
+# 주거/건축 보강 키워드(D7-Q) — '아파트' 등 주거형은 공유 키워드 풀(lens_queries)에 없어
+# building_housing 태그가 누락된다. 라이브 수집 쿼리는 그대로 두고, 대시보드 표시 단계에서만
+# 보수적으로 보강한다(가짜가 아니라 제목의 실제 주거 키워드 기반 · 부분문자열 오탐 방지로
+# 명확한 주거형만 둔다 — 예: '단지'는 산업단지 오탐이 있어 '주거단지/주택단지'로 한정).
+_RESIDENTIAL_LENS_TERMS = ("아파트", "오피스텔", "주상복합", "주거단지", "주택단지")
 
 NEWS_ROW_CAP = 20
 LENS_BANK_CAP = 10
@@ -495,9 +502,30 @@ def _lens_for(sig) -> list:
             keys.add(scope)
         if biz and biz in VALID_LENS:
             keys.add(biz)
+    # 주거/건축 보수적 폴백(D7-Q) — 다른 정밀 콘텐츠 렌즈가 하나도 없을 때만, 제목의 주거형
+    # 키워드('아파트' 등 공유 풀에 없는 항목)로 building_housing을 보강한다(task 폴백 규칙:
+    # "정밀 렌즈가 없으면 가장 보수적인 건설 렌즈"). 이미 plant/safety 등 정밀 렌즈가 있으면
+    # 보강하지 않는다 — 예: "아파트·원전…건설株"는 원전→plant라 폴백 비적용(과태깅·중복 방지).
+    # 이 폴백이 "…아파트에 'AI 주차로봇' 도입"처럼 렌즈가 비는 주거 기사를 건져 빈 렌즈를 막는다.
+    if not (keys - _STATE_LENS) and any(w in raw_title for w in _RESIDENTIAL_LENS_TERMS):
+        keys.add("building_housing")
+    # 건설-AI 보강(D7-Q) — 제목에 직접 AI 근거가 있고 콘텐츠 렌즈가 이미 있으면(건설/주거 등)
+    # 'ai'를 더한다. 순수 비건설 AI 노이즈는 콘텐츠 렌즈가 없어 태깅되지 않는다(과태깅 방지).
+    if (keys - _STATE_LENS) and _has_ai_evidence(raw_title, sig.get("source") or ""):
+        keys.add("ai")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
     return sorted(keys & VALID_LENS)
+
+
+def _has_dashboard_lens(sig) -> bool:
+    """대시보드 행으로 노출할 유효 콘텐츠 렌즈가 있는가(D7-Q · 단일 제외 판정점).
+
+    의미 기반 매핑(_lens_for) 후에도 비면 임원/건설 관련성이 없는 기사(소비재 신상품 등)로
+    보고 대시보드 행에서 제외한다 — 빈 렌즈 행을 가짜로 라벨링하지 않기 위함. 'new'(top_new_
+    issues 분류)는 정당한 상태 태그라 호출부에서 별도로 보존한다(여기선 콘텐츠 렌즈만 본다).
+    """
+    return bool(_lens_for(sig))
 
 
 def _row_from_signal(sig, extra_lens=()) -> dict:
@@ -920,7 +948,9 @@ def _build_lens_banks(full_pool: list, ai_rows: list, now_rows: list,
     # AI 뱅크는 직접 근거가 있는 행만 담는다(D7-L) — AI 탭(ai_rows)은 surface_contracts가
     # 소유하되, 뱅크에 들어가는 행은 raw 제목 근거를 한 번 더 통과시켜 곁다리 오염을 막는다.
     for row in ai_rows or []:
-        if _has_ai_evidence(row.get("title") or "", row.get("source") or ""):
+        # D7-Q: 빈 렌즈 행은 뱅크에 넣지 않는다(가짜 라벨 금지 · 위 ai_pool 필터로 이미 제외되나
+        # 방어적 가드). raw 제목 직접 근거가 있는 행만 'ai' 뱅크에 담는다(곁다리 오염 방지).
+        if row.get("lens") and _has_ai_evidence(row.get("title") or "", row.get("source") or ""):
             add_row("ai", row)
 
     for row in now_rows or []:
@@ -966,12 +996,16 @@ def _derive(brief: dict) -> dict:
     overall_pool = [s for s in overall_pool if _is_http(s.get("url"))]
     overall_pool.sort(key=_signal_rank_key)
     overall_pool = _drop_near_dups(overall_pool)
+    # D7-Q: 유효 콘텐츠 렌즈가 없는 신호는 featured/news에서 제외(가짜 라벨 금지). featured는
+    # 대표 카드라 렌즈가 비면 안 된다 — 약한 HDEC 오탐 가드 직후 _has_dashboard_lens로 거른다.
     featured_candidates = [s for s in overall_pool if not _is_weak_hdec_fp(s)]
+    featured_candidates = [s for s in featured_candidates if _has_dashboard_lens(s)]
     if not featured_candidates:
         fallback = _dedup_signals(brief.get("ai_radar_signals"),
                                   brief.get("business_signals"),
                                   brief.get("risk_regulation_signals"))
-        fallback = [s for s in fallback if _is_http(s.get("url")) and not _is_weak_hdec_fp(s)]
+        fallback = [s for s in fallback if _is_http(s.get("url"))
+                    and not _is_weak_hdec_fp(s) and _has_dashboard_lens(s)]
         fallback.sort(key=_signal_rank_key)
         featured_candidates = _drop_near_dups(fallback)
     featured_sig = featured_candidates[0] if featured_candidates else None
@@ -980,14 +1014,18 @@ def _derive(brief: dict) -> dict:
     # AI 행: featured 제외 + 근접 중복(재전송본) 제거 (briefing 순서 보존, 상위 AI_BANK_CAP건).
     # 각 행에 임원 실행 정보(왜/관련성/액션/카테고리) 부착 → 일반 테마 % 아닌 의사결정 신호.
     ai_pool = _drop_near_dups([s for s in (brief.get("ai_radar_signals") or [])
-                               if _key(s) != fkey])
+                               if _key(s) != fkey and _has_dashboard_lens(s)])
     selected_ai_pool = ai_pool[:AI_BANK_CAP]
     selected_ai_keys = {_key(s) for s in selected_ai_pool}
     ai_rows = [_enrich_row(_ai_enrich(_row_from_signal(s), s), s, ref_date)
                for s in selected_ai_pool]
 
     # 뉴스 풀: featured/AI와 정확 중복을 제거한 뒤 이미 score-first 정렬된 순서를 유지한다.
-    pool = [s for s in overall_pool if _key(s) != fkey and _key(s) not in selected_ai_keys]
+    # D7-Q: 유효 콘텐츠 렌즈가 없는 무관 기사는 제외하되, top_new_issues 분류로 'new' 상태를
+    # 받은 행은 정당하므로 보존한다(여기서 'new'를 새로 붙이지 않는다 — 가짜 fallback 금지).
+    pool = [s for s in overall_pool
+            if _key(s) != fkey and _key(s) not in selected_ai_keys
+            and (_has_dashboard_lens(s) or _key(s) in new_keys)]
     news_rows = [_enrich_row(_row_from_signal(s, ["new"] if _key(s) in new_keys else []),
                              s, ref_date)
                  for s in pool[:NEWS_ROW_CAP]]
