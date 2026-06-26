@@ -30,6 +30,9 @@ TOP_ISSUES = 5
 TOP_THEMES = 5
 # P0-C1.9: 섹션별 레이더(AI/리스크·규제/수주·해외/거시경제)당 노출 신호 상한
 TOP_RADAR = 5
+# D7-U: AI 밸류체인 풀(표시 전용 추가 키) 상한 — ai_radar_signals(top-5)보다 넓게 담아
+# 대시보드가 하이퍼스케일러/칩 신호용 슬롯을 예약할 수 있게 한다. 기존 surface 불변.
+AI_VALUE_CHAIN_POOL = 24
 # 카테고리 드릴다운에서 카테고리당 노출할 근거 기사 상한 (모바일 가독성 · 나머지는 '외 n건')
 TOP_CATEGORY_ARTICLES = 6
 TOP_DISPLAY_SCORE_FLOOR = 2.5
@@ -1860,6 +1863,21 @@ def build_brief(pipeline_counts: dict | None = None,
         ai_radar_signals,
         [top_immediate, hdec_direct_signals, business_signals, top_issues])
 
+    # D7-U: AI 밸류체인 풀 (표시 전용 추가 키, 기존 surface/예산 불변). ai_radar_signals는
+    # 섹션당 TOP_RADAR=5로 캡되어 하이퍼스케일러/AI 칩 신호(OpenAI·Broadcom·NVIDIA·TSMC 등)가
+    # 국내 건설·데이터센터 tier-2 신호에 밀려 빠진다(소스 cap starvation). 이 풀은 동일한
+    # HDEC 관련성 정렬(_ai_sort)을 쓰되 더 넓게(AI_VALUE_CHAIN_POOL) 담아, 대시보드가 밸류체인
+    # 다양성 슬롯을 예약할 수 있게 한다. ai_radar_signals/리포트/Telegram/점수/등급은 불변 —
+    # display_rows를 읽기만 하는 추가 출력 키다(category_sections·risk 섹션과 동형 multi-section).
+    ai_vc_rows = [r for r in display_rows
+                  if radar_sections[r["id"]] == radar.AI
+                  and surface_contracts.decide_ai_tab(r).eligible
+                  and not _is_excluded_quality(r)
+                  and not _is_top_exposure_excluded(r, decisions.get(r["id"]))]
+    ai_vc_rows.sort(key=_ai_sort)
+    ai_value_chain_pool = [_entry(i, r)
+                           for i, r in enumerate(ai_vc_rows[:AI_VALUE_CHAIN_POOL], start=1)]
+
     # D5-A: 구성 가능한 토픽 프로파일 섹션 (현대 그룹사·신탁사·시행사·경쟁 시공사).
     # topic_profiles로 분류해 추가 커버리지 섹션을 파생한다. surface_state를 쓰지 않아
     # (독립 surface) 위 상단 카드 선택을 바꾸지 않는다 — 순수 추가 출력 키이며 점수/등급/
@@ -2082,6 +2100,8 @@ def build_brief(pipeline_counts: dict | None = None,
         # '현대건설 직접 → AI → 수주·해외 → 리스크·규제 → 경쟁사·공급망 → 거시'로 소비한다.
         "hdec_direct_signals": hdec_direct_signals,
         "ai_radar_signals": ai_radar_signals,
+        # D7-U: 표시 전용 — 대시보드 AI 밸류체인 슬롯 예약용 broad 풀(ai_radar_signals 불변).
+        "ai_value_chain_pool": ai_value_chain_pool,
         "risk_regulation_signals": risk_regulation_signals,
         "business_signals": business_signals,
         "competitor_supply_signals": competitor_supply_signals,

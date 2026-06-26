@@ -35,6 +35,10 @@
       "자체 AI 칩", "자체 AI칩", "custom AI chip", "ASIC", "Broadcom", "브로드컴",
       "AI 칩 직접", "AI칩 직접", "AI 칩 자체", "AI칩 자체"
     ],
+    "chip_vendor_terms": [
+      "NVIDIA", "엔비디아", "Broadcom", "브로드컴", "TSMC", "AMD",
+      "HBM", "SK하이닉스", "SK 하이닉스", "삼성전자", "Micron", "마이크론"
+    ],
     "datacenter_terms": [
       "AI 데이터센터", "데이터센터", "데이터 센터", "data center", "datacenter", "IDC"
     ],

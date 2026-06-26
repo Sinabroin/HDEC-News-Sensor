@@ -277,6 +277,10 @@
   .mcat-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:2px;}
   .mcat-t{font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .mcat-c{font-size:10.5px; font-weight:700; color:var(--mute4); flex:none;}
+  /* D7-U: 미연동(값 없음) 행은 연동 행 아래 '관찰 후보'로 분리·약화 — 죽은 행이 카드를 지배하지 않게 한다. */
+  .mcat-sub{font-size:10px; font-weight:700; color:var(--mute4); letter-spacing:0.02em; margin:9px 0 1px; padding-top:7px; border-top:1px dashed var(--line);}
+  .mcat-unlinked{opacity:.55;}
+  .mcat-unlinked .mrow:first-child{border-top:none;}
   .men{font-size:10.5px; font-weight:600; color:var(--mute4); margin-left:5px;}
   .chiprow{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:6px 0 8px;}
   .chiprow .chiplabel{font-size:12px; font-weight:700; color:var(--mute3); flex:none;}
@@ -780,6 +784,7 @@
           <div class="panel" style="border:none; box-shadow:none; padding:0 2px;">
             <div class="ph">시장 모니터링 <small>· 원자재·금속 · 철강·건자재 · 유가·정제유 · 가스·LNG · 석탄 · 금리·물가 · 환율</small></div>
             <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
+            <div class="pnote" id="marketLinkNote">연동(현재값 보유) 지표를 우선 노출하고, <b>미연동 지표는 하단 관찰 후보로 분리했습니다</b> — 값/차트 소스가 없으면 가짜 값을 만들지 않습니다.<span id="marketLinkSummary"></span></div>
           </div>
           <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·알루미늄·휘발유·헨리허브·EUR/KRW·미 국채 10Y). <b>대용(proxy)</b> 종목(철광석·열연강판·연료탄·경유)은 글로벌 벤치마크라 정확한 국내 현물가가 아닙니다. 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
           <div class="mktcats" id="marketCategories"></div>
@@ -1979,27 +1984,42 @@
       '<span class="mv ' + (st.isUnavailable ? "off" : "") + '">' + (st.isUnavailable ? "—" : esc(it.value)) + '</span>' +
       '<span class="md"><span class="delta ' + esc(it.dir || "flat") + '">' + (st.isUnavailable ? "" : esc(it.delta || "")) + '</span>' + dmBadge(it.data_mode) + chartTag + chev + '</span></div>';
   }
-  /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출. */
+  /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출.
+     D7-U: 연동(현재값 보유) 행을 먼저 노출하고, 미연동(값 없음) 행은 카드 하단의 약화된
+     '미연동 관찰 후보' 영역으로 분리한다 — 죽은 행이 섹션을 지배하지 못하게 한다(가짜 값 없음). */
+  function marketLinked(it) { return marketState(it).hasValue; }
   function renderCategoryCards() {
     var box = el("marketCategories"); if (!box) return; box.innerHTML = "";
     var items = MODEL.market_items || [];
+    var totalLinked = 0, totalUnlinked = 0;
     CAT_ORDER.forEach(function (cat) {
       var rows = items.filter(function (it) { return it.category === cat; });
       if (!rows.length) return;
-      var conn = rows.filter(function (r) { return r.value != null; }).length;
+      var linked = rows.filter(marketLinked);
+      var unlinked = rows.filter(function (it) { return !marketLinked(it); });
+      // 연동 내에서도 상세 차트가 있는 행을 위로(차트 우선 노출). 안정 정렬.
+      linked = linked.slice().sort(function (a, b) { return (isClickable(b) ? 1 : 0) - (isClickable(a) ? 1 : 0); });
+      totalLinked += linked.length; totalUnlinked += unlinked.length;
       var card = document.createElement("div"); card.className = "mcat-card";
-      var body = rows.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
+      var body = linked.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
+      if (unlinked.length) {
+        body += '<div class="mcat-sub">미연동 관찰 후보 · ' + unlinked.length + '건 (값/차트 소스 필요 · 가짜 값 없음)</div>' +
+          '<div class="mcat-unlinked">' + unlinked.map(function (it) { return mrowHtml(it, false); }).join("") + '</div>';
+      }
       card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
-        '</span><span class="mcat-c">연동 ' + conn + '/' + rows.length + '</span></div>' + body;
+        '</span><span class="mcat-c">연동 ' + linked.length + '/' + rows.length + '</span></div>' + body;
       box.appendChild(card);
     });
+    var sum = el("marketLinkSummary");
+    if (sum) sum.textContent = " · 연동 " + totalLinked + " · 미연동 " + totalUnlinked + " (관찰 후보로 분리)";
   }
   /* 우측 레일 — 대표 4~6개만 요약(중복 금지). '전체 보기'로 시장 탭 이동. */
   function renderRailSnapshot() {
     var box = el("railMarket"); if (!box) return; box.innerHTML = "";
     var byId = {}; (MODEL.market_items || []).forEach(function (it) { byId[it.id] = it; });
     var ids = MODEL.rail_snapshot || ["usdkrw", "wti", "us_10y", "copper", "jpykrw"];
-    ids.forEach(function (id) { var it = byId[id]; if (it) box.insertAdjacentHTML("beforeend", mrowHtml(it, false)); });
+    // D7-U: 우측 요약은 연동(현재값 보유) 지표만 — 미연동 종목이 요약에 '—'로 새지 않게 한다.
+    ids.forEach(function (id) { var it = byId[id]; if (it && marketLinked(it)) box.insertAdjacentHTML("beforeend", mrowHtml(it, false)); });
     var b = document.createElement("button"); b.type = "button"; b.className = "seeall"; b.id = "railSeeAll";
     b.textContent = "시장 전체 보기 →"; box.appendChild(b);
     b.addEventListener("click", function () {

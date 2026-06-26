@@ -304,3 +304,44 @@ def recommended_lenses(title: str, source: str = "", snippet: str = "") -> set[s
             lenses.add("safety_quality")
 
     return lenses
+
+
+# Custom AI chip is inherently hyperscaler silicon (Broadcom/ASIC custom designs),
+# so it qualifies on the layer alone. Every other value-chain layer must actually
+# name a hyperscaler or a chip VENDOR to count as US big-tech / AI-chip coverage —
+# a bare domestic data-center or semiconductor-cluster infrastructure story (no
+# named vendor) is NOT the hyperscaler gap and stays in the primary radar / civil
+# banks. Uses the precise chip_vendor_terms group (not the generic chip_terms,
+# which includes words like "반도체"/"메모리") to avoid over-flagging.
+_VALUE_CHAIN_NAMED_LAYERS = frozenset({
+    LAYER_SEMI_SUPPLY, LAYER_SEMI_CLUSTER, LAYER_DC_POWER, LAYER_DC_COOLING,
+    LAYER_DC_CONSTRUCTION, LAYER_HYPERSCALER,
+})
+_CHIP_VENDOR_TERMS = _terms("chip_vendor_terms")
+
+
+def is_hyperscaler_value_chain(title: str, source: str = "", snippet: str = "") -> bool:
+    """Policy-driven: is this a US big-tech / named-AI-chip-vendor value-chain signal?
+
+    True for the custom AI chip layer (inherently hyperscaler silicon) and for the
+    AI-semiconductor-supply / cluster / data-center power/cooling/construction layers
+    WHEN a hyperscaler (OpenAI·Anthropic·MS·AWS·Google·Meta·Oracle·xAI) or a named
+    AI-chip vendor (NVIDIA·Broadcom·TSMC·HBM·SK하이닉스·삼성전자·Micron·AMD) is named.
+    Reads only the policy term groups already loaded above — no hardcoded domain
+    keywords (D7-S2 engine/policy split). The dashboard uses this to reserve AI-bank
+    slots so domestic construction stories cannot crowd out hyperscaler / chip
+    coverage (D7-U). Generic model/app, irrelevant, and unnamed domestic data-center
+    or semiconductor-cluster stories return False — they are already covered by the
+    primary AI radar / civil banks and must not be treated as reserved value chain.
+    """
+    cls = classify_ai_value_chain(title, source, snippet)
+    layer = cls["ai_value_chain_layer"]
+    if layer == LAYER_CUSTOM_CHIP:
+        return True
+    if layer in _VALUE_CHAIN_NAMED_LAYERS:
+        # The hyperscaler / vendor name must be in the STORY (title/snippet), not the
+        # source — Google News reports source="Google", which would otherwise
+        # false-match a domestic cluster story to the hyperscaler term "Google".
+        text = _raw(title, "", snippet)
+        return _has_hyperscaler(text) or _contains(text, _CHIP_VENDOR_TERMS)
+    return False
