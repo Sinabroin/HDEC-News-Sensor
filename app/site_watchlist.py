@@ -22,7 +22,7 @@
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # app.config를 import하지 않는다 (DB_PATH 캐시 트랩 회피) — 경로를 직접 계산한다.
@@ -33,6 +33,10 @@ _PRIVATE_DIR = _DATA_DIR / "private"
 # 운영자가 명시적으로 설정해야만 실제 내부 목록을 읽는다(미설정 = 공개 샘플만).
 _ENV_PATH = "SITE_WATCHLIST_PATH"
 _ENV_MAX_QUERIES = "SITE_WATCHLIST_MAX_QUERIES"
+# 트리 노출 게이트(D7-N): 설정 안 됨/!="1" = 매칭 노드만, "1" = 전체 비공개 트리(내부 빌드 전용).
+_ENV_EXPOSE_TREE = "SITE_WATCHLIST_EXPOSE_TREE"
+
+_KST = timezone(timedelta(hours=9))
 
 # 유효한 범위(scope)와 사업 렌즈(business_lens) — VALID_LENS(빌더/템플릿)와 1:1.
 SCOPES = ("domestic_site", "overseas_site", "overseas_branch", "overseas_subsidiary")
@@ -62,6 +66,30 @@ _GROUP_LABEL = {
     "site:overseas_plant": "해외현장·플랜트", "site:overseas_new_energy": "해외현장·New Energy",
     "site:overseas_branch": "해외지사", "site:overseas_subsidiary": "해외법인",
 }
+
+# 트리(D7-N) 표시용 라벨. scope = 빌더 VALID_LENS 키와 1:1(트리 패널이 렌즈 탭에 붙는다).
+_SCOPE_LABEL = {
+    "domestic_site": "국내 현장", "overseas_site": "해외 현장",
+    "overseas_branch": "해외 지사", "overseas_subsidiary": "해외 법인",
+}
+_BIZ_LABEL = {
+    "civil_infrastructure": "토목", "building_housing": "건축주택",
+    "plant": "플랜트", "new_energy": "New Energy",
+}
+_BIZ_ORDER = ("civil_infrastructure", "building_housing", "plant", "new_energy", "")
+# '!' 의미를 항상 명시한다(D7-N) — 위험 확정이 아니라 '최근 공개뉴스가 이 노드를 매칭'했다는 신호.
+# 임원 센싱에서 '!'는 "과거에 한 번이라도 매칭"이 아니라 "최근(≤30일) 공개뉴스 매칭"을 뜻한다.
+TREE_MARKER_LEGEND = "! = 최근 공개뉴스 매칭 있음 · 위험 확정 아님"
+
+# 매칭 신선도(freshness) 버킷 — 발행 시각이 now 기준 얼마나 최근인지. is_recent_signal(=‘!’)은
+# today/recent_7d/recent_30d 일 때만 True. old(>30일)·미상('')은 '!'를 받지 않는다(가짜 긴급 금지).
+_RECENT_FRESHNESS = ("today", "recent_7d", "recent_30d")
+_FRESHNESS_LABEL = {
+    "today": "오늘 매칭", "recent_7d": "최근 7일", "recent_30d": "최근 30일",
+    "old": "과거 매칭", "": "",
+}
+_RECENT_7D = timedelta(days=7)
+_RECENT_30D = timedelta(days=30)
 
 DEFAULT_MAX_QUERIES = 40          # 1회 실행당 사이트 쿼리 기본 상한(env로 override)
 MAX_QUERIES_HARD_CAP = 200        # 폭주 방지 절대 상한
@@ -346,10 +374,277 @@ def classify_site_lenses(title, path=None) -> list:
             out.append({
                 "id": item["id"],
                 "name": item["name"],
+                "label": item["name"],
                 "scope": item["scope"],
                 "business_lens": item.get("business_lens") or "",
+                "org_unit": item.get("org_unit") or "",
             })
     return out
+
+
+# ---------------------------------------------------------------------------
+# 현장/조직 감시 트리 (D7-N) — 매칭 노드 + (운영자 노출 시) 전체 비공개 트리
+# ---------------------------------------------------------------------------
+
+def _fmt_kst(iso) -> str:
+    """ISO datetime → KST 'YYYY-MM-DD HH:mm'. 파싱 실패/없음 → 빈 문자열(가짜 시각 금지)."""
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_KST).strftime("%Y-%m-%d %H:%M")
+
+
+def _coerce_now(now=None) -> datetime:
+    """freshness 기준 시각(now)을 tz-aware UTC datetime으로 정규화한다.
+
+    None이면 현재 UTC. tz 없는 datetime이 오면 UTC로 간주한다. 빌더는 리포트 생성 시각
+    (brief.generated_at)을 넘겨 freshness가 '벽시계'가 아니라 '리포트 시점' 기준이 되게 한다.
+    """
+    if now is None:
+        return datetime.now(timezone.utc)
+    if isinstance(now, datetime):
+        return now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
+    try:
+        dt = datetime.fromisoformat(str(now))
+    except (TypeError, ValueError):
+        return datetime.now(timezone.utc)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _freshness(pub_iso, now=None) -> str:
+    """발행 시각(ISO) → freshness 버킷: today / recent_7d / recent_30d / old / ''.
+
+    '!' 마커의 근거가 되는 단일 판정 함수. 발행 시각이 없거나 파싱 실패하면 ''(미상) — 미상은
+    '최근'으로 위장하지 않는다(가짜 긴급 금지). KST 같은 날짜면 today, 그 외엔 now와의 경과로
+    7일/30일/그 이상(old)을 가른다. 살짝 미래(시차)인 값은 today/recent로 본다.
+    """
+    if not pub_iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(pub_iso))
+    except (TypeError, ValueError):
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    ref = _coerce_now(now)
+    if dt.astimezone(_KST).date() == ref.astimezone(_KST).date():
+        return "today"
+    age = ref - dt
+    if age <= _RECENT_7D:
+        return "recent_7d"
+    if age <= _RECENT_30D:
+        return "recent_30d"
+    return "old"
+
+
+def expose_tree_enabled() -> bool:
+    """전체 비공개 트리 노출 여부 — env SITE_WATCHLIST_EXPOSE_TREE == '1'일 때만 True.
+
+    미설정/다른 값이면 False(매칭 노드만 노출). 공개 빌드는 애초에 트리를 만들지 않는다.
+    """
+    return os.environ.get(_ENV_EXPOSE_TREE) == "1"
+
+
+def match_items_for_row(row_title, items) -> list:
+    """주어진 items 목록에서 제목이 직접 언급한 항목을 돌려준다(목록 재로딩 없음).
+
+    classify_site_lenses와 동일한 매칭 규칙(이름/별칭 ≥ _MIN_MATCH_LEN, 부분문자열). 빌더가
+    이미 로드한 items로 행→노드 연결을 만들 때 쓴다(워치리스트 파일을 다시 읽지 않는다).
+    """
+    t = row_title or ""
+    if not t or not items:
+        return []
+    out, seen = [], set()
+    for item in items:
+        iid = item.get("id")
+        if not iid or iid in seen:
+            continue
+        names = [item.get("name") or "", *(item.get("aliases") or [])]
+        if any(len(n) >= _MIN_MATCH_LEN and n in t for n in names):
+            seen.add(iid)
+            out.append(item)
+    return out
+
+
+def summarize_matches(rows) -> dict:
+    """빌더 산출 행에서 워치리스트 항목 id별 공개 뉴스 매칭을 집계한다.
+
+    반환: {item_id: {match_count, latest_published_at, article_keys:[...]}}.
+    행 provenance의 site_watch_matches(여러 항목) 또는 site_watch_id(단일)를 읽는다. 같은 기사가
+    여러 뱅크/탭에 중복 노출돼도 article_keys(url|title)로 중복 제거해 카운트를 부풀리지 않는다
+    (가짜 카운트 금지). 매칭이 0인 항목은 여기서 등장하지 않는다(트리에서 match_count=0 처리).
+    """
+    agg: dict = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        prov = row.get("provenance") or {}
+        ids = []
+        matches = prov.get("site_watch_matches")
+        if isinstance(matches, list) and matches:
+            ids = [m.get("id") for m in matches if isinstance(m, dict) and m.get("id")]
+        elif prov.get("site_watch_id"):
+            ids = [prov.get("site_watch_id")]
+        if not ids:
+            continue
+        key = row.get("url") or row.get("title") or ""
+        pub = (prov.get("site_watch_latest_published_at")
+               or prov.get("published_at") or "")
+        for iid in ids:
+            slot = agg.setdefault(iid, {"match_count": 0, "latest_published_at": "",
+                                        "article_keys": []})
+            if key and key not in slot["article_keys"]:
+                slot["article_keys"].append(key)
+            if pub and str(pub) > str(slot["latest_published_at"]):
+                slot["latest_published_at"] = pub
+    for slot in agg.values():
+        slot["match_count"] = len(slot["article_keys"])
+    return agg
+
+
+def _tree_node(item: dict, match: dict, now=None) -> dict:
+    """워치리스트 항목 한 건 → 트리 leaf 노드.
+
+    '!'(alert_marker)는 **최근(≤30일) 공개뉴스 매칭**일 때만 켠다(D7-N) — match_count>0이라도
+    발행 시각이 30일을 넘으면(old) '!'를 주지 않고 '과거 매칭'으로만 표시한다(임원 센싱에서
+    '!'='지금 봐야 할 신호'를 보존). latest_kst는 표시용 날짜로 그대로 둔다(old여도 날짜는 보여줌).
+    """
+    mc = int(match.get("match_count") or 0) if match else 0
+    pub = (match or {}).get("latest_published_at") or ""
+    freshness = _freshness(pub, now) if mc > 0 else ""
+    is_recent = freshness in _RECENT_FRESHNESS
+    return {
+        "id": item["id"],
+        "label": item["name"],
+        "scope": item["scope"],
+        "business_lens": item.get("business_lens") or "",
+        "org_unit": item.get("org_unit") or "",
+        "tier": item.get("tier") or 2,
+        "match_count": mc,
+        "latest_published_at": pub,
+        "latest_kst": _fmt_kst(pub),                 # 표시용 날짜(old여도 유지)
+        "match_freshness": freshness,                # today/recent_7d/recent_30d/old/''
+        "is_recent_signal": is_recent,               # '!'의 단일 근거
+        "freshness_label": _FRESHNESS_LABEL.get(freshness, ""),  # 'old' → '과거 매칭'
+        "alert_marker": "!" if is_recent else "",    # 최근 매칭만 '!'(과거/미상은 마커 없음)
+        "article_keys": list((match or {}).get("article_keys") or []),
+    }
+
+
+def _group_key_label(scope: str, item: dict) -> tuple:
+    """노드를 묶는 그룹 키/라벨/종류 — 현장은 business_lens, 조직/법인은 org_unit."""
+    if scope in ("overseas_branch", "overseas_subsidiary"):
+        org = item.get("org_unit") or ""
+        return (org or "(미지정)", org or "(미지정 조직)", "org_unit")
+    biz = item.get("business_lens") or ""
+    return (biz, _BIZ_LABEL.get(biz, biz or "(기타)"), "business_lens")
+
+
+def build_tree(items, matches=None, expose_full_tree=False, is_private=True, now=None) -> dict:
+    """워치리스트 항목 + 매칭 집계 → scope(국내/해외현장·지사·법인) 계층 트리.
+
+    - expose_full_tree=False: 매칭(match_count>0) 노드만 포함(비공개 이름 비노출 — 매칭된,
+      즉 공개 뉴스가 이미 언급한 항목만 보인다).
+    - expose_full_tree=True(SITE_WATCHLIST_EXPOSE_TREE=1, 내부 빌드 전용): 전체 트리 포함,
+      미매칭 노드는 match_count=0·alert_marker="" (가짜 '!' 없음).
+
+    freshness(D7-N): 노드 '!'는 **최근(≤30일) 공개뉴스 매칭**만(now 기준). 요약은 전체-시점
+    매칭 수와 최근 매칭 수를 분리한다 — matched_nodes_all_time는 recent_matched_nodes보다 클 수
+    있다(과거 매칭이 '!'를 받지 않으므로). now 미지정이면 현재 시각(빌더는 리포트 생성 시각 주입).
+
+    반환: {is_private, expose_full_tree, marker_legend, total_nodes, matched_nodes,
+    matched_nodes_all_time, recent_matched_nodes, old_matched_nodes, by_scope:{...}}.
+    by_scope[scope] = {scope,label,match_count,node_count,recent_node_count,
+    groups:[{key,label,kind,match_count,recent_node_count,nodes}]}.
+    """
+    matches = matches or {}
+    ref = _coerce_now(now)
+    by_scope: dict = {}
+    total_nodes = 0
+    matched_nodes = 0          # = matched_nodes_all_time (match_count>0, 신선도 무관)
+    recent_matched = 0         # is_recent_signal True (≤30일)
+    old_matched = 0            # match_count>0 이지만 old(>30일) — '!' 없음, '과거 매칭'
+    for item in items or []:
+        scope = item.get("scope")
+        if scope not in SCOPES:
+            continue
+        match = matches.get(item.get("id")) or {}
+        mc = int(match.get("match_count") or 0)
+        if not expose_full_tree and mc <= 0:
+            continue  # 매칭 노드만 — 미매칭 비공개 이름은 노출하지 않는다
+        node = _tree_node(item, match, ref)
+        is_recent = bool(node["is_recent_signal"])
+        gkey, glabel, gkind = _group_key_label(scope, item)
+        sc = by_scope.setdefault(scope, {
+            "scope": scope, "label": _SCOPE_LABEL.get(scope, scope),
+            "match_count": 0, "node_count": 0, "recent_node_count": 0, "_groups": {},
+        })
+        grp = sc["_groups"].setdefault(gkey, {
+            "key": gkey, "label": glabel, "kind": gkind, "match_count": 0,
+            "recent_node_count": 0, "nodes": [],
+        })
+        grp["nodes"].append(node)
+        grp["match_count"] += mc
+        sc["node_count"] += 1
+        sc["match_count"] += mc
+        total_nodes += 1
+        if mc > 0:
+            matched_nodes += 1
+        if is_recent:
+            recent_matched += 1
+            grp["recent_node_count"] += 1
+            sc["recent_node_count"] += 1
+        elif node["match_freshness"] == "old":
+            old_matched += 1
+        # 매칭됐으나 발행 시각 미상(freshness='')은 recent도 old도 아니다(미상은 위장 금지) —
+        # matched_nodes_all_time 에는 포함되나 '!'/'과거 매칭' 어느 쪽으로도 단정하지 않는다.
+
+    # 그룹/노드 정렬: 노드는 최근 신호 먼저 → 매칭 많은 순 → tier → 라벨(과거 매칭은 아래로).
+    out_scopes: dict = {}
+    for scope, sc in by_scope.items():
+        groups = list(sc.pop("_groups").values())
+        for g in groups:
+            g["nodes"].sort(key=lambda n: (0 if n["is_recent_signal"] else 1,
+                                           -n["match_count"], n["tier"], n["label"]))
+        if scope in ("overseas_branch", "overseas_subsidiary"):
+            groups.sort(key=lambda g: (-g["recent_node_count"], -g["match_count"], g["label"]))
+        else:
+            order = {k: i for i, k in enumerate(_BIZ_ORDER)}
+            groups.sort(key=lambda g: (order.get(g["key"], 99), g["label"]))
+        sc["groups"] = groups
+        out_scopes[scope] = sc
+
+    return {
+        "is_private": bool(is_private),
+        "expose_full_tree": bool(expose_full_tree),
+        "marker_legend": TREE_MARKER_LEGEND,
+        "total_nodes": total_nodes,
+        "matched_nodes": matched_nodes,                # 하위호환 별칭(= all_time)
+        "matched_nodes_all_time": matched_nodes,       # 전체-시점 매칭 노드(신선도 무관)
+        "recent_matched_nodes": recent_matched,        # 최근(≤30일) 매칭 = '!' 받는 노드
+        "old_matched_nodes": old_matched,              # 과거(>30일) 매칭 — '!' 없음
+        "by_scope": out_scopes,
+    }
+
+
+def tree_for_model(rows, path=None, now=None) -> dict | None:
+    """빌더용 트리 파생 — 비공개(env/arg) 워치리스트가 있을 때만 트리를 만든다.
+
+    공개 빌드(SITE_WATCHLIST_PATH 미설정 = 샘플)에서는 None을 반환한다(트리 없음 — 샘플도
+    노출하지 않는다). 비공개면 매칭 집계 후 expose_tree_enabled()로 전체/매칭전용을 정한다.
+    now는 freshness 기준 시각(빌더가 리포트 생성 시각을 주입; 미지정이면 현재 시각).
+    """
+    wl = load_watchlist(path)
+    if not wl["is_private"]:
+        return None
+    matches = summarize_matches(rows)
+    return build_tree(wl["items"], matches,
+                      expose_full_tree=expose_tree_enabled(), is_private=True, now=now)
 
 
 # ---------------------------------------------------------------------------

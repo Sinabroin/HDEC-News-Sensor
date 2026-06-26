@@ -46,7 +46,7 @@ from app import lens_queries  # noqa: E402
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
 # 사이트 워치리스트(leaf, P0-D7-M) — 사내 제공 현장/프로젝트명을 제목에서 매칭해 scope/business
-# 렌즈를 단다. 공개 빌드(SITE_WATCHLIST_PATH 미설정)는 공개 샘플만 보고 비공개 목록을 노출하지
+# 렌즈를 단다. 공개 빌드(비공개 워치리스트 경로 미설정)는 공개 샘플만 보고 비공개 목록을 노출하지
 # 않는다 — 제목이 이미 언급한 프로젝트만 태깅하며, 매칭 없는 항목은 모델/HTML에 들어가지 않는다.
 from app import site_watchlist  # noqa: E402
 
@@ -162,6 +162,45 @@ def _fmt_time(iso) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(_KST).strftime("%m-%d %H:%M")
+
+
+def _fmt_kst_full(iso) -> str:
+    """ISO datetime → KST 'YYYY-MM-DD HH:mm' (헤더 생성 시각·최신 기사 시각용).
+
+    brief.generated_at는 이미 KST(+09:00)지만, UTC 등 다른 tz가 와도 KST로 환산한다.
+    파싱 실패 시 빈 문자열 — 가짜 날짜를 만들지 않는다.
+    """
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_KST).strftime("%Y-%m-%d %H:%M")
+
+
+def _latest_article_kst(rows) -> str:
+    """표시 행들의 실제 published_at 중 가장 최신을 KST 'YYYY-MM-DD HH:mm'로.
+
+    rows는 _row_from_signal 산출물(provenance.published_at 보유). 값이 없으면 빈 문자열
+    (가짜 최신 시각 생성 금지). 헤더의 '최신 기사' 보조 표기에 쓰인다.
+    """
+    best = None
+    for row in rows or []:
+        pub = (row.get("provenance") or {}).get("published_at") if isinstance(row, dict) else None
+        if not pub:
+            continue
+        try:
+            dt = datetime.fromisoformat(str(pub))
+        except (TypeError, ValueError):
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        if best is None or dt > best:
+            best = dt
+    return best.astimezone(_KST).strftime("%Y-%m-%d %H:%M") if best else ""
 
 
 def _score_value(sig) -> float:
@@ -492,15 +531,27 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "published_at": sig.get("published_at") or "",
         "source_quality": sig.get("source_quality") or "",
     }
-    # 사이트 워치리스트 매칭 provenance(D7-M) — 제목이 워치리스트 프로젝트명을 실제로 언급한
-    # 행에만 가벼운 출처를 단다. 전체 비공개 목록은 모델에 넣지 않는다(매칭된 항목만, 첫 매칭).
+    # 사이트 워치리스트 매칭 provenance(D7-M/D7-N) — 제목이 워치리스트 프로젝트명을 실제로
+    # 언급한 행에만 출처를 단다. 전체 비공개 목록은 모델에 넣지 않는다(매칭된 항목만). 한 제목이
+    # 여러 항목과 매칭되면 matches 리스트로 모두 담고, 첫 매칭을 display용 primary로 둔다(트리
+    # 노드의 alert_marker '!'를 이 row→node 연결로 켠다 — D7-N site_watch_tree).
     site_matches = site_watchlist.classify_site_lenses(sig.get("title") or "")
     if site_matches:
         m = site_matches[0]
         provenance["site_watch_match"] = True
+        provenance["site_watch_id"] = m.get("id") or ""
+        provenance["site_watch_label"] = m.get("label") or m.get("name") or ""
         provenance["site_watch_scope"] = m.get("scope") or ""
         provenance["site_watch_business_lens"] = m.get("business_lens") or ""
-        provenance["site_watch_id"] = m.get("id") or ""
+        provenance["site_watch_org_unit"] = m.get("org_unit") or ""
+        if sig.get("published_at"):
+            provenance["site_watch_latest_published_at"] = sig.get("published_at")
+        provenance["site_watch_matches"] = [
+            {"id": x.get("id") or "", "label": x.get("label") or x.get("name") or "",
+             "scope": x.get("scope") or "", "business_lens": x.get("business_lens") or "",
+             "org_unit": x.get("org_unit") or ""}
+            for x in site_matches
+        ]
     return {
         "tag": tag, "tagClass": tag_class,
         "title": sig.get("title") or "",
@@ -1086,7 +1137,8 @@ def _overlay_market_history(model: dict, market_mode: str) -> None:
                 it["dir"], it["delta"] = "flat", "—"
 
 
-def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock") -> str:
+def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock",
+                  brief: dict | None = None) -> str:
     m = re.search(r'(<script type="application/json" id="preview-model">)(.*?)(</script>)',
                   html, re.S)
     if not m:
@@ -1110,7 +1162,32 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     meta["news_data_mode"] = news_mode
     meta["demo"] = news_mode != "live"
     meta["collection"] = "자동 수집 (live)" if news_mode == "live" else "수동 · 데모"
+    # 생성/최신 기사 시각(D7-N) — brief.generated_at(실제 빌드 시각, KST)을 헤더에 노출한다.
+    # 템플릿 정적 기본값(2026·06·22 …)을 더 이상 쓰지 않는다(가짜 날짜 제거). latest_article_kst는
+    # 실제 표시 행의 최신 published_at에서 파생(없으면 빈 문자열). published_kst는 하위호환을 위해
+    # 남기되 generated_kst와 동일하게 맞춰 stale 값을 제거한다.
+    brief = brief or {}
+    generated_kst = _fmt_kst_full(brief.get("generated_at"))
+    all_rows = list(parts.get("news_rows") or []) + list(parts.get("ai_rows") or [])
+    if parts.get("featured_row"):
+        all_rows.append(parts["featured_row"])
+    for bank in (parts.get("lens_banks") or {}).values():
+        all_rows.extend(bank or [])
+    latest_kst = _latest_article_kst(all_rows)
+    if generated_kst:
+        meta["generated_kst"] = generated_kst
+        meta["published_kst"] = generated_kst  # 하위호환: stale 기본값 대신 생성 시각
+    meta["latest_article_kst"] = latest_kst
+    meta["date_kst"] = brief.get("date_kst") or meta.get("date_kst") or ""
     model["meta"] = meta
+    # 현장/조직 감시 트리(D7-N) — 비공개 워치리스트(비공개 워치리스트 경로)가 있을 때만 주입한다.
+    # 공개 빌드는 None → 키 자체를 넣지 않는다(샘플도 노출 안 함). 매칭 노드만/전체 트리 여부는
+    # site_watchlist 리프가 SITE_WATCHLIST_EXPOSE_TREE로 결정한다(빌더는 행만 넘긴다). freshness('!')
+    # 기준 시각은 리포트 생성 시각(brief.generated_at) — '!'가 벽시계가 아니라 이 리포트 시점 기준으로
+    # '최근(≤30일) 매칭'을 뜻하게 한다(없으면 현재 시각). 과거(>30일) 매칭은 '!' 대신 '과거 매칭'.
+    tree = site_watchlist.tree_for_model(all_rows, now=brief.get("generated_at"))
+    if tree is not None:
+        model["site_watch_tree"] = tree
     counts = parts["bank_counts"]
     for grp in ("business_lens", "ecosystem"):
         for it in model.get(grp) or []:
@@ -1184,6 +1261,21 @@ def _update_honesty(html: str, news_mode: str) -> str:
     return html
 
 
+def _update_header_dates(html: str, brief: dict) -> str:
+    """헤더의 stale 정적 날짜(2026·06·22 …)를 실제 생성 시각(생성 KST)으로 치환한다(D7-N).
+
+    라벨은 템플릿에서 이미 '생성 KST'로 바뀌어 있고, 값/보조 표기(최신 기사)는 JS가
+    MODEL.meta(generated_kst/latest_article_kst)에서 채운다. 여기서는 생성 HTML 소스 자체에
+    stale 리터럴이 남지 않도록 값 텍스트를 치환한다 — 가짜 날짜 생성 금지(파싱 실패 시 무변경).
+    """
+    generated_kst = _fmt_kst_full((brief or {}).get("generated_at"))
+    if generated_kst:
+        html = html.replace(
+            '<div class="v num" id="pubKst">2026·06·22 월 07:00</div>',
+            f'<div class="v num" id="pubKst">{escape(generated_kst)}</div>')
+    return html
+
+
 def render_dashboard_html(brief: dict, market_mode: str = "mock") -> str:
     """공유 brief를 standalone 요약 대시보드 HTML로 렌더 (실기사 데이터 주입).
 
@@ -1212,7 +1304,8 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock") -> str:
     parts = _derive(brief)
     if parts["featured_sig"]:
         html = _inject_featured(html, _render_featured(parts["featured_sig"], parts["featured_row"]))
-    html = _inject_model(html, parts, news_mode, market_mode)
+    html = _inject_model(html, parts, news_mode, market_mode, brief=brief)
+    html = _update_header_dates(html, brief)
     html = _update_nav_counts(html, parts["nav_counts"], lens_queries.policy_for_model())
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
                                   len(parts["news_rows"]) + len(parts["ai_rows"]))
