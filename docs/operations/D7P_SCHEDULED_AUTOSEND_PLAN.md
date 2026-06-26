@@ -1,7 +1,7 @@
 # D7-P — 예약 라이브 갱신 + Telegram 정기 자동 발송 (계획)
 
-> 상태: **계획 문서**. D7-N 완료 직후 작성. **D7-N에서는 구현하지 않는다.**
-> D7-P 착수 시 이 명세를 그대로 따라 구현한다.
+> 상태: **구현됨** (D7-P). 아래 §1~§8은 원래 계획이고, 실제 구현은 **§9 구현 메모**를 따른다.
+> (원안은 `telegram-notify.yml` 확장이었으나, 구현은 독립 워크플로로 분리했다 — §9 참고.)
 > 선행: D3I 사람 검토 게이트(`scripts/send_telegram.py`), D3R/D3J 라이브 게시 경로
 > (`.github/workflows/telegram-notify.yml`), D7-N freshness `!`(생성 시각 기준이라 잦은
 > 갱신이 `최근 매칭` 정확도를 높인다).
@@ -132,3 +132,28 @@ D7-P가 추가하는 opt-in 플래그: **`TELEGRAM_AUTO_SEND`** (repo Variable, 
 - 기존 08:00(KST) 슬롯 폐지 — 사용자 명세에 07:00가 있으므로 08:00 제거·07:00로 통합 권장.
 - 슬롯별 콘텐츠 차등(예: 00:00은 축약본) 여부 — 기본은 동일 다이제스트, 차후 검토.
 - 슬롯 라벨을 다이제스트 본문에 노출할지, 헤더 메타에만 둘지 — 운영자 식별 편의 vs 임원 화면 간결성.
+
+## 9. 구현 메모 (D7-P 착수 — 실제 구현과 원안의 차이)
+
+원안(§6)은 기존 `telegram-notify.yml`을 확장하는 안이었으나, 실제 구현은 예약 자동화를
+**독립 워크플로로 분리**했다 (관심사 분리 · 기존 수동/검토 경로 무간섭).
+
+구현 산출물:
+- `.github/workflows/scheduled-live-refresh.yml` — 6 KST 슬롯 cron(§3 그대로),
+  live 리포트/대시보드 생성 → `live_ok`일 때만 commit/push(공개 Pages 갱신) → 게이트된
+  예약 다이제스트. 공개 빌드라 비공개 감시 목록 경로(env)는 설정하지 않는다(사생활).
+- `scripts/send_scheduled_telegram.py` — 예약 발송 오케스트레이터. 기본 dry-run,
+  `TELEGRAM_AUTO_SEND=1` opt-in일 때만 발송 시도. freshness(생성 시각 stale) · live
+  정직성(`news_data_mode != live`는 `TELEGRAM_ALLOW_MOCK=1` 없이 거부) 게이트를 통과해야
+  `send_telegram.py`(D3I 단일 진실원)에 위임한다 — 실제 POST·토큰 처리는 재구현하지 않는다.
+- `scripts/verify_scheduled_refresh_and_telegram.py` — 완전 오프라인 가드(36검사):
+  cron→KST 매핑, 기본 dry-run, opt-in 게이트, stale/mock 거부, 자격증명 없으면 가짜 발송 0,
+  토큰 모양 0, 공개 워크플로 비공개 경로 0.
+
+기존 `telegram-notify.yml`은 **그대로 둔다**(수동 dispatch + 08:00 KST 게시 경로 유지,
+D3I 검증기 계약 보존). 두 워크플로는 발송 시각이 겹치지 않으며, 양쪽 다 명시 승인/opt-in
+없이는 발송 0건이다. 08:00 게시 중복이 신경 쓰이면 차후 telegram-notify의 schedule을 정리할
+수 있으나, 그 경우 `verify_human_review_gate.py`가 요구하는 schedule/cron 존재 계약을 유지해야 한다.
+
+정직성·rules.md §1/§4 보존: mock fallback 발송 금지 · 토큰/시크릿 값 출력 0 · 비공개 감시
+목록 미노출 · 가짜 '발송됨' 위장 0 · 실제 발송은 운영자 opt-in + 자격증명이 모두 있을 때만.

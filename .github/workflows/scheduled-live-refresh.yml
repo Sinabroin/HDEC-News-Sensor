@@ -1,0 +1,132 @@
+name: Scheduled Live Refresh
+
+# D7-P — 하루 6회(KST) 라이브 리포트/대시보드 갱신 + 게이트된 예약 다이제스트 발송.
+# 기본은 게시(공개 Pages 갱신)만 하고 발송은 dry-run이다. 실제 발송은 repo Variable
+# TELEGRAM_AUTO_SEND='1' 명시 opt-in + 라이브 수집 성공(live_ok) + freshness/live 게이트
+# 통과일 때만 일어난다 (send_scheduled_telegram.py → send_telegram.py D3I 위임).
+on:
+  workflow_dispatch:
+    inputs:
+      force_dry_run:
+        description: "Type 'true' to force dry-run even if TELEGRAM_AUTO_SEND is set (default empty)"
+        required: false
+        default: ""
+  schedule:
+    # 6 KST 슬롯 → UTC (KST = UTC+9). GitHub schedule은 best-effort라 수분 지연될 수 있다.
+    - cron: "0 22 * * *"  # 07:00 KST (전일 UTC)
+    - cron: "0 2 * * *"   # 11:00 KST
+    - cron: "0 4 * * *"   # 13:00 KST
+    - cron: "0 7 * * *"   # 16:00 KST
+    - cron: "0 12 * * *"  # 21:00 KST
+    - cron: "0 15 * * *"  # 00:00 KST (전일 UTC)
+
+# 공개 Pages는 main의 docs/를 서빙한다 — 갱신분을 commit/push 하려면 write 권한 필요.
+permissions:
+  contents: write
+
+# 슬롯 실행을 직렬화해 겹침/중복 발송·git push 충돌을 막는다.
+concurrency:
+  group: scheduled-live-refresh
+  cancel-in-progress: false
+
+env:
+  # 검증/기본은 항상 mock 안전 모드 (네트워크/비밀값 0건). live 수집은 게시/발송 step에서만 명시 활성화.
+  APP_MODE: mock
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  scheduled-refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 1) 게이트 (mock-safe · 비밀값/네트워크 0건). 이 예약 경로의 핵심 verifier들.
+      #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
+      - name: Verify pipeline (mock-safe, no secrets)
+        run: |
+          python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py
+          python3 scripts/verify_scheduled_refresh_and_telegram.py
+          python3 scripts/verify_human_review_gate.py
+          python3 scripts/verify_static_report.py
+          python3 scripts/verify_dashboard_real_data.py
+          python3 scripts/verify_data_source_honesty.py
+
+      # 2) live 리포트/대시보드 생성. build_static_report.py가 출력하는 news_data_mode로
+      #    live 수집 성공(live_ok)을 판별한다 (단일 빌드 = 단일 수집). 실패(mock fallback)면
+      #    작업 트리를 복원해 가짜 live 게시를 차단한다.
+      #    ※ 공개 빌드는 비공개 감시 목록 경로(env)를 설정하지 않는다 — 감시 트리 미주입(사생활).
+      - name: Build live report + dashboard
+        id: build
+        env:
+          NEWS_MODE: live
+          # Naver 보조 provider — 이미 생성된 repo secrets로 안전 주입 (값 미출력). 자격증명이
+          # 없거나 실패해도 collector가 정직하게 skip하므로 live_ok 판정에는 영향이 없다.
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          MACRO_MODE: live
+          # 이 step의 시장지표 snapshot을 휘발 파일로 남겨 아래 다이제스트 step이 동일 값을 쓰게 한다.
+          MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
+        run: |
+          OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html --audience executive)"
+          echo "$OUT"
+          if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
+            # 공개 latest.html은 항상 executive 뷰 (operator 기본값 유출 방지, P0-D3R).
+            python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
+            python3 scripts/build_static_dashboard.py --market-mode live --output docs/daily/dashboard-latest.html
+            echo "live_ok=true" >> "$GITHUB_OUTPUT"
+            echo "NEWS_MODE=live · published executive report + operator snapshot + dashboard"
+          else
+            echo "live_ok=false" >> "$GITHUB_OUTPUT"
+            echo "NEWS_MODE=live · live collection failed/empty — NOT publishing as live"
+            git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html || true
+          fi
+
+      # 3) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
+      - name: Publish to Pages (commit live docs)
+        if: steps.build.outputs.live_ok == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html; then
+            echo "live docs unchanged — skip commit"
+          else
+            git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html
+            git commit -m "chore: scheduled live refresh"
+            git push
+            echo "scheduled live docs committed and pushed"
+          fi
+
+      # 4) 예약 다이제스트 — 기본 dry-run. 실제 발송은 vars.TELEGRAM_AUTO_SEND='1' + live_ok +
+      #    send_scheduled_telegram.py의 freshness/live 게이트 통과일 때만 (그 뒤 send_telegram.py 위임).
+      #    live_ok가 아니면 이 step은 건너뛴다 (mock fallback 자동 발송 금지).
+      - name: Scheduled telegram digest (gated auto-send)
+        if: steps.build.outputs.live_ok == 'true'
+        env:
+          # 예약 발송 opt-in — 평문 플래그라 비밀값이 아닌 repo Variable 권장. 미설정이면 dry-run.
+          TELEGRAM_AUTO_SEND: ${{ vars.TELEGRAM_AUTO_SEND || '' }}
+          TELEGRAM_ALLOW_MOCK: ${{ vars.TELEGRAM_ALLOW_MOCK || '' }}
+          TELEGRAM_MAX_AGE_HOURS: ${{ vars.TELEGRAM_MAX_AGE_HOURS || '' }}
+          FORCE_DRY_RUN: ${{ github.event.inputs.force_dry_run || '' }}
+          # 발송 자격증명 — send_telegram.py가 상속받아 쓴다. 값은 출력되지 않는다.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          NEWS_MODE: live
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          MACRO_MODE: live
+          MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
+          # inline 버튼 타겟 (vars 우선, 없으면 secrets). 미설정이면 버튼 없는 텍스트 발송.
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
+        run: |
+          DRY_FLAG=""
+          if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
+          python3 scripts/send_scheduled_telegram.py $DRY_FLAG
