@@ -96,13 +96,41 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html; then
+          DOCS=(
+            docs/daily/latest.html
+            docs/daily/operator-latest.html
+            docs/daily/dashboard-latest.html
+          )
+
+          if git diff --quiet -- "${DOCS[@]}"; then
             echo "live docs unchanged — skip commit"
           else
-            git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html
+            git add -- "${DOCS[@]}"
             git commit -m "chore: scheduled live refresh"
-            git push
-            echo "scheduled live docs committed and pushed"
+
+            for attempt in 1 2 3; do
+              echo "publish attempt ${attempt}/3: fetch + rebase + push"
+              git fetch origin main
+
+              if ! git rebase -X theirs origin/main; then
+                echo "ERROR: rebase onto origin/main failed during scheduled publish"
+                git rebase --abort || true
+                exit 1
+              fi
+
+              if git push origin HEAD:main; then
+                echo "scheduled live docs committed and pushed"
+                exit 0
+              fi
+
+              echo "WARN: git push failed on attempt ${attempt}/3"
+              if [ "${attempt}" -eq 3 ]; then
+                echo "ERROR: scheduled live docs push failed after 3 attempts"
+                exit 1
+              fi
+
+              sleep $((attempt * 5))
+            done
           fi
 
       # 4) 예약 다이제스트 — 기본 dry-run. 실제 발송은 vars.TELEGRAM_AUTO_SEND='1' + live_ok +
