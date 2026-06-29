@@ -102,12 +102,25 @@ _SUPPORTED = [
     # 환율: EUR/KRW·GBP/KRW (공개 무료 Yahoo FX).
     _Spec("eurkrw", "EURKRW=X", 1648.2, 1, 1.0, 800, 4000, "원"),
     _Spec("gbpkrw", "GBPKRW=X", 2034.9, 1, 1.0, 800, 4000, "원"),
+    # D7-Z2: widen detail-chart coverage for linked Yahoo-backed indicators.
+    # These rows already have displayed delayed/proxy values and public Yahoo symbols;
+    # adding history specs only enables real delayed period charts. It does not fabricate
+    # unavailable/manual indicators.
+    _Spec("lumber", "LBR=F", 486.0, 0, 1.0, 100, 2000, "USD/MBF"),
+    _Spec("rebar", "SLX", 62.1, 1, 1.0, 10, 200, "pt"),
+    _Spec("cnykrw", "CNYKRW=X", 211.4, 1, 1.0, 50, 400, "원"),
+    _Spec("audkrw", "AUDKRW=X", 1012.7, 1, 1.0, 400, 2000, "원"),
+    _Spec("cadkrw", "CADKRW=X", 1121.5, 1, 1.0, 400, 2000, "원"),
+    _Spec("dxy", "DX-Y.NYB", 104.8, 1, 1.0, 50, 150, "pt"),
+    _Spec("eurusd", "EURUSD=X", 1.073, 3, 1.0, 0.5, 2.0, ""),
+    _Spec("usdjpy", "USDJPY=X", 157.8, 1, 1.0, 50, 250, ""),
+    _Spec("usdcny", "USDCNH=X", 7.27, 2, 1.0, 3, 12, ""),
 ]
 _BY_ID = {s.id: s for s in _SUPPORTED}
 
 # 글로벌 벤치마크라 정확한 국내 현물가가 아닌(대용) 연동 종목 — 템플릿이 '대용(proxy)'으로
 # 표기한다(히스토리는 실측이되 국내 현물가 주장 금지). 검증 헬퍼가 참조한다.
-PROXY_IDS = ("iron_ore", "hrc_steel", "thermal_coal", "diesel_gasoil")
+PROXY_IDS = ("iron_ore", "hrc_steel", "thermal_coal", "diesel_gasoil", "rebar")
 
 # 공개 무료 소스가 없어 기간 히스토리를 연동하지 않는 종목(정직: 소스 필요).
 # US 2Y·KR 10Y는 Yahoo 무료 심볼이 없어 비연동으로 둔다(가짜 값/가짜 선 미생성).
