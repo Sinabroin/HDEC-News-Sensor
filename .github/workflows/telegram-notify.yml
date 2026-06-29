@@ -57,6 +57,7 @@ jobs:
           python3 scripts/verify_live_publish_path.py
           python3 scripts/verify_executive_ia_polish.py
           python3 scripts/verify_telegram_channel_to_personal_entry.py
+          python3 scripts/verify_national_ai_infra_relevance.py
 
       # 빈 메시지면 live 게시 경로, 커스텀 메시지면 그대로 전달 경로.
       # 입력은 env로만 받아 shell 주입을 막는다.

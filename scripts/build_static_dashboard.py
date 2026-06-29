@@ -258,6 +258,10 @@ def _signal_rank_key(sig, immediate_basis: str = "") -> tuple:
     basis_rank = 1 if immediate_basis == "strict_instant" or _is_strict_immediate(sig) else 0
     return (
         -_score_value(sig),
+        # D7-AB: 국가급 AI 인프라 투자 신호를 Executive Read 후보로 승격 — 점수 '다음'에 두어
+        # (점수를 뒤집지 않는 boost) 동점·유사 점수대에서 앞세운다. mock 신호엔 boost 해당이
+        # 없어(0) mock 정렬은 불변이다. 단독 통과가 아니라 relevant∧boost_combo일 때만 1.
+        -int(lens_queries.national_ai_infra_boost(sig.get("title") or "")),
         -basis_rank,
         -int(_is_hdec_direct(sig)),
         -int(_is_risk_signal(sig)),
