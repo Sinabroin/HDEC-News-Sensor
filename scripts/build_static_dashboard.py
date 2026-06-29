@@ -1311,38 +1311,73 @@ def _market_link_counts(items: list) -> dict:
     }
 
 
-def _overlay_market_history(model: dict, market_mode: str) -> None:
-    """live 모드에서 지원 종목의 기간 히스토리(+표시 현재값/변동)를 공개 시세(지연) 실측으로 교체.
+def _market_has_chart(it: dict) -> bool:
+    """market_item이 이미 기간 차트(1m ≥2 숫자점)를 갖는지 — JS isClickable과 동일 규칙."""
+    arr = (it.get("history") or {}).get("1m") or []
+    return len([x for x in arr if isinstance(x, (int, float))]) >= 2
 
-    mock(기본)에서는 템플릿의 결정적 데모 픽스처를 그대로 둔다 — 네트워크 0건. live에서 일부
-    심볼이 실패하면 그 종목은 데모로 남는다(history_data_mode=mock_demo) — live로 위장하지 않는다.
-    표시 현재값/변동을 히스토리 끝점과 일치시켜 차트·값이 어긋나지 않게 한다('지연·체결값 아님' 유지).
+
+def _apply_history_entry(it: dict, entry: dict) -> None:
+    """market_history 엔트리(데모/실측)를 market_item에 부착하고 표시값/변동을 끝점과 일치시킨다.
+
+    표시 현재값/변동을 히스토리 끝점과 맞춰 차트·값이 어긋나지 않게 한다('체결값 아님' 유지).
+    엔트리가 자기 출처(history_data_mode: mock_demo | delayed_market)를 들고 있어 정직하다.
     """
+    hist = entry.get("history") or {}
+    if len(hist.get("1w") or []) < 1 or len(hist.get("1m") or []) < 2:
+        return  # 불완전 엔트리는 부착하지 않는다(빈/단일점 차트 금지)
+    it["history"] = hist
+    it["history_source"] = entry["history_source"]
+    it["history_data_mode"] = entry["history_data_mode"]
+    it["history_updated_at"] = entry["history_updated_at"]
+    it["history_decimals"] = entry["history_decimals"]
+    latest = hist["1w"][-1]
+    it["value"] = _fmt_market_value(latest, entry["history_decimals"])
+    ref = hist["1m"][0] if hist.get("1m") else None
+    if ref:
+        pct = (latest - ref) / ref * 100
+        if pct > 0.05:
+            it["dir"], it["delta"] = "up", f"▲ +{pct:.1f}%"
+        elif pct < -0.05:
+            it["dir"], it["delta"] = "down", f"▼ {abs(pct):.1f}%"
+        else:
+            it["dir"], it["delta"] = "flat", "—"
+
+
+def _overlay_market_history(model: dict, market_mode: str) -> None:
+    """지원 종목의 기간 히스토리를 부착한다 — 차트 없는 종목은 결정적 데모, live는 실측으로 교체.
+
+    두 단계(둘 다 market_history leaf가 단일 출처):
+      1) 데모 폴백(네트워크 0건) — 아직 기간 차트가 없는 지원 종목에 leaf의 **결정적** 데모
+         픽스처(history_data_mode=mock_demo)를 채운다. D7-Z2로 추가된 종목(철근·환율 등)은
+         템플릿에 데모가 없어 live 실패 시 빈 차트로 남았다 — 이 폴백이 그 회귀(D7-Z3 게이트)를
+         막는다. 이미 차트가 있는 종목(템플릿 데모)은 건드리지 않아 표시값/변동을 보존한다.
+      2) live 실측(market_mode=="live"일 때만) — 공개 시세(지연) 1년 히스토리를 받아 **성공분만**
+         (LIVE_MODE) 덮어쓴다. 실패 심볼은 1)의 데모로 정직하게 남는다 — live로 위장하지 않는다.
+
+    mock(기본)은 1)만 수행하고 네트워크는 0건이다. 가짜 live 값을 만들지 않는다 — 데모는
+    mock_demo로 정직 표기되고 '현재 체결값 아님'을 유지한다.
+    """
+    by_id = {it.get("id"): it for it in model.get("market_items") or []}
+
+    # 1) 데모 폴백 — history_for_model("mock")은 leaf 결정적 데모만 반환(네트워크 미접근).
+    #    차트가 없는 지원 종목만 채운다(이미 있는 종목의 값/변동은 보존).
+    for item_id, entry in market_history.history_for_model(mode="mock").items():
+        it = by_id.get(item_id)
+        if it is not None and not _market_has_chart(it):
+            _apply_history_entry(it, entry)
+
+    # mock(기본)에서는 데모 픽스처까지만 — 네트워크 0건.
     if (market_mode or "mock").strip().lower() != "live":
         return
-    entries = market_history.history_for_model(mode="live")
-    by_id = {it.get("id"): it for it in model.get("market_items") or []}
-    for item_id, entry in entries.items():
+
+    # 2) live 실측으로 성공분만 덮어쓴다(실패분은 1)의 데모 유지 = 정직).
+    for item_id, entry in market_history.history_for_model(mode="live").items():
+        if entry.get("history_data_mode") != market_history.LIVE_MODE:
+            continue  # 실측 성공분(delayed_market)만 교체
         it = by_id.get(item_id)
-        if not it or entry.get("history_data_mode") != market_history.LIVE_MODE:
-            continue  # 실측 성공분만 교체(실패분은 데모 유지 = 정직)
-        hist = entry["history"]
-        it["history"] = hist
-        it["history_source"] = entry["history_source"]
-        it["history_data_mode"] = entry["history_data_mode"]
-        it["history_updated_at"] = entry["history_updated_at"]
-        it["history_decimals"] = entry["history_decimals"]
-        latest = hist["1w"][-1]
-        it["value"] = _fmt_market_value(latest, entry["history_decimals"])
-        ref = hist["1m"][0] if hist.get("1m") else None
-        if ref:
-            pct = (latest - ref) / ref * 100
-            if pct > 0.05:
-                it["dir"], it["delta"] = "up", f"▲ +{pct:.1f}%"
-            elif pct < -0.05:
-                it["dir"], it["delta"] = "down", f"▼ {abs(pct):.1f}%"
-            else:
-                it["dir"], it["delta"] = "flat", "—"
+        if it is not None:
+            _apply_history_entry(it, entry)
 
 
 def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock",
