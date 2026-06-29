@@ -392,21 +392,6 @@
     border-radius:12px; padding:12px 15px; font-size:12.5px; color:#6E5A33; line-height:1.55; margin-bottom:13px;}
   .banner b{color:var(--amber);}
 
-  /* ===== Lower sections ===== */
-  .lowerhead{margin:18px 2px 0;}
-  .lower{margin-top:11px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start;}
-  @media (max-width:980px){ .lower{grid-template-columns:1fr;} }
-  .lower .panel{align-self:start;}
-  .lensgrid{display:flex; flex-direction:column; gap:7px; margin-top:10px;}
-  .lensitem{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 11px;
-    border:1px solid var(--hair); border-radius:11px; background:#FCFDFF;}
-  .lensitem .l{font-size:13px; font-weight:700; color:var(--ink2);}
-  .lensitem .d{font-size:11px; color:var(--mute3); margin-top:2px;}
-  .lensitem .c{font-size:13px; font-weight:800; color:var(--sky); font-variant-numeric:tabular-nums; flex:none;}
-  .lensitem .c.zero{color:var(--mute4);}
-  .lensitem[data-filter]{cursor:pointer; transition:background .12s, border-color .12s;}
-  .lensitem[data-filter]:hover{background:#F5F9FE; border-color:#DCE9F8;}
-  .lensitem.active{background:var(--sky-tint); border-color:#CFE0F4;}
   /* ===== Empty state (선택 렌즈에 표시할 데모 신호 없음) ===== */
   /* AI 사업·운영 신호 카드 (실행가능 신호 — 카테고리 칩 + 왜/관련성/액션/렌즈) */
   .aisig{padding:15px 18px; margin-bottom:12px;}
@@ -1040,28 +1025,6 @@
     </aside>
   </div>
 
-  <!-- =================== LOWER SECTIONS =================== -->
-  <div class="seclabel sky lowerhead"><span class="t">부가 관찰 · SUPPORTING LENSES</span><span class="ln"></span><span class="c">사업 렌즈 · 생태계 관찰 · 다음 관찰</span></div>
-  <div class="lower">
-    <div class="panel">
-      <div class="ph">사업 렌즈 · Business Lens</div>
-      <div class="pnote">사업 부문(Layer-1) 커버리지 — 토픽 프로파일 재사용 (데모 카운트).</div>
-      <div class="lensgrid" id="businessLens"></div>
-    </div>
-
-    <div class="panel">
-      <div class="ph">생태계 관찰 · Ecosystem Watch</div>
-      <div class="pnote">외부 생태계 — 그룹사·경쟁사·신탁/시행·에너지·지정학 (데모 카운트).</div>
-      <div class="lensgrid" id="ecosystem"></div>
-    </div>
-
-    <div class="panel">
-      <div class="ph">다음 관찰 · What to Watch Next</div>
-      <div class="pnote">선행 점검 항목 — 미리보기 데모.</div>
-      <div id="watchNext"></div>
-    </div>
-  </div>
-
   <footer class="bottom">
     <div class="previewflag">NON-PRODUCTION PREVIEW</div><br>
     HDEC Executive Radar · 대시보드 미리보기 — 참고용 브리프 (데모/mock 데이터).<br>
@@ -1115,7 +1078,7 @@
   "meta": {"published_kst": "2026·06·22 월 07:00", "news_data_mode": "mock",
            "collection": "수동 · OFF", "audience": "executive-preview", "demo": true},
   "operator_api_base": "",
-  "operator_endpoints": {"collect": "/api/operator/collect", "send_telegram": "/api/operator/send-telegram"},
+  "operator_endpoints": {"collect": "/api/operator/collect", "telegram": "/api/operator/send-telegram"},
   "lens_policy": {
     "now": {"label": "즉시 확인", "query": "즉시 알림 후보·즉시 확인 등급에서 파생", "supported": true, "note": "", "collection": "derived"},
     "new": {"label": "신규 이슈", "query": "금일 처음 관측된 신규 신호에서 파생", "supported": true, "note": "", "collection": "derived"},
@@ -1304,28 +1267,6 @@
     {"src": "Telegram", "state": "telegram_observed", "stateLabel": "승인 채널 관찰",
      "text": "승인된 산업 채널 관찰 — 국내 데이터센터 전력 인입 일정 지연 루머 (비공개 대화 수집 아님)",
      "meta": "승인 채널 관찰 · 검증 전", "action": "근거 확인"}
-  ],
-  "business_lens": [
-    {"id": "civil_infrastructure", "label": "토목", "desc": "SOC·도로·철도·항만·교량·터널", "count": 2},
-    {"id": "building_housing", "label": "건축주택", "desc": "도시정비·분양·공사비·하자/품질", "count": 3},
-    {"id": "plant", "label": "플랜트", "desc": "원전·LNG·정유/석화·중동 EPC", "count": 4},
-    {"id": "new_energy", "label": "New Energy", "desc": "SMR·수소·전력망·데이터센터 전력", "count": 5},
-    {"id": "development_business", "label": "개발사업", "desc": "시행/디벨로퍼·PF·인허가", "count": 1},
-    {"id": "global_business", "label": "글로벌", "desc": "해외수주·중동·환율·지정학", "count": 5},
-    {"id": "safety_quality", "label": "안전·품질", "desc": "중대재해·특별감독·벌점·하자", "count": 2}
-  ],
-  "ecosystem": [
-    {"id": "hyundai_group", "label": "현대 그룹사", "desc": "범현대 인프라·에너지·공급망", "count": 0},
-    {"id": "competitor_contractors", "label": "경쟁 시공사", "desc": "주요 경쟁사 수주·리스크", "count": 1},
-    {"id": "trust_companies", "label": "신탁사", "desc": "정비사업·PF·책임준공", "count": 0},
-    {"id": "developers", "label": "시행사·디벨로퍼", "desc": "PF·분양·시공사 선정", "count": 0},
-    {"id": "oil_energy", "label": "유가·에너지", "desc": "유가·연료·발주환경 (지연/대용)", "count": 2},
-    {"id": "hormuz", "label": "호르무즈", "desc": "공개뉴스 수집 · AIS 직접 수치 별도", "count": 0}
-  ],
-  "watch_next": [
-    {"n": "1", "title": "건설현장 중대재해 특별감독 대상·일정", "desc": "단기 평판·수주 자격 영향 — 국내현장 점검."},
-    {"n": "2", "title": "데이터센터 전력계통·SMR 로드맵 후속", "desc": "AI 데이터센터 EPC·전력 인프라 수주 기회 추적."},
-    {"n": "3", "title": "중동 LNG·플랜트 발주 일정 (호르무즈 연계)", "desc": "해외 발주환경 — AIS 미연동, 정책/키 연동 시 보강."}
   ]
 }
 </script>
@@ -1619,9 +1560,6 @@
     filterPanel("panel-ai", key);
     if (lensnav) [].forEach.call(lensnav.querySelectorAll(".nav"), function (n) {
       n.classList.toggle("active", n.getAttribute("data-filter") === key);
-    });
-    [].forEach.call(document.querySelectorAll(".lensitem[data-filter]"), function (it) {
-      it.classList.toggle("active", it.getAttribute("data-filter") === key);
     });
     var lab = el("activeLens"); if (lab) lab.textContent = lensLabel(key);
     var cnt = el("lensCount"); if (cnt) cnt.textContent = bankRows ? bankRows.length : newsShown;
@@ -2068,35 +2006,6 @@
     });
   })();
 
-  /* ---------- business lens / ecosystem ---------- */
-  function renderLensList(targetId, items) {
-    var box = el(targetId); if (!box) return; box.innerHTML = "";
-    (items || []).forEach(function (it) {
-      var d = document.createElement("div"); d.className = "lensitem";
-      if (it.id) d.setAttribute("data-filter", it.id);
-      var c = it.count == null ? '<span class="dm unavail" style="font-size:9px;">미연동</span>'
-        : '<span class="c ' + (it.count ? "" : "zero") + '">' + it.count + '</span>';
-      d.innerHTML = '<div><div class="l">' + esc(it.label) + '</div><div class="d">' + esc(it.desc) + '</div></div>' + c;
-      box.appendChild(d);
-    });
-    box.addEventListener("click", function (ev) {              // 우측 레일도 동일 필터 구동
-      var item = ev.target.closest(".lensitem[data-filter]"); if (!item) return;
-      selectLens(item.getAttribute("data-filter"));
-    });
-  }
-  renderLensList("businessLens", MODEL.business_lens);
-  renderLensList("ecosystem", MODEL.ecosystem);
-
-  /* ---------- watch next ---------- */
-  (function () {
-    var box = el("watchNext"); if (!box) return;
-    (MODEL.watch_next || []).forEach(function (w) {
-      var d = document.createElement("div"); d.className = "watch";
-      d.innerHTML = '<span class="wn">' + esc(w.n) + '</span><div><div class="wt">' + esc(w.title) + '</div>' +
-        '<div class="wd">' + esc(w.desc) + '</div></div>';
-      box.appendChild(d);
-    });
-  })();
 
   /* ============================================================
      MARKET DETAIL CHART — within_country / cross_country
@@ -2603,7 +2512,7 @@
           "데이터 새로고침을 실행했습니다. 반영까지 약 1~3분 걸립니다.");
     });
     sendBtn.addEventListener("click", function () {
-      run(sendBtn, endpoints.send_telegram, "텔레그램 전송 실행 중…",
+      run(sendBtn, endpoints.telegram, "텔레그램 전송 실행 중…",
           "텔레그램 전송을 실행했습니다.");
     });
   })();

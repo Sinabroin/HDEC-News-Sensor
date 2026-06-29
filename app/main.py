@@ -256,9 +256,10 @@ def operator_collect(body: OperatorActionRequest | None = None,
 
 
 @app.post("/api/operator/send-telegram")
-def operator_send_telegram(body: OperatorActionRequest | None = None,
-                           x_operator_token: str | None = Header(default=None)):
-    # D7-AA — 운영자 버튼이 호출하는 텔레그램 발송 endpoint. PIN 검증 통과 시에만 게이트웨이가
-    # approve_send="true"를 워크플로에 넘겨 실제 발송까지 간다(자동발송 하드코딩 없음).
+def operator_telegram(body: OperatorActionRequest | None = None,
+                      x_operator_token: str | None = Header(default=None)):
+    # D7-AA — 운영자 버튼이 호출하는 텔레그램 발송 endpoint. 이 라우트는 sender 스크립트를 직접
+    # 호출하지 않고 operator_gateway가 워크플로(telegram-notify.yml)를 dispatch한다. PIN 검증을
+    # 통과한 호출에서만 게이트웨이가 approve_send="true"를 넘겨 실제 발송까지 간다(자동발송 없음).
     return _operator_response(
-        operator_gateway.trigger_send_telegram(_operator_pin(body, x_operator_token)))
+        operator_gateway.trigger_telegram(_operator_pin(body, x_operator_token)))

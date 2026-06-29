@@ -80,15 +80,15 @@ def trigger_collect(pin: str) -> dict:
     return {"action": "collect", **_dispatch(_COLLECT_WORKFLOW)}
 
 
-def trigger_send_telegram(pin: str) -> dict:
+def trigger_telegram(pin: str) -> dict:
     """텔레그램 발송 워크플로(telegram-notify.yml)를 운영자 승인 후 트리거한다.
 
     PIN 검증을 통과한 인증 호출에서만 approve_send="true"를 명시 전달해 실제 발송까지 간다.
     워크플로 입력 기본값은 빈 값(=검토만)이며, 자동발송 하드코딩은 없다.
     """
     if not is_configured():
-        return {"action": "send_telegram", "status": "not_configured"}
+        return {"action": "telegram", "status": "not_configured"}
     if not _pin_ok(pin):
-        return {"action": "send_telegram", "status": "unauthorized"}
-    return {"action": "send_telegram",
+        return {"action": "telegram", "status": "unauthorized"}
+    return {"action": "telegram",
             **_dispatch(_TELEGRAM_WORKFLOW, {"approve_send": "true"})}

@@ -1397,14 +1397,8 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     tree = site_watchlist.tree_for_model(all_rows, now=brief.get("generated_at"))
     if tree is not None:
         model["site_watch_tree"] = tree
-    counts = parts["bank_counts"]
-    for grp in ("business_lens", "ecosystem"):
-        for it in model.get(grp) or []:
-            pol = policy.get(it.get("id"), {})
-            if pol.get("collection") == "unconfigured" or pol.get("supported") is False:
-                it["count"] = None  # 미연동 유지 (count=null → '미연동' 배지)
-            else:
-                it["count"] = counts.get(it.get("id"), 0)
+    # D7-AA — 부가 관찰(SUPPORTING LENSES: business_lens/ecosystem/watch_next) 섹션은 제거됨.
+    # 이전의 그룹별 count 주입 루프도 함께 제거한다(템플릿 모델에 더 이상 해당 키가 없음).
     new_json = json.dumps(model, ensure_ascii=False, indent=2)
     return html[:m.start()] + m.group(1) + "\n" + new_json + "\n" + m.group(3) + html[m.end():]
 

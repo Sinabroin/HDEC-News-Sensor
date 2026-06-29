@@ -78,10 +78,13 @@ def check_lens_controls(tpl: str) -> None:
     check("1a: 좌측 렌즈 nav가 data-filter 속성을 가짐 (>=10)", len(filters) >= 10,
           f"{len(filters)}개")
     check("1b: '전체 종합' 리셋 렌즈(data-filter=\"all\") 존재", "all" in filters)
-    # 우측 레일 사업/생태계 렌즈도 클릭 필터를 구동(JS가 data-filter 주입)
-    check("1c: 우측 레일 lensitem도 data-filter로 필터 구동",
-          'd.setAttribute("data-filter", it.id)' in tpl
-          and '.lensitem[data-filter]' in tpl)
+    # D7-AA — 부가 관찰(SUPPORTING LENSES: Business Lens·Ecosystem Watch·What to Watch Next)
+    # 섹션은 제거되었다. 과거 rail lensitem 필터 바인딩 대신, 해당 섹션/렌더 함수가 다시
+    # 들어오지 않았는지 회귀 가드를 둔다(빈 섹션·죽은 코드 재유입 방지).
+    check("1c: 부가 관찰(SUPPORTING LENSES) 섹션 제거 유지 (회귀 가드)",
+          "renderLensList" not in tpl
+          and 'id="businessLens"' not in tpl
+          and "부가 관찰" not in tpl)
     check("1d: data-filter 컨트롤이 충분히 다양(>=12 고유)",
           len(set(filters)) >= 12, f"{len(set(filters))} 고유")
 
