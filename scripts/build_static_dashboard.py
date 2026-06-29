@@ -502,6 +502,14 @@ def _lens_for(sig) -> list:
         keys.add("overseas_subsidiary")
     else:
         keys.discard("overseas_subsidiary")
+    # 호르무즈 relevance guard(D7-AA) — 직접 호르무즈/Strait of Hormuz 언급, 또는 (지정학 geo
+    # 앵커 ∧ 해상/원유 risk 앵커)일 때만 hormuz 렌즈로 태깅한다. 단순 LNG·중동·유가·해운 단일
+    # 키워드만으로 들어온 오태깅을 제거한다. raw 제목만 본다 — category_label("중동·해외 수주
+    # 환경")이 geo 앵커를 오주입해 일반 유가/중동 기사가 호르무즈에 새는 함정을 피한다.
+    if lens_queries.hormuz_relevant(raw_title):
+        keys.add("hormuz")
+    else:
+        keys.discard("hormuz")
     # AI 렌즈(D7-L) — 섹션/카테고리(injected)로 'ai'가 붙어도 raw 제목에 직접 AI/데이터센터
     # 인프라 근거가 없으면 제외한다(안전/규제 기사의 category 오염 차단). 근거가 있을 때만 유지.
     if ("ai" in keys

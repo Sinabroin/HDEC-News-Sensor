@@ -90,6 +90,35 @@ def keyword_lens_pairs() -> list:
     return pairs
 
 
+def hormuz_relevance_policy() -> dict:
+    """호르무즈 렌즈 relevance 정책 (direct / geo_anchors / risk_anchors). 없으면 빈 리스트들."""
+    spec = _lenses().get("hormuz")
+    rel = spec.get("relevance") if isinstance(spec, dict) else None
+    out = {"direct": [], "geo_anchors": [], "risk_anchors": []}
+    if isinstance(rel, dict):
+        for key in out:
+            out[key] = [w for w in (rel.get(key) or []) if isinstance(w, str) and w]
+    return out
+
+
+def hormuz_relevant(text: str) -> bool:
+    """호르무즈 렌즈 적격성 판정 — D7-AA relevance guard.
+
+    True ⇔ (직접 호르무즈/Strait of Hormuz 언급) OR (geo 앵커 ∧ risk 앵커 동시 등장).
+    단순 LNG·중동·유가·해운 같은 단일 키워드만으로는 False(오태깅 차단). 대소문자 무시.
+    호출부는 raw 제목을 넘긴다(category_label의 '중동·해외' 같은 섹션어 오주입 회피).
+    """
+    low = (text or "").lower()
+    if not low:
+        return False
+    pol = hormuz_relevance_policy()
+    if any(d.lower() in low for d in pol["direct"]):
+        return True
+    geo = any(g.lower() in low for g in pol["geo_anchors"])
+    risk = any(r.lower() in low for r in pol["risk_anchors"])
+    return geo and risk
+
+
 def collection_query_groups() -> list:
     """수집기용 렌즈 쿼리 그룹 — collect 쿼리가 있는 렌즈만 (collector-supported).
 
