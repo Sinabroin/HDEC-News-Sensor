@@ -44,6 +44,9 @@ PRIORITY_LENS_GROUPS = (
     "value_chain:ai_hyperscaler_infra", "value_chain:ai_datacenter_power_cooling",
     "value_chain:ai_chip_supply_chain", "value_chain:ai_semiconductor_cluster",
     "value_chain:developer_trust_finance",
+    # D7-AC: 국가급 AI·반도체·DC·전력 인프라 투자 수집 그룹을 preflight에 올려 전용 4개 쿼리가
+    # 전역 cap 소진 전에 실제로 실행되게 한다(default priority면 fetch order 끝이라 굶어 audit 0건).
+    "national_ai_infra",
     "lens:overseas_site", "lens:overseas_branch", "lens:overseas_subsidiary",
     "lens:hormuz", "lens:civil_infrastructure",
 )

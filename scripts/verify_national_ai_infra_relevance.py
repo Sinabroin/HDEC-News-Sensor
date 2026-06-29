@@ -165,6 +165,14 @@ def check_collection_queries() -> None:
     if ok:
         qs = groups["national_ai_infra"]["queries"]
         check("collect: 후보 확보용 최소 쿼리(>=3, 무차별 OR 아님)", 3 <= len(qs) <= 8, f"n={len(qs)}")
+    # D7-AC: 전용 쿼리가 전역 cap에 굶지 않도록 우선순위 preflight 그룹이어야 한다(default
+    # priority면 fetch order 끝이라 query_audit 0건 → 실제 수집 안 됨). coverage starvation 잠금.
+    try:
+        from app import live_collector as _lc
+        check("collect: national_ai_infra가 우선순위 preflight 그룹 (coverage starvation 방지)",
+              "national_ai_infra" in _lc.PRIORITY_LENS_GROUPS)
+    except Exception as exc:  # noqa: BLE001
+        check("collect: live_collector.PRIORITY_LENS_GROUPS import", False, str(exc))
 
 
 def check_rank_boost() -> None:
