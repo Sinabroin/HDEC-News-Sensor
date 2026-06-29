@@ -1338,13 +1338,17 @@ def _overlay_market_history(model: dict, market_mode: str) -> None:
 
 
 def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock",
-                  brief: dict | None = None) -> str:
+                  brief: dict | None = None, operator_api_base: str = "") -> str:
     m = re.search(r'(<script type="application/json" id="preview-model">)(.*?)(</script>)',
                   html, re.S)
     if not m:
         print("ERROR: preview-model JSON island을 찾지 못함", file=sys.stderr)
         raise SystemExit(1)
     model = json.loads(m.group(2))
+    # D7-AA — 운영자 버튼의 운영 API base URL(공개값)을 island에 주입한다. 빈 값이면 프론트는
+    # 버튼을 비활성 + 미설정 안내만 한다(GitHub 이동 없음). 빌더 소스는 env를 직접 읽지 않고
+    # CLI(--operator-api-base)로만 받는다(verify_dashboard_real_data 1d 계약).
+    model["operator_api_base"] = (operator_api_base or "").strip()
     _overlay_market_history(model, market_mode)
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
@@ -1481,11 +1485,13 @@ def _update_header_dates(html: str, brief: dict) -> str:
     return html
 
 
-def render_dashboard_html(brief: dict, market_mode: str = "mock") -> str:
+def render_dashboard_html(brief: dict, market_mode: str = "mock",
+                          operator_api_base: str = "") -> str:
     """공유 brief를 standalone 요약 대시보드 HTML로 렌더 (실기사 데이터 주입).
 
     market_mode="live"이면 지원 종목의 기간 히스토리를 공개 시세(지연) 실측으로 교체한다
     (네트워크는 market_history leaf가 소유). 기본 mock은 결정적 데모 픽스처(네트워크 0건).
+    operator_api_base는 운영자 버튼이 호출할 공개 API base URL(비밀값 아님 · 빈 값=미설정).
     """
     try:
         html = SOURCE_TEMPLATE.read_text(encoding="utf-8")
@@ -1509,7 +1515,8 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock") -> str:
     parts = _derive(brief)
     if parts["featured_sig"]:
         html = _inject_featured(html, _render_featured(parts["featured_sig"], parts["featured_row"]))
-    html = _inject_model(html, parts, news_mode, market_mode, brief=brief)
+    html = _inject_model(html, parts, news_mode, market_mode, brief=brief,
+                         operator_api_base=operator_api_base)
     html = _update_header_dates(html, brief)
     html = _update_nav_counts(html, parts["nav_counts"], lens_queries.policy_for_model())
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
@@ -1569,10 +1576,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--market-mode", choices=("mock", "live"), default="mock",
                         help="시장 기간 히스토리 출처: mock=결정적 데모 픽스처(기본, 네트워크 0건), "
                              "live=공개 시세(지연) 실측(market_history leaf가 네트워크 소유)")
+    parser.add_argument("--operator-api-base", metavar="URL", default="",
+                        help="운영자 버튼이 호출할 공개 Operator API base URL(비밀값 아님). "
+                             "미지정(기본)이면 버튼은 비활성 + '운영 API 미설정' 안내만 표시한다"
+                             "(GitHub 이동 없음). 빌더는 env를 직접 읽지 않고 이 CLI로만 받는다.")
     args = parser.parse_args(argv)
 
     brief = build_brief_via_mock_pipeline()
-    html = render_dashboard_html(brief, market_mode=args.market_mode)
+    html = render_dashboard_html(brief, market_mode=args.market_mode,
+                                 operator_api_base=args.operator_api_base)
 
     if args.json:
         print(json.dumps(dashboard_metadata(html, brief), ensure_ascii=False, indent=2))

@@ -65,3 +65,26 @@ NAVER_NEWS_ENABLED = (os.environ.get("NAVER_NEWS_ENABLED") or "").strip().lower(
     "1", "true", "on", "yes")
 NAVER_CLIENT_ID = (os.environ.get("NAVER_CLIENT_ID") or "").strip()
 NAVER_CLIENT_SECRET = (os.environ.get("NAVER_CLIENT_SECRET") or "").strip()
+
+# D7-AA — 운영자 실행(Operator) 설정. 공개 정적 대시보드의 "데이터 새로고침"/"텔레그램 전송"
+# 버튼이 GitHub 페이지로 이동하지 않고 서버측 Operator API(POST)를 호출하게 한다.
+#
+# OPERATOR_API_BASE는 정적 페이지에 주입되는 *공개* base URL이다(비밀값 아님). 빈 값이면
+# 버튼은 비활성 + "운영 API 미설정" 안내만 표시하고 어디로도 이동하지 않는다. (빌더는 이 값을
+# --operator-api-base CLI로 받아 preview-model island에 주입한다 — 빌더 소스는 env를 직접 읽지 않음.)
+OPERATOR_API_BASE = (os.environ.get("OPERATOR_API_BASE") or "").strip()
+# 서버측 비밀값 — 환경변수에서만 읽고 어디에도 print/log/직렬화/응답에 싣지 않는다 (rules.md §4).
+# 셋 중 하나라도 비어 있으면 operator_gateway는 fail-closed(not_configured)로 어떤 트리거도 하지 않는다.
+OPERATOR_REPO = (os.environ.get("OPERATOR_REPO") or "Sinabroin/HDEC-News-Sensor").strip()
+GH_OPERATOR_TOKEN = (os.environ.get("GH_OPERATOR_TOKEN")
+                     or os.environ.get("GITHUB_TOKEN") or "").strip()
+OPERATOR_SHARED_SECRET = (os.environ.get("OPERATOR_SHARED_SECRET")
+                          or os.environ.get("OPERATOR_PIN") or "").strip()
+# 공개 정적 페이지(GitHub Pages)에서 Operator API로의 cross-origin 호출을 허용할 origin 목록.
+# 기본은 로컬 + 프로젝트 Pages origin. 추가 origin은 콤마구분 env로 확장(비밀값 아님).
+OPERATOR_ALLOWED_ORIGINS = [
+    o.strip() for o in (
+        (os.environ.get("OPERATOR_ALLOWED_ORIGINS") or "")
+        + ",https://sinabroin.github.io"
+    ).split(",") if o.strip()
+]

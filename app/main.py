@@ -8,14 +8,14 @@
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from app import (
-    briefing, collector, config, db, feedback, insight, notification, scoring,
-    source_quality,
+    briefing, collector, config, db, feedback, insight, notification,
+    operator_gateway, scoring, source_quality,
 )
 
 ALERT_GRADE_ALIASES = {
@@ -39,10 +39,13 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="HDEC Executive Radar", version="day1-p0a", lifespan=lifespan)
 
-# CORS: 로컬 데모 최소 허용 (rules.md §4)
+# CORS: 로컬 데모 최소 허용 (rules.md §4). D7-AA — 공개 Pages 대시보드의 운영자 버튼이
+# Operator API(POST)를 cross-origin 호출하므로 Pages origin을 추가 허용한다(비밀값 아님 ·
+# config.OPERATOR_ALLOWED_ORIGINS로 확장 가능). 자격증명(쿠키)은 쓰지 않는다 — PIN은 헤더로만.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000",
+                   *config.OPERATOR_ALLOWED_ORIGINS],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
@@ -67,6 +70,21 @@ class NotifyRequest(BaseModel):
 class NotifyTestRequest(BaseModel):
     channel: str = "mock"
     message: str = "HDEC Executive Radar test"
+
+
+class OperatorActionRequest(BaseModel):
+    # 운영자 승인 PIN. 프론트는 런타임 입력값을 헤더(X-Operator-Token) 또는 이 body로 보낸다.
+    # 어떤 토큰/시크릿도 정적 페이지에 저장하지 않는다 (rules.md §4).
+    pin: str | None = None
+
+
+# operator_gateway 상태 → HTTP 코드 (비밀값 없는 중립 응답).
+_OPERATOR_HTTP = {
+    "dispatched": 200,
+    "not_configured": 503,
+    "unauthorized": 401,
+    "error": 502,
+}
 
 
 def _parse_json_fields(row: dict | None) -> dict | None:
@@ -216,3 +234,31 @@ def get_brief():
 def settings_topics():
     # Day-1: 조회 전용. 수정 endpoint는 만들지 않는다 (rules.md §1).
     return {"topics": db.fetch_topics(), "read_only": True}
+
+
+def _operator_response(result: dict) -> JSONResponse:
+    """게이트웨이 결과를 비밀값 없는 JSON 응답으로 변환한다 (상태 코드 매핑)."""
+    status = result.get("status", "error")
+    return JSONResponse(status_code=_OPERATOR_HTTP.get(status, 502), content=result)
+
+
+def _operator_pin(body: OperatorActionRequest | None, header_token: str | None) -> str:
+    return ((body.pin if body and body.pin else None) or header_token or "")
+
+
+@app.post("/api/operator/collect")
+def operator_collect(body: OperatorActionRequest | None = None,
+                     x_operator_token: str | None = Header(default=None)):
+    # D7-AA — 운영자 버튼이 호출하는 수집 실행 endpoint. PIN 검증은 operator_gateway가 한다.
+    # GitHub/Telegram 토큰은 서버 env에만 있고 응답/로그에 싣지 않는다.
+    return _operator_response(
+        operator_gateway.trigger_collect(_operator_pin(body, x_operator_token)))
+
+
+@app.post("/api/operator/send-telegram")
+def operator_send_telegram(body: OperatorActionRequest | None = None,
+                           x_operator_token: str | None = Header(default=None)):
+    # D7-AA — 운영자 버튼이 호출하는 텔레그램 발송 endpoint. PIN 검증 통과 시에만 게이트웨이가
+    # approve_send="true"를 워크플로에 넘겨 실제 발송까지 간다(자동발송 하드코딩 없음).
+    return _operator_response(
+        operator_gateway.trigger_send_telegram(_operator_pin(body, x_operator_token)))
