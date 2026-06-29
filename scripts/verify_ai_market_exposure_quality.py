@@ -311,6 +311,16 @@ def verify_market_model(model: dict, html: str) -> None:
     check("4h: 연동 지표가 미연동보다 많음(섹션이 죽은 행에 지배되지 않음)",
           linked > unlinked, f"linked={linked} unlinked={unlinked}")
 
+    check("4i: D7-Z2 상세 차트 미연동 회귀 방지(chartless <= 14)",
+          chartless <= 14, f"chartless={chartless} ceiling=14")
+
+    required_charted = ("lumber", "rebar", "audkrw", "cadkrw", "dxy", "eurusd", "usdjpy")
+    by_id = {it.get("id"): it for it in items}
+    missing_charted = [item_id for item_id in required_charted
+                       if item_id not in by_id or not _market_chartable(by_id[item_id])]
+    check("4j: D7-Z2 신규 상세 차트 핵심 항목 유지",
+          not missing_charted, "missing/not-chartable=" + ",".join(missing_charted))
+
 
 # ── Group 5: Public safety ────────────────────────────────────────────────────
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")          # bot-token shape

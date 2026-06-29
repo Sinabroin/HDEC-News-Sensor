@@ -199,6 +199,16 @@ def check_provider() -> None:
     sync = all((titems.get(s) or {}).get("history") == mh.demo_history(s) for s in new)
     check("4g: 템플릿 임베드 history == market_history.demo_history (동기화)", sync)
 
+    d7z2_ids = ("lumber", "rebar", "cnykrw", "audkrw", "cadkrw",
+                "dxy", "eurusd", "usdjpy", "usdcny")
+    missing_d7z2 = [item_id for item_id in d7z2_ids if not mh.is_supported(item_id)]
+    check("4h: D7-Z2 신규 market_history 지원 id 회귀 방지",
+          not missing_d7z2, "missing=" + ",".join(missing_d7z2))
+
+    proxy_ids = set(getattr(mh, "PROXY_IDS", ()))
+    check("4i: D7-Z2 rebar 대용(proxy) 정직성 유지",
+          "rebar" in proxy_ids, "PROXY_IDS=" + ",".join(sorted(proxy_ids)))
+
 
 def main() -> int:
     print(f"== verify_market_history_coverage (D7-G Part A) @ {ROOT} ==")
