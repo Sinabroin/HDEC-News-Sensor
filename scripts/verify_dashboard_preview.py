@@ -12,7 +12,7 @@ D5-E4 시장 유니버스 확장 검사:
     10Y-2Y·10Y-3M 스프레드, 국가 내/간 비교, 정규화 추세, 전체 만기 확장, 미연동 칩.
   · FX 유니버스: USD/EUR/JPY/CNY(CNH)/GBP/CHF/CAD/AUD/SGD/HKD/TWD/INR/AED/SAR/QAR /KRW.
   · 원자재/에너지: 금속·철강건자재·유가정제유·가스LNG·석탄 카테고리 + 대표 종목.
-  · 시장 탭 IA: 카테고리 카드, 우측 레일 dedup('시장 모니터링'), '전체 보기'.
+  · 시장 탭 IA: 카테고리 카드('시장 모니터링'). 우측 보조 레일은 D7-AC에서 제거(회귀 가드).
   · 라벨 리네임: '시장 압력' 비사용, '초기신호' 탭, 'AI 테마 강도 · 전력 실측값 아님'.
 
 이전(D5-E3) 정직성/구조 계약도 유지: NON-PRODUCTION PREVIEW, 데모/체결값 라벨, US 2Y 데모 선,
@@ -215,9 +215,12 @@ def check_market_ia(tpl: str) -> None:
           'id="marketCategories"' in tpl and "mktcats" in tpl)
     check("9-ia: '금리·물가' 카테고리", "금리·물가" in tpl)
     check("9-ia: '환율' 카테고리", "환율" in tpl)
-    # 우측 레일 dedup: 큐레이션 스냅샷 + 전체 보기 (전체 유니버스 복제 금지)
-    check("9-rail: 레일 큐레이션 스냅샷(rail_snapshot)", '"rail_snapshot"' in tpl)
-    check("9-rail: '전체 보기' 링크/버튼", "전체 보기" in tpl and "seeall" in tpl)
+    # D7-AC — 우측 보조 컨텍스트 레일(시장/AI/내러티브 요약 + rail_snapshot + 전체 보기)은
+    # 제거되었다. 큐레이션 스냅샷 존재가 아니라 '재유입 안 됨'을 회귀 가드로 검증한다.
+    check("9-rail: 보조 컨텍스트 레일 제거 유지 (회귀 가드)",
+          '"rail_snapshot"' not in tpl and "renderRailSnapshot" not in tpl
+          and "railAi" not in tpl and "railNarrative" not in tpl
+          and "보조 컨텍스트" not in tpl and 'class="rail"' not in tpl)
     # 라벨 리네임
     check("9-rename: '시장 압력'을 기본 카드 라벨로 쓰지 않음", "시장 압력" not in tpl)
     check("9-rename: '시장 모니터링' 또는 '시장 리스크' 존재",
@@ -355,9 +358,9 @@ def check_model_island(tpl: str) -> None:
     check("E-model: FX 유니버스 확장(>=14쌍)", len(fx) >= 14, f"{len(fx)}쌍")
     nulls = [it for it in items if it.get("value") is None]
     check("E-model: 미연동 종목 value=null (정직, >=1)", len(nulls) >= 1, f"{len(nulls)}종")
-    rail = data.get("rail_snapshot") or []
-    check("E-model: 레일 스냅샷 큐레이션(4~6개, 전체 복제 아님)",
-          4 <= len(rail) <= 6, f"{len(rail)}개")
+    # D7-AC — 우측 보조 레일 제거 → rail_snapshot 모델키도 제거(죽은 주입 정리). 재유입 회귀 가드.
+    check("E-model: 제거된 rail_snapshot 모델키 미재유입 (회귀 가드)",
+          "rail_snapshot" not in data)
 
 
 def check_early_signals(tpl: str) -> None:

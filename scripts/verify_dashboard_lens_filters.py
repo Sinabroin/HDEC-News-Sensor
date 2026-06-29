@@ -85,6 +85,17 @@ def check_lens_controls(tpl: str) -> None:
           "renderLensList" not in tpl
           and 'id="businessLens"' not in tpl
           and "부가 관찰" not in tpl)
+    # D7-AC — 우측 보조 컨텍스트 레일(SUPPORTING CONTEXT: 시장 모니터링·AI 테마·내러티브 요약)도
+    # 제거되었다. 라벨/섹션/렌더 함수/모델키가 다시 들어오지 않았는지 회귀 가드를 둔다.
+    check("1e: 보조 컨텍스트 레일(SUPPORTING CONTEXT) 제거 유지 (회귀 가드)",
+          "보조 컨텍스트" not in tpl
+          and "SUPPORTING CONTEXT" not in tpl
+          and 'class="rail"' not in tpl
+          and "renderRailSnapshot" not in tpl
+          and '"rail_snapshot"' not in tpl
+          and "railAi" not in tpl
+          and "railNarrative" not in tpl
+          and 'id="railMarket"' not in tpl)
     check("1d: data-filter 컨트롤이 충분히 다양(>=12 고유)",
           len(set(filters)) >= 12, f"{len(set(filters))} 고유")
 
@@ -163,7 +174,7 @@ def check_empty_and_mobile(tpl: str) -> None:
           'e.classList.toggle("hidden", shown > 0)' in tpl)
     # 모바일: 사이드 패널이 본문을 가리지 않음 + 선택 후 본문 노출
     check("4e: 모바일 사이드 패널 static (본문 가림 방지 회귀 규칙 유지)",
-          "aside.lens, aside.rail{position:static" in tpl)
+          "aside.lens{position:static" in tpl)
     check("4f: 모바일 선택 후 본문(main) 노출 위해 scrollIntoView",
           "max-width:900px" in tpl and "scrollIntoView" in tpl
           and 'querySelector("main")' in tpl)

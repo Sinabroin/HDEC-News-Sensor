@@ -113,9 +113,9 @@
   .metric .val.small{font-size:21px;}
   .metric .desc{font-size:11.5px; font-weight:500; color:var(--mute3); margin-top:7px;}
 
-  /* ===== Main grid ===== */
-  .grid{display:grid; grid-template-columns:252px minmax(0,1fr) 388px; gap:16px; align-items:start;}
-  @media (max-width:1240px){ .grid{grid-template-columns:220px minmax(0,1fr);} aside.rail{grid-column:1 / -1;} }
+  /* ===== Main grid (좌측 렌즈 + 본문 2열 — 우측 사이드 요약 레일은 D7-AC에서 제거) ===== */
+  .grid{display:grid; grid-template-columns:252px minmax(0,1fr); gap:16px; align-items:start;}
+  @media (max-width:1240px){ .grid{grid-template-columns:220px minmax(0,1fr);} }
   @media (max-width:900px){ .grid{grid-template-columns:1fr;} aside.lens{position:static;} .metrics{grid-template-columns:repeat(2,1fr);} }
 
   /* ===== Left lens nav ===== */
@@ -217,13 +217,10 @@
   .morebtn{width:100%; padding:15px; background:#FAFCFE; border:none; border-top:1px solid var(--hair);
     font-size:13px; font-weight:700; color:var(--ink4); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;}
 
-  /* ===== Right rail ===== */
-  aside.rail{display:flex; flex-direction:column; gap:14px; position:sticky; top:16px;}
   .panel{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 18px; box-shadow:var(--shadow);}
   .panel .ph{font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .panel .ph small{font-size:11.5px; font-weight:600; color:var(--mute4);}
   .panel .pnote{font-size:11px; color:var(--mute3); font-weight:500; line-height:1.5; margin:5px 0 11px;}
-  .railnote{font-size:10.5px; font-weight:700; letter-spacing:0.08em; color:var(--mute4); text-transform:uppercase; margin-bottom:8px;}
 
   /* ===== Market rows + data_mode badges ===== */
   .mgrp{display:flex; align-items:center; justify-content:space-between; margin:11px 0 7px;}
@@ -292,9 +289,6 @@
   .mtog.off{color:var(--mute4); background:#F4F6FA; border-style:dashed; cursor:not-allowed;}
   .mtog .x{font-size:9px; font-weight:800; margin-left:5px; opacity:.75; letter-spacing:0.02em;}
   .expandbtn{border:none; background:transparent; color:var(--sky); font:inherit; font-size:12px; font-weight:700; cursor:pointer; padding:5px 4px;}
-  .seeall{width:100%; margin-top:12px; padding:9px; background:#F4F9FE; border:1px solid var(--sky-bd); border-radius:10px;
-    font-size:12px; font-weight:700; color:var(--sky); cursor:pointer;}
-  .seeall:hover{background:var(--sky-tint);}
 
   /* ===== Hormuz card ===== */
   .hz .row{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
@@ -450,14 +444,14 @@
     background:var(--amber-tint); border:1px solid var(--amber-bd); border-radius:6px; padding:3px 9px; margin-bottom:8px;}
 
   /* ===== 모바일: 사이드 패널 sticky 해제 — 본문 카드 가림 방지 (D6-I 회귀 수정) =====
-     단일 컬럼이 되는 모바일에서 aside.lens / aside.rail이 position:sticky로 남으면
-     스크롤 시 패널이 상단에 고정돼 그 아래로 흘러가는 뉴스 카드(featured/rows/details)를
-     덮어버린다. 위쪽 @media(max-width:900px)의 aside.lens{position:static}은 base 규칙
+     단일 컬럼이 되는 모바일에서 aside.lens가 position:sticky로 남으면 스크롤 시 패널이
+     상단에 고정돼 그 아래로 흘러가는 뉴스 카드(featured/rows/details)를 덮어버린다.
+     위쪽 @media(max-width:900px)의 aside.lens{position:static}은 base 규칙
      aside.lens{position:sticky}(뒤에 선언)에 source-order로 밀려 무효였다. 패널 base
-     정의 뒤에 두어 모바일에서 두 패널 모두 정상 흐름(static)으로 확실히 되돌린다.
+     정의 뒤에 두어 모바일에서 정상 흐름(static)으로 확실히 되돌린다.
      데스크톱(>900px)의 sticky 사이드바 동작은 그대로 유지된다. */
   @media (max-width:900px){
-    aside.lens, aside.rail{position:static; top:auto; z-index:auto;}
+    aside.lens{position:static; top:auto; z-index:auto;}
   }
 
   /* ===== 운영자 실행 컨트롤 (D7-AA) =====
@@ -998,31 +992,6 @@
         </div>
       </section>
     </main>
-
-    <!-- ---------- RIGHT RAIL (supporting context only) ---------- -->
-    <aside class="rail">
-      <div class="railnote">보조 컨텍스트 · SUPPORTING CONTEXT</div>
-
-      <div class="panel">
-        <div class="ph">시장 모니터링 <small>· 핵심 지표 요약</small></div>
-        <div class="pnote">대표 지표만 — 값이 아니라 추세 신호이며 <b>현재 체결값 아님</b>. 종목별 data_mode 확인. 전체 유니버스는 <b>시장</b> 탭.</div>
-        <div id="railMarket"></div>
-        <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
-          <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다.</div>
-      </div>
-
-      <div class="panel">
-        <div class="ph">AI 테마 강도 <small>· 기사 상대 비중 · 전력 실측값 아님</small></div>
-        <div class="pnote">최대 테마는 AI·데이터센터입니다. % = 기사 상대 비중이며 전력 실측값이 아닙니다. 자세히는 <b>AI 신호</b> 탭.</div>
-        <div id="railAi"></div>
-      </div>
-
-      <div class="panel">
-        <div class="ph">언론이 키우는 이야기 <small>· 평판 렌즈</small></div>
-        <div class="pnote">282건 기준 · 상대 비중</div>
-        <div id="railNarrative"></div>
-      </div>
-    </aside>
   </div>
 
   <footer class="bottom">
@@ -1163,12 +1132,6 @@
     {"label": "냉각·전력설비", "share": 19, "color": "#5B8FCB"},
     {"label": "스마트건설·로봇", "share": 16, "color": "#9C7232"}
   ],
-  "narrative": [
-    {"label": "AI·데이터센터·전력", "share": 42, "color": "#3F6FA8"},
-    {"label": "안전 규제·중대재해", "share": 27, "color": "#9C7232"},
-    {"label": "해외 수주·중동", "share": 19, "color": "#3C7A4E"}
-  ],
-  "rail_snapshot": ["usdkrw", "wti", "us_10y", "copper", "jpykrw"],
   "market_items": [
     {"id": "copper", "label_kr": "구리", "en": "Copper", "category": "base_metals", "value": "9,180",
      "unit": "USD/t", "delta": "▲ 1.2%", "dir": "up", "data_mode": "delayed_market", "spark": [60,62,61,64,66,65,68,67,70,69,71,72], "history": {"1w":[9120,9153,9161,9147,9170,9153,9180],"1m":[9060,9069,9057,9001,9097,9052,9025,9020,9038,9051,9062,9100,9148,9087,9109,9164,9135,9195,9165,9211,9162,9180],"3m":[8757,8915,8830,8749,8771,8841,8887,9063,8899,9017,9063,9059,9180],"1y":[7955,8308,8540,8048,8201,8647,8945,8613,8627,8670,9392,9180]}, "history_source": "데모 픽스처(결정적)", "history_data_mode": "mock_demo", "history_updated_at": "2026-06-22", "history_decimals": 0},
@@ -1827,8 +1790,6 @@
     });
   }
   renderThemes("aiThemes", MODEL.ai_themes);
-  renderThemes("railAi", MODEL.ai_themes);
-  renderThemes("railNarrative", MODEL.narrative);
 
   /* ---------- market snapshot rows + sparklines ---------- */
   function sparkSvg(pts) {
@@ -1975,22 +1936,7 @@
     var sum = el("marketLinkSummary");
     if (sum) sum.textContent = " · 연동 " + totalLinked + " · 미연동 " + totalUnlinked + " (관찰 후보로 분리)";
   }
-  /* 우측 레일 — 대표 4~6개만 요약(중복 금지). '전체 보기'로 시장 탭 이동. */
-  function renderRailSnapshot() {
-    var box = el("railMarket"); if (!box) return; box.innerHTML = "";
-    var byId = {}; (MODEL.market_items || []).forEach(function (it) { byId[it.id] = it; });
-    var ids = MODEL.rail_snapshot || ["usdkrw", "wti", "us_10y", "copper", "jpykrw"];
-    // D7-U: 우측 요약은 연동(현재값 보유) 지표만 — 미연동 종목이 요약에 '—'로 새지 않게 한다.
-    ids.forEach(function (id) { var it = byId[id]; if (it && marketLinked(it)) box.insertAdjacentHTML("beforeend", mrowHtml(it, false)); });
-    var b = document.createElement("button"); b.type = "button"; b.className = "seeall"; b.id = "railSeeAll";
-    b.textContent = "시장 전체 보기 →"; box.appendChild(b);
-    b.addEventListener("click", function () {
-      var t = document.querySelector('.tab[data-tab="market"]'); if (t) t.click();
-      var p = el("panel-market"); if (p && p.scrollIntoView) p.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
   renderCategoryCards();
-  renderRailSnapshot();
 
   /* ---------- early signal rows ---------- */
   (function () {

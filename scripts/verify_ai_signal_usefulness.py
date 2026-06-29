@@ -149,7 +149,7 @@ def check_honesty_and_mobile(tpl: str) -> None:
           "참고 · AI Radar" in tpl and "상대 비중" in tpl)
     # 모바일: 사이드 패널 static + 본문 노출(회귀 규칙 유지)
     check("3c: 모바일 레이아웃 유지(max-width:900px + 사이드 static)",
-          "max-width:900px" in tpl and "aside.lens, aside.rail{position:static" in tpl)
+          "max-width:900px" in tpl and "aside.lens{position:static" in tpl)
     # AI 카드도 렌즈 필터 대상(data-lens 주입)
     check("3d: AI 카드가 렌즈 필터 대상(data-lens 주입)",
           'd.setAttribute("data-lens"' in tpl)

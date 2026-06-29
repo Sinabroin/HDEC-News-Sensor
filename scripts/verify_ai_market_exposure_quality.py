@@ -293,8 +293,13 @@ def verify_market_model(model: dict, html: str) -> None:
           and "미연동 관찰 후보" in html)
     check("4e: 미연동 분리 정직성 안내문 노출",
           "미연동 지표는 하단 관찰 후보로 분리했습니다" in html)
-    check("4f: 우측 요약 레일은 연동 지표만 노출(미연동 누출 방지)",
-          "if (it && marketLinked(it))" in html)
+    # D7-AC — 우측 요약 레일은 제거되었다(보조 컨텍스트 섹션 제거). 미연동 누출 방지는 이제
+    # rail UI(if (it && marketLinked(it))) 존재가 아니라 model(market_items/meta) 기준으로
+    # 검증한다: 연동 지표가 충분하고 chartless 상한(D7-Z3=14, 아래 4i)을 지킨다. 레일 재유입
+    # 회귀 가드는 verify_dashboard_lens_filters 1e가 담당한다.
+    check("4f: 시장 요약 품질 — 연동 지표 다수 + chartless 상한(model 기준·레일 UI 비의존)",
+          linked >= 7 and chartless <= 14,
+          f"linked={linked} chartless={chartless} (D7-Z3 ceiling=14)")
 
     # No fabricated values: unavailable indicators must have null value + empty spark.
     faked = []
