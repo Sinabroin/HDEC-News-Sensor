@@ -856,6 +856,10 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py \
 
 ## 21. Executive Telegram & Section Routing Polish (P0-C1.13)
 
+> **D7-AD 표시 계약:** 아래 항목의 selection/routing 규칙은 유지하지만 Telegram 표시는
+> `app/executive_digest.py`의 결론형 4문장 + 핵심 링크 1~3개로 대체됐다. 과거의 현황판·점수·
+> 섹션별 제목 나열은 더 이상 채널 본문에 렌더하지 않는다.
+
 §20의 의사결정 레이어 위에서, Telegram 다이제스트가 'AI 뉴스 요약'이 아니라 **현대건설
 임원 의사결정 브리프**로 보이게 라우팅·표현을 다듬는다. 변경은 Telegram 도메인
 (`build_telegram_digest.py`)과 `decision_relevance` 라우팅에 한정한다(스코어/등급/외부 API
@@ -907,6 +911,9 @@ NEWS_MODE=live python3 scripts/build_telegram_digest.py --dry-run   # 라이브 
 ```
 
 ## 22. Final Live Routing Cleanup (P0-C1.14)
+
+> D7-AD 이후 `[수주·해외]` 후보는 selection 데이터와 상세 리포트에 유지된다. Telegram의
+> 핵심 링크 3개가 현대건설·AI·리스크로 채워진 날에는 링크 cap 때문에 본문에서 생략될 수 있다.
 
 §21의 라이브 점검에서 남은 라우팅 갭 3개를 닫는다. 제품 원칙은 **"AI 뉴스 수집기가 아니라
 현대건설 임원 의사결정 레이더"** — 분류는 "이 신호가 수주/해외/리스크/재무/기술/경쟁사/
@@ -972,3 +979,6 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py --output /tmp/audit
 - **[RC 봉인 — MVP 운영 증거 패킷 (P0-D3J)](docs/operations/RC_SEAL_D3J.md)** —
   1일 운영 리허설(live 빌드·로컬/공개 검증·다이제스트 후보·발송 게이트·전체 회귀) 실측 증거,
   실제 발송 0건 확인, 남은 리스크.
+- **[D7-AD Gmail/Teams 알림 + Operator API activation](docs/operations/D7AD_EMAIL_TEAMS_OPERATOR_ACTIVATION.md)** —
+  GitHub Actions Gmail SMTP 수동 승인 발송, Teams 채널 이메일 수신정책 검증, Operator API
+  배포 후보 비교와 activation checklist.
