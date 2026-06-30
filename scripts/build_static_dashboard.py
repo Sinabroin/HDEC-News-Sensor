@@ -1512,6 +1512,10 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     tree = site_watchlist.tree_for_model(all_rows, now=brief.get("generated_at"))
     if tree is not None:
         model["site_watch_tree"] = tree
+    # D7-AD-P — 이름 비노출 scope 집계(좌측 '실행 범위' 네비 카운트). tree(이름 포함·비공개 전용)와
+    # 달리 카운트만 담아 공개 빌드에도 안전하게 주입한다(현장명 0건 · verifier가 잠금). 비공개 게이팅은
+    # 리프(site_watchlist)가 환경변수로 담당한다 — 빌더는 환경변수를 직접 읽지 않는다(D7-N 4d 보존).
+    model["site_scope_summary"] = site_watchlist.scope_summary_for_model()
     # D7-AA — 부가 관찰(SUPPORTING LENSES: business_lens/ecosystem/watch_next) 섹션은 제거됨.
     # 이전의 그룹별 count 주입 루프도 함께 제거한다(템플릿 모델에 더 이상 해당 키가 없음).
     new_json = json.dumps(model, ensure_ascii=False, indent=2)

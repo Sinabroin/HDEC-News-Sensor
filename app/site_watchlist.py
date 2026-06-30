@@ -673,6 +673,31 @@ def summarize_watchlist(path=None) -> dict:
     }
 
 
+def scope_summary_for_model(path=None) -> dict:
+    """이름 비노출 scope 집계 — 대시보드 좌측 '실행 범위' 네비 카운트용(D7-AD-P).
+
+    tree_for_model(이름 포함 · 비공개 빌드 전용)과 달리 **카운트만** 담는다 → 공개·비공개 빌드
+    모두에 안전하게 주입할 수 있다(현장명/별칭 0건). 공개 빌드(env 미설정)는 공개 샘플 집계를,
+    운영자 빌드(SITE_WATCHLIST_PATH 설정)는 내부 목록 집계를 반환한다. 반환 dict에는 어떤
+    현장명/별칭/조직명도 들어가지 않는다 — scope 키, 정수 카운트, scope 라벨(고정 상수)뿐이다
+    (verify_site_watch_nav_tree.py가 '이름 비노출'을 잠근다).
+
+    반환: {is_private, total, by_scope:{scope:count(4종 모두 0 포함)}, scope_labels:{scope:라벨}}.
+    """
+    wl = load_watchlist(path)
+    by_scope = {s: 0 for s in SCOPES}
+    for item in wl["items"]:
+        sc = item.get("scope")
+        if sc in by_scope:
+            by_scope[sc] += 1
+    return {
+        "is_private": wl["is_private"],
+        "total": len(wl["items"]),
+        "by_scope": by_scope,
+        "scope_labels": dict(_SCOPE_LABEL),
+    }
+
+
 def validate_watchlist(path=None) -> dict:
     """스키마 검증 — 잘못된 항목의 사유를 모은다(이름 대신 id로 식별)."""
     src_path, _is_private = _resolve_source(path)
