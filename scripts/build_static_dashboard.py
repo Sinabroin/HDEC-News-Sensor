@@ -1544,6 +1544,11 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
     html = html.replace(
         "<title>HDEC Executive Radar — 대시보드 미리보기 (Preview)</title>",
         f"<title>{EXPORT_TITLE}</title>", 1)
+    # 운영본 브랜드 부제를 '요약 대시보드'로 정렬한다 — 이메일 '요약 대시보드 보기' CTA의
+    # 목적지 역할이 화면에서 분명히 보이게 하고, 비프로덕션 'PREVIEW' 표기를 운영본에서 제거.
+    html = html.replace(
+        "현대건설 임원용 외부 신호 브리프 · 대시보드 미리보기 (PREVIEW)",
+        "현대건설 임원용 외부 신호 브리프 · 요약 대시보드", 1)
     if EXPORT_MARKER not in html:
         html = html.replace(
             "<!DOCTYPE html>\n",

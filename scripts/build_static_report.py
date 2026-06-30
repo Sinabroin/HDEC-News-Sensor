@@ -32,7 +32,10 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 
-REPORT_TITLE = "HDEC Executive Radar — Executive Daily Brief"
+# 이 페이지는 전체 리포트(요약 대시보드 dashboard-latest.html과 짝)다. 화면 제목/탭
+# 제목을 '전체 리포트'로 정렬해 이메일 '전체 리포트 보기' CTA와 의미가 어긋나지 않게 한다.
+# 'Executive Daily Brief'는 부제로 보존한다(verifier·아카이브 호환).
+REPORT_TITLE = "HDEC Executive Radar — 전체 리포트"
 DEFAULT_OUTPUT = "docs/daily/latest.html"
 _KST = timezone(timedelta(hours=9))
 
@@ -1087,8 +1090,8 @@ def render_report_html(brief: dict, audience: str = "operator") -> tuple[str, li
         '<span class="brand">HDEC Executive Radar</span>',
         f'<span class="mode-pill">{escape(_mode_pill(brief))}</span>',
         '</div>',
-        '<h1>Executive Daily Brief</h1>',
-        f'<p class="dateline num">{escape(brief["date_kst"])} (KST) · 임원용 시그널 레이더 일일 브리프</p>',
+        '<h1>전체 리포트</h1>',
+        f'<p class="dateline num">{escape(brief["date_kst"])} (KST) · 임원용 시그널 레이더 일일 브리프 · Executive Daily Brief</p>',
         '</header>',
         '<section class="board" aria-label="데일리 현황판">',
     ]

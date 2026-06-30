@@ -324,8 +324,10 @@ def check_git_diff() -> None:
 # ---------- 리포트 실행 검사 ----------
 
 def check_report_dry_run() -> None:
+    # 요약 출력은 REPORT_TITLE을 머리글로 쓴다. 전체 리포트 페이지 제목은 '전체 리포트'로
+    # 정렬됐다(D7-AD-L) — 'Executive Daily Brief'는 HTML 본문 부제로 보존된다(아래 콘텐츠 검사).
     proc = run_script(REPORT_BUILDER, "--dry-run")
-    ok = proc.returncode == 0 and "Executive Daily Brief" in (proc.stdout or "")
+    ok = proc.returncode == 0 and "전체 리포트" in (proc.stdout or "")
     check("report --dry-run 동작 (exit 0, 요약 출력)", ok,
           "" if ok else (proc.stderr or "").strip()[-300:])
 
