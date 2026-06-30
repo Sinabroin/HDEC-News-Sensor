@@ -108,7 +108,42 @@ def check_renderer() -> None:
     teams_message = sender.build_message(digest, "sender@example.com", teams)
     mail_text = mail_message.get_body(preferencelist=("plain",)).get_content()
     teams_text = teams_message.get_body(preferencelist=("plain",)).get_content()
-    check("일반 이메일과 Teams 채널 이메일 본문 동일", mail_text == teams_text)
+    mail_html = mail_message.get_body(preferencelist=("html",)).get_content()
+    teams_html = teams_message.get_body(preferencelist=("html",)).get_content()
+    check("일반 이메일과 Teams 채널 이메일 본문 동일",
+          mail_text == teams_text and mail_html == teams_html)
+
+    # D7-AD-K: 요약 대시보드 / 전체 리포트 CTA 링크 계약 (이메일·Teams 공통)
+    dash_path = "/daily/dashboard-latest.html"
+    report_path = "/daily/latest.html"  # dashboard-latest.html에는 포함되지 않는 고유 경로
+    check("Email HTML에 '요약 대시보드 보기' CTA", "요약 대시보드 보기" in email_html)
+    check("Email HTML에 '전체 리포트 보기' CTA", "전체 리포트 보기" in email_html)
+    check("Email HTML에 요약 대시보드 URL", dash_path in email_html)
+    check("Email HTML에 전체 리포트 URL", report_path in email_html)
+    check("Email text에 요약 대시보드 URL", dash_path in email_text)
+    check("Email text에 전체 리포트 URL", report_path in email_text)
+    check(
+        "버튼이 깨져도 plain URL fallback 노출",
+        "버튼이 보이지 않으면" in email_html
+        and email_html.count(digest.dashboard_url) >= 2
+        and email_html.count(digest.report_url) >= 2,
+    )
+    check(
+        "Email HTML에 외부 JS/CSS/이미지/첨부 없음",
+        not any(
+            token in email_html.lower()
+            for token in ("<script", "<link", "<img", "<iframe", "javascript:", "url(", "@import")
+        ),
+    )
+    rendered = "\n".join((email_html, email_text, render_subject(digest)))
+    leak_names = (
+        "GMAIL_SMTP_USER", "GMAIL_SMTP_APP_PASSWORD", "GMAIL_SMTP_PASSWORD",
+        "ALERT_EMAIL_TO", "ALERT_EMAIL_FROM", "TEAMS_CHANNEL_EMAIL",
+        "OPERATOR_SHARED_SECRET", "OPERATOR_PIN", "GH_OPERATOR_TOKEN",
+        "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS",
+    )
+    check("렌더된 본문에 secret 이름/토큰 없음",
+          not any(name in rendered for name in leak_names))
 
 
 class _FakeSMTP:

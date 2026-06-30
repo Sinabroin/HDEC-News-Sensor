@@ -40,6 +40,7 @@ from app.executive_digest import (  # noqa: E402
     render_subject,
 )
 from build_telegram_digest import build_digest_data  # noqa: E402
+from send_telegram import resolve_dashboard_url, resolve_report_url  # noqa: E402
 
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
@@ -240,7 +241,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    digest = build_executive_digest(build_digest_data())
+    # 대시보드/리포트 CTA URL은 기존 REPORT_URL/DASHBOARD_URL 계약(send_telegram)을
+    # 그대로 재사용한다. env 미설정이면 executive_digest의 공개 fallback 상수가 적용된다.
+    report_url = resolve_report_url()
+    dashboard_url = resolve_dashboard_url(report_url)
+    digest = build_executive_digest(
+        build_digest_data(),
+        dashboard_url=dashboard_url,
+        report_url=report_url,
+    )
     mode = os.environ.get("EMAIL_SEND_MODE", "").strip().lower() or DEFAULT_SEND_MODE
     approved = _true_env("APPROVE_SEND_EMAIL")
     should_send = mode == "send" and approved and not args.dry_run

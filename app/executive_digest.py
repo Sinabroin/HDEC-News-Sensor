@@ -11,6 +11,18 @@ from dataclasses import asdict, dataclass
 from html import escape
 from urllib.parse import urlparse
 
+# 공개 GitHub Pages 산출물 URL (비밀값 아님 — repo `vars`로 노출되는 공개 주소).
+# 운영자가 REPORT_URL/DASHBOARD_URL env로 재정의하지 않으면 이메일/Teams 본문 CTA는
+# 이 정식 공개 주소를 가리킨다. 이 모듈은 env를 읽지 않으므로(채널 중립·env-free),
+# 호출자(send_email_alert.py)가 기존 send_telegram 계약으로 해석한 URL을 주입하고,
+# 미설정이면 아래 fallback이 적용된다 (D7-AD-K).
+DEFAULT_DASHBOARD_URL = (
+    "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/daily/dashboard-latest.html"
+)
+DEFAULT_REPORT_URL = (
+    "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/daily/latest.html"
+)
+
 
 @dataclass(frozen=True)
 class ExecutiveLink:
@@ -30,6 +42,8 @@ class ExecutiveDigest:
     date_kst: str
     brief_time: str
     news_data_mode: str
+    dashboard_url: str
+    report_url: str
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -106,8 +120,17 @@ def _pick_links(data: dict, limit: int = 3) -> tuple[ExecutiveLink, ...]:
     return tuple(picked)
 
 
-def build_executive_digest(data: dict, brief_time: str = "07:00") -> ExecutiveDigest:
-    """Convert selected brief signals into a four-sentence, conclusion-first brief."""
+def build_executive_digest(
+    data: dict,
+    brief_time: str = "07:00",
+    dashboard_url: str = "",
+    report_url: str = "",
+) -> ExecutiveDigest:
+    """Convert selected brief signals into a four-sentence, conclusion-first brief.
+
+    dashboard_url/report_url은 호출자가 기존 REPORT_URL/DASHBOARD_URL 계약으로 해석해
+    주입한다. 비거나 http(s)가 아니면 공개 fallback 상수를 쓴다 (이 모듈은 env를 읽지
+    않는다)."""
 
     all_signals = _signals(data)
     text = _signal_text(all_signals)
@@ -182,6 +205,9 @@ def build_executive_digest(data: dict, brief_time: str = "07:00") -> ExecutiveDi
         watch_items.append("후속 발표와 사업 영향")
     watch = f"오늘은 {'、'.join(watch_items[:3])}을 우선 확인하면 됩니다.".replace("、", ", ")
 
+    resolved_dashboard = dashboard_url if _has_http_url(dashboard_url) else DEFAULT_DASHBOARD_URL
+    resolved_report = report_url if _has_http_url(report_url) else DEFAULT_REPORT_URL
+
     return ExecutiveDigest(
         headline=headline,
         situation=situation,
@@ -192,6 +218,8 @@ def build_executive_digest(data: dict, brief_time: str = "07:00") -> ExecutiveDi
         date_kst=str(data.get("date_kst") or ""),
         brief_time=brief_time,
         news_data_mode=str(data.get("news_data_mode") or "mock"),
+        dashboard_url=resolved_dashboard,
+        report_url=resolved_report,
     )
 
 
@@ -232,42 +260,89 @@ def render_telegram(digest: ExecutiveDigest) -> str:
 
 
 def render_email_text(digest: ExecutiveDigest) -> str:
+    """일반 이메일과 Teams 채널 이메일이 공유하는 plain text 본문.
+
+    Teams는 HTML 버튼이 깨질 수 있으므로 plain text에도 '바로 보기' URL을 반드시 둔다
+    (버튼 없이 URL fallback만으로 대시보드/리포트 접근 가능)."""
+
     lines = [
         f"[오늘 {digest.brief_time} 브리프]",
         "",
         digest.headline,
         "",
+        "상황:",
         digest.situation,
+        "",
+        "현대건설 관점:",
         digest.hdec_angle,
         "",
+        "오늘 확인:",
         digest.watch,
+        "",
+        "바로 보기:",
+        f"- 요약 대시보드: {digest.dashboard_url}",
+        f"- 전체 리포트: {digest.report_url}",
     ]
-    notice = _data_notice(digest)
-    if notice:
-        lines += ["", notice]
     if digest.links:
-        lines += ["", "핵심 링크"]
+        lines += ["", "핵심 링크:"]
         for index, link in enumerate(digest.links, start=1):
             lines.append(f"{index}. [{link.label}] {link.title}")
             lines.append(f"   {link.url}")
+    notice = _data_notice(digest)
+    if notice:
+        lines += ["", notice]
     return "\n".join(lines)
 
 
-def render_email_html(digest: ExecutiveDigest) -> str:
-    paragraphs = "".join(
-        f'<p style="margin:0 0 12px">{escape(sentence)}</p>'
-        for sentence in (
-            digest.headline,
-            digest.situation,
-            digest.hdec_angle,
-            digest.watch,
-        )
+def _email_section(label: str, body: str) -> str:
+    return (
+        f'<p style="margin:18px 0 4px;color:#667085;font-size:12px;'
+        f'font-weight:bold;letter-spacing:.02em">{escape(label)}</p>'
+        f'<p style="margin:0;font-size:15px">{escape(body)}</p>'
     )
-    notice = _data_notice(digest)
-    notice_html = (
-        f'<p style="margin:14px 0 0;color:#667085;font-size:12px">{escape(notice)}</p>'
-        if notice
-        else ""
+
+
+def _cta_button(url: str, label: str, primary: bool) -> str:
+    """버튼 한 개. Gmail/Outlook에서 살아남는 inline style만 쓴다(테이블·외부 CSS 없음)."""
+    background = "#1d4ed8" if primary else "#0f766e"
+    return (
+        f'<a href="{escape(url, quote=True)}" '
+        'style="display:inline-block;margin:0 10px 10px 0;padding:12px 22px;'
+        f'background:{background};color:#ffffff;text-decoration:none;'
+        'border-radius:8px;font-size:14px;font-weight:bold">'
+        f"{escape(label)}</a>"
+    )
+
+
+def render_email_html(digest: ExecutiveDigest) -> str:
+    """임원용 단순 inline-style HTML. 외부 JS/CSS/이미지/첨부 없음.
+
+    버튼이 깨져도 하단 plain URL fallback으로 대시보드/리포트에 접근할 수 있다."""
+
+    headline_card = (
+        '<div style="margin:0 0 4px;padding:16px 18px;background:#f1f5ff;'
+        'border-left:4px solid #1d4ed8;border-radius:6px">'
+        '<p style="margin:0;font-size:16px;font-weight:bold;color:#0b1f4d">'
+        f"{escape(digest.headline)}</p></div>"
+    )
+    body_sections = (
+        _email_section("현재 상황", digest.situation)
+        + _email_section("현대건설 관점", digest.hdec_angle)
+        + _email_section("오늘 확인할 항목", digest.watch)
+    )
+    buttons = (
+        '<div style="margin:22px 0 8px">'
+        + _cta_button(digest.dashboard_url, "요약 대시보드 보기", primary=True)
+        + _cta_button(digest.report_url, "전체 리포트 보기", primary=False)
+        + "</div>"
+    )
+    fallback = (
+        '<p style="margin:0 0 2px;color:#667085;font-size:12px">'
+        "버튼이 보이지 않으면 아래 주소를 직접 여세요.</p>"
+        '<p style="margin:0;font-size:12px;color:#475467">요약 대시보드: '
+        f'<a href="{escape(digest.dashboard_url, quote=True)}">{escape(digest.dashboard_url)}</a></p>'
+        '<p style="margin:0 0 4px;font-size:12px;color:#475467">전체 리포트: '
+        f'<a href="{escape(digest.report_url, quote=True)}">{escape(digest.report_url)}</a></p>'
     )
     links_html = ""
     if digest.links:
@@ -279,14 +354,21 @@ def render_email_html(digest: ExecutiveDigest) -> str:
             for link in digest.links
         )
         links_html = (
-            '<h2 style="font-size:15px;margin:20px 0 10px">핵심 링크</h2>'
+            '<h2 style="font-size:15px;margin:24px 0 10px">핵심 링크</h2>'
             f'<ol style="margin:0;padding-left:22px">{items}</ol>'
         )
+    notice = _data_notice(digest)
+    notice_html = (
+        f'<p style="margin:18px 0 0;color:#667085;font-size:12px">{escape(notice)}</p>'
+        if notice
+        else ""
+    )
     return (
         '<!doctype html><html lang="ko"><body '
-        'style="font-family:Arial,Apple SD Gothic Neo,sans-serif;color:#172033;line-height:1.55">'
-        '<main style="max-width:680px;margin:0 auto;padding:20px">'
-        f'<h1 style="font-size:18px;margin:0 0 20px">오늘 {escape(digest.brief_time)} 브리프</h1>'
-        f"{paragraphs}{notice_html}{links_html}"
+        'style="font-family:Arial,Apple SD Gothic Neo,sans-serif;color:#172033;'
+        'line-height:1.6;background:#ffffff">'
+        '<main style="max-width:680px;margin:0 auto;padding:24px">'
+        f'<h1 style="font-size:18px;margin:0 0 16px">오늘 {escape(digest.brief_time)} 브리프</h1>'
+        f"{headline_card}{body_sections}{buttons}{fallback}{links_html}{notice_html}"
         "</main></body></html>"
     )

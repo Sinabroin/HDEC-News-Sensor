@@ -858,7 +858,10 @@ NEWS_MODE=live python3 scripts/audit_live_article_quality.py \
 
 > **D7-AD 표시 계약:** 아래 항목의 selection/routing 규칙은 유지하지만 Telegram 표시는
 > `app/executive_digest.py`의 결론형 4문장 + 핵심 링크 1~3개로 대체됐다. 과거의 현황판·점수·
-> 섹션별 제목 나열은 더 이상 채널 본문에 렌더하지 않는다.
+> 섹션별 제목 나열은 더 이상 채널 본문에 렌더하지 않는다. 같은 4문장을 쓰는 이메일/Teams
+> 채널 이메일 본문에는 **요약 대시보드 보기**·**전체 리포트 보기** CTA(버튼 + plain URL
+> fallback)가 들어간다 — 주소는 Telegram과 동일한 `REPORT_URL`/`DASHBOARD_URL` 계약을
+> 재사용하고, 미설정 시 공개 fallback 상수를 쓴다.
 
 §20의 의사결정 레이어 위에서, Telegram 다이제스트가 'AI 뉴스 요약'이 아니라 **현대건설
 임원 의사결정 브리프**로 보이게 라우팅·표현을 다듬는다. 변경은 Telegram 도메인

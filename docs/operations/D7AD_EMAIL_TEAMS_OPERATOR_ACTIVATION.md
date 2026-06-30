@@ -93,6 +93,20 @@ Teams 공식 안내:
 Telegram, 일반 이메일, Teams 채널 이메일이 같은 네 문장과 링크를 사용한다. Telegram은
 짧은 HTML text, 이메일과 Teams는 동일한 plain text + 단순 HTML multipart로 렌더한다.
 
+### 4.1 대시보드·리포트 CTA (D7-AD-K)
+
+- 이메일/Teams 본문에는 **요약 대시보드 보기**(`.../daily/dashboard-latest.html`)와
+  **전체 리포트 보기**(`.../daily/latest.html`) CTA가 포함된다.
+- HTML 본문은 두 링크를 inline-style 버튼으로 보여주고, 버튼이 깨질 때를 대비해 같은 두
+  주소를 plain URL로도 함께 노출한다. plain text 본문은 `바로 보기:` 아래에 두 URL을 둔다.
+- Teams 채널 이메일은 클라이언트에서 HTML 버튼이 깨질 수 있으므로, plain text의 URL
+  fallback만으로도 대시보드/전체 리포트에 접근할 수 있어야 한다.
+- CTA 주소는 비밀값이 아니다. 기본값은 `app/executive_digest.py`의 공개 fallback 상수이며,
+  운영자가 `REPORT_URL`/`DASHBOARD_URL`(repo `vars`, Telegram과 동일 계약)을 설정하면 그
+  값이 우선한다. 본문에는 SMTP 계정·수신자·토큰 등 어떤 secret도 넣지 않는다.
+- 메일 발송 step의 `smtp_status=accepted`는 Gmail relay 수락만 의미한다. 실제 수신함 도착,
+  Teams 채널 게시, CTA 버튼이 클라이언트에서 제대로 보이는지는 사람이 별도로 확인한다.
+
 ## 5. Operator API 현재 준비 상태
 
 이미 구현된 항목:
