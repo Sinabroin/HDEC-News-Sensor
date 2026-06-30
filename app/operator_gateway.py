@@ -48,7 +48,7 @@ def _pin_ok(pin: str) -> bool:
 
 
 def _dispatch(workflow: str, inputs: dict | None = None) -> dict:
-    """GitHub Actions workflow_dispatch 호출. 성공 시 204. 비밀값은 반환하지 않는다."""
+    """GitHub Actions workflow_dispatch 호출. 성공 시 2xx. 비밀값은 반환하지 않는다."""
     url = f"{_API_BASE}/repos/{config.OPERATOR_REPO}/actions/workflows/{workflow}/dispatches"
     body = {"ref": _DISPATCH_REF}
     if inputs:
