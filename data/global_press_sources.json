@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "note": "해외 언론(Global press) 정책 — 영어 locale 공개 RSS 수집 그룹 + 해외 매체 출처 레지스트리. app/global_press.py가 읽는 단일 소스. 국내 뉴스(한국 locale)와 분리해 '해외 언론' 신호를 별도 그룹/렌즈로 둔다. 가짜 기사/값 생성 없음: collect 쿼리는 NEWS_MODE=live 공개 Google News(en-US) 경로에서만 쓰이고, mock은 data/mock_articles.json만 읽어 해외 출처가 없으므로 항상 빈 섹션이 된다. 저작권: 제목/짧은 요약/링크/출처만 보존하고 본문 전문은 저장하지 않는다(rules.md §3). 원문 제목은 보존하며, 자동 번역/가짜 한국어 제목은 만들지 않는다.",
+  "collection_group": {
+    "name": "global_press",
+    "label": "해외 언론",
+    "enabled": true,
+    "locale": { "hl": "en", "gl": "US", "ceid": "US:en" },
+    "max_per_query": 2,
+    "max_total": 12,
+    "queries": [
+      "AI data center construction power",
+      "hyperscale data center electricity demand grid",
+      "small modular reactor SMR data center power",
+      "power grid transmission expansion AI demand",
+      "semiconductor fab cluster construction investment",
+      "global construction contractor EPC megaproject",
+      "Middle East infrastructure project contract award",
+      "Saudi NEOM construction EPC contract",
+      "UAE Qatar infrastructure EPC contractor",
+      "oil price construction commodity steel cement cost",
+      "Strait of Hormuz shipping oil geopolitical risk"
+    ]
+  },
+  "foreign_source_label": "해외 언론",
+  "foreign_outlets": [
+    "Reuters", "Bloomberg", "CNBC", "Wall Street Journal", "The Wall Street Journal",
+    "Financial Times", "The New York Times", "New York Times", "Associated Press",
+    "AP News", "Nikkei", "Nikkei Asia", "The Economist", "BBC", "CNN", "Forbes",
+    "TechCrunch", "The Verge", "Ars Technica", "Yahoo Finance", "Business Insider",
+    "Al Jazeera", "The Guardian", "South China Morning Post", "Power Magazine",
+    "Data Center Dynamics", "Engineering News-Record", "Construction Dive",
+    "OilPrice.com", "Rigzone", "World Construction Network", "MEED", "Arab News",
+    "Gulf News", "The National", "Semafor", "Axios", "Politico", "Nature",
+    "Tom's Hardware", "Light Reading", "Utility Dive", "S&P Global", "Fortune"
+  ]
+}

@@ -23,7 +23,8 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config, lens_queries, site_watchlist, source_quality, topic_profiles
+from app import (config, global_press, lens_queries, site_watchlist,
+                 source_quality, topic_profiles)
 
 KST = timezone(timedelta(hours=9))
 
@@ -58,6 +59,12 @@ PREFLIGHT_GROUP_BUDGET = 8
 # effective_cap). 공개 빌드는 site 그룹이 0개라 total이 늘지 않는다(CI 게이트 동작 불변).
 SITE_PREFLIGHT_MAX_PER_QUERY = 2
 SITE_PREFLIGHT_GROUP_BUDGET = 10
+# D7-AD-N: 해외 언론(Global press) preflight — 영어 locale(en-US) 공개 RSS로 해외 매체 신호를
+# 수집한다. 사이트 워치리스트와 같은 패턴으로 전역 cap에 additive headroom으로 얹어, 기존 렌즈
+# 그룹의 수집 예산/깊이를 잠식하지 않는다(국내 렌즈 audit·depth 불변). 기본 production일 때만
+# 동작하며, mock은 fetch_all을 거치지 않으므로 해외 섹션은 항상 빈 상태가 된다(가짜 없음).
+GLOBAL_PRESS_MAX_PER_QUERY = 2
+GLOBAL_PRESS_GROUP_BUDGET = 12
 # 대시보드 live 수집은 설정된 렌즈 그룹이 충분히 돌도록 전역 상한의 하한을 둔다 — 여전히
 # bounded(per-group/per-query 캡 + dedup 유지)이며 cfg가 더 크면 cfg 값을 따른다(폭주 방지).
 # 공개 빌드 total은 이 값으로 고정한다: 토목(civil)은 우선순위 preflight에서 수집하므로 total을
@@ -111,12 +118,15 @@ def _load_sources(path=None) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _build_google_news_url(query: str, cfg: dict) -> str:
+def _build_google_news_url(query: str, cfg: dict, locale: dict | None = None) -> str:
+    """공개 Google News 검색 RSS URL. locale(그룹별 hl/gl/ceid)이 주어지면 우선 적용한다 —
+    해외 언론 그룹은 en-US locale로, 나머지는 cfg(기본 한국 locale)로 수집한다 (D7-AD-N)."""
+    loc = locale or {}
     params = urllib.parse.urlencode({
         "q": query,
-        "hl": cfg.get("hl", "ko"),
-        "gl": cfg.get("gl", "KR"),
-        "ceid": cfg.get("ceid", "KR:ko"),
+        "hl": loc.get("hl") or cfg.get("hl", "ko"),
+        "gl": loc.get("gl") or cfg.get("gl", "KR"),
+        "ceid": loc.get("ceid") or cfg.get("ceid", "KR:ko"),
     })
     return f"https://news.google.com/rss/search?{params}"
 
@@ -358,7 +368,8 @@ def _collect_group(group, *, max_per_query, group_budget, global_cap, timeout, c
         if query_key in seen_queries:
             continue
         seen_queries.add(query_key)
-        url = _build_google_news_url(query, cfg)
+        url = _build_google_news_url(
+            query, cfg, group.get("locale") if isinstance(group, dict) else None)
         try:
             xml_text = _fetch(url, timeout)
         except Exception:  # noqa: BLE001 — 네트워크/HTTP 오류는 query 단위로 무시
@@ -427,9 +438,13 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     # effective_cap == max_total 로 total이 늘지 않는다(다른 렌즈 수집 깊이/게이트 불변).
     by_name = {g["name"]: g for g in query_groups}
     site_groups = []
+    global_press_group = None
     if sources_path is None:
         site_groups = site_watchlist.collection_query_groups()
-    effective_cap = max_total + len(site_groups) * SITE_PREFLIGHT_GROUP_BUDGET
+        global_press_group = global_press.collection_query_group()
+    effective_cap = (max_total
+                     + len(site_groups) * SITE_PREFLIGHT_GROUP_BUDGET
+                     + (GLOBAL_PRESS_GROUP_BUDGET if global_press_group else 0))
 
     seen_urls, results = set(), []
     filtered_urls = set()
@@ -470,6 +485,18 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
                 pass_label="site", **common)
             if emitted == 0:
                 _emit_audit(query_audit, group, "", "skipped", 0, 0, "site")
+
+        # 1c) 해외 언론 preflight — 영어 locale(en-US) 그룹을 additive headroom으로 수집한다.
+        #     국내 렌즈 예산을 건드리지 않고(국내 audit/depth 불변), 실패/빈 결과는 audit에 남으며
+        #     가짜 해외 기사를 만들지 않는다. 해외 매체 출처는 briefing 표시 레이어에서 분류한다.
+        if global_press_group is not None:
+            emitted = _collect_group(
+                global_press_group, max_per_query=GLOBAL_PRESS_MAX_PER_QUERY,
+                group_budget=GLOBAL_PRESS_GROUP_BUDGET, global_cap=effective_cap,
+                pass_label="global_press", **common)
+            if emitted == 0:
+                _emit_audit(query_audit, global_press_group, "", "skipped", 0, 0,
+                            "global_press")
 
     # 2) Normal 패스 — 모든 그룹을 순서대로 전역 cap(effective_cap)까지. preflight에서 본
     #    쿼리/URL은 dedup으로 건너뛰므로 중복 수집이 없다.
