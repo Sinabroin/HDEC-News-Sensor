@@ -182,6 +182,11 @@ def check_smtp_classification() -> None:
 
 
 def _clean_env() -> dict[str, str]:
+    # GITHUB_ACTIONS는 실제 러너가 항상 "true"로 주입한다. 이 verifier는 sender의
+    # 발송 게이트를 통제된 env에서 검증하는데(특히 "Actions 밖 + 두 gate가 열려도
+    # 차단" 경로), 러너의 ambient GITHUB_ACTIONS가 그대로 새어들면 CI에서만 그
+    # 케이스를 재현하지 못해 거짓 실패한다. 따라서 send gate가 읽는 키와 함께
+    # GITHUB_ACTIONS도 baseline에서 제거해 각 케이스가 결정적으로 동작하게 한다.
     blocked = {
         "EMAIL_SEND_MODE",
         "APPROVE_SEND_EMAIL",
@@ -192,6 +197,7 @@ def _clean_env() -> dict[str, str]:
         "ALERT_EMAIL_TO",
         "ALERT_EMAIL_FROM",
         "TEAMS_CHANNEL_EMAIL",
+        "GITHUB_ACTIONS",
     }
     return {key: value for key, value in os.environ.items() if key not in blocked}
 
