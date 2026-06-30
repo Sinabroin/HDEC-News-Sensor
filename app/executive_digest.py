@@ -308,62 +308,51 @@ def render_telegram(digest: ExecutiveDigest) -> str:
 def render_email_text(digest: ExecutiveDigest) -> str:
     """일반 이메일과 Teams 채널 이메일이 공유하는 plain text 본문.
 
-    Teams는 HTML 버튼이 깨질 수 있으므로 plain text에도 '바로 보기' URL을 반드시 둔다
-    (버튼 없이 URL fallback만으로 대시보드/리포트 접근 가능)."""
+    임원용으로 짧게 — 결론 한 줄 + 자연스러운 두세 문장 + 오늘의 신규 이슈 + 바로 보기 링크만.
+    '상황:'·'오늘 확인:' 같은 라벨은 두지 않는다(자연스러운 문장으로 읽히게). Teams는 HTML
+    버튼이 깨질 수 있으므로 plain text에도 '바로 보기' URL을 세로로 명시한다(버튼 없이도 접근)."""
 
     lines = [
         f"[오늘 {digest.brief_time} 브리프]",
         "",
         digest.headline,
         "",
-        "상황:",
         digest.situation,
-        "",
-        "현대건설 관점:",
         digest.hdec_angle,
-        "",
-        "오늘 확인:",
         digest.watch,
-        "",
-        "바로 보기:",
-        f"- 요약 대시보드: {digest.dashboard_url}",
-        f"- 전체 리포트: {digest.report_url}",
     ]
-    new_urls = {issue.url for issue in digest.new_issues if issue.url}
     if digest.new_issues:
         lines += ["", "오늘의 신규 이슈"]
         for index, issue in enumerate(digest.new_issues, start=1):
             lines.append(f"{index}. [{issue.label}] {issue.title}")
             if issue.url:
                 lines.append(f"   {issue.url}")
-    links = [link for link in digest.links if link.url not in new_urls]
-    if links:
-        lines += ["", "핵심 링크:"]
-        for index, link in enumerate(links, start=1):
-            lines.append(f"{index}. [{link.label}] {link.title}")
-            lines.append(f"   {link.url}")
+    # 임원용 이메일은 짧게 유지한다 — '핵심 링크' 블록은 두지 않고, 기사 접근은 위
+    # 신규 이슈 링크와 아래 두 CTA(요약 대시보드/전체 리포트)로 충분히 제공한다.
+    lines += [
+        "",
+        "바로 보기",
+        f"- 요약 대시보드: {digest.dashboard_url}",
+        f"- 전체 리포트: {digest.report_url}",
+    ]
     notice = _data_notice(digest)
     if notice:
         lines += ["", notice]
     return "\n".join(lines)
 
 
-def _email_section(label: str, body: str) -> str:
-    return (
-        f'<p style="margin:18px 0 4px;color:#667085;font-size:12px;'
-        f'font-weight:bold;letter-spacing:.02em">{escape(label)}</p>'
-        f'<p style="margin:0;font-size:15px">{escape(body)}</p>'
-    )
+def _cta_link(url: str, label: str, primary: bool) -> str:
+    """세로 명시 CTA 링크 한 줄 (display:block, 전체폭).
 
-
-def _cta_button(url: str, label: str, primary: bool) -> str:
-    """버튼 한 개. Gmail/Outlook에서 살아남는 inline style만 쓴다(테이블·외부 CSS 없음)."""
+    가로 inline-block 버튼은 Teams/Outlook이 inline-block·배경색을 떼어내며 두 버튼의
+    시각 구분·순서가 무너진다(모바일 오탭·체감 역전). 세로 블록 링크로 쌓으면 문서 흐름
+    순서가 그대로 유지돼 라벨↔목적지가 뒤집히지 않는다. 테이블·외부 CSS는 쓰지 않는다."""
     background = "#1d4ed8" if primary else "#0f766e"
     return (
         f'<a href="{escape(url, quote=True)}" '
-        'style="display:inline-block;margin:0 10px 10px 0;padding:12px 22px;'
+        'style="display:block;margin:0 0 10px;padding:13px 18px;'
         f'background:{background};color:#ffffff;text-decoration:none;'
-        'border-radius:8px;font-size:14px;font-weight:bold">'
+        'border-radius:8px;font-size:15px;font-weight:bold;text-align:center">'
         f"{escape(label)}</a>"
     )
 
@@ -371,34 +360,23 @@ def _cta_button(url: str, label: str, primary: bool) -> str:
 def render_email_html(digest: ExecutiveDigest) -> str:
     """임원용 단순 inline-style HTML. 외부 JS/CSS/이미지/첨부 없음.
 
-    버튼이 깨져도 하단 plain URL fallback으로 대시보드/리포트에 접근할 수 있다."""
+    임원용으로 짧게 — 결론 카드 + 자연스러운 두세 문장 + 오늘의 신규 이슈 + 세로 CTA 링크.
+    '현재 상황'·'오늘 확인할 항목' 같은 라벨 헤더는 두지 않는다(문장으로 읽히게). CTA는 가로
+    버튼이 아니라 세로 블록 링크라 Teams/Outlook에서 순서가 뒤집히지 않는다. 버튼이 깨져도
+    하단 plain URL fallback으로 대시보드/리포트에 접근할 수 있다."""
 
     headline_card = (
-        '<div style="margin:0 0 4px;padding:16px 18px;background:#f1f5ff;'
+        '<div style="margin:0 0 14px;padding:16px 18px;background:#f1f5ff;'
         'border-left:4px solid #1d4ed8;border-radius:6px">'
         '<p style="margin:0;font-size:16px;font-weight:bold;color:#0b1f4d">'
         f"{escape(digest.headline)}</p></div>"
     )
-    body_sections = (
-        _email_section("현재 상황", digest.situation)
-        + _email_section("현대건설 관점", digest.hdec_angle)
-        + _email_section("오늘 확인할 항목", digest.watch)
+    # 결론 아래 두세 문장은 라벨 없이 자연스러운 산문으로만 둔다 (어색한 '현재 상황' 헤더 제거).
+    prose = (
+        f'<p style="margin:0 0 10px;font-size:15px">{escape(digest.situation)}</p>'
+        f'<p style="margin:0 0 10px;font-size:15px">{escape(digest.hdec_angle)}</p>'
+        f'<p style="margin:0 0 4px;font-size:15px">{escape(digest.watch)}</p>'
     )
-    buttons = (
-        '<div style="margin:22px 0 8px">'
-        + _cta_button(digest.dashboard_url, "요약 대시보드 보기", primary=True)
-        + _cta_button(digest.report_url, "전체 리포트 보기", primary=False)
-        + "</div>"
-    )
-    fallback = (
-        '<p style="margin:0 0 2px;color:#667085;font-size:12px">'
-        "버튼이 보이지 않으면 아래 주소를 직접 여세요.</p>"
-        '<p style="margin:0;font-size:12px;color:#475467">요약 대시보드: '
-        f'<a href="{escape(digest.dashboard_url, quote=True)}">{escape(digest.dashboard_url)}</a></p>'
-        '<p style="margin:0 0 4px;font-size:12px;color:#475467">전체 리포트: '
-        f'<a href="{escape(digest.report_url, quote=True)}">{escape(digest.report_url)}</a></p>'
-    )
-    new_urls = {issue.url for issue in digest.new_issues if issue.url}
     new_issues_html = ""
     if digest.new_issues:
         items = "".join(
@@ -413,23 +391,24 @@ def render_email_html(digest: ExecutiveDigest) -> str:
             for issue in digest.new_issues
         )
         new_issues_html = (
-            '<h2 style="font-size:15px;margin:24px 0 10px">오늘의 신규 이슈</h2>'
+            '<h2 style="font-size:15px;margin:22px 0 10px">오늘의 신규 이슈</h2>'
             f'<ol style="margin:0;padding-left:22px">{items}</ol>'
         )
-    links_html = ""
-    visible_links = [link for link in digest.links if link.url not in new_urls]
-    if visible_links:
-        items = "".join(
-            '<li style="margin:0 0 8px">'
-            f'<span style="color:#667085">[{escape(link.label)}]</span> '
-            f'<a href="{escape(link.url, quote=True)}">{escape(link.title)}</a>'
-            "</li>"
-            for link in visible_links
-        )
-        links_html = (
-            '<h2 style="font-size:15px;margin:24px 0 10px">핵심 링크</h2>'
-            f'<ol style="margin:0;padding-left:22px">{items}</ol>'
-        )
+    # 세로 명시 CTA 블록 — 요약 대시보드(주) → 전체 리포트(부) 순서로 쌓는다.
+    cta_block = (
+        '<div style="margin:22px 0 10px">'
+        + _cta_link(digest.dashboard_url, "요약 대시보드 보기", primary=True)
+        + _cta_link(digest.report_url, "전체 리포트 보기", primary=False)
+        + "</div>"
+    )
+    fallback = (
+        '<p style="margin:0 0 2px;color:#667085;font-size:12px">'
+        "버튼이 보이지 않으면 아래 주소를 직접 여세요.</p>"
+        '<p style="margin:0;font-size:12px;color:#475467">요약 대시보드: '
+        f'<a href="{escape(digest.dashboard_url, quote=True)}">{escape(digest.dashboard_url)}</a></p>'
+        '<p style="margin:0 0 4px;font-size:12px;color:#475467">전체 리포트: '
+        f'<a href="{escape(digest.report_url, quote=True)}">{escape(digest.report_url)}</a></p>'
+    )
     notice = _data_notice(digest)
     notice_html = (
         f'<p style="margin:18px 0 0;color:#667085;font-size:12px">{escape(notice)}</p>'
@@ -442,6 +421,6 @@ def render_email_html(digest: ExecutiveDigest) -> str:
         'line-height:1.6;background:#ffffff">'
         '<main style="max-width:680px;margin:0 auto;padding:24px">'
         f'<h1 style="font-size:18px;margin:0 0 16px">오늘 {escape(digest.brief_time)} 브리프</h1>'
-        f"{headline_card}{body_sections}{buttons}{fallback}{new_issues_html}{links_html}{notice_html}"
+        f"{headline_card}{prose}{new_issues_html}{cta_block}{fallback}{notice_html}"
         "</main></body></html>"
     )

@@ -184,6 +184,26 @@ def check_renderer() -> None:
           and all(f"[{issue.label}]" in email_html for issue in digest.new_issues))
     check("신규 이슈 최대 5건", len(digest.new_issues) <= 5, str(len(digest.new_issues)))
 
+    # D7-AD-N: 어색한 라벨 헤더 제거(자연스러운 문장으로) — '현재 상황'·'오늘 확인할 항목' 등.
+    awkward_labels = ("현재 상황", "오늘 확인할 항목", "상황:", "오늘 확인:")
+    found = [label for label in awkward_labels
+             if label in email_html or label in email_text]
+    check("이메일/Teams 본문에 딱딱한 라벨 없음(현재 상황/오늘 확인할 항목)",
+          not found, ", ".join(found))
+    # 공통 4문장 본문은 라벨 없이도 그대로 유지된다(결론 + 자연스러운 산문).
+    check("라벨을 지워도 situation/hdec_angle/watch 문장은 본문에 보존",
+          all(s in email_html and s in email_text
+              for s in (digest.situation, digest.hdec_angle, digest.watch)))
+
+    # D7-AD-N: CTA는 가로 inline-block 버튼이 아니라 세로 block 링크여야 한다(Teams/Outlook
+    # 순서 역전 방지). 앵커 내부 텍스트는 라벨 그대로 유지(라벨↔URL 매핑 잠금과 양립).
+    cta_anchor_re = re.compile(
+        r'<a href="[^"]+"\s+style="([^"]*)"[^>]*>(?:요약 대시보드 보기|전체 리포트 보기)</a>')
+    cta_styles = cta_anchor_re.findall(email_html)
+    check("CTA 2개가 세로 block 링크(display:block, 가로 inline-block 아님)",
+          len(cta_styles) == 2 and all("display:block" in s for s in cta_styles)
+          and "inline-block" not in email_html, f"{len(cta_styles)} styles")
+
 
 def check_telegram_mapping() -> None:
     """Telegram 짧은 라벨은 유지하되 라벨→URL 매핑을 잠근다(이메일과 표현만 다름·역할 동일)."""
