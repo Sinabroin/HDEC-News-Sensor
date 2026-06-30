@@ -416,8 +416,11 @@ def check_render_digest() -> None:
             "top_signals": [], "theme_rankings": [], "category_counts": [], "mode": "mock"}
 
     live_msg = format_digest_message({**base, **_brief("live", 1357.7)})
-    check("digest live → 수치+출처+기준 노출",
-          "1357.7" in live_msg and "Yahoo Finance" in live_msg and "기준" in live_msg)
+    # D7-AD: channel digest는 결론형 4문장만 유지하고 live macro도 상세 리포트에 위임한다.
+    # live 수치/출처 자체는 위 리포트 renderer 검사에서 계속 검증한다.
+    check("digest live → 거시 수치 숨김 + 상세 리포트 위임",
+          "1357.7" not in live_msg and "Yahoo Finance" not in live_msg
+          and "거시경제" in live_msg and "상세 리포트 보기" in live_msg)
 
     mock_msg = format_digest_message({**base, **_brief("mock", 0)})
     check("digest mock_static → 수치 숨김 + Macro Snapshot 미노출",

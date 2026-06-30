@@ -29,6 +29,7 @@ import py_compile
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +38,10 @@ DR_MODULE = ROOT / "app" / "decision_relevance.py"
 RADAR_DB = ROOT / "radar.db"
 
 GRADE_EXCLUDED = "제외"
+KST = timezone(timedelta(hours=9))
+FIXTURE_PUBLISHED_AT = (
+    datetime.now(KST) - timedelta(days=1)
+).strftime("%Y-%m-%dT09:00:00+09:00")
 
 # ---- fixture: P0-C1.13 회귀 시나리오 (제목·출처만으로 결정적 판정) ----
 # 현대건설 직접: 벌점(리스크) · 도시정비/DC(전략) · AI 하도급(운영) · 전환사채(재무).
@@ -75,7 +80,9 @@ FIX = [
      "snippet": "가온전선 데이터센터 전력망 케이블 수주가 급증했다"},
 ]
 for _f in FIX:
-    _f.setdefault("published_at", "2026-06-14T09:00:00+09:00")
+    # Freshness is not the contract under test. A fixed date eventually turns these
+    # routing fixtures into stale/excluded articles and invalidates AI selection checks.
+    _f.setdefault("published_at", FIXTURE_PUBLISHED_AT)
     _f.setdefault("url", f"https://ex.test/{_f['id']}")
 
 PENALTY_MARK = "벌점 사전통보"   # 현대건설 직접·리스크 양쪽 후보 — 중복 표기 검사용
@@ -134,6 +141,8 @@ def _import_dr():
 
 def check_finance_routing_unit() -> None:
     dr = _import_dr()
+    from app import radar
+
     fin = next(f for f in FIX if f["id"] == "f_fin")
     row = {"title": fin["title"], "source": fin["source"],
            "snippet": fin["snippet"], "topic_candidates": "[]"}
@@ -162,6 +171,17 @@ def check_finance_routing_unit() -> None:
           dr.is_supplier_only("삼성물산 EPC 수주 SMR 데이터센터") is False)
     check("광범위 AI DC 정책(회사명 없음) → supplier_only False",
           dr.is_supplier_only("특별법 AI 데이터센터 건설사 전력망 냉각 경쟁") is False)
+    broad = next(f for f in FIX if f["id"] == "f_broadai")
+    check("광범위 AI DC 활성화 정책 → AI primary selection 후보",
+          radar.classify_section(broad) == radar.AI
+          and dr.AI in dr.classify(broad)["executive_sections"])
+    safety_rule = {
+        "title": "건설현장 AI 영상인식 안전관리 의무화 추진",
+        "source": "대한경제",
+        "snippet": "건설현장 AI 영상인식 기반 안전관리 의무화가 추진된다",
+    }
+    check("구체적 AI 안전관리 의무화 → 리스크 primary 유지",
+          radar.classify_section(safety_rule) == radar.RISK)
 
 
 def check_format_units() -> None:
@@ -171,12 +191,14 @@ def check_format_units() -> None:
     # 현대건설 직접 그룹핑: 리스크/전략/운영/재무 4버킷 → ≤3줄 (재무는 캡으로 제외).
     hdec = [
         {"title": "서울시 현대건설에 벌점 사전통보 분양 수주 영향권",
-         "article_id": "pen", "hdec_bucket": 1, "risk_radar_label": "제재"},
+         "article_id": "pen", "hdec_bucket": 1, "risk_radar_label": "제재",
+         "url": "https://example.test/pen"},
         {"title": "현대건설 도시정비 12조 데이터센터 양 축 강화",
-         "article_id": "dc", "hdec_bucket": 2},
+         "article_id": "dc", "hdec_bucket": 2, "url": "https://example.test/dc"},
         {"title": "현대건설 AI로 하도급 계약 점검 상생펀드 운영",
-         "article_id": "ai", "hdec_bucket": 3},
-        {"title": "현대건설 0% 금리 전환사채 발행", "article_id": "fin", "hdec_bucket": 5},
+         "article_id": "ai", "hdec_bucket": 3, "url": "https://example.test/ai"},
+        {"title": "현대건설 0% 금리 전환사채 발행", "article_id": "fin", "hdec_bucket": 5,
+         "url": "https://example.test/fin"},
     ]
     bullets, shown = d._hdec_grouped_bullets(hdec)
     check("현대건설 직접 그룹 bullet 2~3줄 (헤드라인 5줄 나열 아님)",
@@ -191,20 +213,39 @@ def check_format_units() -> None:
             "news_data_mode": "live", "executive_one_liner": "t", "status_board": [],
             "hdec_signals": hdec, "top_signals": [], "ai_first": True,
             "biz_signals": [{"title": "종전에 중동 재건 기대 건설사 수주 채비",
-                             "article_id": "me"}],
+                             "article_id": "me", "url": "https://example.test/me"}],
             "risk_signals": [{"title": "서울시 현대건설에 벌점 사전통보 분양 수주 영향권",
-                              "article_id": "pen", "risk_radar_label": "제재"}],
+                              "article_id": "pen", "risk_radar_label": "제재",
+                              "url": "https://example.test/pen"}],
             "category_counts": [], "macro_snapshot": {}, "mode": "mock"}
     msg = d.format_digest_message(data)
     check("벌점 헤드라인이 다이제스트에 한 번만 (직접 vs 리스크 중복 제거)",
           msg.count(PENALTY_MARK) == 1, f"{msg.count(PENALTY_MARK)}회")
-    check("리스크·규제 줄이 현대건설 연관 포인터로 대체",
-          "현대건설 연관 항목 참고" in msg)
-    check("[수주·해외] 블록 노출 (후보 있을 때)", "[수주·해외]" in msg)
-    check("AI 라벨이 '[AI 관련]'이고 '[AI 관련 Top 3]' 아님",
-          "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
+    check("공통 digest 결론형 4문장 계약",
+          "[오늘 07:00 브리프]" in msg and "현대건설 관점에서는" in msg
+          and "오늘은 " in msg)
+    check("[수주·해외] 핵심 링크 노출 (후보 있을 때)", "[수주·해외]" in msg)
+    check("AI 후보가 없으면 AI 링크 라벨을 만들지 않음", "[AI 관련]" not in msg)
     check("다이제스트에 '[주요 테마]' 없음", "[주요 테마]" not in msg)
     check("live 다이제스트에 '자동 수집' 기술 표현 없음", "자동 수집" not in msg)
+
+    # 링크 cap이 찼을 때의 우선순위는 HDEC → AI → 리스크이며 수주·해외는 selection에만 남는다.
+    priority_data = {
+        **data,
+        "top_signals": [{
+            "title": "AI 데이터센터 전력망 발주 확대",
+            "article_id": "ai-priority",
+            "url": "https://example.test/ai-priority",
+        }],
+        "risk_signals": [{
+            "title": "건설현장 안전규제 강화",
+            "article_id": "risk-priority",
+            "url": "https://example.test/risk-priority",
+        }],
+    }
+    labels = [link.label for link in d.build_executive_digest(priority_data).links]
+    check("핵심 링크 cap 우선순위: 현대건설·AI·리스크",
+          labels == ["현대건설 연관", "AI 관련", "리스크·규제"], str(labels))
 
 
 # ---------- 파이프라인 시뮬레이션 (temp DB subprocess, fetch_all 패치) ----------
@@ -257,13 +298,13 @@ def check_pipeline(sim: dict | None) -> None:
 
     check("시뮬: live 모드로 fixture 파이프라인 통과", sim.get("mode") == "live")
 
-    # 다이제스트 구조 (Phase 2/3/5/6/7)
-    check("다이제스트에 [현대건설 연관] 블록", "[현대건설 연관]" in msg)
+    # 다이제스트 구조 (D7-AD 공통 renderer + 기존 selection/routing)
+    check("다이제스트에 [현대건설 연관] 핵심 링크", "[현대건설 연관]" in msg)
     h_i, a_i = msg.find("[현대건설 연관]"), msg.find("[AI 관련")
     check("현대건설 연관이 AI보다 먼저", 0 <= h_i < a_i)
     check("AI 라벨 '[AI 관련]' (리포트형 'Top 3' 아님)",
           "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
-    check("[수주·해외] 블록 노출 (발주 환경 후보 있음)", "[수주·해외]" in msg)
+    check("핵심 링크는 최대 3개", msg.count('<a href="') <= 3)
     check("[주요 테마] 없음", "[주요 테마]" not in msg)
     for term in ("Macro Snapshot", "시장지표 미연동", "자동 수집"):
         check(f"다이제스트에 '{term}' 없음", term not in msg)

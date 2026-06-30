@@ -111,7 +111,12 @@ def check_digest_quality() -> None:
                  (proc.stderr or "").strip()[-300:]):
         return
     message = proc.stdout
-    check("digest에 중요도 표시", "중요도 " in message and "/5" in message)
+    # D7-AD: 3~5문장 executive brief에는 리포트형 점수/등급을 넣지 않는다.
+    check("digest에 중요도/점수 나열 없음", "중요도 " not in message and "/5" not in message)
+    check("digest가 결론형 4문장 계약 사용",
+          "[오늘 07:00 브리프]" in message
+          and "현대건설 관점에서는" in message
+          and "오늘은 " in message)
     check("digest에 검토/추적 필요 액션 라벨 없음",
           "검토 필요" not in message and "추적 필요" not in message)
     over = OVERCLAIM_RE.findall(message)

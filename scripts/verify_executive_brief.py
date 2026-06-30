@@ -367,7 +367,10 @@ def check_digest() -> None:
           "" if ok else (proc.stderr or "").strip()[-300:])
     if ok:
         message = proc.stdout
-        for label in (HEADER_TEXT, ONE_LINER_LABEL, "즉시 알림 후보", "카테고리"):
+        # D7-AD: Telegram은 리포트형 현황판/카테고리/점수 나열이 아니라 공통
+        # executive digest의 결론→상황→HDEC 의미→오늘 액션 4문장만 노출한다.
+        for label in (HEADER_TEXT, "[오늘 07:00 브리프]", "현대건설 관점에서는",
+                      "오늘은 ", "핵심 링크"):
             check(f"digest에 '{label}' 포함", label in message)
         # P0-C1.13 — [주요 테마]는 Telegram에서 제거(부풀어 보이는 '40건' 카운트 = 임원용
         # 노이즈). 테마 정보는 리포트/대시보드에 유지된다 (verify_static_report가 검사).
@@ -399,6 +402,11 @@ def check_digest() -> None:
           f"{len(signals)}건")
     check("digest JSON에 executive_one_liner 존재",
           bool((data.get("executive_one_liner") or "").strip()))
+    executive = data.get("executive_digest") or {}
+    check("digest JSON에 공통 executive 4필드 존재",
+          all(executive.get(key) for key in ("headline", "situation", "hdec_angle", "watch")))
+    check("digest JSON 핵심 링크 1~3개",
+          1 <= len(executive.get("links") or []) <= 3)
     chars = data.get("message_chars")
     check(f"digest JSON message_chars <= {MESSAGE_BUDGET_MAX}",
           isinstance(chars, int) and chars <= MESSAGE_BUDGET_MAX, str(chars))

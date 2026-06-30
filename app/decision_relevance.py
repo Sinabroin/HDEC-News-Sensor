@@ -494,7 +494,7 @@ def _reason(primary: str, members: set, flags: dict) -> str:
     if extra:
         parts.append("·".join(extra) + " 연계")
     if flags.get("is_finance"):
-        tail = "자본시장 관찰 신호 — 사업 의사결정 핵심도 낮음"
+        tail = "자금조달·금리 환경 신호 — 자본시장 관찰, 사업 의사결정 핵심도 낮음"
     elif flags["hdec_direct"]:
         tail = "현대건설 직접 의사결정 신호"
     elif flags["is_competitor"]:

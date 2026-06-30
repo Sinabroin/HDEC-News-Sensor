@@ -86,6 +86,16 @@ RISK_REG_WEAK = [
     "특별법", "건설안전특별법", "의무화", "기준 강화", "품질 논란",
     "품질관리", "품질 관리",
 ]
+# AI/DC/SMR 산업의 시장·발주 환경을 여는 법제 신호. 아래 토큰만 있고 구체적
+# 안전·제재·의무·품질 리스크가 없으면 AI 실행/시장 신호로 유지한다. 예:
+# "AI 데이터센터 특별법 시행 ... 전력망·냉각 경쟁". 반대로 "AI 안전관리 의무화"는
+# RISK_POLICY_IMPACT_TERMS가 함께 잡혀 계속 risk_regulation이 우선한다.
+AI_POLICY_ENABLEMENT_TERMS = {"법안", "개정안", "시행령", "특별법"}
+RISK_POLICY_IMPACT_TERMS = [
+    "안전", "재해", "사고", "제재", "처벌", "위반", "고발", "소송",
+    "조사", "감사", "감독", "책임", "규제", "의무화", "기준 강화",
+    "품질", "하자", "부실", "입찰제한", "입찰 제한", "영업정지", "영업 정지",
+]
 INDUSTRY_KEYWORDS = [
     "건설", "건설사", "건설업", "건설현장", "현장", "시공", "epc", "플랜트",
     "공사", "토목", "건축", "인프라", "기반시설", "현대건설", "데이터센터",
@@ -199,18 +209,30 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
     if aq.get("local_safety_inspection"):
         return OTHER
 
+    vc = ai_value_chain.classify_ai_value_chain(
+        row.get("title") or "", row.get("source") or "", row.get("snippet") or "")
+    is_ai_candidate = ai_value_chain.is_executive_ai_candidate(vc) or _hits(raw, AI_KEYWORDS)
+    weak_risk_hits = {term for term in RISK_REG_WEAK if term in raw}
+    is_ai_enablement_policy = (
+        is_ai_candidate
+        and bool(weak_risk_hits)
+        and weak_risk_hits <= AI_POLICY_ENABLEMENT_TERMS
+        and not _hits(raw, RISK_POLICY_IMPACT_TERMS)
+    )
+
     # 중대재해·제재·하자·안전규제는 AI/스마트건설 단어가 함께 있어도 리스크로 먼저 본다.
-    # 그래야 'AI 안전관리 의무화'류가 generic AI 기술 기사로 묻히지 않는다.
+    # 단 AI/DC/SMR 특별법처럼 구체 위험 없이 시장·발주 환경을 여는 정책은 AI 후보로
+    # 유지한다. 그래야 활성화 정책을 안전·제재 리스크로 과분류하지 않으면서
+    # 'AI 안전관리 의무화'류는 계속 리스크 섹션이 소유한다.
     if _hits(raw, RISK_ACTION_STRONG) or (
-            _hits(raw, RISK_REG_WEAK) and _hits(raw, INDUSTRY_KEYWORDS)):
+            weak_risk_hits and _hits(raw, INDUSTRY_KEYWORDS)
+            and not is_ai_enablement_policy):
         return RISK
 
     # AI는 raw에 직접 AI 인프라/칩/반도체 공급망/스마트건설 증거가 있을 때만. 단순 앱·
     # 챗봇 기능 업데이트 같은 generic AI는 value-chain classifier가 tier5/generic으로
     # 내려 dashboard 상위 AI 신호가 되지 않는다.
-    vc = ai_value_chain.classify_ai_value_chain(
-        row.get("title") or "", row.get("source") or "", row.get("snippet") or "")
-    if ai_value_chain.is_executive_ai_candidate(vc) or _hits(raw, AI_KEYWORDS):
+    if is_ai_candidate:
         return AI
 
     has_macro = _hits(raw, MACRO_KEYWORDS)

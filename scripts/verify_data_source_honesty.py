@@ -327,8 +327,11 @@ def check_digest_live_branch() -> None:
         "updated_at": "2026-01-01T08:00:00+09:00",
         "values": [{"label": "USD/KRW", "value": 1399.9, "unit": "원"}],
     }})
-    check("live macro → 수치+출처+기준시각 표시",
-          "1399.9" in live_msg and "test_feed" in live_msg and "기준" in live_msg)
+    # D7-AD: 3~5문장 알림은 live 여부와 무관하게 거시 수치를 싣지 않고 상세 리포트로
+    # 위임한다. 리포트 자체의 live macro 정직성 검사는 아래 report 검사에서 유지한다.
+    check("live macro도 짧은 digest에서는 수치 숨김 + 리포트 위임",
+          "1399.9" not in live_msg and "test_feed" not in live_msg
+          and "거시경제" in live_msg and "상세 리포트 보기" in live_msg)
 
     mock_msg = format_digest_message({**base, "macro_snapshot": {
         "macro_data_mode": "mock_static",

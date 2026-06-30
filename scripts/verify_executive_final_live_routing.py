@@ -31,11 +31,16 @@ import py_compile
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIGEST_BUILDER = ROOT / "scripts" / "build_telegram_digest.py"
 RADAR_DB = ROOT / "radar.db"
+KST = timezone(timedelta(hours=9))
+FIXTURE_PUBLISHED_AT = (
+    datetime.now(KST) - timedelta(days=1)
+).strftime("%Y-%m-%dT09:00:00+09:00")
 
 # ---- fixture: P0-C1.14 라이브 라우팅 시나리오 (제목·스니펫만으로 결정적 판정) ----
 # 현대건설 직접: 벌점(리스크) · 도시정비/DC(전략) · 전환사채(재무, AI 금지) ·
@@ -75,7 +80,9 @@ FIX = [
      "snippet": "대한전선이 데이터센터 전력망 케이블 수주가 급증해 생산능력을 2배로 늘린다"},
 ]
 for _f in FIX:
-    _f.setdefault("published_at", "2026-06-14T09:00:00+09:00")
+    # Freshness is not the contract under test. Keep routing fixtures recent so an
+    # aging wall-clock date cannot turn supplier/AI candidates into excluded rows.
+    _f.setdefault("published_at", FIXTURE_PUBLISHED_AT)
     _f.setdefault("url", f"https://ex.test/{_f['id']}")
 
 PENALTY_MARK = "벌점 사전통보"
@@ -270,8 +277,11 @@ def check_sim(sim: dict | None) -> None:
           "f_finproj" in ai_section or "f_finproj" in hdec,
           f"ai_section={sorted(ai_section)} hdec={sorted(hdec)}")
 
-    # ---- A. 수주·해외 Telegram 블록 ----
-    check("A: [수주·해외] 블록 노출 (발주/EPC/해외 후보 있음)", "[수주·해외]" in msg)
+    # ---- A. 수주·해외 selection ----
+    # D7-AD의 핵심 링크는 3개 cap(HDEC·AI·리스크 우선)이므로 수주·해외는 JSON selection으로
+    # 검증하고, Telegram 본문은 공통 renderer의 링크 cap/4문장 계약을 검증한다.
+    check("A: Telegram 공통 renderer 핵심 링크 cap", "핵심 링크" in msg
+          and msg.count('<a href="') <= 3)
     check("A: 수주·해외가 dedup으로 통째로 사라지지 않음 (≥1줄)", len(biz) >= 1, f"biz={biz}")
     check("A: 수주·해외 첫 줄이 공급사 단독 아님 (발주/EPC/해외 우선)",
           bool(biz) and biz[0] not in SUPPLIERS, f"biz={biz}")
@@ -322,7 +332,8 @@ def check_mock() -> None:
         return
     msg = proc.stdout or ""
     check("mock 다이제스트 'mock 데이터 기반' 정직 표기", "mock 데이터 기반" in msg)
-    check("mock 다이제스트 stock-hype 게이트 유지 (제외 등급 존재)", "참고/제외" in msg)
+    check("mock 다이제스트는 리포트형 상태 카운트(참고/제외)를 본문에 싣지 않음",
+          "참고/제외" not in msg)
     check("mock 다이제스트에 [주요 테마] 없음", "[주요 테마]" not in msg)
     check("mock 다이제스트 AI 라벨 '[AI 관련]'",
           "[AI 관련]" in msg and "[AI 관련 Top" not in msg)
