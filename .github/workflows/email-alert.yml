@@ -1,0 +1,61 @@
+name: Email Alert via Gmail SMTP
+
+on:
+  workflow_dispatch:
+    inputs:
+      approve_send_email:
+        description: "Approve real Gmail SMTP delivery (default false = dry-run only)"
+        required: true
+        type: boolean
+        default: false
+      send_to_teams:
+        description: "Also send the same brief to the Teams channel email secret"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  APP_MODE: mock
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  email-alert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify email, Teams, and operator safety contracts
+        run: |
+          python3 -m py_compile app/*.py scripts/*.py
+          python3 scripts/verify_email_teams_alert.py
+          python3 scripts/verify_operator_api_activation_readiness.py
+
+      - name: Build executive email preview (dry-run, no secrets)
+        if: ${{ inputs.approve_send_email != true }}
+        run: python3 scripts/send_email_alert.py --dry-run
+
+      - name: Send approved executive email
+        if: ${{ inputs.approve_send_email == true }}
+        env:
+          EMAIL_SEND_MODE: send
+          APPROVE_SEND_EMAIL: "true"
+          SEND_TO_TEAMS: ${{ inputs.send_to_teams && 'true' || 'false' }}
+          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
+          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
+          GMAIL_SMTP_PASSWORD: ${{ secrets.GMAIL_SMTP_PASSWORD }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
+          NEWS_MODE: live
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: python3 scripts/send_email_alert.py
