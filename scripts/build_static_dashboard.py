@@ -1274,6 +1274,74 @@ def _inject_featured(html: str, featured_html: str) -> str:
     return new
 
 
+# D7-AD-N: 임원 아코디언 섹션 — brief.accordion_sections를 네이티브 <details>로 서버 렌더한다.
+# JS 0줄(각 <details>는 브라우저 기본 동작으로 독립 개폐), 블록 흐름이라 펼쳐져도 다른 목록을
+# 가리지 않는다. 기사 카드는 제목·출처·태그·본문 보기 링크만 노출하고 본문 전문은 싣지 않는다
+# (rules.md §3). 빈 섹션도 헤딩과 '현재 수집된 항목 없음'을 정직히 유지한다(가짜 기사/날씨 없음).
+_ACC_INJECT_MARKER = "<!-- ACCORDION-INJECT -->"
+
+
+def _render_accordion_card(article: dict) -> str:
+    title = escape(article.get("title") or "")
+    tag = escape(article.get("section_tag") or article.get("category_label") or "")
+    src = escape(article.get("display_source") or article.get("source") or "출처 미상")
+    url = article.get("url") or ""
+    open_link = ""
+    if _is_http(url) and article.get("has_original_link"):
+        open_link = (f'<a class="acc-open" href="{escape(url)}" target="_blank" '
+                     'rel="noopener noreferrer">본문 보기 →</a>')
+    tag_html = f'<span class="acc-tag">{tag}</span>' if tag else ""
+    return (
+        '<div class="acc-card">'
+        f'<div class="t">{title}</div>'
+        f'<div class="acc-meta">{tag_html}<span class="acc-src">{src}</span>{open_link}</div>'
+        '</div>'
+    )
+
+
+def _render_accordion_section(section: dict) -> str:
+    label = escape(section.get("label") or "")
+    key = escape(section.get("key") or "")
+    article_count = int(section.get("article_count") or 0)
+    issue_count = int(section.get("issue_count") or 0)
+    is_open = bool(section.get("default_open"))
+    articles = section.get("articles") or []
+    # 헤더 카운트: "N개 이슈 · 기사 M건" — 빈 섹션은 '기사 0건'으로 정직히 표기.
+    count_txt = (f"{issue_count}개 이슈 · 기사 {article_count}건"
+                 if article_count else "기사 0건")
+    flag = '<span class="acc-flag">NEW</span>' if (is_open and article_count) else ""
+    head = (
+        '<summary>'
+        f'<span class="acc-sl"><span class="acc-name">{label}</span>{flag}</span>'
+        f'<span class="acc-count">{escape(count_txt)}</span>'
+        '</summary>'
+    )
+    if articles:
+        body = ('<div class="acc-list">'
+                + "".join(_render_accordion_card(a) for a in articles) + '</div>')
+        note = section.get("note") or ""
+        if note:
+            body += f'<div class="acc-note">{escape(note)}</div>'
+    else:
+        body = (f'<div class="acc-empty">'
+                f'{escape(section.get("empty_message") or "현재 수집된 항목 없음")}</div>')
+    open_attr = " open" if is_open else ""
+    return (f'<details class="acc-sec" data-acc="{key}"{open_attr}>'
+            f'{head}{body}</details>')
+
+
+def _inject_accordion(html: str, brief: dict) -> str:
+    """brief.accordion_sections를 템플릿 마커 영역에 서버 렌더로 주입한다(JS 0줄)."""
+    sections = brief.get("accordion_sections") or []
+    rendered = "".join(_render_accordion_section(s) for s in sections)
+    if not rendered:
+        rendered = '<div class="acc-empty">현재 수집된 항목 없음</div>'
+    if _ACC_INJECT_MARKER not in html:
+        print("ERROR: 아코디언 주입 마커를 찾지 못함 (템플릿 구조 변경?)", file=sys.stderr)
+        raise SystemExit(1)
+    return html.replace(_ACC_INJECT_MARKER, rendered, 1)
+
+
 def _fmt_market_value(value, decimals: int) -> str:
     """시세값을 천단위 구분 + 소수 자리로 포맷 (표시용 — 시세 자체는 바꾸지 않는다)."""
     try:
@@ -1568,6 +1636,7 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
                                   len(parts["news_rows"]) + len(parts["ai_rows"]))
     html = _update_honesty(html, news_mode)
+    html = _inject_accordion(html, brief)
     return html
 
 

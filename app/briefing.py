@@ -17,9 +17,9 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from app import (
-    ai_value_chain, article_quality, config, db, decision_relevance, insight, macro_snapshot,
-    market_snapshot, radar, risk_events, scoring, source_quality, surface_contracts,
-    topic_profiles,
+    ai_value_chain, article_quality, config, db, decision_relevance, global_press, insight,
+    macro_snapshot, market_snapshot, radar, risk_events, scoring, source_quality,
+    surface_contracts, topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -1265,6 +1265,156 @@ def _build_category_sections(scored_rows: list[dict], categories: dict[str, str]
     return sections
 
 
+# D7-AD-N: 요약 대시보드 임원 아코디언 섹션 — 표시 전용 파생값(점수/등급/랭킹/분류 재계산 없음,
+# DB 쓰기 없음, surface_state 미사용 = 기존 상단 카드 선택 불변). 기존 brief 신호(top_issues·
+# decision 멤버십·repo 카테고리·해외 매체 출처)에서 8개 섹션을 조립해 <details> 아코디언으로
+# 노출한다. 재무/브랜드는 '표시 전용 필터'다 — core 분류를 바꾸지 않고 raw 제목+repo 플래그로만
+# 멤버를 고른다. 데이터가 없으면 헤딩을 유지하고 빈 상태를 정직히 표기한다(가짜 기사 생성 없음).
+# 브랜드 섹션 표시 전용 키워드 — 좁게(제목에 명확히 드러날 때만). core 분류를 바꾸지 않는다.
+ACCORDION_BRAND_KEYWORDS = (
+    "디에이치", "the h", "힐스테이트", "사옥", "설계협업", "설계 협업",
+    "프리미엄 주거", "하이엔드", "커뮤니티 시설", "브랜드", "상품성", "조경",
+    "외관 디자인", "디자인 특화", "주거 브랜드",
+)
+
+
+def _accordion_is_finance(row: dict, decision: dict | None) -> bool:
+    """재무 섹션 멤버십 — 표시 전용. repo의 decision is_finance 플래그/finance 토큰만 쓰고
+    시세성(stock_hype)은 제외해 '기업 재무(전환사채·PF·자금조달·금리·회사채·유동성)'만 남긴다.
+    점수/등급/분류를 바꾸지 않는다 — 멤버 판정에만 쓰는 표시용 필터다."""
+    d = decision or {}
+    if d.get("stock_hype"):
+        return False
+    if d.get("is_finance"):
+        return True
+    return decision_relevance.is_finance_signal(row)
+
+
+def _accordion_is_brand(row: dict) -> bool:
+    """브랜드 섹션 멤버십 — 표시 전용 키워드 필터(제목 기준, 좁게). core 분류 불변."""
+    title = (row.get("title") or "").lower()
+    return any(kw in title for kw in ACCORDION_BRAND_KEYWORDS)
+
+
+def _accordion_section(key: str, label: str, rows: list[dict],
+                       categories: dict[str, str], reasons: dict[str, str],
+                       decisions: dict[str, dict] | None,
+                       *, default_open: bool = False, empty_message: str | None = None,
+                       tag_override: str | None = None) -> dict:
+    """한 아코디언 섹션을 조립한다 — 집계/정렬만(점수·등급 재계산 없음, 표시 전용).
+
+    article_count = 멤버 기사 전체, articles = 비-뉴스(블로그/카페) 제외 후 상단 노출순 상위 N건,
+    issue_count = 비-뉴스 멤버의 distinct 노출 cluster 수. 빈 섹션도 헤딩·빈 상태를 유지한다.
+    """
+    decisions = decisions or {}
+    total = len(rows)
+    news_rows = [r for r in rows if not _is_excluded_quality(r)]
+    nonnews = total - len(news_rows)
+    ordered = sorted(news_rows,
+                     key=lambda r: _top_exposure_sort_key(r, decisions.get(r["id"])))
+    # 섹션 내 노출 cluster당 최대 2건(같은 사건 도배 방지) — total은 불변(감사 가능).
+    shown, cluster_counts = [], {}
+    for r in ordered:
+        ck = _exposure_cluster_key(r)
+        if ck and cluster_counts.get(ck, 0) >= 2:
+            continue
+        if ck:
+            cluster_counts[ck] = cluster_counts.get(ck, 0) + 1
+        shown.append(r)
+        if len(shown) >= TOP_CATEGORY_ARTICLES:
+            break
+    articles = []
+    for r in shown:
+        entry = _category_article_entry(
+            r, categories.get(r["id"], "general"), reasons.get(r["id"], ""),
+            decisions.get(r["id"]))
+        if tag_override:
+            entry["section_tag"] = tag_override
+        articles.append(entry)
+    issue_keys = {(_exposure_cluster_key(r) or r["id"]) for r in news_rows}
+    sources = {(r.get("source") or "출처 미상") for r in news_rows}
+    remaining = total - len(articles)
+    note_parts = []
+    if remaining > 0:
+        note_parts.append(f"외 {remaining}건")
+    if nonnews > 0:
+        note_parts.append(f"블로그·카페 등 비-뉴스 출처 {nonnews}건 제외")
+    return {
+        "key": key,
+        "label": label,
+        "default_open": bool(default_open),
+        "total_count": total,
+        "article_count": total,
+        "issue_count": len(issue_keys),
+        "shown_count": len(articles),
+        "remaining_count": remaining,
+        "source_count": len(sources),
+        "articles": articles,
+        "note": " · ".join(note_parts),
+        "empty": total == 0,
+        "empty_message": empty_message or "현재 수집된 항목 없음",
+    }
+
+
+def _build_accordion_sections(scored_rows: list[dict], categories: dict[str, str],
+                              reasons: dict[str, str],
+                              decisions: dict[str, dict] | None,
+                              new_issue_ids: set | None) -> list[dict]:
+    """요약 대시보드 임원 아코디언 8섹션 — 표시 전용(additive, surface_state 미사용).
+
+    오늘의 신규 이슈 / 수주 / 재무 / 정책 / 경쟁 / 브랜드 / 기상·날씨 / 해외 언론.
+    기상은 전용 데이터 소스가 없어 항상 빈 상태(가짜 날씨 금지). 해외 언론은 해외 매체 출처
+    (global_press 레지스트리)만 채운다 — mock/오프라인은 해외 출처가 없어 빈 상태(가짜 없음).
+    """
+    decisions = decisions or {}
+    new_issue_ids = new_issue_ids or set()
+
+    def members(predicate):
+        return [r for r in scored_rows if predicate(r)]
+
+    def in_sec(section_key):
+        return lambda r: decision_relevance.in_section(
+            decisions.get(r["id"]) or {}, section_key)
+
+    return [
+        _accordion_section(
+            "new", "오늘의 신규 이슈",
+            members(lambda r: r["id"] in new_issue_ids),
+            categories, reasons, decisions, default_open=True,
+            empty_message="오늘 새로 관측된 신규 이슈가 없습니다"),
+        _accordion_section(
+            "order", "수주", members(in_sec(decision_relevance.ORDER_OVERSEAS)),
+            categories, reasons, decisions),
+        _accordion_section(
+            "finance", "재무",
+            members(lambda r: _accordion_is_finance(r, decisions.get(r["id"]))),
+            categories, reasons, decisions),
+        _accordion_section(
+            "policy", "정책",
+            members(lambda r: categories.get(r["id"]) == "gov"),
+            categories, reasons, decisions),
+        _accordion_section(
+            "competitor", "경쟁",
+            members(lambda r: in_sec(decision_relevance.COMPETITOR)(r)
+                    or categories.get(r["id"]) == "competitor"),
+            categories, reasons, decisions),
+        _accordion_section(
+            "brand", "브랜드", members(_accordion_is_brand),
+            categories, reasons, decisions,
+            empty_message="브랜드 관련 신호가 현재 수집된 항목 없음"),
+        _accordion_section(
+            "weather", "기상·날씨", [],
+            categories, reasons, decisions,
+            empty_message="기상 데이터 소스 미연동 — 현재 수집된 항목 없음"),
+        _accordion_section(
+            "global_press", "해외 언론",
+            members(lambda r: global_press.is_foreign_press(
+                r.get("source"), r.get("title"))),
+            categories, reasons, decisions, tag_override=global_press.source_label(),
+            empty_message="해외 언론 수집 결과 없음 (live 수집 시 노출 · 가짜 생성 안 함)"),
+    ]
+
+
 def _build_review_excluded(scored_rows: list[dict], categories: dict[str, str],
                            reasons: dict[str, str]) -> dict:
     """참고/제외 등급(제외) 중 '정상 뉴스 출처'만 모은다 — 낮은 관련성/우선순위 뉴스 (P0-C1.8).
@@ -2017,6 +2167,13 @@ def build_brief(pipeline_counts: dict | None = None,
     category_sections = _build_category_sections(
         scored, categories, display_reasons, decisions, surface_state)
 
+    # D7-AD-N: 요약 대시보드 임원 아코디언 8섹션 (표시 전용 파생, additive — surface_state 미사용).
+    # 신규/수주/재무/정책/경쟁/브랜드/기상/해외 언론. new_issue_ids는 위에서 선택된 top_issues에서
+    # 파생한다(새 선택 로직 없음). 점수/등급/랭킹/mock 카운트 불변.
+    new_issue_ids = {e.get("article_id") for e in top_issues}
+    accordion_sections = _build_accordion_sections(
+        scored, categories, display_reasons, decisions, new_issue_ids)
+
     # 노출 품질·중복 감사 (P0-D3F, 운영자 전용) — 어떤 기사가 어느 surface에 노출/억제됐는지
     # 투명화한다. 임원 카드에는 raw 키를 노출하지 않고, 이 감사 구조에서만 사유를 보여준다.
     _top_surface_entries = (
@@ -2125,6 +2282,8 @@ def build_brief(pipeline_counts: dict | None = None,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
         "category_sections": category_sections,
+        # D7-AD-N: 요약 대시보드 임원 아코디언 8섹션 (표시 전용 파생 키, 기존 surface/예산 불변).
+        "accordion_sections": accordion_sections,
         "risk_event_clusters": risk_event_clusters,
         "review_excluded_evidence": review_excluded,
         "source_filtered_evidence": source_filtered,
