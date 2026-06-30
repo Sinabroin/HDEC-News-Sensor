@@ -286,6 +286,9 @@ def build_digest_data() -> dict:
         "macro_snapshot": brief["macro_snapshot"],
         "operator_note": brief["operator_note"],
         "counts": brief["pipeline_counts"] or {},
+        # 이메일/Teams '오늘의 신규 이슈' 섹션용 — 대시보드와 같은 top_new_issues 풀을
+        # 그대로 전달한다(재계산·재선별 없음). Telegram 본문에는 노출하지 않는다.
+        "top_new_issues": brief.get("top_new_issues") or [],
     }
 
 

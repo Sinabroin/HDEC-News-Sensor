@@ -73,6 +73,15 @@ def _fixture() -> dict:
                 "url": "https://news.example/r1",
             }
         ],
+        "top_new_issues": [
+            {
+                "article_id": "n1",
+                "title": "신규 데이터센터 전력 인프라 발주 공고",
+                "category_label": "AI 데이터센터·전력 인프라",
+                "url": "https://news.example/n1",
+                "radar_section": "ai",
+            }
+        ],
     }
 
 
@@ -144,6 +153,91 @@ def check_renderer() -> None:
     )
     check("렌더된 본문에 secret 이름/토큰 없음",
           not any(name in rendered for name in leak_names))
+
+    # D7-AD-L: 라벨 ↔ URL 매핑 정확성 — 라벨과 목적지 역할이 어긋나지 않는다(swap 금지).
+    label_to_url = {
+        label: url
+        for url, label in re.findall(
+            r'<a href="([^"]+)"[^>]*>(요약 대시보드 보기|전체 리포트 보기)</a>', email_html)
+    }
+    summary_url = label_to_url.get("요약 대시보드 보기", "")
+    full_url = label_to_url.get("전체 리포트 보기", "")
+    check("CTA '요약 대시보드 보기' → dashboard-latest.html",
+          summary_url.endswith("/daily/dashboard-latest.html"), summary_url)
+    check("CTA '전체 리포트 보기' → latest.html(전체 리포트)",
+          full_url.endswith("/daily/latest.html"), full_url)
+    check("CTA 라벨 역전 없음 (요약→latest / 전체→dashboard 금지)",
+          not summary_url.endswith("/daily/latest.html")
+          and "/dashboard-latest.html" not in full_url)
+    check("fallback plain URL도 같은 매핑 (요약=dashboard / 전체=latest)",
+          digest.dashboard_url.endswith("/daily/dashboard-latest.html")
+          and digest.report_url.endswith("/daily/latest.html"))
+    check("Email text 라벨↔URL 매핑 정확",
+          f"요약 대시보드: {digest.dashboard_url}" in email_text
+          and f"전체 리포트: {digest.report_url}" in email_text)
+
+    # D7-AD-L: '오늘의 신규 이슈' 섹션 (top_new_issues 재사용 · [분류] 제목)
+    check("Email에 '오늘의 신규 이슈' 섹션", bool(digest.new_issues)
+          and "오늘의 신규 이슈" in email_html and "오늘의 신규 이슈" in email_text)
+    check("신규 이슈는 [분류] 제목 형태(HTML·text)",
+          all(f"[{issue.label}]" in email_text for issue in digest.new_issues)
+          and all(f"[{issue.label}]" in email_html for issue in digest.new_issues))
+    check("신규 이슈 최대 5건", len(digest.new_issues) <= 5, str(len(digest.new_issues)))
+
+
+def check_telegram_mapping() -> None:
+    """Telegram 짧은 라벨은 유지하되 라벨→URL 매핑을 잠근다(이메일과 표현만 다름·역할 동일)."""
+    import json
+
+    import send_telegram as st
+
+    base = "https://x.github.io/repo/daily"
+    report_url, dash_url = f"{base}/latest.html", f"{base}/dashboard-latest.html"
+    payload = st.build_payload("DRY", "m", report_url, "", dash_url)
+    buttons = json.loads(payload["reply_markup"])["inline_keyboard"][0]
+    by_label = {b["text"]: b["url"] for b in buttons}
+    check("Telegram 짧은 라벨 유지('대시보드 보기'/'상세 리포트 보기')",
+          st.SUMMARY_BUTTON_TEXT == "대시보드 보기"
+          and st.FULL_REPORT_BUTTON_TEXT == "상세 리포트 보기")
+    check("Telegram '대시보드 보기' → dashboard-latest(요약 대시보드)",
+          by_label.get("대시보드 보기", "").endswith("/dashboard-latest.html"))
+    check("Telegram '상세 리포트 보기' → latest(전체 리포트)",
+          by_label.get("상세 리포트 보기", "").endswith("/daily/latest.html"))
+
+
+def _render_to_html(script_name: str, extra_args: tuple[str, ...] = ()) -> str:
+    """빌더를 mock으로 산출해 HTML 문자열을 돌려준다(오프라인 · 임시파일)."""
+    import tempfile
+
+    handle, path = tempfile.mkstemp(suffix=".html")
+    os.close(handle)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / script_name), "--output", path, *extra_args],
+            cwd=ROOT, env=_clean_env(), text=True, capture_output=True, timeout=300)
+        return Path(path).read_text(encoding="utf-8") if proc.returncode == 0 else ""
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def check_cta_destination_titles() -> None:
+    """CTA 목적지 페이지의 제목/헤딩이 라벨 역할과 충돌하지 않는다(빌더 산출 기준)."""
+    report = _render_to_html("build_static_report.py", ("--audience", "executive"))
+    dashboard = _render_to_html("build_static_dashboard.py")
+    check("전체 리포트 페이지: <title>가 '전체 리포트'",
+          "<title>HDEC Executive Radar — 전체 리포트</title>" in report)
+    check("전체 리포트 페이지: h1이 '전체 리포트'", "<h1>전체 리포트</h1>" in report)
+    check("전체 리포트 페이지: 'Executive Daily Brief' 부제로 보존",
+          "Executive Daily Brief" in report)
+    check("요약 대시보드 페이지: <title>가 '요약 대시보드'",
+          "<title>HDEC Executive Radar — 요약 대시보드</title>" in dashboard)
+    check("요약 대시보드 페이지: 브랜드에 '요약 대시보드' 가시 표기",
+          "· 요약 대시보드" in dashboard)
+    check("요약 대시보드 운영본에 'PREVIEW' 브랜드 표기 없음",
+          "대시보드 미리보기 (PREVIEW)" not in dashboard)
 
 
 class _FakeSMTP:
@@ -331,6 +425,8 @@ def check_public_artifacts() -> None:
 def main() -> int:
     print(f"== verify_email_teams_alert (D7-AD) @ {ROOT} ==")
     check_renderer()
+    check_telegram_mapping()
+    check_cta_destination_titles()
     check_smtp_classification()
     check_default_dry_run()
     check_workflow()

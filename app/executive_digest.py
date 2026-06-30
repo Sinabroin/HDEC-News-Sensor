@@ -44,6 +44,7 @@ class ExecutiveDigest:
     news_data_mode: str
     dashboard_url: str
     report_url: str
+    new_issues: tuple[ExecutiveLink, ...]
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -118,6 +119,50 @@ def _pick_links(data: dict, limit: int = 3) -> tuple[ExecutiveLink, ...]:
         if len(picked) >= limit:
             break
     return tuple(picked)
+
+
+# radar_section → 신규 이슈 분류 태그 (category_label이 없을 때만 사용하는 fallback).
+_SECTION_TAG = {
+    "ai": "AI", "hdec_direct": "현대건설", "risk_regulation": "리스크",
+    "business": "수주", "order_environment": "수주", "macro": "거시",
+    "competitor": "경쟁", "supply_chain": "공급망",
+}
+
+
+def _issue_tag(item: dict) -> str:
+    """신규 이슈의 짧은 분류 라벨 — 파이프라인의 category_label에서 파생한다(가짜 분류 생성 금지)."""
+    label = " ".join(str(item.get("category_label") or "").split())
+    if label:
+        head = label.split("·")[0].split("/")[0].strip()
+        return _clip(head or label, 12)
+    return _SECTION_TAG.get(str(item.get("radar_section") or ""), "신규")
+
+
+def _pick_new_issues(data: dict, limit: int = 5) -> tuple[ExecutiveLink, ...]:
+    """오늘의 신규 이슈 — brief의 top_new_issues를 [분류] 제목 형태로 최대 5건.
+
+    데이터를 새로 만들지 않고 기존 selected new-issue 풀(top_new_issues)만 쓴다."""
+    out: list[ExecutiveLink] = []
+    seen: set[str] = set()
+    for item in (data.get("top_new_issues") or []):
+        if not isinstance(item, dict):
+            continue
+        title = _clip(item.get("title"), 80)
+        if not title:
+            continue
+        key = str(item.get("article_id") or item.get("url") or title)
+        if key in seen:
+            continue
+        seen.add(key)
+        url = str(item.get("url") or "").strip()
+        out.append(ExecutiveLink(
+            label=_issue_tag(item),
+            title=title,
+            url=url if _has_http_url(url) else "",
+        ))
+        if len(out) >= limit:
+            break
+    return tuple(out)
 
 
 def build_executive_digest(
@@ -220,6 +265,7 @@ def build_executive_digest(
         news_data_mode=str(data.get("news_data_mode") or "mock"),
         dashboard_url=resolved_dashboard,
         report_url=resolved_report,
+        new_issues=_pick_new_issues(data),
     )
 
 
@@ -283,9 +329,17 @@ def render_email_text(digest: ExecutiveDigest) -> str:
         f"- 요약 대시보드: {digest.dashboard_url}",
         f"- 전체 리포트: {digest.report_url}",
     ]
-    if digest.links:
+    new_urls = {issue.url for issue in digest.new_issues if issue.url}
+    if digest.new_issues:
+        lines += ["", "오늘의 신규 이슈"]
+        for index, issue in enumerate(digest.new_issues, start=1):
+            lines.append(f"{index}. [{issue.label}] {issue.title}")
+            if issue.url:
+                lines.append(f"   {issue.url}")
+    links = [link for link in digest.links if link.url not in new_urls]
+    if links:
         lines += ["", "핵심 링크:"]
-        for index, link in enumerate(digest.links, start=1):
+        for index, link in enumerate(links, start=1):
             lines.append(f"{index}. [{link.label}] {link.title}")
             lines.append(f"   {link.url}")
     notice = _data_notice(digest)
@@ -344,14 +398,33 @@ def render_email_html(digest: ExecutiveDigest) -> str:
         '<p style="margin:0 0 4px;font-size:12px;color:#475467">전체 리포트: '
         f'<a href="{escape(digest.report_url, quote=True)}">{escape(digest.report_url)}</a></p>'
     )
+    new_urls = {issue.url for issue in digest.new_issues if issue.url}
+    new_issues_html = ""
+    if digest.new_issues:
+        items = "".join(
+            '<li style="margin:0 0 8px">'
+            f'<span style="color:#667085">[{escape(issue.label)}]</span> '
+            + (
+                f'<a href="{escape(issue.url, quote=True)}">{escape(issue.title)}</a>'
+                if issue.url
+                else escape(issue.title)
+            )
+            + "</li>"
+            for issue in digest.new_issues
+        )
+        new_issues_html = (
+            '<h2 style="font-size:15px;margin:24px 0 10px">오늘의 신규 이슈</h2>'
+            f'<ol style="margin:0;padding-left:22px">{items}</ol>'
+        )
     links_html = ""
-    if digest.links:
+    visible_links = [link for link in digest.links if link.url not in new_urls]
+    if visible_links:
         items = "".join(
             '<li style="margin:0 0 8px">'
             f'<span style="color:#667085">[{escape(link.label)}]</span> '
             f'<a href="{escape(link.url, quote=True)}">{escape(link.title)}</a>'
             "</li>"
-            for link in digest.links
+            for link in visible_links
         )
         links_html = (
             '<h2 style="font-size:15px;margin:24px 0 10px">핵심 링크</h2>'
@@ -369,6 +442,6 @@ def render_email_html(digest: ExecutiveDigest) -> str:
         'line-height:1.6;background:#ffffff">'
         '<main style="max-width:680px;margin:0 auto;padding:24px">'
         f'<h1 style="font-size:18px;margin:0 0 16px">오늘 {escape(digest.brief_time)} 브리프</h1>'
-        f"{headline_card}{body_sections}{buttons}{fallback}{links_html}{notice_html}"
+        f"{headline_card}{body_sections}{buttons}{fallback}{new_issues_html}{links_html}{notice_html}"
         "</main></body></html>"
     )
