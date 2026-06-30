@@ -136,6 +136,25 @@ def check_copy(html: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 18~20 · Teams 채널 전송 버튼 — 정직한 비활성 (운영 API 미연결, D7-AD-O)
+# ---------------------------------------------------------------------------
+
+def check_teams_control(tpl: str) -> None:
+    """Teams 채널 전송 버튼은 텔레그램과 같은 패널/PIN 패턴의 별도 컨트롤이되, 운영 API에
+    Teams endpoint가 아직 없으므로(operator_gateway는 collect/telegram만) 실제 연결 경로가
+    없다. 따라서 가짜 동작 버튼을 만들지 않고 항상 disabled + '운영 API 미연결' 안내만 둔다.
+    운영자 패널은 빌더가 손대지 않는 정적 영역이라 템플릿으로 검증한다."""
+    check("18: 'Teams 채널 전송 실행' 컨트롤 존재", "Teams 채널 전송 실행" in tpl)
+    check('18b: Teams 버튼이 <button class="opctl-btn teams" id="opTeamsBtn"> 요소',
+          '<button class="opctl-btn teams" id="opTeamsBtn"' in tpl)
+    check("19: Teams 버튼은 disabled 기본값(운영 API 미연결 — 가짜 동작 없음)",
+          'id="opTeamsBtn" type="button" disabled' in tpl)
+    check("19b: JS가 Teams 버튼을 활성화/호출하지 않음(가짜 동작 차단)",
+          "teamsBtn.disabled = false" not in tpl and 'el("opTeamsBtn")' not in tpl)
+    check("20: Teams 미연결 정직 안내('운영 API 미연결') 표기", "운영 API 미연결" in tpl)
+
+
+# ---------------------------------------------------------------------------
 # 2 · safety — no secrets / no direct privileged API from the browser
 # ---------------------------------------------------------------------------
 
@@ -200,6 +219,7 @@ def main() -> int:
     check_buttons(dash)
     check_unset_behavior(dash)
     check_copy(dash)
+    check_teams_control(_read(TEMPLATE) if TEMPLATE.exists() else "")
 
     # 11~16 · 공개 HTML 안전성 — 대시보드/운영자/리포트 + 소스 템플릿 모두 스캔.
     safety_targets = [(dash, "dashboard")]

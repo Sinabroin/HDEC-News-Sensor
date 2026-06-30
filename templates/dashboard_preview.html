@@ -113,6 +113,13 @@
   .metric .val.small{font-size:21px;}
   .metric .desc{font-size:11.5px; font-weight:500; color:var(--mute3); margin-top:7px;}
 
+  /* ===== D7-AD-O · 운영자 우선(operator-first) 레이아웃 =====
+     EXECUTIVE READ 히어로(오늘의 판단/큰 제목/오늘의 신호 구성 카드)와 요약 지표(KPI) 카드는
+     운영자 실행 화면에서 불필요 → 레이아웃에서 완전히 빼서 숨긴다(display:none = 상단 빈 여백
+     없음). 그 결과 운영자 실행 패널이 첫 화면 최상단, 임원 브리핑 섹션이 바로 아래로 온다.
+     DOM 노드 자체는 보존한다(검수 계약 문자열/빌더 마커 유지 — 가시성만 제거). */
+  .hero, .metrics{display:none;}
+
   /* ===== Main grid (좌측 렌즈 + 본문 2열 — 우측 사이드 요약 레일은 D7-AC에서 제거) ===== */
   .grid{display:grid; grid-template-columns:252px minmax(0,1fr); gap:16px; align-items:start;}
   @media (max-width:1240px){ .grid{grid-template-columns:220px minmax(0,1fr);} }
@@ -486,6 +493,10 @@
   .opctl-btn.send{background:var(--amber-tint); border-color:var(--amber-bd);}
   .opctl-btn.send .opctl-btn-label{color:var(--amber);}
   .opctl-btn.send .opctl-btn-label::before{background:var(--amber);}
+  /* Teams 채널 전송 — 운영 API 미연결이라 항상 비활성([disabled] opacity로 흐려짐). 정직 표기용. */
+  .opctl-btn.teams{background:#F2F1F8; border-color:#D9D7EC;}
+  .opctl-btn.teams .opctl-btn-label{color:#5A5A86;}
+  .opctl-btn.teams .opctl-btn-label::before{background:#8784B5;}
   .opctl-status{min-height:17px; margin-top:11px; font-size:12px; font-weight:700; color:var(--mute);}
   .opctl-status.running{color:var(--sky);}
   .opctl-status.ok{color:#3C7A4E;}
@@ -611,7 +622,7 @@
   <section class="opctl" aria-label="운영자 실행 컨트롤" id="opctl">
     <div class="opctl-head">
       <span class="opctl-title">운영자 실행</span>
-      <span class="opctl-sub">데이터 새로고침과 텔레그램 전송은 분리된 별도 컨트롤입니다.</span>
+      <span class="opctl-sub">데이터 새로고침 · 텔레그램 전송 · Teams 채널 전송은 각각 분리된 별도 컨트롤입니다.</span>
     </div>
     <div class="opctl-pinrow">
       <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
@@ -627,12 +638,22 @@
         <span class="opctl-btn-label">텔레그램 전송 실행</span>
         <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
       </button>
+      <!-- Teams 채널 전송 — email-alert.yml에 send_to_teams가 있으나 운영 API(POST)에는
+           아직 Teams endpoint가 없다(operator_gateway는 collect/telegram만). 실제 연결 경로가
+           없으므로 가짜 동작 버튼을 만들지 않고, 정직하게 항상 disabled + '운영 API 미연결'로
+           둔다. 운영 API에 Teams endpoint가 생기면 텔레그램과 같은 PIN/보안 패턴으로 활성화한다. -->
+      <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
+              title="Teams 채널 전송은 운영 API에 아직 연결되지 않았습니다(운영 API 미연결)">
+        <span class="opctl-btn-label">Teams 채널 전송 실행</span>
+        <span class="opctl-btn-help">운영 API 미연결 — 이번 릴리스에서는 비활성입니다</span>
+      </button>
     </div>
     <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
     <ul class="opctl-notes">
       <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
       <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
       <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
+      <li>Teams 채널 전송은 운영 API에 아직 연결되지 않아 비활성입니다(운영 API 미연결 · 가짜 버튼 없음).</li>
     </ul>
   </section>
 
