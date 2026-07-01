@@ -23,6 +23,7 @@
     9. 실제 fetch_all() query_audit 에 site:* 그룹이 등장한다(빈 결과여도 가시).
 """
 
+import ast
 import json
 import os
 import re
@@ -316,6 +317,62 @@ def check_no_private_dump() -> None:
 
 
 # ---------------------------------------------------------------------------
+# effective_cap 계약 헬퍼 (D7-AD-Q) — 문자열 매칭 대신 '의미'를 검증한다.
+#   live_collector.fetch_all 의 effective_cap 대입식을 AST로 추출해, mock 입력으로
+#   실제 평가한다. 리팩터(줄바꿈/괄호/항 추가)에 견고하며 계약의 뜻을 직접 확인한다.
+# ---------------------------------------------------------------------------
+
+def _effective_cap_rhs(src: str):
+    """live_collector 소스에서 effective_cap 대입문의 우변 AST 노드를 반환한다(없으면 None)."""
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return None
+    rhs = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "effective_cap" for t in node.targets
+        ):
+            rhs = node.value  # 정상 경로의 대입식(단일)
+    return rhs
+
+
+def _calls_len_on(node, arg_name: str) -> bool:
+    """node 하위 트리에 len(<arg_name>) 호출이 있으면 True."""
+    return any(
+        isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+        and n.func.id == "len"
+        and any(isinstance(a, ast.Name) and a.id == arg_name for a in n.args)
+        for n in ast.walk(node)
+    )
+
+
+def _refs_name(node, name: str) -> bool:
+    return any(isinstance(n, ast.Name) and n.id == name for n in ast.walk(node))
+
+
+def _eval_effective_cap(rhs, *, n_sites: int, has_press: bool) -> int:
+    """소스에서 뽑은 effective_cap 우변식을 mock 입력으로 평가한다(순수 산술, 부작용 없음).
+
+    max_total 은 budget/floor 와 겹치지 않는 sentinel(1000)로 두어, 'site 0개면 total 불변'
+    같은 불변식을 우연한 값 일치 없이 확인한다. 실제 예산 상수는 모듈에서 그대로 읽는다.
+    """
+    ns = {
+        "max_total": 1000,
+        "site_groups": list(range(n_sites)),
+        "global_press_group": (object() if has_press else None),
+        "SITE_PREFLIGHT_GROUP_BUDGET": getattr(lc, "SITE_PREFLIGHT_GROUP_BUDGET", 0),
+        "GLOBAL_PRESS_GROUP_BUDGET": getattr(lc, "GLOBAL_PRESS_GROUP_BUDGET", 0),
+        "len": len,
+    }
+    expr = ast.Expression(body=rhs)
+    ast.fix_missing_locations(expr)
+    # 평가 대상은 저장소 자신의 산술식뿐 — builtins를 비워 sandbox 한다.
+    return int(eval(compile(expr, "<effective_cap>", "eval"),  # noqa: S307
+                    {"__builtins__": {}}, ns))
+
+
+# ---------------------------------------------------------------------------
 # 8 · civil_infrastructure always audited (priority/preflight)
 # ---------------------------------------------------------------------------
 
@@ -324,13 +381,44 @@ def check_civil_priority() -> None:
     check("8a: lens:civil_infrastructure 가 우선순위 preflight에 포함",
           "lens:civil_infrastructure" in pri, f"priority={sorted(pri)}")
     src = _read(COLLECTOR)
-    # 토목은 total을 키우지 않고 우선순위 preflight에서 수집한다 — 공개 빌드 total은 floor로
-    # 고정되고 site preflight만 additive(private 전용)다. 그래야 다른 렌즈의 수집 깊이 게이트
-    # (verify_lens_search_depth)를 회귀시키지 않는다.
-    check("8b: 공개 빌드 total 불변(site만 additive — 토목 수집이 total을 키우지 않음)",
-          "effective_cap = max_total + len(site_groups)" in src
-          and getattr(lc, "DASHBOARD_MIN_MAX_TOTAL", 0) >= 100,
-          f"floor={getattr(lc, 'DASHBOARD_MIN_MAX_TOTAL', 0)}")
+    # 8b (D7-AD-Q) — 토목/site 수집이 normal 렌즈 수집 예산을 잠식하지 않음을 '의미'로 검증한다.
+    #   공개 빌드 total 은 floor 로 고정되고 site preflight 만 additive(private 전용)다. 그래야
+    #   다른 렌즈의 수집 깊이 게이트(verify_lens_search_depth)를 회귀시키지 않는다. 단순 문자열
+    #   매칭 대신, live_collector 의 effective_cap 대입식을 AST 로 뽑아 mock 입력으로 평가한다.
+    rhs = _effective_cap_rhs(src)
+    budget = getattr(lc, "SITE_PREFLIGHT_GROUP_BUDGET", None)
+    structural = rhs is not None and (
+        _refs_name(rhs, "max_total")
+        and _calls_len_on(rhs, "site_groups")
+        and _refs_name(rhs, "SITE_PREFLIGHT_GROUP_BUDGET"))
+    check("8b: effective_cap 대입식이 max_total·len(site_groups)·"
+          "SITE_PREFLIGHT_GROUP_BUDGET 을 반영(AST 의미 검증)",
+          structural,
+          "effective_cap 대입 미발견" if rhs is None else "ok")
+    ok_budget = isinstance(budget, int) and budget > 0
+    if structural and ok_budget:
+        try:
+            pub = _eval_effective_cap(rhs, n_sites=0, has_press=False)
+            add = _eval_effective_cap(rhs, n_sites=3, has_press=False)
+            eval_err = None
+        except Exception as exc:  # noqa: BLE001 — 미지의 항 추가 등은 실패로 보고(가짜 성공 금지)
+            pub = add = None
+            eval_err = f"{type(exc).__name__}: {exc}"
+        expected = 1000 + 3 * budget
+        check("8b-public: 공개 빌드(site 그룹 0개) → effective_cap == max_total "
+              "(normal 렌즈 수집 예산 불변)",
+              eval_err is None and pub == 1000,
+              eval_err or f"effective_cap={pub} (max_total sentinel=1000)")
+        check("8b-additive: 비공개 site 3개 → effective_cap == "
+              "max_total + 3×SITE_PREFLIGHT_GROUP_BUDGET (site preflight만 additive)",
+              eval_err is None and add == expected,
+              eval_err or f"effective_cap={add} (expected={expected})")
+    else:
+        check("8b-eval: effective_cap 의미 평가 전제(AST 구조 + 양의 budget) 충족",
+              False, f"structural={structural}, SITE_PREFLIGHT_GROUP_BUDGET={budget}")
+    floor = getattr(lc, "DASHBOARD_MIN_MAX_TOTAL", 0)
+    check("8b-floor: DASHBOARD_MIN_MAX_TOTAL >= 100 계약 유지(공개 빌드 floor)",
+          floor >= 100, f"floor={floor}")
     # lens_queries.json 의 civil collect 쿼리가 강화됐는지(프로젝트 패밀리 신호).
     try:
         pol = json.loads(_read(ROOT / "data" / "lens_queries.json")).get("lenses") or {}
