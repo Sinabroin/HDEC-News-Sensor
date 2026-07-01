@@ -291,10 +291,16 @@
   .mcat-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:2px;}
   .mcat-t{font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .mcat-c{font-size:10.5px; font-weight:700; color:var(--mute4); flex:none;}
-  /* D7-U: 미연동(값 없음) 행은 연동 행 아래 '관찰 후보'로 분리·약화 — 죽은 행이 카드를 지배하지 않게 한다. */
-  .mcat-sub{font-size:10px; font-weight:700; color:var(--mute4); letter-spacing:0.02em; margin:9px 0 1px; padding-top:7px; border-top:1px dashed var(--line);}
-  .mcat-unlinked{opacity:.55;}
+  /* D7-U/D7-AD-W-1B: 미연동 행은 접힘(details) — 기본 화면에 길게 나열하지 않는다. */
+  .mcat-backlog{margin-top:8px; border-top:1px dashed var(--line); padding-top:4px;}
+  .mcat-backlog summary.mcat-sub{list-style:none; cursor:pointer; font-size:10px; font-weight:700;
+    color:var(--mute4); letter-spacing:0.02em; padding:6px 2px; user-select:none; margin:0; border-top:none;}
+  .mcat-backlog summary.mcat-sub::-webkit-details-marker{display:none;}
+  .mcat-backlog summary.mcat-sub::before{content:"▸ "; font-size:9px; color:var(--mute4);}
+  .mcat-backlog[open] summary.mcat-sub::before{content:"▾ ";}
+  .mcat-unlinked{opacity:.5; padding:2px 0 0;}
   .mcat-unlinked .mrow:first-child{border-top:none;}
+  .mcat-unlinked .mrow .mn{font-size:12px;}
   .men{font-size:10.5px; font-weight:600; color:var(--mute4); margin-left:5px;}
   .chiprow{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:6px 0 8px;}
   .chiprow .chiplabel{font-size:12px; font-weight:700; color:var(--mute3); flex:none;}
@@ -555,11 +561,42 @@
 
   /* ===== D7-AD-R · 단일 임원 대시보드 IA 정리 (accordion→news 흡수 · 3단계 현장 네비 ·
      시장 소스 상태 보드 · 현장 기상 카드 · 운영자 compact) — 모두 블록 흐름(position:absolute/fixed 없음) ===== */
-  /* News Explorer 통합 브리핑 헤더(독립 '임원 브리핑 섹션' 블록 대신 뉴스 탐색 안으로 흡수).
-     D7-AD-V: 본문 위 카테고리 칩 바(newsCatFilter)는 제거했다 — 카테고리 탐색은 좌측 목차가 담당한다. */
-  .news-brief-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin:20px 0 10px;}
-  .news-brief-head .nb-t{font-size:13px; font-weight:800; color:var(--ink3);}
-  .news-brief-head .nb-s{font-size:11px; color:var(--mute3);}
+  /* News Explorer — 3계층 flat list (D7-AD-W). 1차=좌측 렌즈 · 2차=#cnlPills · 3차=카드 목록. */
+  .catnews{margin-top:4px;}
+  .catnews .cnl-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px; margin-bottom:12px;}
+  .catnews .cnl-title{font-size:17px; font-weight:800; color:var(--ink); letter-spacing:-0.02em;}
+  .catnews .cnl-count{font-size:12.5px; font-weight:700; color:var(--mute);}
+  .catnews .cnl-pills{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px;}
+  .catnews .cnl-pill{font:inherit; font-size:11.5px; font-weight:700; color:var(--ink4);
+    background:#fff; border:1px solid var(--line); border-radius:999px; padding:6px 13px;
+    cursor:pointer; transition:background .12s ease, border-color .12s ease;}
+  .catnews .cnl-pill:hover{background:var(--hair2);}
+  .catnews .cnl-pill.active{color:var(--sky); background:var(--sky-tint); border-color:var(--sky-bd);}
+  .catnews .cnl-pill .cnl-badge{display:inline-block; font-size:10px; font-weight:800; margin-left:5px;
+    padding:1px 5px; border-radius:999px; background:var(--hair2); color:var(--mute3);
+    font-variant-numeric:tabular-nums; min-width:1.2em; text-align:center;}
+  .catnews .cnl-pill .cnl-badge.zero{opacity:.45;}
+  .catnews .cnl-pill.active .cnl-badge{background:rgba(255,255,255,.55); color:var(--sky);}
+  .catnews .cnl-cards{display:flex; flex-direction:column; gap:10px;}
+  .catnews .cnl-card{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; box-shadow:var(--shadow); display:flex; gap:14px; align-items:flex-start;}
+  .catnews .cnl-card .cnl-body{flex:1 1 auto; min-width:0;}
+  .catnews .cnl-card .cnl-ctitle{font-size:14px; font-weight:700; color:var(--ink); line-height:1.45;}
+  .catnews .cnl-card .cnl-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:8px;}
+  .catnews .cnl-card .cnl-tag{font-size:10.5px; font-weight:700; color:var(--sky); background:var(--sky-tint);
+    border:1px solid var(--sky-bd); border-radius:5px; padding:2px 7px;}
+  .catnews .cnl-card .cnl-src{font-size:11.5px; color:var(--mute2); font-weight:600;}
+  .catnews .cnl-card .cnl-open{font-size:11.5px; font-weight:700; color:var(--sky); margin-left:auto;}
+  .catnews .cnl-card .cnl-score{flex:none; text-align:right; min-width:52px;}
+  .catnews .cnl-card .cnl-score .v{font-size:16px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .catnews .cnl-card .cnl-score .l{font-size:10.5px; font-weight:700; margin-top:2px;}
+  .catnews .cnl-empty{padding:28px 16px; text-align:center; font-size:13px; font-weight:600; color:var(--mute);}
+  .catnews .cnl-note{margin-top:10px; font-size:11.5px; color:var(--mute3);}
+  @media (max-width:640px){
+    .catnews .cnl-card{flex-direction:column;}
+    .catnews .cnl-card .cnl-score{text-align:left;}
+    .catnews .cnl-card .cnl-open{margin-left:0;}
+  }
   /* 3단계 현장 네비: 대분류(.sn-group) → 중분류(.sn-mid, 접이식) → 개별 현장(.st-node) */
   .sitenav .sn-mid{margin:2px 0;}
   .sitenav .sn-midtog{display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;
@@ -599,8 +636,18 @@
   .wxcard .wx-il{font-size:11px; font-weight:800; color:var(--ink4); margin-right:2px;}
   .wxcard .wx-ichip{font-size:11px; color:var(--mute2); background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:4px 10px;}
   @media (max-width:760px){ .wxcard .wx-row{grid-template-columns:58px repeat(6, 1fr) 64px; font-size:9.5px; gap:3px; padding:7px 8px;} }
-  /* 시장 소스 연동 현황 보드(4단계 상태 · 미연동 후보를 길게 늘어놓지 않고 상태로 구분) */
-  .mktstatus{display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px; margin:2px 0 14px;}
+  /* 시장 소스 연동 현황 보드 — 메인=연동 완료·보고·수동 확인, 미연동/우선은 접힘(D7-AD-W-1B) */
+  .mktstatus{margin:2px 0 14px;}
+  .mktstatus-main{display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px;}
+  .mktstatus .ms-collapse{margin-top:8px; border:1px solid var(--line); border-radius:12px; background:#FAFCFE;}
+  .mktstatus .ms-collapse-sum{padding:9px 13px; font-size:11.5px; font-weight:700; color:var(--mute2);
+    cursor:pointer; list-style:none; user-select:none;}
+  .mktstatus .ms-collapse-sum::-webkit-details-marker{display:none;}
+  .mktstatus .ms-collapse-sum::before{content:"▸ "; font-size:9px; color:var(--mute4);}
+  .mktstatus .ms-collapse[open] .ms-collapse-sum::before{content:"▾ ";}
+  .mktstatus .ms-collapse-body{padding:0 10px 10px; display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px;}
+  .mktstatus .ms-collapse-body .ms-col{opacity:.88;}
   .mktstatus .ms-col{border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:var(--card);}
   .mktstatus .ms-col.ms-priority{border-color:var(--amber-bd); background:var(--amber-tint);}
   .mktstatus .ms-h{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:8px;}
@@ -629,42 +676,6 @@
   .opctl-more .opctl-pinrow{margin-top:10px;}
   .opctl-more .opctl-notes{margin-top:6px; padding-top:8px;}
 
-  /* ===== 임원 브리핑 아코디언 (D7-AD-N · 네이티브 <details>, JS 0줄 · 블록 흐름 = 겹침 없음) ===== */
-  .accordion{max-width:1200px; margin:0 auto 20px; padding:0 22px;}
-  .acc-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin:0 0 12px;}
-  .acc-title{font-size:15px; font-weight:800; color:var(--ink);}
-  .acc-sub{font-size:12px; color:var(--mute);}
-  .acc-body{display:flex; flex-direction:column; gap:10px;}
-  .acc-sec{background:var(--card); border:1px solid var(--line); border-radius:12px;
-    box-shadow:var(--shadow); overflow:hidden;}
-  .acc-sec>summary{list-style:none; cursor:pointer; padding:15px 20px; display:flex;
-    align-items:center; justify-content:space-between; gap:12px; user-select:none;}
-  .acc-sec>summary::-webkit-details-marker{display:none;}
-  .acc-sec>summary::after{content:"\25BE"; color:var(--mute3); font-size:12px; flex:none;
-    transition:transform .15s ease;}
-  .acc-sec[open]>summary::after{transform:rotate(180deg);}
-  .acc-sec>summary:hover{background:var(--hair2);}
-  .acc-sl{display:flex; align-items:center; gap:9px; min-width:0;}
-  .acc-name{font-size:14px; font-weight:800; color:var(--ink2);}
-  .acc-count{font-size:12px; color:var(--mute); white-space:nowrap; flex:none;}
-  .acc-flag{font-size:9.5px; font-weight:800; color:#fff; background:var(--green);
-    border-radius:5px; padding:2px 6px; letter-spacing:.02em;}
-  .acc-list{padding:2px 14px 14px; display:flex; flex-direction:column; gap:8px;}
-  .acc-card{border:1px solid var(--hair); border-radius:9px; padding:11px 13px; background:#fff;}
-  .acc-card .t{font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.45;}
-  .acc-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:7px;}
-  .acc-tag{font-size:10.5px; font-weight:700; color:var(--sky); background:var(--sky-tint);
-    border:1px solid var(--sky-bd); border-radius:5px; padding:2px 7px;}
-  .acc-src{font-size:11.5px; color:var(--mute2);}
-  .acc-open{font-size:11.5px; font-weight:700; color:var(--sky); margin-left:auto;}
-  .acc-empty{padding:2px 18px 16px; font-size:12.5px; color:var(--mute);}
-  .acc-note{padding:0 16px 14px; font-size:11.5px; color:var(--mute3);}
-  @media (max-width:640px){
-    .accordion{padding:0 14px;}
-    .acc-sec>summary{padding:14px 15px;}
-    .acc-list{padding:2px 11px 12px;}
-    .acc-open{margin-left:0;}
-  }
 </style>
 </head>
 <body>
@@ -738,8 +749,7 @@
   <!-- (D7-AD-R) 운영자 실행 컨트롤은 화면 최하단 접이식 영역으로 이동했다(footer 위). 기본 화면 상단은
        임원 신호(Header→Today Focus→News Explorer)에 집중하고, 운영 액션은 de-emphasize한다. -->
 
-  <!-- (D7-AD-R) 독립 '임원 브리핑 섹션' 블록 제거 — 브리핑 섹션(8개)은 News Explorer(뉴스 탭)로 흡수했다.
-       accordionSections 컨테이너와 서버 렌더 주입 마커는 뉴스 탭 안에서 그대로 유지된다. -->
+  <!-- (D7-AD-W) 3계층 뉴스 결과 — 1차 좌측 렌즈 클릭 시 #categoryNewsList(2차 pill + flat list). -->
 
   <!-- =================== MAIN GRID =================== -->
   <div class="grid">
@@ -757,7 +767,7 @@
       <button class="nav" data-filter="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
       <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">8</span></span></button>
 
-      <div class="gtitle">사업영역 · 뉴스 분류</div>
+      <div class="gtitle">사업영역</div>
       <button class="nav" data-filter="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">3</span></span></button>
       <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">4</span></span></button>
@@ -765,15 +775,6 @@
       <button class="nav" data-filter="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">1</span></span></button>
       <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">5</span></span></button>
       <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">2</span></span></button>
-      <!-- 뉴스 분류 (D7-AD-V) — 카테고리별 브리핑을 좌측 목차로 흡수(본문 위 중복 칩 바 제거).
-           클릭 시 뉴스 탭 전환 + 해당 브리핑 <details data-acc>만 펼쳐 본문 기사 목록이 그 분류로 바뀐다.
-           data-acc 키는 서버 렌더 아코디언 키와 일치: order/finance/policy/competitor/brand/global_press. -->
-      <button class="nav navcat" data-acc="order"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">수주</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
-      <button class="nav navcat" data-acc="finance"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">재무</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
-      <button class="nav navcat" data-acc="policy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">정책</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
-      <button class="nav navcat" data-acc="competitor"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">경쟁</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
-      <button class="nav navcat" data-acc="brand"><span class="l"><span class="ndot"></span><span class="nlabel">브랜드</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
-      <button class="nav navcat" data-acc="global_press"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">해외 언론</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
 
       <div class="gtitle">외부 생태계</div>
       <button class="nav" data-filter="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
@@ -876,6 +877,7 @@
 
       <!-- ====== TAB: 뉴스 ====== -->
       <section class="tabpanel" id="panel-news">
+        <div id="lensNewsView">
         <div class="seclabel red"><span class="t">A · 즉시 확인</span><span class="ln"></span><span class="c">3건</span></div>
 
         <!-- FEATURED -->
@@ -928,17 +930,7 @@
           <div class="el-desc" id="newsEmptyDesc">이 렌즈는 데모 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
         </div>
 
-        <!-- BRIEFING SECTIONS (D7-AD-N accordion) — D7-AD-R에서 독립 '임원 브리핑 섹션' 블록을 제거하고
-             News Explorer(뉴스 탭) 안으로 흡수. 카테고리별 브리핑(오늘의 신규 이슈/수주/재무/정책/경쟁/
-             브랜드/기상·날씨/해외 언론) — 네이티브 <details>만 사용(JS 0줄). 빌더가 brief.accordion_sections를
-             아래 마커에 서버 렌더한다. 데이터가 없으면 헤딩 유지 + 정직한 빈 상태(가짜 기사/날씨 없음). -->
-        <!-- D7-AD-V: 본문 위 '뉴스 탐색 필터' 칩 바를 제거하고, 카테고리 탐색을 좌측 목차로 옮겼다.
-             여기 헤더는 조용한 맥락 라벨만 둔다(큰 안내 문구/칩 노출 금지). -->
-        <div class="news-brief-head">
-          <span class="nb-t">카테고리별 브리핑</span>
-          <span class="nb-s">좌측 목차의 수주·재무·정책·경쟁·브랜드·해외 언론을 누르면 해당 섹션이 열립니다.</span>
-        </div>
-        <div class="acc-body" id="accordionSections" data-accordion="exec-sections"><!-- ACCORDION-INJECT --></div>
+        <!-- BRIEFING SECTIONS removed (D7-AD-W) — 카테고리 분류는 #categoryNewsList flat list로 표시. -->
 
         <!-- SIGNAL INDEX (collapsed by default) -->
         <details class="card" id="signalIndex" style="margin-top:14px;">
@@ -948,6 +940,20 @@
           </summary>
           <div style="padding:4px 22px 18px;" id="indexList"></div>
         </details>
+        </div><!-- /lensNewsView -->
+
+        <!-- 카테고리 flat news list (D7-AD-W) — 1차 좌측 렌즈 선택 시 오른쪽 결과 영역.
+             2차 pill(전체/신규/수주/…)은 이 영역 내부 필터만 담당한다. -->
+        <div class="catnews hidden" id="categoryNewsList" aria-live="polite">
+          <div class="cnl-head">
+            <h2 class="cnl-title" id="cnlTitle"></h2>
+            <span class="cnl-count" id="cnlCount"></span>
+          </div>
+          <div class="cnl-pills" id="cnlPills" role="tablist" aria-label="뉴스 분류"></div>
+          <div class="cnl-cards" id="cnlCards"></div>
+          <div class="cnl-empty hidden" id="cnlEmpty">현재 수집된 항목 없음</div>
+          <div class="cnl-note hidden" id="cnlNote"></div>
+        </div>
       </section>
 
       <!-- ====== TAB: AI 신호 ====== -->
@@ -1357,6 +1363,7 @@
     {"label": "출처 신뢰", "value": 4.5, "color": "#3F6FA8"},
     {"label": "반복·확산", "value": 4.0, "color": "#3F6FA8"}
   ],
+  "nav_category_sections": [],
   "news_rows": [
     {"tag": "즉시", "tagClass": "red", "title": "상반기 건설업 중대재해 22% 증가… 고용부, 대형 건설사 특별감독 착수",
      "source": "머니투데이", "time": "3시간 전", "related": "관련 2건", "sources": "출처 2곳",
@@ -1575,43 +1582,352 @@
     });
   }
 
-  /* ---------- 좌측 목차 탐색 헬퍼 (D7-AD-V) — 별도 railNav 없이 기존 목차가 탐색을 담당 ----------
-     뉴스 분류(navcat)/시장(navmkt)/기상(navwx) 목차 항목이 본문 탭·섹션을 전환한다. 렌즈 필터(data-filter)
-     와 같은 aside(#lensnav)에 있으며, 클릭 라우팅은 아래 lensnav 핸들러가 분기한다. 네트워크/난수 0건. */
+  /* ---------- 3계층 뉴스 탐색 (D7-AD-W) — 1차=좌측 렌즈 · 2차=오른쪽 pill · 3차=flat list ----------
+     수주/재무/정책 등은 좌측 1차 항목이 아니라 #cnlPills(2차)에만 둔다. 시장(navmkt)/기상(navwx)은
+     뉴스 flat list가 아니라 시장 탭으로 이동한다. 현장 scope 렌즈는 site_watch_tree 필터를 유지한다. */
   function railScroll(target) {
     if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  function setNavGoActive(b) {                    // 탐색형 목차 항목만 active 표시(렌즈 필터 active와 별개)
+  function setNavGoActive(b) {
     var nav = el("lensnav"); if (!nav) return;
-    [].forEach.call(nav.querySelectorAll(".nav.navcat, .nav.navmkt, .nav.navwx"), function (x) {
+    [].forEach.call(nav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
       x.classList.toggle("active", x === b);
     });
   }
-  function openNewsCategory(key, b) {             // 뉴스 분류 → 뉴스 탭 + 해당 브리핑 <details>만 펼침
-    activateTab("news");
-    var host = el("accordionSections"), target = null;
-    if (host) {
-      [].forEach.call(host.querySelectorAll("details.acc-sec"), function (d) {
-        var on = d.getAttribute("data-acc") === key;
-        d.open = on; if (on) target = d;         // 선택 분류만 펼치고 본문 기사 목록을 그 분류로
+  var NAV_CAT_PILLS = [
+    { key: "all", label: "전체" },
+    { key: "new", label: "신규" },
+    { key: "order", label: "수주" },
+    { key: "finance", label: "재무" },
+    { key: "policy", label: "정책" },
+    { key: "competitor", label: "경쟁" },
+    { key: "brand", label: "브랜드" },
+    { key: "global_press", label: "해외 언론" }
+  ];
+  var NAV_CAT_MAP = {};
+  var SEC_ARTICLE_INDEX = {};
+  var NAV_ARTICLE_LOOKUP = {};
+  (function buildNavCatIndexes() {
+    NAV_CAT_MAP = {};
+    SEC_ARTICLE_INDEX = {};
+    NAV_ARTICLE_LOOKUP = {};
+    (MODEL.nav_category_sections || []).forEach(function (s) {
+      if (!s || !s.key || s.key === "weather") return;
+      NAV_CAT_MAP[s.key] = s;
+      (s.articles || []).forEach(function (a) {
+        [a.article_id, a.url, a.title].forEach(function (k) {
+          if (!k) return;
+          var ks = String(k);
+          if (!SEC_ARTICLE_INDEX[ks]) SEC_ARTICLE_INDEX[ks] = {};
+          SEC_ARTICLE_INDEX[ks][s.key] = 1;
+          if (!NAV_ARTICLE_LOOKUP[ks]) NAV_ARTICLE_LOOKUP[ks] = a;
+        });
+      });
+    });
+  })();
+  var activePrimaryKey = null;
+  var activeSecondaryKey = "all";
+  var ESSENTIAL_LENS_KEYS = { all: 1, now: 1, "new": 1, ai: 1 };
+  function isLayeredNewsLens(key) {
+    if (!key || ESSENTIAL_LENS_KEYS[key]) return false;
+    var scopes = ["domestic_site", "overseas_site", "overseas_branch", "overseas_subsidiary"];
+    if (scopes.indexOf(key) !== -1) return false;
+    return true;
+  }
+  function rowArticleKeys(r) {
+    var keys = [];
+    if (r.article_id) keys.push(String(r.article_id));
+    if (r.provenance && r.provenance.article_id) keys.push(String(r.provenance.article_id));
+    if (r.url) keys.push(String(r.url));
+    if (r.title) keys.push(String(r.title));
+    return keys;
+  }
+  function lookupNavArticle(row) {
+    var keys = rowArticleKeys(row);
+    for (var i = 0; i < keys.length; i++) {
+      if (NAV_ARTICLE_LOOKUP[keys[i]]) return NAV_ARTICLE_LOOKUP[keys[i]];
+    }
+    return null;
+  }
+  function rowMatchesSecondary(row, secondaryKey) {
+    if (secondaryKey === "all") return true;
+    var keys = rowArticleKeys(row);
+    for (var i = 0; i < keys.length; i++) {
+      var bag = SEC_ARTICLE_INDEX[keys[i]];
+      if (bag && bag[secondaryKey]) return true;
+    }
+    return false;
+  }
+  function rowsForPrimaryLens(primaryKey) {
+    var bankRows = primaryKey !== "all" && hasBankRows(primaryKey) ? LENS_BANKS[primaryKey] : null;
+    if (bankRows) return bankRows.slice();
+    return allSiteRows().filter(function (r) {
+      return (r.lens || []).indexOf(primaryKey) !== -1;
+    });
+  }
+  function mergeDisplayArticle(row, navArt) {
+    navArt = navArt || {};
+    var score = navArt.final_score;
+    if (score == null && row.score && row.score !== "-") {
+      var n = Number(row.score);
+      if (!isNaN(n)) score = n;
+    }
+    return {
+      title: navArt.title || row.title || "",
+      display_source: navArt.display_source || row.source || "출처 미상",
+      source: navArt.source || row.source || "출처 미상",
+      section_tag: navArt.section_tag || navArt.category_label || row.cat || "",
+      category_label: navArt.category_label || row.cat || "",
+      url: navArt.url || row.url || "",
+      has_original_link: navArt.has_original_link || !!(row.url && /^https?:\/\//.test(row.url)),
+      final_score: score,
+      action_label: navArt.action_label || row.scoreLabel || "",
+      score_band: navArt.score_band || "",
+      alert_grade: navArt.alert_grade || ""
+    };
+  }
+  function countForSecondary(primaryKey, secondaryKey) {
+    return rowsForPrimaryLens(primaryKey).filter(function (r) {
+      return rowMatchesSecondary(r, secondaryKey);
+    }).length;
+  }
+  function filteredLayeredArticles(primaryKey, secondaryKey) {
+    return rowsForPrimaryLens(primaryKey).filter(function (r) {
+      return rowMatchesSecondary(r, secondaryKey);
+    }).map(function (r) {
+      return mergeDisplayArticle(r, lookupNavArticle(r));
+    });
+  }
+  function scoreColorFor(article) {
+    var g = article.alert_grade;
+    if (g === "instant") return "#B85049";
+    if (g === "daily") return "#9C7232";
+    if (g === "weekly") return "#5E6E8C";
+    return "#5E6E8C";
+  }
+  function formatCategoryScore(article) {
+    if (article.final_score == null || article.final_score === "") {
+      return { v: "—", l: article.action_label || "" };
+    }
+    var n = Number(article.final_score);
+    if (isNaN(n)) return { v: "—", l: article.action_label || "" };
+    return { v: n.toFixed(1), l: article.action_label || article.score_band || "" };
+  }
+  function renderCategoryCard(article) {
+    var tag = article.section_tag || article.category_label || "";
+    var src = article.display_source || article.source || "출처 미상";
+    var sc = formatCategoryScore(article);
+    var col = scoreColorFor(article);
+    var link = (article.has_original_link && article.url && /^https?:\/\//.test(article.url))
+      ? '<a class="cnl-open" href="' + esc(article.url) + '" target="_blank" rel="noopener noreferrer">원문 보기 →</a>'
+      : '<span class="cnl-open" style="color:var(--mute4);">원문 링크 없음</span>';
+    var tagHtml = tag ? '<span class="cnl-tag">' + esc(tag) + '</span>' : "";
+    return '<article class="cnl-card">'
+      + '<div class="cnl-body"><div class="cnl-ctitle">' + esc(article.title || "") + '</div>'
+      + '<div class="cnl-meta">' + tagHtml + '<span class="cnl-src">' + esc(src) + '</span>' + link + '</div></div>'
+      + '<div class="cnl-score"><div class="v" style="color:' + col + '">' + esc(sc.v) + '</div>'
+      + '<div class="l" style="color:' + col + '">' + esc(sc.l) + '</div></div></article>';
+  }
+  function renderCategoryPills(activeKey, primaryKey, siteNode) {
+    var box = el("cnlPills"); if (!box) return;
+    var pk = primaryKey || activePrimaryKey;
+    box.innerHTML = NAV_CAT_PILLS.map(function (p) {
+      var cnt = siteNode ? countForSiteSecondary(siteNode, p.key)
+        : (pk ? countForSecondary(pk, p.key) : 0);
+      var badgeCls = cnt === 0 ? " zero" : "";
+      return '<button type="button" class="cnl-pill' + (p.key === activeKey ? " active" : "")
+        + '" data-cat="' + esc(p.key) + '" role="tab"' + (p.key === activeKey ? ' aria-selected="true"' : "") + '>'
+        + esc(p.label) + '<span class="cnl-badge' + badgeCls + '">' + cnt + '</span></button>';
+    }).join("");
+  }
+  function showCategoryView(on) {
+    var lens = el("lensNewsView");
+    var cat = el("categoryNewsList");
+    if (lens) lens.classList.toggle("hidden", on);
+    if (cat) cat.classList.toggle("hidden", !on);
+  }
+  function exitCategoryView() {
+    activePrimaryKey = null;
+    activeSecondaryKey = "all";
+    showCategoryView(false);
+    if (lensnav) {
+      [].forEach.call(lensnav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
+        x.classList.remove("active");
       });
     }
-    setNavGoActive(b);
-    railScroll(target || host || el("panel-news"));
   }
-  function openMarketCategory(cat, b) {           // 시장 그룹 → 시장 탭 + 해당 카테고리 카드로 이동
+  function renderLayeredNewsList(primaryKey, secondaryKey) {
+    activeSiteFilter = null;
+    activePrimaryKey = primaryKey;
+    activeSecondaryKey = secondaryKey || "all";
+    var label = lensLabel(primaryKey);
+    var allRows = rowsForPrimaryLens(primaryKey);
+    var arts = filteredLayeredArticles(primaryKey, activeSecondaryKey);
+    var titleEl = el("cnlTitle");
+    var countEl = el("cnlCount");
+    var cardsEl = el("cnlCards");
+    var emptyEl = el("cnlEmpty");
+    var noteEl = el("cnlNote");
+    if (titleEl) titleEl.textContent = label;
+    if (countEl) countEl.textContent = "총 " + allRows.length + "건";
+    renderCategoryPills(activeSecondaryKey, primaryKey, null);
+    if (cardsEl) {
+      cardsEl.innerHTML = arts.length ? arts.map(renderCategoryCard).join("") : "";
+      cardsEl.classList.toggle("hidden", !arts.length);
+    }
+    if (emptyEl) {
+      emptyEl.textContent = "현재 수집된 항목 없음";
+      emptyEl.classList.toggle("hidden", !!arts.length);
+    }
+    if (noteEl) {
+      if (activeSecondaryKey !== "all") {
+        var pill = NAV_CAT_PILLS.filter(function (p) { return p.key === activeSecondaryKey; })[0];
+        noteEl.textContent = label + " · " + ((pill && pill.label) || activeSecondaryKey) + " 교차 필터";
+        noteEl.classList.remove("hidden");
+      } else {
+        noteEl.textContent = "";
+        noteEl.classList.add("hidden");
+      }
+    }
+    var lab = el("activeLens"); if (lab) lab.textContent = label;
+    var cnt = el("lensCount"); if (cnt) cnt.textContent = arts.length;
+    var qn = el("lensQueueNote"); if (qn) qn.classList.add("hidden");
+  }
+  function siteKeySet(node) {
+    var keys = {};
+    (node.article_keys || []).forEach(function (k) { if (k) keys[String(k)] = 1; });
+    return keys;
+  }
+  function rowMatchesSiteKeys(row, keySet) {
+    if (!Object.keys(keySet).length) return false;
+    var rkeys = rowArticleKeys(row);
+    for (var i = 0; i < rkeys.length; i++) {
+      if (keySet[rkeys[i]]) return true;
+    }
+    return false;
+  }
+  function rowsForSite(node) {
+    var keySet = siteKeySet(node);
+    if (!Object.keys(keySet).length) return [];
+    return allSiteRows().filter(function (r) { return rowMatchesSiteKeys(r, keySet); });
+  }
+  function countForSiteSecondary(node, secondaryKey) {
+    return rowsForSite(node).filter(function (r) {
+      return rowMatchesSecondary(r, secondaryKey);
+    }).length;
+  }
+  function filteredSiteArticles(node, secondaryKey) {
+    return rowsForSite(node).filter(function (r) {
+      return rowMatchesSecondary(r, secondaryKey);
+    }).map(function (r) {
+      return mergeDisplayArticle(r, lookupNavArticle(r));
+    });
+  }
+  function renderSiteNewsList(node, secondaryKey) {
+    activeSiteFilter = node;
+    activePrimaryKey = null;
+    activeSecondaryKey = secondaryKey || "all";
+    var siteRows = rowsForSite(node);
+    var arts = filteredSiteArticles(node, activeSecondaryKey);
+    var titleEl = el("cnlTitle");
+    var countEl = el("cnlCount");
+    var cardsEl = el("cnlCards");
+    var emptyEl = el("cnlEmpty");
+    var noteEl = el("cnlNote");
+    if (titleEl) titleEl.textContent = node.label || "";
+    if (countEl) countEl.textContent = "매칭 " + siteRows.length + "건";
+    renderCategoryPills(activeSecondaryKey, null, node);
+    if (cardsEl) {
+      cardsEl.innerHTML = arts.length ? arts.map(renderCategoryCard).join("") : "";
+      cardsEl.classList.toggle("hidden", !arts.length);
+    }
+    if (emptyEl) {
+      if (!Object.keys(siteKeySet(node)).length || !siteRows.length) {
+        emptyEl.textContent = "현재 매칭된 기사 없음";
+        emptyEl.classList.remove("hidden");
+        if (cardsEl) cardsEl.classList.add("hidden");
+      } else {
+        emptyEl.textContent = "현재 수집된 항목 없음";
+        emptyEl.classList.toggle("hidden", !!arts.length);
+      }
+    }
+    if (noteEl) {
+      if (activeSecondaryKey !== "all" && siteRows.length) {
+        var pill = NAV_CAT_PILLS.filter(function (p) { return p.key === activeSecondaryKey; })[0];
+        noteEl.textContent = (node.label || "") + " · " + ((pill && pill.label) || activeSecondaryKey) + " 교차 필터";
+        noteEl.classList.remove("hidden");
+      } else {
+        noteEl.textContent = "";
+        noteEl.classList.add("hidden");
+      }
+    }
+    showCategoryView(true);
+    var lab = el("activeLens"); if (lab) lab.textContent = node.label || "현장";
+    var cnt = el("lensCount"); if (cnt) cnt.textContent = arts.length;
+    var qn = el("lensQueueNote"); if (qn) qn.classList.add("hidden");
+  }
+  function openNavigationNewsResult(primaryKey, secondaryKey, opts) {
+    activateTab("news");
+    activeSiteFilter = null;
+    var sfb = el("siteFilterBar"); if (sfb) sfb.classList.add("hidden");
+    refreshSiteNavActive();
+    showCategoryView(true);
+    if (lensnav) {
+      [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (n) {
+        n.classList.toggle("active", n.getAttribute("data-filter") === primaryKey);
+      });
+      [].forEach.call(lensnav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
+        x.classList.remove("active");
+      });
+    }
+    activeLensKey = primaryKey;
+    renderLayeredNewsList(primaryKey, secondaryKey || "all");
+    railScroll(el("categoryNewsList"));
+    if (opts && opts.scroll && window.matchMedia
+        && window.matchMedia("(max-width:900px)").matches) {
+      var main = document.querySelector("main");
+      if (main && main.scrollIntoView) main.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  function openMarketCategory(cat, b) {
+    exitCategoryView();
     activateTab("market");
     setNavGoActive(b);
+    if (lensnav) {
+      [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (x) {
+        x.classList.remove("active");
+      });
+    }
     railScroll(el("mcat-" + cat) || el("marketStatusBoard") || el("panel-market"));
   }
-  function openWeatherRisk(b) {                    // 기상 → 시장 탭 + 명일 정오 시공 리스크 카드(뉴스 필터 제외)
+  function openWeatherRisk(b) {
+    exitCategoryView();
     activateTab("market");
     setNavGoActive(b);
+    if (lensnav) {
+      [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (x) {
+        x.classList.remove("active");
+      });
+    }
     railScroll(el("siteWeatherCard"));
   }
+  (function bindCategoryPills() {
+    var pills = el("cnlPills");
+    if (!pills) return;
+    pills.addEventListener("click", function (ev) {
+      var btn = ev.target.closest(".cnl-pill"); if (!btn) return;
+      var key = btn.getAttribute("data-cat");
+      if (!key) return;
+      if (activeSiteFilter) {
+        renderSiteNewsList(activeSiteFilter, key);
+        return;
+      }
+      if (!activePrimaryKey) return;
+      renderLayeredNewsList(activePrimaryKey, key);
+    });
+  })();
 
-  /* D7-AD-V: 본문 위 뉴스 카테고리 칩 필터(newsCatFilter)는 제거했다 — 카테고리 탐색은 좌측 목차의
-     뉴스 분류 항목(navcat)이 담당하며, openNewsCategory가 해당 브리핑 <details>를 펼친다(중복 제거). */
+  /* D7-AD-V: 본문 위 뉴스 카테고리 칩 필터(newsCatFilter)는 제거 — 2차 pill은 #cnlPills만 사용. */
 
   /* ---------- LENS FILTER (좌측 네비 + 우측 레일 공통, 결정적) ----------
      렌즈를 선택하면 data-lens 태그가 일치하는 카드/신호만 보이고, 일치가 없으면
@@ -1719,28 +2035,47 @@
   }
   function clearSiteFilter() {
     activeSiteFilter = null;
+    activePrimaryKey = null;
+    activeSecondaryKey = "all";
     var bar = el("siteFilterBar"); if (bar) bar.classList.add("hidden");
-    var bankRows = activeLensKey !== "all" && hasBankRows(activeLensKey) ? LENS_BANKS[activeLensKey] : null;
-    renderRows("newsRows", bankRows || MODEL.news_rows);
-    showSiteTreeForLens(activeLensKey);                  // active 표시 해제 위해 재렌더
-    refreshSiteNavActive();                              // 좌측 현장 네비 active 해제 동기화(D7-AD-P)
+    refreshSiteNavActive();
+    var key = activeLensKey || "all";
+    if (isLayeredNewsLens(key)) {
+      openNavigationNewsResult(key, "all");
+    } else {
+      showCategoryView(false);
+      var bankRows = key !== "all" && hasBankRows(key) ? LENS_BANKS[key] : null;
+      renderRows("newsRows", bankRows || MODEL.news_rows);
+      showSiteTreeForLens(key);
+    }
   }
-  function onSiteNodeClick(scope, id) {
+  function onSiteNodeClick(scope, id, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
     var node = findSiteNode(scope, id); if (!node) return;
-    if (activeSiteFilter && activeSiteFilter.id === id) { clearSiteFilter(); return; }  // 토글
+    var sec = (activeSiteFilter && activeSiteFilter.id === id) ? activeSecondaryKey : "all";
     activeSiteFilter = node;
-    var keys = {}; (node.article_keys || []).forEach(function (k) { keys[k] = 1; });
-    var rows = allSiteRows().filter(function (r) { return keys[r.url || r.title || ""]; });
-    renderRows("newsRows", rows);
-    showSiteFilterBar(node, rows.length);
-    showSiteTreeForLens(scope);                          // active 노드 강조 갱신
-    refreshSiteNavActive();                              // 좌측 현장 네비 active 강조 동기화(D7-AD-P)
+    activeLensKey = scope;
+    if (FILTER_TABS.indexOf(activeTabName()) === -1) activateTab("news");
+    if (lensnav) {
+      [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (n) {
+        n.classList.toggle("active", n.getAttribute("data-filter") === scope);
+      });
+      [].forEach.call(lensnav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
+        x.classList.remove("active");
+      });
+    }
+    renderSiteNewsList(node, sec);
+    showSiteFilterBar(node, rowsForSite(node).length);
+    showSiteTreeForLens(scope);
+    refreshSiteNavActive();
+    railScroll(el("categoryNewsList"));
   }
   (function () {                                          // 트리/필터바 클릭 위임(1회 바인딩)
     var panel = el("siteTreePanel");
     if (panel) panel.addEventListener("click", function (ev) {
       var btn = ev.target.closest(".st-node"); if (!btn) return;
-      onSiteNodeClick(btn.getAttribute("data-scope"), btn.getAttribute("data-id"));
+      ev.stopPropagation();
+      onSiteNodeClick(btn.getAttribute("data-scope"), btn.getAttribute("data-id"), ev);
     });
     var bar = el("siteFilterBar");
     if (bar) bar.addEventListener("click", function (ev) {
@@ -1843,9 +2178,11 @@
     var nav = el("siteScopeNav"); if (!nav) return;
     nav.addEventListener("click", function (ev) {
       var node = ev.target.closest(".st-node");
-      if (node) {                                          // 개별 현장(3단계) 클릭 → 뉴스 탭 + 기존 필터 재사용
+      if (node) {                                          // 개별 현장(3단계) 클릭 → flat list + article_keys 필터
+        ev.stopPropagation();
+        ev.preventDefault();
         if (FILTER_TABS.indexOf(activeTabName()) === -1) activateTab("news");
-        onSiteNodeClick(node.getAttribute("data-scope"), node.getAttribute("data-id"));
+        onSiteNodeClick(node.getAttribute("data-scope"), node.getAttribute("data-id"), ev);
         return;
       }
       var midtog = ev.target.closest(".sn-midtog");        // 중분류(2단계) 펼침 → 개별 현장 표시
@@ -1948,6 +2285,7 @@
     return head + pol + note + ' <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요.' + tail;
   }
   function applyLens(key, opts) {
+    exitCategoryView();
     activeLensKey = key;
     activeSiteFilter = null;                              // 렌즈 전환 시 현장 필터 해제
     var sfb = el("siteFilterBar"); if (sfb) sfb.classList.add("hidden");
@@ -1982,14 +2320,15 @@
   }
   function selectLens(key) {
     if (FILTER_TABS.indexOf(activeTabName()) === -1) activateTab("news");
+    if (isLayeredNewsLens(key)) {
+      openNavigationNewsResult(key, "all", { scroll: true });
+      return;
+    }
     applyLens(key, { scroll: true });
   }
   if (lensnav) {
     lensnav.addEventListener("click", function (ev) {
       var b = ev.target.closest(".nav"); if (!b) return;
-      // D7-AD-V — 좌측 목차 하나가 필터/탐색 진입점: 렌즈(data-filter)는 카드 필터, 뉴스 분류/시장/기상은
-      // 본문 탭·섹션 전환. 탐색형 항목은 아래로 분기하고, 나머지는 기존 렌즈 필터 경로를 그대로 탄다.
-      if (b.classList.contains("navcat")) { openNewsCategory(b.getAttribute("data-acc"), b); return; }
       if (b.classList.contains("navmkt")) { openMarketCategory(b.getAttribute("data-market"), b); return; }
       if (b.classList.contains("navwx")) { openWeatherRisk(b); return; }
       selectLens(b.getAttribute("data-filter"));
@@ -2369,8 +2708,9 @@
       card.id = "mcat-" + cat; card.setAttribute("data-cat", cat);   // 좌측 목차(navmkt) 스크롤 앵커
       var body = linked.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
       if (unlinked.length) {
-        body += '<div class="mcat-sub">미연동 관찰 후보 · ' + unlinked.length + '건 (값/차트 소스 필요 · 가짜 값 없음)</div>' +
-          '<div class="mcat-unlinked">' + unlinked.map(function (it) { return mrowHtml(it, false); }).join("") + '</div>';
+        body += '<details class="mcat-backlog"><summary class="mcat-sub">연동 후보 '
+          + unlinked.length + '개 보기 · 값/차트 소스 필요</summary><div class="mcat-unlinked">'
+          + unlinked.map(function (it) { return mrowHtml(it, false); }).join("") + '</div></details>';
       }
       card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
         '</span><span class="mcat-c">연동 ' + linked.length + '/' + rows.length + '</span></div>' + body;
@@ -2410,29 +2750,22 @@
     var items = MODEL.market_items || [];
     var done = [], reported = [], backlog = [], priority = [];
     items.forEach(function (it) {
-      if (MARKET_PRIORITY[it.id]) { priority.push(it); return; }   // 우선 연동 필요(운영 지정)
+      if (MARKET_PRIORITY[it.id]) { priority.push(it); return; }
       if (it.data_mode === "manual_or_reported") { reported.push(it); return; }
-      if (marketState(it).hasValue) { done.push(it); return; }     // 현재값 보유 = 연동 완료
-      backlog.push(it);                                            // 값 없음 = 미연동 후보(가짜 값 없음)
+      if (marketState(it).hasValue) { done.push(it); return; }
+      backlog.push(it);
     });
-    // 연동 완료/보고는 칩 구름(값 있음), 우선 연동 필요/미연동 후보는 '왜 미연동인지' 사유를 함께 노출.
-    var cols = [
-      { t: "연동 완료", cls: "", rows: done, why: false },
-      { t: "보고·수동 확인", cls: "", rows: reported, why: false },
-      { t: "미연동 후보", cls: "", rows: backlog, why: true },
-      { t: "우선 연동 필요", cls: "ms-priority", rows: priority, why: true }
-    ];
     var CAP = 12;
-    box.innerHTML = cols.map(function (c) {
+    function colHtml(c) {
       var body;
       if (!c.rows.length) {
         body = '<div class="ms-empty">해당 없음</div>';
-      } else if (c.why) {                                          // 사유 목록(항목 + 왜 미연동인지)
+      } else if (c.why) {
         body = '<div class="ms-whys">' + c.rows.slice(0, CAP).map(function (it) {
           return '<div class="ms-item"><span class="ms-chip" title="' + esc(marketReason(it)) + '">'
             + esc(it.label_kr) + '</span><span class="ms-why">' + esc(marketReason(it)) + '</span></div>';
         }).join("") + '</div>';
-      } else {                                                     // 값 보유 — 칩 구름만
+      } else {
         var chips = c.rows.slice(0, CAP).map(function (it) {
           return '<span class="ms-chip">' + esc(it.label_kr) + '</span>';
         }).join("");
@@ -2441,7 +2774,23 @@
       }
       return '<div class="ms-col ' + c.cls + '"><div class="ms-h"><span class="ms-t">' + esc(c.t)
         + '</span><span class="ms-n">' + c.rows.length + '</span></div>' + body + '</div>';
-    }).join("");
+    }
+    var mainCols = [
+      { t: "연동 완료", cls: "", rows: done, why: false },
+      { t: "보고·수동 확인", cls: "", rows: reported, why: false }
+    ];
+    var collapsedCols = [
+      { t: "미연동 후보", cls: "", rows: backlog, why: true },
+      { t: "우선 연동 필요", cls: "ms-priority", rows: priority, why: true }
+    ];
+    var collapsedCount = backlog.length + priority.length;
+    var html = '<div class="mktstatus-main">' + mainCols.map(colHtml).join("") + '</div>';
+    if (collapsedCount) {
+      html += '<details class="ms-collapse"><summary class="ms-collapse-sum">미연동/후보 관리 · '
+        + collapsedCount + '개</summary><div class="ms-collapse-body">'
+        + collapsedCols.map(colHtml).join("") + '</div></details>';
+    }
+    box.innerHTML = html;
   }
   renderMarketStatusBoard();
 

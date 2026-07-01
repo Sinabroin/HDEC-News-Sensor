@@ -66,6 +66,8 @@ grep -o '/api/operator/collect\|/api/operator/send-telegram\|/api/operator/send-
 (`GH_OPERATOR_TOKEN`·`OPERATOR_SHARED_SECRET`|`OPERATOR_PIN`·`OPERATOR_REPO`·`OPERATOR_ALLOWED_ORIGINS`)와
 repo variable `OPERATOR_API_BASE`, GitHub Secrets(Gmail SMTP·`TEAMS_CHANNEL_EMAIL`)를 설정해야 한다.
 서버가 없을 때는 위 smoke가 uvicorn 없이 계약(무설정 fail-closed·승인 경로만 dispatch)을 대신 검증한다.
+**실제 브라우저 클릭 테스트**(collect/telegram/Teams POST)는 `fastapi`/`uvicorn` 로컬 설치 또는
+운영 API 배포 후 `--operator-api-base` 빌드로 진행한다.
 
 `docs/daily/*.html`은 hand-edit하지 않는다(빌더/live publish 워크플로가 재생성). 이 작업은
 템플릿·빌더 앵커·운영 게이트웨이 스모크·시장/기상 조사 문서·검증기만 수정한다.

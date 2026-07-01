@@ -288,9 +288,11 @@ def verify_market_model(model: dict, html: str) -> None:
     # No section should be dominated by unlinked rows in the prominent area: the
     # render separates linked-first and labels unlinked as 관찰 후보 candidates. We
     # verify the separation logic + honesty copy are present (rendering is client JS).
-    check("4d: 렌더가 연동 우선·미연동 분리 로직 보유(marketLinked + mcat-unlinked)",
-          "function marketLinked" in html and "mcat-unlinked" in html
-          and "미연동 관찰 후보" in html)
+    # Render anchors live in the template (committed docs/daily may lag behind builder).
+    tpl = TEMPLATE.read_text(encoding="utf-8", errors="ignore")
+    check("4d: 렌더가 연동 우선·미연동 분리 로직 보유(marketLinked + mcat-unlinked + mcat-backlog)",
+          "function marketLinked" in tpl and "mcat-unlinked" in tpl
+          and "mcat-backlog" in tpl)
     check("4e: 미연동 분리 정직성 안내문 노출",
           "미연동 지표는 하단 관찰 후보로 분리했습니다" in html)
     # D7-AC — 우측 요약 레일은 제거되었다(보조 컨텍스트 섹션 제거). 미연동 누출 방지는 이제

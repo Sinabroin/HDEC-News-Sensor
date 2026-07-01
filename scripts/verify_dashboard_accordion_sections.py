@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Offline verifier for D7-AD-N — 요약 대시보드 임원 아코디언 8섹션 + 해외 언론 source group.
+"""Offline verifier for D7-AD-N → D7-AD-W Phase 1B — 브리핑 분류 데이터 + layered flat list.
 
 검증 대상:
-- 8개 섹션(오늘의 신규 이슈 / 수주 / 재무 / 정책 / 경쟁 / 브랜드 / 기상·날씨 / 해외 언론)이
-  독립적인 expandable <details> 컨테이너로 존재하고, summary와 기사 목록이 올바르게 연결된다.
-- 오늘의 신규 이슈만 기본 열림(open), 나머지는 접힘. 펼쳐져도 다른 목록을 가리지 않는 블록 흐름.
-- 데이터가 없으면(브랜드/기상/해외) 헤딩을 유지하고 '현재 수집된 항목 없음'처럼 정직히 표기.
-- 재무/브랜드는 표시 전용 파생 섹션 — 점수/등급/분류를 바꾸지 않고 raw 제목+repo 플래그로만 멤버 선정.
-- 해외 언론 source group(영어 locale)이 존재하고, mock에선 해외 출처가 없어 가짜 기사로 채우지 않는다.
-- 공개 산출물에 secret/token 없음.
+- brief.accordion_sections(8키) 데이터 파이프라인 보존 — 표시 전용 파생·가짜 기사 없음
+- visible accordion(details.acc-sec) 제거 → preview-model.nav_category_sections + #categoryNewsList
+- 2차 pill(#cnlPills) count badge(cnl-badge) · rowsForPrimaryLens/countForSecondary 교차 필터
+- weather는 nav_category_sections에서 제외 · 기상=siteWeatherCard
+- 해외 언론 source group(영어 locale) 존재
+- 공개 산출물 secret/token 없음
 
 네트워크/비밀값 0건 (mock 빌드만 사용)."""
 
@@ -26,6 +25,9 @@ for _p in (ROOT, ROOT / "scripts"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
+NEWS_PILL_KEYS = ("all", "new", "order", "finance", "policy", "competitor", "brand", "global_press")
+
 _failures: list[str] = []
 
 
@@ -35,7 +37,6 @@ def check(name: str, ok: bool, detail: str = "") -> None:
         _failures.append(name)
 
 
-# (key, 헤딩에 반드시 나타나야 하는 텍스트) — 기상은 '기상' 또는 '날씨' 중 하나면 통과.
 REQUIRED_SECTIONS = [
     ("new", ("오늘의 신규 이슈",)),
     ("order", ("수주",)),
@@ -74,6 +75,17 @@ def _build_dashboard_html() -> str:
             pass
 
 
+def _model(html: str) -> dict:
+    m = re.search(r'<script type="application/json" id="preview-model">\s*(.*?)\s*</script>',
+                  html, re.S)
+    if not m:
+        return {}
+    try:
+        return json.loads(m.group(1))
+    except json.JSONDecodeError:
+        return {}
+
+
 def check_config() -> None:
     from app import global_press as gp
 
@@ -102,7 +114,6 @@ def check_config() -> None:
     check("국내 기본 뉴스 소스는 한국 locale 유지(국내↔해외 분리)",
           news.get("gl") == "KR" and news.get("hl") == "ko")
 
-    # 수집기에 그룹별 locale + 해외 preflight가 실제로 연결돼 있다(구조 잠금).
     from app import live_collector as lc
     en_url = lc._build_google_news_url("AI data center", {}, locale)
     check("수집기 URL 빌더가 그룹 locale을 적용(en-US)",
@@ -139,24 +150,20 @@ def check_brief() -> dict:
     check("해외 언론 섹션은 mock에서 빈 상태(가짜 해외 기사로 채우지 않음)",
           gp_sec.get("empty") is True and gp_sec.get("article_count") == 0)
 
-    # 표시 전용·발명 없음: 모든 섹션 기사는 실제 채점 기사여야 한다(새 기사 생성 금지).
     for key in ("new", "order", "finance", "policy", "competitor", "brand"):
         arts = by_key.get(key, {}).get("articles") or []
         ids = [a.get("article_id") for a in arts]
         check(f"'{key}' 섹션 기사는 실제 채점 기사(표시 전용 파생)",
               all(i in scored_ids for i in ids), f"{len(ids)} ids")
-        # 카드 필드: 제목·출처·본문 링크 가용성
         check(f"'{key}' 섹션 기사 카드에 제목·출처 필드",
               all(a.get("title") and (a.get("display_source") or a.get("source"))
                   for a in arts))
 
-    # 빈 섹션도 라벨 + 정직한 빈 상태 메시지를 유지한다.
     for key in ("brand", "weather", "global_press"):
         s = by_key.get(key, {})
         check(f"빈 '{key}' 섹션도 라벨 유지 + 정직한 빈 상태('없음')",
               bool(s.get("label")) and "없음" in (s.get("empty_message") or ""))
 
-    # 헤더 카운트(이슈/기사) 구조가 존재한다.
     order = by_key.get("order", {})
     check("섹션 헤더 카운트 필드(issue_count/article_count) 존재",
           "issue_count" in order and "article_count" in order)
@@ -164,7 +171,6 @@ def check_brief() -> dict:
 
 
 def check_finance_brand_display_only() -> None:
-    """재무/브랜드가 표시 전용 파생(점수/등급/분류 불변)임을 멤버십 함수로 잠근다."""
     import app.briefing as briefing
 
     fin_row = {"title": "현대건설 전환사채 4000억 발행 자금조달", "snippet": ""}
@@ -183,9 +189,19 @@ def check_finance_brand_display_only() -> None:
           not briefing._accordion_is_brand({"title": "중대재해 처벌 강화 추진"}))
 
 
-def _accordion_css(html: str) -> str:
-    m = re.search(r"임원 브리핑 아코디언.*?</style>", html, re.S)
-    return m.group(0) if m else ""
+def check_template_layered() -> None:
+    t = TEMPLATE.read_text(encoding="utf-8")
+    check("템플릿: visible accordion(#accordionSections) 없음",
+          'id="accordionSections"' not in t)
+    check("템플릿: details.acc-sec 없음", "details.acc-sec" not in t)
+    check("템플릿: #categoryNewsList + #cnlPills 존재",
+          'id="categoryNewsList"' in t and 'id="cnlPills"' in t)
+    check("템플릿: openNavigationNewsResult + renderLayeredNewsList",
+          "function openNavigationNewsResult" in t and "function renderLayeredNewsList" in t)
+    check("템플릿: pill count badge(cnl-badge) + countForSecondary",
+          "cnl-badge" in t and "function countForSecondary" in t)
+    check("템플릿: navcat 제거", 'class="nav navcat"' not in t)
+    check("템플릿: '카테고리별 브리핑' 없음", "카테고리별 브리핑" not in t)
 
 
 def check_dashboard_html() -> None:
@@ -194,53 +210,30 @@ def check_dashboard_html() -> None:
     if not html:
         return
 
-    details = re.findall(r'<details class="acc-sec" data-acc="([a-z_]+)"( open)?>', html)
-    keys = [d[0] for d in details]
-    check("아코디언 <details class=acc-sec> 8개(독립 expandable 컨테이너)",
-          len(details) == 8, str(len(details)))
-    for key, _labels in REQUIRED_SECTIONS:
-        check(f"섹션 <details> 존재: {key}", key in keys)
+    check("산출물: visible accordion(details.acc-sec) 없음",
+          '<details class="acc-sec"' not in html)
+    check("산출물: #accordionSections 없음", 'id="accordionSections"' not in html)
+    check("산출물: '카테고리별 브리핑' 없음", "카테고리별 브리핑" not in html)
+    check("산출물: navcat 없음", 'class="nav navcat"' not in html)
+    check("산출물: #categoryNewsList + #cnlPills 존재",
+          'id="categoryNewsList"' in html and 'id="cnlPills"' in html)
+    check("산출물: layered JS(openNavigationNewsResult/renderLayeredNewsList) 존재",
+          "function openNavigationNewsResult" in html
+          and "function renderLayeredNewsList" in html)
+    check("산출물: pill count badge(cnl-badge) 렌더 로직 존재",
+          "cnl-badge" in html and "countForSecondary" in html)
+    check("산출물: 빈 상태 문구 '현재 수집된 항목 없음'",
+          "현재 수집된 항목 없음" in html)
 
-    opened = [d[0] for d in details if d[1]]
-    check("기본 열림 <details open>은 'new' 하나만", opened == ["new"], str(opened))
-
-    names = re.findall(r'<span class="acc-name">([^<]+)</span>', html)
-    for _key, labels in REQUIRED_SECTIONS:
-        check(f"섹션 헤딩 텍스트: {labels[0]}",
-              any(any(lbl in n for lbl in labels) for n in names))
-
-    blocks = re.findall(r'<details class="acc-sec".*?</details>', html, re.S)
-    check("각 <details>는 <summary> 정확히 1개(summary↔목록 연결)",
-          len(blocks) == 8 and all(b.count("<summary>") == 1 for b in blocks))
-    check("각 <details>는 기사 목록(acc-list) 또는 빈 상태(acc-empty)를 포함",
-          all(("acc-list" in b) or ("acc-empty" in b) for b in blocks))
-    # summary와 목록/빈상태가 같은 details 안에 있다(연결) — summary가 먼저, 내용이 뒤.
-    conn_ok = True
-    for b in blocks:
-        s_idx = b.find("</summary>")
-        body_idx = max(b.find('<div class="acc-list"'), b.find('<div class="acc-empty"'))
-        if s_idx < 0 or body_idx < 0 or body_idx < s_idx:
-            conn_ok = False
-    check("summary text가 그 섹션 기사 목록과 같은 컨테이너로 연결", conn_ok)
-
-    check("빈 섹션(브랜드/기상/해외)이 정직한 빈 상태로 표기(≥3건)",
-          html.count('class="acc-empty"') >= 3)
-    check("빈 상태 문구가 '현재 수집된 항목 없음'/'미연동'을 정직히 표기",
-          "현재 수집된 항목 없음" in html or "미연동" in html)
-
-    # 겹침/가림 방지: 아코디언 영역은 블록 흐름 — absolute/fixed positioning을 쓰지 않는다.
-    css = _accordion_css(html)
-    check("아코디언 CSS에 position:absolute/fixed 없음(펼쳐도 다른 목록 안 가림)",
-          bool(css) and "position:absolute" not in css and "position:fixed" not in css)
-    check("아코디언 컨테이너(acc-body) 존재 + 주입 마커 치환됨",
-          'id="accordionSections"' in html and "ACCORDION-INJECT" not in html)
-
-    # 기사 본문 링크는 새 탭 안전 속성으로만 노출(외부 링크 정책).
-    if "본문 보기" in html:
-        check("기사 본문 링크는 target=_blank + rel=noopener noreferrer",
-              'rel="noopener noreferrer"' in html and 'target="_blank"' in html)
-    else:
-        check("기사 본문 링크 정책(표시 항목 없으면 skip)", True)
+    model = _model(html)
+    nav_secs = {s.get("key") for s in (model.get("nav_category_sections") or [])}
+    check("모델: nav_category_sections 존재", bool(nav_secs), str(sorted(nav_secs)))
+    for key in NEWS_PILL_KEYS:
+        if key == "all":
+            continue
+        check(f"모델: nav_category_sections '{key}'", key in nav_secs)
+    check("모델: weather는 nav_category_sections에서 제외", "weather" not in nav_secs)
+    check("기상: siteWeatherCard 존재", 'id="siteWeatherCard"' in html)
 
     leaks = [n for n in ("TELEGRAM_BOT_TOKEN", "GMAIL_SMTP_APP_PASSWORD",
                          "GMAIL_SMTP_USER", "OPERATOR_SHARED_SECRET", "ALERT_EMAIL_TO")
@@ -249,19 +242,17 @@ def check_dashboard_html() -> None:
 
 
 def main() -> int:
-    print(f"== verify_dashboard_accordion_sections (D7-AD-N) @ {ROOT} ==")
-    # check_brief()를 먼저 호출해 build_executive_brief._bootstrap이 임시 DB_PATH를 app.config
-    # import 전에 고정하게 한다 (DB_PATH 캐시 트랩 회피 — app 모듈을 먼저 import하면 repo
-    # radar.db로 오염된다). 이후 check들은 이미 import된 temp-path config를 재사용한다.
+    print(f"== verify_dashboard_accordion_sections (D7-AD-W Phase 1B) @ {ROOT} ==")
     check_brief()
     check_config()
     check_finance_brand_display_only()
+    check_template_layered()
     check_dashboard_html()
     print()
     if _failures:
         print(f"RESULT: FAIL ({len(_failures)} 항목)")
         return 1
-    print("RESULT: PASS — 임원 아코디언 8섹션 + 해외 언론 source group + 표시 전용 잠금")
+    print("RESULT: PASS — brief 분류 데이터 + layered flat list + pill count badge (Phase 1B)")
     return 0
 
 

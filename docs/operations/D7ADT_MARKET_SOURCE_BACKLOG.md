@@ -39,6 +39,33 @@
   성격을 선언한다. 미연동/보고는 버그가 아니라 설계된 정직 상태다.
 - 상태 보드는 **라벨 칩만** 노출한다(값/차트 없음) — 분류/우선순위 도구이지 시세 표시가 아니다.
 
+## D7-AD-W Phase 1C UI (접힘 · anchor 보존)
+
+- **메인 화면:** `연동 완료` · `보고·수동 확인`만 기본 노출 (`mktstatus-main`).
+- **접힘:** `미연동 후보` · `우선 연동 필요` → `<details class="ms-collapse">` (`미연동/후보 관리 · N개`).
+- **카테고리 카드:** 미연동 행 → `<details class="mcat-backlog">` + `<div class="mcat-unlinked">` (기본 닫힘).
+- **회귀 anchor (verifier):** `marketLinked`, `mcat-unlinked`, `mcat-backlog` — 템플릿 JS에 보존.
+
+## D7-AD-X 실연동 우선순위 (adapter · 별도 Phase)
+
+실제 fetch adapter는 Cursor/CI에서 e2e 검증 가능할 때 **별도 커밋**으로 진행한다.
+가짜 값/차트 생성 금지.
+
+| 순위 | id / 항목 | 후보(문서) |
+|---:|---|---|
+| 1 | `us_2y` | FRED DGS2 |
+| 2 | `kr_10y` | FRED OECD / 한은 ECOS |
+| 3 | `twdkrw` | USD/KRW × USD/TWD 교차 |
+| 4 | Hormuz | **repo 내 GitHub API 링크 없음 — 사용자 링크 재요청 필요** (렌즈·데모 카드만 존재) |
+| 5 | `jet_kerosene` | EIA/FRED DJFUELUSGULF |
+| 6 | `nickel` | World Bank Pink Sheet |
+| 7 | `scrap_steel` | FRED WPU1012 |
+| 8 | `bitumen` | FRED WPU05810212 |
+| 9 | `cement` | KOSIS/ECOS PPI |
+| 10 | `coking_coal` / `bunker_fuel` | 보고·대용 검토 |
+
+상세 조사: [`D7ADV_MARKET_SOURCE_DISCOVERY.md`](./D7ADV_MARKET_SOURCE_DISCOVERY.md)
+
 ## 착수 전 체크리스트
 
 - [ ] 우선 목록부터 실측 프로빙(US 2Y=FRED `DGS2`, KR 10Y=한은/유료, 스크랩/원료탄=협회·보고 등 — D7-AB 참조)

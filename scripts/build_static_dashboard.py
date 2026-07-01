@@ -1337,15 +1337,10 @@ def _render_accordion_section(section: dict) -> str:
 
 
 def _inject_accordion(html: str, brief: dict) -> str:
-    """brief.accordion_sections를 템플릿 마커 영역에 서버 렌더로 주입한다(JS 0줄)."""
-    sections = brief.get("accordion_sections") or []
-    rendered = "".join(_render_accordion_section(s) for s in sections)
-    if not rendered:
-        rendered = '<div class="acc-empty">현재 수집된 항목 없음</div>'
-    if _ACC_INJECT_MARKER not in html:
-        print("ERROR: 아코디언 주입 마커를 찾지 못함 (템플릿 구조 변경?)", file=sys.stderr)
-        raise SystemExit(1)
-    return html.replace(_ACC_INJECT_MARKER, rendered, 1)
+    """D7-AD-W: visible accordion 제거 — 분류 데이터는 preview-model.nav_category_sections로만 주입."""
+    if _ACC_INJECT_MARKER in html:
+        return html.replace(_ACC_INJECT_MARKER, "", 1)
+    return html
 
 
 def _fmt_market_value(value, decimals: int) -> str:
@@ -1522,6 +1517,12 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     # 달리 카운트만 담아 공개 빌드에도 안전하게 주입한다(현장명 0건 · verifier가 잠금). 비공개 게이팅은
     # 리프(site_watchlist)가 환경변수로 담당한다 — 빌더는 환경변수를 직접 읽지 않는다(D7-N 4d 보존).
     model["site_scope_summary"] = site_watchlist.scope_summary_for_model()
+    # D7-AD-W — 좌측 navcat flat list용 분류 데이터(기상·날씨 제외). visible accordion 대신
+    # preview-model에서 JS가 #categoryNewsList를 렌더한다(가짜 기사 생성 없음).
+    sections = brief.get("accordion_sections") or []
+    model["nav_category_sections"] = [
+        s for s in sections if (s.get("key") or "") != "weather"
+    ]
     # D7-AA — 부가 관찰(SUPPORTING LENSES: business_lens/ecosystem/watch_next) 섹션은 제거됨.
     # 이전의 그룹별 count 주입 루프도 함께 제거한다(템플릿 모델에 더 이상 해당 키가 없음).
     new_json = json.dumps(model, ensure_ascii=False, indent=2)
