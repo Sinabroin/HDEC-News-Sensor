@@ -195,13 +195,24 @@ def check_template() -> None:
           'el("opTeamsBtn")' in t and "teamsBtn.disabled = false" in t
           and "/api/operator/send-teams" in t)
 
-    # D7-AD-U — 단일 내부 대시보드 1차 IA: 왼쪽 rail 전체 탐색 네비(오늘/뉴스/현장/시장/기상/운영).
-    check("U1: 전체 탐색 rail 네비(railNav)", 'id="railNav"' in t and 'class="railnav"' in t)
-    for scope in ("today", "news", "sites", "market", "weather", "ops"):
-        check(f"U1: rail scope '{scope}'", f'data-scope="{scope}"' in t)
-    for lbl in ("오늘", "뉴스", "현장", "시장", "기상", "운영"):
-        check(f"U1: rail 라벨 '{lbl}'", f'class="ri-l">{lbl}<' in t)
-    # D7-AD-U — 운영자 실행이 화면 하단에서 왼쪽 rail 컬럼(railcol)으로 이동(하단 덩그러니 제거).
+    # D7-AD-V — 별도 상단 목차(railNav '전체 탐색')와 본문 위 카테고리 칩 바(newsCatFilter)를 제거하고,
+    # 기존 좌측 목차(#lensnav) 하나를 필터/탐색 진입점으로 흡수했다.
+    check("V1: 별도 상단 목차(railNav) 제거", 'id="railNav"' not in t and 'class="railnav"' not in t)
+    check("V1: '전체 탐색' 문구 제거(주석 포함)", "전체 탐색" not in t)
+    check("V1: 본문 위 뉴스 카테고리 칩 바(newsCatFilter) 제거", 'id="newsCatFilter"' not in t)
+    check("V2: 좌측 목차가 단일 탐색 진입점(lensnav)", 'id="lensnav"' in t)
+    for key in ("order", "finance", "policy", "competitor", "brand", "global_press"):
+        check(f"V2: 좌측 목차 뉴스 분류 항목(navcat data-acc='{key}')",
+              f'class="nav navcat" data-acc="{key}"' in t)
+    for lbl in ("수주", "재무", "정책", "경쟁", "브랜드", "해외 언론"):
+        check(f"V2: 뉴스 분류 라벨 '{lbl}'", f'class="nlabel">{lbl}</span>' in t)
+    check("V3: 좌측 목차 시장 그룹(navmkt data-market)", 'class="nav navmkt" data-market="' in t)
+    check("V3: 좌측 목차 기상 항목(navwx)→siteWeatherCard(뉴스 필터 제외)",
+          'class="nav navwx"' in t and "function openWeatherRisk" in t
+          and 'el("siteWeatherCard")' in t)
+    check("V4: 뉴스 분류 클릭이 해당 브리핑 섹션을 연다(openNewsCategory→details.acc-sec)",
+          "function openNewsCategory" in t and "details.acc-sec" in t and "d.open = on" in t)
+    # 운영자 실행은 별도 '운영' 목차 항목 없이 왼쪽 rail 컬럼(railcol) 하단 compact 카드로 유지.
     check("U2: 운영자 패널이 왼쪽 rail 컬럼(railcol) 안", 'class="railcol"' in t)
 
     # 시장 소스 상태 보드(4단계) + 미연동 사유
@@ -246,10 +257,13 @@ def check_public_build() -> None:
               len(secs) == 8
               and {"new", "order", "finance", "policy", "competitor", "brand",
                    "weather", "global_press"} <= set(secs), str(secs))
-        # D7-AD-U — 카테고리별 브리핑을 'News Explorer 필터'로 통합: 카테고리 칩 필터(newsCatFilter)가
-        # 브리핑 섹션 앞에 오고(클릭 시 해당 섹션 펼침), 헤더는 '뉴스 탐색 필터' 역할로 표기.
-        check("2d: 뉴스 카테고리 필터(newsCatFilter)가 브리핑 앞에 통합",
-              _order(html, 'class="news-brief-head"', 'id="newsCatFilter"', 'id="accordionSections"'))
+        # D7-AD-V — 본문 위 카테고리 칩 바(newsCatFilter)는 제거됐고, 카테고리 탐색은 좌측 목차의
+        # 뉴스 분류 항목(navcat)이 담당한다. 그 data-acc 키는 서버 렌더 아코디언 키와 정합해야 한다.
+        check("2d: 본문 위 뉴스 카테고리 칩 바(newsCatFilter) 제거",
+              'id="newsCatFilter"' not in html)
+        check("2d: 좌측 목차 뉴스 분류 항목(navcat)이 브리핑 아코디언 키와 정합",
+              all(f'class="nav navcat" data-acc="{k}"' in html for k in
+                  ("order", "finance", "policy", "competitor", "brand", "global_press")))
 
         # 기상·날씨: 뉴스 기사 섹션이 아니다 — 현장 기상 카드는 시장 탭, weather 섹션은 '기사 0건' 미표기
         check("3b: '현장 기상' 카드가 시장 탭 안(panel-market 이후)",
@@ -372,7 +386,7 @@ def check_artifact_and_staging() -> None:
 
 
 def main() -> int:
-    print(f"== verify_dashboard_ia_consolidation (D7-AD-R) @ {ROOT} ==")
+    print(f"== verify_dashboard_ia_consolidation (D7-AD-R → D7-AD-V fold) @ {ROOT} ==")
     check_template()
     check_public_build()
     check_operator_build()
@@ -384,8 +398,9 @@ def main() -> int:
         for f in _failures:
             print(f"  - {f}")
         return 1
-    print("RESULT: PASS — 단일 임원 대시보드 IA 정리(accordion→news · 3단계 현장 네비 · "
-          "시장 상태 보드 · 현장 기상 카드 · 운영자 compact) public-safe (D7-AD-R)")
+    print("RESULT: PASS — 단일 임원 대시보드 IA(좌측 목차 단일 진입점 · railNav/newsCatFilter 제거 · "
+          "뉴스 분류/시장/기상 흡수 · 3단계 현장 네비 · 시장 상태 보드 · 현장 기상 카드 · 운영자 compact) "
+          "public-safe (D7-AD-R→V)")
     return 0
 
 

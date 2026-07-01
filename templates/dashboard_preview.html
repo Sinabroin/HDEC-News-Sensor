@@ -142,21 +142,15 @@
   .lens .nav.active .ncount{color:var(--sky);}
   .lens .nav .flag{font-size:9px; font-weight:800; letter-spacing:0.06em; color:#fff; padding:2px 5px; border-radius:5px;}
 
-  /* ===== Left rail column: 전체 탐색 nav + 렌즈 + 현장 + 운영자(하단) (D7-AD-U) ===== */
+  /* ===== Left rail column: 단일 탐색 진입점(lensnav) + 운영자(하단) (D7-AD-V) =====
+     별도 상단 탐색 목차(railNav)는 두지 않는다 — 좌측 목차 하나가 필터/탐색/운영 진입점이다. */
   .railcol{display:flex; flex-direction:column; gap:16px; min-width:0;}
-  .railtitle{padding:2px 12px 8px; font-size:10.5px; font-weight:800; letter-spacing:0.14em; color:var(--mute4);}
-  .railnav{display:flex; flex-direction:column; gap:3px; margin-bottom:8px; padding-bottom:12px; border-bottom:1px solid var(--hair);}
-  .railnav-item{display:flex; align-items:center; gap:10px; width:100%; padding:8px 11px; border:1px solid transparent;
-    background:transparent; border-radius:11px; cursor:pointer; text-align:left;}
-  .railnav-item:hover{background:#F5F9FE;}
-  .railnav-item.active{background:var(--sky-tint); border-color:var(--sky-bd);}
-  .railnav-item .ri-ic{width:22px; height:22px; flex:none; display:flex; align-items:center; justify-content:center;
-    font-size:12px; color:var(--sky); background:#fff; border:1px solid var(--line); border-radius:7px;}
-  .railnav-item.active .ri-ic{border-color:var(--sky-bd);}
-  .railnav-item .ri-b{display:flex; flex-direction:column; gap:1px; min-width:0;}
-  .railnav-item .ri-l{font-size:13.5px; font-weight:700; color:var(--ink2); line-height:1.2;}
-  .railnav-item.active .ri-l{color:var(--ink);}
-  .railnav-item .ri-d{font-size:10.5px; color:var(--mute3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  /* 탐색형 목차 항목(뉴스 분류·시장·기상) — 렌즈 필터와 시각적으로 구분되는 '이동' 어포던스. */
+  .lens .nav.navcat .navgo, .lens .nav.navmkt .navgo, .lens .nav.navwx .navgo{
+    font-size:10.5px; font-weight:700; color:var(--mute4); white-space:nowrap;}
+  .lens .nav.navcat:hover .navgo, .lens .nav.navmkt:hover .navgo, .lens .nav.navwx:hover .navgo{color:var(--sky);}
+  .lens .nav.navcat.active, .lens .nav.navmkt.active, .lens .nav.navwx.active{background:var(--sky-tint);}
+  .lens .nav.navcat.active .navgo, .lens .nav.navmkt.active .navgo, .lens .nav.navwx.active .navgo{color:var(--sky);}
 
   /* ===== Tabs ===== */
   .tabs{display:inline-flex; background:#E8EFF8; border-radius:11px; padding:3px; gap:2px; flex-wrap:wrap;}
@@ -561,18 +555,11 @@
 
   /* ===== D7-AD-R · 단일 임원 대시보드 IA 정리 (accordion→news 흡수 · 3단계 현장 네비 ·
      시장 소스 상태 보드 · 현장 기상 카드 · 운영자 compact) — 모두 블록 흐름(position:absolute/fixed 없음) ===== */
-  /* News Explorer 통합 브리핑 헤더(독립 '임원 브리핑 섹션' 블록 대신 뉴스 탐색 안으로 흡수) */
+  /* News Explorer 통합 브리핑 헤더(독립 '임원 브리핑 섹션' 블록 대신 뉴스 탐색 안으로 흡수).
+     D7-AD-V: 본문 위 카테고리 칩 바(newsCatFilter)는 제거했다 — 카테고리 탐색은 좌측 목차가 담당한다. */
   .news-brief-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin:20px 0 10px;}
-  .news-brief-head .nb-t{font-size:14px; font-weight:800; color:var(--ink2);}
-  .news-brief-head .nb-s{font-size:11.5px; color:var(--mute3);}
-  /* 뉴스 카테고리 필터 칩 (D7-AD-U) — 카테고리별 브리핑을 탐색 필터로 통합 */
-  .news-cats{display:flex; flex-wrap:wrap; gap:7px; margin:2px 0 12px;}
-  .news-cat{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--ink3);
-    background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:6px 12px; cursor:pointer;}
-  .news-cat:hover{background:#F1F7FD; border-color:var(--sky-bd);}
-  .news-cat.active{background:var(--sky-tint); border-color:var(--sky-bd); color:var(--ink);}
-  .news-cat .nc-c{font-size:10.5px; font-weight:700; color:var(--mute4); font-variant-numeric:tabular-nums;}
-  .news-cat.active .nc-c{color:var(--sky);}
+  .news-brief-head .nb-t{font-size:13px; font-weight:800; color:var(--ink3);}
+  .news-brief-head .nb-s{font-size:11px; color:var(--mute3);}
   /* 3단계 현장 네비: 대분류(.sn-group) → 중분류(.sn-mid, 접이식) → 개별 현장(.st-node) */
   .sitenav .sn-mid{margin:2px 0;}
   .sitenav .sn-midtog{display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;
@@ -757,27 +744,20 @@
   <!-- =================== MAIN GRID =================== -->
   <div class="grid">
 
-    <!-- ---------- LEFT RAIL: 전체 탐색 + 렌즈 + 현장 워치리스트 + 운영자 실행 (D7-AD-U) ---------- -->
+    <!-- ---------- LEFT RAIL: 단일 탐색 목차(렌즈·뉴스 분류·현장·시장·기상) + 운영자 실행 (D7-AD-V) ---------- -->
     <div class="railcol">
-    <aside class="lens" id="lensnav"><!-- JS가 #preview-model.nav로 렌더 (정적 폴백 포함) -->
-      <!-- 전체 탐색 (D7-AD-U) — 단일 내부 대시보드의 1차 IA 네비. 오늘/뉴스/현장/시장/기상/운영을 눌러
-           본문 영역(탭/카드)을 전환한다. 아래 렌즈 필터·현장 워치리스트는 그 안의 세부 탐색이다. -->
-      <div class="railtitle">전체 탐색</div>
-      <div class="railnav" id="railNav" aria-label="전체 탐색">
-        <button type="button" class="railnav-item active" data-scope="today"><span class="ri-ic" aria-hidden="true">◉</span><span class="ri-b"><span class="ri-l">오늘</span><span class="ri-d">핵심 판단·즉시 확인</span></span></button>
-        <button type="button" class="railnav-item" data-scope="news"><span class="ri-ic" aria-hidden="true">▤</span><span class="ri-b"><span class="ri-l">뉴스</span><span class="ri-d">신호·카테고리 탐색</span></span></button>
-        <button type="button" class="railnav-item" data-scope="sites"><span class="ri-ic" aria-hidden="true">◎</span><span class="ri-b"><span class="ri-l">현장</span><span class="ri-d">현장 워치리스트·필터</span></span></button>
-        <button type="button" class="railnav-item" data-scope="market"><span class="ri-ic" aria-hidden="true">◧</span><span class="ri-b"><span class="ri-l">시장</span><span class="ri-d">지표 연동 현황</span></span></button>
-        <button type="button" class="railnav-item" data-scope="weather"><span class="ri-ic" aria-hidden="true">☂</span><span class="ri-b"><span class="ri-l">기상</span><span class="ri-d">명일 정오 시공 리스크</span></span></button>
-        <button type="button" class="railnav-item" data-scope="ops"><span class="ri-ic" aria-hidden="true">⚙</span><span class="ri-b"><span class="ri-l">운영</span><span class="ri-d">수집·전송 실행</span></span></button>
-      </div>
+    <aside class="lens" id="lensnav"><!-- 단일 탐색 진입점 (D7-AD-V) — 렌즈·뉴스 분류·현장·시장·기상을
+         이 좌측 목차 하나로 필터/탐색한다. 별도 상단 탐색 목차(railNav)는 만들지 않는다(중복 제거). -->
+      <!-- D7-AD-V: 기존 왼쪽 목차 자체를 필터/탐색 장치로 개선했다. 렌즈(전체 종합/즉시/신규/AI)는
+           카드 필터, 뉴스 분류(수주/재무/정책/경쟁/브랜드/해외 언론)는 브리핑 섹션 열기, 시장 그룹은
+           시장 탭 카테고리, 기상은 명일 정오 시공 리스크 카드로 각각 본문을 전환한다. -->
       <div class="gtitle">기본 렌즈</div>
       <button class="nav active" data-filter="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">21</span></span></button>
       <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
       <button class="nav" data-filter="new"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">신규 이슈</span></span><span class="r"><span class="flag" style="background:#3C7A4E;">NEW</span><span class="ncount">1</span></span></button>
       <button class="nav" data-filter="ai"><span class="l"><span class="ndot" style="background:#3C7A4E;"></span><span class="nlabel">AI 신호</span></span><span class="r"><span class="ncount">8</span></span></button>
 
-      <div class="gtitle">사업영역</div>
+      <div class="gtitle">사업영역 · 뉴스 분류</div>
       <button class="nav" data-filter="civil_infrastructure"><span class="l"><span class="ndot"></span><span class="nlabel">토목</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="building_housing"><span class="l"><span class="ndot"></span><span class="nlabel">건축주택</span></span><span class="r"><span class="ncount">3</span></span></button>
       <button class="nav" data-filter="plant"><span class="l"><span class="ndot"></span><span class="nlabel">플랜트</span></span><span class="r"><span class="ncount">4</span></span></button>
@@ -785,6 +765,15 @@
       <button class="nav" data-filter="development_business"><span class="l"><span class="ndot"></span><span class="nlabel">개발사업</span></span><span class="r"><span class="ncount">1</span></span></button>
       <button class="nav" data-filter="global_business"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">글로벌</span></span><span class="r"><span class="ncount">5</span></span></button>
       <button class="nav" data-filter="safety_quality"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">안전·품질</span></span><span class="r"><span class="ncount">2</span></span></button>
+      <!-- 뉴스 분류 (D7-AD-V) — 카테고리별 브리핑을 좌측 목차로 흡수(본문 위 중복 칩 바 제거).
+           클릭 시 뉴스 탭 전환 + 해당 브리핑 <details data-acc>만 펼쳐 본문 기사 목록이 그 분류로 바뀐다.
+           data-acc 키는 서버 렌더 아코디언 키와 일치: order/finance/policy/competitor/brand/global_press. -->
+      <button class="nav navcat" data-acc="order"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">수주</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
+      <button class="nav navcat" data-acc="finance"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">재무</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
+      <button class="nav navcat" data-acc="policy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">정책</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
+      <button class="nav navcat" data-acc="competitor"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">경쟁</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
+      <button class="nav navcat" data-acc="brand"><span class="l"><span class="ndot"></span><span class="nlabel">브랜드</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
+      <button class="nav navcat" data-acc="global_press"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">해외 언론</span></span><span class="r"><span class="navgo">브리핑 ▸</span></span></button>
 
       <div class="gtitle">외부 생태계</div>
       <button class="nav" data-filter="hyundai_group"><span class="l"><span class="ndot"></span><span class="nlabel">현대 그룹사</span></span><span class="r"><span class="ncount">0</span></span></button>
@@ -794,7 +783,7 @@
       <button class="nav" data-filter="oil_energy"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·에너지</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="hormuz"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">호르무즈</span></span><span class="r"><span class="ncount">0</span></span></button>
 
-      <div class="gtitle">실행 범위</div>
+      <div class="gtitle">현장 위치리스트</div>
       <button class="nav" data-filter="domestic_site"><span class="l"><span class="ndot"></span><span class="nlabel">국내현장</span></span><span class="r"><span class="ncount">2</span></span></button>
       <button class="nav" data-filter="overseas_site"><span class="l"><span class="ndot"></span><span class="nlabel">해외현장</span></span><span class="r"><span class="ncount">3</span></span></button>
       <button class="nav" data-filter="overseas_branch"><span class="l"><span class="ndot"></span><span class="nlabel">해외지사</span></span><span class="r"><span class="ncount">0</span></span></button>
@@ -804,6 +793,22 @@
            site_scope_summary(이름 비노출 카운트) + site_watch_tree(비공개 빌드에서만 채워짐)로 렌더한다.
            공개 빌드: 그룹·카운트만(이름 비노출). 운영자 빌드: scope별 접이식 현장 목록 + 검색 + 클릭 필터. -->
       <div id="siteScopeNav" class="sitenav hidden" aria-live="polite"></div>
+
+      <!-- 시장 모니터링 (D7-AD-V) — 좌측 목차에서 시장 카테고리를 직접 탐색한다. 클릭 시 시장 탭 전환 +
+           해당 카테고리 카드로 스크롤. data-market 키는 CAT_ORDER와 일치(base_metals/steel_materials/
+           oil_refined/gas_lng/coal/rates_inflation). '금리·환율'은 rates_inflation 카드로 이동(환율 인접). -->
+      <div class="gtitle">시장 모니터링</div>
+      <button class="nav navmkt" data-market="base_metals"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">원자재·금속</span></span><span class="r"><span class="navgo">시세 ▸</span></span></button>
+      <button class="nav navmkt" data-market="steel_materials"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">철강·건자재</span></span><span class="r"><span class="navgo">시세 ▸</span></span></button>
+      <button class="nav navmkt" data-market="oil_refined"><span class="l"><span class="ndot" style="background:#9C7232;"></span><span class="nlabel">유가·정제유</span></span><span class="r"><span class="navgo">시세 ▸</span></span></button>
+      <button class="nav navmkt" data-market="gas_lng"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">가스·LNG</span></span><span class="r"><span class="navgo">시세 ▸</span></span></button>
+      <button class="nav navmkt" data-market="coal"><span class="l"><span class="ndot"></span><span class="nlabel">석탄</span></span><span class="r"><span class="navgo">시세 ▸</span></span></button>
+      <button class="nav navmkt" data-market="rates_inflation"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">금리·환율</span></span><span class="r"><span class="navgo">시세 ▸</span></span></button>
+
+      <!-- 기상 (D7-AD-V) — 뉴스가 아니라 명일(D+1) 정오 12:00 시공 리스크. 클릭 시 시장 탭 전환 +
+           #siteWeatherCard로 스크롤(뉴스 카테고리 필터에서 제외). 실제 소스 연동은 별도 커밋(D7-AD-W). -->
+      <div class="gtitle">기상</div>
+      <button class="nav navwx" data-weather="risk"><span class="l"><span class="ndot" style="background:#3F6FA8;"></span><span class="nlabel">명일 정오 시공 리스크</span></span><span class="r"><span class="navgo">리스크 ▸</span></span></button>
     </aside>
 
     <!-- =========== OPERATOR CONTROLS — 왼쪽 rail 하단 (D7-AD-U) ===========
@@ -927,13 +932,12 @@
              News Explorer(뉴스 탭) 안으로 흡수. 카테고리별 브리핑(오늘의 신규 이슈/수주/재무/정책/경쟁/
              브랜드/기상·날씨/해외 언론) — 네이티브 <details>만 사용(JS 0줄). 빌더가 brief.accordion_sections를
              아래 마커에 서버 렌더한다. 데이터가 없으면 헤딩 유지 + 정직한 빈 상태(가짜 기사/날씨 없음). -->
+        <!-- D7-AD-V: 본문 위 '뉴스 탐색 필터' 칩 바를 제거하고, 카테고리 탐색을 좌측 목차로 옮겼다.
+             여기 헤더는 조용한 맥락 라벨만 둔다(큰 안내 문구/칩 노출 금지). -->
         <div class="news-brief-head">
-          <span class="nb-t">뉴스 탐색 필터</span>
-          <span class="nb-s">카테고리를 누르면 해당 섹션 기사 목록이 열립니다 — 오늘의 신규 이슈 · 수주 · 재무 · 정책 · 경쟁 · 브랜드 · 해외 언론</span>
+          <span class="nb-t">카테고리별 브리핑</span>
+          <span class="nb-s">좌측 목차의 수주·재무·정책·경쟁·브랜드·해외 언론을 누르면 해당 섹션이 열립니다.</span>
         </div>
-        <!-- 뉴스 카테고리 필터 (D7-AD-U) — 서버 렌더된 브리핑 <details data-acc>를 칩으로 노출하고
-             (JS가 채운다), 칩 클릭 시 해당 카테고리 섹션만 펼쳐 본문 뉴스 목록이 바뀌게 한다. -->
-        <div class="news-cats" id="newsCatFilter" aria-label="뉴스 카테고리 필터"></div>
         <div class="acc-body" id="accordionSections" data-accordion="exec-sections"><!-- ACCORDION-INJECT --></div>
 
         <!-- SIGNAL INDEX (collapsed by default) -->
@@ -1571,63 +1575,43 @@
     });
   }
 
-  /* ---------- 전체 탐색(RAIL NAV) — 단일 내부 대시보드 1차 IA 네비 (D7-AD-U) ----------
-     오늘/뉴스/현장/시장/기상/운영을 누르면 해당 본문 영역으로 탭 전환 + 스크롤한다. 렌즈 필터와
-     현장 워치리스트는 이 안의 세부 탐색이다. 네트워크/난수 0건 — 클라이언트 DOM 전환만 한다. */
-  (function () {
-    var railNav = el("railNav"); if (!railNav) return;
-    function railScroll(target) {
-      if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    function goScope(scope) {
-      if (scope === "market" || scope === "weather") activateTab("market");
-      else if (scope !== "ops") activateTab("news");        // today/news/sites → 뉴스 탭(본문)
-      if (scope === "today") railScroll(document.querySelector(".hero"));
-      else if (scope === "news") railScroll(el("panel-news"));
-      else if (scope === "sites") railScroll(el("siteScopeNav"));
-      else if (scope === "market") railScroll(el("marketStatusBoard"));
-      else if (scope === "weather") railScroll(el("siteWeatherCard"));
-      else if (scope === "ops") railScroll(el("opctl"));
-    }
-    railNav.addEventListener("click", function (ev) {
-      var b = ev.target.closest(".railnav-item"); if (!b) return;
-      [].forEach.call(railNav.querySelectorAll(".railnav-item"), function (x) {
-        x.classList.toggle("active", x === b);
-      });
-      goScope(b.getAttribute("data-scope"));
+  /* ---------- 좌측 목차 탐색 헬퍼 (D7-AD-V) — 별도 railNav 없이 기존 목차가 탐색을 담당 ----------
+     뉴스 분류(navcat)/시장(navmkt)/기상(navwx) 목차 항목이 본문 탭·섹션을 전환한다. 렌즈 필터(data-filter)
+     와 같은 aside(#lensnav)에 있으며, 클릭 라우팅은 아래 lensnav 핸들러가 분기한다. 네트워크/난수 0건. */
+  function railScroll(target) {
+    if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function setNavGoActive(b) {                    // 탐색형 목차 항목만 active 표시(렌즈 필터 active와 별개)
+    var nav = el("lensnav"); if (!nav) return;
+    [].forEach.call(nav.querySelectorAll(".nav.navcat, .nav.navmkt, .nav.navwx"), function (x) {
+      x.classList.toggle("active", x === b);
     });
-  })();
-
-  /* ---------- 뉴스 카테고리 필터 (D7-AD-U) — 카테고리별 브리핑을 '탐색 필터'로 통합 ----------
-     서버 렌더된 브리핑 <details data-acc>를 칩으로 노출한다. 칩을 누르면 해당 카테고리 섹션만
-     펼치고 스크롤해 본문 뉴스 목록이 그 카테고리로 바뀐다(나머지는 접힘). 데이터/난수 생성 0건. */
-  (function () {
-    var bar = el("newsCatFilter"), host = el("accordionSections");
-    if (!bar || !host) return;
-    var secs = [].slice.call(host.querySelectorAll("details.acc-sec"));
-    if (!secs.length) { bar.style.display = "none"; return; }   // 서버 렌더 전(템플릿) — 칩 없음
-    bar.innerHTML = secs.map(function (d) {
-      var nameEl = d.querySelector(".acc-name"), cntEl = d.querySelector(".acc-count");
-      var name = nameEl ? nameEl.textContent : (d.getAttribute("data-acc") || "");
-      var cnt = cntEl ? cntEl.textContent : "";
-      var on = d.hasAttribute("open") ? " active" : "";
-      return '<button type="button" class="news-cat' + on + '" data-acc-key="'
-        + esc(d.getAttribute("data-acc")) + '"><span class="nc-l">' + esc(name) + '</span>'
-        + (cnt ? '<span class="nc-c">' + esc(cnt) + '</span>' : '') + '</button>';
-    }).join("");
-    bar.addEventListener("click", function (ev) {
-      var b = ev.target.closest(".news-cat"); if (!b) return;
-      var key = b.getAttribute("data-acc-key"), target = null;
-      secs.forEach(function (d) {
+  }
+  function openNewsCategory(key, b) {             // 뉴스 분류 → 뉴스 탭 + 해당 브리핑 <details>만 펼침
+    activateTab("news");
+    var host = el("accordionSections"), target = null;
+    if (host) {
+      [].forEach.call(host.querySelectorAll("details.acc-sec"), function (d) {
         var on = d.getAttribute("data-acc") === key;
-        d.open = on; if (on) target = d;
+        d.open = on; if (on) target = d;         // 선택 분류만 펼치고 본문 기사 목록을 그 분류로
       });
-      [].forEach.call(bar.querySelectorAll(".news-cat"), function (x) {
-        x.classList.toggle("active", x === b);
-      });
-      if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  })();
+    }
+    setNavGoActive(b);
+    railScroll(target || host || el("panel-news"));
+  }
+  function openMarketCategory(cat, b) {           // 시장 그룹 → 시장 탭 + 해당 카테고리 카드로 이동
+    activateTab("market");
+    setNavGoActive(b);
+    railScroll(el("mcat-" + cat) || el("marketStatusBoard") || el("panel-market"));
+  }
+  function openWeatherRisk(b) {                    // 기상 → 시장 탭 + 명일 정오 시공 리스크 카드(뉴스 필터 제외)
+    activateTab("market");
+    setNavGoActive(b);
+    railScroll(el("siteWeatherCard"));
+  }
+
+  /* D7-AD-V: 본문 위 뉴스 카테고리 칩 필터(newsCatFilter)는 제거했다 — 카테고리 탐색은 좌측 목차의
+     뉴스 분류 항목(navcat)이 담당하며, openNewsCategory가 해당 브리핑 <details>를 펼친다(중복 제거). */
 
   /* ---------- LENS FILTER (좌측 네비 + 우측 레일 공통, 결정적) ----------
      렌즈를 선택하면 data-lens 태그가 일치하는 카드/신호만 보이고, 일치가 없으면
@@ -2003,6 +1987,11 @@
   if (lensnav) {
     lensnav.addEventListener("click", function (ev) {
       var b = ev.target.closest(".nav"); if (!b) return;
+      // D7-AD-V — 좌측 목차 하나가 필터/탐색 진입점: 렌즈(data-filter)는 카드 필터, 뉴스 분류/시장/기상은
+      // 본문 탭·섹션 전환. 탐색형 항목은 아래로 분기하고, 나머지는 기존 렌즈 필터 경로를 그대로 탄다.
+      if (b.classList.contains("navcat")) { openNewsCategory(b.getAttribute("data-acc"), b); return; }
+      if (b.classList.contains("navmkt")) { openMarketCategory(b.getAttribute("data-market"), b); return; }
+      if (b.classList.contains("navwx")) { openWeatherRisk(b); return; }
       selectLens(b.getAttribute("data-filter"));
     });
   }
@@ -2377,6 +2366,7 @@
       linked = linked.slice().sort(function (a, b) { return (isClickable(b) ? 1 : 0) - (isClickable(a) ? 1 : 0); });
       totalLinked += linked.length; totalUnlinked += unlinked.length;
       var card = document.createElement("div"); card.className = "mcat-card";
+      card.id = "mcat-" + cat; card.setAttribute("data-cat", cat);   // 좌측 목차(navmkt) 스크롤 앵커
       var body = linked.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
       if (unlinked.length) {
         body += '<div class="mcat-sub">미연동 관찰 후보 · ' + unlinked.length + '건 (값/차트 소스 필요 · 가짜 값 없음)</div>' +
@@ -2397,20 +2387,20 @@
   var MARKET_PRIORITY = {   // 우선 연동 필요: 건설 투입재(철·시멘트) + 핵심 금리 벤치마크
     scrap_steel: 1, cement: 1, coking_coal: 1, us_2y: 1, kr_10y: 1
   };
-  /* D7-AD-U — 미연동/우선 항목은 방치하지 않고 '왜 미연동인지'를 명시한다(가짜 값 생성 없음).
-     source registry(app/market_profiles.py·live_market.py) 점검 결과: 아래 항목은 공개 무료
-     실시간 소스가 없거나 유료/보고 기반이라 값을 만들지 않는다. 사유는 상태 보드에 노출한다. */
+  /* D7-AD-V — '무료 소스 없음' 단정 대신, 항목별 실제 후보 소스·한계·다음 액션을 명시한다(값 생성 없음).
+     조사 상세·분류표(current_status/source_type/update_frequency/chart_possible/limitation/next_action):
+     docs/operations/D7ADV_MARKET_SOURCE_DISCOVERY.md. 실제 연동은 후속 커밋에서 어댑터 단위로 진행한다. */
   var MARKET_REASON = {
-    scrap_steel: "공개 무료 실시간 시세 없음 · 제강사·협회 보고 기반(수동 확인 필요)",
-    cement: "고시·협회 보고 기반 · 실시간 공개 소스 없음",
-    coking_coal: "원료탄 지수(호주 강점탄) 유료 · 공개 무료 실시간 없음",
-    us_2y: "FRED DGS2 등 공개 소스 후보 있음 · 연동 미구성(우선)",
-    kr_10y: "한은/금투협·유료 소스 필요 · 공개 무료 실시간 없음",
-    nickel: "LME 실시간 유료 · 공개 무료 지연 소스 검증 필요",
-    bitumen: "국내 아스팔트(역청) 현물 공개 소스 없음",
-    jet_kerosene: "항공유·등유 공개 무료 실시간 소스 없음",
-    bunker_fuel: "벙커유(선박유) 공개 무료 실시간 소스 없음",
-    twdkrw: "TWD/KRW 공개 무료 지연 소스 검증 필요"
+    us_2y: "후보: FRED DGS2(공개·무료·일간·CSV 키불필요) · 한계: 영업일만 · 다음: FRED CSV 어댑터 추가(우선)",
+    kr_10y: "후보: FRED IRLTLT01KRM156N(월간·OECD) 또는 한은 ECOS 일간(무료 키) · 한계: FRED는 월간·ECOS 코드 확정 필요 · 다음: ECOS 키 발급+코드 확정(우선)",
+    scrap_steel: "후보: FRED WPU1012(BLS 철스크랩 PPI·월간) · 한계: 지수(₩/톤 아님)·미국 기준 · 다음: 지수 표기로 연동 검토",
+    cement: "후보: KOSIS PPI 품목 DT_404Y016 / 한은 ECOS PPI(월간) · 한계: 국내 시멘트 '지수'(실계약가 아님) · 다음: 보고·지수 병기(우선)",
+    coking_coal: "후보: 공개 무료 원료탄 벤치마크 미확인(Platts/Argus 유료) · 한계: 연료탄(Pink Sheet)은 대체 부적합 · 다음: 보고 기반 수동 확인",
+    nickel: "후보: World Bank Pink Sheet 니켈(LME 표준등급·월간) · 한계: 월평균·약 1개월 지연(실시간 아님) · 다음: Pink Sheet 월간 적재 검토",
+    bitumen: "후보: FRED WPU05810212(BLS 아스팔트 PPI·월간) · 한계: 미국 지수·국내 현물가 아님 · 다음: 지수/보고 병기 검토",
+    jet_kerosene: "후보: EIA/FRED DJFUELUSGULF(걸프 항공유 현물·일간) · 한계: 미 걸프 기준·아시아 아님 · 다음: FRED CSV 어댑터 검토",
+    bunker_fuel: "후보: EIA 잔사유(No.6)로 대용(월간) · 한계: 항만 VLSFO/380 아님(유료) · 다음: 대용 표기로 검토",
+    twdkrw: "후보: USD 레그(USD/KRW·USD/TWD) 교차 산출 · 한계: 직접 TWD/KRW 무료 피드 미확인 · 다음: 교차 산출 방식 검토"
   };
   function marketReason(it) {
     return MARKET_REASON[it.id] || "공개 무료 실시간 소스 없음 — 값 미생성(정직 표기)";
