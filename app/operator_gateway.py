@@ -29,6 +29,7 @@ from app import config
 _API_BASE = "https://api.github.com"
 _COLLECT_WORKFLOW = "scheduled-live-refresh.yml"
 _TELEGRAM_WORKFLOW = "telegram-notify.yml"
+_TEAMS_WORKFLOW = "email-alert.yml"
 _DISPATCH_REF = "main"
 _TIMEOUT_SECONDS = 20
 
@@ -92,3 +93,19 @@ def trigger_telegram(pin: str) -> dict:
         return {"action": "telegram", "status": "unauthorized"}
     return {"action": "telegram",
             **_dispatch(_TELEGRAM_WORKFLOW, {"approve_send": "true"})}
+
+
+def trigger_teams(pin: str) -> dict:
+    """Teams 채널 이메일 발송 워크플로(email-alert.yml)를 운영자 승인 후 트리거한다.
+
+    PIN 검증을 통과한 인증 호출에서만 approve_send_email="true"+send_to_teams="true"를 명시
+    전달해 executive brief를 Gmail SMTP로 Teams 채널 이메일 주소에 보낸다. 워크플로 입력 기본값은
+    false(=dry-run · 미발송)이며 자동발송 하드코딩은 없다 — 실제 발송은 이 인증 경로에서만 일어난다.
+    """
+    if not is_configured():
+        return {"action": "teams", "status": "not_configured"}
+    if not _pin_ok(pin):
+        return {"action": "teams", "status": "unauthorized"}
+    return {"action": "teams",
+            **_dispatch(_TEAMS_WORKFLOW,
+                        {"approve_send_email": "true", "send_to_teams": "true"})}

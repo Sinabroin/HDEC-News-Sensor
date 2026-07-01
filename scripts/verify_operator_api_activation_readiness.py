@@ -147,10 +147,13 @@ def check_configured_dashboard() -> None:
     check("버튼 JS는 MODEL.operator_api_base만 읽음", "MODEL.operator_api_base" in html)
     check("base 설정 시 JS가 두 버튼 활성화", "collectBtn.disabled = false" in html
           and "sendBtn.disabled = false" in html)
+    check("base 설정 시 JS가 Teams 버튼도 활성화(D7-AD-U)",
+          "teamsBtn.disabled = false" in html)
     check(
-        "버튼은 Operator API 상대 endpoint로 POST",
+        "버튼은 Operator API 상대 endpoint로 POST(collect/telegram/teams)",
         '"/api/operator/collect"' in html
         and '"/api/operator/send-telegram"' in html
+        and '"/api/operator/send-teams"' in html
         and "fetch(base + path" in html
         and 'method: "POST"' in html,
     )
@@ -162,12 +165,18 @@ def check_server_gateway() -> None:
     gateway = _read(GATEWAY)
     config = _read(CONFIG)
     main = _read(MAIN)
-    check("Operator API POST routes 존재", '@app.post("/api/operator/collect")' in main
-          and '@app.post("/api/operator/send-telegram")' in main)
+    check("Operator API POST routes 존재(collect/telegram/teams)",
+          '@app.post("/api/operator/collect")' in main
+          and '@app.post("/api/operator/send-telegram")' in main
+          and '@app.post("/api/operator/send-teams")' in main)
     check("서버측 workflow_dispatch 소유", "/actions/workflows/" in gateway
           and 'method="POST"' in gateway)
     check("수집은 scheduled-live-refresh workflow dispatch", "scheduled-live-refresh.yml" in gateway)
     check("텔레그램은 approve_send=true 명시 dispatch", '"approve_send": "true"' in gateway)
+    # D7-AD-U — Teams 채널 전송은 email-alert 워크플로를 승인 입력과 함께 서버측 dispatch한다.
+    check("Teams는 email-alert 워크플로를 approve_send_email+send_to_teams로 dispatch",
+          "email-alert.yml" in gateway and '"approve_send_email": "true"' in gateway
+          and '"send_to_teams": "true"' in gateway)
     check("PIN은 상수시간 비교", "hmac.compare_digest" in gateway)
     check("미설정/불일치 fail-closed", '"status": "not_configured"' in gateway
           and '"status": "unauthorized"' in gateway)

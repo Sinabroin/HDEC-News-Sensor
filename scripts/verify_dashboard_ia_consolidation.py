@@ -189,19 +189,40 @@ def check_template() -> None:
                    'id="opTeamsBtn" type="button" disabled', 'id="opPin"',
                    "브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다."):
         check(f"4c: 운영 계약 앵커 유지 '{anchor[:32]}'", anchor in t)
-    check("4d: Teams 버튼은 여전히 dead(미배선)",
-          "teamsBtn.disabled = false" not in t and 'el("opTeamsBtn")' not in t)
+    # D7-AD-U — Teams 채널 전송이 collect/telegram과 동일하게 운영 API(send-teams)로 배선됐다
+    # (operator_gateway.trigger_teams → email-alert.yml dispatch). 더 이상 dead가 아니다.
+    check("4d: Teams 버튼이 운영 API로 배선(el(opTeamsBtn)+활성화+send-teams endpoint)",
+          'el("opTeamsBtn")' in t and "teamsBtn.disabled = false" in t
+          and "/api/operator/send-teams" in t)
 
-    # 시장 소스 상태 보드(4단계)
+    # D7-AD-U — 단일 내부 대시보드 1차 IA: 왼쪽 rail 전체 탐색 네비(오늘/뉴스/현장/시장/기상/운영).
+    check("U1: 전체 탐색 rail 네비(railNav)", 'id="railNav"' in t and 'class="railnav"' in t)
+    for scope in ("today", "news", "sites", "market", "weather", "ops"):
+        check(f"U1: rail scope '{scope}'", f'data-scope="{scope}"' in t)
+    for lbl in ("오늘", "뉴스", "현장", "시장", "기상", "운영"):
+        check(f"U1: rail 라벨 '{lbl}'", f'class="ri-l">{lbl}<' in t)
+    # D7-AD-U — 운영자 실행이 화면 하단에서 왼쪽 rail 컬럼(railcol)으로 이동(하단 덩그러니 제거).
+    check("U2: 운영자 패널이 왼쪽 rail 컬럼(railcol) 안", 'class="railcol"' in t)
+
+    # 시장 소스 상태 보드(4단계) + 미연동 사유
     check("9a: 시장 상태 보드(renderMarketStatusBoard/marketStatusBoard)",
           "function renderMarketStatusBoard" in t and 'id="marketStatusBoard"' in t)
     for lbl in ("연동 완료", "보고·수동 확인", "미연동 후보", "우선 연동 필요"):
         check(f"9b: 상태 라벨 '{lbl}'", lbl in t)
     check("9c: 우선 연동 필요 목록(MARKET_PRIORITY) 정의", "MARKET_PRIORITY" in t)
+    # D7-AD-U — 미연동/우선 항목을 방치하지 않고 '왜 미연동인지' 사유를 함께 노출한다.
+    check("U3: 미연동 사유(MARKET_REASON) 정의 + 사유 렌더(marketReason/ms-why)",
+          "MARKET_REASON" in t and "marketReason" in t and "ms-why" in t)
 
-    # 현장 기상 카드(뉴스 accordion 아님)
+    # 현장 기상 카드(뉴스 accordion 아님) — D7-AD-U: 명일 정오 시공 리스크 계약
     check("3a: 현장 기상 카드(siteWeatherCard) + '기상 데이터 소스 미연동'",
           'id="siteWeatherCard"' in t and "기상 데이터 소스 미연동" in t)
+    check("U4: 기상 카드가 '명일 정오 시공 리스크'(기준 명일 정오 12:00) 계약",
+          "명일 정오 시공 리스크" in t and "명일 정오 12:00" in t)
+    for fld in ("강수확률", "예상 강수량", "풍속", "돌풍", "폭염·한파", "특보", "작업 리스크 등급"):
+        check(f"U4: 기상 표시 항목 '{fld}'", fld in t)
+    for imp in ("우천", "강풍", "고소작업", "타워크레인", "콘크리트 타설", "외장·방수", "토공"):
+        check(f"U4: 시공 영향 문구 '{imp}'", imp in t)
 
 
 # ---------------------------------------------------------------------------
@@ -225,6 +246,10 @@ def check_public_build() -> None:
               len(secs) == 8
               and {"new", "order", "finance", "policy", "competitor", "brand",
                    "weather", "global_press"} <= set(secs), str(secs))
+        # D7-AD-U — 카테고리별 브리핑을 'News Explorer 필터'로 통합: 카테고리 칩 필터(newsCatFilter)가
+        # 브리핑 섹션 앞에 오고(클릭 시 해당 섹션 펼침), 헤더는 '뉴스 탐색 필터' 역할로 표기.
+        check("2d: 뉴스 카테고리 필터(newsCatFilter)가 브리핑 앞에 통합",
+              _order(html, 'class="news-brief-head"', 'id="newsCatFilter"', 'id="accordionSections"'))
 
         # 기상·날씨: 뉴스 기사 섹션이 아니다 — 현장 기상 카드는 시장 탭, weather 섹션은 '기사 0건' 미표기
         check("3b: '현장 기상' 카드가 시장 탭 안(panel-market 이후)",
@@ -236,9 +261,11 @@ def check_public_build() -> None:
         check("3d: weather 섹션은 데이터 소스 미연동으로 정직 표기",
               bool(wm) and ("미연동" in wm.group(0)))
 
-        # 운영자 실행: 화면 하단으로 이동(panel-rumor 이후, footer 앞) + 장문 안내 접힘
-        check("4e: 운영자 실행 컨트롤이 화면 하단으로 이동(마지막 탭 panel-rumor 이후)",
-              _order(html, 'id="panel-rumor"', 'id="opctl"', "<footer"))
+        # D7-AD-U — 운영자 실행: 화면 하단(panel-rumor 뒤)에서 왼쪽 rail 컬럼(railcol)으로 이동.
+        # 이제 rail 안에서 lensnav 뒤·본문(main/panel-news) 앞에 온다(하단 덩그러니 제거).
+        check("4e: 운영자 실행 컨트롤이 왼쪽 rail(railcol) 하단으로 이동(main 본문 앞)",
+              _order(html, 'class="railcol"', 'id="lensnav"', 'id="opctl"', 'id="panel-news"')
+              and _order(html, 'id="opctl"', "<footer"))
         check("4f: 장문 보안 안내가 details(opctl-more) 안으로 접힘",
               _order(html, '<details class="opctl-more">',
                      "브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다."))

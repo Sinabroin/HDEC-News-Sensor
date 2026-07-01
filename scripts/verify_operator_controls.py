@@ -45,6 +45,7 @@ UNSET_NOTICE = "운영 API가 아직 설정되지 않았습니다. GitHub로 이
 # 운영자 버튼이 호출하는 상대 API 경로 (정적 페이지엔 base만 주입, 비밀값 0건).
 COLLECT_ENDPOINT = "/api/operator/collect"
 TELEGRAM_ENDPOINT = "/api/operator/send-telegram"
+TEAMS_ENDPOINT = "/api/operator/send-teams"   # D7-AD-U — Teams도 운영 API로 배선
 
 # 버튼/상태 요소 식별자 + 요청 상태(실행중/성공/실패/timeout) + 중복클릭 가드.
 REQUIRED_TOKENS = [
@@ -136,22 +137,25 @@ def check_copy(html: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 18~20 · Teams 채널 전송 버튼 — 정직한 비활성 (운영 API 미연결, D7-AD-O)
+# 18~20 · Teams 채널 전송 버튼 — 운영 API로 배선 (D7-AD-U, endpoint 구현됨)
 # ---------------------------------------------------------------------------
 
 def check_teams_control(tpl: str) -> None:
-    """Teams 채널 전송 버튼은 텔레그램과 같은 패널/PIN 패턴의 별도 컨트롤이되, 운영 API에
-    Teams endpoint가 아직 없으므로(operator_gateway는 collect/telegram만) 실제 연결 경로가
-    없다. 따라서 가짜 동작 버튼을 만들지 않고 항상 disabled + '운영 API 미연결' 안내만 둔다.
-    운영자 패널은 빌더가 손대지 않는 정적 영역이라 템플릿으로 검증한다."""
+    """D7-AD-U — Teams 채널 전송이 collect/telegram과 동일하게 운영 API(POST)로 배선됐다.
+    운영 API에 send-teams endpoint(app/main.py + operator_gateway.trigger_teams → email-alert.yml
+    workflow_dispatch)가 생겨, 버튼은 기본 disabled로 두되 운영 API base가 주입된(운영자) 빌드에서
+    JS가 활성화한다. 정적 HTML은 GitHub Actions를 직접 호출하지 않는다 — 승인 PIN 검증과
+    workflow_dispatch는 서버(operator_gateway)가 소유한다. 운영자 패널은 빌더가 손대지 않는 정적
+    영역이라 템플릿으로 검증한다(공개 빌드는 base 미설정이라 세 버튼 모두 disabled)."""
     check("18: 'Teams 채널 전송 실행' 컨트롤 존재", "Teams 채널 전송 실행" in tpl)
     check('18b: Teams 버튼이 <button class="opctl-btn teams" id="opTeamsBtn"> 요소',
           '<button class="opctl-btn teams" id="opTeamsBtn"' in tpl)
-    check("19: Teams 버튼은 disabled 기본값(운영 API 미연결 — 가짜 동작 없음)",
+    check("19: Teams 버튼은 disabled 기본값(운영 API base 주입 시 JS가 활성화)",
           'id="opTeamsBtn" type="button" disabled' in tpl)
-    check("19b: JS가 Teams 버튼을 활성화/호출하지 않음(가짜 동작 차단)",
-          "teamsBtn.disabled = false" not in tpl and 'el("opTeamsBtn")' not in tpl)
-    check("20: Teams 미연결 정직 안내('운영 API 미연결') 표기", "운영 API 미연결" in tpl)
+    check("19b: JS가 Teams 버튼을 운영 API로 배선(el(opTeamsBtn) + base 설정 시 활성화)",
+          "teamsBtn.disabled = false" in tpl and 'el("opTeamsBtn")' in tpl)
+    check("20: Teams 전송은 운영 API 상대 endpoint(send-teams)로 POST(직접 GitHub/발송 아님)",
+          TEAMS_ENDPOINT in tpl)
 
 
 # ---------------------------------------------------------------------------

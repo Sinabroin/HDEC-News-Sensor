@@ -263,3 +263,14 @@ def operator_telegram(body: OperatorActionRequest | None = None,
     # 통과한 호출에서만 게이트웨이가 approve_send="true"를 넘겨 실제 발송까지 간다(자동발송 없음).
     return _operator_response(
         operator_gateway.trigger_telegram(_operator_pin(body, x_operator_token)))
+
+
+@app.post("/api/operator/send-teams")
+def operator_teams(body: OperatorActionRequest | None = None,
+                   x_operator_token: str | None = Header(default=None)):
+    # D7-AD-U — 운영자 버튼이 호출하는 Teams 채널 전송 endpoint. sender를 직접 호출하지 않고
+    # operator_gateway가 워크플로(email-alert.yml)를 approve_send_email=true·send_to_teams=true로
+    # dispatch한다. PIN 검증을 통과한 호출에서만 실제 발송까지 간다(자동발송 없음). Gmail SMTP
+    # 계정·Teams 채널 주소는 GitHub Secrets에만 있고 응답/로그에 싣지 않는다.
+    return _operator_response(
+        operator_gateway.trigger_teams(_operator_pin(body, x_operator_token)))

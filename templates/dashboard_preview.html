@@ -142,6 +142,22 @@
   .lens .nav.active .ncount{color:var(--sky);}
   .lens .nav .flag{font-size:9px; font-weight:800; letter-spacing:0.06em; color:#fff; padding:2px 5px; border-radius:5px;}
 
+  /* ===== Left rail column: 전체 탐색 nav + 렌즈 + 현장 + 운영자(하단) (D7-AD-U) ===== */
+  .railcol{display:flex; flex-direction:column; gap:16px; min-width:0;}
+  .railtitle{padding:2px 12px 8px; font-size:10.5px; font-weight:800; letter-spacing:0.14em; color:var(--mute4);}
+  .railnav{display:flex; flex-direction:column; gap:3px; margin-bottom:8px; padding-bottom:12px; border-bottom:1px solid var(--hair);}
+  .railnav-item{display:flex; align-items:center; gap:10px; width:100%; padding:8px 11px; border:1px solid transparent;
+    background:transparent; border-radius:11px; cursor:pointer; text-align:left;}
+  .railnav-item:hover{background:#F5F9FE;}
+  .railnav-item.active{background:var(--sky-tint); border-color:var(--sky-bd);}
+  .railnav-item .ri-ic{width:22px; height:22px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--sky); background:#fff; border:1px solid var(--line); border-radius:7px;}
+  .railnav-item.active .ri-ic{border-color:var(--sky-bd);}
+  .railnav-item .ri-b{display:flex; flex-direction:column; gap:1px; min-width:0;}
+  .railnav-item .ri-l{font-size:13.5px; font-weight:700; color:var(--ink2); line-height:1.2;}
+  .railnav-item.active .ri-l{color:var(--ink);}
+  .railnav-item .ri-d{font-size:10.5px; color:var(--mute3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
   /* ===== Tabs ===== */
   .tabs{display:inline-flex; background:#E8EFF8; border-radius:11px; padding:3px; gap:2px; flex-wrap:wrap;}
   .tab{border:none; background:transparent; padding:8px 16px; border-radius:9px; font-size:13px; font-weight:700; color:var(--mute); cursor:pointer;}
@@ -497,6 +513,12 @@
      않으며, 운영 API 미설정 시 버튼은 비활성 + 안내만 표시한다(이동 없음). */
   .opctl{position:static; background:var(--card); border:1px solid var(--line); border-radius:16px;
     padding:16px 20px; margin-bottom:14px; box-shadow:var(--shadow);}
+  /* D7-AD-U — 운영자 패널이 왼쪽 rail 하단에 들어간다. rail은 한 덩어리로 스크롤(nav 아래 운영자),
+     좁은 폭에 맞춰 버튼을 세로로 쌓고 패딩을 줄인다. */
+  .railcol aside.lens{position:static; top:auto;}
+  .railcol .opctl{margin:0; padding:14px 15px 15px;}
+  .railcol .opctl-actions{flex-direction:column; gap:8px;}
+  .railcol .opctl-btn{flex:1 1 auto; width:100%; box-sizing:border-box;}
   .opctl-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:13px;}
   .opctl-title{font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .opctl-sub{font-size:12px; color:var(--mute);}
@@ -543,6 +565,14 @@
   .news-brief-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin:20px 0 10px;}
   .news-brief-head .nb-t{font-size:14px; font-weight:800; color:var(--ink2);}
   .news-brief-head .nb-s{font-size:11.5px; color:var(--mute3);}
+  /* 뉴스 카테고리 필터 칩 (D7-AD-U) — 카테고리별 브리핑을 탐색 필터로 통합 */
+  .news-cats{display:flex; flex-wrap:wrap; gap:7px; margin:2px 0 12px;}
+  .news-cat{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--ink3);
+    background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:6px 12px; cursor:pointer;}
+  .news-cat:hover{background:#F1F7FD; border-color:var(--sky-bd);}
+  .news-cat.active{background:var(--sky-tint); border-color:var(--sky-bd); color:var(--ink);}
+  .news-cat .nc-c{font-size:10.5px; font-weight:700; color:var(--mute4); font-variant-numeric:tabular-nums;}
+  .news-cat.active .nc-c{color:var(--sky);}
   /* 3단계 현장 네비: 대분류(.sn-group) → 중분류(.sn-mid, 접이식) → 개별 현장(.st-node) */
   .sitenav .sn-mid{margin:2px 0;}
   .sitenav .sn-midtog{display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;
@@ -567,6 +597,21 @@
   .wxcard .wx-regions{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
   .wxcard .wx-region{font-size:11.5px; color:var(--mute2); background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:5px 11px;}
   .wxcard .wx-region .wx-off{color:var(--mute4); font-weight:800; margin-left:4px;}
+  /* 명일 정오 시공 리스크 카드 — 지역×항목 표 + 시공 영향 칩 (D7-AD-U, 전 항목 미연동) */
+  .wxcard .wx-when{font-size:11px; font-weight:700; color:var(--mute3);}
+  .wxcard .wx-intro{font-size:12px; color:var(--mute3); line-height:1.6; margin:2px 0 12px;}
+  .wxcard .wx-grid{border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:12px;}
+  .wxcard .wx-row{display:grid; grid-template-columns:84px repeat(6, 1fr) 92px; align-items:center; gap:6px;
+    padding:8px 12px; border-top:1px solid var(--hair2); font-size:11px; color:var(--mute2); text-align:center;}
+  .wxcard .wx-row:first-child{border-top:none;}
+  .wxcard .wx-gh{background:#F7FAFD; font-weight:800; color:var(--ink4); font-size:10.5px;}
+  .wxcard .wx-rgn{font-weight:800; color:var(--ink3); font-size:11.5px; text-align:left;}
+  .wxcard .wx-risk{font-weight:700;}
+  .wxcard .wx-off{color:var(--mute4); font-weight:700;}
+  .wxcard .wx-impact{display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:10px;}
+  .wxcard .wx-il{font-size:11px; font-weight:800; color:var(--ink4); margin-right:2px;}
+  .wxcard .wx-ichip{font-size:11px; color:var(--mute2); background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:4px 10px;}
+  @media (max-width:760px){ .wxcard .wx-row{grid-template-columns:58px repeat(6, 1fr) 64px; font-size:9.5px; gap:3px; padding:7px 8px;} }
   /* 시장 소스 연동 현황 보드(4단계 상태 · 미연동 후보를 길게 늘어놓지 않고 상태로 구분) */
   .mktstatus{display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px; margin:2px 0 14px;}
   .mktstatus .ms-col{border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:var(--card);}
@@ -580,6 +625,12 @@
   .mktstatus .ms-col.ms-priority .ms-chip{background:#fff; border-color:var(--amber-bd);}
   .mktstatus .ms-more{font-size:10.5px; color:var(--mute4); font-weight:700; align-self:center;}
   .mktstatus .ms-empty{font-size:11px; color:var(--mute4);}
+  /* 미연동/우선 항목의 '왜 미연동인지' 사유 (D7-AD-U) */
+  .mktstatus .ms-whys{display:flex; flex-direction:column; gap:8px;}
+  .mktstatus .ms-item{display:flex; flex-direction:column; gap:2px;}
+  .mktstatus .ms-item .ms-chip{align-self:flex-start;}
+  .mktstatus .ms-why{font-size:10px; color:var(--mute3); line-height:1.45;}
+  .mktstatus .ms-col.ms-priority .ms-why{color:var(--amber);}
   /* 운영자 실행 — compact 접이식(장황한 안내는 details로 접고 기본은 버튼 3개 + 상태 한 줄만) */
   .opctl.compact{padding:14px 18px;}
   .opctl .opctl-oneline{font-size:12px; color:var(--mute2); font-weight:600;}
@@ -706,8 +757,20 @@
   <!-- =================== MAIN GRID =================== -->
   <div class="grid">
 
-    <!-- ---------- LEFT LENS NAV ---------- -->
+    <!-- ---------- LEFT RAIL: 전체 탐색 + 렌즈 + 현장 워치리스트 + 운영자 실행 (D7-AD-U) ---------- -->
+    <div class="railcol">
     <aside class="lens" id="lensnav"><!-- JS가 #preview-model.nav로 렌더 (정적 폴백 포함) -->
+      <!-- 전체 탐색 (D7-AD-U) — 단일 내부 대시보드의 1차 IA 네비. 오늘/뉴스/현장/시장/기상/운영을 눌러
+           본문 영역(탭/카드)을 전환한다. 아래 렌즈 필터·현장 워치리스트는 그 안의 세부 탐색이다. -->
+      <div class="railtitle">전체 탐색</div>
+      <div class="railnav" id="railNav" aria-label="전체 탐색">
+        <button type="button" class="railnav-item active" data-scope="today"><span class="ri-ic" aria-hidden="true">◉</span><span class="ri-b"><span class="ri-l">오늘</span><span class="ri-d">핵심 판단·즉시 확인</span></span></button>
+        <button type="button" class="railnav-item" data-scope="news"><span class="ri-ic" aria-hidden="true">▤</span><span class="ri-b"><span class="ri-l">뉴스</span><span class="ri-d">신호·카테고리 탐색</span></span></button>
+        <button type="button" class="railnav-item" data-scope="sites"><span class="ri-ic" aria-hidden="true">◎</span><span class="ri-b"><span class="ri-l">현장</span><span class="ri-d">현장 워치리스트·필터</span></span></button>
+        <button type="button" class="railnav-item" data-scope="market"><span class="ri-ic" aria-hidden="true">◧</span><span class="ri-b"><span class="ri-l">시장</span><span class="ri-d">지표 연동 현황</span></span></button>
+        <button type="button" class="railnav-item" data-scope="weather"><span class="ri-ic" aria-hidden="true">☂</span><span class="ri-b"><span class="ri-l">기상</span><span class="ri-d">명일 정오 시공 리스크</span></span></button>
+        <button type="button" class="railnav-item" data-scope="ops"><span class="ri-ic" aria-hidden="true">⚙</span><span class="ri-b"><span class="ri-l">운영</span><span class="ri-d">수집·전송 실행</span></span></button>
+      </div>
       <div class="gtitle">기본 렌즈</div>
       <button class="nav active" data-filter="all"><span class="l"><span class="ndot" style="background:#33415C;"></span><span class="nlabel">전체 종합</span></span><span class="r"><span class="ncount">21</span></span></button>
       <button class="nav" data-filter="now"><span class="l"><span class="ndot" style="background:#B85049;"></span><span class="nlabel">즉시 확인</span></span><span class="r"><span class="flag" style="background:#B85049;">NEW</span><span class="ncount">3</span></span></button>
@@ -742,6 +805,56 @@
            공개 빌드: 그룹·카운트만(이름 비노출). 운영자 빌드: scope별 접이식 현장 목록 + 검색 + 클릭 필터. -->
       <div id="siteScopeNav" class="sitenav hidden" aria-live="polite"></div>
     </aside>
+
+    <!-- =========== OPERATOR CONTROLS — 왼쪽 rail 하단 (D7-AD-U) ===========
+         운영자 실행을 화면 하단에서 왼쪽 rail 하단으로 끌어올렸다(하단 덩그러니 → 실행 범위와 함께).
+         수집/텔레그램/Teams 3버튼 + 상태 한 줄. 장황한 보안 안내·승인 PIN은 접이식 details로 접는다.
+         버튼은 운영 API(POST) 호출이며 GitHub로 이동하지 않는다. base URL은 preview-model island의
+         operator_api_base에서 읽는다(미설정=비활성 + '운영자 서버 미연결' 한 줄). 라벨/클래스/ID/보안
+         문구는 운영 계약(verify_operator_controls)을 위해 그대로 둔다. -->
+    <section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">
+      <div class="opctl-head">
+        <span class="opctl-title">운영자 실행</span>
+        <span class="opctl-oneline" id="opUnsetLine"><span class="off">운영자 서버 미연결</span> · 운영 API 연결 시 버튼이 활성화됩니다</span>
+      </div>
+      <div class="opctl-actions">
+        <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
+                title="뉴스 수집 워크플로 실행 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+          <span class="opctl-btn-label">데이터 새로고침 실행</span>
+          <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
+        </button>
+        <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
+                title="승인 PIN 확인 후 텔레그램 전송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+          <span class="opctl-btn-label">텔레그램 전송 실행</span>
+          <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
+        </button>
+        <!-- Teams 채널 전송 (D7-AD-U) — 운영 API에 send-teams endpoint(operator_gateway.trigger_teams →
+             email-alert.yml dispatch)가 생겨 collect/telegram과 동일하게 배선됐다. 기본은 disabled로 두고
+             운영 API base가 주입된(운영자) 빌드에서 JS가 활성화한다. 정적 HTML은 GitHub Actions를 직접
+             호출하지 않는다 — 승인 PIN 검증·workflow_dispatch는 서버(operator_gateway)가 소유한다. -->
+        <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
+                title="승인 PIN 확인 후 Teams 채널로 즉시 발송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+          <span class="opctl-btn-label">Teams 채널 전송 실행</span>
+          <span class="opctl-btn-help">승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송합니다</span>
+        </button>
+      </div>
+      <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
+      <details class="opctl-more">
+        <summary>승인 PIN · 실행 안내 · 보안</summary>
+        <div class="opctl-pinrow">
+          <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
+          <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
+                 placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
+        </div>
+        <ul class="opctl-notes">
+          <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
+          <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
+          <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
+          <li>Teams 채널 전송은 승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송됩니다(운영 API가 email-alert 워크플로를 실행).</li>
+        </ul>
+      </details>
+    </section>
+    </div><!-- /railcol -->
 
     <!-- ---------- CENTER ---------- -->
     <main style="min-width:0;">
@@ -815,9 +928,12 @@
              브랜드/기상·날씨/해외 언론) — 네이티브 <details>만 사용(JS 0줄). 빌더가 brief.accordion_sections를
              아래 마커에 서버 렌더한다. 데이터가 없으면 헤딩 유지 + 정직한 빈 상태(가짜 기사/날씨 없음). -->
         <div class="news-brief-head">
-          <span class="nb-t">카테고리별 브리핑</span>
-          <span class="nb-s">수주 · 재무 · 정책 · 경쟁 · 브랜드 · 해외 언론 — 섹션 제목을 누르면 기사 목록이 펼쳐집니다</span>
+          <span class="nb-t">뉴스 탐색 필터</span>
+          <span class="nb-s">카테고리를 누르면 해당 섹션 기사 목록이 열립니다 — 오늘의 신규 이슈 · 수주 · 재무 · 정책 · 경쟁 · 브랜드 · 해외 언론</span>
         </div>
+        <!-- 뉴스 카테고리 필터 (D7-AD-U) — 서버 렌더된 브리핑 <details data-acc>를 칩으로 노출하고
+             (JS가 채운다), 칩 클릭 시 해당 카테고리 섹션만 펼쳐 본문 뉴스 목록이 바뀌게 한다. -->
+        <div class="news-cats" id="newsCatFilter" aria-label="뉴스 카테고리 필터"></div>
         <div class="acc-body" id="accordionSections" data-accordion="exec-sections"><!-- ACCORDION-INJECT --></div>
 
         <!-- SIGNAL INDEX (collapsed by default) -->
@@ -899,35 +1015,40 @@
           공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기). <b>NON-PRODUCTION PREVIEW</b>.</span>
         </div>
 
-        <!-- 현장 기상 (D7-AD-R) — 뉴스 accordion이 아니라 지도/지역 카드 placeholder. 실제 기상 소스가
-             없으므로 가짜 날씨를 만들지 않고 '기상 데이터 소스 미연동'만 표시한다(연동 계획: D7-AD-S). -->
-        <div class="wxcard" id="siteWeatherCard" aria-label="현장 기상">
+        <!-- 명일 정오 시공 리스크 (D7-AD-U) — 기상은 뉴스가 아니다. '기사 0건' 아코디언이 아니라
+             명일(D+1) 정오 12:00 기준 현장 시공 리스크 카드/표다. 국내는 기상청(단기예보·초단기예보·
+             기상특보), 해외는 Open-Meteo 등 글로벌 예보를 보조 소스로 검토한다. 실제 소스 연동 전에는
+             가짜 날씨 값을 만들지 않고 전 항목 '미연동'으로 둔다(UI·데이터 계약만 · 실연동: D7-AD-V). -->
+        <div class="wxcard" id="siteWeatherCard" aria-label="명일 정오 시공 리스크">
           <div class="wx-head">
-            <span class="wx-t">현장 기상</span>
+            <span class="wx-t">명일 정오 시공 리스크</span>
+            <span class="wx-when">기준 · 명일(D+1) 정오 12:00</span>
             <span class="wx-badge">기상 데이터 소스 미연동</span>
           </div>
-          <div class="wx-body">
-            <div class="wx-map">
-              <svg viewBox="0 0 240 150" width="100%" height="140" fill="none" aria-label="현장 기상 지도 placeholder(데이터 소스 미연동)" style="display:block;">
-                <rect x="0" y="0" width="240" height="150" rx="10" fill="#F1F5FA"></rect>
-                <path d="M62 40 Q82 30 102 40 T152 44 Q172 40 184 52 Q198 66 186 84 Q194 104 170 110 Q152 126 122 118 Q94 128 76 110 Q52 108 54 84 Q44 62 62 40 Z" fill="#E3EBF4" stroke="#CBD8E8" stroke-width="1.2"></path>
-                <circle cx="98" cy="70" r="3" fill="#9AAAC1"></circle>
-                <circle cx="134" cy="86" r="3" fill="#9AAAC1"></circle>
-                <circle cx="150" cy="64" r="3" fill="#9AAAC1"></circle>
-                <text x="120" y="140" text-anchor="middle" font-size="9" fill="#9AAAC1">현장 위치 지도 · 기상 오버레이 (소스 연동 전 placeholder)</text>
-              </svg>
+          <div class="wx-intro">현장 기상은 뉴스가 아니라 <b>명일 정오 12:00</b> 시점의 시공 리스크로 봅니다.
+            국내 현장은 기상청 단기예보·초단기예보·기상특보, 해외 현장은 Open-Meteo 등 글로벌 예보를 보조
+            소스로 검토합니다. 소스 연동 전에는 <b>가짜 날씨 값을 생성하지 않습니다</b>(실연동 계획: D7-AD-V).</div>
+          <div class="wx-grid" role="table" aria-label="지역별 명일 정오 시공 리스크 (전 항목 미연동)">
+            <div class="wx-row wx-gh" role="row">
+              <span class="wx-rgn" role="columnheader">지역</span>
+              <span role="columnheader">강수확률</span><span role="columnheader">예상 강수량</span>
+              <span role="columnheader">풍속</span><span role="columnheader">돌풍</span>
+              <span role="columnheader">폭염·한파</span><span role="columnheader">특보</span>
+              <span class="wx-risk" role="columnheader">작업 리스크 등급</span>
             </div>
-            <div class="wx-note">
-              현장별 기상·날씨는 공개 무료 기상 소스가 연동되면 지도/지역 카드로 표시됩니다.
-              현재는 <b>기상 데이터 소스 미연동</b> 상태로, 가짜 날씨 값을 생성하지 않습니다.
-              <div class="wx-regions">
-                <span class="wx-region">수도권<span class="wx-off">미연동</span></span>
-                <span class="wx-region">영남권<span class="wx-off">미연동</span></span>
-                <span class="wx-region">호남권<span class="wx-off">미연동</span></span>
-                <span class="wx-region">중동·해외<span class="wx-off">미연동</span></span>
-              </div>
-            </div>
+            <div class="wx-row" role="row"><span class="wx-rgn">수도권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">중부권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">영남권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">호남권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">중동·해외</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
           </div>
+          <div class="wx-impact">
+            <span class="wx-il">시공 영향 점검</span>
+            <span class="wx-ichip">우천</span><span class="wx-ichip">강풍</span><span class="wx-ichip">고소작업</span><span class="wx-ichip">타워크레인</span><span class="wx-ichip">콘크리트 타설</span><span class="wx-ichip">외장·방수</span><span class="wx-ichip">토공</span>
+          </div>
+          <div class="wx-note">기준 시점 <b>명일 정오 12:00</b> · 기상청(국내)/Open-Meteo(해외) 연동 시 지역·현장별
+            강수확률·강수량·풍속·돌풍·특보와 작업 리스크 등급을 표기합니다. 현재는 <b>기상 데이터 소스
+            미연동</b> 상태로 값을 만들지 않습니다.</div>
         </div>
 
         <!-- 2) 카테고리 카드 — 원자재·금속 / 철강·건자재 / 유가·정제유 / 가스·LNG / 석탄 / 금리·물가 / 환율 -->
@@ -1148,52 +1269,6 @@
     </main>
   </div>
 
-  <!-- =================== OPERATOR CONTROLS (D7-AA · D7-AD-R compact) =================== -->
-  <!-- 운영자 실행 — 기본 화면에선 버튼 3개 + 상태 한 줄만. 장황한 보안 안내/승인 PIN은 아래 접이식
-       details로 접어 화면 점유를 최소화한다. 버튼은 운영 API(POST) 호출이며 GitHub로 이동하지 않는다.
-       base URL은 preview-model island의 operator_api_base에서 읽는다(미설정이면 비활성 + '운영자 서버 미연결').
-       버튼 라벨/클래스/ID/보안 문구는 운영 계약(verify_operator_controls) 유지를 위해 그대로 둔다. -->
-  <section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">
-    <div class="opctl-head">
-      <span class="opctl-title">운영자 실행</span>
-      <span class="opctl-oneline" id="opUnsetLine"><span class="off">운영자 서버 미연결</span> · 운영 API 연결 시 버튼이 활성화됩니다</span>
-    </div>
-    <div class="opctl-actions">
-      <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
-              title="뉴스 수집 워크플로 실행 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-        <span class="opctl-btn-label">데이터 새로고침 실행</span>
-        <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
-      </button>
-      <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
-              title="승인 PIN 확인 후 텔레그램 전송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-        <span class="opctl-btn-label">텔레그램 전송 실행</span>
-        <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
-      </button>
-      <!-- Teams 채널 전송 — 운영 API에 Teams endpoint가 없어(operator_gateway는 collect/telegram만) 가짜 동작
-           버튼을 만들지 않고 항상 disabled + '운영 API 미연결'로 둔다(JS 미배선). endpoint 생기면 활성화. -->
-      <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
-              title="Teams 채널 전송은 운영 API에 아직 연결되지 않았습니다(운영 API 미연결)">
-        <span class="opctl-btn-label">Teams 채널 전송 실행</span>
-        <span class="opctl-btn-help">운영 API 미연결 — 이번 릴리스에서는 비활성입니다</span>
-      </button>
-    </div>
-    <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
-    <details class="opctl-more">
-      <summary>승인 PIN · 실행 안내 · 보안</summary>
-      <div class="opctl-pinrow">
-        <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
-        <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
-               placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
-      </div>
-      <ul class="opctl-notes">
-        <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
-        <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
-        <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
-        <li>Teams 채널 전송은 운영 API에 아직 연결되지 않아 비활성입니다(운영 API 미연결 · 가짜 버튼 없음).</li>
-      </ul>
-    </details>
-  </section>
-
   <footer class="bottom">
     <div class="previewflag">NON-PRODUCTION PREVIEW</div><br>
     HDEC Executive Radar · 대시보드 미리보기 — 참고용 브리프 (데모/mock 데이터).<br>
@@ -1247,7 +1322,7 @@
   "meta": {"published_kst": "2026·06·22 월 07:00", "news_data_mode": "mock",
            "collection": "수동 · OFF", "audience": "executive-preview", "demo": true},
   "operator_api_base": "",
-  "operator_endpoints": {"collect": "/api/operator/collect", "telegram": "/api/operator/send-telegram"},
+  "operator_endpoints": {"collect": "/api/operator/collect", "telegram": "/api/operator/send-telegram", "teams": "/api/operator/send-teams"},
   "lens_policy": {
     "now": {"label": "즉시 확인", "query": "즉시 알림 후보·즉시 확인 등급에서 파생", "supported": true, "note": "", "collection": "derived"},
     "new": {"label": "신규 이슈", "query": "금일 처음 관측된 신규 신호에서 파생", "supported": true, "note": "", "collection": "derived"},
@@ -1495,6 +1570,64 @@
       activateTab(b.getAttribute("data-tab"));
     });
   }
+
+  /* ---------- 전체 탐색(RAIL NAV) — 단일 내부 대시보드 1차 IA 네비 (D7-AD-U) ----------
+     오늘/뉴스/현장/시장/기상/운영을 누르면 해당 본문 영역으로 탭 전환 + 스크롤한다. 렌즈 필터와
+     현장 워치리스트는 이 안의 세부 탐색이다. 네트워크/난수 0건 — 클라이언트 DOM 전환만 한다. */
+  (function () {
+    var railNav = el("railNav"); if (!railNav) return;
+    function railScroll(target) {
+      if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    function goScope(scope) {
+      if (scope === "market" || scope === "weather") activateTab("market");
+      else if (scope !== "ops") activateTab("news");        // today/news/sites → 뉴스 탭(본문)
+      if (scope === "today") railScroll(document.querySelector(".hero"));
+      else if (scope === "news") railScroll(el("panel-news"));
+      else if (scope === "sites") railScroll(el("siteScopeNav"));
+      else if (scope === "market") railScroll(el("marketStatusBoard"));
+      else if (scope === "weather") railScroll(el("siteWeatherCard"));
+      else if (scope === "ops") railScroll(el("opctl"));
+    }
+    railNav.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".railnav-item"); if (!b) return;
+      [].forEach.call(railNav.querySelectorAll(".railnav-item"), function (x) {
+        x.classList.toggle("active", x === b);
+      });
+      goScope(b.getAttribute("data-scope"));
+    });
+  })();
+
+  /* ---------- 뉴스 카테고리 필터 (D7-AD-U) — 카테고리별 브리핑을 '탐색 필터'로 통합 ----------
+     서버 렌더된 브리핑 <details data-acc>를 칩으로 노출한다. 칩을 누르면 해당 카테고리 섹션만
+     펼치고 스크롤해 본문 뉴스 목록이 그 카테고리로 바뀐다(나머지는 접힘). 데이터/난수 생성 0건. */
+  (function () {
+    var bar = el("newsCatFilter"), host = el("accordionSections");
+    if (!bar || !host) return;
+    var secs = [].slice.call(host.querySelectorAll("details.acc-sec"));
+    if (!secs.length) { bar.style.display = "none"; return; }   // 서버 렌더 전(템플릿) — 칩 없음
+    bar.innerHTML = secs.map(function (d) {
+      var nameEl = d.querySelector(".acc-name"), cntEl = d.querySelector(".acc-count");
+      var name = nameEl ? nameEl.textContent : (d.getAttribute("data-acc") || "");
+      var cnt = cntEl ? cntEl.textContent : "";
+      var on = d.hasAttribute("open") ? " active" : "";
+      return '<button type="button" class="news-cat' + on + '" data-acc-key="'
+        + esc(d.getAttribute("data-acc")) + '"><span class="nc-l">' + esc(name) + '</span>'
+        + (cnt ? '<span class="nc-c">' + esc(cnt) + '</span>' : '') + '</button>';
+    }).join("");
+    bar.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".news-cat"); if (!b) return;
+      var key = b.getAttribute("data-acc-key"), target = null;
+      secs.forEach(function (d) {
+        var on = d.getAttribute("data-acc") === key;
+        d.open = on; if (on) target = d;
+      });
+      [].forEach.call(bar.querySelectorAll(".news-cat"), function (x) {
+        x.classList.toggle("active", x === b);
+      });
+      if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  })();
 
   /* ---------- LENS FILTER (좌측 네비 + 우측 레일 공통, 결정적) ----------
      렌즈를 선택하면 data-lens 태그가 일치하는 카드/신호만 보이고, 일치가 없으면
@@ -2264,6 +2397,24 @@
   var MARKET_PRIORITY = {   // 우선 연동 필요: 건설 투입재(철·시멘트) + 핵심 금리 벤치마크
     scrap_steel: 1, cement: 1, coking_coal: 1, us_2y: 1, kr_10y: 1
   };
+  /* D7-AD-U — 미연동/우선 항목은 방치하지 않고 '왜 미연동인지'를 명시한다(가짜 값 생성 없음).
+     source registry(app/market_profiles.py·live_market.py) 점검 결과: 아래 항목은 공개 무료
+     실시간 소스가 없거나 유료/보고 기반이라 값을 만들지 않는다. 사유는 상태 보드에 노출한다. */
+  var MARKET_REASON = {
+    scrap_steel: "공개 무료 실시간 시세 없음 · 제강사·협회 보고 기반(수동 확인 필요)",
+    cement: "고시·협회 보고 기반 · 실시간 공개 소스 없음",
+    coking_coal: "원료탄 지수(호주 강점탄) 유료 · 공개 무료 실시간 없음",
+    us_2y: "FRED DGS2 등 공개 소스 후보 있음 · 연동 미구성(우선)",
+    kr_10y: "한은/금투협·유료 소스 필요 · 공개 무료 실시간 없음",
+    nickel: "LME 실시간 유료 · 공개 무료 지연 소스 검증 필요",
+    bitumen: "국내 아스팔트(역청) 현물 공개 소스 없음",
+    jet_kerosene: "항공유·등유 공개 무료 실시간 소스 없음",
+    bunker_fuel: "벙커유(선박유) 공개 무료 실시간 소스 없음",
+    twdkrw: "TWD/KRW 공개 무료 지연 소스 검증 필요"
+  };
+  function marketReason(it) {
+    return MARKET_REASON[it.id] || "공개 무료 실시간 소스 없음 — 값 미생성(정직 표기)";
+  }
   function renderMarketStatusBoard() {
     var box = el("marketStatusBoard"); if (!box) return;
     var items = MODEL.market_items || [];
@@ -2274,20 +2425,30 @@
       if (marketState(it).hasValue) { done.push(it); return; }     // 현재값 보유 = 연동 완료
       backlog.push(it);                                            // 값 없음 = 미연동 후보(가짜 값 없음)
     });
+    // 연동 완료/보고는 칩 구름(값 있음), 우선 연동 필요/미연동 후보는 '왜 미연동인지' 사유를 함께 노출.
     var cols = [
-      { t: "연동 완료", cls: "", rows: done },
-      { t: "보고·수동 확인", cls: "", rows: reported },
-      { t: "미연동 후보", cls: "", rows: backlog },
-      { t: "우선 연동 필요", cls: "ms-priority", rows: priority }
+      { t: "연동 완료", cls: "", rows: done, why: false },
+      { t: "보고·수동 확인", cls: "", rows: reported, why: false },
+      { t: "미연동 후보", cls: "", rows: backlog, why: true },
+      { t: "우선 연동 필요", cls: "ms-priority", rows: priority, why: true }
     ];
-    var CAP = 8;
+    var CAP = 12;
     box.innerHTML = cols.map(function (c) {
-      var chips = c.rows.slice(0, CAP).map(function (it) {
-        return '<span class="ms-chip">' + esc(it.label_kr) + '</span>';
-      }).join("");
-      var more = c.rows.length > CAP ? '<span class="ms-more">외 ' + (c.rows.length - CAP) + '</span>' : "";
-      var body = c.rows.length ? ('<div class="ms-chips">' + chips + more + '</div>')
-        : '<div class="ms-empty">해당 없음</div>';
+      var body;
+      if (!c.rows.length) {
+        body = '<div class="ms-empty">해당 없음</div>';
+      } else if (c.why) {                                          // 사유 목록(항목 + 왜 미연동인지)
+        body = '<div class="ms-whys">' + c.rows.slice(0, CAP).map(function (it) {
+          return '<div class="ms-item"><span class="ms-chip" title="' + esc(marketReason(it)) + '">'
+            + esc(it.label_kr) + '</span><span class="ms-why">' + esc(marketReason(it)) + '</span></div>';
+        }).join("") + '</div>';
+      } else {                                                     // 값 보유 — 칩 구름만
+        var chips = c.rows.slice(0, CAP).map(function (it) {
+          return '<span class="ms-chip">' + esc(it.label_kr) + '</span>';
+        }).join("");
+        var more = c.rows.length > CAP ? '<span class="ms-more">외 ' + (c.rows.length - CAP) + '</span>' : "";
+        body = '<div class="ms-chips">' + chips + more + '</div>';
+      }
       return '<div class="ms-col ' + c.cls + '"><div class="ms-h"><span class="ms-t">' + esc(c.t)
         + '</span><span class="ms-n">' + c.rows.length + '</span></div>' + body + '</div>';
     }).join("");
@@ -2760,10 +2921,14 @@
   (function () {
     var base = String(MODEL.operator_api_base || "").replace(/\/+$/, "");
     var endpoints = MODEL.operator_endpoints || {};
-    var collectBtn = el("opCollectBtn"), sendBtn = el("opSendBtn");
+    var collectBtn = el("opCollectBtn"), sendBtn = el("opSendBtn"), teamsBtn = el("opTeamsBtn");
     var statusBox = el("opStatus"), pinInput = el("opPin");
     var unsetLine = el("opUnsetLine");   // '운영자 서버 미연결' 한 줄 — base 설정 시 숨김(D7-AD-R)
     if (!collectBtn || !sendBtn) return;
+    // D7-AD-U — Teams 채널 전송도 collect/telegram과 같은 운영 API(POST) 경로로 배선한다. base가
+    // 설정된(운영자) 빌드에서만 세 버튼이 활성화되고, 미설정 공개 빌드는 전부 비활성 + 한 줄 안내만.
+    var opBtns = [collectBtn, sendBtn, teamsBtn].filter(Boolean);   // 실행 중 일괄 잠금 대상
+    function setBtns(disabled) { opBtns.forEach(function (b) { b.disabled = disabled; }); }
     function setStatus(msg, kind) {
       if (!statusBox) return;
       statusBox.textContent = msg || "";
@@ -2772,18 +2937,21 @@
     if (!base) {
       // 운영 API 미설정 — 버튼 비활성 + 안내만. 어디로도 이동하지 않는다.
       collectBtn.disabled = true; sendBtn.disabled = true;
+      setBtns(true);
       if (pinInput) pinInput.disabled = true;
       setStatus("운영 API가 아직 설정되지 않았습니다. GitHub로 이동하지 않습니다.", "muted");
       return;
     }
     collectBtn.disabled = false; sendBtn.disabled = false;
+    if (teamsBtn) teamsBtn.disabled = false;           // Teams endpoint 배선됨 → 연결 시 활성화(D7-AD-U)
     collectBtn.removeAttribute("aria-disabled"); sendBtn.removeAttribute("aria-disabled");
+    if (teamsBtn) teamsBtn.removeAttribute("aria-disabled");
     if (unsetLine) unsetLine.style.display = "none";   // 연결됨 → '운영자 서버 미연결' 한 줄 숨김
     var inflight = false;
     function run(btn, path, runningMsg, okMsg) {
       if (inflight || !path) return;                 // 중복 클릭 방지
       inflight = true;
-      collectBtn.disabled = true; sendBtn.disabled = true; btn.classList.add("busy");
+      setBtns(true); btn.classList.add("busy");      // 실행 중 세 버튼 잠금(중복 클릭 방지)
       setStatus(runningMsg, "running");
       var ctrl = new AbortController();
       var timer = setTimeout(function () { ctrl.abort(); }, 25000);   // timeout
@@ -2808,7 +2976,7 @@
         })
         .then(function () {
           clearTimeout(timer); inflight = false;
-          collectBtn.disabled = false; sendBtn.disabled = false; btn.classList.remove("busy");
+          collectBtn.disabled = false; sendBtn.disabled = false; setBtns(false); btn.classList.remove("busy");
         });
     }
     collectBtn.addEventListener("click", function () {
@@ -2818,6 +2986,10 @@
     sendBtn.addEventListener("click", function () {
       run(sendBtn, endpoints.telegram, "텔레그램 전송 실행 중…",
           "텔레그램 전송을 실행했습니다.");
+    });
+    if (teamsBtn) teamsBtn.addEventListener("click", function () {
+      run(teamsBtn, endpoints.teams, "Teams 채널 전송 실행 중…",
+          "Teams 채널 전송을 실행했습니다. 채널 이메일 도착은 별도 확인이 필요합니다.");
     });
   })();
 
