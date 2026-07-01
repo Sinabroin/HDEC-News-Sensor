@@ -537,6 +537,60 @@
   .opctl-notes li::before{content:"·"; position:absolute; left:5px; color:var(--mute3); font-weight:800;}
   @media (max-width:680px){ .opctl-btn{flex:1 1 100%;} }
 
+  /* ===== D7-AD-R · 단일 임원 대시보드 IA 정리 (accordion→news 흡수 · 3단계 현장 네비 ·
+     시장 소스 상태 보드 · 현장 기상 카드 · 운영자 compact) — 모두 블록 흐름(position:absolute/fixed 없음) ===== */
+  /* News Explorer 통합 브리핑 헤더(독립 '임원 브리핑 섹션' 블록 대신 뉴스 탐색 안으로 흡수) */
+  .news-brief-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin:20px 0 10px;}
+  .news-brief-head .nb-t{font-size:14px; font-weight:800; color:var(--ink2);}
+  .news-brief-head .nb-s{font-size:11.5px; color:var(--mute3);}
+  /* 3단계 현장 네비: 대분류(.sn-group) → 중분류(.sn-mid, 접이식) → 개별 현장(.st-node) */
+  .sitenav .sn-mid{margin:2px 0;}
+  .sitenav .sn-midtog{display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;
+    padding:6px 8px 6px 2px; border:none; background:none; cursor:pointer; border-radius:8px; text-align:left;}
+  .sitenav .sn-midtog:hover{background:#F5F9FE;}
+  .sitenav .sn-midtog .l{display:flex; align-items:center; gap:7px; min-width:0;}
+  .sitenav .sn-midcaret{font-size:8px; color:var(--mute4); transition:transform .15s ease; flex:none; display:inline-block;}
+  .sitenav .sn-mid.open .sn-midcaret{transform:rotate(90deg);}
+  .sitenav .sn-midlabel{font-size:12px; font-weight:600; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sitenav .sn-midcount{font-size:11px; font-weight:700; color:var(--mute4); flex:none; font-variant-numeric:tabular-nums;}
+  .sitenav .sn-midcount b{color:#B85049;}
+  .sitenav .sn-mid .sn-nodes{display:none; padding:2px 2px 6px 12px;}
+  .sitenav .sn-mid.open .sn-nodes{display:flex;}
+  /* 현장 기상 카드(뉴스 accordion 아님 — 지도/지역 카드 placeholder, 가짜 날씨 없음) */
+  .wxcard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:12px; box-shadow:var(--shadow);}
+  .wxcard .wx-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .wxcard .wx-t{font-size:14px; font-weight:800; color:var(--ink2);}
+  .wxcard .wx-badge{font-size:10.5px; font-weight:800; color:var(--mute2); background:var(--hair); border:1px solid var(--line); border-radius:6px; padding:2px 8px;}
+  .wxcard .wx-body{display:flex; gap:16px; flex-wrap:wrap; align-items:center;}
+  .wxcard .wx-map{flex:1 1 230px; min-width:0;}
+  .wxcard .wx-note{flex:1 1 230px; min-width:0; font-size:12px; color:var(--mute3); line-height:1.6;}
+  .wxcard .wx-regions{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
+  .wxcard .wx-region{font-size:11.5px; color:var(--mute2); background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:5px 11px;}
+  .wxcard .wx-region .wx-off{color:var(--mute4); font-weight:800; margin-left:4px;}
+  /* 시장 소스 연동 현황 보드(4단계 상태 · 미연동 후보를 길게 늘어놓지 않고 상태로 구분) */
+  .mktstatus{display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px; margin:2px 0 14px;}
+  .mktstatus .ms-col{border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:var(--card);}
+  .mktstatus .ms-col.ms-priority{border-color:var(--amber-bd); background:var(--amber-tint);}
+  .mktstatus .ms-h{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:8px;}
+  .mktstatus .ms-t{font-size:12px; font-weight:800; color:var(--ink3);}
+  .mktstatus .ms-n{font-size:12.5px; font-weight:800; color:var(--mute3); font-variant-numeric:tabular-nums;}
+  .mktstatus .ms-col.ms-priority .ms-t{color:var(--amber);}
+  .mktstatus .ms-chips{display:flex; flex-wrap:wrap; gap:5px;}
+  .mktstatus .ms-chip{font-size:10.5px; color:var(--mute2); background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:3px 8px;}
+  .mktstatus .ms-col.ms-priority .ms-chip{background:#fff; border-color:var(--amber-bd);}
+  .mktstatus .ms-more{font-size:10.5px; color:var(--mute4); font-weight:700; align-self:center;}
+  .mktstatus .ms-empty{font-size:11px; color:var(--mute4);}
+  /* 운영자 실행 — compact 접이식(장황한 안내는 details로 접고 기본은 버튼 3개 + 상태 한 줄만) */
+  .opctl.compact{padding:14px 18px;}
+  .opctl .opctl-oneline{font-size:12px; color:var(--mute2); font-weight:600;}
+  .opctl .opctl-oneline .off{color:#B85049; font-weight:800;}
+  .opctl-more{margin-top:12px; border-top:1px solid var(--hair); padding-top:10px;}
+  .opctl-more>summary{list-style:none; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--mute2); display:inline-flex; align-items:center; gap:6px;}
+  .opctl-more>summary::-webkit-details-marker{display:none;}
+  .opctl-more>summary::after{content:"▾"; color:var(--mute4); font-size:10px;}
+  .opctl-more .opctl-pinrow{margin-top:10px;}
+  .opctl-more .opctl-notes{margin-top:6px; padding-top:8px;}
+
   /* ===== 임원 브리핑 아코디언 (D7-AD-N · 네이티브 <details>, JS 0줄 · 블록 흐름 = 겹침 없음) ===== */
   .accordion{max-width:1200px; margin:0 auto 20px; padding:0 22px;}
   .acc-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin:0 0 12px;}
@@ -643,61 +697,11 @@
     <div class="metric"><div class="row"><span class="ic" style="background:#EEF2F7; color:#9AAAC1;">◑</span><span class="lbl">시장 모니터링</span></div><div class="val small num" style="color:#9AAAC1;">지연·대용</div><div class="desc">원자재·금속·유가·금리·환율 (데모)</div></div>
   </section>
 
-  <!-- =================== OPERATOR CONTROLS (D7-AA) =================== -->
-  <!-- 인플로우(static) 풀폭 패널 — 사이드/리스트 비가림. 두 버튼은 운영 API(POST)를 호출해
-       즉시 실행하며 GitHub 페이지로 이동하지 않는다. PIN은 런타임 입력값으로 헤더에만 실리고
-       어떤 토큰/시크릿도 정적 페이지에 저장하지 않는다. base URL은 preview-model island의
-       operator_api_base에서 읽는다(빌더가 --operator-api-base로 주입 · 미설정이면 비활성). -->
-  <section class="opctl" aria-label="운영자 실행 컨트롤" id="opctl">
-    <div class="opctl-head">
-      <span class="opctl-title">운영자 실행</span>
-      <span class="opctl-sub">데이터 새로고침 · 텔레그램 전송 · Teams 채널 전송은 각각 분리된 별도 컨트롤입니다.</span>
-    </div>
-    <div class="opctl-pinrow">
-      <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
-      <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
-             placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
-    </div>
-    <div class="opctl-actions">
-      <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true">
-        <span class="opctl-btn-label">데이터 새로고침 실행</span>
-        <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
-      </button>
-      <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true">
-        <span class="opctl-btn-label">텔레그램 전송 실행</span>
-        <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
-      </button>
-      <!-- Teams 채널 전송 — email-alert.yml에 send_to_teams가 있으나 운영 API(POST)에는
-           아직 Teams endpoint가 없다(operator_gateway는 collect/telegram만). 실제 연결 경로가
-           없으므로 가짜 동작 버튼을 만들지 않고, 정직하게 항상 disabled + '운영 API 미연결'로
-           둔다. 운영 API에 Teams endpoint가 생기면 텔레그램과 같은 PIN/보안 패턴으로 활성화한다. -->
-      <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
-              title="Teams 채널 전송은 운영 API에 아직 연결되지 않았습니다(운영 API 미연결)">
-        <span class="opctl-btn-label">Teams 채널 전송 실행</span>
-        <span class="opctl-btn-help">운영 API 미연결 — 이번 릴리스에서는 비활성입니다</span>
-      </button>
-    </div>
-    <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
-    <ul class="opctl-notes">
-      <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
-      <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
-      <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
-      <li>Teams 채널 전송은 운영 API에 아직 연결되지 않아 비활성입니다(운영 API 미연결 · 가짜 버튼 없음).</li>
-    </ul>
-  </section>
+  <!-- (D7-AD-R) 운영자 실행 컨트롤은 화면 최하단 접이식 영역으로 이동했다(footer 위). 기본 화면 상단은
+       임원 신호(Header→Today Focus→News Explorer)에 집중하고, 운영 액션은 de-emphasize한다. -->
 
-  <!-- =================== EXECUTIVE ACCORDION SECTIONS (D7-AD-N) =================== -->
-  <!-- 인플로우(static) 풀폭 섹션 — 네이티브 <details>만 사용(JS 0줄). 각 섹션은 독립적으로 열리고
-       닫히며 블록 흐름이라 펼쳐져도 다른 목록/섹션을 가리지 않는다(모바일 겹침 없음). 빌더가 아래
-       마커 영역에 brief.accordion_sections를 서버 렌더해 주입한다. 데이터가 없으면 헤딩을 유지하고
-       '현재 수집된 항목 없음'을 정직히 표기한다(가짜 기사/날씨 생성 없음). -->
-  <section class="accordion" aria-label="임원 브리핑 섹션">
-    <div class="acc-head">
-      <span class="acc-title">임원 브리핑 섹션</span>
-      <span class="acc-sub">섹션 제목을 누르면 기사 목록이 펼쳐집니다 · 각 섹션은 독립적으로 열립니다</span>
-    </div>
-    <div class="acc-body" id="accordionSections" data-accordion="exec-sections"><!-- ACCORDION-INJECT --></div>
-  </section>
+  <!-- (D7-AD-R) 독립 '임원 브리핑 섹션' 블록 제거 — 브리핑 섹션(8개)은 News Explorer(뉴스 탭)로 흡수했다.
+       accordionSections 컨테이너와 서버 렌더 주입 마커는 뉴스 탭 안에서 그대로 유지된다. -->
 
   <!-- =================== MAIN GRID =================== -->
   <div class="grid">
@@ -806,6 +810,16 @@
           <div class="el-desc" id="newsEmptyDesc">이 렌즈는 데모 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
         </div>
 
+        <!-- BRIEFING SECTIONS (D7-AD-N accordion) — D7-AD-R에서 독립 '임원 브리핑 섹션' 블록을 제거하고
+             News Explorer(뉴스 탭) 안으로 흡수. 카테고리별 브리핑(오늘의 신규 이슈/수주/재무/정책/경쟁/
+             브랜드/기상·날씨/해외 언론) — 네이티브 <details>만 사용(JS 0줄). 빌더가 brief.accordion_sections를
+             아래 마커에 서버 렌더한다. 데이터가 없으면 헤딩 유지 + 정직한 빈 상태(가짜 기사/날씨 없음). -->
+        <div class="news-brief-head">
+          <span class="nb-t">카테고리별 브리핑</span>
+          <span class="nb-s">수주 · 재무 · 정책 · 경쟁 · 브랜드 · 해외 언론 — 섹션 제목을 누르면 기사 목록이 펼쳐집니다</span>
+        </div>
+        <div class="acc-body" id="accordionSections" data-accordion="exec-sections"><!-- ACCORDION-INJECT --></div>
+
         <!-- SIGNAL INDEX (collapsed by default) -->
         <details class="card" id="signalIndex" style="margin-top:14px;">
           <summary style="list-style:none; cursor:pointer; padding:16px 22px; font-size:13px; font-weight:700; color:var(--ink4); display:flex; align-items:center; justify-content:space-between;">
@@ -885,6 +899,37 @@
           공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기). <b>NON-PRODUCTION PREVIEW</b>.</span>
         </div>
 
+        <!-- 현장 기상 (D7-AD-R) — 뉴스 accordion이 아니라 지도/지역 카드 placeholder. 실제 기상 소스가
+             없으므로 가짜 날씨를 만들지 않고 '기상 데이터 소스 미연동'만 표시한다(연동 계획: D7-AD-S). -->
+        <div class="wxcard" id="siteWeatherCard" aria-label="현장 기상">
+          <div class="wx-head">
+            <span class="wx-t">현장 기상</span>
+            <span class="wx-badge">기상 데이터 소스 미연동</span>
+          </div>
+          <div class="wx-body">
+            <div class="wx-map">
+              <svg viewBox="0 0 240 150" width="100%" height="140" fill="none" aria-label="현장 기상 지도 placeholder(데이터 소스 미연동)" style="display:block;">
+                <rect x="0" y="0" width="240" height="150" rx="10" fill="#F1F5FA"></rect>
+                <path d="M62 40 Q82 30 102 40 T152 44 Q172 40 184 52 Q198 66 186 84 Q194 104 170 110 Q152 126 122 118 Q94 128 76 110 Q52 108 54 84 Q44 62 62 40 Z" fill="#E3EBF4" stroke="#CBD8E8" stroke-width="1.2"></path>
+                <circle cx="98" cy="70" r="3" fill="#9AAAC1"></circle>
+                <circle cx="134" cy="86" r="3" fill="#9AAAC1"></circle>
+                <circle cx="150" cy="64" r="3" fill="#9AAAC1"></circle>
+                <text x="120" y="140" text-anchor="middle" font-size="9" fill="#9AAAC1">현장 위치 지도 · 기상 오버레이 (소스 연동 전 placeholder)</text>
+              </svg>
+            </div>
+            <div class="wx-note">
+              현장별 기상·날씨는 공개 무료 기상 소스가 연동되면 지도/지역 카드로 표시됩니다.
+              현재는 <b>기상 데이터 소스 미연동</b> 상태로, 가짜 날씨 값을 생성하지 않습니다.
+              <div class="wx-regions">
+                <span class="wx-region">수도권<span class="wx-off">미연동</span></span>
+                <span class="wx-region">영남권<span class="wx-off">미연동</span></span>
+                <span class="wx-region">호남권<span class="wx-off">미연동</span></span>
+                <span class="wx-region">중동·해외<span class="wx-off">미연동</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 2) 카테고리 카드 — 원자재·금속 / 철강·건자재 / 유가·정제유 / 가스·LNG / 석탄 / 금리·물가 / 환율 -->
         <div style="margin-bottom:8px;">
           <div class="panel" style="border:none; box-shadow:none; padding:0 2px;">
@@ -893,6 +938,10 @@
             <div class="pnote" id="marketLinkNote">연동(현재값 보유) 지표를 우선 노출하고, <b>미연동 지표는 하단 관찰 후보로 분리했습니다</b> — 값/차트 소스가 없으면 가짜 값을 만들지 않습니다.<span id="marketLinkSummary"></span></div>
           </div>
           <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·알루미늄·휘발유·헨리허브·EUR/KRW·미 국채 10Y). <b>대용(proxy)</b> 종목(철광석·열연강판·연료탄·경유)은 글로벌 벤치마크라 정확한 국내 현물가가 아닙니다. 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
+          <!-- 시장 소스 연동 현황 (D7-AD-R) — 미연동 후보를 길게 늘어놓지 않고 상태로 구분:
+               연동 완료 / 보고·수동 확인 / 미연동 후보 / 우선 연동 필요. 가짜 값/차트 생성 없음.
+               상세 백로그 계획: D7-AD-T. JS(renderMarketStatusBoard)가 data_mode/값으로 분류한다. -->
+          <div class="mktstatus" id="marketStatusBoard"></div>
           <div class="mktcats" id="marketCategories"></div>
           <div class="disc">공개·무료(지연) 또는 대용(proxy)·보고 기반 참고용이며 현재 체결값이 아닙니다.
             <span style="color:var(--mute);">미연동</span> 지표는 값을 생성하지 않습니다 (가짜 숫자 없음).</div>
@@ -1098,6 +1147,52 @@
       </section>
     </main>
   </div>
+
+  <!-- =================== OPERATOR CONTROLS (D7-AA · D7-AD-R compact) =================== -->
+  <!-- 운영자 실행 — 기본 화면에선 버튼 3개 + 상태 한 줄만. 장황한 보안 안내/승인 PIN은 아래 접이식
+       details로 접어 화면 점유를 최소화한다. 버튼은 운영 API(POST) 호출이며 GitHub로 이동하지 않는다.
+       base URL은 preview-model island의 operator_api_base에서 읽는다(미설정이면 비활성 + '운영자 서버 미연결').
+       버튼 라벨/클래스/ID/보안 문구는 운영 계약(verify_operator_controls) 유지를 위해 그대로 둔다. -->
+  <section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">
+    <div class="opctl-head">
+      <span class="opctl-title">운영자 실행</span>
+      <span class="opctl-oneline" id="opUnsetLine"><span class="off">운영자 서버 미연결</span> · 운영 API 연결 시 버튼이 활성화됩니다</span>
+    </div>
+    <div class="opctl-actions">
+      <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
+              title="뉴스 수집 워크플로 실행 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+        <span class="opctl-btn-label">데이터 새로고침 실행</span>
+        <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
+      </button>
+      <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
+              title="승인 PIN 확인 후 텔레그램 전송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+        <span class="opctl-btn-label">텔레그램 전송 실행</span>
+        <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
+      </button>
+      <!-- Teams 채널 전송 — 운영 API에 Teams endpoint가 없어(operator_gateway는 collect/telegram만) 가짜 동작
+           버튼을 만들지 않고 항상 disabled + '운영 API 미연결'로 둔다(JS 미배선). endpoint 생기면 활성화. -->
+      <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
+              title="Teams 채널 전송은 운영 API에 아직 연결되지 않았습니다(운영 API 미연결)">
+        <span class="opctl-btn-label">Teams 채널 전송 실행</span>
+        <span class="opctl-btn-help">운영 API 미연결 — 이번 릴리스에서는 비활성입니다</span>
+      </button>
+    </div>
+    <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
+    <details class="opctl-more">
+      <summary>승인 PIN · 실행 안내 · 보안</summary>
+      <div class="opctl-pinrow">
+        <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
+        <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
+               placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
+      </div>
+      <ul class="opctl-notes">
+        <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
+        <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
+        <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
+        <li>Teams 채널 전송은 운영 API에 아직 연결되지 않아 비활성입니다(운영 API 미연결 · 가짜 버튼 없음).</li>
+      </ul>
+    </details>
+  </section>
 
   <footer class="bottom">
     <div class="previewflag">NON-PRODUCTION PREVIEW</div><br>
@@ -1555,11 +1650,17 @@
         + '<b>SITE_WATCHLIST_EXPOSE_TREE=1</b> 운영자 빌드에서 가능합니다.</div>';
     }
     var out = "";
-    data.groups.forEach(function (g) {
-      out += '<div class="sn-sub">' + esc(g.label) + ' · ' + (g.nodes ? g.nodes.length : 0)
-        + '</div><div class="sn-nodes">';
-      (g.nodes || []).forEach(function (n) { out += renderSiteNode(scope, n); });   // 기존 노드 마크업 재사용
-      out += '</div>';
+    data.groups.forEach(function (g) {                     // 중분류(3단계 중 2단계) — 접이식. 열면 개별 현장 표시.
+      var nodes = (g.nodes || []).slice().sort(function (a, b) {   // match_count 우선 정렬(0건은 뒤로·흐리게)
+        return (Number(b.match_count) || 0) - (Number(a.match_count) || 0);
+      });
+      var recent = nodes.filter(function (n) { return n.is_recent_signal; }).length;
+      var cnt = nodes.length + (recent ? ' · <b>' + recent + '</b>' : '');
+      out += '<div class="sn-mid"><button type="button" class="sn-midtog"><span class="l">'
+        + '<span class="sn-midcaret">▶</span><span class="sn-midlabel">' + esc(g.label) + '</span></span>'
+        + '<span class="sn-midcount">' + cnt + '</span></button><div class="sn-nodes">';
+      nodes.forEach(function (n) { out += renderSiteNode(scope, n); });   // 개별 현장(3단계) — 기존 노드 마크업 재사용
+      out += '</div></div>';
     });
     return out;
   }
@@ -1602,22 +1703,20 @@
       b.classList.toggle("active", !!on);
     });
   }
-  function filterSiteNav(q) {                              // 현장 검색(라벨 부분일치) — 매칭 그룹 자동 펼침
+  function filterSiteNav(q) {                              // 현장 검색(라벨 부분일치) — 매칭 대분류·중분류 자동 펼침
     var nav = el("siteScopeNav"); if (!nav) return;
     q = (q || "").trim().toLowerCase();
     [].forEach.call(nav.querySelectorAll(".sn-group"), function (grp) {
       var anyNode = false;
-      [].forEach.call(grp.querySelectorAll(".st-node"), function (b) {
-        var hit = !q || b.textContent.toLowerCase().indexOf(q) !== -1;
-        b.style.display = hit ? "" : "none";
-        if (hit) anyNode = true;
-      });
-      [].forEach.call(grp.querySelectorAll(".sn-sub"), function (s) {   // 빈 서브그룹 숨김
-        var holder = s.nextElementSibling;
-        var vis = holder && [].some.call(holder.querySelectorAll(".st-node"),
-          function (b) { return b.style.display !== "none"; });
-        s.style.display = vis ? "" : "none";
-        if (holder) holder.style.display = vis ? "" : "none";
+      [].forEach.call(grp.querySelectorAll(".sn-mid"), function (mid) {   // 중분류(2단계) 단위로 매칭·펼침
+        var midHit = false;
+        [].forEach.call(mid.querySelectorAll(".st-node"), function (b) {
+          var hit = !q || b.textContent.toLowerCase().indexOf(q) !== -1;
+          b.style.display = hit ? "" : "none";
+          if (hit) { midHit = true; anyNode = true; }
+        });
+        if (q) mid.classList.toggle("open", midHit); else mid.classList.remove("open");
+        mid.style.display = (q && !midHit) ? "none" : "";
       });
       if (q) grp.classList.toggle("open", anyNode); else grp.classList.remove("open");
       grp.style.display = (q && !anyNode) ? "none" : "";
@@ -1627,12 +1726,14 @@
     var nav = el("siteScopeNav"); if (!nav) return;
     nav.addEventListener("click", function (ev) {
       var node = ev.target.closest(".st-node");
-      if (node) {                                          // 현장 클릭 → 뉴스 탭 + 기존 필터 재사용
+      if (node) {                                          // 개별 현장(3단계) 클릭 → 뉴스 탭 + 기존 필터 재사용
         if (FILTER_TABS.indexOf(activeTabName()) === -1) activateTab("news");
         onSiteNodeClick(node.getAttribute("data-scope"), node.getAttribute("data-id"));
         return;
       }
-      var tog = ev.target.closest(".sn-toggle");
+      var midtog = ev.target.closest(".sn-midtog");        // 중분류(2단계) 펼침 → 개별 현장 표시
+      if (midtog) { var mid = midtog.closest(".sn-mid"); if (mid) mid.classList.toggle("open"); return; }
+      var tog = ev.target.closest(".sn-toggle");           // 대분류(1단계) 펼침 → 중분류 표시
       if (tog && SITE_TREE && tog.getAttribute("aria-disabled") !== "true") {
         var grp = tog.closest(".sn-group"); if (grp) grp.classList.toggle("open");
       }
@@ -2157,6 +2258,42 @@
   }
   renderCategoryCards();
 
+  /* 시장 소스 연동 현황 보드(D7-AD-R) — MODEL.market_items를 상태로 분류: 연동 완료 / 보고·수동 확인 /
+     미연동 후보 / 우선 연동 필요. 가짜 값 생성 없음(값 없으면 미연동으로 정직 표기). 우선 연동 목록은
+     운영 backlog 우선순위(상세 계획: D7-AD-T). 미연동 후보를 길게 늘어놓지 않고 상태로 요약한다. */
+  var MARKET_PRIORITY = {   // 우선 연동 필요: 건설 투입재(철·시멘트) + 핵심 금리 벤치마크
+    scrap_steel: 1, cement: 1, coking_coal: 1, us_2y: 1, kr_10y: 1
+  };
+  function renderMarketStatusBoard() {
+    var box = el("marketStatusBoard"); if (!box) return;
+    var items = MODEL.market_items || [];
+    var done = [], reported = [], backlog = [], priority = [];
+    items.forEach(function (it) {
+      if (MARKET_PRIORITY[it.id]) { priority.push(it); return; }   // 우선 연동 필요(운영 지정)
+      if (it.data_mode === "manual_or_reported") { reported.push(it); return; }
+      if (marketState(it).hasValue) { done.push(it); return; }     // 현재값 보유 = 연동 완료
+      backlog.push(it);                                            // 값 없음 = 미연동 후보(가짜 값 없음)
+    });
+    var cols = [
+      { t: "연동 완료", cls: "", rows: done },
+      { t: "보고·수동 확인", cls: "", rows: reported },
+      { t: "미연동 후보", cls: "", rows: backlog },
+      { t: "우선 연동 필요", cls: "ms-priority", rows: priority }
+    ];
+    var CAP = 8;
+    box.innerHTML = cols.map(function (c) {
+      var chips = c.rows.slice(0, CAP).map(function (it) {
+        return '<span class="ms-chip">' + esc(it.label_kr) + '</span>';
+      }).join("");
+      var more = c.rows.length > CAP ? '<span class="ms-more">외 ' + (c.rows.length - CAP) + '</span>' : "";
+      var body = c.rows.length ? ('<div class="ms-chips">' + chips + more + '</div>')
+        : '<div class="ms-empty">해당 없음</div>';
+      return '<div class="ms-col ' + c.cls + '"><div class="ms-h"><span class="ms-t">' + esc(c.t)
+        + '</span><span class="ms-n">' + c.rows.length + '</span></div>' + body + '</div>';
+    }).join("");
+  }
+  renderMarketStatusBoard();
+
   /* ---------- early signal rows ---------- */
   (function () {
     var box = el("earlyRows"); if (!box) return;
@@ -2625,6 +2762,7 @@
     var endpoints = MODEL.operator_endpoints || {};
     var collectBtn = el("opCollectBtn"), sendBtn = el("opSendBtn");
     var statusBox = el("opStatus"), pinInput = el("opPin");
+    var unsetLine = el("opUnsetLine");   // '운영자 서버 미연결' 한 줄 — base 설정 시 숨김(D7-AD-R)
     if (!collectBtn || !sendBtn) return;
     function setStatus(msg, kind) {
       if (!statusBox) return;
@@ -2640,6 +2778,7 @@
     }
     collectBtn.disabled = false; sendBtn.disabled = false;
     collectBtn.removeAttribute("aria-disabled"); sendBtn.removeAttribute("aria-disabled");
+    if (unsetLine) unsetLine.style.display = "none";   // 연결됨 → '운영자 서버 미연결' 한 줄 숨김
     var inflight = false;
     function run(btn, path, runningMsg, okMsg) {
       if (inflight || !path) return;                 // 중복 클릭 방지

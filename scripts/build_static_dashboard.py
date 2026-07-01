@@ -1307,8 +1307,14 @@ def _render_accordion_section(section: dict) -> str:
     is_open = bool(section.get("default_open"))
     articles = section.get("articles") or []
     # 헤더 카운트: "N개 이슈 · 기사 M건" — 빈 섹션은 '기사 0건'으로 정직히 표기.
-    count_txt = (f"{issue_count}개 이슈 · 기사 {article_count}건"
-                 if article_count else "기사 0건")
+    # 단, 기상·날씨는 뉴스 수집 섹션이 아니라 데이터 소스 미연동 placeholder이므로 '기사 0건'을
+    # 쓰지 않고 '데이터 소스 미연동'으로 표기한다(D7-AD-R · 실제 현장 기상은 시장 탭 '현장 기상' 카드).
+    if article_count:
+        count_txt = f"{issue_count}개 이슈 · 기사 {article_count}건"
+    elif (section.get("key") or "") == "weather":
+        count_txt = "데이터 소스 미연동"
+    else:
+        count_txt = "기사 0건"
     flag = '<span class="acc-flag">NEW</span>' if (is_open and article_count) else ""
     head = (
         '<summary>'
