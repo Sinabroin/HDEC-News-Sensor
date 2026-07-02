@@ -106,7 +106,7 @@ jobs:
             # 공개 latest.html은 항상 executive 뷰로 게시한다 (operator 기본값 유출 방지, P0-D3R).
             # 같은 live 데이터로 운영자 진단용 operator-latest.html 스냅샷도 함께 생성한다.
             python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
-            python3 scripts/build_static_dashboard.py --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE"
+            python3 scripts/build_static_dashboard.py --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · live RSS collected > 0 · executive report published + operator snapshot + dashboard export"
           else

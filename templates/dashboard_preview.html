@@ -668,6 +668,17 @@
   .wxcard .wx-il{font-size:11px; font-weight:800; color:var(--ink4); margin-right:2px;}
   .wxcard .wx-ichip{font-size:11px; color:var(--mute2); background:#FAFCFE; border:1px solid var(--line); border-radius:999px; padding:4px 10px;}
   @media (max-width:760px){ .wxcard .wx-row{grid-template-columns:58px repeat(6, 1fr) 64px; font-size:9.5px; gap:3px; padding:7px 8px;} }
+  /* 기상 리스크 등급 = 상태색만 사용(장식 아님 · D7-AE): 낮음=녹색, 주의=앰버, 높음=적색,
+     확인 필요/수동 확인=중립 회색. 값 셀은 잉크색(장식 배경 없음). */
+  .wxcard .wx-val{color:var(--ink3); font-weight:600;}
+  .wxcard .wx-risk.wx-low{color:var(--green);}
+  .wxcard .wx-risk.wx-watch{color:var(--amber);}
+  .wxcard .wx-risk.wx-high{color:var(--red);}
+  .wxcard .wx-risk.wx-unknown, .wxcard .wx-manual{color:var(--mute3); font-weight:700;}
+  .wxcard .wx-flag{color:var(--amber); font-weight:800;}
+  .wxcard .wx-reasons{grid-column:1 / -1; text-align:left; font-size:10.5px; color:var(--mute2);
+    padding:0 0 2px; line-height:1.5;}
+  .wxcard .wx-reasons b{color:var(--ink4);}
   /* 시장 소스 연동 현황 보드 — 메인=연동 완료·보고·수동 확인, 미연동/우선은 접힘(D7-AD-W-1B) */
   .mktstatus{margin:2px 0 14px;}
   .mktstatus-main{display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:10px;}
@@ -1058,20 +1069,22 @@
           공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기). <b>NON-PRODUCTION PREVIEW</b>.</span>
         </div>
 
-        <!-- 명일 정오 시공 리스크 (D7-AD-U) — 기상은 뉴스가 아니다. '기사 0건' 아코디언이 아니라
-             명일(D+1) 정오 12:00 기준 현장 시공 리스크 카드/표다. 국내는 기상청(단기예보·초단기예보·
-             기상특보), 해외는 Open-Meteo 등 글로벌 예보를 보조 소스로 검토한다. 실제 소스 연동 전에는
-             가짜 날씨 값을 만들지 않고 전 항목 '미연동'으로 둔다(UI·데이터 계약만 · 실연동: D7-AD-V). -->
+        <!-- 명일 정오 시공 리스크 (D7-AD-U 계약 · D7-AE 실연동) — 기상은 뉴스가 아니다.
+             명일(D+1) 정오 12:00 기준 권역 대표점 시공 리스크 표. 데이터는 weather_risk leaf가
+             Open-Meteo 공개 예보에서 수집(--weather-mode live)하며, MODEL.weather_rows가 있을 때
+             renderSiteWeather()가 이 표를 실측으로 교체한다. live 실패 시 '기상 데이터 미수신',
+             mock/미연동 시 아래 정적 '미연동' 상태 유지 — 어떤 경우에도 가짜 날씨 값을 만들지 않는다.
+             기상청 기상특보는 무료 무키 API가 없어 미연동(행마다 '수동 확인' 정직 표기). -->
         <div class="wxcard" id="siteWeatherCard" aria-label="명일 정오 시공 리스크">
           <div class="wx-head">
             <span class="wx-t">명일 정오 시공 리스크</span>
-            <span class="wx-when">기준 · 명일(D+1) 정오 12:00</span>
-            <span class="wx-badge">기상 데이터 소스 미연동</span>
+            <span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00</span>
+            <span class="wx-badge" id="wxBadge">기상 데이터 소스 미연동</span>
           </div>
-          <div class="wx-intro">현장 기상은 뉴스가 아니라 <b>명일 정오 12:00</b> 시점의 시공 리스크로 봅니다.
-            국내 현장은 기상청 단기예보·초단기예보·기상특보, 해외 현장은 Open-Meteo 등 글로벌 예보를 보조
-            소스로 검토합니다. 소스 연동 전에는 <b>가짜 날씨 값을 생성하지 않습니다</b>(실연동 계획: D7-AD-V).</div>
-          <div class="wx-grid" role="table" aria-label="지역별 명일 정오 시공 리스크 (전 항목 미연동)">
+          <div class="wx-intro">현장 기상은 뉴스가 아니라 <b>명일 정오 12:00</b>(권역 현지시각) 시점의 시공
+            리스크로 봅니다. 권역 대표점(서울·대전·부산·광주·리야드) 예보를 Open-Meteo 공개 API에서
+            수집하며, 값이 없으면 <b>가짜 날씨 값을 생성하지 않습니다</b>. 기상특보는 수동 확인 대상입니다.</div>
+          <div class="wx-grid" role="table" aria-label="지역별 명일 정오 시공 리스크" id="wxGrid">
             <div class="wx-row wx-gh" role="row">
               <span class="wx-rgn" role="columnheader">지역</span>
               <span role="columnheader">강수확률</span><span role="columnheader">예상 강수량</span>
@@ -1089,9 +1102,10 @@
             <span class="wx-il">시공 영향 점검</span>
             <span class="wx-ichip">우천</span><span class="wx-ichip">강풍</span><span class="wx-ichip">고소작업</span><span class="wx-ichip">타워크레인</span><span class="wx-ichip">콘크리트 타설</span><span class="wx-ichip">외장·방수</span><span class="wx-ichip">토공</span>
           </div>
-          <div class="wx-note">기준 시점 <b>명일 정오 12:00</b> · 기상청(국내)/Open-Meteo(해외) 연동 시 지역·현장별
-            강수확률·강수량·풍속·돌풍·특보와 작업 리스크 등급을 표기합니다. 현재는 <b>기상 데이터 소스
-            미연동</b> 상태로 값을 만들지 않습니다.</div>
+          <div class="wx-note" id="wxNote">기준 시점 <b>명일 정오 12:00</b> · 권역 대표점 기준이며 개별 현장
+            값이 아닙니다. 라이브 미수집 상태에서는 <b>기상 데이터 소스 미연동</b>으로 두고 값을 만들지
+            않습니다. 리스크 등급 규칙: 돌풍 ≥15m/s 타워크레인 운전 중지(산업안전보건기준 규칙 제37조) ·
+            ≥10m/s 설치·해체 중지 · 강수확률 ≥60%+강수량 ≥1mm 우천 주의 · 기온 ≥33°C 폭염 / ≤-12°C 한파.</div>
         </div>
 
         <!-- 2) 카테고리 카드 — 원자재·금속 / 철강·건자재 / 유가·정제유 / 가스·LNG / 석탄 / 금리·물가 / 환율 -->
@@ -3056,6 +3070,70 @@ function displaySourceDomain(row){
     box.innerHTML = html;
   }
   renderMarketStatusBoard();
+
+  /* ---------- 명일 정오 시공 리스크 (D7-AE) — weather_risk leaf 실측 렌더 ----------
+     MODEL.weather_data_mode: "live" → 표를 실측으로 교체 · 출처/수집시각 표기.
+     "unavailable" + weather_live_attempted → '기상 데이터 미수신'(live 시도 실패 정직 표기).
+     그 외(mock/미연동)는 정적 '미연동' 표를 그대로 둔다. 어떤 상태에서도 가짜 날씨 값을
+     만들지 않는다 — 값 없는 셀은 '미수신'으로 표기한다. 등급색은 상태 표현 전용. */
+  function wxNum(v, unit, digits) {
+    if (v == null || !isFinite(Number(v))) return "";
+    return Number(v).toFixed(digits == null ? 0 : digits) + (unit || "");
+  }
+  function renderSiteWeather() {
+    var grid = el("wxGrid"), badge = el("wxBadge"), when = el("wxWhen");
+    if (!grid || !badge) return;
+    var mode = MODEL.weather_data_mode || "";
+    var rows = MODEL.weather_rows || [];
+    if (mode !== "live" || !rows.length) {
+      if (MODEL.weather_live_attempted) {          // live 시도했으나 실패 — 미수신 정직 표기
+        badge.textContent = "기상 데이터 미수신";
+        var note = el("wxNote");
+        if (note && MODEL.weather_unavailable_reason) {
+          var reason = document.createElement("div");
+          reason.textContent = MODEL.weather_unavailable_reason;
+          note.appendChild(reason);
+        }
+      }
+      return;                                      // 정적 '미연동' 표 유지(가짜 값 없음)
+    }
+    var gradeCls = { "낮음": "wx-low", "주의": "wx-watch", "높음": "wx-high" };
+    var html = '<div class="wx-row wx-gh" role="row"><span class="wx-rgn" role="columnheader">지역</span>'
+      + '<span role="columnheader">강수확률</span><span role="columnheader">예상 강수량</span>'
+      + '<span role="columnheader">풍속</span><span role="columnheader">돌풍</span>'
+      + '<span role="columnheader">폭염·한파</span><span role="columnheader">특보</span>'
+      + '<span class="wx-risk" role="columnheader">작업 리스크 등급</span></div>';
+    var reasonLines = [];
+    rows.forEach(function (r) {
+      var off = r.row_status !== "ok";
+      function cell(v) {
+        return off || !v ? '<span class="wx-off">미수신</span>'
+          : '<span class="wx-val">' + esc(v) + '</span>';
+      }
+      var flags = (r.flags && r.flags.length)
+        ? '<span class="wx-flag">' + esc(r.flags.join("·")) + '</span>'
+        : (off ? '<span class="wx-off">미수신</span>' : '<span class="wx-val">—</span>');
+      var cls = off ? "wx-unknown" : (gradeCls[r.risk_grade] || "wx-unknown");
+      html += '<div class="wx-row" role="row">'
+        + '<span class="wx-rgn" title="' + esc(r.basis || "") + ' 대표점">' + esc(r.region) + '</span>'
+        + cell(wxNum(r.precip_prob, "%")) + cell(wxNum(r.precip_mm, "mm", 1))
+        + cell(wxNum(r.wind_ms, "m/s", 1)) + cell(wxNum(r.gust_ms, "m/s", 1)) + flags
+        + '<span class="wx-manual" title="' + esc(MODEL.weather_advisory_note || "") + '">수동 확인</span>'
+        + '<span class="wx-risk ' + cls + '">' + esc(off ? "확인 필요" : (r.risk_grade || "")) + '</span></div>';
+      if (!off && r.risk_labels && r.risk_labels.length) {
+        reasonLines.push(esc(r.region) + "(" + esc(r.basis || "") + ") — " + esc(r.risk_labels.join(" · ")));
+      }
+    });
+    if (reasonLines.length) {
+      html += '<div class="wx-row"><span class="wx-reasons"><b>리스크 근거</b> · '
+        + reasonLines.join(" / ") + '</span></div>';
+    }
+    grid.innerHTML = html;
+    badge.textContent = "출처 " + (MODEL.weather_source || "")
+      + " · 수집 " + (MODEL.weather_updated_at || "") + " KST";
+    if (when) when.textContent = "기준 · 명일(D+1) 정오 12:00 · 권역 현지시각";
+  }
+  renderSiteWeather();
 
   /* ---------- early signal rows ---------- */
   (function () {

@@ -46,6 +46,10 @@ from app import ai_value_chain, lens_queries, news_access  # noqa: E402
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
 from app import news_recency  # noqa: E402
+# 명일 정오 시공 리스크 provider(leaf, D7-AE) — 기상 네트워크는 이 leaf만 소유한다.
+# mock(기본)은 unavailable(데모 기상값 생성 금지 — 시장과 달리 기상은 데모 픽스처도 없다),
+# --weather-mode live일 때만 Open-Meteo 공개 예보 실측. 실패 시 '기상 데이터 미수신'.
+from app import weather_risk  # noqa: E402
 # 사이트 워치리스트(leaf, P0-D7-M) — 사내 제공 현장/프로젝트명을 제목에서 매칭해 scope/business
 # 렌즈를 단다. 공개 빌드(비공개 워치리스트 경로 미설정)는 공개 샘플만 보고 비공개 목록을 노출하지
 # 않는다 — 제목이 이미 언급한 프로젝트만 태깅하며, 매칭 없는 항목은 모델/HTML에 들어가지 않는다.
@@ -1782,7 +1786,8 @@ def _sync_site_scope_lens_banks_to_tree(model: dict, tree: dict | None, candidat
         banks[scope] = rows
 
 def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock",
-                  brief: dict | None = None, operator_api_base: str = "") -> str:
+                  brief: dict | None = None, operator_api_base: str = "",
+                  weather_mode: str = "mock") -> str:
     m = re.search(r'(<script type="application/json" id="preview-model">)(.*?)(</script>)',
                   html, re.S)
     if not m:
@@ -1795,6 +1800,11 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     model["operator_api_base"] = (operator_api_base or "").strip()
     _overlay_market_history(model, market_mode)
     _overlay_fred_live_quotes(model, market_mode)
+    # 명일 정오 시공 리스크(D7-AE) — weather_risk leaf가 모드/네트워크/실패 판정을 소유한다.
+    # mock=unavailable(값 0건), live=Open-Meteo 실측 또는 '기상 데이터 미수신'. 빌더는 env를
+    # 읽지 않고 CLI(--weather-mode)로만 받는다. now=brief.generated_at으로 D+1 판정 결정화.
+    model.update(weather_risk.snapshot_for_model(
+        mode=weather_mode, now=(brief or {}).get("generated_at")))
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
     model["lens_banks"] = parts["lens_banks"]
@@ -1948,11 +1958,14 @@ def _update_header_dates(html: str, brief: dict) -> str:
 
 
 def render_dashboard_html(brief: dict, market_mode: str = "mock",
-                          operator_api_base: str = "") -> str:
+                          operator_api_base: str = "",
+                          weather_mode: str = "mock") -> str:
     """공유 brief를 standalone 요약 대시보드 HTML로 렌더 (실기사 데이터 주입).
 
     market_mode="live"이면 지원 종목의 기간 히스토리를 공개 시세(지연) 실측으로 교체한다
     (네트워크는 market_history leaf가 소유). 기본 mock은 결정적 데모 픽스처(네트워크 0건).
+    weather_mode="live"이면 명일 정오 시공 리스크를 Open-Meteo 실측으로 채운다(weather_risk
+    leaf 소유 · 실패 시 '기상 데이터 미수신' — 가짜 값 0건). 기본 mock은 unavailable.
     operator_api_base는 운영자 버튼이 호출할 공개 API base URL(비밀값 아님 · 빈 값=미설정).
     """
     try:
@@ -1983,7 +1996,8 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
     if parts["featured_sig"]:
         html = _inject_featured(html, _render_featured(parts["featured_sig"], parts["featured_row"]))
     html = _inject_model(html, parts, news_mode, market_mode, brief=brief,
-                         operator_api_base=operator_api_base)
+                         operator_api_base=operator_api_base,
+                         weather_mode=weather_mode)
     html = _update_header_dates(html, brief)
     html = _update_nav_counts(html, parts["nav_counts"], lens_queries.policy_for_model())
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
@@ -2044,6 +2058,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--market-mode", choices=("mock", "live"), default="mock",
                         help="시장 기간 히스토리 출처: mock=결정적 데모 픽스처(기본, 네트워크 0건), "
                              "live=공개 시세(지연) 실측(market_history leaf가 네트워크 소유)")
+    parser.add_argument("--weather-mode", choices=("mock", "live"), default="mock",
+                        help="명일 정오 시공 리스크 출처: mock=미연동 상태 유지(기본, 네트워크 0건 · "
+                             "데모 기상값 생성 금지), live=Open-Meteo 공개 예보 실측(weather_risk "
+                             "leaf가 네트워크 소유 · 실패 시 '기상 데이터 미수신')")
     parser.add_argument("--operator-api-base", metavar="URL", default="",
                         help="운영자 버튼이 호출할 공개 Operator API base URL(비밀값 아님). "
                              "미지정(기본)이면 버튼은 비활성 + '운영 API 미설정' 안내만 표시한다"
@@ -2052,7 +2070,8 @@ def main(argv: list[str] | None = None) -> int:
 
     brief = build_brief_via_mock_pipeline()
     html = render_dashboard_html(brief, market_mode=args.market_mode,
-                                 operator_api_base=args.operator_api_base)
+                                 operator_api_base=args.operator_api_base,
+                                 weather_mode=args.weather_mode)
 
     if args.json:
         print(json.dumps(dashboard_metadata(html, brief), ensure_ascii=False, indent=2))

@@ -63,6 +63,7 @@ jobs:
           python3 scripts/verify_ai_market_exposure_quality.py
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_site_article_sensing.py
+          python3 scripts/verify_weather_risk.py
 
       # 2) live 리포트/대시보드 생성. build_static_report.py가 출력하는 news_data_mode로
       #    live 수집 성공(live_ok)을 판별한다 (단일 빌드 = 단일 수집). 실패(mock fallback)면
@@ -89,7 +90,7 @@ jobs:
           if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
             # 공개 latest.html은 항상 executive 뷰 (operator 기본값 유출 방지, P0-D3R).
             python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
-            python3 scripts/build_static_dashboard.py --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE"
+            python3 scripts/build_static_dashboard.py --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · published executive report + operator snapshot + dashboard"
           else
