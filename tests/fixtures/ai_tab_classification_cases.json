@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "purpose": "Small synthetic golden set for AI-tab false-positive/false-negative regression. Titles are text inputs, not classification keys.",
+  "max_cases": 10,
+  "cases": [
+    {
+      "id": "hdec_dc_delivery",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [
+          "hdec"
+        ],
+        "event": [
+          "project_delivery"
+        ],
+        "infra": [
+          "ai_datacenter",
+          "cooling_water",
+          "smart_construction"
+        ],
+        "exclusion": []
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "현대건설, AI 데이터센터 냉각 EPC 수주",
+        "snippet": "고효율 냉각 설비의 시공 계약을 추진한다."
+      },
+      "expected": {
+        "ai_tab": true,
+        "operator_reference": false
+      }
+    },
+    {
+      "id": "field_automation_deployment",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [
+          "construction_delivery"
+        ],
+        "event": [
+          "project_delivery",
+          "technology_deployment"
+        ],
+        "infra": [
+          "smart_construction"
+        ],
+        "exclusion": []
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "건설사, BIM 기반 현장 자동화 도입",
+        "snippet": "시공 데이터에 디지털트윈을 적용한다."
+      },
+      "expected": {
+        "ai_tab": true,
+        "operator_reference": false
+      }
+    },
+    {
+      "id": "hyperscaler_power_expansion",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [
+          "hyperscaler"
+        ],
+        "event": [
+          "investment_expansion"
+        ],
+        "infra": [
+          "ai_datacenter",
+          "power_grid"
+        ],
+        "exclusion": []
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "AWS, AI 데이터센터 전력망 투자 확대",
+        "snippet": "신규 계통 용량과 부지 확보를 추진한다."
+      },
+      "expected": {
+        "ai_tab": true,
+        "operator_reference": false
+      }
+    },
+    {
+      "id": "redevelopment_side_mention",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [
+          "hdec"
+        ],
+        "event": [
+          "project_delivery"
+        ],
+        "infra": [
+          "ai_datacenter"
+        ],
+        "exclusion": [
+          "redevelopment_primary"
+        ]
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "현대건설 도시정비 수주 확대",
+        "snippet": "사업 포트폴리오 설명에서 데이터센터도 언급했다."
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    },
+    {
+      "id": "stock_theme_noise",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [],
+        "event": [],
+        "infra": [
+          "ai_datacenter",
+          "ai_infrastructure",
+          "cooling_water"
+        ],
+        "exclusion": [
+          "stock_promotion"
+        ]
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "AI 인프라 ETF 수혜주 추천",
+        "snippet": "데이터센터 냉각 관련 종목을 소개한다."
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    },
+    {
+      "id": "career_event_noise",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [],
+        "event": [],
+        "infra": [
+          "smart_construction"
+        ],
+        "exclusion": [
+          "career_event"
+        ]
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "스마트건설 현장 대학생 견학",
+        "snippet": "참가자들이 진로와 취업 정보를 들었다."
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    },
+    {
+      "id": "generic_ai_product",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [
+          "hyperscaler"
+        ],
+        "event": [
+          "product_release"
+        ],
+        "infra": [
+          "ai_product"
+        ],
+        "exclusion": []
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "Microsoft, 생성형 AI 챗봇 기능 업데이트",
+        "snippet": "일반 사용자용 앱 기능을 개선했다."
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    },
+    {
+      "id": "finance_context_only",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [],
+        "event": [],
+        "infra": [
+          "ai_datacenter",
+          "power_grid"
+        ],
+        "exclusion": [
+          "finance_context"
+        ]
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "재생에너지 금융 경쟁과 PF 주선",
+        "snippet": "AI 데이터센터 전력망 수요를 배경으로 언급했다."
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    },
+    {
+      "id": "safety_risk_ownership",
+      "case_type": "synthetic_regression",
+      "signals": {
+        "actor": [],
+        "event": [
+          "technology_deployment"
+        ],
+        "infra": [
+          "smart_construction"
+        ],
+        "exclusion": [
+          "safety_risk"
+        ]
+      },
+      "article": {
+        "source": "synthetic",
+        "title": "건설현장 AI 활용으로 산재 예방",
+        "snippet": "위험 예측 기술을 적용한다."
+      },
+      "expected": {
+        "ai_tab": false,
+        "operator_reference": true
+      }
+    }
+  ]
+}

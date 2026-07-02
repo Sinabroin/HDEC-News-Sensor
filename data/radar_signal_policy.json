@@ -1,0 +1,379 @@
+{
+  "version": 1,
+  "note": "AI 탭 운영 분류 정책. title/snippet은 신호 추출 입력일 뿐 고정 키가 아니다. 특정 기사 제목 allowlist/denylist를 두지 않고 actor/event/infra/exclusion 축의 교차 신호로 판단한다.",
+  "axes": {
+    "actor": {
+      "hdec": {
+        "any": [
+          "현대건설",
+          "현대 건설",
+          "현대엔지니어링",
+          "현대ENG",
+          "Hyundai E&C",
+          "HDEC"
+        ]
+      },
+      "construction_delivery": {
+        "any": [
+          "건설사",
+          "시공사",
+          "EPC사",
+          "엔지니어링사",
+          "발주처",
+          "시행사",
+          "디벨로퍼"
+        ]
+      },
+      "hyperscaler": {
+        "any": [
+          "OpenAI",
+          "오픈AI",
+          "Anthropic",
+          "앤트로픽",
+          "Microsoft",
+          "마이크로소프트",
+          "Amazon",
+          "AWS",
+          "Google",
+          "Meta",
+          "Oracle",
+          "xAI"
+        ]
+      },
+      "ai_supply_chain": {
+        "any": [
+          "NVIDIA",
+          "엔비디아",
+          "AMD",
+          "Broadcom",
+          "브로드컴",
+          "TSMC",
+          "SK하이닉스",
+          "삼성전자",
+          "Micron"
+        ]
+      }
+    },
+    "event": {
+      "project_delivery": {
+        "any": [
+          "수주",
+          "발주",
+          "계약",
+          "본계약",
+          "EPC",
+          "시공",
+          "착공",
+          "준공",
+          "신축",
+          "증설",
+          "프로젝트"
+        ]
+      },
+      "investment_expansion": {
+        "any": [
+          "투자",
+          "투입",
+          "확장",
+          "검토",
+          "부지 확보",
+          "설비 확대",
+          "용량 확대",
+          "라인 증설"
+        ]
+      },
+      "technology_deployment": {
+        "any": [
+          "도입",
+          "적용",
+          "활용",
+          "실증",
+          "자동화",
+          "기술 개발",
+          "특허",
+          "운영 기술",
+          "상용화"
+        ]
+      },
+      "product_release": {
+        "any": [
+          "출시",
+          "업데이트",
+          "기능 개편",
+          "서비스 개편",
+          "요금제 개편",
+          "기능 개선",
+          "서비스 고도화"
+        ]
+      },
+      "organization_rd": {
+        "any": [
+          "R&D",
+          "연구개발",
+          "연구원",
+          "조직 개편",
+          "조직 통합",
+          "조직 일원화",
+          "전담 조직",
+          "전담 TF"
+        ]
+      },
+      "enabling_policy": {
+        "any": [
+          "특별법",
+          "법안",
+          "규제 완화",
+          "인허가 개선",
+          "지원 정책"
+        ]
+      }
+    },
+    "infra": {
+      "ai_datacenter": {
+        "any": [
+          "AI 데이터센터",
+          "데이터센터",
+          "데이터 센터",
+          "data center",
+          "datacenter",
+          "IDC"
+        ]
+      },
+      "ai_infrastructure": {
+        "any": [
+          "AI 인프라",
+          "AI 전력",
+          "AI infrastructure"
+        ]
+      },
+      "power_grid": {
+        "any": [
+          "전력망",
+          "전력 인프라",
+          "전력 수요",
+          "송전",
+          "송배전",
+          "변전",
+          "계통",
+          "그리드",
+          "변압기",
+          "버스덕트"
+        ]
+      },
+      "cooling_water": {
+        "any": [
+          "냉각",
+          "쿨링",
+          "액침",
+          "수냉",
+          "수처리"
+        ]
+      },
+      "smart_construction": {
+        "any": [
+          "스마트건설",
+          "스마트 건설",
+          "건설 AI",
+          "건설AI",
+          "현장 AI",
+          "AI 시공",
+          "AI 설계",
+          "AI 안전",
+          "AI 로봇",
+          "AI 필드로봇",
+          "건설로봇",
+          "건설 로봇",
+          "BIM",
+          "디지털트윈",
+          "디지털 트윈",
+          "영상인식",
+          "자율시공"
+        ],
+        "all_of": [
+          [
+            "AI",
+            "인공지능"
+          ],
+          [
+            "건설",
+            "시공",
+            "현장",
+            "하도급"
+          ]
+        ]
+      },
+      "ai_compute": {
+        "any": [
+          "AI 반도체",
+          "AI 칩",
+          "AI칩",
+          "GPU",
+          "HBM",
+          "ASIC",
+          "custom AI chip"
+        ]
+      },
+      "semiconductor_infra": {
+        "any": [
+          "반도체 클러스터",
+          "반도체 공장",
+          "파운드리 증설",
+          "팹 증설",
+          "fab expansion"
+        ]
+      },
+      "advanced_energy": {
+        "any": [
+          "SMR",
+          "소형모듈원자로",
+          "원전 EPC",
+          "가스발전",
+          "LNG 발전"
+        ]
+      },
+      "ai_product": {
+        "any": [
+          "생성형 AI",
+          "AI 챗봇",
+          "AI 앱",
+          "AI 서비스",
+          "인공지능 서비스"
+        ]
+      }
+    },
+    "exclusion": {
+      "stock_promotion": {
+        "any": [
+          "주가 급등",
+          "주가 상승",
+          "주가 하락",
+          "주가 전망",
+          "급등",
+          "관련주",
+          "테마주",
+          "수혜주",
+          "ETF",
+          "종목 추천",
+          "매수",
+          "목표가",
+          "사세요",
+          "삼전",
+          "하닉"
+        ]
+      },
+      "career_event": {
+        "any": [
+          "채용",
+          "취업",
+          "진로",
+          "현장견학",
+          "현장 견학",
+          "대학생 행사"
+        ]
+      },
+      "redevelopment_primary": {
+        "any": [
+          "도시정비",
+          "정비사업",
+          "재건축",
+          "재개발",
+          "분양"
+        ]
+      },
+      "safety_risk": {
+        "any": [
+          "중대재해",
+          "산업재해",
+          "산재",
+          "사망사고",
+          "붕괴사고",
+          "영업정지",
+          "입찰제한",
+          "벌점",
+          "안전 의무화",
+          "안전관리 의무화"
+        ]
+      },
+      "finance_context": {
+        "any": [
+          "PF 주선",
+          "금융 경쟁",
+          "프로젝트 금융",
+          "브릿지론"
+        ]
+      },
+      "market_commentary": {
+        "any": [
+          "투자 사이클",
+          "업황 전망",
+          "증권가 전망",
+          "실적 전망"
+        ]
+      }
+    }
+  },
+  "decision": {
+    "required_axis": "infra",
+    "supporting_axes": [
+      "actor",
+      "event"
+    ],
+    "hard_exclusions": [
+      "stock_promotion",
+      "career_event",
+      "redevelopment_primary",
+      "safety_risk",
+      "market_commentary"
+    ],
+    "primary_infra": [
+      "ai_datacenter",
+      "ai_infrastructure",
+      "power_grid",
+      "cooling_water",
+      "smart_construction",
+      "ai_compute",
+      "semiconductor_infra",
+      "advanced_energy"
+    ],
+    "primary_anchor_infra": [
+      "ai_datacenter",
+      "ai_infrastructure",
+      "smart_construction",
+      "ai_compute",
+      "semiconductor_infra",
+      "advanced_energy"
+    ],
+    "supplement_infra": [
+      "ai_datacenter",
+      "ai_infrastructure",
+      "power_grid",
+      "cooling_water",
+      "smart_construction"
+    ],
+    "supplement_anchor_infra": [
+      "ai_datacenter",
+      "ai_infrastructure",
+      "smart_construction"
+    ],
+    "section_infra": [
+      "ai_datacenter",
+      "ai_infrastructure",
+      "power_grid",
+      "cooling_water",
+      "smart_construction",
+      "ai_compute",
+      "semiconductor_infra",
+      "advanced_energy",
+      "ai_product"
+    ],
+    "section_anchor_infra": [
+      "ai_datacenter",
+      "ai_infrastructure",
+      "smart_construction",
+      "ai_compute",
+      "semiconductor_infra",
+      "advanced_energy",
+      "ai_product"
+    ]
+  }
+}

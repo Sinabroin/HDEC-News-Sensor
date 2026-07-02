@@ -168,13 +168,19 @@ def _age_days(published_at: str) -> float | None:
 
 
 def _mid_age_allowed(article: dict, aq: dict) -> bool:
-    """15~30일 기사 중 daily/top 경쟁을 허용할 강한 예외인지."""
+    """15~30일 기사 중 executive radar에 남길 강한 예외인지.
+
+    날짜 경과만으로 이미 검증된 AI 인프라·리스크·수주·거시 신호를 ``제외``로
+    바꾸지 않는다. radar 분류는 raw title/snippet 기반이고 stock-hype 등은 별도
+    품질 게이트가 계속 소유하므로, OTHER가 아닌 명시적 radar section만 허용한다.
+    """
     if decision_relevance.is_hdec_primary_candidate(article):
         return True
     if aq.get("hdec_enforcement"):
         return True
     try:
-        if radar.classify_section(article, None) == radar.RISK:
+        if radar.classify_section(article, None) in (
+                radar.AI, radar.RISK, radar.BUSINESS, radar.MACRO):
             return True
     except Exception:  # noqa: BLE001 — 점수화는 보수적으로 계속
         pass
@@ -543,10 +549,10 @@ def _score_article(article: dict, ctx: dict) -> dict:
     elif (radar.classify_section(article, None) == radar.RISK
           and quality["source_quality"] not in ("excluded", "low")):
         # 중대재해·벌점·입찰제한·하자 등 명시적 리스크/규제 기사 + 정상 출처 —
-        # 종합 점수가 낮아도 임원 레이더에서 추적 이상으로 보존한다. 국토부 혁신기술 같은
-        # 부처명 단독 기사는 radar.RISK가 아니므로 여기서 승격되지 않는다.
-        rp = radar.risk_fields(article, dims)["risk_priority_score"]
-        grade = _max_grade(grade, GRADE_DAILY if rp >= 3.8 else GRADE_WEEKLY)
+        # 종합 점수가 낮아도 임원 레이더에서 최소 추적으로 보존한다. risk_priority_score는
+        # 리스크 section 내부 정렬을 소유하며 alert cadence를 검토 필요로 재분류하지 않는다.
+        # 국토부 혁신기술 같은 부처명 단독 기사는 radar.RISK가 아니므로 승격되지 않는다.
+        grade = _max_grade(grade, GRADE_WEEKLY)
     elif (decision_relevance.is_order_environment(article)
           and quality["source_quality"] not in ("excluded", "low")):
         # 수주·해외 발주 환경(EPC/데이터센터/SMR/플랜트/원전/중동/재건) + 신뢰 출처 —

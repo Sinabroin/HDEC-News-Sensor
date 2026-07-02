@@ -34,6 +34,7 @@ SQ_RULES = ROOT / "data" / "source_quality_rules.json"
 AQ_MODULE = ROOT / "app" / "article_quality.py"
 SCORING = ROOT / "app" / "scoring.py"
 RADAR = ROOT / "app" / "radar.py"
+RADAR_SIGNALS = ROOT / "app" / "radar_signals.py"
 BRIEFING = ROOT / "app" / "briefing.py"
 MAIN = ROOT / "app" / "main.py"
 REPORT_BUILDER = ROOT / "scripts" / "build_static_report.py"
@@ -197,9 +198,12 @@ def check_integration() -> None:
     check("scoring이 현대건설 직접 등급 floor 적용 (hdec_ai_contract/enforcement)",
           "hdec_ai_contract" in sc and "hdec_enforcement" in sc and "_max_grade" in sc)
     rd = RADAR.read_text(encoding="utf-8")
-    check("radar가 article_quality로 stock-hype 제외 + hdec 라우팅",
+    signal_engine = RADAR_SIGNALS.read_text(encoding="utf-8")
+    check("radar가 stock-hype 제외 + 4축 AI 신호 라우팅",
           "article_quality" in rd and "stock_hype" in rd
-          and "hdec_ai_contract" in rd and "hdec_enforcement" in rd)
+          and "hdec_enforcement" in rd
+          and "radar_signals.classify_ai_radar" in rd
+          and "extract_ai_radar_signals" in signal_engine)
     check("radar 리스크 분류가 risk-action 키워드 요구 (RISK_ACTION_STRONG)",
           "RISK_ACTION_STRONG" in rd and "RISK_REG_WEAK" in rd)
     check("radar가 부처명 단독 리스크 트리거 제거 (국토부 GENERAL_RISK 미사용)",

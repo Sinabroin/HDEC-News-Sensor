@@ -12,8 +12,9 @@ briefing.py가 build_brief에서 호출하는 표시 전용 분류기다:
   collector가 50% 토큰 매칭으로 붙이는 생성 topic_candidates(예: '현대건설'만 맞아도
   '현대건설 데이터센터'가 붙음)는 분류 증거로 쓰지 않는다 — 주입된 '데이터센터'가 종전·
   주가 기사를 AI로 끌어올리던 오탐을 차단한다.
-- AI 섹션은 raw에 직접 AI 인프라 증거(AI_KEYWORDS)가 있어야 한다. 종전·재건·건설주·
-  주가 폭등·종목·CB·전환사채 등은 AI 증거가 아니다 (AI_NEGATIVE_GUARD 참고).
+- AI 섹션은 raw에서 추출한 actor/event/infra/exclusion 교차 신호가 있어야 한다.
+  title/snippet은 입력 데이터이며 특정 전체 제목이나 생성 topic_candidates를 고정
+  분류 키로 쓰지 않는다.
 
 경계 (briefing 도메인과 동일한 '파생 전용' 원칙):
 - DB 접근/쓰기 없음, 네트워크 없음.
@@ -23,7 +24,7 @@ briefing.py가 build_brief에서 호출하는 표시 전용 분류기다:
 
 import json
 
-from app import ai_value_chain, article_quality
+from app import article_quality, radar_signals
 
 # ---- radar_section 키 (단일 소스) ----
 AI = "ai"
@@ -43,29 +44,6 @@ RADAR_LABELS = {
     MACRO: "거시경제",
     OTHER: "기타",
 }
-
-# ---- 분류 키워드 (소문자 매칭) ----
-# AI 인프라 / 건설 AI — 사용자 정의 AI 레이더 우선 키워드 (전력망·SMR·냉각 포함).
-# 단독 'ai'는 'email/detail' 등 오탐을 피해 한국어 토큰/복합어로만 매칭한다.
-AI_KEYWORDS = [
-    "데이터센터", "idc", "인공지능", "생성형",
-    "smr", "소형모듈원자로", "전력망", "송배전", "냉각", "전력수요",
-    "스마트건설", "스마트 건설", "건설로봇", "건설 로봇", "bim", "디지털트윈",
-    "건설 자동화", "자동화 시공", "영상인식", "자율시공", "자율주행",
-    "ai 데이터센터", "ai 인프라", "ai 전력", "ai 시공", "ai 설계", "ai 안전",
-    "ai 수주", "ai 반도체", "스마트 안전", "gpu",
-]
-
-# AI 오탐 차단 (P0-D3A) — 이 토큰들은 AI 증거가 아니다. 종전·재건·건설주·주가 폭등·종목·
-# CB·전환사채는 단독으로 (또는 collector가 주입한 topic_candidates만으로) AI 섹션에
-# 들어가지 못한다. classify_section은 raw 제목+스니펫에 AI_KEYWORDS가 직접 있을 때만 AI를
-# 반환하므로(아래 단독 'ai'는 일부러 AI_KEYWORDS에 넣지 않는다) 이 토큰들은 구조적으로 AI가
-# 될 수 없다. 단 '데이터센터 사업 전환사채'처럼 raw에 직접 AI 인프라 증거가 함께 있으면 AI다
-# (전략 맥락 예외 — decision_relevance의 FINANCE_STRATEGY_CTX와 같은 의도).
-AI_NEGATIVE_GUARD = [
-    "종전", "재건", "건설주", "주가 폭등", "주가폭등", "잭팟", "종목",
-    "전환사채", "회사채", "유상증자",
-]
 
 # 강한 리스크 액션 (P0-C1.11) — 제재/사고 등 실제 리스크-액션이 있을 때만 단독 risk.
 # '국토부/고용노동부/정부/안전/점검' 단독으로는 더 이상 리스크로 보지 않는다 —
@@ -188,9 +166,10 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
     우선순위 (사용자 IA 의도 반영 + P0-C1.11 품질 게이트):
     0) 주식 테마/증권 리서치성(stock-hype, 현대건설 직접 제외)은 어떤 레이더에도
        두지 않는다 → other (임원 핵심 섹션 보호).
-    0') 현대건설 직접 AI 계약검토/컴플라이언스 → ai, 제재/벌점 → risk_regulation.
-    1) AI 인프라/건설 AI 신호(raw에 직접 AI_KEYWORDS)는 전력/SMR/거시를 언급해도 ai로 둔다.
-       종전·재건·건설주·주가 폭등·종목·CB·전환사채는 AI 증거가 아니다 (AI_NEGATIVE_GUARD).
+    0') 현대건설 직접 제재/벌점 → risk_regulation. AI 계약검토도 아래 4축
+       신호 기준을 통과해야 ai가 된다.
+    1) raw에서 추출한 actor/event/infra/exclusion 교차 신호가 AI 기준을 충족하면
+       전력/SMR/거시를 언급해도 ai로 둔다.
     2) 실제 리스크-액션(중대재해/벌점/제재 등) 또는 산업 맥락의 규제 신호는 risk_regulation.
        부처명(국토부 등)·정책·'혁신기술'만으로는 리스크로 보지 않는다.
     3) pure 거시 변수(수주/해외 이벤트 없는 FX·유가·금리)는 macro_economy.
@@ -202,16 +181,13 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
 
     if aq["stock_hype"]:
         return OTHER
-    if aq["hdec_ai_contract"]:
-        return AI
     if aq["hdec_enforcement"]:
         return RISK
     if aq.get("local_safety_inspection"):
         return OTHER
 
-    vc = ai_value_chain.classify_ai_value_chain(
-        row.get("title") or "", row.get("source") or "", row.get("snippet") or "")
-    is_ai_candidate = ai_value_chain.is_executive_ai_candidate(vc) or _hits(raw, AI_KEYWORDS)
+    ai_assessment = radar_signals.classify_ai_radar(row, section=True)
+    is_ai_candidate = bool(ai_assessment["eligible"])
     weak_risk_hits = {term for term in RISK_REG_WEAK if term in raw}
     is_ai_enablement_policy = (
         is_ai_candidate
@@ -229,9 +205,9 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
             and not is_ai_enablement_policy):
         return RISK
 
-    # AI는 raw에 직접 AI 인프라/칩/반도체 공급망/스마트건설 증거가 있을 때만. 단순 앱·
-    # 챗봇 기능 업데이트 같은 generic AI는 value-chain classifier가 tier5/generic으로
-    # 내려 dashboard 상위 AI 신호가 되지 않는다.
+    # 상위 radar section은 정책의 section profile을 쓴다. 일반 AI 제품 이벤트도 AI
+    # section에는 둘 수 있지만, executive AI 탭은 별도 primary profile에서 ai_product를
+    # 제외하므로 앱·챗봇 업데이트가 상단 실행 신호로 승격되지는 않는다.
     if is_ai_candidate:
         return AI
 
@@ -245,7 +221,12 @@ def classify_section(row: dict, category_key: str | None = None) -> str:
     if has_macro:
         return MACRO
 
-    return _CATEGORY_SECTION.get(category_key or "general", OTHER)
+    fallback = _CATEGORY_SECTION.get(category_key or "general", OTHER)
+    # A generated/legacy category may support routing but cannot bypass the
+    # current raw-text signal contract for AI.
+    if fallback == AI and not is_ai_candidate:
+        return OTHER
+    return fallback
 
 
 def is_risk_eligible(row: dict, category_key: str | None = None) -> bool:

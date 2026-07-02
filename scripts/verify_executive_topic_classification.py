@@ -140,9 +140,12 @@ def check_integration() -> None:
     rd = RADAR.read_text(encoding="utf-8")
     check("radar가 raw 제목+스니펫 기준 분류 헬퍼(_raw_text) 사용",
           "_raw_text" in rd and "classify_section" in rd)
-    check("radar가 명시적 AI 오탐 가드(AI_NEGATIVE_GUARD) 정의",
-          "AI_NEGATIVE_GUARD" in rd
-          and all(tok in rd for tok in ("전환사채", "종전", "건설주")))
+    policy = (ROOT / "data" / "radar_signal_policy.json").read_text(
+        encoding="utf-8")
+    check("radar가 actor/event/infra/exclusion 신호 정책 사용",
+          "radar_signals.classify_ai_radar" in rd
+          and all(axis in policy for axis in (
+              '"actor"', '"event"', '"infra"', '"exclusion"')))
     dr = DR_MODULE.read_text(encoding="utf-8")
     check("decision_relevance가 분양/스포츠 강등 가드(_hdec_demoted) 정의",
           "_hdec_demoted" in dr and "HDEC_SALES_PROMO" in dr

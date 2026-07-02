@@ -1062,6 +1062,14 @@ def _render_evidence_panel(brief: dict, audience: str = "operator") -> list[str]
            '<div class="evidence-overview-desktop">']
     out += _render_evidence_overview(brief)
     out.append('</div>')
+    new_issues = brief.get("top_new_issues") or []
+    if new_issues:
+        out += [
+            '<section class="evidence-new-issues" aria-label="신규 이슈 근거">',
+            '<h3>신규 이슈 근거</h3>',
+        ]
+        out += _render_radar_signals(new_issues)
+        out.append('</section>')
     out += _render_mobile_evidence_filter(brief)
     out += _render_mobile_evidence_stream(brief)
     out += _render_category_drilldown(brief)

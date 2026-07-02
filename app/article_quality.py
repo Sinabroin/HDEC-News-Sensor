@@ -23,8 +23,8 @@
 소비처:
 - scoring: stock_hype면 STOCKHYPE_SCORE_CAP로 캡 + 제외 등급; hdec_ai_contract/
   hdec_enforcement면 등급 floor(최소 '추적 필요').
-- radar: stock_hype면 레이더 섹션에서 제외(OTHER); hdec_ai_contract→ai /
-  hdec_enforcement→risk_regulation.
+- radar: stock_hype면 레이더 섹션에서 제외(OTHER);
+  hdec_enforcement→risk_regulation. AI 적격성은 별도 4축 신호 정책이 소유한다.
 """
 
 import json

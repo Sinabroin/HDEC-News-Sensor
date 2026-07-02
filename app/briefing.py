@@ -708,9 +708,12 @@ class _ExposureSurfaceState:
             rec["representative"] = representative
 
     def exact_representative(self, row: dict):
-        aid = row["id"]
-        if aid in self.article_surfaces:
-            return aid
+        """Return only a different article that aliases this row.
+
+        Reappearance of the same article is governed by ``surface_count`` and
+        ``max_article_surfaces``. Returning its own id here made that cap
+        unreachable and accidentally reduced the effective limit to one.
+        """
         return self.alias_owner(row)
 
     def global_cluster_capped(self, row: dict, decision: dict | None = None, *,
@@ -836,9 +839,9 @@ def _supplement_ai_tab(ai_entries: list[dict],
 
     AI 탭이 AI_TAB_SUPPLEMENT_TARGET건 미만이면, 이미 다른 임원 상단 섹션에 노출된 고품질
     AI/DC/스마트건설 기사로 채운다. 적격성·우선순위(tier)는 surface_contracts.
-    decide_ai_supplement(raw 제목만 본다)가 결정한다 — HDEC+AI/DC → DC+수주·정책 →
-    로봇·스마트건설 순. 동일 기사/클러스터/유사 제목(특히 동일 로봇 자동화 기사쌍)은 1건으로
-    dedup하고, mixed 사업·종목성 제목은 들이지 않는다(D4-D 계약 유지). 기존 AI 탭 선택·순서는
+    decide_ai_supplement(actor/event/infra/exclusion 신호)가 결정한다 — HDEC+AI/DC →
+    DC+수주·정책 → 로봇·스마트건설 순. 동일 기사/클러스터/유사 제목은 1건으로
+    dedup하고, mixed 사업·종목성 신호는 들이지 않는다. 기존 AI 탭 선택·순서는
     그대로 두고 뒤에 보충분만 덧붙이며, 보충분은 ai_supplement=True 내부 표식만 남기고 임원
     라벨은 노출하지 않는다. risk_regulation·경쟁사·거시는 호출자가 candidate_surfaces에서
     제외한다(AI 안전·산재·제재는 리스크 섹션이 소유). TARGET~MAX(3~5)에서 멈춘다."""
@@ -1820,7 +1823,9 @@ def build_brief(pipeline_counts: dict | None = None,
     surface_state = _ExposureSurfaceState()
 
     def _radar_group(section_key, limit=TOP_RADAR, sort_key=None, *, surface=None,
-                     eligible=None):
+                     eligible=None,
+                     max_article_surfaces=MAX_ARTICLE_TOP_SURFACES,
+                     max_per_cluster=1):
         rows = [r for r in display_rows if radar_sections[r["id"]] == section_key]
         # P0-D3S/D3U Goal B: AI 상단 적격성 필터 — 직접 건설/인프라 관련성 없는 generic AI
         # (순수 인공지능/반도체/우주/소비자 AI)는 AI 상단에서 제외한다. 빈 탭을 피하려고
@@ -1832,15 +1837,20 @@ def build_brief(pipeline_counts: dict | None = None,
         if surface:
             rows = _filter_surface_exposures(
                 rows, limit, decisions=decisions, surface=surface,
-                state=surface_state)
+                state=surface_state,
+                max_article_surfaces=max_article_surfaces,
+                max_per_cluster=max_per_cluster)
         else:
             rows = _cap_exposure_clusters(rows, limit, decisions=decisions)
         return [_entry(i, r) for i, r in enumerate(rows, start=1)]
 
     def _decision_group(section_key, limit=TOP_RADAR, sort_key=None,
-                        company_cap=None, min_score=None, *, surface=None):
+                        company_cap=None, min_score=None, *, surface=None,
+                        eligible=None):
         rows = [r for r in display_rows
                 if decision_relevance.in_section(decisions[r["id"]], section_key)]
+        if eligible is not None:
+            rows = [r for r in rows if eligible(r)]
         if min_score is not None:
             rows = [r for r in rows if (r.get("final_score") or 0) >= min_score]
         rows.sort(key=sort_key or (
@@ -1870,8 +1880,22 @@ def build_brief(pipeline_counts: dict | None = None,
     # --- 상단 노출 surface를 우선순위대로 빌드한다 (높은 우선순위가 기사를 먼저 점유) ---
     # 0) 즉시 알림 후보 — 임원 헤드라인 다이제스트이므로 가장 먼저 점유한다. 이후 레이더는
     #    같은 article/title/url을 반복하지 않고 다른 근거로 backfill한다(D3L visible single-use).
+    # Live AI/risk items must remain in their semantic section. Reserving them
+    # before the headline selector preserves exact single-use exposure without
+    # letting a headline slot erase AI/risk ownership. Mock keeps its historical
+    # deterministic headline selection unchanged.
+    semantic_owner_ids = {
+        r["id"] for r in display_rows
+        if "live" in (r.get("signal_origin") or "").lower()
+        and (
+            radar_sections[r["id"]] in (radar.AI, radar.RISK)
+            or decision_relevance.in_section(
+                decisions[r["id"]], decision_relevance.HDEC_DIRECT)
+        )
+    }
     instant_pool = [r for r in display_rows
-                    if r.get("alert_grade") == scoring.GRADE_INSTANT]
+                    if r.get("alert_grade") == scoring.GRADE_INSTANT
+                    and r["id"] not in semantic_owner_ids]
     instant_pool.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
     instant_rows = _diverse_top(
         instant_pool, categories, TOP_IMMEDIATE,
@@ -1881,7 +1905,8 @@ def build_brief(pipeline_counts: dict | None = None,
         surface="top_immediate_signals", state=surface_state)
     if not instant_rows:
         fallback_pool = [r for r in display_rows
-                         if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR]
+                         if (r.get("final_score") or 0) >= TOP_DISPLAY_SCORE_FLOOR
+                         and r["id"] not in semantic_owner_ids]
         fallback_pool.sort(
             key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
         instant_rows = _diverse_top(
@@ -1903,7 +1928,11 @@ def build_brief(pipeline_counts: dict | None = None,
                 -(r.get("final_score") or 0), r["id"])
     hdec_direct_signals = _decision_group(
         decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort,
-        surface="hdec_direct_signals")
+        surface="hdec_direct_signals",
+        # AI/risk keeps HDEC membership in decision_relevance, but its one
+        # visible card belongs to the corresponding semantic section.
+        eligible=lambda row: radar_sections[row["id"]]
+        not in (radar.AI, radar.RISK))
 
     # 2) AI 관련 — 정렬 우선순위 (P0-D3S, 임원 의도): (1) 현대건설/건설/EPC/데이터센터/전력
     # 인프라 직접 관련성 → (2) 임원 중요도(종합 점수) → (3) 신뢰 출처 → (4) 최신성.
@@ -1947,7 +1976,12 @@ def build_brief(pipeline_counts: dict | None = None,
                 -(r.get("final_score") or 0), r["id"])
     business_signals = _decision_group(
         decision_relevance.ORDER_OVERSEAS, sort_key=_order_sort, company_cap=2,
-        min_score=1.2, surface="business_signals")
+        min_score=1.2, surface="business_signals",
+        # AI/risk articles can also contain "수주" as an event or impact term;
+        # their primary semantic owner remains AI/risk, including near-duplicate
+        # evidence that may later appear in the new-issues/audit path.
+        eligible=lambda row: radar_sections[row["id"]]
+        not in (radar.AI, radar.RISK))
 
     # 4) 리스크·규제 — broader pool(scored 전체, 비뉴스만 제외)에서 risk_priority순으로 뽑아
     # 중요도(final_score)가 낮아도 중대재해·규제가 레이더에 드러나게 한다. 경쟁사·공급망보다
