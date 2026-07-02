@@ -121,16 +121,19 @@ def render_markdown(audit: dict) -> str:
         "",
         "## 1. Provider 상태",
         "",
-        "| provider | status |",
-        "| --- | --- |",
-        f"| google_news_rss | {_md_escape(ps.get('google_news_rss'))} |",
-        f"| naver_news_api | {_md_escape(ps.get('naver_news_api'))} |",
+        "| provider | status | credentials_present |",
+        "| --- | --- | --- |",
+        f"| google_news_rss | {_md_escape(ps.get('google_news_rss'))} | (무인증 공개 RSS) |",
+        f"| naver_news_api | {_md_escape(ps.get('naver_news_api'))} | "
+        f"{audit.get('credentials_present', {}).get('naver_news_api', False)} |",
         "",
         "## 2. 수집 요약",
         "",
         "| 항목 | 값 |",
         "| --- | --- |",
         f"| collected_total (provider 원시 합계) | {summ.get('collected_total', 0)} |",
+        f"| raw_google_count | {summ.get('raw_google_count', 0)} |",
+        f"| raw_naver_count | {summ.get('raw_naver_count', 0)} |",
         f"| google_only | {summ.get('google_only', 0)} |",
         f"| naver_only | {summ.get('naver_only', 0)} |",
         f"| both | {summ.get('both', 0)} |",
@@ -139,6 +142,11 @@ def render_markdown(audit: dict) -> str:
         f"| top_display (즉시 후보 Top) | {summ.get('top_display', 0)} |",
         f"| observed (즉시/중요/관찰) | {summ.get('observed', 0)} |",
         f"| excluded/background (참고·제외) | {summ.get('excluded', 0)} |",
+        f"| visible_google_count | {summ.get('visible_google_count', 0)} |",
+        f"| visible_naver_count | {summ.get('visible_naver_count', 0)} |",
+        f"| visible_both_count | {summ.get('visible_both_count', 0)} |",
+        f"| google_news_href_count (경유 링크) | {summ.get('google_news_href_count', 0)} |",
+        f"| publisher_href_count (원문 직링크) | {summ.get('publisher_href_count', 0)} |",
     ]
     if audit.get("collection_note"):
         lines += ["", f"> {audit['collection_note']}"]
@@ -246,6 +254,8 @@ def collect_providers(m) -> dict:
         "google_status": google_status,
         "naver_rows": naver_result.get("articles") or [],
         "naver_status": naver_result.get("status"),
+        # 자격증명 유무(bool)만 — 값은 담지 않는다 (rules.md §4).
+        "naver_credentials_present": bool(naver_result.get("credentials_present")),
     }
 
 
@@ -295,24 +305,34 @@ def run_audit() -> dict:
                            "(네트워크 차단 또는 자격증명 부재 가능). 이는 '관련 기사가 없음'을 "
                            "뜻하지 않습니다 — provider 상태를 확인하세요.")
 
+    link_summary = _link_visibility_summary(scored, top_ids)
     return {
         "generated_at": db.now_iso(),
         "news_mode": m["config"].NEWS_MODE,
         "roster_size": len(roster),
+        # 자격증명 유무(bool)만 노출한다 — 값은 절대 담지 않는다 (rules.md §4).
+        "credentials_present": {"naver_news_api": prov.get("naver_credentials_present", False)},
+        # provider_status는 flat 상태 문자열 (disabled/skipped/active/error) — 회귀 계약 유지.
         "provider_status": {
             "google_news_rss": prov["google_status"],
             "naver_news_api": prov["naver_status"],
         },
         "summary": {
             "collected_total": len(google_rows) + len(naver_rows),
+            "raw_google_count": len(google_rows),
+            "raw_naver_count": len(naver_rows),
             "google_only": len(sets["google_only"]),
             "naver_only": len(sets["naver_only"]),
             "both": len(sets["both"]),
+            "google_only_count": len(sets["google_only"]),
+            "naver_only_count": len(sets["naver_only"]),
+            "both_count": len(sets["both"]),
             "deduped_total": deduped_total or len(combined),
             "executive_signals": observed,
             "top_display": len(top_ids),
             "observed": observed,
             "excluded": excluded,
+            **link_summary,
         },
         "coverage_rows": coverage_rows,
         "naver_only_findings": naver_only_findings,
@@ -329,6 +349,51 @@ def _provider_token(row: dict) -> str:
     except ValueError:
         return ""
     return meta.get("provider") or ""
+
+
+def _external_href_of(row: dict) -> str:
+    """저장 기사 row에서 대시보드가 쓰는 외부 원문 href를 재현한다 (네트워크 없음)."""
+    from app import news_access
+    return news_access.choose_external_article_url({
+        "url": row.get("url"),
+        "source_metadata_json": row.get("source_metadata_json"),
+    })
+
+
+def _link_visibility_summary(scored: list[dict], top_ids: set) -> dict:
+    """provider별 visible(제외 제외) 카운트 + 원문/aggregator href 카운트 (순수 파생)."""
+    from app import news_access
+    vis_g = vis_n = vis_both = 0
+    google_href = publisher_href = other_agg_href = 0
+    for row in scored:
+        _t, is_obs, _e = grade_bucket(row.get("alert_grade"), top_ids, row["id"])
+        toks = providers_in(_provider_token(row))
+        if is_obs:
+            has_g, has_n = PROVIDER_GOOGLE in toks, PROVIDER_NAVER in toks
+            if has_g and has_n:
+                vis_both += 1
+            elif has_n:
+                vis_n += 1
+            elif has_g:
+                vis_g += 1
+        href = _external_href_of(row)
+        if not href:
+            continue
+        host = (news_access._domain(href) or "")
+        if "news.google" in host:
+            google_href += 1
+        elif news_access.is_aggregator_url(href):
+            other_agg_href += 1
+        else:
+            publisher_href += 1
+    return {
+        "visible_google_count": vis_g,
+        "visible_naver_count": vis_n,
+        "visible_both_count": vis_both,
+        "google_news_href_count": google_href,
+        "publisher_href_count": publisher_href,
+        "other_aggregator_href_count": other_agg_href,
+    }
 
 
 def _short_reason(row: dict, promoted: bool) -> str:

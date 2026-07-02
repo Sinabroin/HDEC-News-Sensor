@@ -207,9 +207,13 @@ def _request_json(url: str, headers: dict, timeout: int) -> dict:
         return json.loads(resp.read().decode(charset, errors="replace"))
 
 
-def _status_only(status: str, attempted: int = 0) -> dict:
+def _status_only(status: str, attempted: int = 0,
+                 credentials_present: bool = False) -> dict:
+    # credentials_present는 자격증명의 '유무(bool)'만 담는다 — 값(id/secret)은 절대 담지 않는다
+    # (rules.md §4). 감사/오케스트레이션이 disabled vs skipped_missing_credentials를 구분한다.
     return {"provider": PROVIDER, "source_label": SOURCE_LABEL, "status": status,
-            "articles": [], "queries_attempted": attempted, "queries_ok": 0}
+            "articles": [], "queries_attempted": attempted, "queries_ok": 0,
+            "raw_count": 0, "credentials_present": credentials_present}
 
 
 def fetch(timeout: int | None = None, sources_path=None,
@@ -226,19 +230,21 @@ def fetch(timeout: int | None = None, sources_path=None,
       - active: 1개 이상 쿼리 성공.
       - error: 켜졌고 자격증명 있으나 모든 쿼리가 실패 (가짜 값 0건).
     """
+    # 자격증명 유무만 bool로 판별한다 — 값은 읽어서 헤더에만 쓰고 어디에도 출력하지 않는다.
+    creds_present = bool(config.NAVER_CLIENT_ID and config.NAVER_CLIENT_SECRET)
     if not config.NAVER_NEWS_ENABLED:
-        return _status_only(STATUS_DISABLED)
+        return _status_only(STATUS_DISABLED, credentials_present=creds_present)
 
     client_id = config.NAVER_CLIENT_ID
     client_secret = config.NAVER_CLIENT_SECRET
     if not (client_id and client_secret):
         # 자격증명 부재 — 정직하게 skip한다. 비밀값/이름-값을 출력하지 않는다.
-        return _status_only(STATUS_SKIPPED_MISSING_CREDENTIALS)
+        return _status_only(STATUS_SKIPPED_MISSING_CREDENTIALS, credentials_present=False)
 
     cfg = _load_sources(sources_path)
     queries = [q for q in (cfg.get("queries") or []) if isinstance(q, str) and q.strip()]
     if not queries:
-        return _status_only(STATUS_ERROR)
+        return _status_only(STATUS_ERROR, credentials_present=True)
 
     host_map = cfg.get("host_source_map") or {}
     display = int(cfg.get("display", 10))
@@ -288,4 +294,5 @@ def fetch(timeout: int | None = None, sources_path=None,
     status = STATUS_ACTIVE if queries_ok else STATUS_ERROR
     return {"provider": PROVIDER, "source_label": SOURCE_LABEL, "status": status,
             "articles": results, "queries_attempted": len(queries),
-            "queries_ok": queries_ok}
+            "queries_ok": queries_ok, "raw_count": len(results),
+            "credentials_present": True}

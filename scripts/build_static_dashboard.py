@@ -556,6 +556,107 @@ def _has_dashboard_lens(sig) -> bool:
     return bool(_lens_for(sig))
 
 
+# D7-AD-X — 수집 provider 토큰 → 사람이 읽는 라벨. 결합 토큰(Google+Naver)과 mock/미상을 정직히
+# 표기한다. providers=(none) 회귀(대시보드 모델이 provider provenance를 잃던 문제)를 막는다.
+_PROVIDER_LABELS = {
+    "google_news_rss": "Google News RSS",
+    "naver_news_api": "Naver News API",
+    "google_news_rss+naver_news_api": "Google+Naver",
+    "naver_news_api+google_news_rss": "Google+Naver",
+    "mock": "데모(mock) 데이터",
+}
+
+
+def _provider_label(token: str) -> str:
+    token = (token or "").strip()
+    if not token:
+        return "수집 provenance 없음"
+    return _PROVIDER_LABELS.get(token) or token
+
+
+def _signal_source_metadata(sig: dict) -> dict:
+    """signal의 source_metadata_json(문자열)/source_metadata(dict)를 dict로 정규화한다.
+
+    허용 5키(provider/query/source_url/collected_at/provider_response_id)만 담기며 비밀값이
+    없다 — 표시/감사 전용 provenance다. 파싱 실패 시 빈 dict.
+    """
+    smj = sig.get("source_metadata_json")
+    if isinstance(smj, str) and smj.strip():
+        try:
+            parsed = json.loads(smj)
+        except (TypeError, ValueError):
+            parsed = {}
+        return parsed if isinstance(parsed, dict) else {}
+    if isinstance(smj, dict):
+        return smj
+    meta = sig.get("source_metadata")
+    return meta if isinstance(meta, dict) else {}
+
+
+def _news_provider_summary(all_rows: list, provider_status: dict | None) -> dict:
+    """모델 row들의 provider 토큰 분포 + collector provider_status를 합쳐 요약을 만든다 (D7-AD-X).
+
+    visible_count는 실제 대시보드에 노출된 고유 기사 기준(여러 surface에 중복 등장해도
+    article_id/url로 1회만 센다). raw_count/status/dedup 카운트는 collector가 넘긴
+    provider_status(있으면)에서 그대로 취한다. 비밀값 0건(자격증명은 유무 bool만).
+    """
+    seen: set = set()
+    google = naver = both = unknown = 0
+    for row in all_rows or []:
+        key = row.get("article_id") or row.get("url") or row.get("title") or ""
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        token = row.get("provider") or _signal_source_metadata(row).get("provider") or ""
+        toks = {p for p in str(token).split("+") if p}
+        has_g = "google_news_rss" in toks
+        has_n = "naver_news_api" in toks
+        if has_g and has_n:
+            both += 1
+        elif has_n:
+            naver += 1
+        elif has_g:
+            google += 1
+        else:
+            unknown += 1
+    status = provider_status if isinstance(provider_status, dict) else {}
+
+    def _detail(key: str) -> dict:
+        value = status.get(key)
+        if isinstance(value, dict):
+            return dict(value)
+        return {"status": value} if value else {}
+
+    return {
+        "google_news_rss": {"visible_count": google, **_detail("google_news_rss")},
+        "naver_news_api": {"visible_count": naver, **_detail("naver_news_api")},
+        "both": {"visible_count": both},
+        "unknown": {"visible_count": unknown},
+    }
+
+
+def _attach_provider_fields(row: dict) -> dict:
+    """_row_from_signal을 거치지 않는 모델 row(카테고리 근거 기사 등)에도 provider provenance를
+    부착한다 (D7-AD-X). source_metadata_json(허용 5키·비밀값 0)에서 파생하며, 이미 provider가
+    있으면 건드리지 않는다 — 모든 surface의 row가 균일하게 provider 근거를 갖게 한다.
+    """
+    if not isinstance(row, dict) or row.get("provider"):
+        return row
+    meta = _signal_source_metadata(row)
+    token = str(meta.get("provider") or "")
+    row["provider"] = token
+    row["collectionProvider"] = _provider_label(token)
+    row.setdefault("collectionMethod", news_access.classify_collection_method(row))
+    raw_url = row.get("url") or ""
+    src_url = str(meta.get("source_url") or "")
+    row.setdefault("aggregator_url", next(
+        (u for u in (raw_url, src_url) if u and news_access.is_aggregator_url(u)), ""))
+    row.setdefault("original_url", raw_url if _is_http(raw_url)
+                   and not news_access.is_aggregator_url(raw_url)
+                   and not news_access.detect_corp_warning_url(raw_url) else "")
+    return row
+
+
 def _row_from_signal(sig, extra_lens=()) -> dict:
     kind = sig.get("opportunity_or_risk") or "관찰"
     cat_label, cat_color, _kind_cls = _KIND.get(kind, ("관찰", "#3F6FA8", "sky"))
@@ -587,6 +688,22 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         body_sample=sig.get("link_body_sample"),
     )
     collection_method = news_access.classify_collection_method(sig)
+    # D7-AD-X — provider provenance(표시/감사 전용). DB source_metadata_json(허용 5키·비밀값 0)에서
+    # 파생해 모델 row에 보존한다. 이 필드가 없으면 대시보드 모델의 provider 분포가 (none)으로
+    # 소실된다(진단에서 관측된 회귀). 원문 href는 위 external_url이 담당하며 여기선 provenance만 싣는다.
+    source_metadata = _signal_source_metadata(sig)
+    provider_token = str(source_metadata.get("provider") or "")
+    raw_url = sig.get("url") or ""
+    src_url = str(source_metadata.get("source_url") or "")
+    # aggregator_url: news.google.com/포털/검색 '경유' URL(있으면). url이 경유면 url을, 아니면
+    # source_url이 경유면 그것을(merge가 원문으로 대체할 때 경유 URL을 source_url에 보존한다).
+    aggregator_url = next(
+        (u for u in (raw_url, src_url)
+         if u and news_access.is_aggregator_url(u)), "")
+    # original_url: url이 퍼블리셔 직링크(경유/차단 아님)일 때 그 값. 경유 URL이면 원문 직링크 없음.
+    original_url = (raw_url if _is_http(raw_url)
+                    and not news_access.is_aggregator_url(raw_url)
+                    and not news_access.detect_corp_warning_url(raw_url) else "")
     provenance = {
         "source": "executive_brief",
         "article_id": sig.get("article_id") or "",
@@ -645,6 +762,16 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "sourceDomain": access["source_domain"],
         "accessSourceType": access["source_type"],
         "collectionMethod": collection_method,
+        # D7-AD-X — provider provenance(표시/감사 전용, 비밀값 0). provider 분포가 (none)으로
+        # 소실되던 회귀를 막는다. Google News 경유 URL은 aggregator_url로, 퍼블리셔 원문은
+        # original_url/external_url로 분리 노출한다(원문 href는 external_url이 담당).
+        "provider": provider_token,
+        "collectionProvider": _provider_label(provider_token),
+        "source_metadata": source_metadata,
+        "source_metadata_json": sig.get("source_metadata_json") or "",
+        "aggregator_url": aggregator_url,
+        "original_url": original_url,
+        "canonical_url": sig.get("canonical_url") or "",
         "link_access_status": access["link_access_status"],
         "link_access_note": access["link_access_note"],
         "final_url": access["final_url"],
@@ -1542,6 +1669,11 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     # 보안팀 점검용 domain inventory. 관측된 메타데이터만 집계하며 외부 접속은 하지 않는다.
     # 접근 상태는 표시 전용이고 row 선별/점수/렌즈에는 사용되지 않는다.
     model["news_source_inventory"] = news_access.build_source_inventory(all_rows)
+    # D7-AD-X — provider provenance 요약(표시/감사 전용). provider 분포가 (none 70)으로 소실되던
+    # 회귀를 막고, collector가 넘긴 provider_status(Google RSS + Naver API의 raw/dedup 카운트)를
+    # 함께 노출한다 — Naver가 '보조 코드'가 아니라 명시적 1급 provider임을 모델에 기록한다(비밀값 0).
+    model["news_provider_summary"] = _news_provider_summary(
+        all_rows, brief.get("news_provider_status"))
     latest_kst = _latest_article_kst(all_rows)
     if generated_kst:
         meta["generated_kst"] = generated_kst
@@ -1569,9 +1701,12 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     # D7-AD-W — 좌측 navcat flat list용 분류 데이터(기상·날씨 제외). visible accordion 대신
     # preview-model에서 JS가 #categoryNewsList를 렌더한다(가짜 기사 생성 없음).
     sections = brief.get("accordion_sections") or []
-    model["nav_category_sections"] = [
-        s for s in sections if (s.get("key") or "") != "weather"
-    ]
+    nav_sections = [s for s in sections if (s.get("key") or "") != "weather"]
+    # D7-AD-X — 카테고리 근거 기사도 provider provenance를 갖게 한다(_row_from_signal 미경유 surface).
+    for section in nav_sections:
+        for article in section.get("articles") or []:
+            _attach_provider_fields(article)
+    model["nav_category_sections"] = nav_sections
     # D7-AA — 부가 관찰(SUPPORTING LENSES: business_lens/ecosystem/watch_next) 섹션은 제거됨.
     # 이전의 그룹별 count 주입 루프도 함께 제거한다(템플릿 모델에 더 이상 해당 키가 없음).
     new_json = json.dumps(model, ensure_ascii=False, indent=2)

@@ -151,10 +151,15 @@ def merge_provider_articles(rows: list[dict]) -> list[dict]:
         existing = kept[idx]
         ex_url = (existing.get("url") or "").lower()
         if _GOOGLE_REDIRECT_MARK in ex_url and _GOOGLE_REDIRECT_MARK not in url.lower():
-            by_url.pop(make_url_hash(existing.get("url") or ""), None)
-            existing["url"] = url
+            displaced = existing.get("url") or ""   # news.google 경유 URL — provenance로 보존
+            by_url.pop(make_url_hash(displaced), None)
+            existing["url"] = url   # 퍼블리셔 원문(originallink) 우선 — 외부 href가 직링크가 된다
             meta = dict(existing.get("source_metadata") or {})
-            meta["source_url"] = url
+            # source_url에는 경유(aggregator) URL을 보존한다(허용 키만 씀 — rules.md §3). 원문
+            # href는 url(퍼블리셔 직링크)이 담당하고, 감사/모델은 '어디서 발견했는지'를 이 값으로
+            # 추적한다(Google News 경유 링크를 잃지 않되 href로 승격하지도 않는다).
+            if displaced:
+                meta["source_url"] = displaced
             existing["source_metadata"] = meta
             if raw.get("source") and existing.get("source") in (None, "", "출처 미상"):
                 existing["source"] = raw["source"]
@@ -165,6 +170,28 @@ def merge_provider_articles(rows: list[dict]) -> list[dict]:
         meta["provider"] = "+".join(sorted(providers[i]))
         entry["source_metadata"] = meta
     return kept
+
+
+def _provider_dedup_counts(rows: list[dict]) -> tuple[int, int, int]:
+    """merge_provider_articles 결과에서 provider별 dedup 후 기여도를 센다 (비밀값 0건).
+
+    반환: (google_only, naver_only, both). source_metadata.provider 결합 토큰
+    ('google_news_rss+naver_news_api')을 집합으로 해석한다 — 감사/provider_status가
+    Naver 기사가 dedup/병합 이후 몇 건 살아남았는지(naver_only + both) 정직하게 본다.
+    """
+    g_only = n_only = both = 0
+    for row in rows:
+        toks = {p for p in
+                ((row.get("source_metadata") or {}).get("provider") or "").split("+") if p}
+        has_g = "google_news_rss" in toks
+        has_n = "naver_news_api" in toks
+        if has_g and has_n:
+            both += 1
+        elif has_n:
+            n_only += 1
+        elif has_g:
+            g_only += 1
+    return g_only, n_only, both
 
 
 def _ingest(raw_articles: list[dict], signal_origin: str) -> tuple[int, int, int]:
@@ -253,6 +280,8 @@ def _run_live() -> dict:
         labels.append(live_collector.SOURCE_LABEL)
     if naver_rows:
         labels.append(naver_news_provider.SOURCE_LABEL)
+    # provider별 dedup 후 기여도 — combined의 결합 provider 토큰에서 파생 (비밀값 0건).
+    g_only, n_only, both = _provider_dedup_counts(combined)
     return {
         # collected = 두 provider 원시 수집 합계, deduplicated = 교차 dedup 후 고유 기사 수.
         "collected": len(google_rows) + len(naver_rows),
@@ -264,10 +293,24 @@ def _run_live() -> dict:
         "fallback_used": False,
         "source_filtered": source_filtered,
         "google_query_audit": google_query_audit,
-        # provider 상태 — 비밀값 0건. 감사/운영자가 어느 provider가 활성/skip/error인지 본다.
+        # provider 상태 — 비밀값 0건(자격증명은 유무 bool만). 감사/운영자/대시보드가 어느
+        # provider가 active/skip/error이고 각 단계(raw→dedup)에서 몇 건이 살아남았는지 본다.
+        # naver_only/dedup_merged로 Naver가 '보조 코드'가 아니라 실제 1급 provider임을 기록한다.
         "provider_status": {
-            "google_news_rss": google_status,
-            "naver_news_api": naver_result.get("status"),
+            "google_news_rss": {
+                "status": google_status,
+                "raw_count": len(google_rows),
+                "after_dedup_count": g_only + both,
+            },
+            "naver_news_api": {
+                "status": naver_result.get("status"),
+                "raw_count": len(naver_rows),
+                "after_dedup_count": n_only + both,
+                "naver_only_count": n_only,
+                "dedup_merged_count": both,
+                "credentials_present": bool(naver_result.get("credentials_present")),
+            },
+            "both_count": both,
         },
     }
 

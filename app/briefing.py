@@ -394,6 +394,8 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
             row.get("source")) or "출처 미상",
         "published_at": row.get("published_at"),
         "collected_at": row.get("collected_at"),
+        "signal_origin": row.get("signal_origin"),
+        "source_metadata_json": row.get("source_metadata_json"),
         "source_quality": quality["source_quality"],
         "source_quality_label": quality["source_quality_label"],
         "source_quality_reason": quality["source_quality_reason"],
@@ -1164,6 +1166,8 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
         "published_at": row.get("published_at"),
         "collected_at": row.get("collected_at"),
         "snippet": row.get("snippet") or "",
+        "signal_origin": row.get("signal_origin"),
+        "source_metadata_json": row.get("source_metadata_json"),
         "url": url,
         "has_original_link": _has_http_url(url),
         "final_score": row.get("final_score"),
@@ -2247,6 +2251,9 @@ def build_brief(pipeline_counts: dict | None = None,
     news_source = prov.get("news_source") or (
         "live_rss" if news_mode == "live" else "mock")
     google_query_audit = prov.get("google_query_audit") or []
+    # D7-AD-X — provider 상태(Google RSS + Naver API status/raw/dedup 카운트)를 표시 전용으로
+    # 통과시킨다. 점수/등급/라우팅을 재계산하지 않으며 비밀값을 담지 않는다(자격증명은 유무 bool만).
+    news_provider_status = prov.get("provider_status") or {}
 
     # 참고/제외 · 출처 품질 감사 (P0-C1.8) — 카운트만 보이던 버킷을 감사 가능하게 한다.
     # 두 기준을 분리한다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
@@ -2266,6 +2273,9 @@ def build_brief(pipeline_counts: dict | None = None,
         "news_source": news_source,
         "news_fallback_used": news_fallback_used,
         "news_query_audit": google_query_audit,
+        # D7-AD-X — provider provenance(표시/감사 전용). 대시보드가 news_provider_summary를,
+        # 감사가 provider별 status/raw/dedup 카운트를 여기서 읽는다 (비밀값 0건).
+        "news_provider_status": news_provider_status,
         "risk_query_coverage": _risk_query_coverage(google_query_audit),
         "macro_data_mode": macro["macro_data_mode"],
         "macro_source": macro.get("source"),
