@@ -153,13 +153,25 @@ def check_proxy_and_source_needed(html: str, tpl: str, where: str) -> None:
                 if it.get("data_mode") != "proxy_market" or not (it.get("proxy_note") or "").strip()]
     check(f"3b[{where}]: 대용 종목은 proxy_market + proxy_note(국내 현물가 아님) 표기",
           not badproxy, f"라벨 미흡: {badproxy}" if badproxy else "ok")
-    # 소스필요 종목은 히스토리 없음 · 비클릭(value=null·unavailable).
+    # 소스필요 종목은 어떤 경우에도 히스토리 없음(비클릭 · 가짜 차트 금지).
+    # D7-AE 계약 갱신: D7-AD-X FRED leaf가 us_2y(일간)/kr_10y(OECD 월간 proxy) 단일
+    # 관측값을 live로 채우므로, mock의 정직 unavailable(value=null)과 live의 FRED
+    # current_only(value_source 필수 · kr_10y는 proxy_market 라벨) 둘 다 허용한다.
     for sid in SOURCE_NEEDED:
         it = items.get(sid) or {}
-        check(f"3c[{where}]:{sid} 소스필요 — 히스토리 없음 · 비클릭(unavailable)",
-              not _has_history(it) and it.get("value") is None
-              and it.get("data_mode") == "unavailable",
-              f"hist={_has_history(it)} value={it.get('value')} mode={it.get('data_mode')}")
+        no_hist = not _has_history(it)
+        if it.get("value") is None:
+            ok = no_hist and it.get("data_mode") == "unavailable"
+            state = "mock-unavailable"
+        else:
+            want_mode = "proxy_market" if sid == "kr_10y" else "delayed_market"
+            ok = (no_hist and bool(str(it.get("value_source") or "").strip())
+                  and it.get("data_mode") == want_mode)
+            state = "live-FRED-current_only"
+        check(f"3c[{where}]:{sid} 소스필요 — 히스토리 없음 · 정직 상태"
+              f"(unavailable 또는 FRED 단일값)", ok,
+              f"{state} hist={_has_history(it)} value={it.get('value')} "
+              f"mode={it.get('data_mode')} src={bool(it.get('value_source'))}")
     # 템플릿 UI 계약: 대용 라벨/소스필요 비클릭/빈드로어 거부.
     check("3d: 템플릿이 대용(proxy) 드로어 라벨을 노출",
           "대용(proxy)" in tpl and "정확한 국내 현물가 아님" in tpl)

@@ -175,9 +175,12 @@ def check_template() -> None:
           all(token in fred for token in ('"us_2y": ("DGS2"', '"kr_10y": ("IRLTLT01KRM156N"'))
           and "source_id" in fred and "value_source_id" in builder
           and "value_source" in builder)
-    check("13: kr_10y point는 proxy_note와 delayed_market으로 제한",
+    # D7-AE 계약 갱신: kr_10y는 월간 OECD 장기금리 '대용'이므로 delayed로 위장하지 않고
+    # proxy_market으로 라벨한다(감사 keep_proxy_with_caveat · market_history_coverage 3b 정합).
+    # us_2y(일간 DGS2)는 여전히 delayed_market — 두 라벨이 모두 빌더에 있어야 한다.
+    check("13: kr_10y point는 proxy_note + proxy_market 라벨(월간 OECD 대용 정직화)",
           "일간 국고채 10Y 아님" in builder
-          and 'data_mode="delayed_market"' in builder
+          and 'data_mode="proxy_market" if iid == "kr_10y" else "delayed_market"' in builder
           and 'it["proxy"] = True' in builder)
 
 

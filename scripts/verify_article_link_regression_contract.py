@@ -99,8 +99,12 @@ def main() -> int:
     check("6b. externalArticleUrl 헬퍼로 외부 href 생성",
           "function externalArticleUrl" in template
           and "var srcUrl = externalArticleUrl(article)" in template)
+    # D7-AE 갱신: 구현이 regex 리터럴이 아니라 indexOf 검사로 바뀌어도 계약(경고 URL 배제
+    # 로직 존재)은 동일하다 — 두 구현 형태 모두 인정한다.
     check("6c. externalArticleUrl이 warning URL을 배제",
-          "hdec\\.kr\\/warning|warning\\.jpg" in template)
+          "hdec\\.kr\\/warning|warning\\.jpg" in template
+          or ('indexOf("hdec.kr/warning")' in template
+              and 'indexOf("warning.jpg")' in template))
     check("6d. 원문 사이트 링크는 새 탭 안전 속성",
           'target="_blank"' in template and 'rel="noopener noreferrer"' in template)
 

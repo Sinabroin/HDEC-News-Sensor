@@ -142,9 +142,9 @@ _KEYWORD_LENS = lens_queries.keyword_lens_pairs() or _KEYWORD_LENS_FALLBACK
 
 # opportunity_or_risk → (cat 라벨, catColor, tag class)
 _KIND = {
-    "기회": ("기회", "#3C7A4E", "green"),
-    "리스크": ("리스크", "#B85049", "red"),
-    "관찰": ("관찰", "#3F6FA8", "sky"),
+    "기회": ("기회", "#38684A", "green"),
+    "리스크": ("리스크", "#A9433A", "red"),
+    "관찰": ("관찰", "#3E5C80", "sky"),
 }
 # score_band → (tag 라벨, tag class)
 _BAND_TAG = {
@@ -153,7 +153,7 @@ _BAND_TAG = {
     "추적 필요": ("참고", "sky"),
 }
 # score_components 색 팔레트 (featured 신호 지수)
-_COMP_PALETTE = ["#3F6FA8", "#3C7A4E", "#9AAAC1", "#9C7232", "#3F6FA8", "#3C7A4E"]
+_COMP_PALETTE = ["#3E5C80", "#38684A", "#98A0AE", "#8F6A2E", "#3E5C80", "#38684A"]
 
 
 def _is_http(url) -> bool:
@@ -697,19 +697,19 @@ def _attach_provider_fields(row: dict) -> dict:
 
 def _row_from_signal(sig, extra_lens=()) -> dict:
     kind = sig.get("opportunity_or_risk") or "관찰"
-    cat_label, cat_color, _kind_cls = _KIND.get(kind, ("관찰", "#3F6FA8", "sky"))
+    cat_label, cat_color, _kind_cls = _KIND.get(kind, ("관찰", "#3E5C80", "sky"))
     band = sig.get("score_band") or sig.get("alert_grade") or "추적 필요"
     tag, tag_class = _BAND_TAG.get(band, ("참고", "sky"))
     score = sig.get("final_score")
     score_str = "-" if score is None else f"{float(score):.1f}"
     if kind == "리스크":
-        score_label, score_color = "리스크", "#B85049"
+        score_label, score_color = "리스크", "#A9433A"
     elif band == "즉시 확인":
-        score_label, score_color = "즉시", "#B85049"
+        score_label, score_color = "즉시", "#A9433A"
     elif score is not None and float(score) >= 3.5:
-        score_label, score_color = "중요", "#5E6E8C"
+        score_label, score_color = "중요", "#56637A"
     else:
-        score_label, score_color = "관찰", "#5E6E8C"
+        score_label, score_color = "관찰", "#56637A"
     spread = sig.get("spread") or {}
     related = (f"관련 {spread.get('related_count')}건"
                if spread.get("related_count") else "단독 신호")
@@ -1416,17 +1416,17 @@ def _derive(brief: dict) -> dict:
 
 
 _TRUST_SVG = ('<span class="trust"><svg width="11" height="11" viewBox="0 0 24 24" fill="none">'
-              '<path d="M9 12l2 2 4-4" stroke="#3F6FA8" stroke-width="2.2" stroke-linecap="round" '
-              'stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3F6FA8" '
+              '<path d="M9 12l2 2 4-4" stroke="#3E5C80" stroke-width="2.2" stroke-linecap="round" '
+              'stroke-linejoin="round"></path><circle cx="12" cy="12" r="9" stroke="#3E5C80" '
               'stroke-width="1.6"></circle></svg>신뢰 출처</span>')
 _LINK_SVG = ('<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" '
-             'stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>')
+             'stroke="#3E5C80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>')
 
 
 def _render_featured(sig: dict, row: dict) -> str:
     """featured hero 카드를 실제 최상위 신호로 생성 (내부 reader + 보조 원문 링크)."""
     kind = sig.get("opportunity_or_risk") or "관찰"
-    _cl, _cc, kind_cls = _KIND.get(kind, ("관찰", "#3F6FA8", "sky"))
+    _cl, _cc, kind_cls = _KIND.get(kind, ("관찰", "#3E5C80", "sky"))
     chip_keys = [l for l in row["lens"] if l not in ("now", "new")][:3]
     chips = "".join(f'<span class="flchip">{escape(_LENS_LABEL.get(k, k))}</span>'
                     for k in chip_keys)
@@ -1694,9 +1694,11 @@ def _overlay_fred_live_quotes(model: dict, market_mode: str) -> None:
         if it is None or q.get("value") is None:
             continue
         note = "FRED OECD 월간 장기금리 · 일간 국고채 10Y 아님" if iid == "kr_10y" else None
+        # kr_10y는 월간 OECD 장기금리 '대용'이다 — delayed로 위장하지 않고 proxy_market으로
+        # 라벨한다(D7-AE 감사 keep_proxy_with_caveat · verify_market_history_coverage 3b 정합).
         _apply_point_quote(
             it, float(q["value"]), 2,
-            data_mode="delayed_market",
+            data_mode="proxy_market" if iid == "kr_10y" else "delayed_market",
             source=q.get("source") or snap.get("source") or "FRED (public CSV)",
             as_of=q.get("as_of"),
             direction=q.get("direction"),
@@ -1967,11 +1969,23 @@ def _update_honesty(html: str, news_mode: str) -> str:
     """live면 뉴스 렌즈노트 라벨을 '자동 수집 기사'로 정직 표기 (실기사 ≠ 데모).
 
     시장/AIS/초기신호 등 데모 미리보기 블록의 '데모 데이터' 라벨은 그대로 둔다(여전히 데모).
+
+    D7-AE: 헤더 상태 stat 2개도 함께 정직화한다 — live 게시본이 본문은 실기사인데
+    헤더가 '데모 mock'/'수동 · OFF'로 남아 서로 모순되던 표기를 수정한다(표기만 교체 ·
+    데이터 생성 없음). mock 빌드는 기존 문구를 그대로 둔다(정직한 데모 표기).
     """
     if news_mode == "live":
         html = html.replace(
             '<span class="previewflag" style="margin:0 0 0 8px;">데모 데이터</span>',
             '<span class="previewflag" style="margin:0 0 0 8px;">자동 수집 기사</span>')
+        html = html.replace(
+            '<span class="dot" style="background:#C79248;"></span>\n'
+            '        <div><div class="k">뉴스 데이터</div><div class="v">데모 mock</div></div>',
+            '<span class="dot" style="background:#38684A;"></span>\n'
+            '        <div><div class="k">뉴스 데이터</div><div class="v">자동 수집 (live)</div></div>')
+        html = html.replace(
+            '<div><div class="k">수집 상태</div><div class="v">수동 · OFF</div></div>',
+            '<div><div class="k">수집 상태</div><div class="v">공개 RSS · 지연 시세</div></div>')
     return html
 
 
