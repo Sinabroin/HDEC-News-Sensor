@@ -115,6 +115,15 @@ _SUPPORTED = [
     _Spec("eurusd", "EURUSD=X", 1.073, 3, 1.0, 0.5, 2.0, ""),
     _Spec("usdjpy", "USDJPY=X", 157.8, 1, 1.0, 50, 250, ""),
     _Spec("usdcny", "USDCNH=X", 7.27, 2, 1.0, 3, 12, ""),
+    # D7-AE 시장 소스 감사: 정적 표시값으로 남아 있던 KRW 교차환율 5종을 실측 연동으로
+    # 승격한다. 심볼은 2026-07-02 Yahoo chart API 실 GET 프로빙으로 검증(가짜 심볼 없음
+    # — 실측 CHF 1919/SGD 1197/HKD 197/INR 16.3/AED 421). SAR/QAR/TWD는 Yahoo 심볼
+    # 부재·미노출로 제외(감사 문서 docs/D7AE_MARKET_SOURCE_AUDIT.md 참조).
+    _Spec("chfkrw", "CHFKRW=X", 1712.3, 1, 1.0, 800, 4000, "원"),
+    _Spec("sgdkrw", "SGDKRW=X", 1138.9, 1, 1.0, 400, 2500, "원"),
+    _Spec("hkdkrw", "HKDKRW=X", 196.3, 1, 1.0, 50, 500, "원"),
+    _Spec("inrkrw", "INRKRW=X", 18.42, 2, 1.0, 3, 60, "원"),
+    _Spec("aedkrw", "AEDKRW=X", 418.5, 1, 1.0, 100, 1000, "원"),
 ]
 _BY_ID = {s.id: s for s in _SUPPORTED}
 

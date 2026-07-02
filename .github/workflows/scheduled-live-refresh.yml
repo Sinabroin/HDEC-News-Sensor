@@ -64,6 +64,7 @@ jobs:
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_site_article_sensing.py
           python3 scripts/verify_weather_risk.py
+          python3 scripts/verify_market_source_audit.py
 
       # 2) live 리포트/대시보드 생성. build_static_report.py가 출력하는 news_data_mode로
       #    live 수집 성공(live_ok)을 판별한다 (단일 빌드 = 단일 수집). 실패(mock fallback)면

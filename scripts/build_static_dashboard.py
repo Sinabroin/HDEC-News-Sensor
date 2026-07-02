@@ -1706,6 +1706,36 @@ def _overlay_fred_live_quotes(model: dict, market_mode: str) -> None:
         )
 
 
+def _demote_unbacked_market_values(model: dict, market_mode: str) -> None:
+    """live 빌드에서 '살아 있는 것처럼 보이는 정적 표시값'을 제거한다 (D7-AE 시장 소스 감사).
+
+    템플릿 데모 유니버스에는 값은 있으나 어떤 live 소스(market_history 지연/데모 히스토리,
+    FRED 단일값)도 붙지 않는 지표가 있다(아연·두바이유·JKM·SAR/QAR 환율·미 CPI/기준금리).
+    mock(데모 미리보기)에서는 '데모 데이터' 라벨 아래 정당하지만, live 게시본에서는 갱신
+    근거가 없는 정적 숫자가 현재값처럼 읽힌다(감사에서 실측 대비 큰 괴리 확인 — 예: CHF/KRW
+    정적 1712 vs 실측 1919). live 모드에서 이런 행의 값을 제거해 '미연동 관찰 후보'로
+    정직하게 강등한다:
+      · delayed/proxy 라벨인데 소스가 없으면 → data_mode=unavailable(값 없음)
+      · manual_or_reported는 라벨 유지 + 값만 제거(보고 대기 — cement와 동일 상태)
+    값을 만들지 않는다 — 제거만 한다(가짜 현재가 방지 · docs/D7AE_MARKET_SOURCE_AUDIT.md).
+    """
+    if (market_mode or "mock").strip().lower() != "live":
+        return
+    for it in model.get("market_items") or []:
+        has_value = (it.get("value") is not None
+                     and str(it.get("value")).strip() not in ("", "—"))
+        if not has_value:
+            continue
+        if it.get("history_data_mode") or it.get("value_source"):
+            continue  # market_history(실측/데모 정직 라벨) 또는 FRED 실측이 붙은 행
+        it["value"] = None
+        it["dir"], it["delta"] = "flat", "—"
+        it.pop("spark", None)
+        it["static_value_demoted"] = True
+        if it.get("data_mode") != "manual_or_reported":
+            it["data_mode"] = "unavailable"
+
+
 def _overlay_market_history(model: dict, market_mode: str) -> None:
     """지원 종목의 기간 히스토리를 부착한다 — 차트 없는 종목은 결정적 데모, live는 실측으로 교체.
 
@@ -1800,6 +1830,9 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     model["operator_api_base"] = (operator_api_base or "").strip()
     _overlay_market_history(model, market_mode)
     _overlay_fred_live_quotes(model, market_mode)
+    # 시장 소스 감사(D7-AE) — live 게시본에서 소스 없는 정적 표시값을 미연동으로 강등한다.
+    # 반드시 두 overlay 뒤·_market_link_counts(meta) 앞에서 호출한다(카운트 일관성).
+    _demote_unbacked_market_values(model, market_mode)
     # 명일 정오 시공 리스크(D7-AE) — weather_risk leaf가 모드/네트워크/실패 판정을 소유한다.
     # mock=unavailable(값 0건), live=Open-Meteo 실측 또는 '기상 데이터 미수신'. 빌더는 env를
     # 읽지 않고 CLI(--weather-mode)로만 받는다. now=brief.generated_at으로 D+1 판정 결정화.
