@@ -245,17 +245,42 @@ def check_builder_wiring() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5 · 프라이버시 — 공개 빌드는 트리 없음 / 미매칭 이름 비노출
+# 5 · 프라이버시 — 공개 빌드는 추적 공개 목록만 / 내부(env)는 매칭 노드만
+#     (D7-AD-Z가 공개 트리 노출을 도입, D7-AE가 내부 매칭-only 게이트를 복원 — 계약 갱신)
 # ---------------------------------------------------------------------------
 
 def check_privacy_no_env() -> None:
     saved = os.environ.pop("SITE_WATCHLIST_PATH", None)
+    saved_expose = os.environ.pop("SITE_WATCHLIST_EXPOSE_TREE", None)
     try:
-        check("5a: env 미설정(공개 샘플) → tree_for_model None(트리 없음)",
-              sw.tree_for_model([]) is None)
+        tree = sw.tree_for_model([])
+        pub_items = sw.load_watchlist()["items"]
+        ok = (isinstance(tree, dict) and tree.get("is_private") is False
+              and tree.get("total_nodes") == len(pub_items))
+        check("5a: env 미설정 → 추적 공개 목록 전체 트리(is_private=False) (D7-AE 계약 갱신)",
+              ok, f"total_nodes={tree.get('total_nodes') if isinstance(tree, dict) else tree} "
+                  f"/ 공개 {len(pub_items)}건")
+        # 내부 목록(env) + EXPOSE_TREE 미설정 → 미매칭 내부 이름은 트리에 없다(D7-N 복원).
+        fd, p = tempfile.mkstemp(prefix="hdec_swtree_priv_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({"items": [{"id": "pz", "name": _SECRET,
+                                  "scope": "domestic_site", "business_lens": "plant"}]},
+                      f, ensure_ascii=False)
+        try:
+            os.environ["SITE_WATCHLIST_PATH"] = p
+            priv = sw.tree_for_model([])
+            check("5b: 내부(env)+EXPOSE_TREE 미설정 → 미매칭 노드 비노출(매칭만)",
+                  isinstance(priv, dict) and priv.get("is_private") is True
+                  and priv.get("total_nodes") == 0,
+                  f"total_nodes={priv.get('total_nodes') if isinstance(priv, dict) else priv}")
+        finally:
+            os.environ.pop("SITE_WATCHLIST_PATH", None)
+            os.unlink(p)
     finally:
         if saved is not None:
             os.environ["SITE_WATCHLIST_PATH"] = saved
+        if saved_expose is not None:
+            os.environ["SITE_WATCHLIST_EXPOSE_TREE"] = saved_expose
 
 
 # ---------------------------------------------------------------------------

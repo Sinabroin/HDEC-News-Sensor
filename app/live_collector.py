@@ -432,10 +432,11 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
         max_total = max(max_total, DASHBOARD_MIN_MAX_TOTAL)
     collected_at = datetime.now(KST).isoformat(timespec="seconds")
 
-    # P0-D7-M: 사이트 워치리스트 preflight는 우선순위/main 예산을 잠식하지 않도록 전역 cap에
-    # additive headroom으로 더한다(기본 소스일 때만). 사이트 그룹은 내부(private) 워치리스트가
-    # SITE_WATCHLIST_PATH로 주입됐을 때만 비어 있지 않다(env 게이팅) — 공개 빌드는 0개이므로
-    # effective_cap == max_total 로 total이 늘지 않는다(다른 렌즈 수집 깊이/게이트 불변).
+    # P0-D7-M/D7-AE: 사이트 워치리스트 preflight는 우선순위/main 예산을 잠식하지 않도록 전역
+    # cap에 additive headroom으로 더한다(기본 소스일 때만). D7-AE부터 사이트 그룹은 내부
+    # (SITE_WATCHLIST_PATH) 목록뿐 아니라 **추적 공개 목록**(data/site_watchlist.public.json —
+    # 이미 저장소·공개 대시보드에 노출된 이름)에서도 파생된다. placeholder 샘플뿐이면 0개라
+    # effective_cap == max_total(+global press)로 total이 늘지 않는다(리프가 게이팅).
     by_name = {g["name"]: g for g in query_groups}
     site_groups = []
     global_press_group = None
@@ -476,8 +477,9 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
                 # fresh 쿼리가 없었던 경우(전부 dedup/캡)에도 그룹은 audit에 보여야 한다.
                 _emit_audit(query_audit, group, "", "skipped", 0, 0, "preflight")
 
-        # 1b) 사이트 워치리스트 preflight — private 목록이 있을 때만(env 게이팅). 없으면 site_groups
-        #     가 비어 있어 no-op이며 audit에 site:* 그룹이 등장하지 않는다(가짜로 '돌았다' 주장 안 함).
+        # 1b) 사이트 워치리스트 preflight — 내부(env) 또는 추적 공개 목록이 있을 때(D7-AE).
+        #     둘 다 없으면 site_groups가 비어 있어 no-op이며 audit에 site:* 그룹이 등장하지
+        #     않는다(가짜로 '돌았다' 주장 안 함). 어느 목록이든 리프가 bounded로 파생한다.
         for group in site_groups:
             emitted = _collect_group(
                 group, max_per_query=SITE_PREFLIGHT_MAX_PER_QUERY,

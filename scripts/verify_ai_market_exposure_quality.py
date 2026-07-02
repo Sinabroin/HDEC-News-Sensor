@@ -343,10 +343,31 @@ def verify_public_safety(model: dict, html: str) -> None:
     hosts = [h for h in API_HOSTS if h in low]
     check("5c: Telegram/GitHub API 호스트 호출 없음", not hosts, f"발견: {hosts}")
     check("5d: sendMessage 등 직접 발송 호출 없음", "sendmessage" not in low)
-    # No private site-watchlist tree leaked into the public model.
+    # Site-watchlist tree in the public model must contain only the tracked PUBLIC
+    # list (D7-AD-Z/D7-AE contract renewal). Absent tree is still fine; a present
+    # tree must be is_private=False and every node label must exist in
+    # data/site_watchlist.public.json (no private-name leakage).
     tree = model.get("site_watch_tree")
-    check("5e: 비공개 현장 워치리스트 트리 미노출(공개 빌드)",
-          tree in (None, [], {}), f"site_watch_tree={type(tree).__name__}")
+    if tree in (None, [], {}):
+        check("5e: 현장 워치리스트 트리 비노출(공개 빌드 · 허용)", True)
+    else:
+        pub_names: set = set()
+        try:
+            pub_raw = json.loads((ROOT / "data" / "site_watchlist.public.json")
+                                 .read_text(encoding="utf-8"))
+            for it in (pub_raw.get("items") if isinstance(pub_raw, dict) else pub_raw) or []:
+                if isinstance(it, dict) and it.get("name"):
+                    pub_names.add(str(it["name"]))
+        except (OSError, ValueError):
+            pass
+        labels = {str(n.get("label") or "")
+                  for sc in (tree.get("by_scope") or {}).values()
+                  for g in (sc.get("groups") or [])
+                  for n in (g.get("nodes") or [])}
+        extra = {l for l in labels if l and l not in pub_names}
+        check("5e: 공개 모델 현장 트리는 추적 공개 목록 이름만(비공개 누출 0 · D7-AE 갱신)",
+              not tree.get("is_private") and not extra,
+              f"extra={sorted(extra)[:3]}" if extra else "ok")
 
 
 # ── live diagnostic (informational, never fails) ──────────────────────────────

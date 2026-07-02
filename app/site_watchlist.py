@@ -9,6 +9,9 @@
 - private 파일이 없거나 깨져도 빌드를 실패시키지 않는다 — 비어 있는 목록으로 no-op한다.
 - 공개 승인된 현장 목록은 공개 산출물(docs/* 대시보드 HTML)에 트리로 포함한다.
   기사 매칭은 별도이며, 매칭 0건 현장도 정직하게 0으로 표시한다.
+- D7-AE부터 **공개 목록도 수집에 참여한다**: 이미 저장소에 커밋·공개 렌더되는 목록이므로
+  bounded 사이트 쿼리 그룹을 공개 빌드에서도 파생한다(신규 노출 0). 내부 목록 트리는
+  D7-N 계약으로 되돌린다 — 매칭 노드만, 전체는 SITE_WATCHLIST_EXPOSE_TREE=1 내부 빌드 전용.
 
 경계(이 파일만 한다 / 절대 안 한다):
 - 한다: 워치리스트 로드(공개/비공개 게이팅), (1) 수집기용 bounded 사이트 쿼리 그룹 파생,
@@ -248,11 +251,19 @@ def _group_name_for(item: dict) -> str | None:
     return None
 
 
+def _has_latin(text: str) -> bool:
+    return any("a" <= c.lower() <= "z" for c in text or "")
+
+
 def _queries_for(item: dict) -> list:
     """항목 한 건의 공개 뉴스 안전 쿼리(최대 MAX_QUERIES_PER_ITEM건).
 
     국내: "이름" 현대건설 · "별칭" 현대건설 · "이름" 공사
-    해외: "이름" Hyundai E&C · "이름" Hyundai Engineering & Construction · "이름" contractor
+    해외(한글 이름): "이름" 현대건설 · "별칭" 현대건설 · "이름" 수주
+      — 국문 뉴스 인덱스(hl=ko)에서 '"뉴델리 지사" Hyundai E&C' 류 국·영 혼합 쿼리는
+        사실상 0건이라, 라틴 문자가 전혀 없는 이름은 국문 페어링으로 검색한다(D7-AE).
+    해외(라틴 포함 이름): "이름" Hyundai E&C · "이름" Hyundai Engineering & Construction ·
+      "이름" contractor (기존 계약 유지)
     """
     name = item["name"]
     aliases = item.get("aliases") or []
@@ -263,7 +274,12 @@ def _queries_for(item: dict) -> list:
         if aliases:
             out.append(f'"{aliases[0]}" 현대건설')
         out.append(f'"{name}" 공사')
-    else:  # overseas_site / overseas_branch / overseas_subsidiary
+    elif not _has_latin(name):  # 해외 scope지만 순수 한글 이름 — 국문 뉴스 페어링
+        out.append(f'"{name}" 현대건설')
+        if aliases:
+            out.append(f'"{aliases[0]}" 현대건설')
+        out.append(f'"{name}" 수주')
+    else:  # overseas_site / overseas_branch / overseas_subsidiary (라틴 문자 포함)
         out.append(f'"{name}" Hyundai E&C')
         out.append(f'"{name}" Hyundai Engineering & Construction')
         out.append(f'"{name}" contractor')
@@ -295,10 +311,15 @@ def _order_bucket(items: list, rotation_key: int) -> list:
 
 
 def collection_query_groups(path=None, max_queries=None, rotation_key=None) -> list:
-    """수집기용 bounded 사이트 쿼리 그룹 — 내부(private) 워치리스트가 있을 때만.
+    """수집기용 bounded 사이트 쿼리 그룹 — 내부(private) 또는 **추적 공개 목록**에서.
 
-    [{name:'site:*', label, scope, business_lens, queries:[...]}] 형태. 공개 샘플만 있거나
-    private 목록이 비면 빈 리스트를 반환한다(가짜 수집 없음 · 수집기가 site 그룹을 만들지 않음).
+    [{name:'site:*', label, scope, business_lens, queries:[...]}] 형태.
+
+    D7-AE: 공개 현장 목록(data/site_watchlist.public.json)은 이미 저장소에 커밋되고 공개
+    대시보드 트리로 렌더되므로, 그 이름으로 공개 뉴스를 검색해도 **신규 노출이 0**이다 —
+    공개 빌드도 사이트 쿼리를 파생해 현장별 기사 센싱에 참여시킨다. 반면 placeholder
+    샘플(source='sample')로는 검색하지 않는다(의미 없는 가짜 수집 방지). private 목록은
+    기존처럼 SITE_WATCHLIST_PATH가 설정됐을 때만 쓰인다.
 
     bounded + 공정성: 그룹(scope×사업) **라운드로빈**으로 항목을 뽑아 한 scope(예: 국내)가
     예산을 독식하지 않게 한다 — 모든 site 그룹이 매 실행 등장하도록(breadth). 그룹 안에서는
@@ -306,8 +327,10 @@ def collection_query_groups(path=None, max_queries=None, rotation_key=None) -> l
     env SITE_WATCHLIST_MAX_QUERIES)로 상한, 항목당 쿼리도 MAX_QUERIES_PER_ITEM으로 상한.
     """
     wl = load_watchlist(path)
-    if not wl["is_private"] or not wl["items"]:
+    if not wl["items"]:
         return []
+    if not wl["is_private"] and wl["source"] != "public":
+        return []  # placeholder 샘플로는 검색하지 않는다(가짜 수집 방지)
     budget = _resolve_max_queries(max_queries)
     if rotation_key is None:
         rotation_key = _default_rotation_key()
@@ -365,6 +388,49 @@ def collection_query_groups(path=None, max_queries=None, rotation_key=None) -> l
         if g["queries"]:
             result.append(g)
     return result
+
+
+# ---------------------------------------------------------------------------
+# 수집 쿼리 역인덱스 (D7-AE) — '이 기사는 어느 현장 쿼리로 수집됐나'
+# ---------------------------------------------------------------------------
+
+_QUERY_INDEX_CACHE: dict = {}
+
+
+def query_match_index(path=None) -> dict:
+    """수집 쿼리 문자열(casefold) → 워치리스트 항목 dict.
+
+    사이트 쿼리(_queries_for)로 수집된 기사는 제목이 공식 현장명을 그대로 반복하지 않아도
+    "그 현장명으로 검색해 나온 기사"라는 실제 수집 근거(source_metadata.query)가 있다.
+    이 인덱스는 그 query 문자열을 항목으로 역매핑한다 — 문자열이 정확히 일치할 때만
+    매칭한다(가짜 매칭 없음). 같은 쿼리를 여러 항목이 만들면 첫 항목이 이긴다(결정적).
+    """
+    src_path, _is_private = _resolve_source(path)
+    try:
+        mtime = src_path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    cache_key = (str(src_path), mtime)
+    cached = _QUERY_INDEX_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    idx: dict = {}
+    for item in load_watchlist(path)["items"]:
+        for q in _queries_for(item):
+            idx.setdefault(q.strip().casefold(), item)
+    _QUERY_INDEX_CACHE[cache_key] = idx
+    return idx
+
+
+def match_item_for_query(query, path=None) -> dict | None:
+    """수집 provenance의 query가 사이트 쿼리와 정확히 일치하면 해당 항목을 돌려준다.
+
+    빈/무관 쿼리(다른 렌즈·토픽 쿼리 포함)는 None — 사이트 쿼리로 수집된 기사만 매칭된다.
+    """
+    q = str(query or "").strip().casefold()
+    if not q:
+        return None
+    return query_match_index(path).get(q)
 
 
 # ---------------------------------------------------------------------------
@@ -656,9 +722,24 @@ def tree_for_model(rows, path=None, now=None) -> dict | None:
     D7-AD-Z: 기본 공개 소스(data/site_watchlist.public.json)가 있으면 공개 빌드에서도
     국내현장/해외현장/해외지사/해외법인 전체 트리를 모델에 포함한다. 매칭 0건도 정직하게
     표시하고, '!'는 기존처럼 최근 공개뉴스 매칭이 있는 노드에만 부여한다.
+
+    D7-AE: 내부 목록(SITE_WATCHLIST_PATH)은 D7-N 프라이버시 계약으로 되돌린다 —
+    매칭(match_count>0) 노드만 포함하고, 전체 내부 트리는 SITE_WATCHLIST_EXPOSE_TREE=1
+    내부 빌드에서만 노출한다. c7b5b18이 무조건 expose_full_tree=True로 바꿔 미매칭 내부
+    현장명까지 모델에 덤프되던 회귀를 수정한다.
     """
     wl = load_watchlist(path)
+    if not wl["items"]:
+        return None
     matches = summarize_matches(rows)
+    if wl["is_private"]:
+        return build_tree(
+            wl["items"],
+            matches,
+            expose_full_tree=expose_tree_enabled(),
+            is_private=True,
+            now=now,
+        )
     return build_tree(
         wl["items"],
         matches,

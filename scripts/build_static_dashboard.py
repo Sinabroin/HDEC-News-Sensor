@@ -521,10 +521,10 @@ def _lens_for(sig) -> list:
             and not _has_ai_evidence(raw_title, raw_source, raw_snippet)
             and value_chain.get("ai_value_chain_layer") != ai_value_chain.LAYER_CUSTOM_CHIP):
         keys.discard("ai")
-    # 사이트 워치리스트(D7-M) — raw 제목이 워치리스트 프로젝트명/별칭을 직접 언급하면 그 항목의
-    # scope(국내/해외현장·해외지사·해외법인)와 business 렌즈(토목/건축주택/플랜트/New Energy)를
-    # 더한다. 운영자 워치리스트가 권위 있는 분류라 위의 generic 게이트 discard 이후에 적용한다.
-    for match in site_watchlist.classify_site_lenses(raw_title):
+    # 사이트 워치리스트(D7-M/D7-AE) — raw 제목의 직접 언급 또는 사이트 쿼리 수집 provenance가
+    # 있으면 그 항목의 scope(국내/해외현장·해외지사·해외법인)와 business 렌즈(토목/건축주택/
+    # 플랜트/New Energy)를 더한다. 워치리스트가 권위 있는 분류라 generic discard 이후에 적용한다.
+    for match in _site_matches_for(sig):
         scope = match.get("scope")
         biz = match.get("business_lens")
         if scope in VALID_LENS:
@@ -592,6 +592,39 @@ def _signal_source_metadata(sig: dict) -> dict:
         return smj
     meta = sig.get("source_metadata")
     return meta if isinstance(meta, dict) else {}
+
+
+def _site_matches_for(sig) -> list:
+    """워치리스트 현장 매칭 — 단일 판정점 (D7-AE). 두 근거만 인정한다:
+
+    (1) 제목 직접 언급 — classify_site_lenses(기존 규칙 불변, ≥4자 이름/별칭 부분문자열).
+    (2) 사이트 쿼리 수집 provenance — 이 기사가 워치리스트 사이트 쿼리(site:*)로 수집됐다는
+        source_metadata.query를 site_watchlist.match_item_for_query로 역매핑한다. 제목이
+        공식 명칭을 그대로 반복하지 않아도 "그 현장명 검색 결과"라는 실제 수집 근거가 있다.
+        무관 쿼리/빈 쿼리는 매칭되지 않는다(가짜 매칭 생성 없음).
+
+    반환 항목은 classify_site_lenses와 동일 shape + matched_via('title'|'query').
+    """
+    out = []
+    seen = set()
+    for m in site_watchlist.classify_site_lenses(sig.get("title") or ""):
+        entry = dict(m)
+        entry["matched_via"] = "title"
+        seen.add(entry.get("id"))
+        out.append(entry)
+    query = str(_signal_source_metadata(sig).get("query") or "")
+    item = site_watchlist.match_item_for_query(query)
+    if item and item.get("id") not in seen:
+        out.append({
+            "id": item.get("id") or "",
+            "name": item.get("name") or "",
+            "label": item.get("name") or "",
+            "scope": item.get("scope") or "",
+            "business_lens": item.get("business_lens") or "",
+            "org_unit": item.get("org_unit") or "",
+            "matched_via": "query",
+        })
+    return out
 
 
 def _news_provider_summary(all_rows: list, provider_status: dict | None) -> dict:
@@ -719,11 +752,12 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "hdec_relevance_tier": value_chain["hdec_relevance_tier"],
         "ai_value_chain_reason": value_chain["reason"],
     }
-    # 사이트 워치리스트 매칭 provenance(D7-M/D7-N) — 제목이 워치리스트 프로젝트명을 실제로
-    # 언급한 행에만 출처를 단다. 전체 비공개 목록은 모델에 넣지 않는다(매칭된 항목만). 한 제목이
-    # 여러 항목과 매칭되면 matches 리스트로 모두 담고, 첫 매칭을 display용 primary로 둔다(트리
-    # 노드의 alert_marker '!'를 이 row→node 연결로 켠다 — D7-N site_watch_tree).
-    site_matches = site_watchlist.classify_site_lenses(sig.get("title") or "")
+    # 사이트 워치리스트 매칭 provenance(D7-M/D7-N/D7-AE) — 제목이 프로젝트명을 직접 언급했거나
+    # 그 현장명 사이트 쿼리로 수집된 행에만 출처를 단다(_site_matches_for 단일 판정점). 전체
+    # 비공개 목록은 모델에 넣지 않는다(매칭된 항목만). 한 기사가 여러 항목과 매칭되면 matches
+    # 리스트로 모두 담고, 첫 매칭을 display용 primary로 둔다(트리 노드의 alert_marker '!'를
+    # 이 row→node 연결로 켠다 — D7-N site_watch_tree). matched_via로 근거(title/query)를 남긴다.
+    site_matches = _site_matches_for(sig)
     if site_matches:
         m = site_matches[0]
         provenance["site_watch_match"] = True
@@ -732,12 +766,14 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         provenance["site_watch_scope"] = m.get("scope") or ""
         provenance["site_watch_business_lens"] = m.get("business_lens") or ""
         provenance["site_watch_org_unit"] = m.get("org_unit") or ""
+        provenance["site_watch_matched_via"] = m.get("matched_via") or "title"
         if sig.get("published_at"):
             provenance["site_watch_latest_published_at"] = sig.get("published_at")
         provenance["site_watch_matches"] = [
             {"id": x.get("id") or "", "label": x.get("label") or x.get("name") or "",
              "scope": x.get("scope") or "", "business_lens": x.get("business_lens") or "",
-             "org_unit": x.get("org_unit") or ""}
+             "org_unit": x.get("org_unit") or "",
+             "matched_via": x.get("matched_via") or "title"}
             for x in site_matches
         ]
     return {

@@ -153,12 +153,27 @@ def check_no_private_without_env() -> None:
     saved = os.environ.pop("SITE_WATCHLIST_PATH", None)
     try:
         wl = sw.load_watchlist()
-        ok = (wl["is_private"] is False and wl["source"] == "sample"
-              and "private" not in str(wl["path"]).replace("\\", "/").rsplit("/", 1)[-1])
-        check("2a: SITE_WATCHLIST_PATH 미설정 시 비공개 파일 미로드(샘플만)", ok,
+        # D7-AD-Z/D7-AE 계약 갱신: 기본 소스는 추적 공개 목록(public) — 없을 때만 sample 폴백.
+        # 핵심 프라이버시 계약은 유지: env 미설정 시 data/private/* 를 절대 읽지 않는다.
+        norm_path = str(wl["path"]).replace("\\", "/")
+        ok = (wl["is_private"] is False and wl["source"] in ("public", "sample")
+              and "/private/" not in norm_path)
+        check("2a: env 미설정 시 비공개 파일 미로드(추적 공개 목록/샘플만 · D7-AE 갱신)", ok,
               f"source={wl['source']} path={Path(wl['path']).name}")
-        check("2b: env 미설정 시 site 수집 그룹 0개(no-op)",
-              sw.collection_query_groups() == [])
+        # D7-AE 계약 갱신: 공개 목록도 수집에 참여한다(이미 커밋·공개 렌더된 이름 = 신규 노출 0).
+        # 프라이버시 계약은 '쿼리가 추적 공개 목록에서만 파생'으로 검증한다 — 비공개 이름 0건.
+        groups = sw.collection_query_groups(rotation_key=0)
+        if wl["source"] == "public":
+            allowed = {q.strip().casefold() for it in wl["items"]
+                       for q in sw._queries_for(it)}
+            got = [q for g in groups for q in (g.get("queries") or [])]
+            foreign = [q for q in got if q.strip().casefold() not in allowed]
+            check("2b: env 미설정 site 그룹은 추적 공개 목록 파생만(bounded · D7-AE 갱신)",
+                  bool(groups) and not foreign and len(got) <= sw.MAX_QUERIES_HARD_CAP,
+                  f"{len(got)}개 쿼리, 공개 목록 밖: {foreign[:2]}")
+        else:
+            check("2b: 공개 목록 없음(샘플 폴백) → site 수집 그룹 0개(no-op)",
+                  groups == [])
     finally:
         if saved is not None:
             os.environ["SITE_WATCHLIST_PATH"] = saved
@@ -236,11 +251,22 @@ def check_collector_gating() -> None:
           "site_watchlist" in src and "collection_query_groups()" in src)
     check("5b: site 그룹은 기본 소스(sources_path is None)에서만 합쳐진다",
           "sources_path is None" in src and "site_groups" in src)
-    # 모듈 게이팅이 곧 수집기 게이팅: env 없으면 [] → 수집기 site_groups=[].
+    # 모듈 게이팅이 곧 수집기 게이팅(D7-AE 갱신): env 없으면 추적 공개 목록에서만 파생 —
+    # 비공개 이름이 쿼리에 들어갈 경로가 없다(공개 목록 없으면 0개 no-op).
     saved = os.environ.pop("SITE_WATCHLIST_PATH", None)
     try:
-        check("5c: env 미설정 → collection_query_groups()=[] (수집기 site no-op)",
-              sw.collection_query_groups() == [])
+        wl = sw.load_watchlist()
+        groups = sw.collection_query_groups(rotation_key=0)
+        if wl["source"] == "public":
+            allowed = {q.strip().casefold() for it in wl["items"]
+                       for q in sw._queries_for(it)}
+            foreign = [q for g in groups for q in (g.get("queries") or [])
+                       if q.strip().casefold() not in allowed]
+            check("5c: env 미설정 → site 쿼리는 공개 목록 파생만(비공개 0건 · D7-AE 갱신)",
+                  not foreign, str(foreign[:2]))
+        else:
+            check("5c: env 미설정+공개 목록 없음 → collection_query_groups()=[]",
+                  groups == [])
     finally:
         if saved is not None:
             os.environ["SITE_WATCHLIST_PATH"] = saved
