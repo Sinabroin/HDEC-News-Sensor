@@ -10,7 +10,7 @@ Part B — real article data:
   · The published dashboard's article rows come from the SAME shared brief object that
     docs/daily/latest.html uses (build_executive_brief.build_brief_via_mock_pipeline) —
     titles/sources are real, not the template's hardcoded demo sample.
-  · Article cards carry data-lens (real category/section tags) + real 원문 보기 links
+  · Article cards carry data-lens + 내부 기사 reader + 보조 원문 사이트 links
     (target=_blank rel=noopener noreferrer), and the empty state still exists.
   · latest.html stays the full Executive Daily Brief; dashboard-latest.html stays the
     summary dashboard; the two remain separate.
@@ -206,7 +206,7 @@ def check_committed_dashboard() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4 · 안전한 원문 링크 (target=_blank rel=noopener noreferrer) 또는 부재 안내
+# 4 · 내부 reader 기본 CTA + 안전한 보조 원문 링크 또는 부재 안내
 # ---------------------------------------------------------------------------
 
 def check_article_links() -> None:
@@ -220,9 +220,13 @@ def check_article_links() -> None:
     check("4a: 실기사 행이 url을 보유(>=1)", bool(with_url), f"{len(with_url)}/{len(rows)}")
     check("4b: 안전한 원문 링크(target=_blank rel=noopener noreferrer) 존재",
           bool(safe_link))
-    check("4c: renderRows가 url 있는 행에 원문 링크를 그림(없으면 생략)",
-          'class="srowlink"' in html and "원문 보기" in html)
-    check("4d: 링크 부재 시 정직 안내 또는 링크 존재(가짜 링크 금지)",
+    template = _read(ROOT / "templates" / "dashboard_preview.html")
+    check("4c: 기본 CTA는 기사 보기 내부 reader",
+          "function openArticleReader" in template
+          and ">기사 보기</button>" in template)
+    check("4d: 원문 사이트는 접근상태가 붙은 보조 링크",
+          "원문 사이트 ↗" in template and "access-badge" in template)
+    check("4e: 링크 부재 시 정직 안내 또는 링크 존재(가짜 링크 금지)",
           "원문 링크 없음" in html or bool(safe_link))
 
 

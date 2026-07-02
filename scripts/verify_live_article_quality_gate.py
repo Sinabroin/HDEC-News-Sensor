@@ -36,6 +36,7 @@ SCORING = ROOT / "app" / "scoring.py"
 RADAR = ROOT / "app" / "radar.py"
 RADAR_SIGNALS = ROOT / "app" / "radar_signals.py"
 BRIEFING = ROOT / "app" / "briefing.py"
+NEWS_ACCESS = ROOT / "app" / "news_access.py"
 MAIN = ROOT / "app" / "main.py"
 REPORT_BUILDER = ROOT / "scripts" / "build_static_report.py"
 BRIEF_BUILDER = ROOT / "scripts" / "build_executive_brief.py"
@@ -149,6 +150,27 @@ def check_py_compile() -> None:
             except py_compile.PyCompileError as exc:
                 bad.append(f"{path.name}: {exc.msg.strip().splitlines()[-1]}")
     check("py_compile scripts/*.py app/*.py", not bad, "; ".join(bad))
+
+
+def check_link_access_separation() -> None:
+    """사내 warning은 접근성 상태일 뿐 품질/레이더 제외 입력이 아님을 잠근다."""
+    sys.path.insert(0, str(ROOT))
+    from app import news_access
+
+    result = news_access.classify_link_access(
+        "https://publisher.example/article/1",
+        final_url="https://www.hdec.kr/warning/WARNING.jpg",
+        status_code=200,
+        content_type="image/jpeg",
+    )
+    check("원문 warning redirect는 corp_blocked로 분류",
+          result["link_access_status"] == "corp_blocked", str(result))
+    check("접근성 상태가 scoring/radar/briefing 제외 기준에 유입되지 않음",
+          all("link_access_status" not in path.read_text(encoding="utf-8")
+              for path in (SCORING, RADAR, BRIEFING)))
+    check("접근성 모듈은 기사 삭제·네트워크 호출을 소유하지 않음",
+          all(token not in NEWS_ACCESS.read_text(encoding="utf-8")
+              for token in ("delete_article", "urlopen(", "requests.get(", "httpx.get(")))
 
 
 def check_rules_files() -> None:
@@ -461,6 +483,7 @@ def main() -> int:
     db_before = _db_state()
 
     check_py_compile()
+    check_link_access_separation()
     check_rules_files()
     check_integration()
     check_article_quality_unit()

@@ -31,6 +31,7 @@ REPORT_BUILDER = ROOT / "scripts" / "build_static_report.py"
 MACRO_MODULE = ROOT / "app" / "macro_snapshot.py"
 MACRO_FILE = ROOT / "data" / "mock_macro_snapshot.json"
 TEMPLATE = ROOT / "templates" / "index.html"
+DASHBOARD_TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 COMMITTED_REPORT = ROOT / "docs" / "daily" / "latest.html"
 PAGES_INDEX = ROOT / "docs" / "index.html"
 README = ROOT / "README.md"
@@ -419,6 +420,17 @@ def check_dashboard_template() -> None:
     check("대시보드: macro_data_mode 분기 존재", "macro_data_mode" in html)
     leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
     check("대시보드: macro 고정값 하드코딩 없음", not leaked, ", ".join(leaked))
+    reader_html = DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+    check("대시보드: 원문 접근 상태를 정직하게 표시",
+          "link_access_status" in reader_html and "접근 확인 전" in reader_html
+          and "사내망 정책상 제한될 수" in reader_html)
+    access_src = (ROOT / "app" / "news_access.py").read_text(encoding="utf-8")
+    check("뉴스 접근성 분류: offline·관측값 기반(강제 네트워크 없음)",
+          all(token not in access_src for token in
+              ("urlopen(", "requests.get(", "httpx.get(", "socket.")))
+    check("뉴스 접근성 분류: 가짜 접근 성공 기본값 없음",
+          '"unknown", "ok", "corp_blocked"' in access_src
+          and 'status = "unknown"' in access_src)
 
 
 def check_no_dev_wording() -> None:

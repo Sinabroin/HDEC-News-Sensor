@@ -41,7 +41,7 @@ for _p in (ROOT, SCRIPTS_DIR):
 from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 # 중앙 렌즈 쿼리 정책(단일 소스) — leaf는 app.config/DB/네트워크를 건드리지 않아 bootstrap
 # 전에 import해도 안전하다(config의 DB_PATH 캐시 트랩 회피). 정책=대시보드+수집기 공유.
-from app import ai_value_chain, lens_queries  # noqa: E402
+from app import ai_value_chain, lens_queries, news_access  # noqa: E402
 # 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
@@ -579,6 +579,14 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
     value_chain = ai_value_chain.classify_ai_value_chain(
         sig.get("title") or "", sig.get("source") or "", sig.get("snippet") or "")
     lens = sorted(set(_lens_for(sig)) | ({l for l in extra_lens} & VALID_LENS))
+    access = news_access.classify_link_access(
+        sig.get("url"),
+        final_url=sig.get("final_url"),
+        status_code=sig.get("link_status_code"),
+        content_type=sig.get("link_content_type"),
+        body_sample=sig.get("link_body_sample"),
+    )
+    collection_method = news_access.classify_collection_method(sig)
     provenance = {
         "source": "executive_brief",
         "article_id": sig.get("article_id") or "",
@@ -615,15 +623,31 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
             for x in site_matches
         ]
     return {
+        "article_id": sig.get("article_id") or "",
         "tag": tag, "tagClass": tag_class,
         "title": sig.get("title") or "",
         "source": _better_source(sig),
         "time": _fmt_time(sig.get("published_at")),
+        "published_at": sig.get("published_at") or "",
+        "collected_at": sig.get("collected_at") or "",
+        "snippet": sig.get("snippet") or "",
+        "radarReason": sig.get("decision_reason") or sig.get("one_line_reason")
+                       or sig.get("implication") or "",
+        "whyImportant": sig.get("one_line_reason") or sig.get("implication") or "",
         "related": related, "sources": sources,
         "cat": cat_label, "catColor": cat_color,
         "score": score_str, "scoreLabel": score_label, "scoreColor": score_color,
         "lens": lens,
         "url": sig.get("url") if _is_http(sig.get("url")) else "",
+        # 외부 '원문 사이트' href 전용 — 가장 원본에 가깝고 warning이 아닌 URL. url(원본
+        # 수집값)/final_url(접근 진단)과 분리한다. warning URL이면 ""(링크 미생성).
+        "external_url": news_access.choose_external_article_url(sig),
+        "sourceDomain": access["source_domain"],
+        "accessSourceType": access["source_type"],
+        "collectionMethod": collection_method,
+        "link_access_status": access["link_access_status"],
+        "link_access_note": access["link_access_note"],
+        "final_url": access["final_url"],
         "provenance": provenance,
     }
 
@@ -1213,19 +1237,40 @@ _LINK_SVG = ('<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path 
 
 
 def _render_featured(sig: dict, row: dict) -> str:
-    """featured hero 카드를 실제 최상위 신호로 생성 (data-lens/data-category + 원문 링크)."""
+    """featured hero 카드를 실제 최상위 신호로 생성 (내부 reader + 보조 원문 링크)."""
     kind = sig.get("opportunity_or_risk") or "관찰"
     _cl, _cc, kind_cls = _KIND.get(kind, ("관찰", "#3F6FA8", "sky"))
     chip_keys = [l for l in row["lens"] if l not in ("now", "new")][:3]
     chips = "".join(f'<span class="flchip">{escape(_LENS_LABEL.get(k, k))}</span>'
                     for k in chip_keys)
     trust = _TRUST_SVG if sig.get("source_quality") == "trusted" else ""
-    url = sig.get("url") or ""
+    # 외부 '원문 사이트' href는 warning URL을 배제한 원본 링크만 쓴다(진단 final_url 아님).
+    url = news_access.choose_external_article_url(sig)
+    article_id = row.get("article_id") or ""
+    reader = (
+        f'<button class="extlink article-reader-open" type="button" '
+        f'data-article-id="{escape(article_id)}" '
+        f'data-article-title="{escape(sig.get("title") or "")}" '
+        'onclick="return openArticleReader(this);">기사 보기</button>'
+    )
     if _is_http(url):
-        link = (f'<a class="extlink" href="{escape(url)}" target="_blank" rel="noopener noreferrer">'
-                f'원문 보기 {_LINK_SVG}</a>')
+        source_link = (
+            f'<a class="article-source-link" href="{escape(url)}" target="_blank" '
+            f'rel="noopener noreferrer">원문 사이트 {_LINK_SVG}</a>'
+        )
     else:
-        link = '<span style="font-size:12px; color:var(--mute4);">원문 링크 없음</span>'
+        source_link = '<span style="font-size:12px; color:var(--mute4);">원문 링크 없음</span>'
+    access_status = row.get("link_access_status") or "unknown"
+    access_label = {
+        "ok": "원문 접근 가능",
+        "corp_blocked": "원문 사이트 제한 가능",
+        "redirected": "리다이렉트 감지",
+        "timeout": "원문 확인 실패",
+        "error": "원문 확인 실패",
+    }.get(access_status, "접근 확인 전")
+    access_badge = (
+        f'<span class="access-badge {escape(access_status)}">{escape(access_label)}</span>'
+    )
     summary = escape(sig.get("one_line_reason") or sig.get("implication") or "")
     impact = escape(f"{sig.get('category_label') or ''} · {row['cat']} 신호 · 의사결정 관련도 점검")
     action = escape(sig.get("action_label") or "내용 확인 후 담당 라인 검토 배정")
@@ -1254,7 +1299,7 @@ def _render_featured(sig: dict, row: dict) -> str:
         '<div class="idxgrid" id="idxgrid"></div></div>'
         '<div class="cardfoot">'
         '<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">'
-        f'{link}'
+        f'{reader}{source_link}{access_badge}'
         f'<span style="font-size:12px; color:var(--mute4);">연계 {escape(sig.get("category_label") or "")}</span>'
         '</div>'
         '<span style="font-size:11.5px; color:var(--mute4);" class="num">자동 분류 · '
@@ -1469,6 +1514,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
     model["lens_banks"] = parts["lens_banks"]
+    model["featured_row"] = parts.get("featured_row")
     model["immediate_status"] = parts.get("immediate_status") or {}
     # 중앙 정책(data/lens_queries.json)에서 lens_policy를 주입 — 생성 대시보드의 렌즈 정책·
     # 연동 상태(collection)가 단일 소스에서 나오게 한다(템플릿 정적 정책을 덮어씀).
@@ -1493,6 +1539,9 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
         all_rows.append(parts["featured_row"])
     for bank in (parts.get("lens_banks") or {}).values():
         all_rows.extend(bank or [])
+    # 보안팀 점검용 domain inventory. 관측된 메타데이터만 집계하며 외부 접속은 하지 않는다.
+    # 접근 상태는 표시 전용이고 row 선별/점수/렌즈에는 사용되지 않는다.
+    model["news_source_inventory"] = news_access.build_source_inventory(all_rows)
     latest_kst = _latest_article_kst(all_rows)
     if generated_kst:
         meta["generated_kst"] = generated_kst

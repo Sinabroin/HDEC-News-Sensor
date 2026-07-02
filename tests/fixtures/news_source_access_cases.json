@@ -1,0 +1,17 @@
+{
+  "cases": [
+    {
+      "id": "hdec_warning_redirect",
+      "original_url": "https://www.example-news.co.kr/article/123",
+      "final_url": "https://www.hdec.kr/warning/WARNING.jpg",
+      "status_code": 200,
+      "content_type": "image/jpeg",
+      "expected_status": "corp_blocked"
+    },
+    {
+      "id": "publisher_unchecked",
+      "original_url": "https://www.example-news.co.kr/article/456",
+      "expected_status": "unknown"
+    }
+  ]
+}

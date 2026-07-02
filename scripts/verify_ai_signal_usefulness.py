@@ -133,8 +133,9 @@ def check_template_view(tpl: str) -> None:
         check(f"2d: 임원 마이크로카피 '{micro}' 노출", micro in tpl)
     check("2e: 실질 신호 없을 때 정직 폴백('오늘 실질적 AI 사업 신호 없음')",
           "오늘 실질적 AI 사업 신호 없음" in tpl)
-    check("2f: AI 신호가 원문 링크로 연결(srowlink/원문 보기)",
-          "srowlink" in tpl and "원문 보기" in tpl)
+    check("2f: AI 신호가 내부 기사 reader + 보조 원문 사이트로 연결",
+          "openArticleReader" in tpl and ">기사 보기</button>" in tpl
+          and "원문 사이트 ↗" in tpl)
 
 
 # ---------------------------------------------------------------------------

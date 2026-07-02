@@ -25,6 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SENDER = ROOT / "scripts" / "send_telegram.py"
+DASHBOARD_TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 
 SUMMARY_LABEL = "대시보드 보기"
 FULL_LABEL = "상세 리포트 보기"
@@ -201,6 +202,19 @@ def check_no_send() -> None:
           and "def build_payload" in src)
 
 
+def check_article_reader_targets() -> None:
+    """기사 기본 CTA는 내부 reader, 외부 원문은 명시적 보조 링크인지 확인한다."""
+    html = DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+    check("9a. 기사 보기 → openArticleReader 내부 reader",
+          "function openArticleReader" in html
+          and 'onclick="return openArticleReader(this);">기사 보기</button>' in html)
+    check("9b. 원문 사이트는 새 탭 보조 링크",
+          "원문 사이트 ↗" in html and 'target="_blank"' in html
+          and 'rel="noopener noreferrer"' in html)
+    check("9c. reader 경로에 arbitrary proxy URL 없음",
+          "/proxy?url=" not in html and "/fetch-url?url=" not in html)
+
+
 def main() -> int:
     print("== verify_report_link_targets (D6-I 버튼 라벨→대상 매핑) ==")
     check_in_process_mapping()
@@ -208,6 +222,7 @@ def main() -> int:
     check_telegram_payload_mapping()
     check_preflight_output()
     check_no_send()
+    check_article_reader_targets()
     print(f"\n{_passes} passed, {len(_failures)} failed")
     if _failures:
         print("FAILED:")

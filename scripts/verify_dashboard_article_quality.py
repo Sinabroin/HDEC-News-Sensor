@@ -191,6 +191,17 @@ def check_builder_quality() -> None:
         # 약한 HDEC 오탐이 행에 과대표집되지 않음
         weak = [t for t in titles if b._is_weak_hdec_fp({"title": t})]
         check("1j: 약한 HDEC 오탐이 행에 과대표집되지 않음(<=1)", len(weak) <= 1, f"{weak[:2]}")
+        check("1k: 모든 생성 행에 reader 접근성 필드 존재",
+              bool(allrows) and all(
+                  r.get("link_access_status") in {
+                      "unknown", "ok", "corp_blocked", "redirected", "timeout", "error"}
+                  and "link_access_note" in r and "sourceDomain" in r
+                  for r in allrows))
+        check("1l: 기본 기사 보기 + 보조 원문 사이트 CTA",
+              "function openArticleReader" in html and ">기사 보기</button>" in html
+              and "원문 사이트 ↗" in html)
+        check("1m: source inventory가 모델에 포함되고 행 수를 줄이지 않음",
+              bool(model.get("news_source_inventory")) and len(allrows) >= len(rows))
 
 
 # ---------------------------------------------------------------------------

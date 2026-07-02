@@ -215,6 +215,20 @@
   .bar > span{display:block; height:100%; border-radius:3px;}
   .cardfoot{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:14px; padding-top:13px; border-top:1px solid var(--hair); flex-wrap:wrap;}
   .extlink{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--sky);}
+  button.extlink{border:1px solid var(--sky-bd); background:var(--sky-tint); border-radius:8px;
+    padding:6px 11px; cursor:pointer; font-family:inherit;}
+  .article-source-link{display:inline-flex; align-items:center; gap:5px; font-size:11.5px;
+    font-weight:700; color:var(--mute2); text-decoration:none;}
+  .access-badge{display:inline-flex; align-items:center; border-radius:999px; padding:3px 8px;
+    font-size:10px; font-weight:800; color:#65748C; background:#F0F3F8; border:1px solid #DCE3ED;}
+  .access-badge.ok{color:#3C7A4E; background:#EFF8F2; border-color:#C8E2D0;}
+  .access-badge.corp_blocked,.access-badge.timeout,.access-badge.error{
+    color:#8A5F26; background:#FBF6EA; border-color:#E8D5AB;}
+  .access-badge.redirected{color:#3F6FA8; background:#EFF5FC; border-color:#C8D9EC;}
+  .article-actions{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:7px;}
+  .article-reader-open{font-family:inherit; font-size:11.5px; font-weight:800; color:var(--sky);
+    border:1px solid var(--sky-bd); background:var(--sky-tint); border-radius:7px;
+    padding:5px 9px; cursor:pointer;}
 
   /* ===== Compact rows ===== */
   .rows{overflow:hidden;}
@@ -381,6 +395,23 @@
   .drawer-close{border:1px solid var(--line); background:var(--card); border-radius:9px; width:32px; height:32px;
     cursor:pointer; font-size:17px; line-height:1; color:var(--mute); flex:none;}
   .drawer-close:hover{background:#F4F9FE; color:var(--ink3);}
+  .article-drawer{width:min(660px,96vw);}
+  .article-reader-meta{display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; align-items:center;
+    color:var(--mute3); font-size:11.5px;}
+  .article-reader-block{margin-top:15px; padding:14px 15px; border:1px solid var(--hair);
+    border-radius:11px; background:#FAFCFE;}
+  .article-reader-block .k{font-size:10.5px; font-weight:800; color:var(--mute2);
+    letter-spacing:.02em; margin-bottom:6px;}
+  .article-reader-block .v{font-size:13px; color:var(--ink3); line-height:1.65; white-space:pre-wrap;}
+  .article-reader-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;}
+  .article-reader-field{padding:11px 12px; border:1px solid var(--hair); border-radius:10px;}
+  .article-reader-field .k{font-size:10px; color:var(--mute3); font-weight:700;}
+  .article-reader-field .v{font-size:11.5px; color:var(--ink3); margin-top:4px; overflow-wrap:anywhere;}
+  .article-reader-notice{margin-top:14px; padding:11px 13px; border-radius:10px; font-size:12px;
+    line-height:1.55; color:#6E5A33; background:var(--amber-tint); border:1px solid var(--amber-bd);}
+  .article-reader-footer{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin-top:17px; padding-top:14px; border-top:1px solid var(--hair);}
+  @media(max-width:620px){.article-reader-grid{grid-template-columns:1fr;}}
   .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0;}
   .kpi{background:#FAFCFE; border:1px solid var(--hair); border-radius:11px; padding:11px 13px;}
   .kpi .k{font-size:10px; color:var(--mute3); font-weight:600;}
@@ -907,7 +938,8 @@
           </div>
           <div class="cardfoot">
             <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-              <a class="extlink" href="#" rel="noopener" onclick="return false;">원문 보기 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="#3F6FA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>
+              <button class="extlink article-reader-open" type="button" data-article-title="현대건설, 사우디 네옴 AI 데이터센터 EPC 우선협상대상자 선정" onclick="return openArticleReader(this);">기사 보기</button>
+              <span class="access-badge unknown">접근 확인 전</span>
               <span style="font-size:12px; color:var(--mute4);">연계 AI 관련 · 수주·해외</span>
             </div>
             <span style="font-size:11.5px; color:var(--mute4);" class="num">데모 · 키워드 ai_datacenter_power</span>
@@ -1324,6 +1356,56 @@
   </div>
 </div>
 
+<!-- 내부 기사 reader: 수집된 메타데이터·요약·판단근거를 먼저 보여준다.
+  외부 원문은 보조 링크이며 proxy/VPN/우회 endpoint를 사용하지 않는다. -->
+<div class="drawer-ov" id="articleReaderOv" role="dialog" aria-modal="true"
+     aria-labelledby="arTitle" aria-hidden="true">
+  <div class="drawer article-drawer" id="articleReader">
+    <div class="drawer-head">
+      <div>
+        <div class="dt" id="arTitle">기사 보기</div>
+        <div class="dsub">수집된 기사 요약과 레이더 판단근거</div>
+      </div>
+      <button class="drawer-close" id="arClose" type="button" aria-label="기사 reader 닫기">×</button>
+    </div>
+    <div class="article-reader-meta">
+      <b id="arSource">출처 미상</b><span>·</span><span id="arPublished">발행시각 미상</span>
+      <span>·</span><span id="arCollected">수집시각 미상</span>
+      <span class="access-badge unknown" id="arAccessBadge">접근 확인 전</span>
+    </div>
+    <div class="article-reader-block">
+      <div class="k">기사 내용 · 수집 요약/snippet</div>
+      <div class="v" id="arSnippet">수집된 요약이 없습니다.</div>
+    </div>
+    <div class="article-reader-block">
+      <div class="k">레이더 판단근거</div>
+      <div class="v" id="arReason">판단근거가 없습니다.</div>
+    </div>
+    <div class="article-reader-block">
+      <div class="k">왜 중요한가</div>
+      <div class="v" id="arWhy">중요도 설명이 없습니다.</div>
+    </div>
+    <div class="article-reader-block">
+      <div class="k">관련 렌즈</div>
+      <div class="v" id="arLenses">전체</div>
+    </div>
+    <div class="article-reader-grid">
+      <div class="article-reader-field"><div class="k">원문 URL</div><div class="v" id="arUrl">—</div></div>
+      <div class="article-reader-field"><div class="k">source domain</div><div class="v" id="arDomain">—</div></div>
+      <div class="article-reader-field"><div class="k">source type / collection method</div><div class="v" id="arSourceType">unknown / unknown</div></div>
+      <div class="article-reader-field"><div class="k">link_access_status / access note</div><div class="v" id="arAccessNote">unknown · 접근 확인 전</div></div>
+    </div>
+    <div class="article-reader-notice" id="arNotice">
+      접근 상태는 기사 중요도·레이더 라우팅과 분리됩니다.
+    </div>
+    <div class="article-reader-footer">
+      <a class="article-source-link" id="arSourceSite" href="#" target="_blank"
+         rel="noopener noreferrer">원문 사이트 ↗</a>
+      <span style="font-size:11px; color:var(--mute4);">외부 사이트는 사내망 정책상 제한될 수 있습니다.</span>
+    </div>
+  </div>
+</div>
+
 <!-- =================== CONTRACT-SHAPED DEMO MODEL ===================
   키 구조는 기존 계약을 미러링한다: /api/brief(briefing.build_brief) + market_snapshot.
   값은 전부 데모(실데이터 아님)이며, 시장/AIS/소셜은 위조하지 않고 honest state로 둔다. -->
@@ -1536,6 +1618,127 @@
     return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
   function pct(v) { return (Number(v) / 5 * 100).toFixed(0) + "%"; }
 
+  /* ---------- INTERNAL ARTICLE READER ----------
+     수집된 메타데이터/요약을 내부에서 표시한다. 외부 URL은 보조 링크일 뿐이며,
+     접근 상태는 점수·렌즈·기사 보존 여부에 사용하지 않는다. 네트워크 호출/우회 0건. */
+  var ARTICLE_ACCESS_LABEL = {
+    ok: "원문 접근 가능", corp_blocked: "원문 사이트 제한 가능",
+    redirected: "리다이렉트 감지", timeout: "원문 확인 실패",
+    error: "원문 확인 실패", unknown: "접근 확인 전"
+  };
+  function articleRowsForReader() {
+    var out = [], seen = {};
+    function add(row) {
+      if (!row || !row.title) return;
+      var key = row.article_id || (row.provenance && row.provenance.article_id)
+        || row.url || row.title;
+      if (!seen[key]) { seen[key] = 1; out.push(row); }
+    }
+    add(MODEL.featured_row);
+    (MODEL.news_rows || []).forEach(add);
+    (MODEL.ai_rows || []).forEach(add);
+    Object.keys(MODEL.lens_banks || {}).forEach(function (key) {
+      (MODEL.lens_banks[key] || []).forEach(add);
+    });
+    (MODEL.nav_category_sections || []).forEach(function (section) {
+      (section.articles || []).forEach(add);
+    });
+    return out;
+  }
+  function findReaderArticle(target) {
+    if (target && !target.getAttribute && target.title) return target;
+    var id = target && target.getAttribute ? target.getAttribute("data-article-id") : "";
+    var title = target && target.getAttribute ? target.getAttribute("data-article-title") : "";
+    var rows = articleRowsForReader();
+    for (var i = 0; i < rows.length; i++) {
+      var rid = rows[i].article_id || (rows[i].provenance && rows[i].provenance.article_id) || "";
+      if ((id && String(rid) === id) || (title && rows[i].title === title)) return rows[i];
+    }
+    return { title: title || "기사 보기", link_access_status: "unknown",
+      link_access_note: "접근 확인 전 — 기사 중요도와 무관" };
+  }
+  function readerTime(value, fallback) {
+    if (!value) return fallback;
+    return String(value).replace("T", " ").replace(/([+-]\d\d:\d\d|Z)$/, "");
+  }
+  function readerDomain(article) {
+    if (article.sourceDomain) return article.sourceDomain;
+    try { return article.url ? new URL(article.url).hostname : ""; }
+    catch (e) { return ""; }
+  }
+  /* 외부 '원문 사이트' href — 빌더가 준 external_url을 우선, 없으면 original/canonical/url.
+     warning URL(hdec.kr/warning·WARNING.jpg)은 절대 링크로 만들지 않는다. url(원본 수집값)·
+     final_url(접근 진단)과 분리하며, 접근 상태는 점수/분류/최신성 판단에 쓰지 않는다. */
+  function externalArticleUrl(article) {
+    article = article || {};
+    var cands = [article.external_url, article.original_url,
+      article.canonical_url, article.url];
+    for (var i = 0; i < cands.length; i++) {
+      var v = String(cands[i] || "").trim();
+      if (/^https?:\/\//i.test(v) && !/hdec\.kr\/warning|warning\.jpg/i.test(v)) return v;
+    }
+    return "";
+  }
+  function openArticleReader(target) {
+    var article = findReaderArticle(target);
+    var status = article.link_access_status || "unknown";
+    if (!ARTICLE_ACCESS_LABEL[status]) status = "unknown";
+    el("arTitle").textContent = article.title || "기사 보기";
+    el("arSource").textContent = article.display_source || article.source || "출처 미상";
+    el("arPublished").textContent = readerTime(article.published_at, article.time || "발행시각 미상");
+    el("arCollected").textContent = readerTime(article.collected_at, "수집시각 미상");
+    el("arSnippet").textContent = article.snippet || "수집된 요약이 없습니다.";
+    el("arReason").textContent = article.radarReason || article.decision_reason
+      || article.one_line_reason || article.why_it_matters || "판단근거가 없습니다.";
+    el("arWhy").textContent = article.whyImportant || article.why || article.relevance
+      || article.radarReason || article.why_it_matters || "중요도 설명이 없습니다.";
+    var policy = MODEL.lens_policy || {};
+    el("arLenses").textContent = (article.lens || []).map(function (key) {
+      return (policy[key] && policy[key].label) || key;
+    }).join(" · ") || article.category_label || article.cat || "전체";
+    el("arUrl").textContent = article.url || "—";
+    el("arDomain").textContent = readerDomain(article) || "—";
+    el("arSourceType").textContent = (article.accessSourceType || "unknown") + " / "
+      + (article.collectionMethod || "unknown");
+    el("arAccessNote").textContent = status + " · "
+      + (article.link_access_note || "접근 확인 전 — 기사 중요도와 무관");
+    var badge = el("arAccessBadge");
+    badge.className = "access-badge " + status;
+    badge.textContent = ARTICLE_ACCESS_LABEL[status];
+    var notice = el("arNotice");
+    notice.textContent = status === "corp_blocked"
+      ? "외부 원문은 사내망 정책상 제한될 수 있습니다. 기사는 삭제되지 않으며 내부 요약과 판단근거는 계속 제공됩니다."
+      : "접근 상태는 기사 중요도·즉시확인·AI·리스크 판단과 분리됩니다.";
+    var sourceSite = el("arSourceSite");
+    var extUrl = externalArticleUrl(article);
+    if (extUrl) {
+      sourceSite.href = extUrl;
+      sourceSite.classList.remove("hidden");
+    } else {
+      sourceSite.removeAttribute("href");
+      sourceSite.classList.add("hidden");
+    }
+    var overlay = el("articleReaderOv");
+    overlay.classList.add("open");
+    overlay.setAttribute("aria-hidden", "false");
+    if (el("arClose")) el("arClose").focus();
+    return false;
+  }
+  function closeArticleReader() {
+    var overlay = el("articleReaderOv");
+    if (!overlay) return;
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  window.openArticleReader = openArticleReader;
+  if (el("arClose")) el("arClose").addEventListener("click", closeArticleReader);
+  if (el("articleReaderOv")) el("articleReaderOv").addEventListener("click", function (event) {
+    if (event.target === this) closeArticleReader();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeArticleReader();
+  });
+
   /* ---------- HEADER DATES (D7-N) ---------- */
   /* 생성 KST = MODEL.meta.generated_kst (빌더가 brief.generated_at에서 주입). 보조 표기는
      최신 기사 시각. 둘 다 가짜 값 없음 — 없으면 비운다(정적 stale 기본값은 빌더가 치환). */
@@ -1673,13 +1876,28 @@
       if (!isNaN(n)) score = n;
     }
     return {
+      article_id: navArt.article_id || row.article_id
+        || (row.provenance && row.provenance.article_id) || "",
       title: navArt.title || row.title || "",
       display_source: navArt.display_source || row.source || "출처 미상",
       source: navArt.source || row.source || "출처 미상",
       section_tag: navArt.section_tag || navArt.category_label || row.cat || "",
       category_label: navArt.category_label || row.cat || "",
       url: navArt.url || row.url || "",
+      external_url: navArt.external_url || row.external_url || "",
       has_original_link: navArt.has_original_link || !!(row.url && /^https?:\/\//.test(row.url)),
+      published_at: navArt.published_at || row.published_at || "",
+      collected_at: navArt.collected_at || row.collected_at || "",
+      snippet: navArt.snippet || row.snippet || "",
+      radarReason: row.radarReason || navArt.why_it_matters || "",
+      whyImportant: row.whyImportant || row.why || navArt.why_it_matters || "",
+      lens: row.lens || [],
+      sourceDomain: row.sourceDomain || "",
+      accessSourceType: row.accessSourceType || "unknown",
+      collectionMethod: row.collectionMethod || "unknown",
+      link_access_status: row.link_access_status || navArt.link_access_status || "unknown",
+      link_access_note: row.link_access_note || navArt.link_access_note
+        || "접근 확인 전 — 기사 중요도와 무관",
       final_score: score,
       action_label: navArt.action_label || row.scoreLabel || "",
       score_band: navArt.score_band || "",
@@ -1713,14 +1931,30 @@
     if (isNaN(n)) return { v: "—", l: article.action_label || "" };
     return { v: n.toFixed(1), l: article.action_label || article.score_band || "" };
   }
+  function articleActions(article, linkClass) {
+    article = article || {};
+    var articleId = article.article_id
+      || (article.provenance && article.provenance.article_id) || "";
+    var status = article.link_access_status || "unknown";
+    if (!ARTICLE_ACCESS_LABEL[status]) status = "unknown";
+    var primary = '<button type="button" class="article-reader-open ' + esc(linkClass || "")
+      + '" data-article-id="' + esc(articleId) + '" data-article-title="' + esc(article.title || "")
+      + '" onclick="return openArticleReader(this);">기사 보기</button>';
+    var srcUrl = externalArticleUrl(article);
+    var source = srcUrl
+      ? '<a class="article-source-link ' + esc(linkClass || "") + '" href="' + esc(srcUrl)
+        + '" target="_blank" rel="noopener noreferrer">원문 사이트 ↗</a>'
+      : '<span class="srownolink">원문 링크 없음</span>';
+    return '<div class="article-actions">' + primary + source
+      + '<span class="access-badge ' + esc(status) + '">' + esc(ARTICLE_ACCESS_LABEL[status])
+      + '</span></div>';
+  }
   function renderCategoryCard(article) {
     var tag = article.section_tag || article.category_label || "";
     var src = article.display_source || article.source || "출처 미상";
     var sc = formatCategoryScore(article);
     var col = scoreColorFor(article);
-    var link = (article.has_original_link && article.url && /^https?:\/\//.test(article.url))
-      ? '<a class="cnl-open" href="' + esc(article.url) + '" target="_blank" rel="noopener noreferrer">원문 보기 →</a>'
-      : '<span class="cnl-open" style="color:var(--mute4);">원문 링크 없음</span>';
+    var link = articleActions(article, "cnl-open");
     var tagHtml = tag ? '<span class="cnl-tag">' + esc(tag) + '</span>' : "";
     return '<article class="cnl-card">'
       + '<div class="cnl-body"><div class="cnl-ctitle">' + esc(article.title || "") + '</div>'
@@ -2457,12 +2691,8 @@
       var a = document.createElement("div"); a.className = "srow";
       a.setAttribute("data-lens", (r.lens || []).join(" "));
       a.setAttribute("data-category", r.cat || "");
-      // 실기사 원문 링크 — http(s)일 때만 새 탭으로 (target=_blank rel=noopener noreferrer).
-      // 데모 표본 행에는 url이 없어 링크가 생략된다(기존 미리보기 동작 보존).
-      var rowUrl = (r.url && /^https?:\/\//.test(r.url)) ? r.url : "";
-      var rowLink = rowUrl
-        ? '<a class="srowlink" href="' + esc(rowUrl) + '" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a>'
-        : '<span class="srownolink">원문 링크 없음</span>';
+      // 기본 CTA는 내부 reader. 외부 원문은 접근 제한 badge가 붙은 보조 링크다.
+      var rowLink = articleActions(r, "srowlink");
       a.innerHTML =
         '<span class="stag tag ' + esc(r.tagClass) + '">' + esc(r.tag) + '</span>' +
         '<div class="body"><div class="title">' + esc(r.title) + '</div>' +
@@ -2509,10 +2739,7 @@
     rows.forEach(function (r) {
       var chips = (r.lens || []).filter(function (k) { return k !== "now" && k !== "new"; })
         .map(function (k) { return '<span class="flchip">' + esc(lensLabel(k)) + '</span>'; }).join("");
-      var rowUrl = (r.url && /^https?:\/\//.test(r.url)) ? r.url : "";
-      var link = rowUrl
-        ? '<a class="srowlink" href="' + esc(rowUrl) + '" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a>'
-        : '<span class="srownolink">원문 링크 없음</span>';
+      var link = articleActions(r, "srowlink");
       var d = document.createElement("article"); d.className = "card aisig";
       d.setAttribute("data-lens", (r.lens || []).join(" "));
       d.setAttribute("data-category", r.cat || "");
