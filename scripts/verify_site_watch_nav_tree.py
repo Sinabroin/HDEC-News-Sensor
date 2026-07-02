@@ -4,12 +4,12 @@
 기존 D7-N site_watch_tree / onSiteNodeClick / article_keys 구조를 좌측 '실행 범위' 네비로
 끌어올린 **표시·필터 레이어**를 검증한다. 핵심 계약:
 
-  - 공개 빌드(env 미설정): 실제 현장명 비노출 — scope 그룹 + 이름 비노출 카운트만(public-safe).
-    site_watch_tree 키 자체가 모델에 없다(공개 null-gating 유지).
+  - 공개 빌드(env 미설정): 승인된 공개 현장 목록을 site_watch_tree로 노출한다.
+    scope 그룹 + 개별 현장 노드 + match_count/article_keys 계약을 유지한다.
   - 운영자(비공개) 빌드(SITE_WATCHLIST_PATH + SITE_WATCHLIST_EXPOSE_TREE=1): scope별 전체 현장
     노출, 각 현장 고유 id·match_count·article_keys 유지, alias 매칭, match_count=0도 정직 표시.
     현장 클릭 필터는 기존 onSiteNodeClick(article_keys)를 그대로 재사용한다(코어 랭킹/점수 불변).
-  - 비공개 목록은 gitignored + not staged, 커밋 산출물(docs/daily)에 현장명 비덤프, hand-edit 없음.
+  - data/private는 계속 staged 금지이며, 공개 산출물은 data/site_watchlist.public.json 기반 현장명을 노출한다.
 
 완전 OFFLINE · 시간 무관. 실제 비공개 파일/커밋 산출물은 있으면 검사, 없으면 SKIP(가짜 성공 금지).
 기존 verify_site_watch_tree.py / verify_site_watchlist_sensing.py 계약은 깨지 않는다(앵커 재확인).
@@ -176,7 +176,7 @@ def check_module_summary() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2 · 템플릿 DOM/JS — 네비 렌더 + 기존 구조 재사용 + public-safe 게이팅
+# 2 · 템플릿 DOM/JS — 네비 렌더 + 기존 구조 재사용 + 공개 현장 트리 게이트
 # ---------------------------------------------------------------------------
 
 def check_template() -> None:
@@ -191,8 +191,10 @@ def check_template() -> None:
           "renderScopeNodes(sc, data)" in t and "out += renderSiteNode(scope, n)" in t)
     check("2e: 이름 비노출 카운트 소스(MODEL.site_scope_summary)",
           "MODEL.site_scope_summary || null" in t)
-    check("2f: public-safe 게이트 — 이름은 SITE_TREE(비공개)일 때만(var priv = !!SITE_TREE)",
-          "var priv = !!SITE_TREE" in t)
+    check("2f: 공개 현장 트리 게이트 — SITE_TREE가 있으면 공개 현장명 렌더",
+          "var hasTree = !!SITE_TREE" in t
+          and "if (!hasTree)" in t
+          and "var priv = !!SITE_TREE" not in t)
     check("2g: 검색 입력(snSearch)", 'id="snSearch"' in t)
     check("2h: match_count=0 현장 흐리게(zero 클래스)",
           'Number(n.match_count || 0)' in t and 'Number(n.match_count) ? "" : " zero"' in t
@@ -237,14 +239,14 @@ def check_public_build() -> None:
         ss = model.get("site_scope_summary") or {}
         check("4b: 공개 모델에 site_scope_summary 주입(is_private=False)",
               bool(ss) and ss.get("is_private") is False, str(ss.get("is_private")))
-        check("4c: 공개 모델에 site_watch_tree 키 없음(공개 null-gating)",
-              "site_watch_tree" not in model)
+        tree = model.get("site_watch_tree")
+        if not check("4c: 공개 모델에 site_watch_tree 주입(D7-AD-Z)", isinstance(tree, dict)):
+            return
+        nodes = _nodes(tree)
         check("4d: 공개 HTML에 네비 DOM(siteScopeNav) 존재", 'id="siteScopeNav"' in html)
-        check("4e: 공개 HTML에 임시 비공개 현장명 비노출(env 미설정 → 미로드)",
-              _SECRET not in html and _OPERATOR_ONLY_NAME not in html)
-        leaked = [m for m in INTERNAL_MARKERS if m in html]
-        check("4f: 공개 HTML에 내부 고유 현장명 표본 비노출", not leaked, str(leaked) if leaked else "ok")
-
+        check("4e: 공개 모델에 현장 노드 노출", len(nodes) > 0, f"{len(nodes)}개")
+        check("4f: 공개 트리는 전체 노드 노출(expose_full_tree=True)",
+              tree.get("expose_full_tree") is True, str(tree.get("expose_full_tree")))
 
 # ---------------------------------------------------------------------------
 # 5 · 통합 빌드 OPERATOR(비공개 + EXPOSE_TREE=1) — 전체 현장 + 고유키/카운트/alias/0건
@@ -296,32 +298,21 @@ def check_operator_build() -> None:
 def check_committed_artifact() -> None:
     html = _read(DASHBOARD)
     if not html:
-        info(f"SKIP — 커밋 대시보드 없음({DASHBOARD.name}). 빌드 후 재검(공개 산출물 프라이버시).")
+        info(f"SKIP — 커밋 대시보드 없음({DASHBOARD.name}). 빌드 후 재검.")
         return
     model = _model(html)
-    # 6a는 freshness — docs/daily는 hand-edit/stage 금지이고 CI/빌더가 재생성한다. 신규 템플릿 이전
-    # 산출물이면 FAIL이 아니라 SKIP(공개 빌드 네비 DOM은 §4d 신규 빌드에서 이미 강제). 보안 계약(6b/6d/6e)
-    # 은 stale 여부와 무관하게 항상 강제한다.
-    if 'id="siteScopeNav"' in html:
-        check("6a: 커밋 대시보드에 네비 DOM(siteScopeNav)", True)
-    elif 'id="siteScopeNav"' in _read(TEMPLATE):
-        info("6a: 커밋 대시보드가 신규 템플릿 이전 산출물(siteScopeNav 미포함) — docs/daily는 "
-             "hand-edit 금지이며 CI/빌더 재생성 시 반영(SKIP). 공개 네비 DOM은 §4d에서 강제됨.")
-    else:
-        check("6a: 커밋 대시보드에 네비 DOM(siteScopeNav)", False)
-    check("6b: 커밋 대시보드(공개)에 site_watch_tree 데이터 없음(이름 비노출)",
-          "site_watch_tree" not in model)
-    ss = model.get("site_scope_summary")
-    if ss is not None:
-        check("6c: 커밋 대시보드 site_scope_summary는 공개(is_private=False)",
-              ss.get("is_private") is False, str(ss.get("is_private")))
-    else:
-        info("6c: 커밋 대시보드에 site_scope_summary 미주입 — 다음 빌드에서 주입 예정(SKIP)")
-    leaked = [m for m in INTERNAL_MARKERS if m in html]
-    check("6d: 커밋 대시보드에 내부 고유 현장명 표본 비노출", not leaked, str(leaked) if leaked else "ok")
+    check("6a: 커밋 대시보드에 네비 DOM(siteScopeNav)", 'id="siteScopeNav"' in html)
+    tree = model.get("site_watch_tree")
+    if not check("6b: 커밋 대시보드 공개 site_watch_tree 데이터 있음(D7-AD-Z)",
+                 isinstance(tree, dict)):
+        return
+    nodes = _nodes(tree)
+    check("6c: 커밋 대시보드 공개 현장 노드 노출", len(nodes) > 0, f"{len(nodes)}개")
+    ss = model.get("site_scope_summary") or {}
+    check("6d: 커밋 대시보드 site_scope_summary는 공개(is_private=False)",
+          ss.get("is_private") is False, str(ss.get("is_private")))
     check("6e: 커밋 대시보드는 빌더 생성물(hand-edit 아님 — export 마커)",
           "source=templates/dashboard_preview.html" in html)
-
 
 # ---------------------------------------------------------------------------
 # 7 · 비공개 목록 stage 금지(gitignore + not staged)

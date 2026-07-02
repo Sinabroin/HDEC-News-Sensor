@@ -1,14 +1,14 @@
 """Site Watchlist 도메인 (leaf) — 사내 제공 현장/프로젝트/지사/법인 워치리스트 (P0-D7-M).
 
 사용자가 제공한 실제 현대건설 국내·해외 현장/프로젝트/해외지사/해외법인 이름을 기반으로
-공개 뉴스를 센싱한다. 핵심은 **프라이버시 경계**다:
+공개 뉴스를 센싱한다. D7-AD-Z부터 핵심은 **공개 현장 트리 노출**이다:
 
-- 기본값은 **공개 샘플**(data/site_watchlist.sample.json)만 읽는다 — 공개·플레이스홀더 항목만.
+- 기본값은 **공개 현장 목록**(data/site_watchlist.public.json)을 읽는다 — 없을 때만 공개 샘플로 폴백한다.
 - 실제 내부 목록(data/private/site_watchlist.local.json)은 환경변수 SITE_WATCHLIST_PATH가
   명시적으로 설정됐을 때만 읽는다. 미설정이면 private 목록은 비어 있다(샘플로 폴백).
 - private 파일이 없거나 깨져도 빌드를 실패시키지 않는다 — 비어 있는 목록으로 no-op한다.
-- 전체 내부 목록을 공개 산출물(docs/* 대시보드 HTML)에 절대 덤프하지 않는다 — 매칭된
-  공개 기사 행만 해당 라벨을 단다(기사가 이미 그 프로젝트명을 언급한 경우에만).
+- 공개 승인된 현장 목록은 공개 산출물(docs/* 대시보드 HTML)에 트리로 포함한다.
+  기사 매칭은 별도이며, 매칭 0건 현장도 정직하게 0으로 표시한다.
 
 경계(이 파일만 한다 / 절대 안 한다):
 - 한다: 워치리스트 로드(공개/비공개 게이팅), (1) 수집기용 bounded 사이트 쿼리 그룹 파생,
@@ -28,6 +28,7 @@ from pathlib import Path
 # app.config를 import하지 않는다 (DB_PATH 캐시 트랩 회피) — 경로를 직접 계산한다.
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 _SAMPLE_PATH = _DATA_DIR / "site_watchlist.sample.json"
+_PUBLIC_PATH = _DATA_DIR / "site_watchlist.public.json"
 _PRIVATE_DIR = _DATA_DIR / "private"
 
 # 운영자가 명시적으로 설정해야만 실제 내부 목록을 읽는다(미설정 = 공개 샘플만).
@@ -104,17 +105,34 @@ _CACHE: dict = {}
 # 로드 + 정규화 (프라이버시 게이팅)
 # ---------------------------------------------------------------------------
 
-def _resolve_source(path=None):
-    """읽을 소스 경로와 private 여부를 결정한다.
+def _path_is_public_source(path: Path) -> bool:
+    """True if path points to the tracked public watchlist."""
+    try:
+        return path.resolve() == _PUBLIC_PATH.resolve()
+    except OSError:
+        return path.name == _PUBLIC_PATH.name
 
-    우선순위: 명시적 path 인자 > env SITE_WATCHLIST_PATH > 공개 샘플.
-    path/env로 온 경로는 private(내부 목록)로 본다 — 샘플은 공개.
+
+def _resolve_source(path=None) -> tuple[Path, bool]:
+    """Resolve watchlist source.
+
+    D7-AD-Z: the default dashboard source is now the tracked public watchlist
+    data/site_watchlist.public.json when present. SITE_WATCHLIST_PATH remains an
+    explicit local/operator override, but public export no longer null-gates site
+    names by default.
     """
-    explicit = path or os.environ.get(_ENV_PATH)
-    if explicit:
-        return Path(explicit), True
-    return _SAMPLE_PATH, False
+    if path:
+        src = Path(path).expanduser()
+        return src, not _path_is_public_source(src)
 
+    env_path = os.environ.get(_ENV_PATH)
+    if env_path:
+        return Path(env_path).expanduser(), True
+
+    if _PUBLIC_PATH.exists():
+        return _PUBLIC_PATH, False
+
+    return _SAMPLE_PATH, False
 
 def _normalize_item(raw: dict) -> dict | None:
     """raw dict 한 건을 정규화한다. id/name/scope가 없으면 None(무시)."""
@@ -185,7 +203,7 @@ def load_watchlist(path=None) -> dict:
     """워치리스트를 로드한다(프라이버시 게이팅).
 
     반환: {items, is_private, source, path}
-    - 기본(env/arg 없음): 공개 샘플을 읽는다 → is_private=False, source='sample'.
+    - 기본(env/arg 없음): 공개 현장 목록을 읽는다 → is_private=False, source='public'. 없으면 샘플로 폴백한다.
     - SITE_WATCHLIST_PATH 또는 path 인자 설정: 내부 목록을 읽는다 → is_private=True.
       파일이 없거나 깨지면 items=[] 로 no-op한다(source='private_missing', 빌드 실패 없음).
     """
@@ -198,7 +216,7 @@ def load_watchlist(path=None) -> dict:
         return {"items": items, "is_private": True, "source": "private",
                 "path": str(src_path)}
     items = _read_items(src_path) or []
-    return {"items": items, "is_private": False, "source": "sample", "path": str(src_path)}
+    return {"items": items, "is_private": False, "source": "public" if _path_is_public_source(src_path) else "sample", "path": str(src_path)}
 
 
 # ---------------------------------------------------------------------------
@@ -633,18 +651,21 @@ def build_tree(items, matches=None, expose_full_tree=False, is_private=True, now
 
 
 def tree_for_model(rows, path=None, now=None) -> dict | None:
-    """빌더용 트리 파생 — 비공개(env/arg) 워치리스트가 있을 때만 트리를 만든다.
+    """빌더용 트리 파생 — 공개 대시보드도 현장명 트리를 노출한다.
 
-    공개 빌드(SITE_WATCHLIST_PATH 미설정 = 샘플)에서는 None을 반환한다(트리 없음 — 샘플도
-    노출하지 않는다). 비공개면 매칭 집계 후 expose_tree_enabled()로 전체/매칭전용을 정한다.
-    now는 freshness 기준 시각(빌더가 리포트 생성 시각을 주입; 미지정이면 현재 시각).
+    D7-AD-Z: 기본 공개 소스(data/site_watchlist.public.json)가 있으면 공개 빌드에서도
+    국내현장/해외현장/해외지사/해외법인 전체 트리를 모델에 포함한다. 매칭 0건도 정직하게
+    표시하고, '!'는 기존처럼 최근 공개뉴스 매칭이 있는 노드에만 부여한다.
     """
     wl = load_watchlist(path)
-    if not wl["is_private"]:
-        return None
     matches = summarize_matches(rows)
-    return build_tree(wl["items"], matches,
-                      expose_full_tree=expose_tree_enabled(), is_private=True, now=now)
+    return build_tree(
+        wl["items"],
+        matches,
+        expose_full_tree=True,
+        is_private=False,
+        now=now,
+    )
 
 
 # ---------------------------------------------------------------------------

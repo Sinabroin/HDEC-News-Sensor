@@ -169,7 +169,7 @@ def check_template() -> None:
     for anchor in ("function renderScopeNodes", "function renderSiteScopeNav",
                    "function filterSiteNav", "renderScopeNodes(sc, data)",
                    'Number(n.match_count || 0)', 'Number(n.match_count) ? "" : " zero"',
-                   "var priv = !!SITE_TREE",
+                   "var hasTree = !!SITE_TREE",
                    "if (!SITE_TREE || !isSiteScope(key))", "MODEL.site_watch_tree || null"):
         check(f"6f: 기존 네비/트리 앵커 유지 '{anchor}'", anchor in t)
 
@@ -270,11 +270,14 @@ def check_public_build() -> None:
             check(f"2e: nav_category_sections에 '{key}' 존재", key in nav_secs)
         check("2e: weather는 nav_category_sections에서 제외", "weather" not in nav_secs)
 
-        check("8a: 공개 모델에 site_watch_tree 키 없음(공개 null-gating)",
-              "site_watch_tree" not in model)
-        leaked = [m for m in INTERNAL_MARKERS if m in html]
-        check("8b: 공개 HTML에 내부 고유 현장명 표본 비노출", not leaked,
-              str(leaked) if leaked else "ok")
+        tree = model.get("site_watch_tree") or {}
+        node_total = sum(len(g.get("nodes") or [])
+                         for sc in (tree.get("by_scope") or {}).values()
+                         for g in sc.get("groups") or [])
+        check("8a: 공개 모델에 site_watch_tree 현장 노드 노출(D7-AD-Z)",
+              node_total > 0, f"nodes={node_total}")
+        check("8b: 공개 HTML에 현장 워치리스트 DOM 유지",
+              'id="siteScopeNav"' in html)
 
 
 def check_operator_build() -> None:
@@ -319,32 +322,64 @@ def check_real_counts() -> None:
 
 def check_artifact_and_staging() -> None:
     html = _read(DASHBOARD)
-    if html:
-        check("10a: 커밋 대시보드는 빌더 산출(hand-edit 아님 — export 마커)",
-              "source=templates/dashboard_preview.html" in html)
-        leaked = [m for m in INTERNAL_MARKERS if m in html]
-        check("10b: 커밋 대시보드에 내부 고유 현장명 표본 비노출", not leaked,
-              str(leaked) if leaked else "ok")
-    else:
-        info(f"SKIP — 커밋 대시보드 없음({DASHBOARD.name}). CI/빌더 재생성 시 반영.")
+    if not html:
+        info(f"SKIP — 커밋 대시보드 없음({DASHBOARD.name}). 빌드 후 재검.")
+        return
 
-    rc, out = _git("check-ignore", _REL_PRIVATE)
-    if rc == 127:
-        check("10c: 비공개 local.json gitignore 규칙(폴백)",
-              "data/private/*" in _read(ROOT / ".gitignore"))
-    else:
-        check("10c: 비공개 local.json gitignored", rc == 0, out or "매칭 없음")
+    check("10a: 커밋 대시보드는 빌더 산출(hand-edit 아님 — export 마커)",
+          "source=templates/dashboard_preview.html" in html
+          or "dashboard-export:summary" in html)
 
-    _, staged = _git("diff", "--cached", "--name-only")
-    staged_lines = [s for s in (staged or "").splitlines() if s.strip()]
-    forbidden = [".agents/", "design/", "data/private/"]
-    hits = [s for s in staged_lines if any(s.startswith(p) for p in forbidden)]
-    check("10d: 금지 경로(.agents/·design/·data/private/) staged 아님", not hits, str(hits))
-    docs_staged = [s for s in staged_lines if s.startswith("docs/daily/")
-                   and s.endswith(".html")]
+    model = _model(html)
+    tree = model.get("site_watch_tree") or {}
+    node_total = sum(
+        len(g.get("nodes") or [])
+        for sc in (tree.get("by_scope") or {}).values()
+        for g in sc.get("groups") or []
+    )
+    check("10b: 커밋 대시보드에 승인된 공개 현장 노드 노출(D7-AD-Z)",
+          node_total > 0, f"nodes={node_total}")
+
+    try:
+        import subprocess
+        ignored = subprocess.run(
+            ["git", "check-ignore", "data/private/site_watchlist.local.json"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        check("10c: 비공개 local.json gitignored",
+              ignored.returncode == 0,
+              (ignored.stdout or ignored.stderr).strip())
+    except Exception as exc:
+        check("10c: 비공개 local.json gitignored", False, str(exc))
+
+    try:
+        import subprocess
+        staged = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=ROOT,
+            text=True,
+        ).splitlines()
+    except Exception:
+        staged = []
+
+    forbidden = [
+        x for x in staged
+        if x.startswith(".agents/")
+        or x.startswith("design/")
+        or x.startswith("data/private/")
+    ]
+    check("10d: 금지 경로(.agents/·design/·data/private/) staged 아님",
+          not forbidden, str(forbidden))
+
+    staged_docs = [
+        x for x in staged
+        if x.startswith("docs/daily/") and x.endswith(".html")
+    ]
     check("10e: docs/daily/*.html hand-edit stage 아님(빌더 산출만 허용)",
-          not docs_staged or "source=templates/dashboard_preview.html" in html, str(docs_staged))
-
+          not staged_docs, "staged docs 없음" if not staged_docs else str(staged_docs))
 
 def main() -> int:
     print(f"== verify_dashboard_ia_consolidation (D7-AD-W Phase 1B) @ {ROOT} ==")

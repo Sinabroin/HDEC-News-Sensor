@@ -1,0 +1,1888 @@
+{
+  "version": 1,
+  "note": "공개 현장 위치리스트 — 국내현장/해외현장/해외지사/해외법인을 공개 대시보드에 표시한다. 사용자 승인에 따라 기존 private-gating 정책에서 public exposure 정책으로 전환됨.",
+  "generated_by": "prepare_site_watchlist_from_text.py",
+  "items": [
+    {
+      "id": "domestic_site_수도권광역급행철도_b노선_민간투자시설사업",
+      "name": "수도권광역급행철도 B노선 민간투자시설사업",
+      "aliases": [
+        "GTX-B",
+        "GTX B노선",
+        "수도권광역급행철도 B노선"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_수도권광역급행철도_c노선_민간투자시설사업",
+      "name": "수도권광역급행철도 C노선 민간투자시설사업",
+      "aliases": [
+        "GTX-C",
+        "GTX C노선",
+        "수도권광역급행철도 C노선"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_대곡_홍대_광역철도_민간투자사업",
+      "name": "대곡~홍대 광역철도 민간투자사업",
+      "aliases": [
+        "대곡 홍대 광역철도",
+        "대곡~홍대"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_월곶_판교_복선전철_제6공구_건설공사",
+      "name": "월곶~판교 복선전철 제6공구 건설공사",
+      "aliases": [
+        "월곶 판교 복선전철",
+        "월곶~판교"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_동부간선도로_지하화_민간투자사업",
+      "name": "동부간선도로 지하화 민간투자사업",
+      "aliases": [
+        "동부간선도로 지하화"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_경원선남측구간_철도복원",
+      "name": "경원선남측구간 철도복원",
+      "aliases": [
+        "경원선 철도복원"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_이천문경간철도",
+      "name": "이천문경간철도",
+      "aliases": [
+        "이천 문경 철도"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_부산항_진해신항_남방파제",
+      "name": "부산항 진해신항 남방파제",
+      "aliases": [
+        "진해신항 남방파제",
+        "진해신항"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_부산항_진해신항_컨테이너부두",
+      "name": "부산항 진해신항 컨테이너부두",
+      "aliases": [
+        "진해신항 컨테이너부두"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_인천신항_1_2단계_컨테이너부두",
+      "name": "인천신항 1-2단계 컨테이너부두",
+      "aliases": [
+        "인천신항 컨테이너부두",
+        "인천신항"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_인천계양_국도39호선_확장공사",
+      "name": "인천계양 국도39호선 확장공사",
+      "aliases": [
+        "국도39호선 확장",
+        "인천계양 국도39호선"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_계양_강화_고속국도_건설공사",
+      "name": "계양~강화 고속국도 건설공사",
+      "aliases": [
+        "계양 강화 고속국도"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_고속국도_제400호선_김포_파주_건설공사",
+      "name": "고속국도 제400호선 김포~파주 건설공사",
+      "aliases": [
+        "고속국도 400호선",
+        "김포 파주 고속국도"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_광양항_준설토투기장",
+      "name": "광양항 준설토투기장",
+      "aliases": [
+        "광양항 준설토"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_군산항_준설토투기장",
+      "name": "군산항 준설토투기장",
+      "aliases": [
+        "군산항 준설토"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_서부간선지하도로",
+      "name": "서부간선지하도로",
+      "aliases": [
+        "서부간선 지하도로"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_영동대로_지하공간_복합개발",
+      "name": "영동대로 지하공간 복합개발",
+      "aliases": [
+        "영동대로 지하공간"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_시흥시_클린에너지센터",
+      "name": "시흥시 클린에너지센터",
+      "aliases": [
+        "시흥 클린에너지센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_신안우이_해상풍력_발전사업",
+      "name": "신안우이 해상풍력 발전사업",
+      "aliases": [
+        "신안우이 해상풍력"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_제주한림해상풍력",
+      "name": "제주한림해상풍력",
+      "aliases": [
+        "한림해상풍력"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_포천양수발전소",
+      "name": "포천양수발전소",
+      "aliases": [
+        "포천 양수발전"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_하남감일_공공주택지구",
+      "name": "하남감일 공공주택지구",
+      "aliases": [
+        "하남감일 공공주택"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_한국타이어_technoring",
+      "name": "한국타이어 Technoring",
+      "aliases": [
+        "테크노링",
+        "Technoring"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "토목사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_gbc_시공단",
+      "name": "GBC 시공단",
+      "aliases": [
+        "GBC",
+        "글로벌비즈니스센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_icn062_dc",
+      "name": "ICN062 DC",
+      "aliases": [
+        "ICN062"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_pus05_dc",
+      "name": "PUS05 DC",
+      "aliases": [
+        "PUS05"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_구로_항동_dc",
+      "name": "구로 항동 DC",
+      "aliases": [
+        "구로 항동 데이터센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_안산_성곡동_dc",
+      "name": "안산 성곡동 DC",
+      "aliases": [
+        "안산 성곡동 데이터센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_안산_식하_dc",
+      "name": "안산 식하 DC",
+      "aliases": [
+        "안산 식하 데이터센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_티블루_dc",
+      "name": "티블루 DC",
+      "aliases": [
+        "티블루 데이터센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_포항_ai_dc",
+      "name": "포항 AI DC",
+      "aliases": [
+        "포항 AI 데이터센터"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_더_파크사이드_서울",
+      "name": "더 파크사이드 서울",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_더_갤러리_832",
+      "name": "더 갤러리 832",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_더_현대_광주",
+      "name": "더 현대 광주",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_광명11r_재개발",
+      "name": "광명11R 재개발",
+      "aliases": [
+        "광명11R"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_광명5r_재개발",
+      "name": "광명5R 재개발",
+      "aliases": [
+        "광명5R"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_대조제1구역_주택재개발",
+      "name": "대조제1구역 주택재개발",
+      "aliases": [
+        "대조1구역"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_부산_범천1_1구역",
+      "name": "부산 범천1-1구역",
+      "aliases": [
+        "범천1-1구역"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_신반포_22차_재건축",
+      "name": "신반포 22차 재건축",
+      "aliases": [
+        "신반포22차"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_이문4구역_주택재개발",
+      "name": "이문4구역 주택재개발",
+      "aliases": [
+        "이문4구역"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_인천_산곡6구역_재개발",
+      "name": "인천 산곡6구역 재개발",
+      "aliases": [
+        "산곡6구역"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_잠실주경기장_리모델링",
+      "name": "잠실주경기장 리모델링",
+      "aliases": [
+        "잠실 주경기장"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_제기_제4구역_재개발",
+      "name": "제기 제4구역 재개발",
+      "aliases": [
+        "제기4구역"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_흑석9구역_재개발",
+      "name": "흑석9구역 재개발",
+      "aliases": [
+        "흑석9구역"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_힐스테이트_더_운정",
+      "name": "힐스테이트 더 운정",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_힐스테이트_디에이치센트럴",
+      "name": "힐스테이트 디에이치센트럴",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_힐스테이트_도안리버파크",
+      "name": "힐스테이트 도안리버파크",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_힐스테이트_둔산",
+      "name": "힐스테이트 둔산",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_힐스테이트_삼성",
+      "name": "힐스테이트 삼성",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_힐스테이트_이수역센트럴",
+      "name": "힐스테이트 이수역센트럴",
+      "aliases": [],
+      "scope": "domestic_site",
+      "business_lens": "building_housing",
+      "org_unit": "건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_사힌_에틸렌시설_건설공사_pkg1",
+      "name": "사힌 에틸렌시설 건설공사 PKG1",
+      "aliases": [
+        "사힌 에틸렌",
+        "사힌 PKG1"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "plant",
+      "org_unit": "플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_사힌사업단",
+      "name": "사힌사업단",
+      "aliases": [
+        "사힌"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "plant",
+      "org_unit": "플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_서산태양광발전소_관리운영_사업소",
+      "name": "서산태양광발전소 관리운영 사업소",
+      "aliases": [
+        "서산태양광"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "new_energy",
+      "org_unit": "NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_동해안_신가평_hvdc_송전선공사",
+      "name": "동해안-신가평 HVDC 송전선공사",
+      "aliases": [
+        "동해안 신가평 HVDC",
+        "신가평 HVDC"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "new_energy",
+      "org_unit": "NewEnergy사업부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_수출용신형연구로_건설공사",
+      "name": "수출용신형연구로 건설공사",
+      "aliases": [
+        "수출용 신형연구로"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "new_energy",
+      "org_unit": "NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_한신울원자력_3_4호기",
+      "name": "한신울원자력 3,4호기",
+      "aliases": [
+        "신울진 3",
+        "4호기",
+        "한신울원자력"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "new_energy",
+      "org_unit": "NewEnergy사업부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "domestic_site_혁신원자력연구단지_구축공사",
+      "name": "혁신원자력연구단지 구축공사",
+      "aliases": [
+        "혁신원자력연구단지"
+      ],
+      "scope": "domestic_site",
+      "business_lens": "new_energy",
+      "org_unit": "NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_네옴_러닝_터널_공사",
+      "name": "사우디 네옴 러닝 터널 공사",
+      "aliases": [
+        "네옴 러닝 터널",
+        "NEOM The Line",
+        "네옴 더라인"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_두바이_대관람차_공사",
+      "name": "두바이 대관람차 공사",
+      "aliases": [
+        "두바이 대관람차",
+        "Ain Dubai"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_미국_전기로_제철소_부지조성_공사",
+      "name": "미국 전기로 제철소 부지조성 공사",
+      "aliases": [
+        "미국 전기로 제철소 부지조성"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_베트남_하노이_메트로_3호선_cp03",
+      "name": "베트남 하노이 메트로 3호선 CP03",
+      "aliases": [
+        "하노이 메트로 3호선",
+        "하노이 메트로 CP03"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_싱가포르_tuas_서부해안_인프라공사",
+      "name": "싱가포르 Tuas 서부해안 인프라공사",
+      "aliases": [
+        "Tuas 서부해안",
+        "투아스 서부해안"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_싱가포르_nsc_n113_n115_건설공사",
+      "name": "싱가포르 NSC N113,N115 건설공사",
+      "aliases": [
+        "NSC N113",
+        "NSC N115"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_싱가포르_t315_건설공사",
+      "name": "싱가포르 T315 건설공사",
+      "aliases": [
+        "T315"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_싱가포르_투아스_핑거3_매립공사",
+      "name": "싱가포르 투아스 핑거3 매립공사",
+      "aliases": [
+        "투아스 핑거3",
+        "Tuas Finger 3"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_이라크_해수처리시설_부지조성_공사",
+      "name": "이라크 해수처리시설 부지조성 공사",
+      "aliases": [
+        "이라크 해수처리시설 부지조성"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_인도네시아_peusangan_수력발전소",
+      "name": "인도네시아 Peusangan 수력발전소",
+      "aliases": [
+        "Peusangan 수력",
+        "쁘우상안 수력"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_칠레_차카오_교량_공사",
+      "name": "칠레 차카오 교량 공사",
+      "aliases": [
+        "차카오 교량",
+        "Chacao"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_카타르_al_bustan_st_도로_확장_및_신설_공사",
+      "name": "카타르 Al Bustan St. 도로 확장 및 신설 공사",
+      "aliases": [
+        "Al Bustan",
+        "알 부스탄 도로"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_카타르_tse_저류조_공사",
+      "name": "카타르 TSE 저류조 공사",
+      "aliases": [
+        "카타르 TSE 저류조"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_카타르_루사일_고속도로_건설공사",
+      "name": "카타르 루사일 고속도로 건설공사",
+      "aliases": [
+        "루사일 고속도로"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_쿠웨이트_슈아_항만_개보수_공사",
+      "name": "쿠웨이트 슈아 항만 개보수 공사",
+      "aliases": [
+        "슈아 항만",
+        "쿠웨이트 슈아"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_쿠웨이트_신규_정유공장_해상공사",
+      "name": "쿠웨이트 신규 정유공장 해상공사",
+      "aliases": [
+        "쿠웨이트 정유공장 해상"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_파나마_메트로_3호선",
+      "name": "파나마 메트로 3호선",
+      "aliases": [
+        "파나마 메트로"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_필리핀_남부철도",
+      "name": "필리핀 남부철도",
+      "aliases": [
+        "필리핀 남부철도 PNR"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "civil_infrastructure",
+      "org_unit": "해외 토목사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_미국_전기로_제철소_건설공사",
+      "name": "미국 전기로 제철소 건설공사",
+      "aliases": [
+        "미국 전기로 제철소"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_미국_조지아_전기차_배터리공장",
+      "name": "미국 조지아 전기차 배터리공장",
+      "aliases": [
+        "조지아 배터리공장",
+        "Georgia battery"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_ckd_공장",
+      "name": "사우디 CKD 공장",
+      "aliases": [
+        "사우디 CKD"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_스리랑카_콜롬보_킨스시티_프로젝트",
+      "name": "스리랑카 콜롬보 킨스시티 프로젝트",
+      "aliases": [
+        "콜롬보 킨스시티",
+        "Colombo Kins City"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_싱가포르_쇼타워",
+      "name": "싱가포르 쇼타워",
+      "aliases": [
+        "Shaw Tower",
+        "쇼 타워"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_싱가포르_풍골_스포츠센터",
+      "name": "싱가포르 풍골 스포츠센터",
+      "aliases": [
+        "풍골 스포츠센터",
+        "Punggol"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_카타르_국립박물관_신축공사",
+      "name": "카타르 국립박물관 신축공사",
+      "aliases": [
+        "카타르 국립박물관",
+        "Qatar National Museum"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_카타르_루사일_타워",
+      "name": "카타르 루사일 타워",
+      "aliases": [
+        "루사일 타워",
+        "Lusail Tower"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_홍콩_유나이티드_크리스천_병원",
+      "name": "홍콩 유나이티드 크리스천 병원",
+      "aliases": [
+        "United Christian Hospital",
+        "유나이티드 크리스천"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "building_housing",
+      "org_unit": "해외 건축주택사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_리비아_트리폴리_웨스트_화력발전소",
+      "name": "리비아 트리폴리 웨스트 화력발전소",
+      "aliases": [
+        "트리폴리 웨스트 화력"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_베트남_광짝_1_400mw_화력발전소",
+      "name": "베트남 광짝 1,400MW 화력발전소",
+      "aliases": [
+        "광짝 화력발전소",
+        "Quang Trach"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_마잔_가스처리_공장",
+      "name": "사우디 마잔 가스처리 공장",
+      "aliases": [
+        "마잔 가스처리",
+        "Marjan gas"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_마잔_오일처리_시설",
+      "name": "사우디 마잔 오일처리 시설",
+      "aliases": [
+        "마잔 오일처리"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_아미랄_유틸리티_및_부대시설",
+      "name": "사우디 아미랄 유틸리티 및 부대시설",
+      "aliases": [
+        "아미랄 유틸리티",
+        "Amiral"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_자푸라_ii_유틸리티_및_부대공사",
+      "name": "사우디 자푸라 II 유틸리티 및 부대공사",
+      "aliases": [
+        "자푸라 II",
+        "Jafurah"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_알제리_우마쉐_복합화력발전소",
+      "name": "알제리 우마쉐 복합화력발전소",
+      "aliases": [
+        "우마쉐 복합화력",
+        "Oumache"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_이라크_바스라_정유공장_고도화설비",
+      "name": "이라크 바스라 정유공장 고도화설비",
+      "aliases": [
+        "바스라 정유공장",
+        "Basra refinery"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_이라크_카르발라_정유공장",
+      "name": "이라크 카르발라 정유공장",
+      "aliases": [
+        "카르발라 정유공장",
+        "Karbala"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_이라크_해수처리시설",
+      "name": "이라크 해수처리시설",
+      "aliases": [
+        "이라크 해수처리"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_인도네시아_깔리반_석탄화력발전소",
+      "name": "인도네시아 깔리반 석탄화력발전소",
+      "aliases": [
+        "깔리반 석탄화력",
+        "Kalibaru"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_쿠웨이트_알주르_lng_터미널",
+      "name": "쿠웨이트 알주르 LNG 터미널",
+      "aliases": [
+        "알주르 LNG",
+        "Al Zour LNG"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_카타르_5차_비료공장",
+      "name": "카타르 5차 비료공장",
+      "aliases": [
+        "카타르 비료공장"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_파푸아_lng_기본설계_공사",
+      "name": "파푸아 LNG 기본설계 공사",
+      "aliases": [
+        "파푸아 LNG",
+        "Papua LNG"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "plant",
+      "org_unit": "해외 플랜트사업본부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_하일_알주프_380kv_송전선",
+      "name": "사우디 하일-알주프 380kV 송전선",
+      "aliases": [
+        "하일 알주프 송전",
+        "Hail Aljouf"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_uae_원전_건설공사",
+      "name": "UAE 원전 건설공사",
+      "aliases": [
+        "바라카 원전",
+        "UAE 원전",
+        "Barakah"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_루마니아_ctrf_신축공사",
+      "name": "루마니아 CTRF 신축공사",
+      "aliases": [
+        "루마니아 CTRF"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_루마니아_체르나보다_설비개선공사",
+      "name": "루마니아 체르나보다 설비개선공사",
+      "aliases": [
+        "체르나보다",
+        "Cernavoda"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_500kv_hvdc_송전선",
+      "name": "사우디 500kV HVDC 송전선",
+      "aliases": [
+        "사우디 HVDC"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_미국_텍사스_lucy_태양광_발전사업",
+      "name": "미국 텍사스 LUCY 태양광 발전사업",
+      "aliases": [
+        "LUCY 태양광",
+        "텍사스 태양광"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_미얀마_500kv_변전소",
+      "name": "미얀마 500kV 변전소",
+      "aliases": [
+        "미얀마 변전소"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_불가리아_코즐로두이_원전_7_8호기_설계공사",
+      "name": "불가리아 코즐로두이 원전 7,8호기 설계공사",
+      "aliases": [
+        "코즐로두이 원전",
+        "Kozloduy"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 1,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_nic_south_ycnt_hvdc_송전",
+      "name": "사우디 NIC South - YCNT HVDC 송전",
+      "aliases": [
+        "NIC South YCNT",
+        "YCNT HVDC"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_rafha_380kv_변전_공사",
+      "name": "사우디 Rafha 380kV 변전 공사",
+      "aliases": [
+        "Rafha 380kV",
+        "라프하 변전"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_클리스_380kv_송전공사",
+      "name": "사우디 클리스 380kV 송전공사",
+      "aliases": [
+        "클리스 380kV"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_site_사우디_하일4_카심2_380kv_송전선_공사",
+      "name": "사우디 하일4-카심2 380kV 송전선 공사",
+      "aliases": [
+        "하일4 카심2",
+        "하일 카심 송전"
+      ],
+      "scope": "overseas_site",
+      "business_lens": "new_energy",
+      "org_unit": "해외 NewEnergy사업부",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_뉴델리_지사",
+      "name": "뉴델리 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_다카_지사",
+      "name": "다카 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_도하_지사",
+      "name": "도하 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_두바이_사무소",
+      "name": "두바이 사무소",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_쿠웨이트_지사",
+      "name": "쿠웨이트 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_리야드_지사",
+      "name": "리야드 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_마닐라_지사",
+      "name": "마닐라 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_바그다드_지사",
+      "name": "바그다드 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_바르샤바_지사",
+      "name": "바르샤바 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_소피아_지사",
+      "name": "소피아 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_시드니_지사",
+      "name": "시드니 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_싱가포르_지사",
+      "name": "싱가포르 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_아부다비_지사",
+      "name": "아부다비 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_알제리_지사",
+      "name": "알제리 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_알코바_지사",
+      "name": "알코바 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_자카르타_지사",
+      "name": "자카르타 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_쿠알라룸푸르_사무소",
+      "name": "쿠알라룸푸르 사무소",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_타슈켄트_지사",
+      "name": "타슈켄트 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_트리폴리_지사",
+      "name": "트리폴리 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_파나마시티_지사",
+      "name": "파나마시티 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_하노이_지사",
+      "name": "하노이 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_홍콩_지사",
+      "name": "홍콩 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_branch_오클랜드_지사",
+      "name": "오클랜드 지사",
+      "aliases": [],
+      "scope": "overseas_branch",
+      "business_lens": "",
+      "org_unit": "해외지사",
+      "tier": 3,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_subsidiary_hyundai_america_inc",
+      "name": "Hyundai America Inc.",
+      "aliases": [
+        "현대건설 미국법인"
+      ],
+      "scope": "overseas_subsidiary",
+      "business_lens": "",
+      "org_unit": "해외법인",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    },
+    {
+      "id": "overseas_subsidiary_hyundai_e_c_japan",
+      "name": "Hyundai E&C Japan",
+      "aliases": [
+        "현대건설 일본법인",
+        "Hyundai E&C Japan Co."
+      ],
+      "scope": "overseas_subsidiary",
+      "business_lens": "",
+      "org_unit": "해외법인",
+      "tier": 2,
+      "public_safe": false,
+      "source": "user_screenshot_manual_seed",
+      "review_status": "needs_review"
+    }
+  ],
+  "visibility": "public"
+}

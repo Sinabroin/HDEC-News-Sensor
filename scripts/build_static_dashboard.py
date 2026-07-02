@@ -1702,6 +1702,49 @@ def _overlay_market_history(model: dict, market_mode: str) -> None:
             _apply_history_entry(it, entry)
 
 
+def _sync_site_scope_lens_banks_to_tree(model: dict, tree: dict | None, candidate_rows: list[dict]) -> None:
+    """D7-AD-Z: site scope article lists must mean actual site-watch matches.
+
+    Before D7-AD-Z, domestic_site/overseas_site lens banks could contain generic
+    "건설현장/해외 프로젝트" articles even when no individual watchlist site matched.
+    Now the public site watchlist is visible, so the 1차 site scope article list must
+    be derived only from site_watch_tree node.article_keys. If every node has 0
+    article_keys, the scope article list is empty.
+    """
+    if not isinstance(model, dict) or not isinstance(tree, dict):
+        return
+    banks = model.setdefault("lens_banks", {})
+    if not isinstance(banks, dict):
+        return
+
+    rows_by_key = {}
+    for row in candidate_rows or []:
+        if not isinstance(row, dict):
+            continue
+        for key in (row.get("url"), row.get("title")):
+            if key and key not in rows_by_key:
+                rows_by_key[key] = row
+
+    for scope in getattr(site_watchlist, "SCOPES", ()):
+        keys = []
+        sc = (tree.get("by_scope") or {}).get(scope) or {}
+        for group in sc.get("groups") or []:
+            for node in group.get("nodes") or []:
+                keys.extend(node.get("article_keys") or [])
+
+        seen = set()
+        rows = []
+        for key in keys:
+            row = rows_by_key.get(key)
+            if not row:
+                continue
+            rk = row.get("url") or row.get("title") or key
+            if rk in seen:
+                continue
+            seen.add(rk)
+            rows.append(row)
+        banks[scope] = rows
+
 def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock",
                   brief: dict | None = None, operator_api_base: str = "") -> str:
     m = re.search(r'(<script type="application/json" id="preview-model">)(.*?)(</script>)',
@@ -1772,6 +1815,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     tree = site_watchlist.tree_for_model(all_rows, now=brief.get("generated_at"))
     if tree is not None:
         model["site_watch_tree"] = tree
+        _sync_site_scope_lens_banks_to_tree(model, tree, all_rows)
     # D7-AD-P — 이름 비노출 scope 집계(좌측 '실행 범위' 네비 카운트). tree(이름 포함·비공개 전용)와
     # 달리 카운트만 담아 공개 빌드에도 안전하게 주입한다(현장명 0건 · verifier가 잠금). 비공개 게이팅은
     # 리프(site_watchlist)가 환경변수로 담당한다 — 빌더는 환경변수를 직접 읽지 않는다(D7-N 4d 보존).

@@ -484,7 +484,7 @@
   .st-node.zero .st-mc{color:var(--mute4);}
   .sitetree .st-empty{font-size:12px; color:var(--mute3); padding:8px 2px 2px; line-height:1.6;}
   /* 실행 범위 · 현장 워치리스트 네비 (D7-AD-P) — 좌측 네비 하위 개별 현장 목록. 공개 빌드는
-     이름 비노출(카운트만), 운영자(비공개) 빌드만 현장명·접이식 목록·검색을 노출한다. */
+     공개 빌드에서도 현장명·접이식 목록·검색을 노출한다. */
   .sitenav{margin:4px 2px 2px; padding:10px 4px 2px; border-top:1px solid var(--hair);}
   .sitenav.hidden{display:none;}
   .sitenav .sn-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:0 10px 4px;}
@@ -823,8 +823,8 @@
       <button class="nav" data-filter="overseas_subsidiary"><span class="l"><span class="ndot"></span><span class="nlabel">해외법인</span></span><span class="r"><span class="ncount">0</span></span></button>
 
       <!-- 현장 워치리스트 네비 (D7-AD-P) — '실행 범위' 하위 개별 현장 목록. JS가 #preview-model의
-           site_scope_summary(이름 비노출 카운트) + site_watch_tree(비공개 빌드에서만 채워짐)로 렌더한다.
-           공개 빌드: 그룹·카운트만(이름 비노출). 운영자 빌드: scope별 접이식 현장 목록 + 검색 + 클릭 필터. -->
+           site_scope_summary + site_watch_tree로 렌더한다.
+           공개 빌드: scope별 접이식 현장 목록 + 검색 + 클릭 필터. -->
       <div id="siteScopeNav" class="sitenav hidden" aria-live="polite"></div>
 
       <!-- 시장 모니터링 (D7-AD-V) — 좌측 목차에서 시장 카테고리를 직접 탐색한다. 클릭 시 시장 탭 전환 +
@@ -948,7 +948,7 @@
         </article>
 
         <!-- SITE WATCH TREE (D7-N) — 현장/조직 감시 트리. 비공개 빌드(비공개 워치리스트 경로)에서만
-             채워지고(공개=비노출), 국내현장/해외현장/해외지사/해외법인 렌즈에서만 펼쳐진다. 노드
+             채워지고, 국내현장/해외현장/해외지사/해외법인 렌즈에서 펼쳐진다. 노드
              클릭 시 매칭 공개뉴스만 아래 목록에 필터링한다. '!'=최근 공개뉴스 매칭(위험 확정 아님). -->
         <div class="sitetree hidden" id="siteTreePanel" aria-live="polite"></div>
         <div class="st-filterbar hidden" id="siteFilterBar"></div>
@@ -1670,13 +1670,36 @@
   /* 외부 '원문 사이트' href — 빌더가 준 external_url을 우선, 없으면 original/canonical/url.
      warning URL(hdec.kr/warning·WARNING.jpg)은 절대 링크로 만들지 않는다. url(원본 수집값)·
      final_url(접근 진단)과 분리하며, 접근 상태는 점수/분류/최신성 판단에 쓰지 않는다. */
+function isMockOrBlockedUrl(url){
+  var u = String(url || "").trim().toLowerCase();
+  return !!u && (
+    u.indexOf("example.com") >= 0 ||
+    u.indexOf("example.invalid") >= 0 ||
+    u.indexOf("/mock-") >= 0 ||
+    u.indexOf("hdec.kr/warning") >= 0 ||
+    u.indexOf("warning.jpg") >= 0
+  );
+}
+function displaySourceUrl(row){
+  var u = String((row && (row.external_url || row.original_url || row.canonical_url || row.url)) || "").trim();
+  if (!u || isMockOrBlockedUrl(u)) return "원문 URL 없음";
+  return u;
+}
+function displaySourceDomain(row){
+  var u = String((row && (row.external_url || row.original_url || row.canonical_url || row.url)) || "").trim();
+  var d = String((row && row.source_domain) || "").trim();
+  if (isMockOrBlockedUrl(u) || isMockOrBlockedUrl(d)) return "원문 도메인 없음";
+  return d || "확인 전";
+}
+
+
   function externalArticleUrl(article) {
     article = article || {};
     var cands = [article.external_url, article.original_url,
       article.canonical_url, article.url];
     for (var i = 0; i < cands.length; i++) {
       var v = String(cands[i] || "").trim();
-      if (/^https?:\/\//i.test(v) && !/hdec\.kr\/warning|warning\.jpg/i.test(v)) return v;
+      if (/^https?:\/\//i.test(v) && !isMockOrBlockedUrl(v)) return v;
     }
     return "";
   }
@@ -1697,8 +1720,8 @@
     el("arLenses").textContent = (article.lens || []).map(function (key) {
       return (policy[key] && policy[key].label) || key;
     }).join(" · ") || article.category_label || article.cat || "전체";
-    el("arUrl").textContent = article.url || "—";
-    el("arDomain").textContent = readerDomain(article) || "—";
+    el("arUrl").textContent = displaySourceUrl(article);
+    el("arDomain").textContent = displaySourceDomain(article);
     el("arSourceType").textContent = (article.accessSourceType || "unknown") + " / "
       + (article.collectionMethod || "unknown");
     el("arAccessNote").textContent = status + " · "
@@ -2172,16 +2195,27 @@
   var activeLensKey = "all";
   var LENS_BANKS = MODEL.lens_banks || {};
   var IMMEDIATE_STATUS = MODEL.immediate_status || {};
-  // 현장/조직 감시 트리(D7-N) — 비공개 빌드에서만 채워진다(공개=null). 사이트 scope 렌즈가
+  // 현장/조직 감시 트리(D7-N) — 공개 빌드에서도 채워진다. 사이트 scope 렌즈가
   // 선택될 때만 해당 트리를 노출하고, 노드 클릭으로 매칭 기사만 필터한다.
   var SITE_TREE = MODEL.site_watch_tree || null;
-  // 이름 비노출 scope 카운트(공개·비공개 공통). 공개 빌드는 이 카운트만 보이고 현장명은 SITE_TREE가
-  // 채워진 운영자(비공개) 빌드에서만 노출한다 — '실행 범위' 네비 하위 현장 목록의 단일 소스.
+  // 공개 scope 카운트. 현장명은 SITE_TREE를 통해 공개 빌드에서도 노출한다 — '실행 범위' 네비 하위 현장 목록의 단일 소스.
   var SITE_SCOPE_SUMMARY = MODEL.site_scope_summary || null;
   var SITE_SCOPES = ["domestic_site", "overseas_site", "overseas_branch", "overseas_subsidiary"];
+  function siteScopeArticleCount(scope) {
+    var sc = siteScopeData(scope);
+    var n = sc ? Number(sc.match_count || 0) : 0;
+    return isFinite(n) ? n : 0;
+  }
+  function syncSiteScopePrimaryNavCounts() {
+    if (!lensnav || !SITE_TREE) return;
+    SITE_SCOPES.forEach(function (scope) {
+      var badge = lensnav.querySelector('.nav[data-filter="' + scope + '"] .ncount');
+      if (badge) badge.textContent = String(siteScopeArticleCount(scope));
+    });
+  }
   var activeSiteFilter = null;
   /* 현장/조직 감시 트리 렌더 + 노드 필터 (D7-N).
-     - SITE_TREE는 비공개 빌드에서만 채워진다(공개=null) → 공개 대시보드에는 트리가 절대 안 그려진다.
+     - SITE_TREE는 공개 빌드에서도 채워진다 → 공개 대시보드에는 트리가 절대 안 그려진다.
      - '!'(alert_marker)는 리프(site_watchlist.build_tree)가 '최근(≤30일) 공개뉴스 매칭'에만 부여한다.
        과거(>30일) 매칭은 '!' 대신 '과거 매칭' 뱃지로만 표시한다 — UI는 리프 판정을 그대로 따른다. */
   function isSiteScope(key) { return SITE_SCOPES.indexOf(key) !== -1; }
@@ -2227,7 +2261,7 @@
       + esc((sc && sc.label) || lensLabel(scope)) + '</small></div>';
     if (!sc || !sc.groups || !sc.groups.length) {
       return head + '</div><div class="st-empty">이 분류에서 <b>최근 공개뉴스에 매칭된</b> 워치리스트 '
-        + '현장·조직이 없습니다. 비공개 목록은 노출하지 않으며, 공개 뉴스가 직접 언급한 항목만 표시합니다.</div>'
+        + '현장·조직이 없습니다. 공개 현장 목록에서 아직 이 분류에 표시할 노드가 없습니다.</div>'
         + legendHtml;
     }
     var rn = Number(sc.recent_node_count || 0);
@@ -2319,9 +2353,7 @@
   })();
   /* ---------- 실행 범위 · 현장 워치리스트 네비 (D7-AD-P) ----------
      좌측 '실행 범위' 하위에 개별 현장을 scope별 접이식으로 노출한다. 단일 데이터 소스 =
-     #preview-model: site_scope_summary(이름 비노출 카운트, 공개·비공개 공통) + site_watch_tree
-     (이름 포함, 비공개 빌드만 채워짐). 공개 빌드는 SITE_TREE=null → 현장명을 절대 렌더하지 않고
-     scope 카운트만 보인다(public-safe). 운영자 빌드는 전체 현장을 보이고, 현장 클릭 시 기존
+     #preview-model: site_scope_summary + site_watch_tree. 공개 빌드도 전체 현장을 보이고, 현장 클릭 시 기존
      onSiteNodeClick(article_keys 필터)를 그대로 재사용한다 — 코어 랭킹/점수 불변(표시/필터 레이어). */
   function snScopeCount(scope) {
     var s = SITE_SCOPE_SUMMARY && SITE_SCOPE_SUMMARY.by_scope;
@@ -2357,12 +2389,12 @@
     var nav = el("siteScopeNav"); if (!nav) return;
     if (!SITE_SCOPE_SUMMARY) { nav.classList.add("hidden"); nav.innerHTML = ""; return; }
     nav.classList.remove("hidden");
-    var priv = !!SITE_TREE;                                // 비공개(운영자) 빌드에서만 현장명 노출
+    var hasTree = !!SITE_TREE;                         // 공개 빌드에서도 현장명 노출
     var html = '<div class="sn-head"><span class="sn-title">현장 워치리스트</span>'
       + '<span class="sn-count">' + Number(SITE_SCOPE_SUMMARY.total || 0) + '개 현장</span></div>';
-    if (!priv) {                                           // 공개 빌드: 이름 비노출 — 그룹·카운트만
-      html += '<div class="sn-note">개별 현장명은 비공개입니다. 공개본은 그룹·집계만 표시하며, '
-        + '실제 현장 목록과 현장별 뉴스는 운영자 전용 빌드에서만 보입니다.</div>';
+    if (!hasTree) {
+      html += '<div class="sn-note">현장 공개 데이터가 아직 빌드 모델에 없습니다. '
+        + 'data/site_watchlist.public.json을 확인한 뒤 대시보드를 재생성하세요.</div>';
       SITE_SCOPES.forEach(function (sc) {
         html += '<div class="sn-group"><div class="sn-toggle" aria-disabled="true"><span class="l">'
           + '<span class="sn-glabel">' + esc(snScopeLabel(sc)) + '</span></span>'
@@ -2384,6 +2416,7 @@
         + '<div class="sn-list">' + renderScopeNodes(sc, data) + '</div></div>';
     });
     nav.innerHTML = html;
+    syncSiteScopePrimaryNavCounts();
   }
   function refreshSiteNavActive() {                        // 활성 현장 강조만 갱신(접힘/검색 상태 보존)
     var nav = el("siteScopeNav"); if (!nav || !SITE_TREE) return;

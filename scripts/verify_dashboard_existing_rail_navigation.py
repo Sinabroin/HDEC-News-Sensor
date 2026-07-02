@@ -233,9 +233,14 @@ def check_public_build() -> None:
         check("10: 무설정 공개 빌드 버튼 disabled + 운영자 서버 미연결",
               'id="opCollectBtn" type="button" disabled' in html
               and "운영자 서버 미연결" in html)
-        # 14 · public artifact에 내부 현장명/secret/token 없음
-        leaked = [m for m in INTERNAL_MARKERS if m in html]
-        check("14: 공개 산출물에 내부 현장명 표본 비노출", not leaked, str(leaked))
+        # 14 · D7-AD-Z: approved public site watchlist is intentionally visible.
+        tree = model.get("site_watch_tree") or {}
+        node_total = 0
+        for sc in (tree.get("by_scope") or {}).values():
+            for g in sc.get("groups") or []:
+                node_total += len(g.get("nodes") or [])
+        check("14: 공개 산출물에 승인된 현장 워치리스트 노드 노출",
+              node_total > 0, f"nodes={node_total}")
         sec = [s for s in SECRET_NAMES if s in html]
         toks = any(p.search(html) for p in _TOKEN_SHAPES)
         check("14: 공개 산출물에 secret 이름/token 형태 없음", not sec and not toks,

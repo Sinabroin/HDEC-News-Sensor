@@ -215,6 +215,10 @@ def _http_nonwarning(value) -> str:
         return ""
     if detect_corp_warning_url(text):
         return ""
+    host = _domain(text)
+    lowered = text.lower()
+    if host in {"example.com", "www.example.com", "example.invalid"} or "/mock-" in lowered:
+        return ""
     return text
 
 

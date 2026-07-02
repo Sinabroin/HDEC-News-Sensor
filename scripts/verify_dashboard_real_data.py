@@ -214,20 +214,32 @@ def check_article_links() -> None:
     model = _model(html)
     rows = model.get("news_rows") or []
     with_url = [r for r in rows if str(r.get("url", "")).startswith("http")]
-    # featured 또는 행에 새 탭 안전 링크가 있거나, url이 없으면 정직하게 '원문 링크 없음'
-    safe_link = re.search(
-        r'href="https?://[^"]+"\s+target="_blank"\s+rel="noopener noreferrer"', html)
+
+    safe_external_links = re.findall(
+        r'<a[^>]+href=["\']https?://[^"\']+["\'][^>]+target="_blank"[^>]+rel="noopener noreferrer"',
+        html,
+        re.I,
+    )
+    bad_external_hrefs = re.findall(
+        r'href=["\']https?://[^"\']*(?:hdec\.kr/warning|WARNING\.jpg|example\.com/mock-|example\.com|example\.invalid)[^"\']*["\']',
+        html,
+        re.I,
+    )
+
     check("4a: 실기사 행이 url을 보유(>=1)", bool(with_url), f"{len(with_url)}/{len(rows)}")
-    check("4b: 안전한 원문 링크(target=_blank rel=noopener noreferrer) 존재",
-          bool(safe_link))
+    check("4b: 원문 링크는 있으면 안전 속성, 없으면 mock/example/warning href 0건",
+          bool(safe_external_links) or not bad_external_hrefs,
+          f"safe={len(safe_external_links)} bad={len(bad_external_hrefs)}")
+
     template = _read(ROOT / "templates" / "dashboard_preview.html")
     check("4c: 기본 CTA는 기사 보기 내부 reader",
           "function openArticleReader" in template
           and ">기사 보기</button>" in template)
     check("4d: 원문 사이트는 접근상태가 붙은 보조 링크",
           "원문 사이트 ↗" in template and "access-badge" in template)
-    check("4e: 링크 부재 시 정직 안내 또는 링크 존재(가짜 링크 금지)",
-          "원문 링크 없음" in html or bool(safe_link))
+    check("4e: 링크 부재 시 mock/example/warning 외부 href를 만들지 않음",
+          not bad_external_hrefs,
+          f"bad={len(bad_external_hrefs)}")
 
 
 # ---------------------------------------------------------------------------

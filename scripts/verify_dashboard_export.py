@@ -108,7 +108,7 @@ def check_builder_generation() -> None:
             check("builder output keeps honesty labels",
                   meta.get("has_data_honesty_labels") is True)
             check("builder output is compact, not a design dump",
-                  20_000 < int(meta.get("html_chars") or 0) < 500_000,
+                  20_000 < int(meta.get("html_chars") or 0) < 650_000,
                   str(meta.get("html_chars")))
 
     with tempfile.TemporaryDirectory(prefix="hdec_dash_") as tmp:
