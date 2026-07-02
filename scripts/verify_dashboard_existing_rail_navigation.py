@@ -31,8 +31,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "scripts" / "build_static_dashboard.py"
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
+FRED_MODULE = ROOT / "app" / "fred_market.py"
 SMOKE = ROOT / "scripts" / "smoke_operator_api_local.py"
 DISCOVERY_DOC = ROOT / "docs" / "operations" / "D7ADV_MARKET_SOURCE_DISCOVERY.md"
+INTEGRATION_DOC = ROOT / "docs" / "operations" / "D7ADX_MARKET_SOURCE_INTEGRATION.md"
 
 # 사용자 지정 2차 pill(오른쪽 결과 내부) — 좌측 1차 navcat 아님.
 NEWS_PILL_LABELS = {"all": "전체", "new": "신규", "order": "수주", "finance": "재무",
@@ -47,6 +49,8 @@ MARKET_CATS = ("base_metals", "steel_materials", "oil_refined", "gas_lng", "coal
 # 사용자 지정 시장 지표 10개(id) — 상태 보드(MARKET_REASON) + 조사 문서에 존재해야 한다.
 MARKET_IDS = ("nickel", "scrap_steel", "cement", "bitumen", "jet_kerosene",
               "bunker_fuel", "coking_coal", "us_2y", "kr_10y", "twdkrw")
+UNLINKED_MARKET_IDS = ("nickel", "scrap_steel", "cement", "bitumen",
+                       "jet_kerosene", "bunker_fuel", "coking_coal", "twdkrw")
 INTERNAL_MARKERS = ["흑석9구역", "자푸라", "코즐로두이", "진해신항", "월곶~판교",
                     "마잔", "카르발라", "루사일 타워", "신반포 22차", "대조제1구역"]
 SECRET_NAMES = ("GH_OPERATOR_TOKEN", "OPERATOR_SHARED_SECRET", "OPERATOR_PIN",
@@ -79,6 +83,12 @@ def _order(html: str, *needles) -> bool:
             return False
         last = i
     return True
+
+
+def _market_reason(template: str, item_id: str) -> str:
+    match = re.search(
+        rf'^\s*{re.escape(item_id)}:\s*"([^"]*)"', template, re.MULTILINE)
+    return match.group(1) if match else ""
 
 
 def _build(out: Path, base: str | None = None):
@@ -134,14 +144,41 @@ def check_template() -> None:
           "function openMarketCategory" in t and 'el("mcat-" + cat)' in t)
     check("8: 운영자 실행이 왼쪽 목차 하단 compact 카드(opctl compact)",
           'class="opctl compact"' in t and 'id="opctl"' in t)
-    # 13 · 상태 보드가 '무료 소스 없음' 단정 대신 항목별 후보/다음 액션을 노출(방치 금지).
+    # 13 · 미연동은 후보/한계/다음 액션, FRED overlay는 provenance/caveat를 노출한다.
     check("13: 시장 상태 보드에 항목별 사유(MARKET_REASON/marketReason/ms-why)",
           "MARKET_REASON" in t and "marketReason" in t and "ms-why" in t)
     check("13: 미연동/우선=접힘(ms-collapse) · 시장 카드=mcat-backlog",
           "ms-collapse" in t and "mcat-backlog" in t)
-    for mid in MARKET_IDS:
-        check(f"13: {mid} 사유가 '후보' 기반(무료 소스 없음 단정 아님)",
-              f'{mid}: "후보' in t)
+    us_reason = _market_reason(t, "us_2y")
+    check("13: us_2y 연동 사유에 FRED DGS2 provenance",
+          "FRED" in us_reason and "DGS2" in us_reason, us_reason)
+    check("13: us_2y 현재값 오인 방지(영업일/단일값/delayed caveat)",
+          any(term in us_reason for term in ("영업일", "단일값", "지연")),
+          us_reason)
+    kr_reason = _market_reason(t, "kr_10y")
+    check("13: kr_10y FRED/OECD 월간 proxy provenance",
+          "FRED" in kr_reason and "OECD" in kr_reason and "월간" in kr_reason,
+          kr_reason)
+    check("13: kr_10y를 실시간 한국 국고채로 표현하지 않음",
+          "일간 국고 10Y 아님" in kr_reason
+          or any(term in kr_reason for term in ("proxy", "대용", "지연")),
+          kr_reason)
+    for mid in UNLINKED_MARKET_IDS:
+        reason = _market_reason(t, mid)
+        check(f"13: {mid} 미연동 사유에 후보/한계/next action",
+              reason.startswith("후보:")
+              and "한계:" in reason and "다음:" in reason,
+              reason)
+    fred = _read(FRED_MODULE)
+    builder = _read(BUILDER)
+    check("13: FRED overlay가 item별 source id/provenance를 모델에 보존",
+          all(token in fred for token in ('"us_2y": ("DGS2"', '"kr_10y": ("IRLTLT01KRM156N"'))
+          and "source_id" in fred and "value_source_id" in builder
+          and "value_source" in builder)
+    check("13: kr_10y point는 proxy_note와 delayed_market으로 제한",
+          "일간 국고채 10Y 아님" in builder
+          and 'data_mode="delayed_market"' in builder
+          and 'it["proxy"] = True' in builder)
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +296,14 @@ def check_discovery_doc() -> None:
     check("13: '무료 소스 없음' 단정 대신 후보/한계/다음 액션 기록",
           "next_action" in doc and doc.count("candidate") >= 5
           and ("후보" in doc and "다음" in doc))
+    integration = _read(INTEGRATION_DOC)
+    check("13: D7-AD-X 문서에 FRED source id와 point/proxy 한계 기록",
+          "`DGS2`" in integration and "`IRLTLT01KRM156N`" in integration
+          and "단일값" in integration and "일간 국고 10Y 아님" in integration)
+    check("13: 호르무즈 미연동에 후보/한계/next action 기록",
+          "호르무즈 해협 API" in integration and "후보:" in integration
+          and "AIS/API 키·정책 한계" in integration
+          and "사용자 링크 재요청" in integration)
 
 
 # ---------------------------------------------------------------------------

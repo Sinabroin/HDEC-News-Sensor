@@ -168,7 +168,8 @@ def check_template() -> None:
           and re.search(r"\.sitenav\s+\.sn-mid\.open\s+\.sn-nodes\{display:flex", t) is not None)
     for anchor in ("function renderScopeNodes", "function renderSiteScopeNav",
                    "function filterSiteNav", "renderScopeNodes(sc, data)",
-                   'Number(n.match_count) ? "" : " zero"', "var priv = !!SITE_TREE",
+                   'Number(n.match_count || 0)', 'Number(n.match_count) ? "" : " zero"',
+                   "var priv = !!SITE_TREE",
                    "if (!SITE_TREE || !isSiteScope(key))", "MODEL.site_watch_tree || null"):
         check(f"6f: 기존 네비/트리 앵커 유지 '{anchor}'", anchor in t)
 

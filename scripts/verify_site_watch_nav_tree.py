@@ -195,7 +195,8 @@ def check_template() -> None:
           "var priv = !!SITE_TREE" in t)
     check("2g: 검색 입력(snSearch)", 'id="snSearch"' in t)
     check("2h: match_count=0 현장 흐리게(zero 클래스)",
-          'Number(n.match_count) ? "" : " zero"' in t and ".st-node.zero" in t)
+          'Number(n.match_count || 0)' in t and 'Number(n.match_count) ? "" : " zero"' in t
+          and ".st-node.zero" in t)
     check("2i: 네비 그룹은 data-sn-scope 사용(렌즈 data-filter 미사용 — 카운트/파티션 로직 비충돌)",
           "data-sn-scope" in t)
     check("2j: 부팅 시 renderSiteScopeNav() 호출", "renderSiteScopeNav();" in t)

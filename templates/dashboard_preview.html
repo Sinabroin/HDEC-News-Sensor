@@ -480,7 +480,8 @@
   .st-node .st-bang{color:#B85049; font-weight:900; font-size:13px; line-height:1;}
   .st-node .st-when{font-size:10.5px; color:var(--mute4); font-weight:600; font-variant-numeric:tabular-nums;}
   .st-node .st-old{font-size:10px; color:var(--mute4); font-weight:600; background:var(--hair); padding:1px 6px; border-radius:999px;}
-  .st-node .st-mc{font-size:10px; color:var(--mute3); font-weight:700;}
+  .st-node .st-mc{font-size:10px; color:var(--mute3); font-weight:700; font-variant-numeric:tabular-nums;}
+  .st-node.zero .st-mc{color:var(--mute4);}
   .sitetree .st-empty{font-size:12px; color:var(--mute3); padding:8px 2px 2px; line-height:1.6;}
   /* 실행 범위 · 현장 워치리스트 네비 (D7-AD-P) — 좌측 네비 하위 개별 현장 목록. 공개 빌드는
      이름 비노출(카운트만), 운영자(비공개) 빌드만 현장명·접이식 목록·검색을 노출한다. */
@@ -2214,7 +2215,7 @@
       ? '<span class="st-when">' + esc(n.latest_kst || n.freshness_label || "") + '</span>'
       : (n.match_freshness === "old"
           ? '<span class="st-old">' + esc(n.freshness_label || "과거 매칭") + '</span>' : "");
-    var mc = n.match_count ? '<span class="st-mc">' + Number(n.match_count) + '</span>' : "";
+    var mc = '<span class="st-mc" title="매칭 기사 수">' + Number(n.match_count || 0) + '</span>';
     return '<button type="button" class="' + cls + '" data-scope="' + esc(scope)
       + '" data-id="' + esc(n.id) + '">' + bang + '<span>' + esc(n.label) + '</span>' + mc + when + '</button>';
   }
@@ -2340,8 +2341,10 @@
       var nodes = (g.nodes || []).slice().sort(function (a, b) {   // match_count 우선 정렬(0건은 뒤로·흐리게)
         return (Number(b.match_count) || 0) - (Number(a.match_count) || 0);
       });
+      var siteCnt = nodes.length;
+      var artCnt = nodes.reduce(function (s, n) { return s + (Number(n.match_count) || 0); }, 0);
       var recent = nodes.filter(function (n) { return n.is_recent_signal; }).length;
-      var cnt = nodes.length + (recent ? ' · <b>' + recent + '</b>' : '');
+      var cnt = '현장 ' + siteCnt + ' · 기사 ' + artCnt + (recent ? ' · <b>최근 ' + recent + '</b>' : '');
       out += '<div class="sn-mid"><button type="button" class="sn-midtog"><span class="l">'
         + '<span class="sn-midcaret">▶</span><span class="sn-midlabel">' + esc(g.label) + '</span></span>'
         + '<span class="sn-midcount">' + cnt + '</span></button><div class="sn-nodes">';
@@ -2356,14 +2359,14 @@
     nav.classList.remove("hidden");
     var priv = !!SITE_TREE;                                // 비공개(운영자) 빌드에서만 현장명 노출
     var html = '<div class="sn-head"><span class="sn-title">현장 워치리스트</span>'
-      + '<span class="sn-count">' + Number(SITE_SCOPE_SUMMARY.total || 0) + '개</span></div>';
+      + '<span class="sn-count">' + Number(SITE_SCOPE_SUMMARY.total || 0) + '개 현장</span></div>';
     if (!priv) {                                           // 공개 빌드: 이름 비노출 — 그룹·카운트만
       html += '<div class="sn-note">개별 현장명은 비공개입니다. 공개본은 그룹·집계만 표시하며, '
         + '실제 현장 목록과 현장별 뉴스는 운영자 전용 빌드에서만 보입니다.</div>';
       SITE_SCOPES.forEach(function (sc) {
         html += '<div class="sn-group"><div class="sn-toggle" aria-disabled="true"><span class="l">'
           + '<span class="sn-glabel">' + esc(snScopeLabel(sc)) + '</span></span>'
-          + '<span class="sn-count">' + snScopeCount(sc) + '</span></div></div>';
+          + '<span class="sn-count">현장 ' + snScopeCount(sc) + '</span></div></div>';
       });
       nav.innerHTML = html;
       return;
@@ -2373,7 +2376,7 @@
     SITE_SCOPES.forEach(function (sc) {                    // 운영자 빌드: scope별 접이식 현장 목록
       var data = siteScopeData(sc);
       var recent = data ? Number(data.recent_node_count || 0) : 0;
-      var cnt = snScopeCount(sc) + (recent ? ' · <b>' + recent + '</b>' : '');
+      var cnt = '현장 ' + snScopeCount(sc) + (recent ? ' · <b>최근 ' + recent + '</b>' : '');
       html += '<div class="sn-group" data-sn-scope="' + esc(sc) + '">'
         + '<button type="button" class="sn-toggle"><span class="l"><span class="sn-caret">▶</span>'
         + '<span class="sn-glabel">' + esc(snScopeLabel(sc)) + '</span></span>'
@@ -2958,8 +2961,8 @@
      조사 상세·분류표(current_status/source_type/update_frequency/chart_possible/limitation/next_action):
      docs/operations/D7ADV_MARKET_SOURCE_DISCOVERY.md. 실제 연동은 후속 커밋에서 어댑터 단위로 진행한다. */
   var MARKET_REASON = {
-    us_2y: "후보: FRED DGS2(공개·무료·일간·CSV 키불필요) · 한계: 영업일만 · 다음: FRED CSV 어댑터 추가(우선)",
-    kr_10y: "후보: FRED IRLTLT01KRM156N(월간·OECD) 또는 한은 ECOS 일간(무료 키) · 한계: FRED는 월간·ECOS 코드 확정 필요 · 다음: ECOS 키 발급+코드 확정(우선)",
+    us_2y: "연동(live): FRED DGS2 공개 CSV · 한계: 영업일·차트 미연동(단일값) · mock은 unavailable",
+    kr_10y: "연동(live): FRED OECD 월간 · 한계: 일간 국고 10Y 아님 · ECOS 코드 확정 시 교체(우선)",
     scrap_steel: "후보: FRED WPU1012(BLS 철스크랩 PPI·월간) · 한계: 지수(₩/톤 아님)·미국 기준 · 다음: 지수 표기로 연동 검토",
     cement: "후보: KOSIS PPI 품목 DT_404Y016 / 한은 ECOS PPI(월간) · 한계: 국내 시멘트 '지수'(실계약가 아님) · 다음: 보고·지수 병기(우선)",
     coking_coal: "후보: 공개 무료 원료탄 벤치마크 미확인(Platts/Argus 유료) · 한계: 연료탄(Pink Sheet)은 대체 부적합 · 다음: 보고 기반 수동 확인",
@@ -2977,7 +2980,7 @@
     var items = MODEL.market_items || [];
     var done = [], reported = [], backlog = [], priority = [];
     items.forEach(function (it) {
-      if (MARKET_PRIORITY[it.id]) { priority.push(it); return; }
+      if (MARKET_PRIORITY[it.id] && !marketState(it).hasValue) { priority.push(it); return; }
       if (it.data_mode === "manual_or_reported") { reported.push(it); return; }
       if (marketState(it).hasValue) { done.push(it); return; }
       backlog.push(it);

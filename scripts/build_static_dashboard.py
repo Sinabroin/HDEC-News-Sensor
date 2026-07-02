@@ -45,6 +45,7 @@ from app import ai_value_chain, lens_queries, news_access  # noqa: E402
 # 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
+from app import news_recency  # noqa: E402
 # 사이트 워치리스트(leaf, P0-D7-M) — 사내 제공 현장/프로젝트명을 제목에서 매칭해 scope/business
 # 렌즈를 단다. 공개 빌드(비공개 워치리스트 경로 미설정)는 공개 샘플만 보고 비공개 목록을 노출하지
 # 않는다 — 제목이 이미 언급한 프로젝트만 태깅하며, 매칭 없는 항목은 모델/HTML에 들어가지 않는다.
@@ -1078,12 +1079,22 @@ def _is_executive_review_candidate(sig: dict, new_keys: set) -> bool:
     )
 
 
-def _build_now_bank(brief: dict, new_keys: set, ref_date, base_pool: list) -> tuple[list, dict]:
+def _build_now_bank(brief: dict, new_keys: set, ref_date, base_pool: list,
+                    news_mode: str = "mock") -> tuple[list, dict]:
     """Build the immediate lens honestly.
 
     Strict `top_immediate_signals` win. Only when no strict displayable rows exist do we
     expose real executive-review candidates, marked as candidates rather than alerts.
+    live 모드에서는 72h 초과 stale 기사를 now 뱅크에서 제외(news_recency leaf).
     """
+    ref_dt = None
+    gen = (brief or {}).get("generated_at")
+    if gen:
+        try:
+            ref_dt = datetime.fromisoformat(str(gen))
+        except (TypeError, ValueError):
+            ref_dt = None
+
     strict_raw = brief.get("top_immediate_signals") or []
     strict_pool = [s for s in _dedup_signals(strict_raw) if _is_http(s.get("url"))]
     strict_pool.sort(key=lambda s: _signal_rank_key(s, "strict_instant"))
@@ -1105,9 +1116,14 @@ def _build_now_bank(brief: dict, new_keys: set, ref_date, base_pool: list) -> tu
         basis = "executive_review_candidate"
 
     rows, seen_titles = [], set()
+    stale_filtered = 0
     for sig in selected:
         if len(rows) >= NOW_BANK_CAP:
             break
+        if not news_recency.passes_immediate_recency(
+                sig.get("published_at"), news_mode, ref_dt=ref_dt):
+            stale_filtered += 1
+            continue
         extra = ["now"] + (["new"] if _key(sig) in new_keys else [])
         row = _decorate_immediate_row(
             _enrich_row(_row_from_signal(sig, extra), sig, ref_date),
@@ -1124,6 +1140,8 @@ def _build_now_bank(brief: dict, new_keys: set, ref_date, base_pool: list) -> tu
         "strict_displayable_count": len(strict_pool),
         "fallback_count": len(rows) if basis == "executive_review_candidate" else 0,
         "bank_count": len(rows),
+        "stale_filtered_count": stale_filtered,
+        "immediate_max_age_hours": news_recency.IMMEDIATE_MAX_AGE_HOURS,
     }
     return rows, status
 
@@ -1324,7 +1342,9 @@ def _derive(brief: dict) -> dict:
                     if featured_sig else None)
     panel_rows = ([featured_row] if featured_row else []) + news_rows
     lens_counts = _lens_counts(panel_rows)
-    now_rows, immediate_status = _build_now_bank(brief, new_keys, ref_date, overall_pool)
+    news_mode = brief.get("news_data_mode") or "mock"
+    now_rows, immediate_status = _build_now_bank(
+        brief, new_keys, ref_date, overall_pool, news_mode=news_mode)
     lens_banks = _build_lens_banks(_brief_signal_pool(brief), ai_rows, now_rows,
                                    new_keys, ref_date)
     bank_counts = _bank_counts(lens_banks)
@@ -1589,6 +1609,63 @@ def _apply_history_entry(it: dict, entry: dict) -> None:
             it["dir"], it["delta"] = "flat", "—"
 
 
+def _apply_point_quote(it: dict, value: float, decimals: int, *,
+                       data_mode: str, source: str, as_of: str | None,
+                       direction: str | None = None, source_id: str | None = None,
+                       frequency: str | None = None,
+                       proxy_note: str | None = None) -> None:
+    """단일 관측값만 부착(기간 차트 없음) — FRED 등 leaf 실측. 가짜 history 생성 금지."""
+    it["value"] = _fmt_market_value(value, decimals)
+    it["data_mode"] = data_mode
+    it["value_source"] = source
+    if source_id:
+        it["value_source_id"] = source_id
+    if frequency:
+        it["value_frequency"] = frequency
+    if as_of:
+        it["value_as_of"] = as_of
+    d = direction or "flat"
+    if d == "up":
+        it["dir"], it["delta"] = "up", "▲"
+    elif d == "down":
+        it["dir"], it["delta"] = "down", "▼"
+    else:
+        it["dir"], it["delta"] = "flat", "—"
+    if proxy_note:
+        it["proxy"] = True
+        it["proxy_note"] = proxy_note
+
+
+def _overlay_fred_live_quotes(model: dict, market_mode: str) -> None:
+    """live 모드에서 FRED 공개 CSV leaf로 보조 금리 등 단일값을 부착(D7-AD-X).
+
+    네트워크는 app.fred_market leaf만 소유. 실패 시 None 유지(가짜 값 금지).
+    """
+    if (market_mode or "mock").strip().lower() != "live":
+        return
+    from app import fred_market  # noqa: E402 — leaf 격리
+
+    snap = fred_market.fetch_quotes_by_id(use_cache=False)
+    if not snap:
+        return
+    by_id = {it.get("id"): it for it in model.get("market_items") or []}
+    for iid, q in (snap.get("quotes_by_id") or {}).items():
+        it = by_id.get(iid)
+        if it is None or q.get("value") is None:
+            continue
+        note = "FRED OECD 월간 장기금리 · 일간 국고채 10Y 아님" if iid == "kr_10y" else None
+        _apply_point_quote(
+            it, float(q["value"]), 2,
+            data_mode="delayed_market",
+            source=q.get("source") or snap.get("source") or "FRED (public CSV)",
+            as_of=q.get("as_of"),
+            direction=q.get("direction"),
+            source_id=q.get("source_id"),
+            frequency=q.get("frequency"),
+            proxy_note=note,
+        )
+
+
 def _overlay_market_history(model: dict, market_mode: str) -> None:
     """지원 종목의 기간 히스토리를 부착한다 — 차트 없는 종목은 결정적 데모, live는 실측으로 교체.
 
@@ -1638,6 +1715,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     # CLI(--operator-api-base)로만 받는다(verify_dashboard_real_data 1d 계약).
     model["operator_api_base"] = (operator_api_base or "").strip()
     _overlay_market_history(model, market_mode)
+    _overlay_fred_live_quotes(model, market_mode)
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
     model["lens_banks"] = parts["lens_banks"]
