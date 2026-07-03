@@ -2119,10 +2119,13 @@ def build_brief(pipeline_counts: dict | None = None,
     # brittleness 회피). 각 엔트리에 Layer-1/2/3 분류 태그를 부착한다(표시 전용, 점수/등급/
     # 분류 재계산·DB 쓰기 없음). _entry는 공유 함수라 건드리지 않고 지역 dict 병합만 한다.
     def _business_lens_group(lens):
+        # D7-AE-RC1: match_topic_profile 직접 호출 대신 classify_business_lenses로 통일한다
+        # — 그래야 애매(3개 이상 렌즈 동시매칭) 배제 규칙이 카드 노출 여부에도 적용된다
+        # (태그 표시에만 적용되고 카드 목록은 그대로면 규칙이 반쪽짜리가 된다).
         rows = [r for r in topic_pool
-                if topic_profiles.match_topic_profile(
+                if lens.id in topic_profiles.classify_business_lenses(
                     {"title": r.get("title"), "snippet": r.get("snippet"),
-                     "source": r.get("source")}, lens)]
+                     "source": r.get("source")})]
         rows.sort(key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
         capped, counts = [], {}
         for r in rows:
@@ -2138,6 +2141,7 @@ def build_brief(pipeline_counts: dict | None = None,
                    "source": r.get("source")}
             out.append({**_entry(i, r),
                         "business_lens_tags": topic_profiles.classify_business_lenses(art),
+                        "business_lens_reason": topic_profiles.business_lens_reason(art, lens) or "",
                         "org_unit_tags": topic_profiles.classify_org_units(art),
                         "execution_scope_tags": topic_profiles.classify_execution_scopes(art)})
         return out

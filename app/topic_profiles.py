@@ -395,20 +395,24 @@ _CIVIL_INFRA = TopicProfile(
 _BUILDING_HOUSING = TopicProfile(
     id="building_housing",
     label="건축주택",
-    description="국내건축·주택·도시정비·분양·공사비·하자/품질 등 건축주택 사업 신호를 감지한다.",
+    description="국내건축·주택·정비사업·분양·데이터센터·공사비/하자 등 건축주택 사업 신호를 감지한다.",
     enabled=True,
     queries=(
         "도시정비 재건축 수주", "아파트 하자 품질 건설사", "공사비 갈등 조합",
         "분양 미분양 리스크", "리모델링 시공사 선정", "책임준공 PF 주택",
     ),
+    # D7-AE-RC1: 데이터센터 추가(사용자 지정 리스트: 주택/분양/정비사업/데이터센터/건축
+    # 공사 — 데이터센터는 전력 인프라이자 동시에 건축 프로젝트라 건축주택에도 속한다).
+    # "하자"는 safety_quality에서 제거해 이 렌즈 전속으로 둔다(중대재해 수준 근거 없는
+    # 일반 하자 민원은 건축주택 소관, safety_quality는 강한 안전 근거만).
     include_keywords=(
         "국내건축", "주택", "아파트", "힐스테이트", "디에이치", "도시정비", "재건축",
-        "재개발", "리모델링", "분양", "미분양", "조합", "공사비", "하자",
+        "재개발", "리모델링", "분양", "미분양", "조합", "공사비", "하자", "데이터센터",
     ),
     relevance_anchors=_BIZ_ANCHOR + (
         "품질", "안전", "PF", "책임준공", "신탁사", "시행사", "시공사 선정",
     ),
-    exclude_keywords=_BIZ_EXCLUDE,
+    exclude_keywords=_BIZ_EXCLUDE + ("경매", "급매"),
     max_items=5,
     surface_key="building_housing",
     priority=2,
@@ -417,19 +421,24 @@ _BUILDING_HOUSING = TopicProfile(
 _PLANT = TopicProfile(
     id="plant",
     label="플랜트",
-    description="플랜트·원전·LNG·발전소·정유/석유화학 EPC와 중동 해외 발주·수주 신호를 감지한다.",
+    description="플랜트·원전·LNG·발전소·정유/석유화학·산업설비·수처리 EPC와 중동 해외 발주·수주 신호를 감지한다.",
     enabled=True,
     queries=(
         "LNG 플랜트 발주", "원전 EPC 수주", "석유화학 정유 플랜트",
-        "중동 플랜트 공급망", "발전소 건설 수주", "수소 플랜트 사우디",
+        "중동 플랜트 공급망", "발전소 건설 수주", "산업설비 수처리 플랜트",
     ),
+    # D7-AE-RC1: 수소/전력/에너지는 제거했다 — new_energy의 include(수소/전력망/에너지
+    # 인프라)와 겹쳐 같은 기사가 두 렌즈에 무조건 동시 배정되는 버그였다(실측: "코즐로두이
+    # 원전" 기사가 plant·new_energy 둘 다 걸림). 원전/발전소/LNG/정유/석유화학은 전통
+    # EPC 산업 고유어라 plant 전속으로 둔다(사용자 지정 리스트: 원전/발전/석유화학/
+    # 산업설비/수처리).
     include_keywords=(
-        "플랜트", "원전", "LNG", "발전소", "정유", "석유화학", "수소", "전력", "에너지",
+        "플랜트", "원전", "LNG", "발전소", "정유", "석유화학", "산업설비", "수처리",
     ),
     relevance_anchors=_BIZ_ANCHOR + (
         "FEED", "중동", "사우디", "카타르", "UAE", "이라크", "해외사업", "플랜트",
     ),
-    exclude_keywords=_BIZ_EXCLUDE,
+    exclude_keywords=_BIZ_EXCLUDE + ("주유소", "전기차 충전소"),
     max_items=5,
     surface_key="plant",
     priority=3,
@@ -438,21 +447,24 @@ _PLANT = TopicProfile(
 _NEW_ENERGY = TopicProfile(
     id="new_energy",
     label="New Energy",
-    description="SMR·수소·재생에너지·전력망·데이터센터 전력 등 신에너지 인프라 구축 신호를 감지한다.",
+    description="SMR·수소·태양광·풍력·ESS·CCUS 등 신에너지·전력망·데이터센터 전력 인프라 구축 신호를 감지한다.",
     enabled=True,
     queries=(
         "SMR 전력망 데이터센터", "수소 탄소중립 건설", "해상풍력 송전망 EPC",
         "데이터센터 전력 냉각", "ESS 재생에너지 인프라", "CCUS 전력 인프라",
     ),
+    # D7-AE-RC1: 원전(bare)은 제거했다 — plant 전속(사용자 지정: 원전은 플랜트 소관).
+    # 차세대/소형 원전은 SMR로 이미 잡힌다. 풍력(해상풍력 외 육상 포함)을 추가했다
+    # (사용자 지정 리스트: 수소/태양광/풍력/SMR/ESS/CCUS).
     include_keywords=(
-        "SMR", "수소", "재생에너지", "해상풍력", "태양광", "ESS", "전력망", "송전",
-        "배전", "데이터센터 전력", "데이터센터", "냉각", "에너지 인프라", "탄소중립",
-        "CCUS", "원전",
+        "SMR", "수소", "재생에너지", "해상풍력", "풍력", "태양광", "ESS", "전력망",
+        "송전", "배전", "데이터센터 전력", "데이터센터", "냉각", "에너지 인프라",
+        "탄소중립", "CCUS",
     ),
     relevance_anchors=_BIZ_ANCHOR + (
         "인프라", "전력망", "송전", "배전", "데이터센터", "냉각", "송전망",
     ),
-    exclude_keywords=_BIZ_EXCLUDE,
+    exclude_keywords=_BIZ_EXCLUDE + ("전기차", "충전소"),
     max_items=5,
     surface_key="new_energy",
     priority=4,
@@ -504,14 +516,19 @@ _GLOBAL_BUSINESS = TopicProfile(
 _SAFETY_QUALITY = TopicProfile(
     id="safety_quality",
     label="안전·품질",
-    description="중대재해·특별감독·벌점·철근누락·부실시공·하자 등 안전/품질 리스크 신호를 감지한다.",
+    description="중대재해·특별감독·벌점·철근누락·부실시공·산재 등 강한 근거가 있는 안전/품질 리스크만 감지한다.",
     enabled=True,
     queries=(
-        "중대재해 특별감독 건설현장", "철근누락 부실시공 하자",
+        "중대재해 특별감독 건설현장", "철근누락 부실시공",
         "안전 품질 벌점 제재", "현장점검 행정처분", "공기지연 안전관리 리스크",
     ),
+    # D7-AE-RC1: "하자"는 제거했다 — building_housing과 겹쳐(둘 다 include) 일반적인
+    # 아파트 하자 민원 기사가 항상 안전·품질로도 같이 잡히는 문제였다. 사용자 지정:
+    # "사고/중대재해/부실시공/특별감독/품질 이슈 등 강한 근거가 있을 때만" — 하자
+    # 단독은 약한 근거(주택 품질 민원과 구분 안 됨), 아래 6개는 이미 강한 사고성/제재성
+    # 단어라 그대로 둔다. "품질"은 anchor에만 둬 include 단어와 반드시 함께 있어야 한다.
     include_keywords=(
-        "중대재해", "특별감독", "벌점", "부실시공", "철근누락", "하자", "사고", "산재",
+        "중대재해", "특별감독", "벌점", "부실시공", "철근누락", "사고", "산재",
     ),
     relevance_anchors=_BIZ_ANCHOR + (
         "안전", "품질", "안전관리", "품질관리", "공기지연", "제재", "행정처분",
@@ -622,10 +639,26 @@ def get_business_lens(lens_id: str) -> TopicProfile | None:
     return None
 
 
+# D7-AE-RC1 — 사용자 지시: "애매하면 여러 렌즈에 중복 배정하지 말고 '전체 종합'에만 둬라."
+# 사업 렌즈는 사업 관련성 anchor(_BIZ_ANCHOR)를 공유하기 때문에, 넓은 기사 한 건이 서로
+# 다른 렌즈의 include 단어를 우연히 여러 개 걸치는 경우가 있다(예: 국내외 여러 사업을
+# 나열한 종합 실적 기사). 진짜로 두 사업이 함께 걸린 기사는 대개 1~2개 렌즈로 좁혀지므로,
+# 3개 이상이 동시에 걸리면 신호가 약하다고 보고 특정 렌즈에 배정하지 않는다(빈 리스트 =
+# 대시보드에서 '전체 종합'에만 노출, 어느 사업 렌즈 카드에도 안 붙는다).
+_MAX_CONFIDENT_BUSINESS_LENSES = 2
+
+
 def classify_business_lenses(article: dict) -> list[str]:
-    """기사가 속하는 enabled 사업 부문 렌즈 id 목록을 priority 순으로 반환한다."""
-    return [p.id for p in get_enabled_business_lenses()
-            if match_topic_profile(article, p)]
+    """기사가 속하는 enabled 사업 부문 렌즈 id 목록을 priority 순으로 반환한다.
+
+    3개 이상 렌즈가 동시에 매칭되면 애매한 신호로 보고 빈 리스트를 반환한다(전체 종합에만
+    남긴다 — 넓은 공유 anchor 때문에 약한 매칭이 여러 렌즈로 번지는 것을 막는다).
+    """
+    matched = [p.id for p in get_enabled_business_lenses()
+               if match_topic_profile(article, p)]
+    if len(matched) > _MAX_CONFIDENT_BUSINESS_LENSES:
+        return []
+    return matched
 
 
 def business_lens_reason(article: dict, lens: TopicProfile) -> str | None:
