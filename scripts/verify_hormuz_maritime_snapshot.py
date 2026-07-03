@@ -12,6 +12,12 @@
   D  시간 창 옵션(1시간/6시간/24시간/7일)
   E  라이브 AIS 통합 미주장 + 외부 AIS 소스/엔드포인트 미호출(app/·scripts/·templates/)
   F  프로덕션 일일 리포트(docs/daily)에 호르무즈 선박 수가 새지 않음
+
+D7-AE-RC1: check F는 원래 latest.html/operator-latest.html만 봤다 — 실제 유출은
+dashboard-latest.html(요약 대시보드, 이 검사기 작성 이후 도입된 파일)에서 났다. F를
+그 파일까지 커버하도록 넓혔다(계약 완화가 아니라 놓친 표면을 메우는 강화). 요약
+대시보드는 이제 카드 자체를 통째로 제거한다(scripts/build_static_dashboard.py의
+_strip_hormuz_demo_card) — 전용 계약은 verify_hormuz_demo_removed.py가 잠근다.
 """
 
 import sys
@@ -21,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 DOCS_LATEST = ROOT / "docs" / "daily" / "latest.html"
 DOCS_OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
+DOCS_DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
 
 # 라이브 AIS/해상 트래픽 제공자 호스트 — 미리보기는 이들 중 무엇도 호출하면 안 된다.
 AIS_LIVE_HOSTS = (
@@ -127,11 +134,19 @@ def main() -> int:
     check("E4: app/에 라이브 해상/AIS 백엔드 모듈 없음 (정직한 미연동)",
           not maritime_mods, ", ".join(maritime_mods) if maritime_mods else "none")
 
-    # F · 프로덕션 docs/daily 비오염
-    for label, path in (("latest", DOCS_LATEST), ("operator", DOCS_OPERATOR)):
+    # F · 프로덕션 docs/daily 비오염 (D7-AE-RC1: dashboard-latest.html도 포함하도록 확장)
+    for label, path in (("latest", DOCS_LATEST), ("operator", DOCS_OPERATOR),
+                        ("dashboard", DOCS_DASHBOARD)):
         d = _read(path)
         leaked = "호르무즈" in d and ("AIS 관측 통과" in d or "통항 중" in d)
         check(f"F: docs/daily/{label}에 호르무즈 선박 수 미유출", not leaked)
+    # F2 · dashboard-latest.html은 카드 자체(모식도/데모 배지)도 통째로 없어야 한다.
+    dash = _read(DOCS_DASHBOARD)
+    if dash:
+        check("F2: dashboard-latest.html에 호르무즈 카드(class=\"card hz\") 자체가 없음",
+              'class="card hz"' not in dash)
+        check("F2b: dashboard-latest.html에 'AIS 하한 추정 · proxy' 배지 없음",
+              "AIS 하한 추정 · proxy" not in dash)
 
     print()
     if _failures:

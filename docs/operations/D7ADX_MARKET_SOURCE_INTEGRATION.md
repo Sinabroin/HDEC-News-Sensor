@@ -34,6 +34,25 @@ live 연동은 `--market-mode live` 빌드 + leaf 네트워크 성공 시에만 
 - 존재하는 것: 뉴스 렌즈(`lens:hormuz`), 데모 운영 카드(AIS 미연동), `verify_hormuz_lens_relevance.py`
 - **다음**: 사용자에게 원본 GitHub URL 재요청 → `docs/operations/D7ADX_HORMUZ_API_CANDIDATE.md`에 기록 후 D7-AD-X2
 
+### D7-AE-RC1 재확인 (repo reference not found)
+
+사용자가 다시 "이전에 알려준 GitHub repo/reference"를 조사하라고 요청해 재검색했다 —
+`.agents/`, `design/`, `tmp/`(미커밋 포함) 전체와 `docs/`, `app/`, `scripts/`, `data/`,
+커밋 히스토리를 재스캔했으나 **AIS/해상교통(MarineTraffic·VesselFinder·AISStream·
+AISHub·Spire·Datalastic 등) 관련 GitHub repo/API 링크는 여전히 발견되지 않았다.** 위
+결론은 그대로 유효하다: **repo reference not found.**
+
+실 라이브 소스가 없는 상태에서 데모 카드(선박 수·시간대별 통과·선종 분포·해협 모식도)가
+공개 요약 대시보드(`docs/daily/dashboard-latest.html`)에 실측처럼 노출된 것이 사용자
+실사용 QA 실패 사유였다 — 카드 자체가 preview 전용(`/dashboard-preview`)으로 설계됐으나
+공개 빌더가 같은 템플릿을 공유해 그대로 새어나갔다. 조치: `scripts/build_static_dashboard.py`
+의 `_strip_hormuz_demo_card`가 공개 정적 산출물에서만 이 카드를 통째로 제거한다. 내부
+`/dashboard-preview` 디자인 도구는 원본 템플릿을 그대로 서빙하므로 데모 카드가 계속
+보인다(그 라우트는 비프로덕션·미공개이므로 문제 없음). 실 AIS 소스가 확보되면(사용자가
+GitHub URL을 다시 제공하거나 유료 소스를 승인하면) `_strip_hormuz_demo_card` 호출을
+제거하고 source/mode/timestamp가 있는 실측 카드로 교체한다 — 검증은
+`scripts/verify_hormuz_demo_removed.py`.
+
 ## 운영 버튼(uvicorn)
 
 - `requirements.txt`에 `fastapi`, `uvicorn` 포함

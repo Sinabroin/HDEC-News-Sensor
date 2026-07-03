@@ -1517,6 +1517,63 @@ def _render_featured(sig: dict, row: dict) -> str:
     )
 
 
+_HORMUZ_CARD_MARKER = "<!-- Hormuz -->"
+_HORMUZ_CARD_OPEN = '<div class="card hz"'
+
+
+def _strip_hormuz_demo_card(html: str) -> str:
+    """공개 산출물에서 호르무즈 AIS 데모 관찰 카드를 제거한다 (D7-AE-RC1).
+
+    사용자 실사용 QA: "AIS 하한 추정 · proxy / 데모 데이터 / 212척 같은 값이 보이면
+    실패다." 이 카드(선박 수·시간대별 통과·선종 분포·해협 모식도)는 전부 preview
+    데모 고정값이고, 라이브 AIS 소스가 없다(저장소 전수 검색으로도 사용자가 언급한
+    GitHub 연동 참조를 찾지 못함 — docs/operations/D7ADX_MARKET_SOURCE_INTEGRATION.md
+    참고). 실 소스가 생기기 전까지 공개 화면에서는 숨긴다.
+
+    templates/dashboard_preview.html(내부 비프로덕션 /dashboard-preview 라우트)은 이
+    함수를 거치지 않아 원본 그대로 데모 카드를 유지한다 — 디자인 미리보기 목적은
+    남아있고, 여기서 지우는 건 오직 공개 정적 산출물(docs/daily/dashboard-latest.html)
+    뿐이다. 인터랙션 스크립트(#hzTimeSeg 기반 IIFE)는 `el("hzTimeSeg")`가 없으면
+    즉시 return하도록 이미 가드돼 있어(byte-identical 유지 원칙상 스크립트는 건드리지
+    않는다) 카드만 지워도 런타임 에러가 나지 않는다.
+    """
+    start = html.find(_HORMUZ_CARD_MARKER)
+    if start < 0:
+        print("WARNING: Hormuz demo card marker not found — nothing to strip "
+              "(template may have changed; verify_hormuz_demo_removed.py will catch a leak)",
+              file=sys.stderr)
+        return html
+    card_open = html.find(_HORMUZ_CARD_OPEN, start)
+    if card_open < 0:
+        print("WARNING: Hormuz demo card <div class=\"card hz\"> not found after marker",
+              file=sys.stderr)
+        return html
+    # 열림/닫힘 <div> 깊이를 세어 카드의 진짜 닫는 태그를 찾는다(중첩 div 다수 포함).
+    depth = 0
+    tag_re = re.compile(r"<div\b|</div>")
+    end = -1
+    for m in tag_re.finditer(html, card_open):
+        if m.group(0) == "</div>":
+            depth -= 1
+            if depth == 0:
+                end = m.end()
+                break
+        else:
+            depth += 1
+    if end < 0:
+        print("WARNING: Hormuz demo card closing tag not found (unbalanced divs?)",
+              file=sys.stderr)
+        return html
+    result = html[:start] + html[end:]
+    # 제거 이음매에 남는 공백줄(들여쓰기만 있던 blank line)을 좁게 정리한다 —
+    # git diff --check가 trailing whitespace를 에러로 잡는다. 이음매 근처(±120자)만
+    # 정규화해 문서 나머지(특히 인터랙션 스크립트 블록)의 byte-identity에는 영향 없다.
+    seam_start = max(0, start - 40)
+    seam_end = min(len(result), start + 80)
+    seam = re.sub(r"(?:[ \t]*\n){2,}", "\n\n", result[seam_start:seam_end])
+    return result[:seam_start] + seam + result[seam_end:]
+
+
 def _inject_featured(html: str, featured_html: str) -> str:
     if not featured_html:
         return html
@@ -2043,15 +2100,19 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
         print(f"ERROR: dashboard template missing: {SOURCE_TEMPLATE}", file=sys.stderr)
         raise SystemExit(1) from exc
 
+    # D7-AE-RC1 — 공개 정적 산출물에서만 호르무즈 AIS 데모 카드를 제거한다(실 소스 없음).
+    html = _strip_hormuz_demo_card(html)
+
     news_mode = brief.get("news_data_mode") or "mock"
     html = html.replace(
         "<title>HDEC Executive Radar — 대시보드 미리보기 (Preview)</title>",
         f"<title>{EXPORT_TITLE}</title>", 1)
     # 운영본 브랜드 부제를 '요약 대시보드'로 정렬한다 — 이메일 '요약 대시보드 보기' CTA의
     # 목적지 역할이 화면에서 분명히 보이게 하고, 비프로덕션 'PREVIEW' 표기를 운영본에서 제거.
+    # D7-AE-RC1: 헤더 문구를 "현대건설 임원용 신호 브리프"로 명확히 정리(사용자 지정 문구).
     html = html.replace(
-        "현대건설 임원용 외부 신호 브리프 · 대시보드 미리보기 (PREVIEW)",
-        "현대건설 임원용 외부 신호 브리프 · 요약 대시보드", 1)
+        "현대건설 임원용 신호 브리프 · 대시보드 미리보기 (PREVIEW)",
+        "현대건설 임원용 신호 브리프 · 요약 대시보드", 1)
     if EXPORT_MARKER not in html:
         html = html.replace(
             "<!DOCTYPE html>\n",
