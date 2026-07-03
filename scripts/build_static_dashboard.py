@@ -25,6 +25,7 @@ Honesty contract is preserved:
 """
 
 import argparse
+import base64
 import json
 import re
 import sys
@@ -98,37 +99,24 @@ _LENS_LABEL = {
     "overseas_subsidiary": "해외법인",
 }
 
-# 머신 category → 기본 렌즈 (briefing이 분류한 결정 카테고리)
-_CATEGORY_LENS = {
-    "dc_power": ["ai", "new_energy", "plant"],
-    "mideast_overseas": ["global_business", "overseas_site", "plant"],
-    "safety": ["safety_quality"],
-    "hdec": [],
-}
-# radar_section → 렌즈
-_SECTION_LENS = {
-    "ai": ["ai"],
-    "business_overseas": ["global_business", "overseas_site"],
-    "risk_regulation": ["safety_quality"],
-    "competitor_supply": ["competitor_contractors"],
-    "macro": ["oil_energy"],
-    "hdec_direct": [],
-}
-# category_label/제목 키워드 → 추가 렌즈 (보수적 보강 — 매핑 불완전 시 fallback).
+# 제목 키워드 → 추가 렌즈 (보수적 보강 — 매핑 불완전 시 fallback).
 # 단일 소스는 data/lens_queries.json(app.lens_queries)이며, 아래는 정책 로드 실패 시의
-# fallback이다 — 둘 다 동일 계약(부분문자열 오탐 금지)을 따른다.
+# fallback이다 — 둘 다 동일 계약(부분문자열 오탐 금지·raw 제목 근거만)을 따른다.
 # 함정: 부분문자열 오탐 금지 — '시행'은 '시행령/시행규칙'에 걸리므로 '시행사'만 쓴다.
 # 그룹사/신탁/시행 렌즈는 수집된 기사 본문/제목에서만 매칭한다(없으면 0건=정직 빈 상태).
+# 안전·품질은 사고/중대재해/부실시공/특별감독/품질 이슈가 명확한 토큰만 쓴다(D7-AE-RC3:
+# bare '안전'은 기술 홍보기사에, '규제'는 규제완화 기사에 오탐된 실측이 있어 제외).
 _KEYWORD_LENS_FALLBACK = [
     (("토목", "철도", "광역철도", "도로", "교량", "터널", "SOC"), "civil_infrastructure"),
     (("건축", "주택", "정비", "분양", "공사비", "재건축", "재개발"), "building_housing"),
     (("플랜트", "LNG", "원전", "EPC", "정유", "석유화학", "발전소", "SMR"), "plant"),
     (("SMR", "수소", "전력망", "데이터센터", "신재생", "태양광", "풍력", "전력 인프라"), "new_energy"),
     (("중동", "해외", "글로벌", "사우디", "UAE", "카타르", "네옴", "체코", "유럽", "수출"), "global_business"),
-    (("유가", "국제유가", "원유", "WTI", "브렌트", "두바이유", "LNG", "연료", "정제유",
-      "정제마진", "가스", "호르무즈", "에너지"), "oil_energy"),
-    (("안전", "중대재해", "특별감독", "규제", "벌점", "산업안전"), "safety_quality"),
-    (("경쟁", "수주 경쟁"), "competitor_contractors"),
+    (("유가", "국제유가", "원유", "WTI", "브렌트", "두바이유", "정제유",
+      "정제마진", "휘발유", "천연가스", "호르무즈"), "oil_energy"),
+    (("중대재해", "특별감독", "벌점", "산업안전", "품질", "하자", "부실시공", "붕괴",
+      "사망사고", "안전사고", "안전관리", "안전 관리", "안전비위", "안전교육"), "safety_quality"),
+    (("경쟁사", "수주 경쟁"), "competitor_contractors"),
     # 범현대 그룹사 — 현대건설(E&C)·현대엔지니어링은 제외(HDEC 직접 렌즈 오염 방지).
     (("현대차", "현대자동차", "현대모비스", "현대글로비스", "현대제철", "현대중공업",
       "HD현대", "현대로템", "현대오토에버", "현대위아", "현대트랜시스", "현대건설기계"),
@@ -473,27 +461,72 @@ def _is_overseas_subsidiary_relevant(title: str) -> bool:
     return any(w in t for w in _OVERSEAS_ENTITY_GENERIC) and _has_overseas_marker(t)
 
 
+# 글로벌/해외 렌즈의 '사업 맥락' 토큰(D7-AE-RC3) — 해외 마커만으로는 부족하다. "해외
+# 안전비위"류 리스크 기사가 bare '해외' 키워드 하나로 글로벌 사업 렌즈에 새던 오탐을
+# 막는다. '건설'은 사명(현대건설/대우건설)에 substring 매칭되므로 여기 넣지 않는다.
+_OVERSEAS_BIZ_CONTEXT = ("수주", "발주", "EPC", "재건", "진출", "계약", "투자",
+                         "프로젝트", "사업", "시장", "공급망", "인프라", "플랜트")
+
+
+def _has_overseas_biz_context(title: str) -> bool:
+    return any(w in (title or "") for w in _OVERSEAS_BIZ_CONTEXT)
+
+
+# 카테고리/섹션 → 폴백 렌즈 1개(D7-AE-RC3). 예전에는 카테고리가 렌즈 2~3개를 무조건
+# 주입해(dc_power→ai·new_energy·plant, mideast_overseas→글로벌·해외현장·plant) 제목
+# 근거가 전혀 없는 plant/해외현장 과대분류를 만들었다(공개 QA 실패 원인 1). 이제 무조건
+# 주입은 없다: 제목 근거 렌즈가 하나도 없을 때만 아래 대표 렌즈 1개로 폴백하고, 그
+# 사실을 lens_reasons에 '분류 폴백'으로 남긴다. ai/plant/해외현장은 폴백으로 쓰지
+# 않는다(각각 전용 근거 가드가 있거나, 무근거 태깅 자체가 이번에 제거한 오탐이라서).
+# macro는 폴백이 없다 — 금리/환율 기사에 '유가·에너지' 라벨을 강제하는 것도 오분류다.
+_CATEGORY_FALLBACK_LENS = {"dc_power": "new_energy", "mideast_overseas": "global_business",
+                           "safety": "safety_quality"}
+_SECTION_FALLBACK_LENS = {"business_overseas": "global_business",
+                          "risk_regulation": "safety_quality",
+                          "competitor_supply": "competitor_contractors"}
+
+
 def _lens_for(sig) -> list:
-    keys = set(_CATEGORY_LENS.get(sig.get("category"), []))
-    keys.update(_SECTION_LENS.get(sig.get("radar_section"), []))
+    return _lens_for_with_reasons(sig)[0]
+
+
+def _lens_for_with_reasons(sig) -> tuple:
+    """렌즈 태깅 + 렌즈별 근거 — 단일 판정점 (D7-AE-RC3 근거 게이팅).
+
+    공개 QA 과대분류의 두 원인을 제거했다: (1) 카테고리/섹션의 무조건 다중 렌즈 주입 →
+    근거 없을 때만 대표 렌즈 1개 폴백, (2) 키워드 매칭이 category_label(섹션 설명문 —
+    "중동·해외 수주 환경")까지 봐서 섹션 전체가 같은 렌즈로 물들던 것 → raw 제목만 본다.
+    반환 (lenses, reasons) — reasons는 {lens: [사람이 읽는 근거…]}로 모델 row에 실려
+    감사 가능하다(lens_reasons). 최종 키에 남은 렌즈의 근거만 반환한다.
+    """
     raw_title = sig.get("title") or ""
     raw_source = sig.get("source") or ""
     raw_snippet = sig.get("snippet") or ""
+    reasons: dict = {}
+
+    def _why(lens: str, note: str) -> None:
+        bag = reasons.setdefault(lens, [])
+        if note not in bag:
+            bag.append(note)
+
+    keys = set()
     value_chain = ai_value_chain.classify_ai_value_chain(raw_title, raw_source, raw_snippet)
-    keys.update(ai_value_chain.recommended_lenses(raw_title, raw_source, raw_snippet))
-    text = f"{raw_title} {sig.get('category_label') or ''}"
+    for lens in ai_value_chain.recommended_lenses(raw_title, raw_source, raw_snippet):
+        keys.add(lens)
+        _why(lens, f"AI 밸류체인:{value_chain.get('ai_value_chain_layer')}")
     for words, lens in _KEYWORD_LENS:
-        if any(w in text for w in words):
+        hits = [w for w in words if w in raw_title]
+        if hits:
             keys.add(lens)
-    if _is_hyundai_group_relevant(text):
+            _why(lens, "제목 키워드:" + "·".join(hits[:3]))
+    if _is_hyundai_group_relevant(raw_title):
         keys.add("hyundai_group")
+        _why("hyundai_group", "그룹사명+건설·인프라 맥락(제목)")
     else:
         keys.discard("hyundai_group")
-    # 해외 마커가 없으면 글로벌/해외현장 렌즈에서 제외 — 국내 기업뉴스가 섹션 분류만으로
-    # '글로벌'에 섞이지 않게 한다(가짜가 아니라 정밀화 · 다른 렌즈 태그는 유지).
-    # 함정: category_label은 섹션 설명("중동·해외 수주 환경")이라 항상 해외어를 포함한다 →
-    # 기사 고유성 판정은 raw 제목만 본다(섹션 라벨로 도메스틱 기사가 글로벌에 새지 않게).
-    if not _has_overseas_marker(raw_title):
+    # 글로벌/해외현장 — 제목에 해외 마커 ∧ 사업 맥락(수주/발주/재건/투자…)이 같이 있어야
+    # 유지한다. '해외 안전비위'류 리스크 기사가 bare '해외' 하나로 글로벌에 새지 않게 한다.
+    if not (_has_overseas_marker(raw_title) and _has_overseas_biz_context(raw_title)):
         keys.discard("global_business")
         keys.discard("overseas_site")
     if value_chain.get("ai_value_chain_layer") == ai_value_chain.LAYER_GENERIC_AI:
@@ -505,10 +538,12 @@ def _lens_for(sig) -> list:
     # 법인 신호는 키워드 매핑 누락과 무관하게 정확히 태깅한다(hyundai_group과 동일 패턴).
     if _is_overseas_branch_relevant(raw_title):
         keys.add("overseas_branch")
+        _why("overseas_branch", "해외 조직/거점 마커(제목)")
     else:
         keys.discard("overseas_branch")
     if _is_overseas_subsidiary_relevant(raw_title):
         keys.add("overseas_subsidiary")
+        _why("overseas_subsidiary", "해외 법인격 마커(제목)")
     else:
         keys.discard("overseas_subsidiary")
     # 호르무즈 relevance guard(D7-AA) — 직접 호르무즈/Strait of Hormuz 언급, 또는 (지정학 geo
@@ -517,6 +552,7 @@ def _lens_for(sig) -> list:
     # 환경")이 geo 앵커를 오주입해 일반 유가/중동 기사가 호르무즈에 새는 함정을 피한다.
     if lens_queries.hormuz_relevant(raw_title):
         keys.add("hormuz")
+        _why("hormuz", "호르무즈 직접 언급 또는 지정학∧해상리스크 앵커(제목)")
     else:
         keys.discard("hormuz")
     # AI 렌즈(D7-L) — 섹션/카테고리(injected)로 'ai'가 붙어도 raw 제목에 직접 AI/데이터센터
@@ -531,10 +567,13 @@ def _lens_for(sig) -> list:
     for match in _site_matches_for(sig):
         scope = match.get("scope")
         biz = match.get("business_lens")
+        site_name = match.get("name") or match.get("label") or ""
         if scope in VALID_LENS:
             keys.add(scope)
+            _why(scope, f"워치리스트 현장 매칭:{site_name}")
         if biz and biz in VALID_LENS:
             keys.add(biz)
+            _why(biz, f"워치리스트 현장({site_name})의 사업 렌즈")
     # 주거/건축 보수적 폴백(D7-Q) — 다른 정밀 콘텐츠 렌즈가 하나도 없을 때만, 제목의 주거형
     # 키워드('아파트' 등 공유 풀에 없는 항목)로 building_housing을 보강한다(task 폴백 규칙:
     # "정밀 렌즈가 없으면 가장 보수적인 건설 렌즈"). 이미 plant/safety 등 정밀 렌즈가 있으면
@@ -542,13 +581,29 @@ def _lens_for(sig) -> list:
     # 이 폴백이 "…아파트에 'AI 주차로봇' 도입"처럼 렌즈가 비는 주거 기사를 건져 빈 렌즈를 막는다.
     if not (keys - _STATE_LENS) and any(w in raw_title for w in _RESIDENTIAL_LENS_TERMS):
         keys.add("building_housing")
+        _why("building_housing", "주거 키워드 폴백(다른 정밀 렌즈 없음)")
     # 건설-AI 보강(D7-Q) — 제목에 직접 AI 근거가 있고 콘텐츠 렌즈가 이미 있으면(건설/주거 등)
     # 'ai'를 더한다. 순수 비건설 AI 노이즈는 콘텐츠 렌즈가 없어 태깅되지 않는다(과태깅 방지).
     if (keys - _STATE_LENS) and _has_ai_evidence(raw_title, raw_source, raw_snippet):
         keys.add("ai")
+        _why("ai", "제목 AI 근거 + 건설 콘텐츠 렌즈 동반")
+    # 분류 폴백(D7-AE-RC3) — 제목 근거 렌즈가 전혀 없을 때만 카테고리/섹션 대표 렌즈 1개.
+    # 폴백도 렌즈별 최소 게이트를 통과해야 한다: global_business 폴백은 제목에 해외 마커가
+    # 있어야 한다(섹션 분류만 믿고 소비재/무관 기사를 글로벌로 되살리지 않는다 — C1/C4 계약).
+    # generic_ai 레이어는 폴백 자체를 받지 않는다(무렌즈 무노출 — D7-S2 fail-safe 유지).
+    if (not (keys - _STATE_LENS)
+            and value_chain.get("ai_value_chain_layer") != ai_value_chain.LAYER_GENERIC_AI):
+        fb = (_CATEGORY_FALLBACK_LENS.get(sig.get("category"))
+              or _SECTION_FALLBACK_LENS.get(sig.get("radar_section")))
+        fb_gate_ok = fb != "global_business" or _has_overseas_marker(raw_title)
+        if fb and fb_gate_ok:
+            keys.add(fb)
+            _why(fb, "분류 폴백:"
+                 f"{sig.get('category') or sig.get('radar_section')}(제목 직접 근거 없음)")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
-    return sorted(keys & VALID_LENS)
+    final = sorted(keys & VALID_LENS)
+    return final, {k: reasons[k] for k in final if reasons.get(k)}
 
 
 def _has_dashboard_lens(sig) -> bool:
@@ -732,7 +787,8 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
                if spread.get("source_count") else "출처 1곳")
     value_chain = ai_value_chain.classify_ai_value_chain(
         sig.get("title") or "", sig.get("source") or "", sig.get("snippet") or "")
-    lens = sorted(set(_lens_for(sig)) | ({l for l in extra_lens} & VALID_LENS))
+    lens_keys, lens_reasons = _lens_for_with_reasons(sig)
+    lens = sorted(set(lens_keys) | ({l for l in extra_lens} & VALID_LENS))
     access = news_access.classify_link_access(
         sig.get("url"),
         final_url=sig.get("final_url"),
@@ -818,6 +874,8 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "cat": cat_label, "catColor": cat_color,
         "score": score_str, "scoreLabel": score_label, "scoreColor": score_color,
         "lens": lens,
+        # 렌즈별 근거(D7-AE-RC3) — 왜 이 렌즈인지 사람이 감사할 수 있게 모델에 노출.
+        "lens_reasons": lens_reasons,
         "url": sig.get("url") if _is_http(sig.get("url")) else "",
         # 외부 '원문 사이트' href 전용 — 가장 원본에 가깝고 warning이 아닌 URL. url(원본
         # 수집값)/final_url(접근 진단)과 분리한다. warning URL이면 ""(링크 미생성).
@@ -1574,6 +1632,104 @@ def _strip_hormuz_demo_card(html: str) -> str:
     return result[:seam_start] + seam + result[seam_end:]
 
 
+# 공식 현대건설 CI asset(D7-AE-RC3) — 출처: hdec.kr 공식 사이트 헤더 SVG(확보 경로·출처
+# 기록은 docs/assets/brand/README.md). 파일이 없으면 로고를 만들어내지 않는다(가짜 금지).
+BRAND_LOGO_ASSET = ROOT / "docs" / "assets" / "brand" / "hdec-logo.svg"
+_BRAND_LOGO_SLOT = "바로 뒤에 data-URI <img>로 임베드한다 — 가짜 로고를 만들지 않는다. -->"
+
+
+def _embed_brand_logo(html: str) -> str:
+    """공식 현대건설 CI(SVG)를 data-URI <img>로 마스트헤드에 임베드한다 (D7-AE-RC3).
+
+    템플릿의 placeholder 아이콘은 제거됐고 로고 슬롯 주석만 남아 있다. 공식 asset이
+    존재할 때만 임베드하고, 없으면 텍스트 브랜드만 남긴다(임의 로고 생성 금지).
+    data-URI라 외부 요청이 없다(self-contained · 기사 href 외 외부 URL 0건 정책 유지).
+    """
+    if _BRAND_LOGO_SLOT not in html:
+        return html
+    try:
+        svg = BRAND_LOGO_ASSET.read_bytes()
+    except OSError:
+        print("WARNING: 공식 CI asset(docs/assets/brand/hdec-logo.svg) 없음 — 로고 미임베드"
+              " (텍스트 브랜드만 표시). 확보 절차: docs/assets/brand/README.md",
+              file=sys.stderr)
+        return html
+    uri = "data:image/svg+xml;base64," + base64.b64encode(svg).decode("ascii")
+    img = f'\n      <img class="cilogo" alt="현대건설" src="{uri}">'
+    return html.replace(_BRAND_LOGO_SLOT, _BRAND_LOGO_SLOT + img, 1)
+
+
+def _strip_operator_controls(html: str, operator_api_base: str) -> str:
+    """운영 API 미설정(공개) 빌드에서 운영자 실행 UI를 HTML에서 완전히 제거한다 (D7-AE-RC3).
+
+    사용자 QA: disabled 버튼(데이터 새로고침/텔레그램/Teams)이 접혀 있어도 제품 기능처럼
+    읽혀 "아직도 안 된다"가 된다. base 미설정이면 실행 패널(버튼 3개·승인 PIN·상태줄)을
+    통째로 제거하고 '운영 API 설정 필요' 한 줄만 남긴다. base가 주입된(운영자) 빌드는
+    기존 패널을 유지한다 — 버튼이 실제로 동작하는 유일한 경우다. 인터랙션 JS는 버튼
+    부재 시 `if (!collectBtn || !sendBtn) return;`으로 안전 종료한다(스크립트 무수정 —
+    byte-identity 계약 유지).
+    """
+    if (operator_api_base or "").strip():
+        return html
+    start = html.find('<section class="opctl compact"')
+    end = html.find("</section>", start)
+    if start < 0 or end < 0:
+        print("WARNING: opctl section을 찾지 못함 — 운영자 UI 제거 스킵", file=sys.stderr)
+        return html
+    # 섹션 바로 앞의 설명 주석 블록(OPERATOR CONTROLS …)도 함께 제거 — 공개 raw HTML에
+    # 옛 패널 설명('운영자 서버 미연결' 등)이 남지 않게 한다(JS 주석은 byte-identity 계약상
+    # 그대로 두며 화면에 노출되지 않는다).
+    comment_start = html.rfind("<!-- =========== OPERATOR CONTROLS", 0, start)
+    if comment_start >= 0:
+        start = comment_start
+    end += len("</section>")
+    replacement = (
+        '<section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">\n'
+        '      <div class="opctl-head">\n'
+        '        <span class="opctl-title">운영자 모드</span>\n'
+        '        <span class="opctl-oneline"><span class="off">운영 API 설정 필요</span>'
+        ' · 실행 버튼은 운영 API가 연결된 빌드에서만 표시됩니다</span>\n'
+        '      </div>\n'
+        '    </section>')
+    return html[:start] + replacement + html[end:]
+
+
+_MARKET_INTRO_ONE_LINER = ('<div class="pnote">자동 연동 지표만 표시합니다. '
+                           '지연 시세이며 현재 체결값은 아닙니다.</div>')
+
+
+def _simplify_market_intro(html: str) -> str:
+    """시장 탭 상단의 장문 설명 블록을 짧은 한 줄로 교체한다 (D7-AE-RC3 임원용 표면 정리).
+
+    공개 산출물에서 제거: ① 패널 제목 옆 카테고리 나열 <small>, ② '건설 시장 유니버스…'
+    pnote, ③ '연동 지표를 우선 노출…' pnote(marketLinkNote — JS는 el 부재 시 안전 스킵),
+    ④ '기간 히스토리가 연동된 행을 클릭…' clickhint 장문. 대체 한 줄에 정직성 핵심
+    ('지연 시세 · 현재 체결값 아님')을 유지한다. 템플릿(내부 프리뷰 설계 도구)은 그대로다.
+    """
+    ph = re.sub(r'(<div class="ph">시장 모니터링) <small>[^<]*</small>(</div>)',
+                r"\1\2", html, count=1)
+    if ph == html:
+        print("WARNING: 시장 패널 제목 <small> 미발견 — 교체 스킵", file=sys.stderr)
+    html = ph
+    universe = re.sub(
+        r'<div class="pnote">건설 시장 유니버스[^<]*(?:<b>[^<]*</b>[^<]*)*</div>',
+        _MARKET_INTRO_ONE_LINER, html, count=1)
+    if universe == html:
+        print("WARNING: '건설 시장 유니버스' pnote 미발견 — 교체 스킵", file=sys.stderr)
+    html = universe
+    linknote = re.sub(
+        r'\s*<div class="pnote" id="marketLinkNote">.*?</div>', "", html,
+        count=1, flags=re.S)
+    if linknote == html:
+        print("WARNING: marketLinkNote pnote 미발견 — 제거 스킵", file=sys.stderr)
+    html = linknote
+    hint = re.sub(r'\s*<div class="clickhint" style="margin-top:8px;">.*?</div>', "",
+                  html, count=1, flags=re.S)
+    if hint == html:
+        print("WARNING: 시장 clickhint 미발견 — 제거 스킵", file=sys.stderr)
+    return hint
+
+
 _WX_GRADE_CLS = {"낮음": "wx-low", "주의": "wx-watch", "높음": "wx-high"}
 
 
@@ -1684,6 +1840,14 @@ def _render_weather_section(html: str, weather: dict) -> str:
     html = re.sub(
         r'<span class="wx-badge" id="wxBadge">[^<]*</span>',
         f'<span class="wx-badge" id="wxBadge">{badge_text}</span>', html, count=1)
+    # D7-AE-RC3 — live 산출물의 raw HTML에는 '기상 데이터 소스 미연동' 문구가 남지 않아야
+    # 한다(사용자 QA). 노트의 미수집-상태 설명 문장을 실측 상태 설명으로 교체한다 —
+    # unavailable/mock 산출물은 이 분기를 타지 않아 기존 문구를 그대로 유지한다(정직).
+    html = re.sub(
+        r"라이브 미수집 상태에서는 <b>기상 데이터 소스 미연동</b>으로 두고 값을 만들지\s*"
+        r"않습니다\.",
+        "값은 공개 기상 API 실측(예보)이며 수집 실패 시 값을 만들지 않습니다.",
+        html, count=1)
     html = html.replace(
         '<span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00</span>',
         '<span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00 · 권역 현지시각</span>', 1)
@@ -1990,6 +2154,12 @@ def _overlay_market_history(model: dict, market_mode: str) -> None:
         it = by_id.get(item_id)
         if it is not None:
             _apply_history_entry(it, entry)
+            # D7-AE-RC3 — 정적 분류가 unavailable(값 없음)이던 종목(us_2y)에 '실측'
+            # 일별 히스토리가 성공적으로 붙으면 현재값(끝점)도 실측 소스가 생긴 것이므로
+            # delayed_market으로 승격한다. proxy/manual 분류는 그대로 둔다(영구 분류 —
+            # 실측 히스토리가 붙어도 대용은 대용이라는 D7-AE-RC1 규칙 불변).
+            if it.get("data_mode") == "unavailable":
+                it["data_mode"] = "delayed_market"
 
 
 def _sync_site_scope_lens_banks_to_tree(model: dict, tree: dict | None, candidate_rows: list[dict]) -> None:
@@ -2048,6 +2218,9 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     # 버튼을 비활성 + 미설정 안내만 한다(GitHub 이동 없음). 빌더 소스는 env를 직접 읽지 않고
     # CLI(--operator-api-base)로만 받는다(verify_dashboard_real_data 1d 계약).
     model["operator_api_base"] = (operator_api_base or "").strip()
+    # D7-AE-RC3 — 공개 산출물은 '연동 후보' 상세 목록을 렌더하지 않는다(한 줄 카운트로
+    # 강등, 상세는 내부 백로그 문서). 템플릿(내부 프리뷰)은 플래그가 없어 기존대로 보인다.
+    model["market_backlog_visible"] = False
     _overlay_market_history(model, market_mode)
     _overlay_fred_live_quotes(model, market_mode)
     # 시장 소스 감사(D7-AE) — live 게시본에서 소스 없는 정적 표시값을 미연동으로 강등한다.
@@ -2241,6 +2414,11 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
 
     # D7-AE-RC1 — 공개 정적 산출물에서만 호르무즈 AIS 데모 카드를 제거한다(실 소스 없음).
     html = _strip_hormuz_demo_card(html)
+    # D7-AE-RC3 — 공개 표면 정리 3종: 공식 CI 로고 임베드(asset 있을 때만) · 운영 API
+    # 미설정 빌드의 실행 버튼 완전 제거('운영 API 설정 필요' 한 줄) · 시장 장문 설명 한 줄화.
+    html = _embed_brand_logo(html)
+    html = _strip_operator_controls(html, operator_api_base)
+    html = _simplify_market_intro(html)
 
     news_mode = brief.get("news_data_mode") or "mock"
     html = html.replace(

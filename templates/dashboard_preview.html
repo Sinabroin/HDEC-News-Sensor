@@ -59,8 +59,8 @@
   header.top{display:flex; align-items:center; justify-content:space-between; gap:24px; padding:4px 4px 13px;
     flex-wrap:wrap; border-bottom:2px solid var(--ink); margin-bottom:14px;}
   .brand{display:flex; align-items:center; gap:14px;}
-  .brand .mark{width:42px; height:42px; border-radius:8px; background:var(--card);
-    border:1px solid var(--ink3); display:flex; align-items:center; justify-content:center; flex:none;}
+  /* 공식 CI 로고(빌더 임베드, data-URI) — placeholder 아이콘(.mark)은 제거됨(D7-AE-RC3) */
+  .brand .cilogo{height:26px; width:auto; display:block; flex:none;}
   .brand .name{font-size:20px; font-weight:800; letter-spacing:-0.01em; color:var(--ink);}
   .brand .name b{color:var(--sky); font-weight:700;}
   .brand .sub{font-size:11.5px; font-weight:500; letter-spacing:0.16em; color:var(--mute3); margin-top:2px;}
@@ -343,6 +343,10 @@
   .mcat-c{font-size:10.5px; font-weight:700; color:var(--mute4); flex:none;}
   /* D7-U/D7-AD-W-1B: 미연동 행은 접힘(details) — 기본 화면에 길게 나열하지 않는다. */
   .mcat-backlog{margin-top:8px; border-top:1px dashed var(--line); padding-top:4px;}
+  /* 공개 산출물의 백로그 한 줄 강등 표기(D7-AE-RC3) — 상세는 내부 운영 문서로 */
+  .mcat-backlognote{margin-top:8px; border-top:1px dashed var(--line); padding-top:5px;
+    font-size:10px; color:var(--mute4);}
+  .ms-backlognote{margin-top:6px; font-size:10px; color:var(--mute4);}
   .mcat-backlog summary.mcat-sub{list-style:none; cursor:pointer; font-size:10px; font-weight:700;
     color:var(--mute4); letter-spacing:0.02em; padding:6px 2px; user-select:none; margin:0; border-top:none;}
   .mcat-backlog summary.mcat-sub::-webkit-details-marker{display:none;}
@@ -518,6 +522,7 @@
   .st-node .st-old{font-size:10px; color:var(--mute4); font-weight:600; background:var(--hair); padding:1px 6px; border-radius:999px;}
   .st-node .st-mc{font-size:10px; color:var(--mute3); font-weight:700; font-variant-numeric:tabular-nums;}
   .st-node.zero .st-mc{color:var(--mute4);}
+  .st-node .st-none{font-size:9.5px; color:var(--mute4); font-weight:600;}
   .sitetree .st-empty{font-size:12px; color:var(--mute3); padding:8px 2px 2px; line-height:1.6;}
   /* 실행 범위 · 현장 워치리스트 네비 (D7-AD-P) — 좌측 네비 하위 개별 현장 목록. 공개 빌드는
      공개 빌드에서도 현장명·접이식 목록·검색을 노출한다. */
@@ -769,9 +774,9 @@
   <!-- =================== HEADER =================== -->
   <header class="top">
     <div class="brand">
-      <div class="mark">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#5B7FA6" stroke-width="1.4"></circle><circle cx="12" cy="12" r="4.5" stroke="#5B7FA6" stroke-width="1.4"></circle><circle cx="12" cy="12" r="1.6" fill="#3E5C80"></circle></svg>
-      </div>
+      <!-- 로고 슬롯(D7-AE-RC3): placeholder 아이콘은 제거했다. 공식 현대건설 CI(SVG,
+           docs/assets/brand/hdec-logo.svg)가 존재하면 빌더(_embed_brand_logo)가 이 주석
+           바로 뒤에 data-URI <img>로 임베드한다 — 가짜 로고를 만들지 않는다. -->
       <div>
         <div class="name">HDEC <b>EXECUTIVE RADAR</b></div>
         <div class="sub">현대건설 임원용 신호 브리프 · 대시보드 미리보기 (PREVIEW)</div>
@@ -1174,7 +1179,7 @@
             <div class="pnote">건설 시장 유니버스 — 카테고리별 종목. 종목별 data_mode(지연/대용/보고/미연동)를 함께 표기하며 <b>현재 체결값 아님</b>.</div>
             <div class="pnote" id="marketLinkNote">연동(현재값 보유) 지표를 우선 노출하고, <b>미연동 지표는 하단 관찰 후보로 분리했습니다</b> — 값/차트 소스가 없으면 가짜 값을 만들지 않습니다.<span id="marketLinkSummary"></span></div>
           </div>
-          <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·알루미늄·휘발유·헨리허브·EUR/KRW·미 국채 10Y). <b>대용(proxy)</b> 종목(철광석·열연강판·연료탄·경유)은 글로벌 벤치마크라 정확한 국내 현물가가 아닙니다. 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: US 2Y·KR 10Y)은 클릭·차트를 열지 않습니다(소스 필요).</b></div>
+          <div class="clickhint" style="margin-top:8px;">↗ 기간 히스토리가 연동된 행을 클릭하면 상세 차트가 열립니다 (예: USD/KRW·WTI·구리·알루미늄·휘발유·헨리허브·EUR/KRW·미 국채 10Y). <b>대용(proxy)</b> 종목(철광석·열연강판·연료탄·경유)은 글로벌 벤치마크라 정확한 국내 현물가가 아닙니다. 기간 버튼(1주·1개월·3개월·1년)은 <b>각각 다른 기간 창</b>을 표시합니다 — 데모 모드에선 결정적 데모 추세, live 모드에선 공개 시세(지연) 실측이며 <b>현재 체결값이 아닙니다</b>. <b>히스토리 미연동 종목(예: KR 10Y·니켈)은 클릭·차트를 열지 않습니다(소스 필요).</b> 미 국채 2Y는 FRED DGS2(일별·전영업일 확정)로 기간 차트가 연동됩니다.</div>
           <!-- 시장 소스 연동 현황 (D7-AD-R) — 미연동 후보를 길게 늘어놓지 않고 상태로 구분:
                연동 완료 / 보고·수동 확인 / 미연동 후보 / 우선 연동 필요. 가짜 값/차트 생성 없음.
                상세 백로그 계획: D7-AD-T. JS(renderMarketStatusBoard)가 data_mode/값으로 분류한다. -->
@@ -1906,7 +1911,8 @@ function displaySourceDomain(row){
     { key: "policy", label: "정책" },
     { key: "competitor", label: "경쟁" },
     { key: "brand", label: "브랜드" },
-    { key: "global_press", label: "해외 언론" }
+    { key: "global_press", label: "해외 언론" },
+    { key: "etc", label: "기타" }
   ];
   var NAV_CAT_MAP = {};
   var SEC_ARTICLE_INDEX = {};
@@ -1953,14 +1959,25 @@ function displaySourceDomain(row){
     }
     return null;
   }
+  /* 2차 레이블은 exclusive partition(D7-AE-RC3): 각 기사에 정확히 하나의 2차 레이블만
+     배정한다 — pill 순서가 우선순위다(신규 > 수주 > 재무 > 정책 > 경쟁 > 브랜드 > 해외 언론).
+     어느 섹션에도 없으면 '기타'. '전체 = 하위 레이블 합산'이 항상 성립해 카운트가 임원
+     직관과 일치한다(이전 facet 구조는 전체 10 vs 신규 4 + 나머지 0처럼 합산이 안 맞았다). */
+  function rowSecondaryKey(row) {
+    var keys = rowArticleKeys(row);
+    for (var p = 0; p < NAV_CAT_PILLS.length; p++) {
+      var k = NAV_CAT_PILLS[p].key;
+      if (k === "all" || k === "etc") continue;
+      for (var i = 0; i < keys.length; i++) {
+        var bag = SEC_ARTICLE_INDEX[keys[i]];
+        if (bag && bag[k]) return k;
+      }
+    }
+    return "etc";
+  }
   function rowMatchesSecondary(row, secondaryKey) {
     if (secondaryKey === "all") return true;
-    var keys = rowArticleKeys(row);
-    for (var i = 0; i < keys.length; i++) {
-      var bag = SEC_ARTICLE_INDEX[keys[i]];
-      if (bag && bag[secondaryKey]) return true;
-    }
-    return false;
+    return rowSecondaryKey(row) === secondaryKey;
   }
   function rowsForPrimaryLens(primaryKey) {
     var bankRows = primaryKey !== "all" && hasBankRows(primaryKey) ? LENS_BANKS[primaryKey] : null;
@@ -2069,6 +2086,8 @@ function displaySourceDomain(row){
     box.innerHTML = NAV_CAT_PILLS.map(function (p) {
       var cnt = siteNode ? countForSiteSecondary(siteNode, p.key)
         : (pk ? countForSecondary(pk, p.key) : 0);
+      // 0건 pill은 렌더하지 않는다(D7-AE-RC3) — partition이라 '전체 = 표시 pill 합산' 유지.
+      if (cnt === 0 && p.key !== "all" && p.key !== activeKey) return "";
       var badgeCls = cnt === 0 ? " zero" : "";
       return '<button type="button" class="cnl-pill' + (p.key === activeKey ? " active" : "")
         + '" data-cat="' + esc(p.key) + '" role="tab"' + (p.key === activeKey ? ' aria-selected="true"' : "") + '>'
@@ -2320,7 +2339,11 @@ function displaySourceDomain(row){
       ? '<span class="st-when">' + esc(n.latest_kst || n.freshness_label || "") + '</span>'
       : (n.match_freshness === "old"
           ? '<span class="st-old">' + esc(n.freshness_label || "과거 매칭") + '</span>' : "");
-    var mc = '<span class="st-mc" title="매칭 기사 수">' + Number(n.match_count || 0) + '</span>';
+    // 매칭 0건 현장은 숫자 0 대신 '관련 기사 없음'을 명시한다(D7-AE-RC3 정직 표시) —
+    // 무관 기사를 붙이는 대신 없음을 없다고 말한다.
+    var mc = Number(n.match_count || 0)
+      ? '<span class="st-mc" title="매칭 기사 수">' + Number(n.match_count) + '</span>'
+      : '<span class="st-none">관련 기사 없음</span>';
     return '<button type="button" class="' + cls + '" data-scope="' + esc(scope)
       + '" data-id="' + esc(n.id) + '">' + bang + '<span>' + esc(n.label) + '</span>' + mc + when + '</button>';
   }
@@ -3056,6 +3079,10 @@ function displaySourceDomain(row){
      D7-U: 연동(현재값 보유) 행을 먼저 노출하고, 미연동(값 없음) 행은 카드 하단의 약화된
      '미연동 관찰 후보' 영역으로 분리한다 — 죽은 행이 섹션을 지배하지 못하게 한다(가짜 값 없음). */
   function marketLinked(it) { var s = marketState(it); return s.hasValue && s.isAutoLive; }
+  // 공개 산출물은 '연동 후보' 상세를 노출하지 않는다(D7-AE-RC3) — 빌더가
+  // market_backlog_visible=false를 주입하면 목록 대신 한 줄 카운트만 남기고, 상세
+  // 후보/사유는 내부 백로그 문서(docs/operations)로 낮춘다. 값 생성은 어느 쪽도 없다.
+  var SHOW_MARKET_BACKLOG = MODEL.market_backlog_visible !== false;
   function renderCategoryCards() {
     var box = el("marketCategories"); if (!box) return; box.innerHTML = "";
     var items = MODEL.market_items || [];
@@ -3071,10 +3098,13 @@ function displaySourceDomain(row){
       var card = document.createElement("div"); card.className = "mcat-card";
       card.id = "mcat-" + cat; card.setAttribute("data-cat", cat);   // 좌측 목차(navmkt) 스크롤 앵커
       var body = linked.map(function (it) { return mrowHtml(it, isClickable(it)); }).join("");
-      if (unlinked.length) {
+      if (unlinked.length && SHOW_MARKET_BACKLOG) {
         body += '<details class="mcat-backlog"><summary class="mcat-sub">연동 후보 '
           + unlinked.length + '개 보기 · 값/차트 소스 필요</summary><div class="mcat-unlinked">'
           + unlinked.map(function (it) { return mrowHtml(it, false); }).join("") + '</div></details>';
+      } else if (unlinked.length) {
+        body += '<div class="mcat-backlognote">미연동 ' + unlinked.length
+          + '종 — 내부 백로그로 관리(값 미생성)</div>';
       }
       card.innerHTML = '<div class="mcat-head"><span class="mcat-t">' + esc(CAT_LABEL[cat] || cat) +
         '</span><span class="mcat-c">연동 ' + linked.length + '/' + rows.length + '</span></div>' + body;
@@ -3095,7 +3125,7 @@ function displaySourceDomain(row){
      조사 상세·분류표(current_status/source_type/update_frequency/chart_possible/limitation/next_action):
      docs/operations/D7ADV_MARKET_SOURCE_DISCOVERY.md. 실제 연동은 후속 커밋에서 어댑터 단위로 진행한다. */
   var MARKET_REASON = {
-    us_2y: "연동(live): FRED DGS2 공개 CSV · 한계: 영업일·차트 미연동(단일값) · mock은 unavailable",
+    us_2y: "연동(live): FRED DGS2 공개 CSV(일별) + 기간 차트 · 한계: 영업일 확정치(실시간 시세 아님) · mock은 unavailable",
     kr_10y: "연동(live): FRED OECD 월간 · 한계: 일간 국고 10Y 아님 · ECOS 코드 확정 시 교체(우선)",
     scrap_steel: "후보: FRED WPU1012(BLS 철스크랩 PPI·월간) · 한계: 지수(₩/톤 아님)·미국 기준 · 다음: 지수 표기로 연동 검토",
     cement: "후보: KOSIS PPI 품목 DT_404Y016 / 한은 ECOS PPI(월간) · 한계: 국내 시멘트 '지수'(실계약가 아님) · 다음: 보고·지수 병기(우선)",
@@ -3149,10 +3179,13 @@ function displaySourceDomain(row){
     ];
     var collapsedCount = backlog.length + priority.length;
     var html = '<div class="mktstatus-main">' + mainCols.map(colHtml).join("") + '</div>';
-    if (collapsedCount) {
+    if (collapsedCount && SHOW_MARKET_BACKLOG) {
       html += '<details class="ms-collapse"><summary class="ms-collapse-sum">미연동/후보 관리 · '
         + collapsedCount + '개</summary><div class="ms-collapse-body">'
         + collapsedCols.map(colHtml).join("") + '</div></details>';
+    } else if (collapsedCount) {
+      html += '<div class="ms-backlognote">미연동·후보 ' + collapsedCount
+        + '종은 내부 백로그(운영 문서)로 관리합니다 — 값을 만들지 않습니다.</div>';
     }
     box.innerHTML = html;
   }

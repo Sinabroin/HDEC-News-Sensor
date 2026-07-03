@@ -105,7 +105,7 @@
     "dc_construction_dev_markers": ["부지", "입지", "토지", "자금", "PF", "개발", "임대", "시설"],
     "dc_construction_epc_markers": ["EPC", "시공", "건설", "공사", "수주", "발주"],
     "semi_cluster_plant_markers": ["fab", "팹", "공장", "EPC", "플랜트", "전력"],
-    "safety_quality_markers": ["안전", "품질", "영상인식", "안전관리"]
+    "safety_quality_markers": ["중대재해", "사고", "붕괴", "부실", "하자", "품질"]
   },
   "lens_mapping": {
     "hyperscaler_model": [],
@@ -114,7 +114,7 @@
     "ai_datacenter_power": ["ai", "new_energy"],
     "ai_datacenter_cooling": ["ai", "new_energy"],
     "ai_datacenter_construction": ["ai"],
-    "semiconductor_cluster_infra": ["ai", "civil_infrastructure", "new_energy"],
+    "semiconductor_cluster_infra": ["ai", "new_energy"],
     "development_finance": ["development_business"],
     "smart_construction_ai": ["ai"],
     "generic_ai": [],
