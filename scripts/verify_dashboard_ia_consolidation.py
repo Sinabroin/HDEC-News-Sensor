@@ -194,7 +194,11 @@ def check_template() -> None:
     check("V2: 좌측 목차가 단일 탐색 진입점(lensnav)", 'id="lensnav"' in t)
     check("V2: 좌측 navcat(수주/재무 등 1차 항목) 제거",
           'class="nav navcat"' not in t)
-    check("V3: 좌측 목차 시장 그룹(navmkt data-market)", 'class="nav navmkt" data-market="' in t)
+    # D7-AE-RC1: 시장 그룹 이동은 좌측 목차가 아니라 시장 탭 상단 pill bar(#mktPillBar)로
+    # 옮겼다(사용자 지시 — 좌·상단 시장 nav 중복 제거). navmkt 클래스/라우팅은 그대로다.
+    check("V3: 시장 그룹 navmkt data-market(pill bar, 좌측 목차 밖)",
+          'class="nav navmkt mkt-pill" data-market="' in t and 'id="mktPillBar"' in t
+          and '<div class="gtitle">시장 모니터링</div>' not in t)
     check("V3: 좌측 목차 기상 항목(navwx)→siteWeatherCard(뉴스 필터 제외)",
           'class="nav navwx"' in t and "function openWeatherRisk" in t
           and 'el("siteWeatherCard")' in t)

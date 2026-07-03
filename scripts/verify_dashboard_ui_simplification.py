@@ -65,8 +65,15 @@ def check_surface(label: str, text: str) -> None:
           'id="todayStrip"' in text)
     for s in STRIP_ACTIONS:
         check(f"5[{label}]: 명시 액션 '{s}'", s in text)
-    check(f"5[{label}]: 시장/기상 탐색 어포던스(시세 열기 · 리스크 표 열기)",
-          "시세 열기 ▸" in text and "리스크 표 열기 ▸" in text)
+    # D7-AE-RC1: "시세 열기 ▸"는 좌측 목차 navmkt 버튼 전용 라벨이었다 — 그 버튼 자체가
+    # 시장 탭 상단 pill bar(#mktPillBar)로 옮겨가며 인터랙션 모델이 "목록 항목"에서
+    # "탭/세그먼트 pill"로 바뀌었다(다른 기존 pill류 — NAV_CAT_PILLS 등 — 도 동사 접미
+    # 없이 라벨만 쓴다. 탭 관용구는 그 자체로 자명해 "열기" 동사가 불필요). 어포던스
+    # 명확성은 여전히 요구하되, pill bar 존재 + 자기설명적 카테고리 라벨로 검증한다.
+    check(f"5[{label}]: 기상 탐색 어포던스(리스크 표 열기)", "리스크 표 열기 ▸" in text)
+    check(f"5[{label}]: 시장 탐색은 상단 pill bar(자기설명적 카테고리 라벨, 좌측 중복 제거)",
+          'id="mktPillBar"' in text and "현대건설 주가" in text
+          and '<div class="gtitle">시장 모니터링</div>' not in text)
     check(f"5[{label}]: 뉴스 더보기 라벨 명시(전체 기사 더보기)",
           "전체 기사 더보기" in text)
     missing = [s for s in LOCKED if s not in text]
@@ -96,9 +103,14 @@ def check_template_only() -> None:
           and "이 스트립은 어떤 값도 만들지 않는다" in t)
     for s in STRIP_ITEMS:
         check(f"4t: 판단 바 항목 '{s}'", s in t)
-    # serif 마스트헤드(결재문서 톤 · 외부 폰트 0건 — 시스템 serif 스택만).
-    check("7t: serif 변수 + 마스트헤드 적용",
-          "--serif:Georgia" in t and "font-family:var(--serif)" in t)
+    # D7-AE-RC1: 사용자 실사용 QA가 이 serif 마스트헤드를 "구리다"고 명시 지적했다
+    # ("serif/Georgia 스타일은 제거하라") — 계약을 반대로 뒤집는다: serif 변수/사용처가
+    # 없어야 하고, Pretendard가 최우선 폰트여야 한다(전용 검증은
+    # verify_hdec_visual_system.py). 외부 폰트 CDN 0건 계약은 그대로 유지.
+    check("7t: serif 변수/마스트헤드 제거됨(Pretendard로 대체, 사용자 지적 반영)",
+          "--serif:Georgia" not in t and "font-family:var(--serif)" not in t
+          and "Georgia" not in t and "Times New Roman" not in t)
+    check("7t: Pretendard가 body 최우선 폰트", "font-family:Pretendard," in t)
     check("7t: 외부 폰트/CDN 0건(@font-face·fonts.googleapis 없음)",
           "@font-face" not in t and "fonts.googleapis" not in t.lower())
 

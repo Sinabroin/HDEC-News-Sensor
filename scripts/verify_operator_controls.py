@@ -21,6 +21,13 @@ This replaces the old D7-T contract (which required the buttons to *be* GitHub A
 links). The Telegram inline-button mapping for the report/dashboard links (send_telegram)
 is unrelated to the operator controls and is still checked (check 17).
 
+D7-AE-RC1: user QA found the three disabled buttons rendered as large always-visible CTAs
+("비활성 버튼이 제품 기능처럼 보인다") even though they were architecturally safe. Checks
+21-22 lock the new contract: the action buttons live inside a closed-by-default
+<details id="opctlPanel"> (only a one-line summary is unconditionally visible) and the JS
+auto-opens it when operator_api_base is actually configured. See
+verify_operator_panel_not_fake.py for the dedicated "not fake" prominence audit.
+
 Usage:
     python3 scripts/verify_operator_controls.py
 """
@@ -191,6 +198,16 @@ def check_safety(html: str, label: str) -> None:
 # 17 · existing report/dashboard inline-button mapping unchanged (send_telegram)
 # ---------------------------------------------------------------------------
 
+def check_collapsed_by_default(html: str, tpl: str) -> None:
+    """21-22 · D7-AE-RC1 — 버튼은 기본 닫힌 details 뒤에 있고, JS가 연결 시에만 연다."""
+    check("21: 운영자 버튼이 닫힌 details(id=opctlPanel) 안에 있음(기본 접힘)",
+          '<details class="opctl-panel" id="opctlPanel">' in html)
+    check("21b: 공개(미연결) 산출물의 opctlPanel에 open 속성 없음(펼쳐진 채 시작 안 함)",
+          '<details class="opctl-panel" id="opctlPanel" open' not in html)
+    check("22: JS가 base 연결 시 opctlPanel을 자동으로 엶(운영자는 바로 보임)",
+          'el("opctlPanel")' in tpl and "panel.open = true" in tpl)
+
+
 def check_report_dashboard_mapping() -> None:
     sys.path.insert(0, str(ROOT / "scripts"))
     try:
@@ -224,6 +241,7 @@ def main() -> int:
     check_unset_behavior(dash)
     check_copy(dash)
     check_teams_control(_read(TEMPLATE) if TEMPLATE.exists() else "")
+    check_collapsed_by_default(dash, _read(TEMPLATE) if TEMPLATE.exists() else "")
 
     # 11~16 · 공개 HTML 안전성 — 대시보드/운영자/리포트 + 소스 템플릿 모두 스캔.
     safety_targets = [(dash, "dashboard")]

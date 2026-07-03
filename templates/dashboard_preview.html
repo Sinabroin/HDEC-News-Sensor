@@ -5,7 +5,9 @@
   · 출처: Claude Design "HDEC Executive Radar.dc.html" 시각 방향을 그대로 구현한 미리보기.
   · 프로덕션 아님: docs/daily/latest.html · docs/daily/operator-latest.html · Telegram 발송과 무관.
   · 데이터 정직성 하드룰(rules.md §1) 준수:
-      - 외부 URL/폰트/CDN 0건 (시스템 폰트 스택만 사용 — Pretendard CDN 미사용).
+      - 외부 URL/폰트/CDN 0건 — Pretendard는 스타일시트 원격 로드 없이 순수 font-family
+        이름으로만 선언한다(scripts/build_static_report.py와 동일 패턴). 설치돼 있으면
+        쓰고, 없으면 조용히 다음 시스템 폰트로 폴백한다 — 네트워크 요청 자체가 없다.
       - 시장/AIS/소셜(초기신호) 실데이터를 위조하지 않는다.
       - 실데이터가 없는 자리는 demo/mock/미연동/정책·키 필요로 정직하게 표기한다.
       - 모든 시장 수치는 data_mode(지연/대용/보고/미연동)를 함께 노출하며 현재 체결값을 주장하지 않는다.
@@ -33,7 +35,6 @@
     --red:#A9433A; --red-tint:#F8EFED; --red-bd:#E3CBC6;
     --green:#38684A; --green-tint:#EFF4EF; --green-bd:#D3DFD5;
     --amber:#8F6A2E; --amber-tint:#F7F1E3; --amber-bd:#EADFC8;
-    --serif:Georgia,"Times New Roman","Noto Serif KR",serif;
     --shadow:0 1px 2px rgba(32,40,54,0.05);
     --shadow-lg:0 2px 8px rgba(32,40,54,0.07);
     --shadow-hero:0 1px 3px rgba(32,40,54,0.05);
@@ -42,7 +43,7 @@
   html,body{margin:0;padding:0;}
   body{
     background:var(--bg1);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",
+    font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",
       "Malgun Gothic","Noto Sans KR",roboto,sans-serif;
     -webkit-font-smoothing:antialiased; color:#2A3648; font-size:14px; line-height:1.5;
   }
@@ -54,13 +55,13 @@
   .eyebrow{font-size:11.5px; font-weight:700; letter-spacing:0.14em; color:var(--sky2);}
   @keyframes radarSweep{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 
-  /* ===== 헤더 — 결재문서 마스트헤드(잉크 이중 괘선 · serif 제호) ===== */
+  /* ===== 헤더 — 결재문서 마스트헤드(잉크 이중 괘선 · Pretendard 제호, D7-AE-RC1: serif 제거) ===== */
   header.top{display:flex; align-items:center; justify-content:space-between; gap:24px; padding:4px 4px 13px;
     flex-wrap:wrap; border-bottom:2px solid var(--ink); margin-bottom:14px;}
   .brand{display:flex; align-items:center; gap:14px;}
   .brand .mark{width:42px; height:42px; border-radius:8px; background:var(--card);
     border:1px solid var(--ink3); display:flex; align-items:center; justify-content:center; flex:none;}
-  .brand .name{font-family:var(--serif); font-size:20px; font-weight:700; letter-spacing:0; color:var(--ink);}
+  .brand .name{font-size:20px; font-weight:800; letter-spacing:-0.01em; color:var(--ink);}
   .brand .name b{color:var(--sky); font-weight:700;}
   .brand .sub{font-size:11.5px; font-weight:500; letter-spacing:0.16em; color:var(--mute3); margin-top:2px;}
   .hbar{display:flex; align-items:stretch; gap:10px; flex-wrap:wrap;}
@@ -205,7 +206,7 @@
   .tag.green{color:var(--green); border:1px solid var(--green-bd); background:var(--green-tint);}
   .tag.amber{color:var(--amber); border:1px solid var(--amber-bd); background:var(--amber-tint);}
   .tag.sky{color:var(--sky); border:1px solid var(--sky-bd); background:var(--sky-tint);}
-  .featured h2{margin:0; font-family:var(--serif); font-size:22px; line-height:1.38; font-weight:700; letter-spacing:0; color:var(--ink);}
+  .featured h2{margin:0; font-size:22px; line-height:1.38; font-weight:800; letter-spacing:-0.01em; color:var(--ink);}
   .meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--mute2); font-weight:500;}
   .meta b{font-weight:700; color:var(--ink4);}
   .meta .sep{color:#D3DCEA;}
@@ -318,6 +319,19 @@
   .legend .it.off{color:var(--mute4);}
   .legend .it.off .sw{background:repeating-linear-gradient(90deg,var(--mute5) 0 3px,transparent 3px 6px); height:2px;}
   .axisnote{font-size:11px; color:var(--mute3); font-weight:500; margin-top:8px; line-height:1.5;}
+
+  /* ===== Market category pill bar (D7-AE-RC1) =====
+     시장 탭 전용 상단 세그먼트 컨트롤 — 좌측 rail의 중복 시장 nav를 대체한다(단일 진입점).
+     버튼 자체는 기존 navmkt 클릭 라우팅(openMarketCategory)을 그대로 쓰되(behavior 재사용),
+     시각 스타일만 가로 pill로 새로 정의한다(.lens 조상 의존 CSS를 상속하지 않으므로 독립 정의). */
+  .mkt-pillbar{display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 14px;}
+  .mkt-pill{display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border:1px solid var(--line);
+    border-radius:999px; background:var(--card); cursor:pointer; font:inherit; font-size:12.5px;
+    font-weight:700; color:var(--ink3); white-space:nowrap;}
+  .mkt-pill:hover{background:#F6F5F0;}
+  .mkt-pill.active{background:var(--sky-tint); border-color:var(--sky-bd); color:var(--sky);}
+  .mkt-pill .ndot{width:6px; height:6px; border-radius:50%; flex:none; background:var(--mute5);}
+  .mkt-pill.active .ndot{background:var(--sky);}
 
   /* ===== Market universe: category cards + maturity/country chips ===== */
   .mktcats{column-count:2; column-gap:12px; margin-top:9px;}
@@ -730,10 +744,16 @@
   .mktstatus .ms-item .ms-chip{align-self:flex-start;}
   .mktstatus .ms-why{font-size:10px; color:var(--mute3); line-height:1.45;}
   .mktstatus .ms-col.ms-priority .ms-why{color:var(--amber);}
-  /* 운영자 실행 — compact 접이식(장황한 안내는 details로 접고 기본은 버튼 3개 + 상태 한 줄만) */
+  /* 운영자 실행 — compact 접이식(D7-AE-RC1: 버튼 3개 자체가 기본 접힘 — 항상 보이는 건
+     opctl-head 요약 한 줄뿐. 비활성 CTA가 제품 기능처럼 크게 보이는 것을 막는다). */
   .opctl.compact{padding:14px 18px;}
   .opctl .opctl-oneline{font-size:12px; color:var(--mute2); font-weight:600;}
   .opctl .opctl-oneline .off{color:#A9433A; font-weight:800;}
+  .opctl-panel{margin-top:10px;}
+  .opctl-panel>summary{list-style:none; cursor:pointer; font-size:12px; font-weight:700;
+    color:var(--mute2); display:inline-flex; align-items:center; gap:6px; padding:2px 0;}
+  .opctl-panel>summary::-webkit-details-marker{display:none;}
+  .opctl-panel[open]>summary{margin-bottom:12px;}
   .opctl-more{margin-top:12px; border-top:1px solid var(--hair); padding-top:10px;}
   .opctl-more>summary{list-style:none; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--mute2); display:inline-flex; align-items:center; gap:6px;}
   .opctl-more>summary::-webkit-details-marker{display:none;}
@@ -754,7 +774,7 @@
       </div>
       <div>
         <div class="name">HDEC <b>EXECUTIVE RADAR</b></div>
-        <div class="sub">현대건설 임원용 외부 신호 브리프 · 대시보드 미리보기 (PREVIEW)</div>
+        <div class="sub">현대건설 임원용 신호 브리프 · 대시보드 미리보기 (PREVIEW)</div>
       </div>
     </div>
     <div class="hbar">
@@ -860,16 +880,10 @@
            공개 빌드: scope별 접이식 현장 목록 + 검색 + 클릭 필터. -->
       <div id="siteScopeNav" class="sitenav hidden" aria-live="polite"></div>
 
-      <!-- 시장 모니터링 (D7-AD-V) — 좌측 목차에서 시장 카테고리를 직접 탐색한다. 클릭 시 시장 탭 전환 +
-           해당 카테고리 카드로 스크롤. data-market 키는 CAT_ORDER와 일치(base_metals/steel_materials/
-           oil_refined/gas_lng/coal/rates_inflation). '금리·환율'은 rates_inflation 카드로 이동(환율 인접). -->
-      <div class="gtitle">시장 모니터링</div>
-      <button class="nav navmkt" data-market="base_metals"><span class="l"><span class="ndot" style="background:#8F6A2E;"></span><span class="nlabel">원자재·금속</span></span><span class="r"><span class="navgo">시세 열기 ▸</span></span></button>
-      <button class="nav navmkt" data-market="steel_materials"><span class="l"><span class="ndot" style="background:#8F6A2E;"></span><span class="nlabel">철강·건자재</span></span><span class="r"><span class="navgo">시세 열기 ▸</span></span></button>
-      <button class="nav navmkt" data-market="oil_refined"><span class="l"><span class="ndot" style="background:#8F6A2E;"></span><span class="nlabel">유가·정제유</span></span><span class="r"><span class="navgo">시세 열기 ▸</span></span></button>
-      <button class="nav navmkt" data-market="gas_lng"><span class="l"><span class="ndot" style="background:#3E5C80;"></span><span class="nlabel">가스·LNG</span></span><span class="r"><span class="navgo">시세 열기 ▸</span></span></button>
-      <button class="nav navmkt" data-market="coal"><span class="l"><span class="ndot"></span><span class="nlabel">석탄</span></span><span class="r"><span class="navgo">시세 열기 ▸</span></span></button>
-      <button class="nav navmkt" data-market="rates_inflation"><span class="l"><span class="ndot" style="background:#3E5C80;"></span><span class="nlabel">금리·환율</span></span><span class="r"><span class="navgo">시세 열기 ▸</span></span></button>
+      <!-- D7-AE-RC1: 좌측 목차의 시장 모니터링 섹션은 제거했다(사용자 지시: "좌측 시장
+           분류와 상단 시장 분류가 중복된다 · 좌측 시장 모니터링 nav는 제거하거나 접어라").
+           같은 이동 기능은 이제 시장 탭 상단의 단일 pill bar(#mktPillBar, panel-market
+           안)만 제공한다 — navmkt 클릭 라우팅(openMarketCategory)은 그대로 재사용한다. -->
 
       <!-- 기상 (D7-AD-V) — 뉴스가 아니라 명일(D+1) 정오 12:00 시공 리스크. 클릭 시 시장 탭 전환 +
            #siteWeatherCard로 스크롤(뉴스 카테고리 필터에서 제외). 실제 소스 연동은 별도 커밋(D7-AD-W). -->
@@ -877,52 +891,58 @@
       <button class="nav navwx" data-weather="risk"><span class="l"><span class="ndot" style="background:#3E5C80;"></span><span class="nlabel">명일 정오 시공 리스크</span></span><span class="r"><span class="navgo">리스크 표 열기 ▸</span></span></button>
     </aside>
 
-    <!-- =========== OPERATOR CONTROLS — 왼쪽 rail 하단 (D7-AD-U) ===========
-         운영자 실행을 화면 하단에서 왼쪽 rail 하단으로 끌어올렸다(하단 덩그러니 → 실행 범위와 함께).
-         수집/텔레그램/Teams 3버튼 + 상태 한 줄. 장황한 보안 안내·승인 PIN은 접이식 details로 접는다.
-         버튼은 운영 API(POST) 호출이며 GitHub로 이동하지 않는다. base URL은 preview-model island의
-         operator_api_base에서 읽는다(미설정=비활성 + '운영자 서버 미연결' 한 줄). 라벨/클래스/ID/보안
-         문구는 운영 계약(verify_operator_controls)을 위해 그대로 둔다. -->
+    <!-- =========== OPERATOR CONTROLS — 왼쪽 rail 하단 (D7-AE-RC1) ===========
+         사용자 실사용 QA: "운영자 서버 미연결 상태인데 버튼이 크게 보여서 제품 기능처럼
+         보인다." 수정: 3버튼+상태는 기본 닫힌 <details>(id=opctlPanel) 뒤로 접는다 — 항상
+         보이는 건 요약 줄(운영자 모드 · 미연결)뿐이다. 펼쳐야만 버튼이 드러난다("작은 설정
+         안내 또는 운영자 모드 전용 접힘 영역"). 운영 API base가 주입된(운영자) 빌드에서는
+         JS(wireOperatorControls)가 details를 자동으로 연다 — 그 경우에만 버튼이 바로 보인다.
+         버튼은 운영 API(POST) 호출이며 GitHub로 이동하지 않는다. base URL은 preview-model
+         island의 operator_api_base에서 읽는다. 라벨/클래스/ID/endpoint/보안 문구는 운영
+         계약(verify_operator_controls)을 위해 그대로 둔다 — 바뀐 건 시각적 프로미넌스뿐. -->
     <section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">
       <div class="opctl-head">
-        <span class="opctl-title">운영자 실행</span>
-        <span class="opctl-oneline" id="opUnsetLine"><span class="off">운영자 서버 미연결</span> · 운영 API 연결 시 버튼이 활성화됩니다</span>
+        <span class="opctl-title">운영자 모드</span>
+        <span class="opctl-oneline" id="opUnsetLine"><span class="off">운영자 서버 미연결</span> · 설정 시에만 아래에서 실행할 수 있습니다</span>
       </div>
-      <div class="opctl-actions">
-        <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
-                title="뉴스 수집 워크플로 실행 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-          <span class="opctl-btn-label">데이터 새로고침 실행</span>
-          <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
-        </button>
-        <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
-                title="승인 PIN 확인 후 텔레그램 전송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-          <span class="opctl-btn-label">텔레그램 전송 실행</span>
-          <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
-        </button>
-        <!-- Teams 채널 전송 (D7-AD-U) — 운영 API에 send-teams endpoint(operator_gateway.trigger_teams →
-             email-alert.yml dispatch)가 생겨 collect/telegram과 동일하게 배선됐다. 기본은 disabled로 두고
-             운영 API base가 주입된(운영자) 빌드에서 JS가 활성화한다. 정적 HTML은 GitHub Actions를 직접
-             호출하지 않는다 — 승인 PIN 검증·workflow_dispatch는 서버(operator_gateway)가 소유한다. -->
-        <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
-                title="승인 PIN 확인 후 Teams 채널로 즉시 발송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-          <span class="opctl-btn-label">Teams 채널 전송 실행</span>
-          <span class="opctl-btn-help">승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송합니다</span>
-        </button>
-      </div>
-      <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
-      <details class="opctl-more">
-        <summary>승인 PIN · 실행 안내 · 보안</summary>
-        <div class="opctl-pinrow">
-          <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
-          <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
-                 placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
+      <details class="opctl-panel" id="opctlPanel">
+        <summary class="opctl-panel-summary">운영자 실행 패널 (설정 필요) ▸</summary>
+        <div class="opctl-actions">
+          <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
+                  title="뉴스 수집 워크플로 실행 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+            <span class="opctl-btn-label">데이터 새로고침 실행</span>
+            <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
+          </button>
+          <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
+                  title="승인 PIN 확인 후 텔레그램 전송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+            <span class="opctl-btn-label">텔레그램 전송 실행</span>
+            <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
+          </button>
+          <!-- Teams 채널 전송 (D7-AD-U) — 운영 API에 send-teams endpoint(operator_gateway.trigger_teams →
+               email-alert.yml dispatch)가 생겨 collect/telegram과 동일하게 배선됐다. 기본은 disabled로 두고
+               운영 API base가 주입된(운영자) 빌드에서 JS가 활성화한다. 정적 HTML은 GitHub Actions를 직접
+               호출하지 않는다 — 승인 PIN 검증·workflow_dispatch는 서버(operator_gateway)가 소유한다. -->
+          <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
+                  title="승인 PIN 확인 후 Teams 채널로 즉시 발송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
+            <span class="opctl-btn-label">Teams 채널 전송 실행</span>
+            <span class="opctl-btn-help">승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송합니다</span>
+          </button>
         </div>
-        <ul class="opctl-notes">
-          <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
-          <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
-          <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
-          <li>Teams 채널 전송은 승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송됩니다(운영 API가 email-alert 워크플로를 실행).</li>
-        </ul>
+        <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
+        <details class="opctl-more">
+          <summary>승인 PIN · 실행 안내 · 보안</summary>
+          <div class="opctl-pinrow">
+            <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
+            <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
+                   placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
+          </div>
+          <ul class="opctl-notes">
+            <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
+            <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
+            <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
+            <li>Teams 채널 전송은 승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송됩니다(운영 API가 email-alert 워크플로를 실행).</li>
+          </ul>
+        </details>
       </details>
     </section>
     </div><!-- /railcol -->
@@ -1087,11 +1107,25 @@
 
       <!-- ====== TAB: 시장 ====== -->
       <section class="tabpanel hidden" id="panel-market">
-        <!-- 1) 정직성 스트립 -->
+        <!-- 1) 정직성 스트립 (D7-AE-RC1: 메인 뷰=자동 연동만, 대용/보고/미연동은 backlog로 이동) -->
         <div class="banner">
           <span>ⓘ</span>
-          <span>모든 시세는 공개·무료 <b>지연</b> / 대용(proxy) / 보고 기반 참고용이며 <b>현재 체결값이 아닙니다</b>.
-          공개 무료 소스가 없는 지표는 값을 만들지 않고 <b>미연동</b>으로 둡니다 (데모 미리보기). <b>NON-PRODUCTION PREVIEW</b>.</span>
+          <span>메인 화면은 공개·무료 <b>지연</b> 시세가 자동 연동된 지표만 표시하며 <b>현재 체결값이 아닙니다</b>.
+          대용(proxy)·보고 기반·미연동 지표는 값을 만들지 않고 각 카테고리 하단 "연동 후보" 접힘 영역으로 분리합니다.</span>
+        </div>
+
+        <!-- D7-AE-RC1 — 시장 카테고리 이동은 이 pill bar 하나뿐이다(좌측 rail의 중복 nav 제거,
+             사용자 지시). 버튼은 기존 navmkt 클릭 라우팅(openMarketCategory→해당 mcat-<cat>
+             카드로 스크롤)을 그대로 재사용한다 — data-market 키는 CAT_ORDER와 1:1. -->
+        <div class="mkt-pillbar" id="mktPillBar" role="tablist" aria-label="시장 카테고리 이동">
+          <button class="nav navmkt mkt-pill" data-market="equities"><span class="ndot" style="background:#3E5C80;"></span>현대건설 주가</button>
+          <button class="nav navmkt mkt-pill" data-market="base_metals"><span class="ndot" style="background:#8F6A2E;"></span>원자재·금속</button>
+          <button class="nav navmkt mkt-pill" data-market="steel_materials"><span class="ndot" style="background:#8F6A2E;"></span>철강·건자재</button>
+          <button class="nav navmkt mkt-pill" data-market="oil_refined"><span class="ndot" style="background:#8F6A2E;"></span>유가·정제유</button>
+          <button class="nav navmkt mkt-pill" data-market="gas_lng"><span class="ndot" style="background:#3E5C80;"></span>가스·LNG</button>
+          <button class="nav navmkt mkt-pill" data-market="coal"><span class="ndot"></span>석탄</button>
+          <button class="nav navmkt mkt-pill" data-market="rates_inflation"><span class="ndot" style="background:#3E5C80;"></span>금리·물가</button>
+          <button class="nav navmkt mkt-pill" data-market="fx"><span class="ndot" style="background:#3E5C80;"></span>환율</button>
         </div>
 
         <!-- 명일 정오 시공 리스크 (D7-AD-U 계약 · D7-AE 실연동) — 기상은 뉴스가 아니다.
@@ -1305,21 +1339,6 @@
           <div class="hz-fine" style="margin-top:8px;">데모 미리보기 고정값 · 라이브 AIS 통합이 아니며(미연동) 공개 AIS 소스/키 연동 전에는 프로덕션 값을 생성하지 않습니다.</div>
         </div>
 
-        <!-- Hyundai E&C market reaction (참고) -->
-        <div class="card" style="padding:18px 22px;">
-          <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-            <div class="panel" style="border:none; box-shadow:none; padding:0;">
-              <div class="ph">현대건설 시장 반응 <small>· 참고용</small></div>
-              <div class="pnote">주가·거래 반응은 <b>참고</b>이며 <b>투자 판단 근거가 아닙니다</b>. 거래용 실시간 시세 아님.</div>
-            </div>
-            <span class="dm delay">지연</span>
-          </div>
-          <div class="mrow" style="margin-top:8px;">
-            <span class="mn">현대건설 (종가, 지연)</span>
-            <span class="mv off">참고만</span>
-            <span class="md"><span class="delta flat">방향성 참고</span><span class="dm delay">지연</span></span>
-          </div>
-        </div>
       </section>
 
       <!-- ====== TAB: 초기신호 (검증 전 관찰 · 카더라 포함) ====== -->
@@ -1372,7 +1391,10 @@
     </div>
     <div style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
       <span id="dwMode"></span>
-      <span class="previewflag" style="margin:0;">데모 데이터</span>
+      <!-- D7-AE-RC1: 이 배지는 openDrawer가 종목이 실제로 데모(mock_demo)일 때만 보이게
+           켠다(JS 기본 hidden) — 실측 지연 시세 종목에 '데모 데이터'가 상시 노출되던
+           오탐을 없앤다. -->
+      <span class="previewflag hidden" id="dwDemoFlag" style="margin:0;">데모 데이터</span>
     </div>
     <div class="kpis">
       <div class="kpi"><div class="k">현재값 (지연/대용)</div><div class="v num" id="dwVal">—</div></div>
@@ -1626,7 +1648,9 @@
     {"id": "usdjpy", "label_kr": "USD/JPY", "en": "참고", "category": "fx", "value": "157.8",
      "unit": "", "delta": "▲ +0.3%", "dir": "up", "data_mode": "delayed_market", "spark": [44,45,46,45,47,48,47,49,48,50,49,51]},
     {"id": "usdcny", "label_kr": "USD/CNY", "en": "참고", "category": "fx", "value": "7.27",
-     "unit": "", "delta": "▲ +0.1%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,53]}
+     "unit": "", "delta": "▲ +0.1%", "dir": "up", "data_mode": "delayed_market", "spark": [48,49,48,50,49,51,50,52,51,53,52,53]},
+    {"id": "hdec_stock", "label_kr": "현대건설(000720)", "en": "Hyundai E&C", "category": "equities",
+     "value": null, "unit": "원", "delta": "", "dir": "flat", "data_mode": "delayed_market", "spark": []}
   ],
   "early_signals": [
     {"src": "X (엑스)", "state": "unverified_social", "stateLabel": "확인 전",
@@ -1854,10 +1878,24 @@ function displaySourceDomain(row){
   function railScroll(target) {
     if (target && target.scrollIntoView) target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+  // D7-AE-RC1: navmkt(시장 카테고리 pill)는 이제 #lensnav 밖(시장 탭 상단 #mktPillBar)에
+  // 산다 — active 토글/클리어는 좌측 rail과 pill bar를 모두 훑어야 한다(navwx는 여전히
+  // rail에 있음). 이 두 헬퍼가 흩어져 있던 4곳의 lensnav-only 스캔을 대체한다.
+  function navMktWxScopes() {
+    return [el("lensnav"), el("mktPillBar")].filter(Boolean);
+  }
+  function clearNavMktWxActive() {
+    navMktWxScopes().forEach(function (scope) {
+      [].forEach.call(scope.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
+        x.classList.remove("active");
+      });
+    });
+  }
   function setNavGoActive(b) {
-    var nav = el("lensnav"); if (!nav) return;
-    [].forEach.call(nav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
-      x.classList.toggle("active", x === b);
+    navMktWxScopes().forEach(function (scope) {
+      [].forEach.call(scope.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
+        x.classList.toggle("active", x === b);
+      });
     });
   }
   var NAV_CAT_PILLS = [
@@ -2047,11 +2085,7 @@ function displaySourceDomain(row){
     activePrimaryKey = null;
     activeSecondaryKey = "all";
     showCategoryView(false);
-    if (lensnav) {
-      [].forEach.call(lensnav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
-        x.classList.remove("active");
-      });
-    }
+    clearNavMktWxActive();
   }
   function renderLayeredNewsList(primaryKey, secondaryKey) {
     activeSiteFilter = null;
@@ -2173,10 +2207,8 @@ function displaySourceDomain(row){
       [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (n) {
         n.classList.toggle("active", n.getAttribute("data-filter") === primaryKey);
       });
-      [].forEach.call(lensnav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
-        x.classList.remove("active");
-      });
     }
+    clearNavMktWxActive();
     activeLensKey = primaryKey;
     renderLayeredNewsList(primaryKey, secondaryKey || "all");
     railScroll(el("categoryNewsList"));
@@ -2368,10 +2400,8 @@ function displaySourceDomain(row){
       [].forEach.call(lensnav.querySelectorAll(".nav[data-filter]"), function (n) {
         n.classList.toggle("active", n.getAttribute("data-filter") === scope);
       });
-      [].forEach.call(lensnav.querySelectorAll(".nav.navmkt, .nav.navwx"), function (x) {
-        x.classList.remove("active");
-      });
     }
+    clearNavMktWxActive();
     renderSiteNewsList(node, sec);
     showSiteFilterBar(node, rowsForSite(node).length);
     showSiteTreeForLens(scope);
@@ -2643,6 +2673,16 @@ function displaySourceDomain(row){
       selectLens(b.getAttribute("data-filter"));
     });
   }
+  // D7-AE-RC1 — 시장 카테고리 pill bar(#mktPillBar, panel-market 상단)는 #lensnav 밖에
+  // 있어 위 리스너가 안 잡는다. 같은 openMarketCategory 라우팅을 별도 리스너로 배선한다
+  // (좌측 rail 중복 제거 후 유일한 시장 카테고리 이동 경로).
+  var mktPillBar = el("mktPillBar");
+  if (mktPillBar) {
+    mktPillBar.addEventListener("click", function (ev) {
+      var b = ev.target.closest(".nav.navmkt"); if (!b) return;
+      openMarketCategory(b.getAttribute("data-market"), b);
+    });
+  }
 
   /* ---------- 빈 렌즈 분리: count==0 비핵심 렌즈를 하단 그룹으로 이동 ----------
      제품 규칙(D7-G Part B): 기본 사이드바에 0건 렌즈를 남기지 않는다. 핵심 렌즈(전체/즉시/신규/
@@ -2888,10 +2928,11 @@ function displaySourceDomain(row){
       '" stroke="' + (rising ? "#A9433A" : "#38684A") + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
   }
   var CAT_LABEL = {
-    base_metals: "원자재·금속", steel_materials: "철강·건자재", oil_refined: "유가·정제유",
-    gas_lng: "가스·LNG", coal: "석탄", rates_inflation: "금리·물가", fx: "환율"
+    equities: "현대건설 주가", base_metals: "원자재·금속", steel_materials: "철강·건자재",
+    oil_refined: "유가·정제유", gas_lng: "가스·LNG", coal: "석탄", rates_inflation: "금리·물가",
+    fx: "환율"
   };
-  var CAT_ORDER = ["base_metals", "steel_materials", "oil_refined", "gas_lng", "coal", "rates_inflation", "fx"];
+  var CAT_ORDER = ["equities", "base_metals", "steel_materials", "oil_refined", "gas_lng", "coal", "rates_inflation", "fx"];
   function isClickable(it) {
     // 기간 히스토리(1주/1개월/3개월/1년)가 연동된 종목만 클릭/차트를 허용 — 미연동은 비클릭.
     return !!(it.history && it.history["1m"] && it.history["1m"].length >= 2);
@@ -2911,6 +2952,26 @@ function displaySourceDomain(row){
      · isCurrentOnly  : 값은 있으나 기간 히스토리 없음 → 차트 없음(비클릭)
      · isUnavailable  : 값 자체 없음 → '—' · 미연동(차트·스파크라인 없음)
      · isProxy        : 대용(proxy) 종목(글로벌 벤치마크 · 국내 현물가 아님) */
+  // D7-AE-RC1 — 자동 연동(live/delayed) 계열만 "연동됨"으로 본다(사용자 지시:
+  // "proxy/manual/unavailable/mock/demo는 메인에서 숨긴다"). 두 조건을 모두 만족해야
+  // 한다:
+  //  (1) data_mode(설계상 분류)가 허용 목록이어야 한다 — proxy_market은 대용 종목이
+  //      영구 분류이므로, 그 종목의 기간 히스토리가 live로 성공해도(market_history leaf는
+  //      대용 여부와 무관하게 성공 시 항상 delayed_market을 붙인다) "진짜 지연 시세"로
+  //      승격되지 않는다(대용은 여전히 대용 — proxy_market 원천 차단).
+  //  (2) 그 종목에 실제 히스토리 근거(history_data_mode)가 있다면, 그것도 허용 목록이어야
+  //      한다 — data_mode는 정적 필드라 live 빌드에서 이 종목의 실측이 실패해 데모로
+  //      대체돼도 바뀌지 않는다. history_data_mode가 mock_demo면 "지연 시세"라고 주장하는
+  //      값이 사실은 오늘 데모로 대체된 것이므로 숨긴다(cnykrw류 실측 재현으로 발견).
+  var AUTO_LIVE_MODES = {live_market: 1, delayed_market: 1, live_macro: 1, delayed_macro: 1};
+  function effectiveDataMode(it) {
+    return it.history_data_mode || it.data_mode || "";
+  }
+  function isAutoLive(it) {
+    if (!AUTO_LIVE_MODES[it.data_mode]) return false;
+    if (it.history_data_mode && !AUTO_LIVE_MODES[it.history_data_mode]) return false;
+    return true;
+  }
   function marketState(it) {
     var v = it.value;
     var hasValue = v != null && v !== "" && v !== "—";
@@ -2918,6 +2979,7 @@ function displaySourceDomain(row){
     return {
       hasValue: hasValue,
       isProxy: !!it.proxy || it.data_mode === "proxy_market",
+      isAutoLive: isAutoLive(it),
       chartable: chartable,
       isCurrentOnly: hasValue && !chartable,
       isUnavailable: !hasValue
@@ -2993,7 +3055,7 @@ function displaySourceDomain(row){
   /* 시장 탭 중앙 — 카테고리 카드(클릭 시 상세 드로어). 전체 유니버스 노출.
      D7-U: 연동(현재값 보유) 행을 먼저 노출하고, 미연동(값 없음) 행은 카드 하단의 약화된
      '미연동 관찰 후보' 영역으로 분리한다 — 죽은 행이 섹션을 지배하지 못하게 한다(가짜 값 없음). */
-  function marketLinked(it) { return marketState(it).hasValue; }
+  function marketLinked(it) { var s = marketState(it); return s.hasValue && s.isAutoLive; }
   function renderCategoryCards() {
     var box = el("marketCategories"); if (!box) return; box.innerHTML = "";
     var items = MODEL.market_items || [];
@@ -3585,10 +3647,17 @@ function displaySourceDomain(row){
       // 기간 히스토리가 연동된 종목만 상세 차트를 연다(빈 차트 방지). 행도 비클릭이지만 방어적으로 막는다.
       if (!current || !(current.history && current.history["1m"] && current.history["1m"].length >= 2)) { current = null; return; }
       el("dwTitle").textContent = current.label_kr + (current.unit ? " (" + current.unit + ")" : "");
-      // 대용(proxy) 종목은 글로벌 벤치마크라 정확한 국내 현물가가 아님을 명시(과장 금지).
-      el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트 · 데모 미리보기"
+      // D7-AE-RC1: effectiveDataMode(history_data_mode 우선)로 실제 출처를 판단한다 — 이
+      // 종목이 정말 데모 대체값인지, 진짜 지연 실측인지는 정적 data_mode가 아니라 지금
+      // 표시된 값의 실제 근거(history_data_mode)로 가른다. 대용(proxy) 종목은 글로벌
+      // 벤치마크라 정확한 국내 현물가가 아님을 별도로 명시(과장 금지).
+      var isDemoNow = effectiveDataMode(current) === "mock_demo";
+      el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트"
+        + (isDemoNow ? " · 데모 미리보기" : " · 공개 시세(지연) 실측")
         + (current.proxy ? " · 대용(proxy) · " + (current.proxy_note || "정확한 국내 현물가 아님") : "");
-      el("dwMode").innerHTML = dmBadge(current.data_mode);
+      el("dwMode").innerHTML = dmBadge(effectiveDataMode(current));
+      var demoFlag = el("dwDemoFlag");
+      if (demoFlag) demoFlag.classList.toggle("hidden", !isDemoNow);
       var off = current.value == null;
       var vEl = el("dwVal"); vEl.textContent = off ? "—" : current.value; vEl.className = "v num" + (off ? " off" : "");
       var cEl = el("dwChg"); cEl.textContent = off ? "—" : (current.delta || "—");
@@ -3623,10 +3692,12 @@ function displaySourceDomain(row){
     });
   })();
 
-  /* ---------- Hormuz preview (모든 값 데모 고정 · AIS 하한 추정 · 라이브 미연동) ----------
-     주의: 이 카드의 수치는 preview 데모 고정값이다. 라이브 AIS 통합이 아니며 프로덕션 값을 만들지 않는다.
-     '현재 통항 중/대기·정박/평균 속도/신뢰도' 타일과 선종 분포는 현재 상태라 시간창과 무관하게 마크업 고정값을 유지한다.
-     시간창은 누적 통과 수(count) · 증감(delta) · 시간대 막대(bars)만 바꾼다. */
+  /* ---------- Hormuz preview — internal /dashboard-preview design tool only (D7-AE-RC1) ----------
+     사용자 실사용 QA: 공개 대시보드에 선박 통항 데모 수치가 실측처럼 보였다. 실 AIS 소스가
+     없어(저장소 전수 검색으로도 연동 참조를 찾지 못함) 빌더가 공개 산출물에서 위 관찰 카드
+     블록을 통째로 걷어낸다(build_static_dashboard.py의 데모 카드 제거 helper 참고). 아래
+     IIFE는 그 블록이 없으면 시간창 셀렉터 조회가 null이라 즉시 return한다 — 공개 산출물에서는
+     no-op, 이 내부 미리보기 템플릿에서만 동작한다. */
   (function () {
     var seg = el("hzTimeSeg"); if (!seg) return;
     var HZ = {
@@ -3710,6 +3781,8 @@ function displaySourceDomain(row){
     collectBtn.removeAttribute("aria-disabled"); sendBtn.removeAttribute("aria-disabled");
     if (teamsBtn) teamsBtn.removeAttribute("aria-disabled");
     if (unsetLine) unsetLine.style.display = "none";   // 연결됨 → '운영자 서버 미연결' 한 줄 숨김
+    var panel = el("opctlPanel");                       // D7-AE-RC1: 연결된(운영자) 빌드는
+    if (panel) panel.open = true;                        // 접힌 패널을 자동으로 펼친다
     var inflight = false;
     function run(btn, path, runningMsg, okMsg) {
       if (inflight || !path) return;                 // 중복 클릭 방지

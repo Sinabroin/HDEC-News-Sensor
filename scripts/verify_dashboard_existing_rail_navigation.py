@@ -137,11 +137,21 @@ def check_template() -> None:
           'class="nav navwx"' in t and "function openWeatherRisk" in t
           and 'el("siteWeatherCard")' in t
           and 'class="nav navcat" data-acc="weather"' not in t)
+    # D7-AE-RC1: 시장 카테고리 이동은 좌측 목차가 아니라 시장 탭 상단 pill bar
+    # (#mktPillBar)로 옮겼다(사용자 지시 — 좌측/상단 시장 nav 중복 제거, 상단 하나만
+    # 유지). navmkt 클래스와 클릭 라우팅(openMarketCategory)은 재사용하되 위치와 시각
+    # 클래스(mkt-pill 추가)가 바뀌었다 — 좌측 목차에는 더 이상 navmkt가 없어야 한다.
     for cat in MARKET_CATS:
-        check(f"7: 좌측 목차 시장 그룹 navmkt data-market='{cat}'",
-              f'class="nav navmkt" data-market="{cat}"' in t)
+        check(f"7: 시장 pill bar navmkt data-market='{cat}'",
+              f'data-market="{cat}"' in t and f'class="nav navmkt mkt-pill" data-market="{cat}"' in t)
     check("7: 시장 그룹 클릭이 카테고리 카드로 이동(openMarketCategory→mcat-<cat>)",
           "function openMarketCategory" in t and 'el("mcat-" + cat)' in t)
+    check("7: 시장 pill bar가 좌측 목차(#lensnav) 밖, 시장 탭(#panel-market) 안에 있음(문서 순서)",
+          'id="mktPillBar"' in t and 'id="lensnav"' in t and 'id="panel-market"' in t
+          and t.index('id="lensnav"') < t.index("</aside>", t.index('id="lensnav"'))
+          < t.index('id="panel-market"') < t.index('id="mktPillBar"'))
+    check("7: 좌측 목차(#lensnav)에는 더 이상 navmkt가 없음(중복 제거 완료)",
+          '<div class="gtitle">시장 모니터링</div>' not in t)
     check("8: 운영자 실행이 왼쪽 목차 하단 compact 카드(opctl compact)",
           'class="opctl compact"' in t and 'id="opctl"' in t)
     # 13 · 미연동은 후보/한계/다음 액션, FRED overlay는 provenance/caveat를 노출한다.
