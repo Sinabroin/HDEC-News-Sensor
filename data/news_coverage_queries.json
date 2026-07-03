@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "note": "D7-AF 임원 뉴스 coverage 확장 정책. Google News RSS와 Naver News Search API가 같은 query group을 사용한다. 검색 결과의 제목·짧은 snippet·출처·시각·원문 링크만 저장하며 실패 시 기사를 만들지 않는다.",
+  "groups": [
+    {
+      "name": "ai_infra_watch",
+      "label": "AI 인프라 투자",
+      "max_per_query": 3,
+      "max_total": 18,
+      "queries": [
+        "AI 데이터센터",
+        "AI 데이터센터 전력",
+        "반도체 메가투자",
+        "데이터센터 전력기기",
+        "AI 인프라 투자",
+        "GPU 데이터센터 전력망"
+      ],
+      "match_any": [
+        "AI 데이터센터",
+        "데이터센터 전력",
+        "반도체 메가투자",
+        "전력기기",
+        "18.4GW",
+        "15GW",
+        "AI compute",
+        "AI 컴퓨팅",
+        "AI chip",
+        "AI칩"
+      ]
+    },
+    {
+      "name": "deal_watch_project",
+      "label": "프로젝트·딜",
+      "max_per_query": 3,
+      "max_total": 18,
+      "queries": [
+        "본PF 개발사업",
+        "오피스 개발 본PF",
+        "데이터센터 PF",
+        "시행사 개발사업",
+        "선매각 오피스 개발",
+        "프로젝트 금융 건설"
+      ],
+      "match_any": [
+        "본PF",
+        "본 PF",
+        "오피스 개발",
+        "데이터센터 PF",
+        "시행사",
+        "선매각",
+        "프로젝트 금융",
+        "진원이앤씨",
+        "도곡 힐스테이트",
+        "시설 안전진단",
+        "시설안전진단",
+        "코매퍼"
+      ]
+    },
+    {
+      "name": "hmg_watch",
+      "label": "현대차그룹",
+      "max_per_query": 3,
+      "max_total": 15,
+      "queries": [
+        "현대오토에버 AX 조직개편",
+        "현대오토에버 RX사업실",
+        "현대차그룹 KAI AAM",
+        "현대로템 방산 우주",
+        "현대차그룹 SDV SDF"
+      ],
+      "match_any": [
+        "현대오토에버",
+        "RX사업실",
+        "RX 사업실",
+        "현대차그룹",
+        "KAI",
+        "AAM",
+        "현대로템",
+        "SDV",
+        "SDF"
+      ]
+    },
+    {
+      "name": "major_group_ai_watch",
+      "label": "주요 그룹 AI",
+      "max_per_query": 3,
+      "max_total": 18,
+      "queries": [
+        "삼성 CFO AI 조직",
+        "LG전자 로보틱스사업센터",
+        "LS그룹 AI 데이터센터 전력",
+        "GS그룹 AI 데이터센터",
+        "SK KKR 재생에너지 플랫폼",
+        "SKT 15GW AI 데이터센터"
+      ],
+      "match_any": [
+        "삼성·SK",
+        "삼성 SK",
+        "4550조",
+        "4,550조",
+        "CFO AI 조직",
+        "CFO 산하 AI",
+        "로보틱스사업센터",
+        "LS그룹",
+        "GS그룹",
+        "120조",
+        "SK KKR",
+        "SK·KKR",
+        "재생에너지 플랫폼",
+        "SKT",
+        "15GW"
+      ]
+    },
+    {
+      "name": "global_ai_watch",
+      "label": "글로벌 AI",
+      "max_per_query": 3,
+      "max_total": 18,
+      "queries": [
+        "Anthropic Samsung AI chip",
+        "Meta excess AI compute",
+        "Claude Sonnet 5",
+        "KPMG AI hallucination report",
+        "Virtue AI Meta"
+      ],
+      "match_any": [
+        "Anthropic",
+        "앤트로픽",
+        "Meta",
+        "메타",
+        "Fable",
+        "Mythos",
+        "KPMG",
+        "AI 환각",
+        "Claude Sonnet 5",
+        "클로드 소넷 5",
+        "Virtue AI"
+      ]
+    }
+  ]
+}

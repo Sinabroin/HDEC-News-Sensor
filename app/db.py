@@ -115,6 +115,19 @@ def get_existing_normalized_titles() -> set:
     return {row["normalized_title"] for row in rows}
 
 
+def get_existing_title_sources() -> set[tuple[str, str]]:
+    """cross-source 후보 보존용 (normalized_title, normalized source) 집합."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT normalized_title, source FROM articles "
+            "WHERE normalized_title IS NOT NULL"
+        ).fetchall()
+    return {
+        (row["normalized_title"], (row["source"] or "").strip().casefold())
+        for row in rows
+    }
+
+
 def fetch_all_articles() -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(

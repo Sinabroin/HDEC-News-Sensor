@@ -83,6 +83,8 @@ def build_brief_via_mock_pipeline() -> dict:
             "attempted_mode": collect_stats.get("attempted_mode"),
             "source_filtered": collect_stats.get("source_filtered"),
             "google_query_audit": collect_stats.get("google_query_audit"),
+            "thebell_candidates": collect_stats.get("thebell_candidates"),
+            "thebell_watch_status": collect_stats.get("thebell_watch_status"),
             # D7-AD-X — provider 상태(Google RSS + Naver API의 status/raw/dedup 카운트)를
             # brief까지 전달해 대시보드/리포트가 provider provenance를 표시할 수 있게 한다.
             # collector가 넘긴 값을 그대로 전달할 뿐이며 비밀값은 담기지 않는다 (rules.md §4).

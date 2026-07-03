@@ -24,8 +24,8 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import (config, global_press, lens_queries, news_access, site_watchlist,
-                 source_quality, topic_profiles)
+from app import (config, global_press, lens_queries, news_access, news_coverage,
+                 site_watchlist, source_quality, topic_profiles)
 
 KST = timezone(timedelta(hours=9))
 
@@ -66,6 +66,10 @@ SITE_PREFLIGHT_GROUP_BUDGET = 10
 # 동작하며, mock은 fetch_all을 거치지 않으므로 해외 섹션은 항상 빈 상태가 된다(가짜 없음).
 GLOBAL_PRESS_MAX_PER_QUERY = 2
 GLOBAL_PRESS_GROUP_BUDGET = 12
+# D7-AF: Weekly Brief/Deal Watch coverage group은 기존 HDEC 렌즈 예산과 분리해 얕은
+# additive pass를 갖는다. 그룹당 최대 8건으로 제한하며 검색 실패 시 audit만 남긴다.
+COVERAGE_MAX_PER_QUERY = 2
+COVERAGE_GROUP_BUDGET = 8
 # 대시보드 live 수집은 설정된 렌즈 그룹이 충분히 돌도록 전역 상한의 하한을 둔다 — 여전히
 # bounded(per-group/per-query 캡 + dedup 유지)이며 cfg가 더 크면 cfg 값을 따른다(폭주 방지).
 # 공개 빌드 total은 이 값으로 고정한다: 토목(civil)은 우선순위 preflight에서 수집하므로 total을
@@ -252,6 +256,39 @@ def _merge_lens_query_groups(groups: list[dict], cfg: dict) -> list[dict]:
         if group.get("name") == "default":
             return groups[:i] + lens_groups + groups[i:]
     return groups + lens_groups
+
+
+def _merge_coverage_query_groups(groups: list[dict], cfg: dict) -> list[dict]:
+    """D7-AF 중앙 coverage query group을 production Google RSS 경로에 합친다."""
+    existing = {q.strip().casefold()
+                for group in groups for q in (group.get("queries") or [])}
+    additions = []
+    for raw in news_coverage.collection_query_groups():
+        queries = []
+        for query in raw.get("queries") or []:
+            key = query.strip().casefold()
+            if not key or key in existing:
+                continue
+            existing.add(key)
+            queries.append(query)
+        if not queries:
+            continue
+        additions.append({
+            "name": raw["name"],
+            "label": raw["label"],
+            "queries": queries,
+            "max_per_query": min(
+                int(raw.get("max_per_query") or COVERAGE_MAX_PER_QUERY),
+                max(1, int(cfg.get("max_per_query", 4))),
+            ),
+            "max_total": int(raw.get("max_total") or COVERAGE_GROUP_BUDGET),
+        })
+    if not additions:
+        return groups
+    for index, group in enumerate(groups):
+        if group.get("name") == "default":
+            return groups[:index] + additions + groups[index:]
+    return groups + additions
 
 
 def _fetch(url: str, timeout: int) -> str:
@@ -547,6 +584,8 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
         query_groups = _merge_topic_profile_groups(query_groups, cfg)
         # P0-D7-E: 중앙 렌즈 정책의 렌즈 쿼리 그룹을 합쳐 렌즈 우선 수집을 한다(단일 소스 공유).
         query_groups = _merge_lens_query_groups(query_groups, cfg)
+        # D7-AF: 임원 Weekly Brief/Deal Watch coverage group을 같은 공개 RSS 경로에 합친다.
+        query_groups = _merge_coverage_query_groups(query_groups, cfg)
     if not query_groups:
         return []
 
@@ -569,9 +608,15 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     if sources_path is None:
         site_groups = site_watchlist.collection_query_groups()
         global_press_group = global_press.collection_query_group()
-    effective_cap = (max_total
-                     + len(site_groups) * SITE_PREFLIGHT_GROUP_BUDGET
-                     + (GLOBAL_PRESS_GROUP_BUDGET if global_press_group else 0))
+    coverage_names = {group["name"] for group in news_coverage.collection_query_groups()}
+    coverage_groups = [group for group in query_groups
+                       if group.get("name") in coverage_names]
+    effective_cap = (
+        max_total
+        + len(site_groups) * SITE_PREFLIGHT_GROUP_BUDGET
+        + (GLOBAL_PRESS_GROUP_BUDGET if global_press_group else 0)
+        + len(coverage_groups) * COVERAGE_GROUP_BUDGET
+    )
 
     seen_urls, results = set(), []
     filtered_urls = set()
@@ -625,6 +670,16 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
             if emitted == 0:
                 _emit_audit(query_audit, global_press_group, "", "skipped", 0, 0,
                             "global_press")
+
+        # 1d) D7-AF coverage pass — 앞선 렌즈가 전역 cap을 소진해도 Weekly Brief/Deal
+        #     Watch 그룹이 실제 검색되는 구조를 보장한다. 결과 0건은 그대로 0건이다.
+        for group in coverage_groups:
+            emitted = _collect_group(
+                group, max_per_query=COVERAGE_MAX_PER_QUERY,
+                group_budget=COVERAGE_GROUP_BUDGET, global_cap=effective_cap,
+                pass_label="coverage", **common)
+            if emitted == 0:
+                _emit_audit(query_audit, group, "", "skipped", 0, 0, "coverage")
 
     # 2) Normal 패스 — 모든 그룹을 순서대로 전역 cap(effective_cap)까지. preflight에서 본
     #    쿼리/URL은 dedup으로 건너뛰므로 중복 수집이 없다.

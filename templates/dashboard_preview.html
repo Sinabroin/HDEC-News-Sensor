@@ -665,6 +665,27 @@
   .catnews .cnl-card .cnl-score .l{font-size:10.5px; font-weight:700; margin-top:2px;}
   .catnews .cnl-empty{padding:28px 16px; text-align:center; font-size:13px; font-weight:600; color:var(--mute);}
   .catnews .cnl-note{margin-top:10px; font-size:11.5px; color:var(--mute3);}
+  /* D7-AF Deal Watch — 기사 전문 없이 metadata·한 줄 시사점·원문 링크만 표시. */
+  .dealwatch{margin-top:18px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; box-shadow:var(--shadow); padding:17px 19px;}
+  .dealwatch .dw-head{display:flex; align-items:baseline; justify-content:space-between;
+    gap:12px; flex-wrap:wrap; margin-bottom:10px;}
+  .dealwatch .dw-title{font-size:15px; font-weight:800; color:var(--ink);}
+  .dealwatch .dw-note{font-size:10.5px; color:var(--mute3);}
+  .dealwatch .dw-list{display:flex; flex-direction:column;}
+  .dealwatch .dw-row{padding:11px 0; border-top:1px solid var(--hair);}
+  .dealwatch .dw-row:first-child{border-top:none; padding-top:4px;}
+  .dealwatch .dw-row-title{font-size:13.5px; font-weight:750; line-height:1.45; color:var(--ink2);}
+  .dealwatch .dw-row-meta{display:flex; flex-wrap:wrap; align-items:center; gap:7px;
+    margin-top:6px; font-size:10.5px; color:var(--mute3);}
+  .dealwatch .dw-label{font-weight:800; color:var(--sky); background:var(--sky-tint);
+    border:1px solid var(--sky-bd); border-radius:999px; padding:2px 7px;}
+  .dealwatch .dw-limited{font-weight:800; color:var(--amber); background:var(--amber-tint);
+    border:1px solid var(--amber-bd); border-radius:999px; padding:2px 7px;}
+  .dealwatch .dw-insight{font-size:11.5px; line-height:1.55; color:var(--ink4); margin-top:7px;}
+  .dealwatch .dw-link{font-size:11px; font-weight:750; color:var(--sky); text-decoration:none;}
+  .dealwatch .dw-link:hover{text-decoration:underline;}
+  .dealwatch .dw-empty{padding:15px 0 5px; font-size:12px; color:var(--mute3);}
   @media (max-width:640px){
     .catnews .cnl-card{flex-direction:column;}
     .catnews .cnl-card .cnl-score{text-align:left;}
@@ -1048,6 +1069,15 @@
           <div class="cnl-empty hidden" id="cnlEmpty">현재 수집된 항목 없음</div>
           <div class="cnl-note hidden" id="cnlNote"></div>
         </div>
+
+        <section class="dealwatch" id="dealWatchSection" aria-labelledby="dealWatchTitle">
+          <div class="dw-head">
+            <h2 class="dw-title" id="dealWatchTitle">Deal Watch</h2>
+            <span class="dw-note">프로젝트·그룹·AI 인프라·자본시장 공개 신호</span>
+          </div>
+          <div class="dw-list" id="dealWatchRows"></div>
+          <div class="dw-empty hidden" id="dealWatchEmpty">현재 수집된 Deal Watch 후보가 없습니다.</div>
+        </section>
       </section>
 
       <!-- ====== TAB: AI 신호 ====== -->
@@ -1712,6 +1742,7 @@
     (MODEL.nav_category_sections || []).forEach(function (section) {
       (section.articles || []).forEach(add);
     });
+    (MODEL.deal_watch_rows || []).forEach(add);
     return out;
   }
   function findReaderArticle(target) {
@@ -2273,6 +2304,33 @@ function displaySourceDomain(row){
       if (!activePrimaryKey) return;
       renderLayeredNewsList(activePrimaryKey, key);
     });
+  })();
+
+  /* ---------- D7-AF Deal Watch compact list ----------
+     수집 metadata만 표시한다. 제한 기사는 상태를 명시하고 원문 링크를 유지한다. */
+  (function renderDealWatch() {
+    var box = el("dealWatchRows"), empty = el("dealWatchEmpty");
+    if (!box) return;
+    var rows = MODEL.deal_watch_rows || [];
+    box.innerHTML = rows.map(function (row) {
+      var link = externalArticleUrl(row);
+      var published = String(row.published_at || "").replace("T", " ")
+        .replace(/([+-]\d\d:\d\d|Z)$/, "");
+      var access = row.access_limited || row.subscription_required
+        ? '<span class="dw-limited">유료/제한</span>' : "";
+      var sourceLink = link
+        ? '<a class="dw-link" href="' + esc(link)
+          + '" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a>'
+        : "";
+      return '<article class="dw-row"><div class="dw-row-title">' + esc(row.title || "") + '</div>'
+        + '<div class="dw-row-meta"><span class="dw-label">'
+        + esc(row.deal_watch_label_name || row.deal_watch_label || "Deal Watch") + '</span>'
+        + '<span>' + esc(row.source || "출처 미상") + '</span>'
+        + (published ? '<span>' + esc(published) + '</span>' : "")
+        + access + sourceLink + '</div>'
+        + '<div class="dw-insight">' + esc(row.implication || "") + '</div></article>';
+    }).join("");
+    if (empty) empty.classList.toggle("hidden", !!rows.length);
   })();
 
   /* D7-AD-V: 본문 위 뉴스 카테고리 칩 필터(newsCatFilter)는 제거 — 2차 pill은 #cnlPills만 사용. */

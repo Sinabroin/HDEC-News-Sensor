@@ -17,8 +17,8 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from app import (
-    ai_value_chain, article_quality, config, db, decision_relevance, global_press, insight,
-    macro_snapshot, market_snapshot, radar, risk_events, scoring, source_quality,
+    ai_value_chain, article_quality, config, db, deal_watch, decision_relevance,
+    global_press, insight, macro_snapshot, market_snapshot, radar, risk_events, scoring, source_quality,
     surface_contracts, topic_profiles,
 )
 
@@ -2258,6 +2258,11 @@ def build_brief(pipeline_counts: dict | None = None,
     # D7-AD-X — provider 상태(Google RSS + Naver API status/raw/dedup 카운트)를 표시 전용으로
     # 통과시킨다. 점수/등급/라우팅을 재계산하지 않으며 비밀값을 담지 않는다(자격증명은 유무 bool만).
     news_provider_status = prov.get("provider_status") or {}
+    deal_watch_rows = deal_watch.build_dashboard_rows(scored)
+    thebell_watch_status = prov.get("thebell_watch_status") or {
+        "status": "unavailable", "candidate_count": 0,
+        "collection_method": "naver_search_api",
+    }
 
     # 참고/제외 · 출처 품질 감사 (P0-C1.8) — 카운트만 보이던 버킷을 감사 가능하게 한다.
     # 두 기준을 분리한다: 참고/제외=낮은 관련성 뉴스, 출처 품질 제외=비뉴스성 출처.
@@ -2280,6 +2285,8 @@ def build_brief(pipeline_counts: dict | None = None,
         # D7-AD-X — provider provenance(표시/감사 전용). 대시보드가 news_provider_summary를,
         # 감사가 provider별 status/raw/dedup 카운트를 여기서 읽는다 (비밀값 0건).
         "news_provider_status": news_provider_status,
+        "deal_watch_rows": deal_watch_rows,
+        "thebell_watch_status": thebell_watch_status,
         "risk_query_coverage": _risk_query_coverage(google_query_audit),
         "macro_data_mode": macro["macro_data_mode"],
         "macro_source": macro.get("source"),

@@ -7,8 +7,13 @@
     "enabled": true,
     "locale": { "hl": "en", "gl": "US", "ceid": "US:en" },
     "max_per_query": 2,
-    "max_total": 12,
+    "max_total": 22,
     "queries": [
+      "Anthropic Samsung AI chip",
+      "Meta excess AI compute sale",
+      "Claude Sonnet 5 launch",
+      "KPMG AI hallucination report withdrawn",
+      "Virtue AI Meta team acquisition",
       "AI data center construction power",
       "hyperscale data center electricity demand grid",
       "small modular reactor SMR data center power",
@@ -25,7 +30,7 @@
   "foreign_source_label": "해외 언론",
   "foreign_outlets": [
     "Reuters", "Bloomberg", "CNBC", "Wall Street Journal", "The Wall Street Journal",
-    "Financial Times", "The New York Times", "New York Times", "Associated Press",
+    "Financial Times", "The Information", "The New York Times", "New York Times", "Associated Press",
     "AP News", "Nikkei", "Nikkei Asia", "The Economist", "BBC", "CNN", "Forbes",
     "TechCrunch", "The Verge", "Ars Technica", "Yahoo Finance", "Business Insider",
     "Al Jazeera", "The Guardian", "South China Morning Post", "Power Magazine",

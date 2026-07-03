@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config, source_quality
+from app import config, news_coverage, source_quality
 
 KST = timezone(timedelta(hours=9))
 
@@ -217,7 +217,7 @@ def _status_only(status: str, attempted: int = 0,
 
 
 def fetch(timeout: int | None = None, sources_path=None,
-          filtered_out: list | None = None) -> dict:
+          filtered_out: list | None = None, include_coverage: bool = True) -> dict:
     """설정된 쿼리에 대해 공식 Naver 검색 API를 호출해 raw dict + 상태를 돌려준다.
 
     반환 계약 (collector 오케스트레이션 + 감사가 소비):
@@ -242,7 +242,18 @@ def fetch(timeout: int | None = None, sources_path=None,
         return _status_only(STATUS_SKIPPED_MISSING_CREDENTIALS, credentials_present=False)
 
     cfg = _load_sources(sources_path)
-    queries = [q for q in (cfg.get("queries") or []) if isinstance(q, str) and q.strip()]
+    configured = [q for q in (cfg.get("queries") or [])
+                  if isinstance(q, str) and q.strip()]
+    # D7-AF: Google RSS와 동일한 중앙 coverage query group을 Naver API에도 연결한다.
+    # 순서를 보존하며 중복 query만 제거한다.
+    queries, seen_queries = [], set()
+    coverage_queries = news_coverage.all_queries() if include_coverage else []
+    for query in coverage_queries + configured:
+        key = query.strip().casefold()
+        if not key or key in seen_queries:
+            continue
+        seen_queries.add(key)
+        queries.append(query)
     if not queries:
         return _status_only(STATUS_ERROR, credentials_present=True)
 

@@ -87,15 +87,19 @@ def _to_article_row(raw: dict, queries: list[str], collected_at: str,
 
 
 def _dedup(rows: list[dict]) -> list[dict]:
-    """배치 내 dedup: url_hash 우선, 다음 normalized_title. 첫 기사를 유지한다."""
+    """배치 내 dedup: URL 또는 같은 출처의 normalized_title 중복만 제거한다."""
     seen_hashes, seen_titles, kept = set(), set(), []
     for row in rows:
         if row["url_hash"] in seen_hashes:
             continue
-        if row["normalized_title"] and row["normalized_title"] in seen_titles:
+        title_source = (
+            row["normalized_title"],
+            (row.get("source") or "").strip().casefold(),
+        )
+        if row["normalized_title"] and title_source in seen_titles:
             continue
         seen_hashes.add(row["url_hash"])
-        seen_titles.add(row["normalized_title"])
+        seen_titles.add(title_source)
         kept.append(row)
     return kept
 
@@ -121,7 +125,7 @@ def merge_provider_articles(rows: list[dict]) -> list[dict]:
     """
     kept: list[dict] = []
     by_url: dict[str, int] = {}
-    by_title: dict[str, int] = {}
+    by_title: dict[str, list[int]] = {}
     providers: list[set] = []
 
     for raw in rows:
@@ -133,7 +137,16 @@ def merge_provider_articles(rows: list[dict]) -> list[dict]:
 
         idx = by_url.get(uh)
         if idx is None and nt:
-            idx = by_title.get(nt)
+            # 같은 제목이어도 Reuters/TheBell처럼 서로 다른 원문 후보는 보존한다.
+            # 동일 매체이거나 한쪽 매체가 미상인 provider 재전송만 병합한다.
+            incoming_source = (raw.get("source") or "").strip().casefold()
+            for candidate_idx in by_title.get(nt, []):
+                existing_source = (kept[candidate_idx].get("source") or "").strip().casefold()
+                unknown = {"", "출처 미상", "unknown"}
+                if (incoming_source == existing_source
+                        or incoming_source in unknown or existing_source in unknown):
+                    idx = candidate_idx
+                    break
 
         if idx is None:
             entry = dict(raw)
@@ -142,7 +155,7 @@ def merge_provider_articles(rows: list[dict]) -> list[dict]:
             i = len(kept) - 1
             by_url[uh] = i
             if nt:
-                by_title.setdefault(nt, i)
+                by_title.setdefault(nt, []).append(i)
             providers.append({prov})
             continue
 
@@ -203,13 +216,18 @@ def _ingest(raw_articles: list[dict], signal_origin: str) -> tuple[int, int, int
             for raw in raw_articles]
     deduped = _dedup(rows)
 
-    existing_titles = db.get_existing_normalized_titles()
+    existing_title_sources = db.get_existing_title_sources()
     inserted = 0
     for row in deduped:
-        if row["normalized_title"] and row["normalized_title"] in existing_titles:
+        title_source = (
+            row["normalized_title"],
+            (row.get("source") or "").strip().casefold(),
+        )
+        if row["normalized_title"] and title_source in existing_title_sources:
             continue
         if db.insert_article(row):
             inserted += 1
+            existing_title_sources.add(title_source)
     return len(rows), len(deduped), inserted
 
 
@@ -238,7 +256,7 @@ def _run_live() -> dict:
     네트워크 import 금지). Naver는 기본 off(disabled)이며 자격증명이 없으면 정직하게 skip한다
     (전체 수집을 실패시키지 않는다). live가 0건이면 가짜 live를 만들지 않고 mock으로 fallback한다.
     """
-    from app import live_collector, naver_news_provider
+    from app import live_collector, naver_news_provider, thebell_watch
 
     # 출처 품질로 수집 단계에서 제외된 비뉴스성 항목을 감사용으로 함께 받는다 (P0-C1.8).
     source_filtered: list[dict] = []
@@ -269,6 +287,9 @@ def _run_live() -> dict:
         naver_result = {"provider": naver_news_provider.PROVIDER,
                         "status": naver_news_provider.STATUS_ERROR, "articles": []}
     naver_rows = naver_result.get("articles") or []
+    # TheBell은 Naver 검색 metadata에서만 후보를 파생한다. 별도 기사 페이지 요청이나
+    # 제한 우회는 없으며 제목·짧은 snippet·시각·링크만 보존한다.
+    thebell_candidates = thebell_watch.extract_candidates(naver_rows)
 
     # 교차 dedup — Naver-only는 보존하고, 동일 사건은 provider 근거를 합쳐 하나로 만든다.
     combined = merge_provider_articles(google_rows + naver_rows)
@@ -302,6 +323,13 @@ def _run_live() -> dict:
         "fallback_used": False,
         "source_filtered": source_filtered,
         "google_query_audit": google_query_audit,
+        "thebell_candidates": thebell_candidates,
+        "thebell_watch_status": {
+            "status": "active" if thebell_candidates else (
+                "unavailable" if naver_result.get("status") != "active" else "empty"),
+            "candidate_count": len(thebell_candidates),
+            "collection_method": "naver_search_api",
+        },
         # provider 상태 — 비밀값 0건(자격증명은 유무 bool만). 감사/운영자/대시보드가 어느
         # provider가 active/skip/error이고 각 단계(raw→dedup)에서 몇 건이 살아남았는지 본다.
         # naver_only/dedup_merged로 Naver가 '보조 코드'가 아니라 실제 1급 provider임을 기록한다.

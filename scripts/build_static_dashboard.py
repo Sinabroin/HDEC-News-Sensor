@@ -2234,6 +2234,8 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
         mode=weather_mode, now=(brief or {}).get("generated_at")))
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
+    model["deal_watch_rows"] = list(brief.get("deal_watch_rows") or [])
+    model["thebell_watch_status"] = dict(brief.get("thebell_watch_status") or {})
     model["lens_banks"] = parts["lens_banks"]
     model["lens_counts"] = parts["bank_counts"]
     model["featured_row"] = parts.get("featured_row")

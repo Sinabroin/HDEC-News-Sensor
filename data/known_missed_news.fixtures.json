@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "purpose": "D7-AF collector/query coverage와 offline classifier 회귀 fixture. 실시간 기사 존재나 전문 접근을 보장하지 않는다.",
+  "fixtures": [
+    {
+      "id": "weekly_samsung_sk_4550",
+      "title_hint": "삼성·SK 4,550조대 AI·반도체 메가투자",
+      "must_match_any": ["삼성·SK", "4,550조", "반도체 메가투자"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["naver_news", "google_news", "public_search"],
+      "required": true,
+      "notes": "주요 그룹 장기 AI·반도체 투자"
+    },
+    {
+      "id": "weekly_ai_dc_550",
+      "title_hint": "AI 데이터센터 550조·18.4GW 로드맵",
+      "must_match_any": ["AI 데이터센터", "550조", "18.4GW"],
+      "expected_query_group": "ai_infra_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["naver_news", "google_news", "public_search"],
+      "required": true,
+      "notes": "데이터센터 전력 수요 로드맵"
+    },
+    {
+      "id": "weekly_skt_15gw",
+      "title_hint": "SKT 중심 SK그룹 15GW AI 데이터센터 로드맵",
+      "must_match_any": ["SKT", "SK그룹", "15GW"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["naver_news", "google_news", "public_search"],
+      "required": true,
+      "notes": "그룹 AI 데이터센터 계획"
+    },
+    {
+      "id": "weekly_sk_kkr",
+      "title_hint": "SK·KKR 2조원 재생에너지 플랫폼",
+      "must_match_any": ["SK·KKR", "KKR", "재생에너지 플랫폼"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "capital_markets",
+      "expected_source_family": ["naver_news", "google_news", "thebell"],
+      "required": true,
+      "notes": "인프라 플랫폼 투자·조달"
+    },
+    {
+      "id": "weekly_hd_power_11",
+      "title_hint": "HD현대일렉트릭 AI 데이터센터 전력기기 패키지 1.1조 공급",
+      "must_match_any": ["HD현대일렉트릭", "전력기기", "1.1조"],
+      "expected_query_group": "ai_infra_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["naver_news", "google_news"],
+      "required": true,
+      "notes": "전력기기 공급망"
+    },
+    {
+      "id": "weekly_meta_compute",
+      "title_hint": "Meta 잉여 AI 컴퓨팅 판매 검토",
+      "must_match_any": ["Meta", "잉여 AI 컴퓨팅", "AI compute"],
+      "expected_query_group": "global_ai_watch",
+      "expected_deal_watch_label": "global_issues",
+      "expected_source_family": ["google_news", "public_search"],
+      "required": true,
+      "notes": "글로벌 AI compute 시장"
+    },
+    {
+      "id": "weekly_anthropic_samsung_chip",
+      "title_hint": "앤트로픽 삼성전자와 자체 AI칩 생산 논의",
+      "must_match_any": ["앤트로픽", "삼성전자", "AI칩"],
+      "expected_query_group": "global_ai_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["google_news", "public_search"],
+      "required": true,
+      "notes": "AI 칩 공급망"
+    },
+    {
+      "id": "weekly_fable_mythos",
+      "title_hint": "미국 앤트로픽 Fable·Mythos 수출통제 해제",
+      "must_match_any": ["Fable", "Mythos", "수출통제"],
+      "expected_query_group": "global_ai_watch",
+      "expected_deal_watch_label": "global_issues",
+      "expected_source_family": ["google_news", "public_search"],
+      "required": true,
+      "notes": "글로벌 AI 정책"
+    },
+    {
+      "id": "weekly_kpmg_hallucination",
+      "title_hint": "KPMG 보고서 회수 AI 환각 리스크",
+      "must_match_any": ["KPMG", "보고서 회수", "AI 환각"],
+      "expected_query_group": "global_ai_watch",
+      "expected_deal_watch_label": "global_issues",
+      "expected_source_family": ["google_news", "public_search"],
+      "required": true,
+      "notes": "AI 거버넌스 리스크"
+    },
+    {
+      "id": "weekly_claude_sonnet_5",
+      "title_hint": "Claude Sonnet 5 출시",
+      "must_match_any": ["Claude Sonnet 5", "출시"],
+      "expected_query_group": "global_ai_watch",
+      "expected_deal_watch_label": "global_issues",
+      "expected_source_family": ["google_news", "public_search"],
+      "required": true,
+      "notes": "글로벌 AI 모델 동향"
+    },
+    {
+      "id": "weekly_meta_virtue",
+      "title_hint": "Meta Virtue AI 창업자·팀 영입",
+      "must_match_any": ["Meta", "Virtue AI", "창업자"],
+      "expected_query_group": "global_ai_watch",
+      "expected_deal_watch_label": "global_issues",
+      "expected_source_family": ["google_news", "public_search"],
+      "required": true,
+      "notes": "글로벌 AI 인재 이동"
+    },
+    {
+      "id": "deal_jinwon_dogok_pf",
+      "title_hint": "진원이앤씨 도곡 힐스테이트 갤러리 부지 개발 본PF",
+      "must_match_any": ["진원이앤씨", "도곡 힐스테이트", "본PF"],
+      "expected_query_group": "deal_watch_project",
+      "expected_deal_watch_label": "project",
+      "expected_source_family": ["naver_news", "thebell"],
+      "required": true,
+      "notes": "개발사업 본PF"
+    },
+    {
+      "id": "deal_gs_120",
+      "title_hint": "GS그룹 120조 AI 데이터센터 투자 본격화 및 조달 구조",
+      "must_match_any": ["GS그룹", "120조", "AI 데이터센터"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["naver_news", "thebell", "google_news"],
+      "required": true,
+      "notes": "그룹 투자·조달"
+    },
+    {
+      "id": "deal_comapper",
+      "title_hint": "코매퍼 AI 기반 시설 안전진단 솔루션 글로벌 확장",
+      "must_match_any": ["코매퍼", "시설 안전진단", "글로벌 확장"],
+      "expected_query_group": "deal_watch_project",
+      "expected_deal_watch_label": "construction_industry",
+      "expected_source_family": ["naver_news", "thebell"],
+      "required": true,
+      "notes": "건설 테크"
+    },
+    {
+      "id": "deal_autoever_rx",
+      "title_hint": "현대오토에버 AX 중심 조직개편 RX사업실 신설",
+      "must_match_any": ["현대오토에버", "AX", "RX사업실"],
+      "expected_query_group": "hmg_watch",
+      "expected_deal_watch_label": "hmg",
+      "expected_source_family": ["naver_news", "thebell", "google_news"],
+      "required": true,
+      "notes": "HMG 조직개편"
+    },
+    {
+      "id": "deal_hmg_kai_aam",
+      "title_hint": "현대차그룹 KAI와 AAM 협력 확대 빅딜 가능성",
+      "must_match_any": ["현대차그룹", "KAI", "AAM"],
+      "expected_query_group": "hmg_watch",
+      "expected_deal_watch_label": "hmg",
+      "expected_source_family": ["naver_news", "thebell", "google_news"],
+      "required": true,
+      "notes": "AAM 협력·딜"
+    },
+    {
+      "id": "deal_lg_robotics",
+      "title_hint": "LG전자 로보틱스사업센터 출범",
+      "must_match_any": ["LG전자", "로보틱스사업센터", "출범"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "major_groups",
+      "expected_source_family": ["naver_news", "thebell", "google_news"],
+      "required": true,
+      "notes": "주요 그룹 조직개편"
+    },
+    {
+      "id": "deal_ls_power_chain",
+      "title_hint": "LS그룹 AI 데이터센터 전력 인프라 밸류체인",
+      "must_match_any": ["LS그룹", "AI 데이터센터", "전력 인프라"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "ai_infra",
+      "expected_source_family": ["naver_news", "thebell", "google_news"],
+      "required": true,
+      "notes": "전력 인프라 밸류체인"
+    },
+    {
+      "id": "deal_samsung_cfo_ai",
+      "title_hint": "삼성 계열사 CFO 산하 AI 조직 신설",
+      "must_match_any": ["삼성", "CFO 산하", "AI 조직"],
+      "expected_query_group": "major_group_ai_watch",
+      "expected_deal_watch_label": "major_groups",
+      "expected_source_family": ["naver_news", "thebell", "google_news"],
+      "required": true,
+      "notes": "주요 그룹 AI 조직"
+    }
+  ]
+}
