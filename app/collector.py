@@ -252,6 +252,15 @@ def _run_live() -> dict:
         google_query_audit = []
     google_status = "active" if google_rows else "skipped"
 
+    # D7-AE-RC1 — 원문 URL 최선노력 해석. fetch_all 자체는 오프라인 테스트 표면이라 자동
+    # 실행하지 않으므로, 실제 live 진입점인 여기서만 명시적으로 켠다. 실패해도(네트워크
+    # 없음/타임아웃/포맷 변경) google_rows는 원래 값 그대로 쓰인다 — 수집을 막지 않는다.
+    if google_rows:
+        try:
+            live_collector.resolve_publisher_urls(google_rows)
+        except Exception:  # noqa: BLE001 — 최선노력, 실패해도 수집 결과는 그대로 진행
+            pass
+
     # Naver 보조 provider — 기본 off면 네트워크 0건(status=disabled), 자격증명 없으면 정직 skip.
     naver_filtered: list[dict] = []
     try:
