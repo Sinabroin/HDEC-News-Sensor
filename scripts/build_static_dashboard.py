@@ -1665,23 +1665,46 @@ def _fmt_market_value(value, decimals: int) -> str:
     return f"{num:,.{decimals}f}"
 
 
+_MARKET_AUTO_LIVE_MODES = {"live_market", "delayed_market", "live_macro", "delayed_macro"}
+
+
+def _market_is_auto_live(it: dict) -> bool:
+    """이 행이 메인 뷰 자격(자동 live/delayed)이 있는지 — 템플릿 JS isAutoLive와 동일 규칙.
+
+    두 조건 모두 필요하다(D7-AE-RC1): (1) data_mode(설계상 분류)가 허용 목록 —
+    proxy_market/manual_or_reported/unavailable은 값이 있어도 영구적으로 자격이 없다
+    (대용 종목은 기간 히스토리가 live로 성공해도 여전히 대용). (2) history_data_mode가
+    있다면 그것도 허용 목록 — 정적 data_mode는 안 바뀌므로, live 빌드에서 실측이 실패해
+    데모로 대체된 행(예: cnykrw)을 잡아낸다.
+    """
+    if it.get("data_mode") not in _MARKET_AUTO_LIVE_MODES:
+        return False
+    hist_mode = it.get("history_data_mode")
+    if hist_mode and hist_mode not in _MARKET_AUTO_LIVE_MODES:
+        return False
+    return True
+
+
 def _market_link_counts(items: list) -> dict:
-    """시장 지표 연동/미연동 분포 카운트(D7-U). 렌더 JS의 marketState와 동일 규칙:
+    """시장 지표 연동/미연동 분포 카운트(D7-U, D7-AE-RC1 갱신). 렌더 JS의 marketState/
+    isAutoLive와 동일 규칙:
 
-    · linked  = 현재값 보유(미연동 아님). 지연/대용/보고 값 모두 포함(라벨로 출처 명시).
-    · unlinked= 값 자체 없음(value null/—) → 하단 '미연동 관찰 후보'로 분리(deprioritized).
-    · chartless= 값은 있으나 1개월 실데이터 히스토리(≥2점)가 없어 상세 차트가 없는 행(linked 부분집합).
+    · linked  = 값 보유 ∧ 자동 live/delayed(_market_is_auto_live). proxy/manual/미연동/
+      데모대체는 값이 있어도 제외한다(메인 뷰에 안 보이므로 linked로 세면 안 된다).
+    · unlinked= linked가 아닌 전부(값 없음 + proxy/manual/데모대체) → '연동 후보' 접힘으로.
+    · chartless= linked 중 1개월 실데이터 히스토리(≥2점)가 없어 상세 차트가 없는 행.
 
-    값을 만들어내지 않는다 — 미연동을 가짜로 linked로 올리지 않는다(정직성).
+    값을 만들어내지 않는다 — 미연동/대용/데모대체를 가짜로 linked로 올리지 않는다(정직성).
     """
     linked = unlinked = chartless = 0
     for it in items or []:
         v = it.get("value")
         has_value = v is not None and str(v).strip() not in ("", "—")
+        auto_live = has_value and _market_is_auto_live(it)
         hist = it.get("history") if isinstance(it.get("history"), dict) else {}
         arr = (hist or {}).get("1m") or []
         chartable = len([x for x in arr if isinstance(x, (int, float))]) >= 2
-        if has_value:
+        if auto_live:
             linked += 1
             if not chartable:
                 chartless += 1

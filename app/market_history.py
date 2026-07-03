@@ -124,6 +124,11 @@ _SUPPORTED = [
     _Spec("hkdkrw", "HKDKRW=X", 196.3, 1, 1.0, 50, 500, "원"),
     _Spec("inrkrw", "INRKRW=X", 18.42, 2, 1.0, 3, 60, "원"),
     _Spec("aedkrw", "AEDKRW=X", 418.5, 1, 1.0, 100, 1000, "원"),
+    # D7-AE-RC1: 현대건설 보통주(KRX 000720) — 사용자 실사용 QA 요구. 심볼은 Yahoo Finance
+    # chart API 실 GET 프로빙으로 검증(가짜 심볼 없음 — 2026-07-02 실측 종가 115,200원,
+    # currency=KRW 확인). KRX 상장주라 지연 시세(무인증 공개)이며 체결값이 아니다 — 다른
+    # delayed_market 종목과 동일 정직성 계약. base는 프로빙 시점 실측 종가(데모 픽스처 앵커).
+    _Spec("hdec_stock", "000720.KS", 115200.0, 0, 1.0, 10000, 400000, "원"),
 ]
 _BY_ID = {s.id: s for s in _SUPPORTED}
 

@@ -35,6 +35,16 @@
 표기: 소스열의 ✔=이 저장소에서 실측 검증된 무료 소스, ▲=무료지만 대용(proxy),
 ✖=무료 소스 없음(유료 전용 또는 부재). "자동"=워크플로 live 빌드에서 자동 갱신.
 
+### 주식 (equities · 1종, D7-AE-RC1 신규)
+
+사용자 실사용 QA: "현대건설 주가도 자동 갱신 그래프가 있어야 한다." KRX 상장주는
+공개·무료 실시간 소스가 없어 지연 시세(Yahoo chart, 무인증)로 연동한다 — 다른
+delayed_market 종목과 동일 정직성 계약(체결값 아님 명시).
+
+| id | 지표 | 사업 질문 | 소스 사실 | 성격 | 자동/차트 | 중요도 | 최종 판단 |
+|---|---|---|---|---|---|---|---|
+| hdec_stock | 현대건설(000720) | 자사주가·시가총액·시장 신뢰도 프록시 | ✔ Yahoo `000720.KS`(프로브 실측 2026-07-02 115,200원, currency=KRW) | delayed | ○/○ | 상 | keep_live |
+
 ### 환율 (fx · 19종)
 
 | id | 지표 | 사업 질문 | 소스 사실 | 성격 | 자동/차트 | 중요도 | 최종 판단 |
@@ -120,7 +130,7 @@
 
 ## 3. 집계
 
-- keep_live: **27** (기존 22 + D7-AE 승격 5: chf/sgd/hkd/inr/aed·KRW)
+- keep_live: **28** (기존 22 + D7-AE 승격 5: chf/sgd/hkd/inr/aed·KRW + D7-AE-RC1 hdec_stock)
 - keep_proxy_with_caveat: **6** (철광석·열연·철근SLX·경유HO환산·연료탄API2·KR10Y OECD)
 - keep_manual_report_only: **3** (시멘트·두바이유·JKM — 전부 값 null·as-of 없는 정적값 금지)
 - move_to_backlog: **10** (SAR/QAR/TWD KRW·니켈·아연·철스크랩·역청·원료탄·미 CPI·미 기준금리)
