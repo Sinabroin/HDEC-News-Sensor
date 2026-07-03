@@ -481,8 +481,11 @@ def _has_overseas_biz_context(title: str) -> bool:
 # macro는 폴백이 없다 — 금리/환율 기사에 '유가·에너지' 라벨을 강제하는 것도 오분류다.
 _CATEGORY_FALLBACK_LENS = {"dc_power": "new_energy", "mideast_overseas": "global_business",
                            "safety": "safety_quality"}
+# risk_regulation 섹션은 폴백을 주지 않는다(D7-AE-RC3 라이브 실측): 이 섹션엔 평가/수상
+# PR("상호협력평가 최우수")류가 섞이는데, 안전 키워드가 하나도 없어 폴백까지 온 기사를
+# safety_quality로 되살리는 건 사용자 규칙("사고/중대재해/부실시공/특별감독/품질 이슈가
+# 명확할 때만") 위반이다. category=safety(브리핑의 강한 리스크 분류)만 폴백을 유지한다.
 _SECTION_FALLBACK_LENS = {"business_overseas": "global_business",
-                          "risk_regulation": "safety_quality",
                           "competitor_supply": "competitor_contractors"}
 
 
@@ -593,13 +596,15 @@ def _lens_for_with_reasons(sig) -> tuple:
     # generic_ai 레이어는 폴백 자체를 받지 않는다(무렌즈 무노출 — D7-S2 fail-safe 유지).
     if (not (keys - _STATE_LENS)
             and value_chain.get("ai_value_chain_layer") != ai_value_chain.LAYER_GENERIC_AI):
-        fb = (_CATEGORY_FALLBACK_LENS.get(sig.get("category"))
-              or _SECTION_FALLBACK_LENS.get(sig.get("radar_section")))
+        fb = _CATEGORY_FALLBACK_LENS.get(sig.get("category"))
+        fb_driver = sig.get("category")
+        if not fb:
+            fb = _SECTION_FALLBACK_LENS.get(sig.get("radar_section"))
+            fb_driver = sig.get("radar_section")
         fb_gate_ok = fb != "global_business" or _has_overseas_marker(raw_title)
         if fb and fb_gate_ok:
             keys.add(fb)
-            _why(fb, "분류 폴백:"
-                 f"{sig.get('category') or sig.get('radar_section')}(제목 직접 근거 없음)")
+            _why(fb, f"분류 폴백:{fb_driver}(제목 직접 근거 없음)")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
     final = sorted(keys & VALID_LENS)
