@@ -26,15 +26,17 @@ live 연동은 `--market-mode live` 빌드 + leaf 네트워크 성공 시에만 
 | 미 국채 2Y | **live 연동 시도** | FRED DGS2 | chartless(단일값) | (동일) | official | 일간 | yes(FRED history) | 영업일·ND 결측 | history CSV 확장(D7-AD-X2) | **yes(live point)** |
 | 한국 국고 10Y | **live 연동 시도(월간)** | FRED OECD | chartless | ECOS 일간(키·코드 필요) | official / delayed | FRED 월간 | yes(FRED) | 월간·지연 | ECOS 코드 확정 | **yes(live point, proxy)** |
 | TWD/KRW | unlinked | — | 직접 cross thin | USD/KRW ÷ USD/TWD | public_free / delayed | EOD | yes(교차) | USD/TWD leg 미연동 | Yahoo `TWD=X` leg 추가 후 교차 | no(leg 없음) |
-| 호르무즈 해협 API | unlinked (데모 카드) | 템플릿 데모 | — | 후보: 사용자 원본 GitHub URL 재제공 필요(repo 내 링크 없음) | 미확정 | 미확정 | 미확정 | AIS/API 키·정책 한계 | **사용자 링크 재요청** → D7-AD-X2 | no |
+| 호르무즈 해협 API | unlinked (조사 완료) | — | aisstream.io 무료 WebSocket | 후보: `yasumorishima/hormuz-ship-tracker` 수집기 이식 (실체 확인 완료 — D7-AE-RC3) | public_free(키 필요) | 상시 스트림 | yes(러너 확보 시) | 상주 프로세스 필요·지상 AIS 하한 | **HORMUZ_LIVE_INTEGRATION.md 계획 따라 진행** | no |
 
 ## Hormuz GitHub 링크
 
-- repo 전역 검색(Hormuz/hormuz/호르무즈/github): **사용자가 언급한 GitHub API 링크 없음**
+- (당시) repo 전역 검색(Hormuz/hormuz/호르무즈/github): **사용자가 언급한 GitHub API 링크 없음**
 - 존재하는 것: 뉴스 렌즈(`lens:hormuz`), 데모 운영 카드(AIS 미연동), `verify_hormuz_lens_relevance.py`
-- **다음**: 사용자에게 원본 GitHub URL 재요청 → `docs/operations/D7ADX_HORMUZ_API_CANDIDATE.md`에 기록 후 D7-AD-X2
+- ~~**다음**: 사용자에게 원본 GitHub URL 재요청~~ → **해소(D7-AE-RC3)**: 사용자가
+  `yasumorishima/hormuz-ship-tracker`를 제공 — 실체 확인·실연동 조사 완료.
+  상세: `docs/operations/HORMUZ_LIVE_INTEGRATION.md`
 
-### D7-AE-RC1 재확인 (repo reference not found)
+### D7-AE-RC1 재확인 (repo reference not found) — ※ D7-AE-RC3에서 해소됨(아래는 당시 기록)
 
 사용자가 다시 "이전에 알려준 GitHub repo/reference"를 조사하라고 요청해 재검색했다 —
 `.agents/`, `design/`, `tmp/`(미커밋 포함) 전체와 `docs/`, `app/`, `scripts/`, `data/`,

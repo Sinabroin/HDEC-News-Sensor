@@ -56,7 +56,7 @@
 | 1 | `us_2y` | FRED DGS2 |
 | 2 | `kr_10y` | FRED OECD / 한은 ECOS |
 | 3 | `twdkrw` | USD/KRW × USD/TWD 교차 |
-| 4 | Hormuz | **repo 내 GitHub API 링크 없음 — 사용자 링크 재요청 필요** (렌즈·데모 카드만 존재) |
+| 4 | Hormuz | **해소(D7-AE-RC3)**: `yasumorishima/hormuz-ship-tracker` 확인 — aisstream.io 무료 스트림, 상주 러너 필요. 계획: HORMUZ_LIVE_INTEGRATION.md |
 | 5 | `jet_kerosene` | EIA/FRED DJFUELUSGULF |
 | 6 | `nickel` | World Bank Pink Sheet |
 | 7 | `scrap_steel` | FRED WPU1012 |

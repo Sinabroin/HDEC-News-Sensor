@@ -40,3 +40,15 @@
 그림자" 아님)·`--sky:#3E5C80` 남색 계열 강조로 재작업돼 있었다 — 이번 라운드에서 추가
 색상 시스템 전면 개편은 하지 않았다(과잉 범위 방지). 세리프 마스트헤드가 이 팔레트와
 어긋나 보이는 게 "구리다"는 인상의 핵심 원인으로 보고 그 부분만 교정했다.
+
+## D7-AE-RC3 갱신 — 로고 확보로 'logo asset needed' 해소
+
+위 "logo asset needed" 결론은 **해소**됐다. 사용자 지시(D7-AE-RC3)에 따라 공식 배포
+채널에서 현대건설 CI를 확보해 커밋했다:
+
+- asset: `docs/assets/brand/hdec-logo.svg` — hdec.kr **공식 사이트 헤더가 실제 사용하는
+  SVG**(`https://www.hdec.kr/common/img/logo.svg`, 2026-07-03 확인). 마스터 벡터(.ai,
+  8개 변형)의 공식 다운로드 경로 포함 상세 출처는 `docs/assets/brand/README.md`.
+- 적용: `scripts/build_static_dashboard.py`의 `_embed_brand_logo()`가 빌드 시 data-URI로
+  임베드(외부 요청 0건). asset이 없으면 여전히 로고를 생성하지 않는다(가짜 금지 원칙 불변).
+- 템플릿의 placeholder 추상 SVG 아이콘(.mark)은 제거했다(사용자 지시).
