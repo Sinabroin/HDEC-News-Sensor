@@ -86,8 +86,9 @@ _RULES_BY_ID = {r["id"]: r for r in RISK_RULES}
 
 TARGET_LABEL = "명일(D+1) 정오 12:00 · 권역 현지시각"
 ADVISORY_NOTE = "기상특보(기상청)는 무료 무키 API 미연동 — 발령 여부 수동 확인 필요"
-_MOCK_REASON = "기상 소스는 라이브 빌드에서만 수집합니다 — 데모 기상값을 생성하지 않습니다"
-_FAIL_REASON = "기상 데이터 미수신 — 예보 API 응답 없음(가짜 값을 만들지 않습니다)"
+_UNAVAILABLE_REASON = "기상 데이터 미수신 — 공개 예보 API 응답 없음. 값을 만들지 않습니다."
+_MOCK_REASON = _UNAVAILABLE_REASON
+_FAIL_REASON = _UNAVAILABLE_REASON
 
 _HOURLY_FIELDS = ("temperature_2m", "precipitation_probability", "precipitation",
                   "wind_speed_10m", "wind_gusts_10m")

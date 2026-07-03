@@ -1143,7 +1143,7 @@
           <div class="wx-head">
             <span class="wx-t">명일 정오 시공 리스크</span>
             <span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00</span>
-            <span class="wx-badge" id="wxBadge">기상 데이터 소스 미연동</span>
+            <span class="wx-badge" id="wxBadge">기상 데이터 미수신</span>
           </div>
           <div class="wx-intro">현장 기상은 뉴스가 아니라 <b>명일 정오 12:00</b>(권역 현지시각) 시점의 시공
             리스크로 봅니다. 권역 대표점(서울·대전·부산·광주·리야드) 예보를 Open-Meteo 공개 API에서
@@ -1156,19 +1156,19 @@
               <span role="columnheader">폭염·한파</span><span role="columnheader">특보</span>
               <span class="wx-risk" role="columnheader">작업 리스크 등급</span>
             </div>
-            <div class="wx-row" role="row"><span class="wx-rgn">수도권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
-            <div class="wx-row" role="row"><span class="wx-rgn">중부권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
-            <div class="wx-row" role="row"><span class="wx-rgn">영남권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
-            <div class="wx-row" role="row"><span class="wx-rgn">호남권</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
-            <div class="wx-row" role="row"><span class="wx-rgn">중동·해외</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-off">미연동</span><span class="wx-risk wx-off">미연동</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">수도권</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-risk wx-off">미수신</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">중부권</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-risk wx-off">미수신</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">영남권</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-risk wx-off">미수신</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">호남권</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-risk wx-off">미수신</span></div>
+            <div class="wx-row" role="row"><span class="wx-rgn">중동·해외</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-off">미수신</span><span class="wx-risk wx-off">미수신</span></div>
           </div>
           <div class="wx-impact">
             <span class="wx-il">시공 영향 점검</span>
             <span class="wx-ichip">우천</span><span class="wx-ichip">강풍</span><span class="wx-ichip">고소작업</span><span class="wx-ichip">타워크레인</span><span class="wx-ichip">콘크리트 타설</span><span class="wx-ichip">외장·방수</span><span class="wx-ichip">토공</span>
           </div>
-          <div class="wx-note" id="wxNote">기준 시점 <b>명일 정오 12:00</b> · 권역 대표점 기준이며 개별 현장
-            값이 아닙니다. 라이브 미수집 상태에서는 <b>기상 데이터 소스 미연동</b>으로 두고 값을 만들지
-            않습니다. 리스크 등급 규칙: 돌풍 ≥15m/s 타워크레인 운전 중지(산업안전보건기준 규칙 제37조) ·
+          <div class="wx-note" id="wxNote"><b>기상 데이터 미수신</b> — 공개 예보 API 응답 없음. 값을 만들지
+            않습니다. 기준 시점 <b>명일 정오 12:00</b> · 권역 대표점 기준이며 개별 현장 값이 아닙니다.
+            리스크 등급 규칙: 돌풍 ≥15m/s 타워크레인 운전 중지(산업안전보건기준 규칙 제37조) ·
             ≥10m/s 설치·해체 중지 · 강수확률 ≥60%+강수량 ≥1mm 우천 주의 · 기온 ≥33°C 폭염 / ≤-12°C 한파.</div>
         </div>
 
@@ -3194,7 +3194,7 @@ function displaySourceDomain(row){
   /* ---------- 명일 정오 시공 리스크 (D7-AE) — weather_risk leaf 실측 렌더 ----------
      MODEL.weather_data_mode: "live" → 표를 실측으로 교체 · 출처/수집시각 표기.
      "unavailable" + weather_live_attempted → '기상 데이터 미수신'(live 시도 실패 정직 표기).
-     그 외(mock/미연동)는 정적 '미연동' 표를 그대로 둔다. 어떤 상태에서도 가짜 날씨 값을
+     그 외(mock/unavailable)는 정적 '미수신' 표를 그대로 둔다. 어떤 상태에서도 가짜 날씨 값을
      만들지 않는다 — 값 없는 셀은 '미수신'으로 표기한다. 등급색은 상태 표현 전용. */
   function wxNum(v, unit, digits) {
     if (v == null || !isFinite(Number(v))) return "";
@@ -3208,14 +3208,8 @@ function displaySourceDomain(row){
     if (mode !== "live" || !rows.length) {
       if (MODEL.weather_live_attempted) {          // live 시도했으나 실패 — 미수신 정직 표기
         badge.textContent = "기상 데이터 미수신";
-        var note = el("wxNote");
-        if (note && MODEL.weather_unavailable_reason) {
-          var reason = document.createElement("div");
-          reason.textContent = MODEL.weather_unavailable_reason;
-          note.appendChild(reason);
-        }
       }
-      return;                                      // 정적 '미연동' 표 유지(가짜 값 없음)
+      return;                                      // 정적 '미수신' 표 유지(가짜 값 없음)
     }
     var gradeCls = { "낮음": "wx-low", "주의": "wx-watch", "높음": "wx-high" };
     var html = '<div class="wx-row wx-gh" role="row"><span class="wx-rgn" role="columnheader">지역</span>'
@@ -3782,10 +3776,27 @@ function displaySourceDomain(row){
     apply("24h");
   })();
 
-  /* ---------- 운영자 실행 컨트롤 (D7-AA) — 운영 API POST 호출, GitHub 이동 없음 ----------
-     base URL은 MODEL.operator_api_base(JSON island, 빌더 주입)에서만 읽는다 — 이 인터랙션
-     스크립트는 빌더가 손대지 않아 템플릿과 byte-identical로 유지된다. 토큰/시크릿 리터럴 0건. */
+  /* 운영자 실행 컨트롤 JS는 별도 opctl-js 블록으로 분리했다(D7-AE-RC4) —
+     공개(운영 API 미설정) 빌드에서 빌더가 태그째 제거해도 이 메인 인터랙션 스크립트는
+     템플릿과 byte-identical로 유지된다(verify_dashboard_lens_filters 5c). */
+
+  /* initial chart draw (panel hidden ok — viewBox scales) */
+  drawYieldChart();
+})();
+</script>
+<script id="opctl-js">
+  /* ---------- 운영자 실행 컨트롤 (D7-AA · D7-AE-RC4 분리 스크립트) ----------
+     운영 API POST 호출 전용 — GitHub 이동 없음, 토큰/시크릿 리터럴 0건. 메인 인터랙션
+     스크립트(5c byte-identity 계약 대상)와 분리한 자족 블록이다: 운영 API 미설정(공개)
+     빌드에서는 빌더(_strip_operator_controls)가 이 script 태그를 통째로 제거해 실행
+     문자열("데이터 새로고침 실행" 등)이 공개 raw HTML에 남지 않는다(D7-AE-RC4).
+     base URL은 preview-model island의 operator_api_base에서만 읽는다 — 메인 스크립트
+     스코프(el/MODEL)에 의존하지 않도록 island를 직접 파싱한다. */
   (function () {
+    var el = function (id) { return document.getElementById(id); };
+    var MODEL = {};
+    try { MODEL = JSON.parse((el("preview-model") || { textContent: "{}" }).textContent || "{}"); }
+    catch (err) { MODEL = {}; }
     var base = String(MODEL.operator_api_base || "").replace(/\/+$/, "");
     var endpoints = MODEL.operator_endpoints || {};
     var collectBtn = el("opCollectBtn"), sendBtn = el("opSendBtn"), teamsBtn = el("opTeamsBtn");
@@ -3861,10 +3872,6 @@ function displaySourceDomain(row){
           "Teams 채널 전송을 실행했습니다. 채널 이메일 도착은 별도 확인이 필요합니다.");
     });
   })();
-
-  /* initial chart draw (panel hidden ok — viewBox scales) */
-  drawYieldChart();
-})();
 </script>
 </body>
 </html>

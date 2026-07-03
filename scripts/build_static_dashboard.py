@@ -42,7 +42,7 @@ for _p in (ROOT, SCRIPTS_DIR):
 from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 # 중앙 렌즈 쿼리 정책(단일 소스) — leaf는 app.config/DB/네트워크를 건드리지 않아 bootstrap
 # 전에 import해도 안전하다(config의 DB_PATH 캐시 트랩 회피). 정책=대시보드+수집기 공유.
-from app import ai_value_chain, lens_queries, news_access  # noqa: E402
+from app import ai_value_chain, lens_queries, news_access, topic_profiles  # noqa: E402
 # 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
@@ -73,6 +73,10 @@ VALID_LENS = {
 }
 # 상태 렌즈(노출 상태일 뿐 콘텐츠 분류가 아님) — 대시보드 제외/콘텐츠 판정 시 구분한다.
 _STATE_LENS = {"now", "new"}
+_BUSINESS_LENSES = {
+    "civil_infrastructure", "building_housing", "plant", "new_energy",
+    "development_business", "global_business", "safety_quality",
+}
 # 주거/건축 보강 키워드(D7-Q) — '아파트' 등 주거형은 공유 키워드 풀(lens_queries)에 없어
 # building_housing 태그가 누락된다. 라이브 수집 쿼리는 그대로 두고, 대시보드 표시 단계에서만
 # 보수적으로 보강한다(가짜가 아니라 제목의 실제 주거 키워드 기반 · 부분문자열 오탐 방지로
@@ -472,21 +476,11 @@ def _has_overseas_biz_context(title: str) -> bool:
     return any(w in (title or "") for w in _OVERSEAS_BIZ_CONTEXT)
 
 
-# 카테고리/섹션 → 폴백 렌즈 1개(D7-AE-RC3). 예전에는 카테고리가 렌즈 2~3개를 무조건
-# 주입해(dc_power→ai·new_energy·plant, mideast_overseas→글로벌·해외현장·plant) 제목
-# 근거가 전혀 없는 plant/해외현장 과대분류를 만들었다(공개 QA 실패 원인 1). 이제 무조건
-# 주입은 없다: 제목 근거 렌즈가 하나도 없을 때만 아래 대표 렌즈 1개로 폴백하고, 그
-# 사실을 lens_reasons에 '분류 폴백'으로 남긴다. ai/plant/해외현장은 폴백으로 쓰지
-# 않는다(각각 전용 근거 가드가 있거나, 무근거 태깅 자체가 이번에 제거한 오탐이라서).
-# macro는 폴백이 없다 — 금리/환율 기사에 '유가·에너지' 라벨을 강제하는 것도 오분류다.
-_CATEGORY_FALLBACK_LENS = {"dc_power": "new_energy", "mideast_overseas": "global_business",
-                           "safety": "safety_quality"}
-# risk_regulation 섹션은 폴백을 주지 않는다(D7-AE-RC3 라이브 실측): 이 섹션엔 평가/수상
-# PR("상호협력평가 최우수")류가 섞이는데, 안전 키워드가 하나도 없어 폴백까지 온 기사를
-# safety_quality로 되살리는 건 사용자 규칙("사고/중대재해/부실시공/특별감독/품질 이슈가
-# 명확할 때만") 위반이다. category=safety(브리핑의 강한 리스크 분류)만 폴백을 유지한다.
-_SECTION_FALLBACK_LENS = {"business_overseas": "global_business",
-                          "competitor_supply": "competitor_contractors"}
+# RC4: category/radar_section/value-chain은 사업영역 렌즈의 근거가 아니다. 수집 섹션
+# 설명이 모든 행에 복제되면서 사업 렌즈가 fan-out한 원인이므로, 비사업 생태계 렌즈만
+# 제한적으로 섹션 폴백을 허용한다. 사업영역 7종은 아래 _lens_for_with_reasons에서
+# topic_profiles의 title/snippet/source 직접 근거로만 배정한다.
+_SECTION_FALLBACK_LENS = {"competitor_supply": "competitor_contractors"}
 
 
 def _lens_for(sig) -> list:
@@ -494,17 +488,18 @@ def _lens_for(sig) -> list:
 
 
 def _lens_for_with_reasons(sig) -> tuple:
-    """렌즈 태깅 + 렌즈별 근거 — 단일 판정점 (D7-AE-RC3 근거 게이팅).
+    """렌즈 태깅 + 렌즈별 근거 — 단일 판정점 (D7-AE-RC4 근거 게이팅).
 
-    공개 QA 과대분류의 두 원인을 제거했다: (1) 카테고리/섹션의 무조건 다중 렌즈 주입 →
-    근거 없을 때만 대표 렌즈 1개 폴백, (2) 키워드 매칭이 category_label(섹션 설명문 —
-    "중동·해외 수주 환경")까지 봐서 섹션 전체가 같은 렌즈로 물들던 것 → raw 제목만 본다.
-    반환 (lenses, reasons) — reasons는 {lens: [사람이 읽는 근거…]}로 모델 row에 실려
-    감사 가능하다(lens_reasons). 최종 키에 남은 렌즈의 근거만 반환한다.
+    사업영역 7종은 topic_profiles의 include ∧ relevance-anchor ∧ exclude 계약을
+    title/snippet/source 원문 메타데이터에만 적용한다. category/category_label/
+    radar_section/value-chain/site 설정은 사업 렌즈를 주입하지 않는다. AI value-chain은
+    ai 렌즈만 추천하며 실제 사업 근거가 따로 잡힐 때만 사업 렌즈가 동반된다.
+    반환 (lenses, reasons) — reasons는 {lens: [사람이 읽는 근거…]}로 모델 row에 실린다.
     """
     raw_title = sig.get("title") or ""
     raw_source = sig.get("source") or ""
     raw_snippet = sig.get("snippet") or ""
+    raw_evidence = " ".join(p for p in (raw_title, raw_snippet, raw_source) if p)
     reasons: dict = {}
 
     def _why(lens: str, note: str) -> None:
@@ -515,13 +510,24 @@ def _lens_for_with_reasons(sig) -> tuple:
     keys = set()
     value_chain = ai_value_chain.classify_ai_value_chain(raw_title, raw_source, raw_snippet)
     for lens in ai_value_chain.recommended_lenses(raw_title, raw_source, raw_snippet):
+        if lens in _BUSINESS_LENSES:
+            continue
         keys.add(lens)
         _why(lens, f"AI 밸류체인:{value_chain.get('ai_value_chain_layer')}")
     for words, lens in _KEYWORD_LENS:
+        if lens in _BUSINESS_LENSES:
+            continue
         hits = [w for w in words if w in raw_title]
         if hits:
             keys.add(lens)
             _why(lens, "제목 키워드:" + "·".join(hits[:3]))
+    article = {"title": raw_title, "snippet": raw_snippet, "source": raw_source}
+    for lens in topic_profiles.classify_business_lenses(article):
+        profile = topic_profiles.get_business_lens(lens)
+        reason = topic_profiles.business_lens_reason(article, profile) if profile else None
+        if reason:
+            keys.add(lens)
+            _why(lens, "원문 근거:" + reason)
     if _is_hyundai_group_relevant(raw_title):
         keys.add("hyundai_group")
         _why("hyundai_group", "그룹사명+건설·인프라 맥락(제목)")
@@ -529,13 +535,12 @@ def _lens_for_with_reasons(sig) -> tuple:
         keys.discard("hyundai_group")
     # 글로벌/해외현장 — 제목에 해외 마커 ∧ 사업 맥락(수주/발주/재건/투자…)이 같이 있어야
     # 유지한다. '해외 안전비위'류 리스크 기사가 bare '해외' 하나로 글로벌에 새지 않게 한다.
-    if not (_has_overseas_marker(raw_title) and _has_overseas_biz_context(raw_title)):
+    if not (_has_overseas_marker(raw_evidence)
+            and _has_overseas_biz_context(raw_evidence)):
         keys.discard("global_business")
         keys.discard("overseas_site")
     if value_chain.get("ai_value_chain_layer") == ai_value_chain.LAYER_GENERIC_AI:
         keys.discard("ai")
-        keys.discard("global_business")
-        keys.discard("overseas_site")
     # 해외지사/해외법인 렌즈(D7-L) — 조직/법인격 마커가 raw 제목에 있을 때만 분류한다. broad
     # 키워드(EPC/수주/법인)로 들어온 generic 해외 프로젝트 오탐을 제거하고, 실제 해외 조직/
     # 법인 신호는 키워드 매핑 누락과 무관하게 정확히 태깅한다(hyundai_group과 동일 패턴).
@@ -564,49 +569,33 @@ def _lens_for_with_reasons(sig) -> tuple:
             and not _has_ai_evidence(raw_title, raw_source, raw_snippet)
             and value_chain.get("ai_value_chain_layer") != ai_value_chain.LAYER_CUSTOM_CHIP):
         keys.discard("ai")
-    # 사이트 워치리스트(D7-M/D7-AE) — raw 제목의 직접 언급 또는 사이트 쿼리 수집 provenance가
-    # 있으면 그 항목의 scope(국내/해외현장·해외지사·해외법인)와 business 렌즈(토목/건축주택/
-    # 플랜트/New Energy)를 더한다. 워치리스트가 권위 있는 분류라 generic discard 이후에 적용한다.
+    # 사이트 워치리스트는 실행 범위(scope) 근거로만 사용한다. config의 business_lens를
+    # 기사 사업영역으로 복사하면 title/snippet/source에 근거가 없는 fan-out이 되므로 RC4에서
+    # 금지한다. 현장명이 원문에 있더라도 사업영역은 위 topic_profiles가 별도로 판정한다.
     for match in _site_matches_for(sig):
         scope = match.get("scope")
-        biz = match.get("business_lens")
         site_name = match.get("name") or match.get("label") or ""
         if scope in VALID_LENS:
             keys.add(scope)
             _why(scope, f"워치리스트 현장 매칭:{site_name}")
-        if biz and biz in VALID_LENS:
-            keys.add(biz)
-            _why(biz, f"워치리스트 현장({site_name})의 사업 렌즈")
-    # 주거/건축 보수적 폴백(D7-Q) — 다른 정밀 콘텐츠 렌즈가 하나도 없을 때만, 제목의 주거형
-    # 키워드('아파트' 등 공유 풀에 없는 항목)로 building_housing을 보강한다(task 폴백 규칙:
-    # "정밀 렌즈가 없으면 가장 보수적인 건설 렌즈"). 이미 plant/safety 등 정밀 렌즈가 있으면
-    # 보강하지 않는다 — 예: "아파트·원전…건설株"는 원전→plant라 폴백 비적용(과태깅·중복 방지).
-    # 이 폴백이 "…아파트에 'AI 주차로봇' 도입"처럼 렌즈가 비는 주거 기사를 건져 빈 렌즈를 막는다.
-    if not (keys - _STATE_LENS) and any(w in raw_title for w in _RESIDENTIAL_LENS_TERMS):
-        keys.add("building_housing")
-        _why("building_housing", "주거 키워드 폴백(다른 정밀 렌즈 없음)")
     # 건설-AI 보강(D7-Q) — 제목에 직접 AI 근거가 있고 콘텐츠 렌즈가 이미 있으면(건설/주거 등)
     # 'ai'를 더한다. 순수 비건설 AI 노이즈는 콘텐츠 렌즈가 없어 태깅되지 않는다(과태깅 방지).
     if (keys - _STATE_LENS) and _has_ai_evidence(raw_title, raw_source, raw_snippet):
         keys.add("ai")
         _why("ai", "제목 AI 근거 + 건설 콘텐츠 렌즈 동반")
-    # 분류 폴백(D7-AE-RC3) — 제목 근거 렌즈가 전혀 없을 때만 카테고리/섹션 대표 렌즈 1개.
-    # 폴백도 렌즈별 최소 게이트를 통과해야 한다: global_business 폴백은 제목에 해외 마커가
-    # 있어야 한다(섹션 분류만 믿고 소비재/무관 기사를 글로벌로 되살리지 않는다 — C1/C4 계약).
-    # generic_ai 레이어는 폴백 자체를 받지 않는다(무렌즈 무노출 — D7-S2 fail-safe 유지).
+    # 비사업 생태계 렌즈만 섹션 폴백 가능. category/section은 사업영역 7종을 절대 만들지 않는다.
     if (not (keys - _STATE_LENS)
             and value_chain.get("ai_value_chain_layer") != ai_value_chain.LAYER_GENERIC_AI):
-        fb = _CATEGORY_FALLBACK_LENS.get(sig.get("category"))
-        fb_driver = sig.get("category")
-        if not fb:
-            fb = _SECTION_FALLBACK_LENS.get(sig.get("radar_section"))
-            fb_driver = sig.get("radar_section")
-        fb_gate_ok = fb != "global_business" or _has_overseas_marker(raw_title)
-        if fb and fb_gate_ok:
+        fb = _SECTION_FALLBACK_LENS.get(sig.get("radar_section"))
+        if fb:
             keys.add(fb)
-            _why(fb, f"분류 폴백:{fb_driver}(제목 직접 근거 없음)")
+            _why(fb, f"비사업 섹션 폴백:{sig.get('radar_section')}")
     if sig.get("alert_grade") == "즉시 알림 후보" or sig.get("score_band") == "즉시 확인":
         keys.add("now")
+    # 방어적 fail-closed: 사업 렌즈는 사람이 읽을 수 있는 원문 근거가 없으면 최종 결과에서 제거.
+    for lens in _BUSINESS_LENSES:
+        if lens in keys and not reasons.get(lens):
+            keys.discard(lens)
     final = sorted(keys & VALID_LENS)
     return final, {k: reasons[k] for k in final if reasons.get(k)}
 
@@ -793,7 +782,9 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
     value_chain = ai_value_chain.classify_ai_value_chain(
         sig.get("title") or "", sig.get("source") or "", sig.get("snippet") or "")
     lens_keys, lens_reasons = _lens_for_with_reasons(sig)
-    lens = sorted(set(lens_keys) | ({l for l in extra_lens} & VALID_LENS))
+    # 호출부 extra_lens는 now/new 상태만 허용한다. 사업 렌즈를 외부에서 주입해 reason 없이
+    # 모델에 싣는 우회 경로를 닫는다.
+    lens = sorted(set(lens_keys) | ({l for l in extra_lens} & _STATE_LENS))
     access = news_access.classify_link_access(
         sig.get("url"),
         final_url=sig.get("final_url"),
@@ -1665,29 +1656,16 @@ def _embed_brand_logo(html: str) -> str:
 
 
 def _strip_operator_controls(html: str, operator_api_base: str) -> str:
-    """운영 API 미설정(공개) 빌드에서 운영자 실행 UI를 HTML에서 완전히 제거한다 (D7-AE-RC3).
+    """운영 API 미설정 공개 빌드에서 운영자 실행 UI/JS를 완전히 제거한다 (D7-AE-RC4).
 
     사용자 QA: disabled 버튼(데이터 새로고침/텔레그램/Teams)이 접혀 있어도 제품 기능처럼
     읽혀 "아직도 안 된다"가 된다. base 미설정이면 실행 패널(버튼 3개·승인 PIN·상태줄)을
     통째로 제거하고 '운영 API 설정 필요' 한 줄만 남긴다. base가 주입된(운영자) 빌드는
-    기존 패널을 유지한다 — 버튼이 실제로 동작하는 유일한 경우다. 인터랙션 JS는 버튼
-    부재 시 `if (!collectBtn || !sendBtn) return;`으로 안전 종료한다(스크립트 무수정 —
-    byte-identity 계약 유지).
+    기존 패널과 별도 opctl-js를 유지한다 — 버튼이 실제로 동작하는 유일한 경우다. 공개
+    산출물은 opctl-js 태그 자체를 제거해 실행 라벨/상태 문자열이 raw HTML에도 남지 않는다.
     """
     if (operator_api_base or "").strip():
         return html
-    start = html.find('<section class="opctl compact"')
-    end = html.find("</section>", start)
-    if start < 0 or end < 0:
-        print("WARNING: opctl section을 찾지 못함 — 운영자 UI 제거 스킵", file=sys.stderr)
-        return html
-    # 섹션 바로 앞의 설명 주석 블록(OPERATOR CONTROLS …)도 함께 제거 — 공개 raw HTML에
-    # 옛 패널 설명('운영자 서버 미연결' 등)이 남지 않게 한다(JS 주석은 byte-identity 계약상
-    # 그대로 두며 화면에 노출되지 않는다).
-    comment_start = html.rfind("<!-- =========== OPERATOR CONTROLS", 0, start)
-    if comment_start >= 0:
-        start = comment_start
-    end += len("</section>")
     replacement = (
         '<section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">\n'
         '      <div class="opctl-head">\n'
@@ -1696,7 +1674,24 @@ def _strip_operator_controls(html: str, operator_api_base: str) -> str:
         ' · 실행 버튼은 운영 API가 연결된 빌드에서만 표시됩니다</span>\n'
         '      </div>\n'
         '    </section>')
-    return html[:start] + replacement + html[end:]
+    start = html.find('<section class="opctl compact"')
+    end = html.find("</section>", start)
+    if start < 0 or end < 0:
+        print("WARNING: opctl section을 찾지 못함 — 운영자 UI 제거 스킵", file=sys.stderr)
+    else:
+        # 섹션 바로 앞의 설명 주석 블록도 함께 제거해 공개 raw HTML에 운영 전용 설명이
+        # 남지 않게 한다.
+        comment_start = html.rfind("<!-- =========== OPERATOR CONTROLS", 0, start)
+        if comment_start >= 0:
+            start = comment_start
+        end += len("</section>")
+        html = html[:start] + replacement + html[end:]
+    stripped, count = re.subn(
+        r'\n<script id="opctl-js">.*?</script>', "", html, count=1, flags=re.S)
+    if count != 1:
+        print("WARNING: opctl-js script를 찾지 못함 — 운영자 실행 JS 제거 스킵",
+              file=sys.stderr)
+    return stripped
 
 
 _MARKET_INTRO_ONE_LINER = ('<div class="pnote">자동 연동 지표만 표시합니다. '
@@ -1807,16 +1802,18 @@ def _render_weather_section(html: str, weather: dict) -> str:
     mode = weather.get("weather_data_mode") or ""
     rows = weather.get("weather_rows") or []
     if mode != "live" or not rows:
-        if weather.get("weather_live_attempted"):
-            html = html.replace(
-                '<span class="wx-badge" id="wxBadge">기상 데이터 소스 미연동</span>',
-                '<span class="wx-badge" id="wxBadge">기상 데이터 미수신</span>', 1)
-            reason = weather.get("weather_unavailable_reason")
-            if reason:
-                html = html.replace(
-                    '<div class="wx-note" id="wxNote">',
-                    f'<div class="wx-note" id="wxNote"><div>{escape(reason)}</div>', 1)
-        return html  # 정적 '미연동' 표 유지 — 가짜 값 없음(mock/미시도와 동일 규칙)
+        html = re.sub(
+            r'<span class="wx-badge" id="wxBadge">[^<]*</span>',
+            '<span class="wx-badge" id="wxBadge">기상 데이터 미수신</span>',
+            html, count=1)
+        unavailable_note = (
+            '<div class="wx-note" id="wxNote"><b>기상 데이터 미수신</b> — '
+            '공개 예보 API 응답 없음. 값을 만들지 않습니다. 기준 시점 '
+            '<b>명일 정오 12:00</b> · 권역 대표점 기준이며 개별 현장 값이 아닙니다.</div>')
+        html = re.sub(
+            r'<div class="wx-note" id="wxNote">.*?</div>',
+            unavailable_note, html, count=1, flags=re.S)
+        return html  # 정적 미수신 표 유지 — mock/live 실패 모두 가짜 값 없음
 
     rows_html, _reasons = _render_weather_rows_html(rows)
     grid_start = html.find('id="wxGrid">')
@@ -1845,14 +1842,13 @@ def _render_weather_section(html: str, weather: dict) -> str:
     html = re.sub(
         r'<span class="wx-badge" id="wxBadge">[^<]*</span>',
         f'<span class="wx-badge" id="wxBadge">{badge_text}</span>', html, count=1)
-    # D7-AE-RC3 — live 산출물의 raw HTML에는 '기상 데이터 소스 미연동' 문구가 남지 않아야
-    # 한다(사용자 QA). 노트의 미수집-상태 설명 문장을 실측 상태 설명으로 교체한다 —
-    # unavailable/mock 산출물은 이 분기를 타지 않아 기존 문구를 그대로 유지한다(정직).
+    live_note = (
+        '<div class="wx-note" id="wxNote">값은 Open-Meteo 공개 예보 API 응답이며 '
+        '수집 실패 시 값을 만들지 않습니다. 기준 시점 <b>명일 정오 12:00</b> · '
+        '권역 대표점 기준이며 개별 현장 값이 아닙니다.</div>')
     html = re.sub(
-        r"라이브 미수집 상태에서는 <b>기상 데이터 소스 미연동</b>으로 두고 값을 만들지\s*"
-        r"않습니다\.",
-        "값은 공개 기상 API 실측(예보)이며 수집 실패 시 값을 만들지 않습니다.",
-        html, count=1)
+        r'<div class="wx-note" id="wxNote">.*?</div>',
+        live_note, html, count=1, flags=re.S)
     html = html.replace(
         '<span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00</span>',
         '<span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00 · 권역 현지시각</span>', 1)
@@ -2239,6 +2235,7 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
     model["lens_banks"] = parts["lens_banks"]
+    model["lens_counts"] = parts["bank_counts"]
     model["featured_row"] = parts.get("featured_row")
     model["immediate_status"] = parts.get("immediate_status") or {}
     # 중앙 정책(data/lens_queries.json)에서 lens_policy를 주입 — 생성 대시보드의 렌즈 정책·
@@ -2385,6 +2382,37 @@ def _update_honesty(html: str, news_mode: str) -> str:
     return html
 
 
+def _strip_public_preview_residuals(html: str, operator_api_base: str) -> str:
+    """공개 export raw HTML에서 내부 preview/demo 표면을 제거한다 (D7-AE-RC4).
+
+    템플릿은 /dashboard-preview 내부 설계 도구이므로 샘플 정직성 표기를 유지한다.
+    운영 API base가 없는 정적 export만 공개 임원 대시보드 계약으로 정리한다. visible DOM뿐
+    아니라 주석·숨김 template·JS literal까지 같은 raw 문자열 계약을 적용한다.
+    """
+    if (operator_api_base or "").strip():
+        return html
+    public_footer = (
+        '<footer class="bottom">\n'
+        '    HDEC Executive Radar · 공개 데이터 기반 요약 대시보드.<br>\n'
+        '    시장 지표는 지연 또는 공개 대용 데이터이며 현재 체결값이 아닙니다.\n'
+        '  </footer>')
+    html = re.sub(
+        r'<footer class="bottom">.*?</footer>',
+        public_footer, html, count=1, flags=re.S)
+    replacements = (
+        ("기상 데이터 소스 미연동", "기상 데이터 미수신"),
+        ("NON-PRODUCTION PREVIEW", "PUBLIC SUMMARY DASHBOARD"),
+        ("데모/mock 데이터", "내부 고정 샘플"),
+        ("데모 데이터", "내부 고정 샘플"),
+        ("데모 미리보기", "상세 보기"),
+        ("데모 표본", "수집 표본"),
+        ("대시보드 미리보기 (PREVIEW)", "요약 대시보드"),
+    )
+    for old, new in replacements:
+        html = html.replace(old, new)
+    return html
+
+
 def _update_header_dates(html: str, brief: dict) -> str:
     """헤더의 stale 정적 날짜(2026·06·22 …)를 실제 생성 시각(생성 KST)으로 치환한다(D7-N).
 
@@ -2464,6 +2492,7 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
                                   len(parts["news_rows"]) + len(parts["ai_rows"]))
     html = _update_honesty(html, news_mode)
     html = _inject_accordion(html, brief)
+    html = _strip_public_preview_residuals(html, operator_api_base)
     return html
 
 
@@ -2478,9 +2507,10 @@ def dashboard_metadata(html: str, brief: dict) -> dict:
         "has_export_marker": EXPORT_MARKER in html,
         "has_preview_model": 'id="preview-model"' in html,
         "has_data_honesty_labels": (
-            "데모 데이터" in html
-            and "현재 체결값 아님" in html
+            "현재 체결값 아님" in html
             and "미연동" in html
+            and "데모 데이터" not in html
+            and "NON-PRODUCTION PREVIEW" not in html
         ),
         "news_data_mode": brief.get("news_data_mode"),
         "news_row_count": len(parts["news_rows"]),

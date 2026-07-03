@@ -1415,7 +1415,7 @@ def _build_accordion_sections(scored_rows: list[dict], categories: dict[str, str
         _accordion_section(
             "weather", "기상·날씨", [],
             categories, reasons, decisions,
-            empty_message="기상 데이터 소스 미연동 — 현재 수집된 항목 없음"),
+            empty_message="기상 데이터 미수신 — 공개 예보 API 응답 없음. 값을 만들지 않습니다."),
         _accordion_section(
             "global_press", "해외 언론",
             members(lambda r: global_press.is_foreign_press(
