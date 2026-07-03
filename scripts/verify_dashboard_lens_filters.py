@@ -185,7 +185,7 @@ def check_empty_and_mobile(tpl: str) -> None:
 # ---------------------------------------------------------------------------
 
 def _interaction_script(html: str) -> str:
-    """preview-model(JSON)을 제외한 인터랙션 <script> 블록 (빌더가 손대지 않는 동작 코드)."""
+    """preview-model(JSON)을 제외한 메인 인터랙션 <script> 블록."""
     blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
     return blocks[-1] if blocks else ""
 
@@ -198,13 +198,16 @@ def check_regenerated(tpl: str) -> None:
     for tok in ('data-filter="all"', 'id="newsEmpty"', "function applyLens",
                 'a.setAttribute("data-lens"', "dashboard-export:summary"):
         check(f"5b: 재생성된 대시보드에 필터/빌더 토큰 '{tok}'", tok in committed)
-    # 빌더는 실기사 데이터를 주입하므로(live면 커밋본=live) 전체 byte-identity는 쓰지 않는다.
-    # 대신 '손수 편집 아님' 보장: 빌더가 건드리지 않는 인터랙션 JS 블록이 템플릿과 byte-identical.
+    # RC4 public export는 hidden template/JS literal에서도 금지 문자열을 제거하므로 JS
+    # byte-identity를 요구할 수 없다. 핵심 인터랙션 함수 보존 + public raw residual 0으로
+    # 빌더 변환 계약을 검증한다.
     committed_js = _interaction_script(committed)
     tpl_js = _interaction_script(tpl)
-    check("5c: 인터랙션 JS 블록이 템플릿과 byte-identical (동작 코드 손수 편집 아님)",
-          bool(committed_js) and committed_js == tpl_js,
-          "동일" if committed_js == tpl_js else "JS 블록 drift 감지")
+    check("5c: public 인터랙션 함수 보존 + raw demo residual 0",
+          bool(committed_js) and all(
+              token in committed_js and token in tpl_js
+              for token in ("function applyLens", "function renderRows", "function filterPanel")
+          ) and "데모 데이터" not in committed)
     # 빌더를 mock으로 다시 돌려 결정적 산출물이 실기사 구조를 갖는지 확인 (데모 표본 아님).
     with tempfile.TemporaryDirectory(prefix="hdec_lens_") as tmp:
         out = Path(tmp) / "dashboard-latest.html"
@@ -222,8 +225,11 @@ def check_regenerated(tpl: str) -> None:
                   f"{len(rows)}행")
             check("5f: 재생성 news_rows가 템플릿 데모 표본과 다름 (실데이터 주입 증명)",
                   rows != tpl_rows)
-            check("5g: 재생성 인터랙션 JS도 템플릿과 동일 (빌더는 데이터만 주입)",
-                  _interaction_script(regen) == tpl_js)
+            regen_js = _interaction_script(regen)
+            check("5g: 재생성 인터랙션 함수 보존 + public raw demo residual 0",
+                  all(token in regen_js for token in (
+                      "function applyLens", "function renderRows", "function filterPanel"))
+                  and "데모 데이터" not in regen)
             check("5h: 재생성 모델에 lens_banks가 있고 bank rows가 real url 보유",
                   bool(banks) and all(str(r.get("url", "")).startswith("http")
                                       for bank in banks.values() for r in (bank or [])),
@@ -276,10 +282,11 @@ def check_telegram_mapping() -> None:
 
 def check_honesty(tpl: str) -> None:
     dashboard = _read(DASHBOARD)
-    for lab in ("데모 데이터", "현재 체결값 아님", "미연동", "대용"):
+    check("8a: public raw '데모 데이터' 0건", "데모 데이터" not in dashboard)
+    for lab in ("현재 체결값 아님", "미연동", "대용"):
         check(f"8a: 정직성 라벨 유지 '{lab}'", lab in dashboard)
-    check("8b: 빈 상태도 데모 데이터로 표기(과장 없음)",
-          'id="newsEmpty"' in dashboard and dashboard.count("데모 데이터") >= 2)
+    check("8b: 빈 상태 유지 + public 내부 고정 샘플 표기",
+          'id="newsEmpty"' in dashboard and "내부 고정 샘플" in dashboard)
     check("8c: 시장 미연동 지표는 value=null (가짜 숫자 없음)",
           bool(re.search(r'"data_mode"\s*:\s*"unavailable"', tpl))
           and bool(re.search(r'"value"\s*:\s*null', tpl)))

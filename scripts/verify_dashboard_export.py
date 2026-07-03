@@ -135,8 +135,9 @@ def check_committed_dashboard() -> None:
     check("dashboard export marker 포함", EXPORT_MARKER in dashboard)
     check("dashboard가 preview model/대시보드 구조 포함",
           'id="preview-model"' in dashboard and "HDEC Executive Radar" in dashboard)
-    check("dashboard가 demo/missing-data 정직성 라벨 유지",
-          "데모 데이터" in dashboard and "현재 체결값 아님" in dashboard and "미연동" in dashboard)
+    check("dashboard가 public 정직성 라벨 유지 + demo residual 제거",
+          "데모 데이터" not in dashboard and "현재 체결값 아님" in dashboard
+          and "미연동" in dashboard and "기상 데이터 미수신" in dashboard)
     check("dashboard는 latest.html과 다른 파일", dashboard != latest)
     check("latest.html은 전체 Executive Daily Brief로 유지",
           "Executive Daily Brief" in latest and EXPORT_MARKER not in latest

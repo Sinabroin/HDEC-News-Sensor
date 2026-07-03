@@ -18,9 +18,9 @@ D+1 12:00(현지) 예보 + rule-based 시공 리스크 등급을 모델(weather_
   6. 경계 — 기상 네트워크는 leaf만 소유(빌더 소스에 urllib/os.environ 0건),
      빌더는 CLI --weather-mode로만 모드를 받고 snapshot_for_model을 호출한다.
   7. 워크플로 — 두 라이브 게시 경로 모두 --weather-mode live로 빌드한다.
-  8. 템플릿 — 실측 렌더(renderSiteWeather)와 정직 상태 문자열('기상 데이터 미수신',
-     정적 '미연동' 유지), 기존 계약 문자열(명일 정오 시공 리스크 · 명일 정오 12:00 ·
-     기상 데이터 소스 미연동) 보존, 소스/기준시각/target 표기.
+  8. 템플릿 — 실측 렌더(renderSiteWeather)와 정직 상태 문자열('기상 데이터 미수신'),
+     정적 '미수신' 유지, 기존 계약 문자열(명일 정오 시공 리스크 · 명일 정오 12:00)
+     보존, 소스/기준시각/target 표기.
   9. 커밋 산출물 — weather_data_mode ∈ {live, unavailable}. live면 실측 행+출처,
      unavailable이면 rows=[](가짜 숫자 0건).
 """
@@ -234,10 +234,10 @@ def check_workflows() -> None:
 
 def check_template() -> None:
     t = TEMPLATE.read_text(encoding="utf-8")
-    check("8a: 기존 계약 문자열 보존(명일 정오 시공 리스크 · 명일 정오 12:00 · "
-          "기상 데이터 소스 미연동)",
+    check("8a: RC4 계약 문자열(명일 정오 시공 리스크 · 명일 정오 12:00 · 미수신)",
           "명일 정오 시공 리스크" in t and "명일 정오 12:00" in t
-          and "기상 데이터 소스 미연동" in t)
+          and "기상 데이터 미수신" in t
+          and "기상 데이터 소스 미연동" not in t)
     check("8b: 실측 렌더 함수 + 호출(renderSiteWeather)",
           "function renderSiteWeather" in t and "renderSiteWeather();" in t)
     check("8c: 모델 계약 키 사용(weather_rows/weather_data_mode/weather_live_attempted)",
@@ -249,11 +249,11 @@ def check_template() -> None:
     check("8f: 등급 상태색 클래스(wx-low/wx-watch/wx-high/wx-unknown)",
           all(c in t for c in (".wx-risk.wx-low", ".wx-risk.wx-watch",
                                ".wx-risk.wx-high", "wx-unknown")))
-    # 정적 placeholder 표에는 숫자 기상값이 없어야 한다(가짜 값 금지 — 전부 '미연동').
+    # 정적 placeholder 표에는 숫자 기상값이 없어야 한다(가짜 값 금지 — 전부 '미수신').
     m = re.search(r'id="wxGrid".*?</div>\s*<div class="wx-impact"', t, re.S)
     grid = m.group(0) if m else ""
-    check("8g: 정적 표는 전 셀 '미연동'(데모 숫자 0건)",
-          bool(grid) and "미연동" in grid
+    check("8g: 정적 표는 전 셀 '미수신'(데모 숫자 0건)",
+          bool(grid) and "미수신" in grid
           and not re.search(r"\d+\s*(mm|m/s|%)", grid))
     check("8h: 리스크 규칙이 UI 카피에 추적 가능(제37조·33°C·-12°C)",
           "제37조" in t and "33°C" in t and "-12°C" in t)

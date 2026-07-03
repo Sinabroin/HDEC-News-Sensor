@@ -10,7 +10,7 @@
   6 공식 현대건설 CI 임베드(가짜 로고 금지 · data-URI)
   7 US 2Y FRED 일별 히스토리 계약 + 미연동 4분류 백로그 문서 + 공개 UI 백로그 강등
   8 시장 상단 장문 설명 제거 → 한 줄
-  9 weather live 산출물 raw HTML에 '기상 데이터 소스 미연동' 0건(비live는 보존)
+  9 모든 공개 산출물은 기상 unavailable을 '기상 데이터 미수신'으로만 표기
 
 네트워크 0건: fresh 빌드는 mock, 커밋 산출물 검사는 마커(news-data-mode/weather_data_mode)
 로 모드를 판별해 해당 모드의 계약만 적용한다.
@@ -109,14 +109,18 @@ def check_surface(html: str, label: str, *, expect_operator_hidden: bool) -> Non
             if len([l for l in (r.get("lens") or []) if l in BIZ_LENSES]) > 3]
     check(f"S2c[{label}]: 기사당 사업영역 렌즈 ≤3(과대분류 상한)", not over,
           str(over[:2])[:120])
-    # 9 · 기상 문구(모드 인지)
+    # 9 · RC4 기상 문구: live/unavailable 모두 옛 '미연동' 문구를 쓰지 않는다.
     wx_live = model.get("weather_data_mode") == "live"
     if wx_live:
-        check(f"S9[{label}]: weather live — '기상 데이터 소스 미연동' raw HTML 0건",
-              "기상 데이터 소스 미연동" not in html)
+        check(f"S9[{label}]: weather live — source/as_of + 옛 문구 0건",
+              "기상 데이터 소스 미연동" not in html
+              and bool(model.get("weather_source"))
+              and bool(model.get("weather_updated_at")))
     else:
-        check(f"S9[{label}]: weather 비live — 자리표시자 보존(정직)",
-              "기상 데이터 소스 미연동" in html)
+        check(f"S9[{label}]: weather unavailable — '기상 데이터 미수신'만 사용",
+              "기상 데이터 소스 미연동" not in html
+              and "기상 데이터 미수신" in html
+              and not (model.get("weather_rows") or []))
     # 1 · 현장 매칭 정직성 — 매칭 노드 수 ≤ 워치리스트 총 노드, 0건 노드는 UI가
     # '관련 기사 없음'을 렌더할 수 있어야 한다(렌더 분기는 T5/JS가 소유 — 여기선 데이터).
     tree = model.get("site_watch_tree") or {}

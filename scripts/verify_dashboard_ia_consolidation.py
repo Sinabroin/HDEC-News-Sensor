@@ -218,8 +218,9 @@ def check_template() -> None:
     check("9e: 시장 카드 미연동=접힘(mcat-backlog/details)",
           "mcat-backlog" in t and "<details class=\"mcat-backlog\">" in t)
 
-    check("3a: 현장 기상 카드(siteWeatherCard) + '기상 데이터 소스 미연동'",
-          'id="siteWeatherCard"' in t and "기상 데이터 소스 미연동" in t)
+    check("3a: 현장 기상 카드(siteWeatherCard) + '기상 데이터 미수신'",
+          'id="siteWeatherCard"' in t and "기상 데이터 미수신" in t
+          and "기상 데이터 소스 미연동" not in t)
     check("U4: 기상 카드가 '명일 정오 시공 리스크'(기준 명일 정오 12:00) 계약",
           "명일 정오 시공 리스크" in t and "명일 정오 12:00" in t)
     for fld in ("강수확률", "예상 강수량", "풍속", "돌풍", "폭염·한파", "특보", "작업 리스크 등급"):

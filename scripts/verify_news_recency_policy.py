@@ -93,7 +93,8 @@ def check_mock_build_status() -> None:
             st = model.get("immediate_status") or {}
             check("4d: immediate_status.stale_filtered_count 키",
                   "stale_filtered_count" in st)
-        check("4e: mock 렌즈노트 데모 배지 유지", "데모 데이터" in html)
+        check("4e: public mock도 raw '데모 데이터' 제거 + 내부 샘플 정직 표기",
+              "데모 데이터" not in html and "내부 고정 샘플" in html)
 
 
 def main() -> int:

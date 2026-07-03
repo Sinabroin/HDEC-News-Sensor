@@ -8,9 +8,8 @@
     항상 두 렌즈 모두에 동시 배정됐다(실측: "코즐로두이 원전" 기사가 plant AND
     new_energy 둘 다 매칭). New Energy는 SMR/차세대로 충분히 구분되므로 원전(전통
     EPC)은 plant 전속으로 뗐다.
-  - building_housing·safety_quality가 둘 다 "하자"를 include로 가져, 일반적인 아파트
-    하자 민원 기사가 항상 안전·품질로도 같이 잡혔다(사용자 규칙: 안전·품질은 강한
-    사고/제재 근거가 있을 때만 — 하자 단독은 약한 근거).
+  - RC4에서 "하자"는 사용자 지정 안전·품질 직접 근거로 safety_quality 전속이며,
+    building_housing는 주택/정비/분양/공사비 근거로만 분류한다.
   - classify_business_lenses()에 상한이 없어 넓은 종합 기사가 3개 이상 렌즈에 동시
     배정될 수 있었다 — 이제 3개 이상이면 애매한 신호로 보고 빈 리스트(전체 종합에만).
   - business_lens_reason이 존재했지만 briefing._business_lens_group이 호출하지 않아
@@ -180,20 +179,16 @@ def check_vocabulary_isolation() -> None:
     kw = {lid: set(tp.get_business_lens(lid).include_keywords) for lid in LENSES}
     check("C1: plant·new_energy가 '원전'을 공유하지 않음(과거 실측 충돌)",
           not ({"원전"} <= kw["plant"] and "원전" in kw["new_energy"]))
-    check("C2: building_housing·safety_quality가 '하자'를 공유하지 않음",
-          not ("하자" in kw["building_housing"] and "하자" in kw["safety_quality"]))
+    check("C2: '하자'는 safety_quality 전속(building_housing와 비공유)",
+          "하자" not in kw["building_housing"] and "하자" in kw["safety_quality"])
     # 실측 재현 — 코즐로두이 원전 기사가 더 이상 plant+new_energy 동시 매칭 아님.
     kozloduy = "현대건설, 미 원전 시장 속도낸다…웨스팅하우스 자금 지원 '호재'"
     hits = tp.classify_business_lenses(_art(kozloduy))
     check("C3: 실측 재현 — 원전 기사가 plant+new_energy 동시매칭 아님",
           not ("plant" in hits and "new_energy" in hits), str(hits))
-    # 완전 겹치는 include 단어 쌍이 없는지 전수 확인(회귀 고정) — 단, "데이터센터"는
-    # building_housing(건축 프로젝트)·new_energy(전력 인프라) 양쪽에 의도적으로 둔다
-    # (사용자 지정 리스트 6번: 건축주택에 데이터센터 포함). 그 외 쌍은 전부 우연한
-    # vocabulary 중복이라 하나도 허용하지 않는다(원전/하자처럼 재발 시 즉시 FAIL).
-    _INTENTIONAL_OVERLAP = {
-        frozenset({"building_housing", "new_energy"}): {"데이터센터"},
-    }
+    # 완전 겹치는 include 단어 쌍이 없는지 전수 확인(회귀 고정). RC4는 bare
+    # "데이터센터"도 제거해 AI 기사 전체가 건축주택/New Energy로 fan-out하지 않게 한다.
+    _INTENTIONAL_OVERLAP = {}
     overlap_pairs = []
     ids = list(kw)
     for i in range(len(ids)):
@@ -203,8 +198,8 @@ def check_vocabulary_isolation() -> None:
             unexpected = shared - allowed
             if unexpected:
                 overlap_pairs.append((ids[i], ids[j], unexpected))
-    check("C4: 렌즈 간 include_keywords 의도치 않은 중복 단어 0쌍(회귀 고정, "
-          "데이터센터/건축주택+new_energy 제외)", not overlap_pairs, str(overlap_pairs))
+    check("C4: 렌즈 간 include_keywords 중복 단어 0쌍(회귀 고정)",
+          not overlap_pairs, str(overlap_pairs))
 
 
 # ---------------------------------------------------------------------------

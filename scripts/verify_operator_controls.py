@@ -156,8 +156,8 @@ def check_public_dash(html: str) -> None:
     check("P3: '운영 API 설정 필요' 한 줄 존재", "운영 API 설정 필요" in html)
     check("P4: opctl 섹션 자체는 유지(운영자 모드 표시)", 'id="opctl"' in html)
     check("P5: GitHub Actions 수동실행 URL 미포함", "/actions/workflows/" not in html)
-    check("P6: 운영 API 호출 JS는 보존(운영자 빌드에서 재사용 — fetch(base + path)",
-          "fetch(base + path" in html and COLLECT_ENDPOINT in html)
+    check("P6: 공개 raw에는 운영 API 호출 JS/opctl-js 0건",
+          "fetch(base + path" not in html and 'id="opctl-js"' not in html)
 
 
 # ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@
      빌더 실측 배지/모델에서만 읽는다(스트립 자체 값 생성 금지 주석).
   5. 명시 어포던스 — "시세 열기 ▸"/"리스크 표 열기 ▸"/"전체 기사 더보기".
   6. 기존 계약 문자열 보존 — 기사 보기 버튼, 명일 정오 시공 리스크,
-     기상 데이터 소스 미연동, 시장 상태 보드 4라벨(간결화가 정직성 계약을
+     기상 데이터 미수신, 시장 상태 보드 4라벨(간결화가 정직성 계약을
      지우지 않았음을 보증).
   7. 커밋 산출물 — 빌더 마커 존재(hand-edit 아님) + 동일 계약.
 """
@@ -37,10 +37,8 @@ LOCKED = (
     "명일 정오 시공 리스크",
     "연동 완료", "보고·수동 확인", "미연동 후보", "우선 연동 필요",
 )
-# 기상 미연동 문구(D7-AE-RC3 모드 인지 계약): weather live 산출물은 실측을 렌더하므로
-# raw HTML에 이 문구가 남지 않아야 하고(사용자 QA), 템플릿/mock/미시도 산출물은 정직한
-# 자리표시자로 반드시 보존해야 한다 — 같은 문자열이 상태에 따라 필수↔금지로 뒤집힌다.
-WX_UNLINKED = "기상 데이터 소스 미연동"
+WX_OLD = "기상 데이터 소스 미연동"
+WX_UNAVAILABLE = "기상 데이터 미수신"
 STRIP_ITEMS = ("즉시 확인", "신규 이슈", "현장 매칭", "명일 정오 시공 리스크")
 STRIP_ACTIONS = ("즉시 확인 목록 보기", "신규 이슈 보기", "현장별 기사 확인",
                  "리스크 표 열기")
@@ -84,11 +82,11 @@ def check_surface(label: str, text: str) -> None:
           f"소실: {missing[:3]}")
     wx_live = '"weather_data_mode": "live"' in text
     if wx_live:
-        check(f"6w[{label}]: weather live 산출물 — '{WX_UNLINKED}' raw HTML 0건(실측 렌더)",
-              WX_UNLINKED not in text)
+        check(f"6w[{label}]: weather live 산출물 — 옛 문구 raw HTML 0건(실측 렌더)",
+              WX_OLD not in text)
     else:
-        check(f"6w[{label}]: weather 비live — '{WX_UNLINKED}' 자리표시자 보존",
-              WX_UNLINKED in text)
+        check(f"6w[{label}]: weather 비live — '{WX_UNAVAILABLE}' 자리표시자",
+              WX_UNAVAILABLE in text and WX_OLD not in text)
 
 
 def check_template_only() -> None:

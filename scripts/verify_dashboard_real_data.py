@@ -116,7 +116,7 @@ def check_builder() -> None:
     check("1h: 실 news 행 다수(>=6) + featured 제목 존재",
           (meta.get("news_row_count") or 0) >= 6 and bool(meta.get("featured_title")),
           f"news={meta.get('news_row_count')} featured={meta.get('featured_title')!r}")
-    check("1i: 정직성 라벨 유지(데모/체결값/미연동)",
+    check("1i: public 정직성 라벨 유지(체결값/미연동 + demo residual 0)",
           meta.get("has_data_honesty_labels") is True)
 
 
@@ -199,7 +199,8 @@ def check_committed_dashboard() -> None:
           bool(re.search(r'class="card featured"[^>]*data-lens="[^"]+"[^>]*data-category="[^"]+"', html)))
     check("3h: 빈 상태 요소 유지(newsEmpty/aiEmpty)",
           'id="newsEmpty"' in html and 'id="aiEmpty"' in html)
-    for lab in ("데모 데이터", "현재 체결값 아님", "미연동"):
+    check("3i: public raw '데모 데이터' 0건", "데모 데이터" not in html)
+    for lab in ("현재 체결값 아님", "미연동"):
         check(f"3i: 정직성 라벨 유지 '{lab}'", lab in html)
     check("3j: 발송 토큰/시크릿 미혼입",
           not TOKEN_SHAPE.search(html) and "TELEGRAM_BOT_TOKEN" not in html)
