@@ -184,7 +184,15 @@ def check_conditional_if_reintroduced() -> None:
 def check_backlog_documented() -> None:
     doc = _read(D7ADX_DOC)
     check("E1: D7ADX 문서 존재", bool(doc))
-    check("E2: 'repo reference not found' 결론 기록", "repo reference not found" in doc)
+    # D7-AE-RC3 — 당시 결론(repo reference not found)은 역사 기록으로 남고, 사용자가
+    # 재제공한 repo(yasumorishima/hormuz-ship-tracker)로 해소됐음이 함께 기록돼야 한다.
+    check("E2: 당시 결론 기록 + RC3 해소(hormuz-ship-tracker) 기록",
+          "repo reference not found" in doc and "hormuz-ship-tracker" in doc
+          and "해소" in doc)
+    integ = _read(ROOT / "docs" / "operations" / "HORMUZ_LIVE_INTEGRATION.md")
+    check("E2b: 실연동 조사 문서(HORMUZ_LIVE_INTEGRATION.md) 존재 + 소스/키/운영 방식 기록",
+          bool(integ) and "hormuz-ship-tracker" in integ
+          and "무료" in integ and "상주" in integ and "어댑터" in integ)
     check("E3: 재검색 대상(.agents/design/tmp 포함) 기록",
           ".agents" in doc and "design" in doc and "tmp" in doc)
     check("E4: 제거 조치(_strip_hormuz_demo_card) 기록", "_strip_hormuz_demo_card" in doc)

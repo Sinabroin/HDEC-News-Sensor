@@ -35,9 +35,12 @@ OLD_PASTEL = ("#EAF2FC", "#EFF4FA", "#EAF1F8", "#E8EFF8", "#F1F7FE")
 LOCKED = (
     ">기사 보기</button>",
     "명일 정오 시공 리스크",
-    "기상 데이터 소스 미연동",
     "연동 완료", "보고·수동 확인", "미연동 후보", "우선 연동 필요",
 )
+# 기상 미연동 문구(D7-AE-RC3 모드 인지 계약): weather live 산출물은 실측을 렌더하므로
+# raw HTML에 이 문구가 남지 않아야 하고(사용자 QA), 템플릿/mock/미시도 산출물은 정직한
+# 자리표시자로 반드시 보존해야 한다 — 같은 문자열이 상태에 따라 필수↔금지로 뒤집힌다.
+WX_UNLINKED = "기상 데이터 소스 미연동"
 STRIP_ITEMS = ("즉시 확인", "신규 이슈", "현장 매칭", "명일 정오 시공 리스크")
 STRIP_ACTIONS = ("즉시 확인 목록 보기", "신규 이슈 보기", "현장별 기사 확인",
                  "리스크 표 열기")
@@ -79,6 +82,13 @@ def check_surface(label: str, text: str) -> None:
     missing = [s for s in LOCKED if s not in text]
     check(f"6[{label}]: 기존 정직성 계약 문자열 보존", not missing,
           f"소실: {missing[:3]}")
+    wx_live = '"weather_data_mode": "live"' in text
+    if wx_live:
+        check(f"6w[{label}]: weather live 산출물 — '{WX_UNLINKED}' raw HTML 0건(실측 렌더)",
+              WX_UNLINKED not in text)
+    else:
+        check(f"6w[{label}]: weather 비live — '{WX_UNLINKED}' 자리표시자 보존",
+              WX_UNLINKED in text)
 
 
 def check_template_only() -> None:

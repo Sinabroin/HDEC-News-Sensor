@@ -69,13 +69,28 @@ def _check_html(html: str, label: str) -> None:
     check(f"B[{label}]: Georgia 문자열 0건", "Georgia" not in html)
     check(f"B[{label}]: Times New Roman 문자열 0건", "Times New Roman" not in html)
 
-    # C · 가짜 로고 없음 — <img> 로고 태그가 외부 URL이나 hyundai 도메인을 참조하지 않음.
+    # C · 로고 정직성(D7-AE-RC3 갱신) — 공식 CI asset(docs/assets/brand/hdec-logo.svg,
+    # 출처: hdec.kr 공식 사이트 헤더)이 확보돼 계약이 반전됐다: 빌더 산출물은 공식 로고를
+    # data-URI로 임베드해야 하고(외부 fetch 0건), 템플릿은 <img> 로고가 없어야 한다
+    # (임베드는 빌더 소유 — placeholder/가짜 로고 생성 금지 원칙은 유지).
     img_tags = re.findall(r"<img\b[^>]*>", html, re.I)
-    bad_logo_imgs = [t for t in img_tags if "logo" in t.lower() or "hyundai" in t.lower()]
-    check(f"C[{label}]: 로고 성격 <img> 태그 0건(asset 없음 — 가짜 로고 미생성)",
-          not bad_logo_imgs, str(bad_logo_imgs[:3]))
-    check(f"C[{label}]: hyundai.co.kr/현대건설 로고 도메인 미참조",
-          "hyundai.co.kr" not in html.lower())
+    logo_imgs = [t for t in img_tags if "cilogo" in t.lower() or "logo" in t.lower()
+                 or "hyundai" in t.lower()]
+    if label.startswith("template"):
+        check(f"C[{label}]: 템플릿에 <img> 로고 없음(임베드는 빌더 소유)", not logo_imgs,
+              str(logo_imgs[:2]))
+    else:
+        ok = (len(logo_imgs) >= 1
+              and all('src="data:image/svg+xml;base64,' in t for t in logo_imgs)
+              and any('alt="현대건설"' in t for t in logo_imgs))
+        check(f"C[{label}]: 공식 CI 로고가 data-URI로 임베드(외부 URL 아님·alt=현대건설)",
+              ok, str(logo_imgs[:1])[:120])
+    # 외부 fetch 금지 — http(s) src를 가진 <img>가 하나도 없어야 한다(로고 포함 전부
+    # data-URI). 도메인 substring 검사는 쓰지 않는다: 'hdec.kr/warning'은 사내 차단페이지
+    # 감지 JS의 정당한 리터럴이다(이미지 fetch 아님).
+    http_imgs = [t for t in img_tags if re.search(r'src="https?://', t, re.I)]
+    check(f"C[{label}]: http(s) src <img> 0건(로고 포함 전부 data-URI/무이미지)",
+          not http_imgs, str(http_imgs[:2])[:120])
 
     # D · 헤더 문구
     check(f"D[{label}]: 헤더 문구 '현대건설 임원용 신호 브리프' 존재",
@@ -106,9 +121,11 @@ def check_template() -> None:
     if not check("템플릿 파일 로드", bool(tpl)):
         return
     _check_html(tpl, "template(/dashboard-preview)")
-    # 마스트헤드 아이콘은 추상 SVG(장식)이지 브랜드 로고가 아니다 — 사칭 아님을 재확인.
-    check("template: 마스트헤드가 <svg> 아이콘(장식, 브랜드 사칭 아님)",
-          '<div class="mark">' in tpl and "<svg" in tpl.split('<div class="mark">')[1][:200])
+    # D7-AE-RC3 — placeholder 아이콘(.mark 추상 SVG)은 제거됐고 로고 슬롯 주석만 남는다.
+    check("template: placeholder 아이콘(.mark) 제거 + 빌더 로고 슬롯 주석 존재",
+          '<div class="mark">' not in tpl and "_embed_brand_logo" in tpl)
+    check("template: (구 계약 무효화 확인) 마스트헤드 추상 SVG placeholder 부재",
+          '<div class="mark">' not in tpl)
 
 
 def check_visual_doc() -> None:
@@ -121,6 +138,9 @@ def check_visual_doc() -> None:
           "인터넷에서 로고를 가져오지 않았다" in doc)
     check("G5: Pretendard 적용 근거(CDN 아닌 font-family 선언) 기록",
           "font-family" in doc and "CDN" in doc)
+    # D7-AE-RC3 — 공식 CI 확보로 '로고 없음' 결론이 해소됐음이 같은 문서에 기록돼야 한다.
+    check("G6: RC3 공식 CI 확보(docs/assets/brand) 해소 기록",
+          "hdec-logo.svg" in doc and "해소" in doc)
 
 
 def check_fresh_build() -> None:

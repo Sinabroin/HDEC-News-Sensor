@@ -80,63 +80,37 @@ def _opctl_section(html: str) -> str:
 # ---------------------------------------------------------------------------
 
 def check_public_build_collapsed(html: str, label: str) -> None:
+    """D7-AE-RC3(B안) — 공개(base 미설정) 빌드의 운영자 영역 계약.
+
+    RC1은 'disabled 버튼을 접어서 작게'였지만 사용자 QA가 재지적("비활성 버튼을 제품
+    기능처럼 남기지 마라") — 이제 공개 빌드는 실행 UI(버튼 3개·PIN·상태줄·details)를
+    아예 렌더하지 않고 '운영 API 설정 필요' 한 줄만 남긴다. 버튼이 존재하는 유일한
+    표면은 운영 API base가 주입된 운영자 빌드(템플릿 계약 — check_operator_build_expands).
+    """
     section = _opctl_section(html)
     if not check(f"A0[{label}]: opctl 섹션 존재", bool(section)):
         return
+    check(f"A1[{label}]: 실행 패널/버튼/PIN 마크업 0건(opctlPanel·opctl-btn·opPin)",
+          "opctlPanel" not in section and 'class="opctl-btn' not in section
+          and "opPin" not in section)
+    check(f"A2[{label}]: '운영 API 설정 필요' 한 줄 존재", "운영 API 설정 필요" in section)
+    check(f"A3[{label}]: 옛 문구('운영자 서버 미연결') 잔존 없음(섹션 내)",
+          "운영자 서버 미연결" not in section)
+    check(f"B1[{label}]: 섹션이 한 줄 안내 수준으로 작음(<800자)",
+          len(section) < 800, f"len={len(section)}")
 
-    # A1: 닫힌 details 태그 존재 + open 속성 없음.
-    m = re.search(r'<details class="opctl-panel" id="opctlPanel"(\s[^>]*)?>', section)
-    check(f"A1[{label}]: opctlPanel details 존재", m is not None)
-    if m:
-        attrs = m.group(1) or ""
-        check(f"A1b[{label}]: opctlPanel에 open 속성 없음(공개 빌드는 닫힘 시작)",
-              "open" not in attrs, attrs)
-
-    # A2: 상시 노출 영역(details 앞부분, head)에는 <button class="opctl-btn 이 없다.
-    panel_start = section.find('<details class="opctl-panel"')
-    always_visible = section[:panel_start] if panel_start >= 0 else section
-    check(f"A2[{label}]: 상시 노출 영역에 CTA 버튼(<button class=\"opctl-btn) 없음",
-          'class="opctl-btn' not in always_visible, always_visible[:200])
-
-    # B: 상시 노출 영역이 접힌 콘텐츠보다 뚜렷이 짧다(크기 휴리스틱 — '크게 보인다'의
-    #    대리 지표). 접힌 콘텐츠(details 내부)는 버튼 3개+상태+PIN details를 담아 항상
-    #    수백 바이트 이상이다 — 상시 노출 영역이 그 절반을 넘으면 '작은 안내'라 보기 어렵다.
-    collapsed_content = section[panel_start:] if panel_start >= 0 else ""
-    if collapsed_content:
-        ratio = len(always_visible) / max(1, len(collapsed_content))
-        check(f"B1[{label}]: 상시 노출 영역이 접힌 콘텐츠의 30% 미만(작은 안내 수준)",
-              ratio < 0.30, f"always={len(always_visible)}B collapsed={len(collapsed_content)}B "
-                             f"ratio={ratio:.2f}")
-    check(f"B2[{label}]: 상시 노출 영역에 CTA 관련 단어가 1줄 요약 수준(3버튼 라벨 전부 없음)",
-          not all(lbl in always_visible for lbl in
-                  ("데이터 새로고침 실행", "텔레그램 전송 실행", "Teams 채널 전송 실행")))
-
-
-# ---------------------------------------------------------------------------
-# C · 장황한 큰 배너가 아니다 — '운영자 서버 미연결'이 banner/alert류 클래스가 아님
-# ---------------------------------------------------------------------------
 
 def check_not_big_banner(html: str, label: str) -> None:
+    """'운영 API 설정 필요'가 배너/알림 박스가 아니라 한 줄(opctl-oneline)로만 표시된다."""
     section = _opctl_section(html)
-    if not section:
-        return
-    idx = section.find("운영자 서버 미연결")
-    check(f"C1[{label}]: '운영자 서버 미연결' 문구 존재(정직 표기 유지)", idx >= 0)
-    if idx < 0:
-        return
-    context = section[max(0, idx - 160):idx]
-    big_banner_classes = ("banner", "alert-box", "hero", "cta-hero", "opctl-warn-big")
-    hit = [c for c in big_banner_classes if c in context]
-    check(f"C2[{label}]: '운영자 서버 미연결'이 큰 배너류 클래스에 실려있지 않음",
-          not hit, str(hit))
-    # 한 줄(span) 수준인지 — 같은 줄에 <div class="banner"나 KPI-스타일 큰 박스가 없다.
+    idx = section.find("운영 API 설정 필요")
+    check(f"C1[{label}]: '운영 API 설정 필요' 문구 존재(정직 표기)", idx >= 0)
+    window = section[max(0, idx - 220):idx]
+    check(f"C2[{label}]: 배너류 클래스(banner/alert/hero)에 실려있지 않음",
+          all(k not in window for k in ("banner", "alert", "hero")))
     check(f"C3[{label}]: 한 줄 요약(<span class=\"opctl-oneline)으로만 표시",
-          '<span class="opctl-oneline"' in section)
+          'class="opctl-oneline' in window or 'class="opctl-oneline' in section)
 
-
-# ---------------------------------------------------------------------------
-# D · secret이 필요한 기능은 정적 페이지가 직접 호출하지 않음(독립 재확인)
-# ---------------------------------------------------------------------------
 
 def check_no_direct_privileged_calls(html: str, label: str) -> None:
     low = html.lower()

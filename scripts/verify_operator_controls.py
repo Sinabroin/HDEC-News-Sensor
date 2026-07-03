@@ -143,6 +143,23 @@ def check_copy(html: str) -> None:
         check(f"11: 안내 문구 '{phrase[:22]}…' 존재", phrase in html)
 
 
+def check_public_dash(html: str) -> None:
+    """D7-AE-RC3(B안) — 공개 산출물(운영 API base 미주입): 실행 버튼을 렌더하지 않는다.
+
+    사용자 QA: disabled 버튼이 제품 기능처럼 읽힘("아직도 안 된다"). 공개 빌드는 실행
+    UI(버튼 3개·PIN·패널) 0건 + '운영 API 설정 필요' 한 줄만. GitHub 이동 없음은 유지.
+    """
+    check("P1: 공개 산출물에 실행 버튼 마크업 0건(opctl-btn·opCollectBtn·opSendBtn·opTeamsBtn)",
+          'class="opctl-btn' not in html and 'id="opCollectBtn"' not in html
+          and 'id="opSendBtn"' not in html and 'id="opTeamsBtn"' not in html)
+    check("P2: 공개 산출물에 승인 PIN 입력(opPin) 0건", 'id="opPin"' not in html)
+    check("P3: '운영 API 설정 필요' 한 줄 존재", "운영 API 설정 필요" in html)
+    check("P4: opctl 섹션 자체는 유지(운영자 모드 표시)", 'id="opctl"' in html)
+    check("P5: GitHub Actions 수동실행 URL 미포함", "/actions/workflows/" not in html)
+    check("P6: 운영 API 호출 JS는 보존(운영자 빌드에서 재사용 — fetch(base + path)",
+          "fetch(base + path" in html and COLLECT_ENDPOINT in html)
+
+
 # ---------------------------------------------------------------------------
 # 18~20 · Teams 채널 전송 버튼 — 운영 API로 배선 (D7-AD-U, endpoint 구현됨)
 # ---------------------------------------------------------------------------
@@ -199,13 +216,19 @@ def check_safety(html: str, label: str) -> None:
 # ---------------------------------------------------------------------------
 
 def check_collapsed_by_default(html: str, tpl: str) -> None:
-    """21-22 · D7-AE-RC1 — 버튼은 기본 닫힌 details 뒤에 있고, JS가 연결 시에만 연다."""
-    check("21: 운영자 버튼이 닫힌 details(id=opctlPanel) 안에 있음(기본 접힘)",
-          '<details class="opctl-panel" id="opctlPanel">' in html)
-    check("21b: 공개(미연결) 산출물의 opctlPanel에 open 속성 없음(펼쳐진 채 시작 안 함)",
-          '<details class="opctl-panel" id="opctlPanel" open' not in html)
+    """21-22 · D7-AE-RC3 — 공개 산출물엔 패널이 아예 없고(B안), 템플릿(운영자 빌드 소스)의
+    패널은 기본 닫힘 + JS가 base 연결 시에만 연다(RC1 계약을 템플릿 표면으로 이동)."""
+    check("21: 공개 산출물에 opctlPanel 자체가 없음(B안 — 접힘이 아니라 제거)",
+          "opctlPanel" not in _strip_scripts(html))
+    check("21b: 템플릿(운영자 소스)의 opctlPanel은 기본 닫힘(open 속성 없음)",
+          '<details class="opctl-panel" id="opctlPanel">' in tpl
+          and '<details class="opctl-panel" id="opctlPanel" open' not in tpl)
     check("22: JS가 base 연결 시 opctlPanel을 자동으로 엶(운영자는 바로 보임)",
           'el("opctlPanel")' in tpl and "panel.open = true" in tpl)
+
+
+def _strip_scripts(html: str) -> str:
+    return re.sub(r"<script.*?</script>", "", html, flags=re.S)
 
 
 def check_report_dashboard_mapping() -> None:
@@ -236,10 +259,14 @@ def main() -> int:
         print("\nRESULT: FAIL (대시보드 산출물 누락)")
         return 1
     dash = _read(DASHBOARD)
+    tpl = _read(TEMPLATE) if TEMPLATE.exists() else ""
 
-    check_buttons(dash)
-    check_unset_behavior(dash)
-    check_copy(dash)
+    # D7-AE-RC3(B안) — 버튼/POST 배선 계약은 버튼이 존재하는 표면(템플릿 = 운영자 빌드
+    # 소스)에서 검증한다. 공개 산출물은 버튼이 아예 없어야 한다(check_public_dash).
+    check_buttons(tpl)
+    check_unset_behavior(tpl)
+    check_copy(tpl)
+    check_public_dash(dash)
     check_teams_control(_read(TEMPLATE) if TEMPLATE.exists() else "")
     check_collapsed_by_default(dash, _read(TEMPLATE) if TEMPLATE.exists() else "")
 

@@ -42,7 +42,9 @@ from app import market_history as mh  # noqa: E402
 # 기간 히스토리가 연동돼야 하는 headline 종목 (task가 명시한 최소집합 + 깔끔한 Yahoo 심볼).
 SUPPORTED = ("usdkrw", "jpykrw", "wti", "copper", "us_10y")
 # 공개 무료 소스가 없어 히스토리를 연동하지 않는(소스 필요) 종목.
-SOURCE_NEEDED = ("us_2y", "kr_10y")
+# D7-AE-RC3: us_2y는 FRED DGS2(일별 CSV)로 기간 히스토리가 연동됐다 — 소스필요는 kr_10y만.
+# (mock 템플릿의 us_2y는 여전히 unavailable·히스토리 없음 — 아래 4a-us2y가 별도 검증)
+SOURCE_NEEDED = ("kr_10y",)
 PERIODS = ("1w", "1m", "3m", "1y")
 
 _failures = []
@@ -200,10 +202,16 @@ def check_source_needed(tpl: str) -> None:
           and re.search(r'current\.history && current\.history\["1m"\]', tpl) is not None)
     check("4c: 비클릭 행에 '히스토리 미연동'/'차트 없음' 표기",
           "히스토리 미연동" in tpl and "차트 없음" in tpl)
-    # clickhint가 미연동 종목(US 2Y·KR 10Y)을 비오픈으로 경고.
-    check("4d: clickhint가 US 2Y·KR 10Y 비오픈(소스 필요)을 경고",
-          "US 2Y" in tpl and "KR 10Y" in tpl and "열지 않습니다" in tpl
-          and "소스 필요" in tpl)
+    # clickhint가 미연동 종목(KR 10Y 등)을 비오픈으로 경고 + us_2y FRED 연동을 명시(D7-AE-RC3).
+    check("4d: clickhint가 KR 10Y 비오픈(소스 필요) 경고 + US 2Y FRED 연동 명시",
+          "KR 10Y" in tpl and "열지 않습니다" in tpl and "소스 필요" in tpl
+          and "FRED DGS2" in tpl)
+    # 템플릿(mock 데모)의 us_2y는 여전히 정직한 unavailable(값·히스토리 없음)이다 —
+    # FRED 연동은 live 빌드에서만 붙는다(mock에 가짜 데모 차트를 만들지 않는다).
+    us2 = _items(tpl).get("us_2y") or {}
+    check("4a-us2y: 템플릿 us_2y는 unavailable(값·히스토리 없음 — live에서만 FRED 연동)",
+          not us2.get("history") and us2.get("value") is None
+          and us2.get("data_mode") == "unavailable")
     # 시장 행이 가용성 기반 클릭(전부 true 아님).
     check("4e: 시장 행이 가용성 기반 클릭(mrowHtml(it, isClickable(it)))",
           "mrowHtml(it, isClickable(it))" in tpl and "mrowHtml(it, true)" not in tpl)
@@ -240,8 +248,10 @@ def check_provider() -> None:
     sup = set(mh.supported_ids())
     check("6a: provider가 headline 종목을 모두 지원", set(SUPPORTED) <= sup,
           f"누락: {set(SUPPORTED) - sup}")
-    check("6b: US 2Y·KR 10Y는 provider 비지원(소스 필요)",
-          all(not mh.is_supported(s) for s in SOURCE_NEEDED))
+    check("6b: KR 10Y는 provider 비지원(소스 필요) · us_2y는 Yahoo 카탈로그 밖(FRED 전용)",
+          all(not mh.is_supported(s) for s in SOURCE_NEEDED)
+          and not mh.is_supported("us_2y")
+          and mh._FRED_HISTORY.get("us_2y", ("",))[0] == "DGS2")
     # 결정적: 같은 호출 두 번이 동일.
     det = all(mh.demo_history(s) == mh.demo_history(s) for s in SUPPORTED)
     check("6c: demo_history 결정적(now()/random 미사용)", det)

@@ -308,8 +308,11 @@ def verify_market_model(model: dict, html: str) -> None:
     check("4d: 렌더가 연동 우선·미연동 분리 로직 보유(marketLinked + mcat-unlinked + mcat-backlog)",
           "function marketLinked" in tpl and "mcat-unlinked" in tpl
           and "mcat-backlog" in tpl)
-    check("4e: 미연동 분리 정직성 안내문 노출",
-          "미연동 지표는 하단 관찰 후보로 분리했습니다" in html)
+    # D7-AE-RC3 — 장문 안내문("미연동 지표는 하단 관찰 후보로 분리했습니다")은 사용자
+    # 지시로 공개 산출물에서 제거됐다. 정직성은 짧은 한 줄("자동 연동 지표만 표시…지연
+    # 시세…체결값 아님")과 백로그 강등 한 줄("내부 백로그로 관리 · 값 미생성")이 잇는다.
+    check("4e: 미연동 분리 정직성 안내(한 줄 + 백로그 강등 문구)",
+          "자동 연동 지표만 표시합니다" in html and "내부 백로그로 관리" in html)
     # D7-AC — 우측 요약 레일은 제거되었다(보조 컨텍스트 섹션 제거). 미연동 누출 방지는 이제
     # rail UI(if (it && marketLinked(it))) 존재가 아니라 model(market_items/meta) 기준으로
     # 검증한다: 연동 지표가 충분하고 chartless 상한(D7-Z3=14, 아래 4i)을 지킨다. 레일 재유입

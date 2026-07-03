@@ -253,11 +253,14 @@ def check_public_build() -> None:
         check("4e: 운영자 실행 컨트롤이 왼쪽 rail(railcol) 하단으로 이동(main 본문 앞)",
               _order(html, 'class="railcol"', 'id="lensnav"', 'id="opctl"', 'id="panel-news"')
               and _order(html, 'id="opctl"', "<footer"))
-        check("4f: 장문 보안 안내가 details(opctl-more) 안으로 접힘",
-              _order(html, '<details class="opctl-more">',
-                     "브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다."))
-        check("5b: 미설정(공개) 시 '운영자 서버 미연결' 한 줄 노출(opUnsetLine)",
-              'id="opUnsetLine"' in html and "운영자 서버 미연결" in html)
+        # D7-AE-RC3(B안): 공개(무설정) 빌드는 실행 패널 자체가 없다 — 장문 보안 안내/PIN/
+        # 버튼이 통째로 제거되고 '운영 API 설정 필요' 한 줄만 남는다. 장문 안내 접힘(4f)은
+        # 운영자(base 주입) 빌드의 계약으로 템플릿에서 검증한다(아래 5a는 템플릿 유지).
+        check("4f: 공개 빌드에 장문 보안 안내/실행 패널 부재(<details class=opctl-more 0건)",
+              '<details class="opctl-more">' not in html
+              and 'id="opctlPanel"' not in html)
+        check("5b: 미설정(공개) 시 '운영 API 설정 필요' 한 줄 노출(실행 버튼 0건)",
+              "운영 API 설정 필요" in html and 'class="opctl-btn' not in html)
 
         check("9d: 시장 상태 보드 컨테이너 렌더(marketStatusBoard)",
               'id="marketStatusBoard"' in html)

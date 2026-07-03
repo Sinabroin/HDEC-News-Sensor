@@ -37,7 +37,8 @@ PERIODS = ("1w", "1m", "3m", "1y")
 GROUPS = ("base_metals", "steel_materials", "oil_refined", "gas_lng",
           "coal", "rates_inflation", "fx")
 # 공개 무료 소스가 없어 비연동(소스 필요)로 두는 종목 — 클릭/차트 없음.
-SOURCE_NEEDED = ("us_2y", "kr_10y")
+# D7-AE-RC3: us_2y는 FRED DGS2 일별 히스토리로 연동 — 소스필요는 kr_10y만 남는다.
+SOURCE_NEEDED = ("kr_10y",)
 
 _failures = []
 
@@ -192,8 +193,14 @@ def check_provider() -> None:
            "diesel_gasoil", "henry_hub", "ttf_gas", "eurkrw", "gbpkrw")
     check("4a: provider가 D7-G 확대 종목을 지원", set(new) <= sup,
           f"누락: {sorted(set(new) - sup)}")
-    check("4b: US 2Y·KR 10Y는 provider 비지원(소스 필요)",
+    check("4b: KR 10Y는 provider 비지원(소스 필요)",
           all(not mh.is_supported(s) for s in SOURCE_NEEDED))
+    # D7-AE-RC3 — us_2y는 Yahoo 카탈로그(_SUPPORTED) 밖에 남되(mock 데모 미생성),
+    # FRED 일별 히스토리 레지스트리로 live 연동된다(가짜 심볼 아님 — DGS2 실 프로빙).
+    check("4b2: us_2y는 FRED 히스토리 레지스트리(DGS2)로 연동 · Yahoo 비지원 유지",
+          not mh.is_supported("us_2y")
+          and mh._FRED_HISTORY.get("us_2y", ("",))[0] == "DGS2"
+          and mh.SOURCE_NEEDED_IDS == ("kr_10y",))
     det = all(mh.demo_history(s) == mh.demo_history(s) for s in new)
     check("4c: demo_history 결정적(now()/random 미사용)", det)
     dist = all(mh.demo_distinct_ok(s) for s in new)
