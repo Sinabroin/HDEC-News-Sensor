@@ -12,9 +12,12 @@
      공개 목록 항목에서 나온다(비공개 이름 0건).
   2. 쿼리 역인덱스 — 리프가 만든 쿼리를 그대로 되돌리면 해당 항목이 나온다.
      무관 쿼리/빈 쿼리는 None(가짜 매칭 없음).
-  3. 빌더 매칭 판정점(_site_matches_for) — (a) 제목 직접 언급 = title 매칭,
-     (b) 사이트 쿼리 수집 provenance = query 매칭, (c) 무관 기사 = 매칭 없음.
-     매칭 행에는 site_watch provenance + scope/business 렌즈가 붙는다.
+  3. 빌더 매칭 판정점(_site_matches_for, D7-AE-RC1 신뢰도 계약) — (a) 제목/스니펫
+     직접 언급 = title/snippet 매칭(confidence=high), (b) 사이트 쿼리 수집 provenance
+     + 식별 토큰(국가/도시/고유명) corroboration = query 매칭(confidence=medium),
+     (c) query-only(식별 토큰 없음)/무관 기사 = 매칭 없음(버림, 낮은 신뢰도를 숨기지
+     않고 아예 반환하지 않는다). 매칭 행에는 site_watch provenance + confidence/
+     reasons + scope/business 렌즈가 붙는다.
   4. controlled fixture 통합(mock 파이프라인 · 오프라인) — fixture 현장이 mock 기사와
      매칭되어 model.site_watch_tree에 match_count>0 + article_keys가 생기고,
      lens_banks[scope]가 그 article_keys의 실제 행으로 동기화된다. 미매칭 fixture
@@ -169,29 +172,48 @@ def check_builder_matching() -> None:
         if not check("3a: 공개 국내 현장 항목 존재", item is not None):
             return
         site_query = sw._queries_for(item)[0]
-        # (a) 사이트 쿼리 provenance 매칭 — 제목은 공식 명칭을 반복하지 않는다.
-        sig_q = {"title": "현장 인근 교통 대책 발표…시공사 협의 착수",
+        tokens = sw.corroboration_tokens(item)
+        if not check("3a2: corroboration 토큰 존재(식별 가능한 항목)", bool(tokens),
+                     str(item.get("name"))):
+            return
+        corroborator = tokens[0]
+        # (a) 사이트 쿼리 provenance + 식별 토큰(국가/도시/고유명) corroboration → medium.
+        #     D7-AE-RC1: 실사용 QA에서 query-only(제목/스니펫에 아무 근거 없음)가 무관 기사에
+        #     붙는 게 확인돼(파나마 메트로 3호선 ↔ 대구 모노레일, 코즐로두이 원전 ↔ 미국
+        #     원전시장), query 매칭은 이제 식별 토큰이 함께 있어야만 인정한다.
+        sig_q = {"title": f"{corroborator} 인근 교통 대책 발표…시공사 협의 착수",
                  "url": "https://news.example.test/q1",
                  "published_at": "2026-07-01T09:00:00+09:00",
                  "source_metadata_json": _meta_json(site_query)}
         got = builder._site_matches_for(sig_q)
-        check("3b: 사이트 쿼리 수집 provenance → query 매칭",
-              [ (m.get("id"), m.get("matched_via")) for m in got ]
-              == [(item["id"], "query")], str(got))
+        check("3b: 사이트 쿼리 + 식별 토큰 corroboration → query 매칭(medium)",
+              [(m.get("id"), m.get("matched_via"), m.get("confidence")) for m in got]
+              == [(item["id"], "query", "medium")], str(got))
         lens = builder._lens_for(sig_q)
-        check("3c: query 매칭 행에 scope 렌즈 태깅", item["scope"] in lens, str(lens))
+        check("3c: 신뢰도 있는 query 매칭 행에 scope 렌즈 태깅", item["scope"] in lens, str(lens))
         prov = (builder._row_from_signal(sig_q).get("provenance") or {})
-        check("3d: provenance에 site_watch_match + matched_via=query",
+        check("3d: provenance에 site_watch_match + matched_via=query + confidence=medium",
               prov.get("site_watch_match") is True
               and prov.get("site_watch_id") == item["id"]
-              and prov.get("site_watch_matched_via") == "query")
-        # (b) 제목 직접 언급 = title 매칭(기존 규칙 불변).
+              and prov.get("site_watch_matched_via") == "query"
+              and prov.get("site_watch_match_confidence") == "medium"
+              and bool(prov.get("site_watch_match_reasons")))
+        # (b) 제목 직접 언급 = title 매칭(기존 규칙 불변, high).
         sig_t = {"title": f"{item['name']} 공정 점검", "url": "https://news.example.test/t1"}
         got_t = builder._site_matches_for(sig_t)
-        check("3e: 제목 직접 언급 → title 매칭",
+        check("3e: 제목 직접 언급 → title 매칭(high)",
               bool(got_t) and got_t[0].get("id") == item["id"]
-              and got_t[0].get("matched_via") == "title", str(got_t[:1]))
-        # (c) 무관 기사(일반 지명·무관 쿼리) → 매칭 없음(broad FP 방지).
+              and got_t[0].get("matched_via") == "title"
+              and got_t[0].get("confidence") == "high", str(got_t[:1]))
+        # (b2) 스니펫 직접 언급도 high(D7-AE-RC1 확장) — 제목엔 없어도 스니펫에 있으면 인정.
+        sig_s = {"title": "현장 인근 교통 대책 발표", "snippet": f"{item['name']} 공정이 순항 중이다.",
+                 "url": "https://news.example.test/s1"}
+        got_s = builder._site_matches_for(sig_s)
+        check("3e2: 스니펫 직접 언급 → snippet 매칭(high)",
+              bool(got_s) and got_s[0].get("id") == item["id"]
+              and got_s[0].get("matched_via") == "snippet"
+              and got_s[0].get("confidence") == "high", str(got_s[:1]))
+        # (c) 무관 기사(일반 지명·무관 쿼리) → 매칭 없음(broad FP 방지, 기존 규칙 불변).
         sig_n = {"title": "서울 아파트 분양 시장 동향", "url": "https://news.example.test/n1",
                  "source_metadata_json": _meta_json("건설 AI 동향")}
         check("3f: 무관 기사/무관 쿼리 → 매칭 없음(가짜 매칭 0)",
@@ -199,6 +221,21 @@ def check_builder_matching() -> None:
         prov_n = (builder._row_from_signal(sig_n).get("provenance") or {})
         check("3g: 무관 행 provenance에 site_watch 키 없음",
               "site_watch_match" not in prov_n)
+        # (d) D7-AE-RC1 회귀 고정 — query provenance인데 제목/스니펫에 식별 토큰이 전혀
+        #     없으면(구 버전이 그대로 인정하던 케이스) 매칭을 버린다. 이게 실사용 QA가 지적한
+        #     "무관 기사가 현장에 매칭됨" 버그의 정확한 재현 fixture다.
+        sig_bare = {"title": "현장 인근 교통 대책 발표…시공사 협의 착수",
+                    "url": "https://news.example.test/qbare",
+                    "source_metadata_json": _meta_json(site_query)}
+        got_bare = builder._site_matches_for(sig_bare)
+        check("3h: query-only(식별 토큰 없음) → 매칭 버림(회귀 고정)",
+              got_bare == [], str(got_bare))
+        lens_bare = builder._lens_for(sig_bare)
+        check("3i: query-only 무매칭 행은 scope 렌즈도 태깅 안 됨",
+              item["scope"] not in lens_bare, str(lens_bare))
+        prov_bare = (builder._row_from_signal(sig_bare).get("provenance") or {})
+        check("3j: query-only 무매칭 행 provenance에 site_watch 키 없음",
+              "site_watch_match" not in prov_bare)
     finally:
         if saved is not None:
             os.environ["SITE_WATCHLIST_PATH"] = saved

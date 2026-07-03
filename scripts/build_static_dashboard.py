@@ -599,35 +599,50 @@ def _signal_source_metadata(sig: dict) -> dict:
 
 
 def _site_matches_for(sig) -> list:
-    """워치리스트 현장 매칭 — 단일 판정점 (D7-AE). 두 근거만 인정한다:
+    """워치리스트 현장 매칭 — 단일 판정점 (D7-AE, 신뢰도 계약 D7-AE-RC1).
 
-    (1) 제목 직접 언급 — classify_site_lenses(기존 규칙 불변, ≥4자 이름/별칭 부분문자열).
-    (2) 사이트 쿼리 수집 provenance — 이 기사가 워치리스트 사이트 쿼리(site:*)로 수집됐다는
-        source_metadata.query를 site_watchlist.match_item_for_query로 역매핑한다. 제목이
-        공식 명칭을 그대로 반복하지 않아도 "그 현장명 검색 결과"라는 실제 수집 근거가 있다.
-        무관 쿼리/빈 쿼리는 매칭되지 않는다(가짜 매칭 생성 없음).
+    실사용 QA 실패: query provenance만으로 매칭을 인정하면 "파나마 메트로 3호선"에
+    무관한 대구 모노레일 기사가, "코즐로두이 원전"에 무관한 미국 원전시장 기사가
+    붙는다(둘 다 제목·스니펫에 현장명이 전혀 없고 쿼리로만 걸림). 이제 두 신뢰도만
+    인정하고, 그 외엔 매칭을 아예 반환하지 않는다(낮은 신뢰도는 숨기지 않고 버린다):
 
-    반환 항목은 classify_site_lenses와 동일 shape + matched_via('title'|'query').
+    - **high** — 제목 또는 스니펫에 현장명/별칭 직접 포함(classify_site_lenses,
+      ≥4자 부분문자열, 기존 규칙 불변 + 스니펫 확장).
+    - **medium** — 사이트 쿼리(site:*) 수집 provenance(source_metadata.query가 그
+      현장의 exact-phrase 쿼리와 일치) **그리고** 제목+스니펫에 그 현장의 식별 토큰
+      (국가/도시/고유 프로젝트명 — corroboration_tokens, 업종어 제외)이 하나 이상
+      있을 때만. 식별 토큰이 하나도 없으면 매칭을 버린다(query-only는 인정 안 함).
+
+    반환 항목은 classify_site_lenses와 동일 shape + matched_via('title'|'snippet'|'query')
+    + confidence('high'|'medium') + reasons(list[str]).
     """
     out = []
     seen = set()
-    for m in site_watchlist.classify_site_lenses(sig.get("title") or ""):
+    title = sig.get("title") or ""
+    snippet = sig.get("snippet") or ""
+    for m in site_watchlist.classify_site_lenses(title, snippet):
         entry = dict(m)
-        entry["matched_via"] = "title"
+        entry["confidence"] = "high"
+        entry["reasons"] = [f"{entry.get('matched_via')}_direct_mention"]
         seen.add(entry.get("id"))
         out.append(entry)
     query = str(_signal_source_metadata(sig).get("query") or "")
     item = site_watchlist.match_item_for_query(query)
     if item and item.get("id") not in seen:
-        out.append({
-            "id": item.get("id") or "",
-            "name": item.get("name") or "",
-            "label": item.get("name") or "",
-            "scope": item.get("scope") or "",
-            "business_lens": item.get("business_lens") or "",
-            "org_unit": item.get("org_unit") or "",
-            "matched_via": "query",
-        })
+        hit = site_watchlist.corroboration_hit(item, f"{title} {snippet}")
+        if hit:
+            out.append({
+                "id": item.get("id") or "",
+                "name": item.get("name") or "",
+                "label": item.get("name") or "",
+                "scope": item.get("scope") or "",
+                "business_lens": item.get("business_lens") or "",
+                "org_unit": item.get("org_unit") or "",
+                "matched_via": "query",
+                "confidence": "medium",
+                "reasons": ["query_exact_phrase", f"context_token:{hit}"],
+            })
+        # else: query-only, no corroborating context → dropped (가짜 매칭 생성 없음)
     return out
 
 
@@ -771,13 +786,20 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         provenance["site_watch_business_lens"] = m.get("business_lens") or ""
         provenance["site_watch_org_unit"] = m.get("org_unit") or ""
         provenance["site_watch_matched_via"] = m.get("matched_via") or "title"
+        # D7-AE-RC1 — 신뢰도/근거(site_watch_match_confidence·_reasons). _site_matches_for가
+        # 이미 threshold 미만(query-only, 무관 corroboration)은 걸러 반환하므로 여기 도달한
+        # 항목은 전부 high/medium이다(low는 애초에 존재하지 않는다).
+        provenance["site_watch_match_confidence"] = m.get("confidence") or "high"
+        provenance["site_watch_match_reasons"] = list(m.get("reasons") or [])
         if sig.get("published_at"):
             provenance["site_watch_latest_published_at"] = sig.get("published_at")
         provenance["site_watch_matches"] = [
             {"id": x.get("id") or "", "label": x.get("label") or x.get("name") or "",
              "scope": x.get("scope") or "", "business_lens": x.get("business_lens") or "",
              "org_unit": x.get("org_unit") or "",
-             "matched_via": x.get("matched_via") or "title"}
+             "matched_via": x.get("matched_via") or "title",
+             "confidence": x.get("confidence") or "high",
+             "reasons": list(x.get("reasons") or [])}
             for x in site_matches
         ]
     return {
