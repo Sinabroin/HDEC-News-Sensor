@@ -1574,6 +1574,122 @@ def _strip_hormuz_demo_card(html: str) -> str:
     return result[:seam_start] + seam + result[seam_end:]
 
 
+_WX_GRADE_CLS = {"낮음": "wx-low", "주의": "wx-watch", "높음": "wx-high"}
+
+
+def _wx_num(value, unit: str, digits: int = 0) -> str:
+    if value is None:
+        return ""
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if num != num or num in (float("inf"), float("-inf")):  # NaN/inf guard
+        return ""
+    return f"{num:.{digits}f}{unit}"
+
+
+def _render_weather_rows_html(rows: list) -> tuple[str, list]:
+    """templates/dashboard_preview.html의 renderSiteWeather() JS와 동일 규칙으로 행 HTML을
+    만든다(서버=클라이언트 이중 렌더 — 한쪽이 바뀌면 둘 다 고친다는 뜻). 헤더 행은 그대로
+    두고(정적) 데이터 행만 생성한다."""
+    html_parts = []
+    reason_lines = []
+    for r in rows:
+        off = r.get("row_status") != "ok"
+
+        def cell(v: str) -> str:
+            return ('<span class="wx-off">미수신</span>' if (off or not v)
+                    else f'<span class="wx-val">{escape(v)}</span>')
+
+        flags = r.get("flags") or []
+        if flags:
+            flags_html = f'<span class="wx-flag">{escape("·".join(flags))}</span>'
+        elif off:
+            flags_html = '<span class="wx-off">미수신</span>'
+        else:
+            flags_html = '<span class="wx-val">—</span>'
+        cls = "wx-unknown" if off else _WX_GRADE_CLS.get(r.get("risk_grade"), "wx-unknown")
+        risk_text = "확인 필요" if off else (r.get("risk_grade") or "")
+        html_parts.append(
+            '<div class="wx-row" role="row">'
+            f'<span class="wx-rgn" title="{escape(r.get("basis") or "")} 대표점">'
+            f'{escape(r.get("region") or "")}</span>'
+            + cell(_wx_num(r.get("precip_prob"), "%")) + cell(_wx_num(r.get("precip_mm"), "mm", 1))
+            + cell(_wx_num(r.get("wind_ms"), "m/s", 1)) + cell(_wx_num(r.get("gust_ms"), "m/s", 1))
+            + flags_html
+            + '<span class="wx-manual">수동 확인</span>'
+            + f'<span class="wx-risk {cls}">{escape(risk_text)}</span></div>')
+        if not off and r.get("risk_labels"):
+            reason_lines.append(
+                f'{escape(r.get("region") or "")}({escape(r.get("basis") or "")}) — '
+                f'{escape(" · ".join(r["risk_labels"]))}')
+    if reason_lines:
+        html_parts.append(
+            '<div class="wx-row"><span class="wx-reasons"><b>리스크 근거</b> · '
+            + " / ".join(reason_lines) + "</span></div>")
+    return "".join(html_parts), reason_lines
+
+
+def _render_weather_section(html: str, weather: dict) -> str:
+    """명일 정오 시공 리스크 표를 서버 사이드에서 채운다 (D7-AE-RC2).
+
+    사용자 실사용 QA: weather_data_mode=live에 weather_rows도 있는데 '초기 화면'에는
+    정적 '미연동' 표가 보였다 — renderSiteWeather() 자체는 정상 동작(헤드리스 실측 확인,
+    콘솔 에러 0건)이지만, 이 표가 문서 후반부의 거대한 단일 <script> 블록이 전부 파싱된
+    "이후"에만 JS로 교체되므로, 그 전까지의 첫 페인트(파일 크기 수백KB)에서는 정적
+    placeholder가 그대로 보일 수 있다. 뉴스 featured 카드(_render_featured)와 동일하게
+    빌드 시점에 실측값을 HTML에 직접 구워 넣어 JS 실행 여부와 무관하게 첫 화면부터
+    정확하게 만든다. renderSiteWeather()는 그대로 둔다 — 같은 MODEL 값을 읽어 같은 결과로
+    재렌더하므로 멱등하고(해가 없음), 향후 JS만 수정되는 경우에도 안전망 역할을 한다.
+    """
+    mode = weather.get("weather_data_mode") or ""
+    rows = weather.get("weather_rows") or []
+    if mode != "live" or not rows:
+        if weather.get("weather_live_attempted"):
+            html = html.replace(
+                '<span class="wx-badge" id="wxBadge">기상 데이터 소스 미연동</span>',
+                '<span class="wx-badge" id="wxBadge">기상 데이터 미수신</span>', 1)
+            reason = weather.get("weather_unavailable_reason")
+            if reason:
+                html = html.replace(
+                    '<div class="wx-note" id="wxNote">',
+                    f'<div class="wx-note" id="wxNote"><div>{escape(reason)}</div>', 1)
+        return html  # 정적 '미연동' 표 유지 — 가짜 값 없음(mock/미시도와 동일 규칙)
+
+    rows_html, _reasons = _render_weather_rows_html(rows)
+    grid_start = html.find('id="wxGrid">')
+    if grid_start < 0:
+        return html
+    grid_open_end = grid_start + len('id="wxGrid">')
+    depth = 0
+    tag_re = re.compile(r"<div\b|</div>")
+    inner_end = -1
+    for tag_m in tag_re.finditer(html, grid_open_end):
+        if tag_m.group(0) == "</div>":
+            if depth == 0:
+                inner_end = tag_m.start()
+                break
+            depth -= 1
+        else:
+            depth += 1
+    if inner_end < 0:
+        return html
+    header_row_m = re.search(r'<div class="wx-row wx-gh".*?</div>', html[grid_open_end:inner_end], re.S)
+    header_row = header_row_m.group(0) if header_row_m else ""
+    html = html[:grid_open_end] + header_row + rows_html + html[inner_end:]
+
+    badge_text = ("출처 " + escape(weather.get("weather_source") or "")
+                  + " · 수집 " + escape(weather.get("weather_updated_at") or "") + " KST")
+    html = re.sub(
+        r'<span class="wx-badge" id="wxBadge">[^<]*</span>',
+        f'<span class="wx-badge" id="wxBadge">{badge_text}</span>', html, count=1)
+    html = html.replace(
+        '<span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00</span>',
+        '<span class="wx-when" id="wxWhen">기준 · 명일(D+1) 정오 12:00 · 권역 현지시각</span>', 1)
+    return html
+
+
 def _inject_featured(html: str, featured_html: str) -> str:
     if not featured_html:
         return html
@@ -2151,6 +2267,14 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
     html = _inject_model(html, parts, news_mode, market_mode, brief=brief,
                          operator_api_base=operator_api_base,
                          weather_mode=weather_mode)
+    # D7-AE-RC2 — JSON island에 이미 주입된 weather_* 값을 그대로 되읽어(재요청/재조회 없음)
+    # wxGrid/wxBadge를 서버에서 채운다 — JS(renderSiteWeather)와 동일 소스, 동일 결과.
+    model_m = re.search(r'<script type="application/json" id="preview-model">(.*?)</script>',
+                        html, re.S)
+    if model_m:
+        weather_snapshot = {k: v for k, v in json.loads(model_m.group(1)).items()
+                            if k.startswith("weather_")}
+        html = _render_weather_section(html, weather_snapshot)
     html = _update_header_dates(html, brief)
     html = _update_nav_counts(html, parts["nav_counts"], lens_queries.policy_for_model())
     html = _update_section_counts(html, parts["immediate_n"], len(parts["ai_rows"]),
@@ -2222,6 +2346,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     brief = build_brief_via_mock_pipeline()
+    # D7-AE-RC2 — market/weather는 --live인데 뉴스는 (NEWS_MODE=live를 안 잊고 켜지 않아)
+    # mock으로 수집됐는지 확인한다. RC1의 마지막 수동 rebuild가 정확히 이 조합으로
+    # news_data_mode를 조용히 mock으로 되돌렸다(공개 헤더가 실제 상태와 모순되는 결과가
+    # 됨). brief는 이미 build_brief_via_mock_pipeline()이 만든 값이라 빌더가 env를 직접
+    # 읽지 않는다(verify_dashboard_real_data 1d 계약 준수) — 막지는 않는다(뉴스는 mock,
+    # 시세/기상만 live로 테스트하는 것도 유효한 조합이라) 눈에 띄게 경고만 한다.
+    if (args.market_mode == "live" or args.weather_mode == "live") \
+            and brief.get("news_data_mode") != "live":
+        print("WARNING: --market-mode/--weather-mode=live인데 뉴스는 mock으로 수집됨"
+              "(NEWS_MODE=live 환경변수가 설정되지 않은 것으로 보임) — 헤더는 정직하게 "
+              "'데모 mock'으로 남습니다. 공개 라이브 산출물을 원하면 NEWS_MODE=live를 "
+              "함께 설정하세요.", file=sys.stderr)
     html = render_dashboard_html(brief, market_mode=args.market_mode,
                                  operator_api_base=args.operator_api_base,
                                  weather_mode=args.weather_mode)
