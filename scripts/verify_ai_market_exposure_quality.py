@@ -249,9 +249,24 @@ def verify_ai_dashboard_model(model: dict) -> None:
 
 
 # ── Group 4: Market model ─────────────────────────────────────────────────────
+_MARKET_AUTO_LIVE_MODES = {"live_market", "delayed_market", "live_macro", "delayed_macro"}
+
+
 def _market_linked(it: dict) -> bool:
+    """D7-AE-RC1: "값이 있다"만으로는 부족하다 — data_mode(설계상 분류)가 허용 목록이고,
+    history_data_mode(있다면, 오늘 실제로 어디서 왔는지)도 허용 목록이어야 linked다.
+    scripts/build_static_dashboard.py의 _market_is_auto_live · 템플릿 JS의 isAutoLive와
+    동일 규칙(단일 계약, 세 곳 모두 갱신)."""
     v = it.get("value")
-    return v is not None and str(v).strip() not in ("", "—")
+    has_value = v is not None and str(v).strip() not in ("", "—")
+    if not has_value:
+        return False
+    if it.get("data_mode") not in _MARKET_AUTO_LIVE_MODES:
+        return False
+    hist_mode = it.get("history_data_mode")
+    if hist_mode and hist_mode not in _MARKET_AUTO_LIVE_MODES:
+        return False
+    return True
 
 
 def _market_chartable(it: dict) -> bool:
@@ -314,9 +329,13 @@ def verify_market_model(model: dict, html: str) -> None:
     check("4g: 미연동(unavailable) 지표에 가짜 값/스파크 없음(값 null)",
           not faked, "; ".join(faked[:5]))
 
-    # Sanity: at least linked indicators exist and the surface is not all-dead.
-    check("4h: 연동 지표가 미연동보다 많음(섹션이 죽은 행에 지배되지 않음)",
-          linked > unlinked, f"linked={linked} unlinked={unlinked}")
+    # D7-AE-RC1: "linked > unlinked"는 linked가 "값이 있으면 전부"(proxy/manual 포함)이던
+    # 시절 기준이다. 이제 linked는 진짜 자동 live/delayed만이라(사용자 지시 — proxy/manual/
+    # unavailable/데모대체는 메인 뷰 자격 없음), 정직하게 세면 소수여도 정상이다(실측:
+    # 49종 중 19종). "죽은 행에 지배되지 않음"의 실제 의도는 "연동 지표가 무의미하게
+    # 적지 않음"이므로, 과반 대신 절대 하한(운영자가 실사용 가능한 수준)으로 검사한다.
+    check("4h: 연동 지표가 유의미한 절대 하한 이상(섹션이 죽은 행에 지배되지 않음)",
+          linked >= 15, f"linked={linked} unlinked={unlinked}")
 
     check("4i: D7-Z2 상세 차트 미연동 회귀 방지(chartless <= 14)",
           chartless <= 14, f"chartless={chartless} ceiling=14")
