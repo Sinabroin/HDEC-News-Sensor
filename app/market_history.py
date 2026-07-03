@@ -3,7 +3,7 @@
 대시보드 시장 기간 버튼(1주·1개월·3개월·1년)을 실제로 동작시키기 위한 per-period 시계열을
 공급한다. app/live_market.py(현재값 leaf)와 같은 경계 원칙을 따른다:
 
-- 네트워크 IO는 이 leaf만 한다(공개·무료 Yahoo chart JSON). API key/비밀값이 필요 없다.
+- 네트워크 IO는 이 leaf만 한다(공개·무료 Yahoo chart JSON + FRED 공개 CSV). API key/비밀값이 필요 없다.
 - 다른 app 도메인을 import하지 않는다(설정/심볼을 자체 보유). DB·점수·insight·발송 0건.
 - live 수집이 실패하면 가짜 live 값을 만들지 않는다 — 해당 종목은 demo 픽스처로 두되
   history_data_mode를 'mock_demo'로 정직하게 표기한다(live로 위장 금지).
@@ -137,9 +137,22 @@ _BY_ID = {s.id: s for s in _SUPPORTED}
 PROXY_IDS = ("iron_ore", "hrc_steel", "thermal_coal", "diesel_gasoil", "rebar")
 
 # 공개 무료 소스가 없어 기간 히스토리를 연동하지 않는 종목(정직: 소스 필요).
-# US 2Y·KR 10Y는 Yahoo 무료 심볼이 없어 비연동으로 둔다(가짜 값/가짜 선 미생성).
+# KR 10Y는 일간 무료 소스가 없어 비연동(FRED OECD 월간은 단일값 proxy만 — 가짜 선 미생성).
+# US 2Y는 D7-AE-RC3에서 FRED DGS2(일별 공개 CSV)로 기간 히스토리가 연동됐다(아래 _FRED_HISTORY).
 # 니켈·아연(ZNC=F는 신뢰 불가한 ALTSYMBOL)·원료탄 등은 신뢰 가능한 무료 심볼이 없어 비연동.
-SOURCE_NEEDED_IDS = ("us_2y", "kr_10y")
+SOURCE_NEEDED_IDS = ("kr_10y",)
+
+# FRED 공개 CSV(무인증) 일별 히스토리(D7-AE-RC3) — Yahoo 무료 심볼이 없는 미 국채 2Y.
+# 2026-07-03 실 GET 프로빙: fredgraph.csv?id=DGS2 → 200 OK · 일별(영업일) 시계열 ·
+# 결측은 '.'로 옴. 값은 % 그대로(스케일 불요). Yahoo 카탈로그(_SUPPORTED)와 분리해
+# is_supported()는 계속 False다(= 'Yahoo provider 비지원' 계약 유지 — 데모 픽스처도
+# 만들지 않아 mock 빌드의 us_2y는 여전히 unavailable·차트 없음으로 정직하다).
+FRED_CSV_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
+FRED_HISTORY_MAX_POINTS = 260  # 최근 1년치(영업일)만 사용
+# {item_id: (series_id, decimals, sane_min, sane_max)}
+_FRED_HISTORY = {
+    "us_2y": ("DGS2", 2, 0.0, 25.0),
+}
 
 
 def supported_ids() -> list:
@@ -283,12 +296,66 @@ def _scaled(values: list, spec: "_Spec") -> list:
     return out
 
 
+def _fetch_fred_csv(series_id: str, timeout: int) -> list:
+    """FRED 공개 CSV에서 (date, value) 쌍 목록을 꺼낸다 — 결측('.')은 제외."""
+    url = FRED_CSV_BASE + urllib.parse.quote(series_id, safe="")
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (public CSV)
+        text = resp.read().decode("utf-8", errors="replace")
+    pairs = []
+    for line in text.splitlines()[1:]:
+        cols = line.strip().split(",")
+        if len(cols) != 2 or cols[1] in (".", ""):
+            continue
+        try:
+            pairs.append((cols[0], float(cols[1])))
+        except ValueError:
+            continue
+    return pairs
+
+
+def _fred_history_entries(item_ids, timeout: int) -> dict:
+    """FRED 일별 시계열 종목의 live 엔트리(D7-AE-RC3) — 실패는 종목 단위 격리(가짜 값 없음)."""
+    out = {}
+    for item_id, (sid, decimals, lo, hi) in _FRED_HISTORY.items():
+        if item_ids and item_id not in item_ids:
+            continue
+        try:
+            pairs = _fetch_fred_csv(sid, timeout)
+        except Exception:  # noqa: BLE001 — 네트워크/HTTP/파싱 오류는 종목 단위로 무시
+            continue
+        pairs = [(d, v) for d, v in pairs if lo <= v <= hi][-FRED_HISTORY_MAX_POINTS:]
+        closes = [_round(v, decimals) for _d, v in pairs]
+        if len(closes) < PERIOD_LEN["1w"]:
+            continue
+        history = {}
+        ok = True
+        for period in PERIOD_KEYS:
+            arr = _window(closes, period)
+            if len(arr) < 2:
+                ok = False
+                break
+            history[period] = arr
+        if not ok:
+            continue
+        out[item_id] = {
+            "history": history,
+            "history_source": f"FRED {sid} (일별·전영업일 확정)",
+            "history_data_mode": LIVE_MODE,
+            "history_updated_at": pairs[-1][0],
+            "history_decimals": decimals,
+        }
+    return out
+
+
 def fetch_live_history(item_ids=None, timeout: int | None = None,
                        fetcher=None) -> dict:
     """지원 종목의 공개 시세 1년 히스토리를 수집해 기간별 엔트리로 반환.
 
     심볼 1건 실패/결측은 격리(해당 id 제외). 반환은 {id: live_entry} (성공분만).
     fetcher는 테스트 주입용(symbol→{timestamps, closes} 또는 None). 평상시 None.
+    Yahoo 카탈로그(_SUPPORTED) 외에 FRED 일별 시계열 종목(_FRED_HISTORY: us_2y=DGS2)도
+    수집한다 — fetcher 주입(테스트) 시에는 FRED 네트워크 경로를 타지 않는다.
     """
     ids = list(item_ids) if item_ids else supported_ids()
     to = int(timeout if timeout is not None else DEFAULT_TIMEOUT)
@@ -326,6 +393,10 @@ def fetch_live_history(item_ids=None, timeout: int | None = None,
             "history_updated_at": updated,
             "history_decimals": spec.decimals,
         }
+    # FRED 일별 시계열(us_2y 등) — Yahoo 경로와 독립 수집. fetcher 주입 시(오프라인
+    # 테스트) 네트워크를 만들지 않기 위해 스킵한다(Yahoo 경로와 동일 계약).
+    if fetcher is None:
+        out.update(_fred_history_entries(item_ids, to))
     return out
 
 
