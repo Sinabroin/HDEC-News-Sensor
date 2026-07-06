@@ -6,8 +6,8 @@
   1. 독립 '임원 브리핑 섹션' accordion 제거 · layered flat list(#categoryNewsList)로 대체
   2. 브리핑 분류 데이터는 preview-model.nav_category_sections로 주입(weather 제외)
   3. 기상·날씨는 siteWeatherCard(시장 탭) — 뉴스 기사 섹션 아님
-  4. 운영 API 장문 설명 details(opctl-more) 접힘 + opctl compact
-  5. disabled 버튼 → '운영자 서버 미연결' 한 줄(opUnsetLine)
+  4. 운영 API 상세는 details(opctl-more) 접힘 + opctl compact
+  5. API 미연결 공개 페이지 → 3개 실행 버튼 visible + 명확한 미연결 상태
   6. 현장 워치리스트 3단계 접힘(대분류→중분류→개별 현장)
   7. private/operator 135개 현장 보존(있으면 검사)
   8. public 실제 현장명 미노출
@@ -176,14 +176,21 @@ def check_template() -> None:
     check("4a: 운영자 패널 compact(opctl compact)", 'class="opctl compact"' in t)
     check("4b: 장문 안내/PIN는 접이식(details.opctl-more)로", 'class="opctl-more"' in t
           and "<details class=\"opctl-more\">" in t)
-    check("5a: disabled 한 줄 설명(opUnsetLine) + '운영자 서버 미연결'",
-          'id="opUnsetLine"' in t and "운영자 서버 미연결" in t)
+    check("5a: 운영자 모드가 클릭 가능한 summary + 실행 버튼 3개",
+          '<summary class="opctl-mode-toggle">' in t and 'id="opActionLinks"' not in t
+          and all(label in t for label in (
+              "데이터 새로고침 실행", "텔레그램 전송 실행", "Teams 채널 전송 실행"
+          )))
+    # D7-AG-3 — 브라우저 PIN 제거 + 보호 서버 앞단 이관. opPin·PIN 저장 문구 앵커는 제거하고,
+    # 서버 앞단 인증 안내(opAuthNote) + PIN 미보유(페이지에 PIN·토큰을 넣지 않습니다) 앵커로 대체.
     for anchor in ("데이터 새로고침 실행", "텔레그램 전송 실행", "Teams 채널 전송 실행",
                    'id="opCollectBtn" type="button" disabled',
                    'id="opSendBtn" type="button" disabled',
-                   'id="opTeamsBtn" type="button" disabled', 'id="opPin"',
-                   "브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다."):
+                   'id="opTeamsBtn" type="button" disabled', 'id="opAuthNote"',
+                   "페이지에 PIN·토큰을 넣지 않습니다"):
         check(f"4c: 운영 계약 앵커 유지 '{anchor[:32]}'", anchor in t)
+    check("4c-2: 브라우저 PIN 입력 제거(서버 앞단 인증)",
+          'id="opPin"' not in t and "승인 PIN" not in t)
     check("4d: Teams 버튼이 운영 API로 배선(el(opTeamsBtn)+활성화+send-teams endpoint)",
           'el("opTeamsBtn")' in t and "teamsBtn.disabled = false" in t
           and "/api/operator/send-teams" in t)
@@ -254,14 +261,16 @@ def check_public_build() -> None:
         check("4e: 운영자 실행 컨트롤이 왼쪽 rail(railcol) 하단으로 이동(main 본문 앞)",
               _order(html, 'class="railcol"', 'id="lensnav"', 'id="opctl"', 'id="panel-news"')
               and _order(html, 'id="opctl"', "<footer"))
-        # D7-AE-RC3(B안): 공개(무설정) 빌드는 실행 패널 자체가 없다 — 장문 보안 안내/PIN/
-        # 버튼이 통째로 제거되고 '운영 API 설정 필요' 한 줄만 남는다. 장문 안내 접힘(4f)은
-        # 운영자(base 주입) 빌드의 계약으로 템플릿에서 검증한다(아래 5a는 템플릿 유지).
-        check("4f: 공개 빌드에 장문 보안 안내/실행 패널 부재(<details class=opctl-more 0건)",
-              '<details class="opctl-more">' not in html
-              and 'id="opctlPanel"' not in html)
-        check("5b: 미설정(공개) 시 '운영 API 설정 필요' 한 줄 노출(실행 버튼 0건)",
-              "운영 API 설정 필요" in html and 'class="opctl-btn' not in html)
+        check("4f: 공개 빌드 운영자 모드는 클릭 가능한 details",
+              '<details class="opctl-panel" id="opctlPanel">' in html
+              and '<summary class="opctl-mode-toggle">' in html)
+        check("5b: 미설정 공개 빌드에 실행 UI visible + 명확한 미연결",
+              'id="opActionLinks"' not in html and 'id="opApiControls"' in html
+              and "Operator API 미연결" in html
+              and "데이터 새로고침 실행" in html
+              and "텔레그램 전송 실행" in html
+              and "Teams 채널 전송 실행" in html
+              and "Public URL 새로고침" in html)
 
         check("9d: 시장 상태 보드 컨테이너 렌더(marketStatusBoard)",
               'id="marketStatusBoard"' in html)

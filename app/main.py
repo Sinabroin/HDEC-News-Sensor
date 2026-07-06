@@ -8,15 +8,16 @@
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app import (
     briefing, collector, config, db, feedback, insight, notification,
-    operator_gateway, scoring, source_quality,
+    scoring, source_quality,
 )
+from app.operator_api import router as operator_router
 
 ALERT_GRADE_ALIASES = {
     "instant_candidate": "즉시 알림 후보",
@@ -41,14 +42,18 @@ app = FastAPI(title="HDEC Executive Radar", version="day1-p0a", lifespan=lifespa
 
 # CORS: 로컬 데모 최소 허용 (rules.md §4). D7-AA — 공개 Pages 대시보드의 운영자 버튼이
 # Operator API(POST)를 cross-origin 호출하므로 Pages origin을 추가 허용한다(비밀값 아님 ·
-# config.OPERATOR_ALLOWED_ORIGINS로 확장 가능). 자격증명(쿠키)은 쓰지 않는다 — PIN은 헤더로만.
+# config.OPERATOR_ALLOWED_ORIGINS로 확장 가능). D7-AG-3 — 보호가 서버 앞단(edge SSO/Access)으로
+# 이관돼 브라우저가 경계 세션 쿠키를 실어 보낼 수 있어야 하므로 자격증명을 허용한다(와일드카드
+# origin 금지 · 명시 목록만). 배포 entrypoint는 최소 app.operator_api:app이며 이 full 앱은 로컬용.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8000", "http://127.0.0.1:8000",
                    *config.OPERATOR_ALLOWED_ORIGINS],
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Operator-Token"],
+    allow_credentials=True,
 )
+app.include_router(operator_router)
 
 
 class SenseRunRequest(BaseModel):
@@ -70,21 +75,6 @@ class NotifyRequest(BaseModel):
 class NotifyTestRequest(BaseModel):
     channel: str = "mock"
     message: str = "HDEC Executive Radar test"
-
-
-class OperatorActionRequest(BaseModel):
-    # 운영자 승인 PIN. 프론트는 런타임 입력값을 헤더(X-Operator-Token) 또는 이 body로 보낸다.
-    # 어떤 토큰/시크릿도 정적 페이지에 저장하지 않는다 (rules.md §4).
-    pin: str | None = None
-
-
-# operator_gateway 상태 → HTTP 코드 (비밀값 없는 중립 응답).
-_OPERATOR_HTTP = {
-    "dispatched": 200,
-    "not_configured": 503,
-    "unauthorized": 401,
-    "error": 502,
-}
 
 
 def _parse_json_fields(row: dict | None) -> dict | None:
@@ -234,43 +224,3 @@ def get_brief():
 def settings_topics():
     # Day-1: 조회 전용. 수정 endpoint는 만들지 않는다 (rules.md §1).
     return {"topics": db.fetch_topics(), "read_only": True}
-
-
-def _operator_response(result: dict) -> JSONResponse:
-    """게이트웨이 결과를 비밀값 없는 JSON 응답으로 변환한다 (상태 코드 매핑)."""
-    status = result.get("status", "error")
-    return JSONResponse(status_code=_OPERATOR_HTTP.get(status, 502), content=result)
-
-
-def _operator_pin(body: OperatorActionRequest | None, header_token: str | None) -> str:
-    return ((body.pin if body and body.pin else None) or header_token or "")
-
-
-@app.post("/api/operator/collect")
-def operator_collect(body: OperatorActionRequest | None = None,
-                     x_operator_token: str | None = Header(default=None)):
-    # D7-AA — 운영자 버튼이 호출하는 수집 실행 endpoint. PIN 검증은 operator_gateway가 한다.
-    # GitHub/Telegram 토큰은 서버 env에만 있고 응답/로그에 싣지 않는다.
-    return _operator_response(
-        operator_gateway.trigger_collect(_operator_pin(body, x_operator_token)))
-
-
-@app.post("/api/operator/send-telegram")
-def operator_telegram(body: OperatorActionRequest | None = None,
-                      x_operator_token: str | None = Header(default=None)):
-    # D7-AA — 운영자 버튼이 호출하는 텔레그램 발송 endpoint. 이 라우트는 sender 스크립트를 직접
-    # 호출하지 않고 operator_gateway가 워크플로(telegram-notify.yml)를 dispatch한다. PIN 검증을
-    # 통과한 호출에서만 게이트웨이가 approve_send="true"를 넘겨 실제 발송까지 간다(자동발송 없음).
-    return _operator_response(
-        operator_gateway.trigger_telegram(_operator_pin(body, x_operator_token)))
-
-
-@app.post("/api/operator/send-teams")
-def operator_teams(body: OperatorActionRequest | None = None,
-                   x_operator_token: str | None = Header(default=None)):
-    # D7-AD-U — 운영자 버튼이 호출하는 Teams 채널 전송 endpoint. sender를 직접 호출하지 않고
-    # operator_gateway가 워크플로(email-alert.yml)를 approve_send_email=true·send_to_teams=true로
-    # dispatch한다. PIN 검증을 통과한 호출에서만 실제 발송까지 간다(자동발송 없음). Gmail SMTP
-    # 계정·Teams 채널 주소는 GitHub Secrets에만 있고 응답/로그에 싣지 않는다.
-    return _operator_response(
-        operator_gateway.trigger_teams(_operator_pin(body, x_operator_token)))

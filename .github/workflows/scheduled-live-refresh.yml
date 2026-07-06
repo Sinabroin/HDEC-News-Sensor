@@ -62,8 +62,10 @@ jobs:
           python3 scripts/verify_dashboard_accordion_sections.py
           python3 scripts/verify_dashboard_existing_rail_navigation.py
           python3 scripts/verify_hormuz_lens_relevance.py
+          python3 scripts/verify_hormuz_ais_traffic.py
           python3 scripts/verify_national_ai_infra_relevance.py
           python3 scripts/verify_operator_controls.py
+          python3 scripts/verify_operator_actual_buttons.py
           python3 scripts/verify_ai_market_exposure_quality.py
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_site_article_sensing.py
@@ -88,8 +90,8 @@ jobs:
           MACRO_MODE: live
           # 이 step의 시장지표 snapshot을 휘발 파일로 남겨 아래 다이제스트 step이 동일 값을 쓰게 한다.
           MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
-          # D7-AA — 운영자 버튼이 호출할 공개 Operator API base URL (비밀값 아님 · repo variable).
-          # 미설정이면 빈 값 → 대시보드 버튼은 비활성 + '운영 API 미설정' 안내만 (GitHub 이동 없음).
+          # 운영자 버튼이 호출할 공개 Operator API base URL (비밀값 아님 · repo variable).
+          # 미설정이면 3개 실행 버튼을 비활성화하고 Operator API 미연결을 명시한다.
           OPERATOR_API_BASE: ${{ vars.OPERATOR_API_BASE }}
         run: |
           OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html --audience executive)"

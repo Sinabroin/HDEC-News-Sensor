@@ -1936,10 +1936,16 @@ def build_brief(pipeline_counts: dict | None = None,
     hdec_direct_signals = _decision_group(
         decision_relevance.HDEC_DIRECT, limit=TOP_RADAR, sort_key=_hdec_sort,
         surface="hdec_direct_signals",
-        # AI/risk keeps HDEC membership in decision_relevance, but its one
-        # visible card belongs to the corresponding semantic section.
-        eligible=lambda row: radar_sections[row["id"]]
-        not in (radar.AI, radar.RISK))
+        # AI/risk 기사가 HDEC를 secondary 로만 포함하면 그 한 장의 카드는 해당 semantic
+        # 섹션(AI/리스크)이 소유한다. 단 primary executive_section 이 현대건설 직접인 기사
+        # (예: '현대건설, 네옴 AI 데이터센터 EPC 우선협상대상자 선정')는 radar 가 AI 여도
+        # 현대건설 연관 섹션이 소유한다 — HDEC-first IA 계약(P0-C1.12). 이 섹션이 AI 탭보다
+        # 먼저 빌드되며 surface_state 에 등록되므로 AI 탭에서는 single-use 로 자동 제외된다
+        # (중복 카드 없음).
+        eligible=lambda row: (
+            radar_sections[row["id"]] not in (radar.AI, radar.RISK)
+            or decisions[row["id"]]["primary_executive_section"]
+            == decision_relevance.HDEC_DIRECT))
 
     # 2) AI 관련 — 정렬 우선순위 (P0-D3S, 임원 의도): (1) 현대건설/건설/EPC/데이터센터/전력
     # 인프라 직접 관련성 → (2) 임원 중요도(종합 점수) → (3) 신뢰 출처 → (4) 최신성.

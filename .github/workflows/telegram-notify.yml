@@ -59,6 +59,9 @@ jobs:
           python3 scripts/verify_executive_ia_polish.py
           python3 scripts/verify_telegram_channel_to_personal_entry.py
           python3 scripts/verify_national_ai_infra_relevance.py
+          python3 scripts/verify_hormuz_ais_traffic.py
+          python3 scripts/verify_operator_controls.py
+          python3 scripts/verify_operator_actual_buttons.py
 
       # 빈 메시지면 live 게시 경로, 커스텀 메시지면 그대로 전달 경로.
       # 입력은 env로만 받아 shell 주입을 막는다.
@@ -96,8 +99,8 @@ jobs:
           # 재fetch 없이 동일 값을 쓰게 한다(리포트·다이제스트 시세 불일치 방지, P0-C2).
           # runner temp는 commit되지 않으며 실행마다 새로 만들어진다.
           MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
-          # D7-AA — 운영자 버튼이 호출할 공개 Operator API base URL (비밀값 아님 · repo variable).
-          # 미설정이면 빈 값 → 대시보드 버튼은 비활성 + '운영 API 미설정' 안내만 (GitHub 이동 없음).
+          # 운영자 버튼이 호출할 공개 Operator API base URL (비밀값 아님 · repo variable).
+          # 미설정이면 3개 실행 버튼을 비활성화하고 Operator API 미연결을 명시한다.
           OPERATOR_API_BASE: ${{ vars.OPERATOR_API_BASE }}
         run: |
           OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html --audience executive)"
@@ -106,7 +109,7 @@ jobs:
             # 공개 latest.html은 항상 executive 뷰로 게시한다 (operator 기본값 유출 방지, P0-D3R).
             # 같은 live 데이터로 운영자 진단용 operator-latest.html 스냅샷도 함께 생성한다.
             python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
-            python3 scripts/build_static_dashboard.py --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
+            python3 scripts/build_static_dashboard.py --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --market-mode live --weather-mode live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · live RSS collected > 0 · executive report published + operator snapshot + dashboard export"
           else

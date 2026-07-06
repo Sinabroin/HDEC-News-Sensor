@@ -79,3 +79,26 @@
 
 - D7-AD-X/D7-AE-RC1: repo 링크가 대화에서 유실돼 "사용자 링크 재요청 필요"로 기록·데모 카드 공개 제거.
 - **D7-AE-RC3(본 문서): 사용자가 `yasumorishima/hormuz-ship-tracker`를 재제공 — 실체 확인 완료, 위 조사로 해소.**
+
+## 8. D7-AG-3 — 실연동 완료 (IMF PortWatch 위성 AIS 일일 통항)
+
+- **연결한 소스: IMF PortWatch — "Daily Chokepoint Transit Calls and Trade Volume Estimates"**
+  (portid `chokepoint6` = Strait of Hormuz). 공개 ArcGIS FeatureServer(키 불필요, HTTP GET) —
+  `services9.arcgis.com/weJ1QsnbMYJlCHdG/.../Daily_Chokepoints_Data/FeatureServer/0/query`.
+  위성 AIS 기반 **일 단위** 통항 선박 수 + 선종 분해(유조선/화물선/컨테이너/벌크/RoRo). 처리 지연 ~수일.
+- **왜 aisstream(§2)이 아니라 PortWatch인가:** aisstream WebSocket은 상주 러너가 필요해(§5-A "불가")
+  GitHub Actions 배치에 즉시 연동 불가다. PortWatch는 동일 목표(통항 선박량)를 배치 GET으로 제공해
+  실제 연동이 가능하다. aisstream 준실시간 게이트 IN/OUT은 러너·키 확보 시 병기 업그레이드로 남긴다(§6).
+- **새 leaf `app/hormuz_transit.py`**: 네트워크는 이 leaf만 소유(urllib), DB/점수/발송 접근 없음.
+  `mode!="live"`이면 network 0건·`unavailable`(가짜 수치 금지). `--market-mode live`일 때만 실측.
+- **빌더**: `_strip_hormuz_demo_card`(데모 제거)는 유지하고, 그 자리에 `_inject_hormuz_transit_card`가
+  실측 카드(`class="card hz-transit"`, id `hormuz*` — 데모 `card hz`/`hz*` DOM과 구별)를 넣는다.
+  실측이면 통항 수·선종·변화율·관측일, 미연동이면 '연동 미설정'만 표시(기사 카드로 대체하지 않음).
+- **검증기 변경(§6 예고대로 공개 갱신)**:
+  - `verify_hormuz_maritime_snapshot.py` **폐기** — "app/에 라이브 AIS 백엔드 없음(E4)·데모 전용" 전제가
+    실연동으로 무효화됨(몰래 우회 금지 원칙에 따라 삭제로 기록).
+  - `verify_hormuz_fixed_risk_watch.py`(D7-AG-2, 기사 카드 중심) **폐기** →
+    `verify_hormuz_ais_traffic.py`로 대체(통과 선박량 지표·기사 아님·미연동은 정직 계약). 두 워크플로
+    (telegram-notify·scheduled-live-refresh) preflight도 새 검증기로 갱신.
+  - `verify_hormuz_demo_removed.py`는 그대로 유지 — 새 카드가 데모 DOM(`card hz`/`hz*`/`해협 모식도`/
+    proxy/데모 데이터)을 침범하지 않으므로 계속 통과(데모 재유입 방지 잠금 유지).

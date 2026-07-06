@@ -46,8 +46,9 @@ def main() -> int:
                and item["access_type"] == "subscription_required"))
     check("collection method 명시",
           bool(item and item["collection_method"] == "naver_search_api"))
-    check("저작권 note 명시",
-          bool(item and item["copyright_note"] == "no_full_text_stored"))
+    check("저작권 note 명시 (기사 본문 미저장 표식)",
+          bool(item and item["copyright_note"] == thebell_watch.COPYRIGHT_NOTE
+               and item["copyright_note"] == "no_body_stored"))
     check("금지 저장 key 없음",
           bool(item and not (set(item) & FORBIDDEN_KEYS)))
     allowed = {

@@ -517,8 +517,12 @@ def check_committed_report() -> None:
         check("dashboard-latest는 latest.html을 대체하지 않음",
               "dashboard-export:summary" in dash and dash != latest
               and "dashboard-export:summary" not in latest)
+        # 요약 대시보드 구조 마커 — verify_dashboard_export와 동일 계약(preview-model JSON +
+        # 대시보드 타이틀). 과거 "데모 데이터" 잔여 문구 검사는 demo residual 제거(정직성 라벨은
+        # "데모(mock) 데이터"로 변경)와 라이브 스냅샷 게시 이후 stale이며, verify_dashboard_export
+        # 의 '"데모 데이터" not in dashboard'와 정면으로 충돌하므로 구조 마커로 정정한다.
         check("dashboard-latest가 preview-model 요약 대시보드 구조 포함",
-              'id="preview-model"' in dash and "데모 데이터" in dash)
+              'id="preview-model"' in dash and "HDEC Executive Radar" in dash)
     check("docs/.nojekyll 존재 (Pages에서 Jekyll 비활성)", NOJEKYLL.exists())
 
 

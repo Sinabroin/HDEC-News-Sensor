@@ -70,21 +70,57 @@ NAVER_CLIENT_SECRET = (os.environ.get("NAVER_CLIENT_SECRET") or "").strip()
 # 버튼이 GitHub 페이지로 이동하지 않고 서버측 Operator API(POST)를 호출하게 한다.
 #
 # OPERATOR_API_BASE는 정적 페이지에 주입되는 *공개* base URL이다(비밀값 아님). 빈 값이면
-# 버튼은 비활성 + "운영 API 미설정" 안내만 표시하고 어디로도 이동하지 않는다. (빌더는 이 값을
+# 3개 버튼은 비활성 + "Operator API 미연결"을 표시하고 링크로 대체하지 않는다. (빌더는 이 값을
 # --operator-api-base CLI로 받아 preview-model island에 주입한다 — 빌더 소스는 env를 직접 읽지 않음.)
 OPERATOR_API_BASE = (os.environ.get("OPERATOR_API_BASE") or "").strip()
 # 서버측 비밀값 — 환경변수에서만 읽고 어디에도 print/log/직렬화/응답에 싣지 않는다 (rules.md §4).
-# 셋 중 하나라도 비어 있으면 operator_gateway는 fail-closed(not_configured)로 어떤 트리거도 하지 않는다.
+# 토큰·repo가 비어 있으면 operator_gateway는 fail-closed(not_configured)로 어떤 트리거도 하지 않는다.
 OPERATOR_REPO = (os.environ.get("OPERATOR_REPO") or "Sinabroin/HDEC-News-Sensor").strip()
 GH_OPERATOR_TOKEN = (os.environ.get("GH_OPERATOR_TOKEN")
                      or os.environ.get("GITHUB_TOKEN") or "").strip()
+
+# D7-AG-3 — 운영자 보호를 브라우저 PIN에서 **서버 앞단(edge) 인증**으로 이관한다.
+# 공개 페이지(GitHub Pages)에 PIN을 입력받는 설계는 약하고(어깨너머·피싱·단일 공유값·신원 없음)
+# 사용자도 불필요하다고 판단했다. 대신 Operator API 호스트를 인증된 경계 뒤에 배포하고(우선순위
+# A: Cloudflare Access / Vercel Protection / 사내 SSO / Basic Auth), 서버는 아래 정책으로 fail-closed
+# 인가한다. public HTML에는 PIN 정답도 secret도 절대 넣지 않는다(브라우저는 base+경로로만 POST).
+#
+# OPERATOR_ACCESS_MODE:
+#   "edge"          — 경계(SSO/Access)가 주입하는 신원 헤더(OPERATOR_ACCESS_HEADER)를 신뢰하고
+#                     그 값이 OPERATOR_ALLOWED_USERS 허용목록에 있을 때만 인가(권장·PIN 없음).
+#   "shared_secret" — 레거시/단순 배포용. X-Operator-Token == OPERATOR_SHARED_SECRET (브라우저 UI에는
+#                     노출하지 않음 — 경계가 주입하거나 서버-대-서버 호출에만 사용).
+#   ""(미설정)       — 인가 정책 없음 = fail-closed(어떤 트리거도 안 함).
+OPERATOR_ACCESS_MODE = (os.environ.get("OPERATOR_ACCESS_MODE") or "").strip().lower()
+# 경계가 인증된 운영자 신원을 실어 보내는 헤더 이름(비밀값 아님). 기본은 Cloudflare Access 표준.
+OPERATOR_ACCESS_HEADER = (os.environ.get("OPERATOR_ACCESS_HEADER")
+                          or "cf-access-authenticated-user-email").strip().lower()
+# edge 모드에서 실행을 허용할 운영자 신원(이메일 등) 허용목록. 비어 있으면 edge 모드는 fail-closed.
+OPERATOR_ALLOWED_USERS = [
+    u.strip().lower() for u in (os.environ.get("OPERATOR_ALLOWED_USERS") or "").split(",")
+    if u.strip()
+]
+# 레거시 shared_secret 모드 값. edge 모드에서는 사용하지 않는다(브라우저 PIN 아님).
 OPERATOR_SHARED_SECRET = (os.environ.get("OPERATOR_SHARED_SECRET")
                           or os.environ.get("OPERATOR_PIN") or "").strip()
+# 분당 트리거 상한(레이트리밋 · 프로세스 로컬). 남용/자동요청 완화용 방어선.
+try:
+    OPERATOR_RATE_LIMIT_PER_MIN = int(os.environ.get("OPERATOR_RATE_LIMIT_PER_MIN") or "12")
+except ValueError:
+    OPERATOR_RATE_LIMIT_PER_MIN = 12
+# 로컬 개발/데모 전용 우회 — loopback(127.0.0.1/localhost) origin에 한해 경계 인증 없이 인가한다.
+# 프로덕션에서는 절대 설정하지 않는다("1"일 때만·loopback 한정). 활성 빌드의 fetch 경로/버튼 활성
+# 상태를 로컬에서 검증하기 위한 스위치다(실제 발송은 OPERATOR_DRY_RUN과 함께 차단할 수 있다).
+OPERATOR_LOCAL_DEV = (os.environ.get("OPERATOR_LOCAL_DEV") or "").strip() in ("1", "true", "on", "yes")
+# 로컬 검증용 — 설정 시 workflow_dispatch(네트워크)를 실제로 하지 않고 접수 응답만 반환한다.
+OPERATOR_DRY_RUN = (os.environ.get("OPERATOR_DRY_RUN") or "").strip() in ("1", "true", "on", "yes")
+
 # 공개 정적 페이지(GitHub Pages)에서 Operator API로의 cross-origin 호출을 허용할 origin 목록.
-# 기본은 로컬 + 프로젝트 Pages origin. 추가 origin은 콤마구분 env로 확장(비밀값 아님).
+# 기본은 프로젝트 Pages origin + loopback. 추가 origin은 콤마구분 env로 확장(비밀값 아님).
 OPERATOR_ALLOWED_ORIGINS = [
     o.strip() for o in (
         (os.environ.get("OPERATOR_ALLOWED_ORIGINS") or "")
         + ",https://sinabroin.github.io"
+        + ",http://127.0.0.1:8088,http://localhost:8088"
     ).split(",") if o.strip()
 ]

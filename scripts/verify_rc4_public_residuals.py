@@ -20,15 +20,16 @@ TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
 
 FORBIDDEN_RAW = (
-    "데이터 새로고침 실행",
-    "텔레그램 전송 실행",
-    "Teams 채널 전송 실행",
     "기상 데이터 소스 미연동",
     "NON-PRODUCTION PREVIEW",
     "데모/mock 데이터",
     "데모 데이터",
 )
-OPERATOR_LABELS = FORBIDDEN_RAW[:3]
+OPERATOR_LABELS = (
+    "데이터 새로고침 실행",
+    "텔레그램 전송 실행",
+    "Teams 채널 전송 실행",
+)
 BUSINESS_LENSES = (
     "civil_infrastructure", "building_housing", "plant", "new_energy",
     "development_business", "global_business", "safety_quality",
@@ -75,10 +76,15 @@ def _rows(model: dict) -> list[dict]:
 def check_public(html: str, label: str) -> None:
     hits = [token for token in FORBIDDEN_RAW if token in html]
     check(f"R1[{label}]: public raw 실패 문자열 0건", not hits, str(hits))
-    check(f"R2[{label}]: public raw opctl-js 태그 0건", 'id="opctl-js"' not in html)
+    check(f"R2[{label}]: public operator JS는 미연결 fail-closed 분기 포함",
+          'id="opctl-js"' in html and 'setStatus("Operator API 미연결"' in html
+          and "setBtns(true)" in html)
     check(
-        f"R3[{label}]: public 실행 버튼 라벨 0건",
-        all(token not in html for token in OPERATOR_LABELS),
+        f"R3[{label}]: 실행 버튼 3개 visible + 링크 fallback 없음",
+        'id="opActionLinks"' not in html and 'id="opApiControls"' in html
+        and all(label_text in html for label_text in (
+            "데이터 새로고침 실행", "텔레그램 전송 실행", "Teams 채널 전송 실행"
+        )),
     )
     model = _model(html)
     check(f"R4[{label}]: preview-model JSON 파싱", bool(model))

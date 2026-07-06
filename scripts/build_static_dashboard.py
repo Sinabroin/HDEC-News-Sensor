@@ -42,10 +42,14 @@ for _p in (ROOT, SCRIPTS_DIR):
 from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
 # 중앙 렌즈 쿼리 정책(단일 소스) — leaf는 app.config/DB/네트워크를 건드리지 않아 bootstrap
 # 전에 import해도 안전하다(config의 DB_PATH 캐시 트랩 회피). 정책=대시보드+수집기 공유.
-from app import ai_value_chain, lens_queries, news_access, topic_profiles  # noqa: E402
+from app import ai_value_chain, deal_watch, lens_queries, news_access, topic_profiles  # noqa: E402
 # 시장 기간 히스토리 provider(leaf) — 네트워크는 이 leaf만 소유한다(빌더는 소켓/urllib/env를
 # 직접 들이지 않는다). mock(기본)은 결정적 데모 픽스처, --market-mode live일 때만 공개 시세 실측.
 from app import market_history  # noqa: E402
+# 호르무즈 해협 선박 통항량 provider(leaf, D7-AG-3) — 외부 네트워크(IMF PortWatch 위성 AIS 기반
+# 일일 통항)를 이 leaf만 소유한다. --market-mode live일 때만 실측하고, 아니면/실패면 unavailable
+# (가짜 수치·데모 모식도 생성 금지). 기사 카드가 아니라 통과 선박 수 지표다.
+from app import hormuz_transit  # noqa: E402
 from app import news_recency  # noqa: E402
 # 명일 정오 시공 리스크 provider(leaf, D7-AE) — 기상 네트워크는 이 leaf만 소유한다.
 # mock(기본)은 unavailable(데모 기상값 생성 금지 — 시장과 달리 기상은 데모 픽스처도 없다),
@@ -82,6 +86,11 @@ _BUSINESS_LENSES = {
 # 보수적으로 보강한다(가짜가 아니라 제목의 실제 주거 키워드 기반 · 부분문자열 오탐 방지로
 # 명확한 주거형만 둔다 — 예: '단지'는 산업단지 오탐이 있어 '주거단지/주택단지'로 한정).
 _RESIDENTIAL_LENS_TERMS = ("아파트", "오피스텔", "주상복합", "주거단지", "주택단지")
+# 명확한 건축·주택 사업 키워드(D7-Q) — 이 키워드가 제목에 있으면 building_housing은 실제
+# 주택 사업 근거이므로 다른 정밀 렌즈와 함께여도 유지한다. 이런 근거 없이 bare 주거어(아파트)
+# 만으로 붙은 building_housing은 더 구체적인 렌즈(plant/토목 등)가 있으면 incidental로 보고
+# 억제한다(다중 섹터 시황 기사 과태깅 방지 — 예: '아파트·원전…건설株'는 원전→plant만).
+_STRONG_BUILDING_TERMS = ("건축", "주택", "정비", "분양", "공사비", "재건축", "재개발")
 
 NEWS_ROW_CAP = 20
 LENS_BANK_CAP = 10
@@ -528,6 +537,17 @@ def _lens_for_with_reasons(sig) -> tuple:
         if reason:
             keys.add(lens)
             _why(lens, "원문 근거:" + reason)
+    # building_housing 과태깅 억제(D7-Q) — bare 주거어(아파트 등)만으로 붙은 building_housing은
+    # 더 구체적인 건설 렌즈(plant/토목/뉴에너지)가 함께 있고 명확한 건축·주택 키워드가 없으면
+    # incidental로 보고 제거한다. 다중 섹터 시황 기사('아파트·원전…건설株')가 원전→plant 외에
+    # building_housing까지 인플레되는 것을 막는다(displayable 인플레 방지). 실제 재건축·분양 등
+    # 강한 주택 근거가 있으면 유지한다.
+    if ("building_housing" in keys
+            and (keys & {"plant", "civil_infrastructure", "new_energy"})
+            and any(w in raw_title for w in _RESIDENTIAL_LENS_TERMS)
+            and not any(w in raw_title for w in _STRONG_BUILDING_TERMS)):
+        keys.discard("building_housing")
+        reasons.pop("building_housing", None)
     if _is_hyundai_group_relevant(raw_title):
         keys.add("hyundai_group")
         _why("hyundai_group", "그룹사명+건설·인프라 맥락(제목)")
@@ -578,6 +598,18 @@ def _lens_for_with_reasons(sig) -> tuple:
         if scope in VALID_LENS:
             keys.add(scope)
             _why(scope, f"워치리스트 현장 매칭:{site_name}")
+    # 주거/건축 보수적 폴백(D7-Q) — 정밀 콘텐츠 렌즈가 하나도 없을 때만, 제목의 주거형
+    # 키워드('아파트' 등 공유 키워드 풀에 없는 항목)로 building_housing을 보강한다("정밀 렌즈가
+    # 없으면 가장 보수적인 건설 렌즈"). 이미 plant/토목 등 정밀 렌즈가 있으면 보강하지 않는다.
+    # 빈 렌즈 주거 기사("…아파트에 'AI 주차로봇' 도입")를 건져 대시보드에서 사라지지 않게 한다.
+    # 아래 AI 보강보다 먼저 둔다 — 폴백 후 building_housing이 콘텐츠 렌즈가 되어 AI 근거가 있으면
+    # ai까지 동반된다(예: 'AI 주차로봇 아파트' → {building_housing, ai}). 'ai'는 정밀 사업 렌즈가
+    # 아니라 교차 태그이므로 폴백 게이트에서 제외한다 — AI 밸류체인이 스마트건설로 ai만 남기고
+    # building_housing을 (RC4 근거게이팅으로) 떨궈도 주거 기사가 빈 건설 렌즈로 남지 않게 한다.
+    if (not (keys - _STATE_LENS - {"ai"})
+            and any(w in raw_title for w in _RESIDENTIAL_LENS_TERMS)):
+        keys.add("building_housing")
+        _why("building_housing", "주거 키워드 폴백(다른 정밀 렌즈 없음)")
     # 건설-AI 보강(D7-Q) — 제목에 직접 AI 근거가 있고 콘텐츠 렌즈가 이미 있으면(건설/주거 등)
     # 'ai'를 더한다. 순수 비건설 AI 노이즈는 콘텐츠 렌즈가 없어 태깅되지 않는다(과태깅 방지).
     if (keys - _STATE_LENS) and _has_ai_evidence(raw_title, raw_source, raw_snippet):
@@ -893,6 +925,9 @@ def _row_from_signal(sig, extra_lens=()) -> dict:
         "link_access_note": access["link_access_note"],
         "final_url": access["final_url"],
         "provenance": provenance,
+        # D7-AG-1 — 뉴스 카드 보조 태그(최대 3). Deal Watch 독립 섹션 대신 기사별 근거 태그로 흡수한다.
+        "deal_tags": deal_watch.display_tags(
+            sig.get("title") or "", sig.get("snippet") or "", sig.get("source") or ""),
     }
 
 
@@ -1132,7 +1167,10 @@ def _brief_signal_pool(brief: dict) -> list:
     """brief 전체에서 기사형 dict를 순회 수집한다.
 
     news_rows는 큐레이션 상위 피드로 유지하지만, 렌즈 전용 bank는 full brief에 들어온
-    기사형 신호 전체를 써야 top-N 클리핑 때문에 렌즈가 비는 일이 없다.
+    기사형 신호 전체를 써야 top-N 클리핑 때문에 렌즈가 비는 일이 없다. 단,
+    deal_watch_rows는 내부 분류 모델일 뿐 별도 공개 카드 공급원이 아니다. 해당 배열을
+    재귀 순회하면 generic implication을 가진 독립 Deal Watch 후보가 일반 뉴스 카드로
+    다시 나타나므로 명시적으로 건너뛴다(D7-AG-1).
     """
     seen, out = set(), []
 
@@ -1143,7 +1181,9 @@ def _brief_signal_pool(brief: dict) -> list:
                 if k and k not in seen:
                     seen.add(k)
                     out.append(node)
-            for value in node.values():
+            for key, value in node.items():
+                if key == "deal_watch_rows":
+                    continue
                 walk(value)
         elif isinstance(node, list):
             for value in node:
@@ -1354,6 +1394,36 @@ def _build_lens_banks(full_pool: list, ai_rows: list, now_rows: list,
     return banks
 
 
+def _build_hormuz_watch(full_pool: list, ref_date) -> dict:
+    """호르무즈를 기본 본문 핵심 리스크 카드로 고정한다.
+
+    실제 수집 기사만 article 상태로 사용한다. 매칭 기사가 없으면 기사 제목·URL·수치를
+    만들지 않고 명시적인 감시 유지 상태만 반환한다. AIS 데모 카드와는 무관하다.
+    """
+    candidates = [
+        sig for sig in _dedup_signals(full_pool)
+        if _is_http(sig.get("url"))
+        and lens_queries.hormuz_relevant(sig.get("title") or "")
+    ]
+    candidates.sort(key=lambda sig: (-_published_rank(sig), *_signal_rank_key(sig)))
+    if not candidates:
+        return {
+            "mode": "watch",
+            "label": "호르무즈",
+            "status": "금일 신규 기사 없음 / 감시 유지",
+            "summary": "유가·에너지·해상운송·글로벌 리스크 핵심 감시 항목",
+        }
+    sig = candidates[0]
+    row = _enrich_row(_row_from_signal(sig), sig, ref_date)
+    return {
+        "mode": "article",
+        "label": "호르무즈",
+        "status": "금일 신규 기사" if row.get("freshness") == "오늘"
+                  else "최근 수집 기사 · 감시 유지",
+        "row": row,
+    }
+
+
 def _ai_tier(sig) -> int:
     """HDEC 관련성 tier (1=직접 … 5=일반). 저장된 분류 필드 우선, 없으면 raw로 재분류."""
     raw = sig.get("hdec_relevance_tier")
@@ -1461,7 +1531,8 @@ def _derive(brief: dict) -> dict:
     news_mode = brief.get("news_data_mode") or "mock"
     now_rows, immediate_status = _build_now_bank(
         brief, new_keys, ref_date, overall_pool, news_mode=news_mode)
-    lens_banks = _build_lens_banks(_brief_signal_pool(brief), ai_rows, now_rows,
+    full_signal_pool = _brief_signal_pool(brief)
+    lens_banks = _build_lens_banks(full_signal_pool, ai_rows, now_rows,
                                    new_keys, ref_date)
     bank_counts = _bank_counts(lens_banks)
     # D7-U: 실제 노출되는 'ai' 뱅크에서 하이퍼스케일러/칩 밸류체인 건수를 센다(진단 카운트).
@@ -1485,6 +1556,7 @@ def _derive(brief: dict) -> dict:
         "nav_counts": nav_counts,
         "immediate_n": bank_counts.get("now", 0),
         "immediate_status": immediate_status,
+        "hormuz_watch": _build_hormuz_watch(full_signal_pool, ref_date),
         # D7-U: 하이퍼스케일러/밸류체인 노출 진단 카운트 — 빈 날에도 0을 명시(가짜 채움 금지).
         "ai_hyper_count": ai_hyper_count,
         "ai_value_chain_pool_count": len(brief.get("ai_value_chain_pool") or []),
@@ -1497,6 +1569,15 @@ _TRUST_SVG = ('<span class="trust"><svg width="11" height="11" viewBox="0 0 24 2
               'stroke-width="1.6"></circle></svg>신뢰 출처</span>')
 _LINK_SVG = ('<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" '
              'stroke="#3E5C80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>')
+
+
+def _deal_tags_html(tags) -> str:
+    """뉴스 카드 보조 태그(pill)를 meta line 끝에 붙일 HTML. 근거 없으면 빈 문자열."""
+    items = [t for t in (tags or []) if t]
+    if not items:
+        return ""
+    pills = "".join(f'<span class="deal-tag">{escape(t)}</span>' for t in items)
+    return f'<span class="deal-tags">{pills}</span>'
 
 
 def _render_featured(sig: dict, row: dict) -> str:
@@ -1546,7 +1627,8 @@ def _render_featured(sig: dict, row: dict) -> str:
         f'<h2>{escape(sig.get("title") or "")}</h2>'
         f'<div class="meta"><b>{escape(row["source"])}</b><span class="sep">·</span>'
         f'<span>{escape(row["time"])}</span><span class="sep">·</span><span>{escape(row["related"])}</span>'
-        f'<span class="sep">·</span><span>{escape(row["sources"])}</span>{trust}</div>'
+        f'<span class="sep">·</span><span>{escape(row["sources"])}</span>{trust}'
+        f'{_deal_tags_html(row.get("deal_tags"))}</div>'
         f'<div class="featlens"><span class="fllabel">렌즈</span>{chips}</div>'
         '</div>'
         f'<div class="score"><div class="v num" style="color:{row["scoreColor"]};">{escape(row["score"])}'
@@ -1568,6 +1650,58 @@ def _render_featured(sig: dict, row: dict) -> str:
         '<span style="font-size:11.5px; color:var(--mute4);" class="num">자동 분류 · '
         f'{escape(sig.get("category") or "")}</span>'
         '</div></article>'
+    )
+
+
+def _render_hormuz_watch(watch: dict) -> str:
+    """실기사 또는 정직한 감시 유지 상태를 고정 본문 카드로 서버 렌더한다."""
+    label = escape(watch.get("label") or "호르무즈")
+    status = escape(watch.get("status") or "금일 신규 기사 없음 / 감시 유지")
+    head = (
+        '<div class="hormuz-watch-head">'
+        '<div><span class="hormuz-kicker">핵심 리스크 감시</span>'
+        f'<h3>{label} 해협</h3></div>'
+        f'<span class="hormuz-status">{status}</span></div>'
+    )
+    row = watch.get("row") if watch.get("mode") == "article" else None
+    if not row:
+        summary = escape(
+            watch.get("summary")
+            or "유가·에너지·해상운송·글로벌 리스크 핵심 감시 항목"
+        )
+        body = (
+            '<div class="hormuz-empty">'
+            '<strong>금일 신규 기사 없음 / 감시 유지</strong>'
+            f'<span>{summary}</span></div>'
+        )
+        return (
+            '<section class="hormuz-watch" id="hormuzRiskWatch" '
+            'data-state="watch" aria-label="호르무즈 핵심 리스크 감시">'
+            f'{head}{body}</section>'
+        )
+    title = escape(row.get("title") or "")
+    source = escape(row.get("source") or "출처 미상")
+    published = escape(row.get("time") or "")
+    url = news_access.choose_external_article_url(row)
+    if _is_http(url):
+        title_html = (
+            f'<a href="{escape(url)}" target="_blank" rel="noopener noreferrer">'
+            f'{title} ↗</a>'
+        )
+    else:
+        title_html = title
+    score = escape(row.get("score") or "-")
+    body = (
+        '<article class="hormuz-article" data-lens="hormuz oil_energy">'
+        f'<div class="hormuz-title">{title_html}</div>'
+        f'<div class="hormuz-meta"><span>{source}</span><span>{published}</span>'
+        '<span>유가·에너지</span><span>글로벌 리스크</span>'
+        f'<span>신호 {score} / 5</span></div></article>'
+    )
+    return (
+        '<section class="hormuz-watch" id="hormuzRiskWatch" '
+        'data-state="article" aria-label="호르무즈 핵심 리스크 감시">'
+        f'{head}{body}</section>'
     )
 
 
@@ -1628,6 +1762,174 @@ def _strip_hormuz_demo_card(html: str) -> str:
     return result[:seam_start] + seam + result[seam_end:]
 
 
+# --- 호르무즈 해협 선박 통항량 실측 카드 (D7-AG-3) -----------------------------------
+# 위의 데모 카드는 _strip_hormuz_demo_card가 제거하고, 그 자리에 이 카드를 넣는다. 값은
+# app/hormuz_transit(IMF PortWatch 위성 AIS 일 단위 통항) leaf가 소유하며, 미연동/실패면
+# 가짜 수치·모식도 없이 '연동 미설정'만 표시한다. 클래스는 'hz-transit'(데모 'card hz'와 구별),
+# id는 hormuz*(hz* 아님) — verify_hormuz_demo_removed의 데모 DOM 부재 계약을 침범하지 않는다.
+_HORMUZ_TRANSIT_ANCHOR = '<div class="mktcats" id="marketCategories"></div>'
+
+
+def _hz_int(value) -> str:
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _render_hormuz_transit_spark(recent: list) -> str:
+    """recent(실측 일별 통항 수)로 정직한 미니 막대(추세)를 그린다 — 값이 없으면 빈 문자열."""
+    pts = [r for r in (recent or []) if isinstance(r.get("n_total"), int)]
+    if len(pts) < 2:
+        return ""
+    vals = [r["n_total"] for r in pts]
+    top = max(vals) or 1
+    n = len(pts)
+    slot = 100.0 / n
+    bw = min(slot * 0.62, 11.0)
+    bars = []
+    for i, r in enumerate(pts):
+        h = 4.0 + (r["n_total"] / top) * 30.0
+        x = i * slot + (slot - bw) / 2.0
+        y = 38.0 - h
+        last = i == n - 1
+        fill = "#8F6A2E" if last else "#C9B78E"
+        bars.append(
+            f'<rect x="{x:.2f}" y="{y:.2f}" width="{bw:.2f}" height="{h:.2f}" rx="1.2" '
+            f'fill="{fill}"><title>{escape(r.get("date") or "")} · {r["n_total"]}척</title></rect>'
+        )
+    first_lbl = escape(pts[0].get("date") or "")[5:]
+    last_lbl = escape(pts[-1].get("date") or "")[5:]
+    return (
+        '<div class="hzt-spark">'
+        '<svg viewBox="0 0 100 42" width="100%" height="42" preserveAspectRatio="none" '
+        'aria-label="최근 일별 호르무즈 통과 선박 수 추세(실측)">' + "".join(bars) + '</svg>'
+        f'<div class="hzt-sparkx"><span>{first_lbl}</span>'
+        f'<span>최근 {n}일 통과 선박 수 (실측)</span><span>{last_lbl}</span></div></div>'
+    )
+
+
+_HZT_STYLE = (
+    '<style>'
+    '.card.hz-transit{padding:18px 20px;margin-bottom:12px;}'
+    '.hz-transit .hzt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}'
+    '.hz-transit .ph{font-weight:850;color:var(--ink2);font-size:14.5px;}'
+    '.hz-transit .ph small{color:var(--mute2);font-weight:700;font-size:11px;}'
+    '.hz-transit .hzt-sub{color:var(--mute2);font-size:11.5px;margin-top:3px;line-height:1.45;}'
+    '.hz-transit .hzt-src{flex:none;border:1px solid #E4D7BA;background:#FFF8E7;color:#8F6A2E;'
+    'border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;}'
+    '.hz-transit .hzt-src.off{border-color:#D9DEE6;background:#F2F4F7;color:#8A93A2;}'
+    '.hz-transit .hzt-hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;margin-top:12px;}'
+    '.hz-transit .hzt-mlabel{color:var(--mute2);font-size:11px;font-weight:700;}'
+    '.hz-transit .hzt-mval{display:flex;align-items:baseline;gap:4px;margin-top:2px;}'
+    '.hz-transit .hzt-mval .num{font-size:34px;font-weight:850;color:var(--ink2);line-height:1;}'
+    '.hz-transit .hzt-unit{font-size:15px;font-weight:800;color:var(--mute2);}'
+    '.hz-transit .hzt-delta{font-size:12px;font-weight:800;margin-top:5px;}'
+    '.hz-transit .hzt-delta.down{color:#B4451F;}.hz-transit .hzt-delta.up{color:#2F6D4B;}'
+    '.hz-transit .hzt-delta.flat{color:#6E7889;}'
+    '.hz-transit .hzt-break{display:flex;gap:8px;}'
+    '.hz-transit .hzt-chip{border:1px solid var(--line);border-radius:9px;padding:6px 11px;background:#FCFBF7;}'
+    '.hz-transit .hzt-chip .k{display:block;color:var(--mute2);font-size:10.5px;font-weight:700;}'
+    '.hz-transit .hzt-chip .v{font-size:16px;font-weight:850;color:var(--ink2);}'
+    '.hz-transit .hzt-spark{margin-top:12px;}'
+    '.hz-transit .hzt-sparkx{display:flex;justify-content:space-between;color:var(--mute2);'
+    'font-size:9.5px;margin-top:2px;}'
+    '.hz-transit .hzt-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;'
+    'margin-top:12px;color:var(--mute2);font-size:10.5px;line-height:1.5;}'
+    '.hz-transit .hzt-empty{margin-top:12px;display:flex;flex-direction:column;gap:4px;'
+    'padding:14px;border:1px dashed #D9DEE6;border-radius:10px;background:#F8FAFC;}'
+    '.hz-transit .hzt-empty strong{color:#8A6D2E;font-size:13px;}'
+    '.hz-transit .hzt-empty span{color:var(--mute2);font-size:11.5px;line-height:1.5;}'
+    '</style>'
+)
+
+
+def _render_hormuz_transit_card(snap: dict) -> str:
+    """호르무즈 통과 선박량 실측 카드(연결) 또는 정직한 '연동 미설정' 카드(미연동)를 서버 렌더한다.
+
+    기사 카드가 아니라 통과 선박 수 지표다. 값은 leaf가 소유하고 여기서는 표시만 한다(가짜 수치
+    생성 없음). 외부 하이퍼링크를 넣지 않는다(공개 HTML 외부 URL은 기사 href만 허용 정책 준수) —
+    출처는 텍스트로만 표기한다.
+    """
+    snap = snap or {}
+    head = (
+        '<div class="hzt-head"><div style="min-width:0;">'
+        '<div class="ph">호르무즈 해협 통과 선박량 <small>· 일일 통항</small></div>'
+        '<div class="hzt-sub">유가·에너지 · 글로벌 리스크 연계 · 위성 AIS 기반 일 단위 통과 선박 수</div>'
+        '</div>')
+
+    if snap.get("data_mode") != "live" or not isinstance(snap.get("n_total"), int):
+        reason = escape(snap.get("unavailable_reason")
+                        or "AIS 선박 통항 데이터 소스 미연결 — 기사 기반 대체 아님.")
+        body = (
+            f'{head}<span class="hzt-src off">연동 미설정</span></div>'
+            '<div class="hzt-empty"><strong>연동 미설정</strong>'
+            f'<span>{reason}</span>'
+            '<span>실 소스 연결 시 일일 통과 선박 수·유조선/화물선 분해·변화율·관측일을 표시합니다. '
+            '기사 카드로 대체하지 않습니다.</span></div>')
+        return (f'\n          <!-- Hormuz transit (D7-AG-3): 실측 미연동 — 정직한 연동 미설정 -->'
+                f'\n          {_HZT_STYLE}'
+                f'\n          <div class="card hz-transit" id="hormuzTransitCard" '
+                f'data-hz-mode="unavailable" data-lens="hormuz oil_energy">{body}</div>\n')
+
+    observed = escape(snap.get("observed_date") or "")
+    total = snap.get("n_total")
+    tanker = snap.get("n_tanker")
+    cargo = snap.get("n_cargo")
+    d7 = snap.get("delta_vs_prev7_pct")
+    prev7 = snap.get("prev7_avg")
+    if isinstance(d7, (int, float)) and d7 < 0:
+        cls, arrow = "down", "▼"
+    elif isinstance(d7, (int, float)) and d7 > 0:
+        cls, arrow = "up", "▲"
+    else:
+        cls, arrow = "flat", "—"
+    if isinstance(d7, (int, float)) and prev7 is not None:
+        delta = (f'<div class="hzt-delta {cls}">{arrow} {abs(d7):.1f}% · '
+                 f'최근 7일 평균 {escape(_hz_int(round(prev7)))}척 대비</div>')
+    else:
+        delta = ''
+    chips = ''
+    if isinstance(tanker, int):
+        chips += f'<div class="hzt-chip"><span class="k">유조선</span><span class="v">{_hz_int(tanker)}척</span></div>'
+    if isinstance(cargo, int):
+        chips += f'<div class="hzt-chip"><span class="k">화물선</span><span class="v">{_hz_int(cargo)}척</span></div>'
+    lag = snap.get("lag_days")
+    lag_txt = (f' · 약 {int(lag)}일 지연' if isinstance(lag, int) else '')
+    hero = (
+        '<div class="hzt-hero"><div class="hzt-metric">'
+        f'<div class="hzt-mlabel">최근 관측 {observed} · 일일 통과 선박</div>'
+        f'<div class="hzt-mval"><span class="num">{_hz_int(total)}</span>'
+        '<span class="hzt-unit">척</span></div>'
+        f'{delta}</div>'
+        f'<div class="hzt-break">{chips}</div></div>')
+    spark = _render_hormuz_transit_spark(snap.get("recent"))
+    foot = (
+        '<div class="hzt-foot">'
+        '<span>출처: IMF PortWatch · Daily Chokepoint Transit Calls (위성 AIS 기반)</span>'
+        f'<span>관측일 {observed}{lag_txt} · 위성 AIS 일 단위 통항 추정(하한 가능)</span></div>')
+    body = f'{head}<span class="hzt-src">IMF PortWatch · live</span></div>{hero}{spark}{foot}'
+    return (f'\n          <!-- Hormuz transit (D7-AG-3): IMF PortWatch 위성 AIS 실측 일일 통항 -->'
+            f'\n          {_HZT_STYLE}'
+            f'\n          <div class="card hz-transit" id="hormuzTransitCard" '
+            f'data-hz-mode="live" data-lens="hormuz oil_energy">{body}</div>\n')
+
+
+def _inject_hormuz_transit_card(html: str, card_html: str) -> str:
+    """제거된 데모 자리(시장 패널)에 호르무즈 통과 선박량 실측 카드를 넣는다.
+
+    _strip_hormuz_demo_card가 데모를 지운 뒤 호출한다. marketCategories 컨테이너 바로 뒤에
+    삽입해 유가·에너지 시장 지표와 같은 흐름에 둔다. 앵커가 없으면(템플릿 변경) 경고만 남기고
+    카드를 넣지 않는다(빌드는 계속).
+    """
+    if _HORMUZ_TRANSIT_ANCHOR not in html:
+        print("WARNING: 시장 패널 marketCategories 앵커를 찾지 못함 — 호르무즈 통항 카드 미주입",
+              file=sys.stderr)
+        return html
+    return html.replace(_HORMUZ_TRANSIT_ANCHOR,
+                        _HORMUZ_TRANSIT_ANCHOR + card_html, 1)
+
+
 # 공식 현대건설 CI asset(D7-AE-RC3) — 출처: hdec.kr 공식 사이트 헤더 SVG(확보 경로·출처
 # 기록은 docs/assets/brand/README.md). 파일이 없으면 로고를 만들어내지 않는다(가짜 금지).
 BRAND_LOGO_ASSET = ROOT / "docs" / "assets" / "brand" / "hdec-logo.svg"
@@ -1655,43 +1957,19 @@ def _embed_brand_logo(html: str) -> str:
     return html.replace(_BRAND_LOGO_SLOT, _BRAND_LOGO_SLOT + img, 1)
 
 
-def _strip_operator_controls(html: str, operator_api_base: str) -> str:
-    """운영 API 미설정 공개 빌드에서 운영자 실행 UI/JS를 완전히 제거한다 (D7-AE-RC4).
+def _set_operator_api_flag(html: str, operator_api_base: str) -> str:
+    """운영 API 연결 여부만 공개 DOM 플래그로 표시한다.
 
-    사용자 QA: disabled 버튼(데이터 새로고침/텔레그램/Teams)이 접혀 있어도 제품 기능처럼
-    읽혀 "아직도 안 된다"가 된다. base 미설정이면 실행 패널(버튼 3개·승인 PIN·상태줄)을
-    통째로 제거하고 '운영 API 설정 필요' 한 줄만 남긴다. base가 주입된(운영자) 빌드는
-    기존 패널과 별도 opctl-js를 유지한다 — 버튼이 실제로 동작하는 유일한 경우다. 공개
-    산출물은 opctl-js 태그 자체를 제거해 실행 라벨/상태 문자열이 raw HTML에도 남지 않는다.
+    base가 없는 정적 페이지도 운영자 패널과 3개 실행 버튼을 제거하지 않는다. 링크 fallback
+    대신 미연결을 명시하고, 연결된 빌드에서만 클라이언트가 POST 실행을 활성화한다.
+    이 함수는 token/secret/workflow_dispatch 인증값을 읽거나 주입하지 않는다.
     """
-    if (operator_api_base or "").strip():
+    enabled = "true" if (operator_api_base or "").strip() else "false"
+    marker = 'data-operator-api-enabled="false"'
+    if marker not in html:
+        print("WARNING: data-operator-api-enabled 플래그를 찾지 못함", file=sys.stderr)
         return html
-    replacement = (
-        '<section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">\n'
-        '      <div class="opctl-head">\n'
-        '        <span class="opctl-title">운영자 모드</span>\n'
-        '        <span class="opctl-oneline"><span class="off">운영 API 설정 필요</span>'
-        ' · 실행 버튼은 운영 API가 연결된 빌드에서만 표시됩니다</span>\n'
-        '      </div>\n'
-        '    </section>')
-    start = html.find('<section class="opctl compact"')
-    end = html.find("</section>", start)
-    if start < 0 or end < 0:
-        print("WARNING: opctl section을 찾지 못함 — 운영자 UI 제거 스킵", file=sys.stderr)
-    else:
-        # 섹션 바로 앞의 설명 주석 블록도 함께 제거해 공개 raw HTML에 운영 전용 설명이
-        # 남지 않게 한다.
-        comment_start = html.rfind("<!-- =========== OPERATOR CONTROLS", 0, start)
-        if comment_start >= 0:
-            start = comment_start
-        end += len("</section>")
-        html = html[:start] + replacement + html[end:]
-    stripped, count = re.subn(
-        r'\n<script id="opctl-js">.*?</script>', "", html, count=1, flags=re.S)
-    if count != 1:
-        print("WARNING: opctl-js script를 찾지 못함 — 운영자 실행 JS 제거 스킵",
-              file=sys.stderr)
-    return stripped
+    return html.replace(marker, f'data-operator-api-enabled="{enabled}"', 1)
 
 
 _MARKET_INTRO_ONE_LINER = ('<div class="pnote">자동 연동 지표만 표시합니다. '
@@ -1862,6 +2140,20 @@ def _inject_featured(html: str, featured_html: str) -> str:
                      html, count=1, flags=re.S)
     if n != 1:
         print("ERROR: featured 카드 블록을 찾지 못함 (템플릿 구조 변경?)", file=sys.stderr)
+        raise SystemExit(1)
+    return new
+
+
+def _inject_hormuz_watch(html: str, watch_html: str) -> str:
+    new, n = re.subn(
+        r'<section class="hormuz-watch".*?</section>',
+        lambda _m: watch_html,
+        html,
+        count=1,
+        flags=re.S,
+    )
+    if n != 1:
+        print("ERROR: 호르무즈 핵심 리스크 카드 블록을 찾지 못함", file=sys.stderr)
         raise SystemExit(1)
     return new
 
@@ -2208,17 +2500,20 @@ def _sync_site_scope_lens_banks_to_tree(model: dict, tree: dict | None, candidat
 
 def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mock",
                   brief: dict | None = None, operator_api_base: str = "",
-                  weather_mode: str = "mock") -> str:
+                  weather_mode: str = "mock", hormuz_transit_snap: dict | None = None) -> str:
     m = re.search(r'(<script type="application/json" id="preview-model">)(.*?)(</script>)',
                   html, re.S)
     if not m:
         print("ERROR: preview-model JSON island을 찾지 못함", file=sys.stderr)
         raise SystemExit(1)
     model = json.loads(m.group(2))
-    # D7-AA — 운영자 버튼의 운영 API base URL(공개값)을 island에 주입한다. 빈 값이면 프론트는
-    # 버튼을 비활성 + 미설정 안내만 한다(GitHub 이동 없음). 빌더 소스는 env를 직접 읽지 않고
-    # CLI(--operator-api-base)로만 받는다(verify_dashboard_real_data 1d 계약).
+    # 운영 API base URL(공개값)을 island에 주입한다. 빈 값이면 프론트는 3개 실행 버튼을
+    # 비활성화하고 '미연결'을 명시한다(링크 fallback 없음). 빌더는 env를 직접 읽지 않고 CLI로만 받는다.
     model["operator_api_base"] = (operator_api_base or "").strip()
+    model["operator_api_enabled"] = bool(model["operator_api_base"])
+    # D7-AG-3 — 호르무즈 통과 선박량 실측 스냅샷을 island에 실어 검증기가 data_mode/출처/관측일/
+    # 통항 수를 확인할 수 있게 한다. leaf 계약을 그대로 미러링한다(가짜 수치 생성 없음).
+    model["hormuz_transit"] = dict(hormuz_transit_snap or {"data_mode": "unavailable"})
     # D7-AE-RC3 — 공개 산출물은 '연동 후보' 상세 목록을 렌더하지 않는다(한 줄 카운트로
     # 강등, 상세는 내부 백로그 문서). 템플릿(내부 프리뷰)은 플래그가 없어 기존대로 보인다.
     model["market_backlog_visible"] = False
@@ -2234,12 +2529,14 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
         mode=weather_mode, now=(brief or {}).get("generated_at")))
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
-    model["deal_watch_rows"] = list(brief.get("deal_watch_rows") or [])
+    # D7-AG-1 — Deal Watch 독립 섹션 제거. deal_watch_rows(및 generic 시사점 문구)를 공개
+    # MODEL에 싣지 않는다. 딜/투자/조달 신호는 기사별 보조 태그(row["deal_tags"])로 흡수한다.
     model["thebell_watch_status"] = dict(brief.get("thebell_watch_status") or {})
     model["lens_banks"] = parts["lens_banks"]
     model["lens_counts"] = parts["bank_counts"]
     model["featured_row"] = parts.get("featured_row")
     model["immediate_status"] = parts.get("immediate_status") or {}
+    model["hormuz_watch"] = parts.get("hormuz_watch") or {}
     # 중앙 정책(data/lens_queries.json)에서 lens_policy를 주입 — 생성 대시보드의 렌즈 정책·
     # 연동 상태(collection)가 단일 소스에서 나오게 한다(템플릿 정적 정책을 덮어씀).
     # 빈 상태 설명(emptyDescHtml)이 이 정책을 읽어 렌즈별 정직 안내를 만든다.
@@ -2304,6 +2601,10 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     for section in nav_sections:
         for article in section.get("articles") or []:
             _attach_provider_fields(article)
+            # D7-AG-1 — 카테고리/사이트 카드도 뉴스 카드 보조 태그를 갖게 한다(_row_from_signal 미경유 surface).
+            article["deal_tags"] = deal_watch.display_tags(
+                article.get("title") or "", article.get("snippet") or "",
+                article.get("display_source") or article.get("source") or "")
     model["nav_category_sections"] = nav_sections
     # D7-AA — 부가 관찰(SUPPORTING LENSES: business_lens/ecosystem/watch_next) 섹션은 제거됨.
     # 이전의 그룹별 count 주입 루프도 함께 제거한다(템플릿 모델에 더 이상 해당 키가 없음).
@@ -2447,12 +2748,18 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
         print(f"ERROR: dashboard template missing: {SOURCE_TEMPLATE}", file=sys.stderr)
         raise SystemExit(1) from exc
 
-    # D7-AE-RC1 — 공개 정적 산출물에서만 호르무즈 AIS 데모 카드를 제거한다(실 소스 없음).
+    # D7-AG-3 — 호르무즈 통과 선박량 실측 스냅샷(leaf가 네트워크/모드 소유). market_mode=live일 때만
+    # IMF PortWatch를 실측하고, 아니면/실패면 unavailable(가짜 수치 없음). 데모 카드를 제거한 자리에
+    # 이 실측 카드(또는 정직한 '연동 미설정')를 넣는다 — 기사 카드로 대체하지 않는다.
+    hormuz_transit_snap = hormuz_transit.fetch_hormuz_transit(
+        mode="live" if (market_mode or "mock").strip().lower() == "live" else "mock")
+    # D7-AE-RC1 — 공개 정적 산출물에서만 호르무즈 AIS 데모 카드를 제거한다(데모 모식도·proxy 값 금지).
     html = _strip_hormuz_demo_card(html)
-    # D7-AE-RC3 — 공개 표면 정리 3종: 공식 CI 로고 임베드(asset 있을 때만) · 운영 API
-    # 미설정 빌드의 실행 버튼 완전 제거('운영 API 설정 필요' 한 줄) · 시장 장문 설명 한 줄화.
+    html = _inject_hormuz_transit_card(html, _render_hormuz_transit_card(hormuz_transit_snap))
+    # 공개 표면 정리: 공식 CI 로고 임베드(asset 있을 때만) · 운영 API 연결 플래그 ·
+    # 시장 장문 설명 한 줄화. API 미연결 공개 빌드도 실행 버튼을 유지하되 미연결을 명시한다.
     html = _embed_brand_logo(html)
-    html = _strip_operator_controls(html, operator_api_base)
+    html = _set_operator_api_flag(html, operator_api_base)
     html = _simplify_market_intro(html)
 
     news_mode = brief.get("news_data_mode") or "mock"
@@ -2477,9 +2784,11 @@ def render_dashboard_html(brief: dict, market_mode: str = "mock",
     parts = _derive(brief)
     if parts["featured_sig"]:
         html = _inject_featured(html, _render_featured(parts["featured_sig"], parts["featured_row"]))
+    html = _inject_hormuz_watch(html, _render_hormuz_watch(parts["hormuz_watch"]))
     html = _inject_model(html, parts, news_mode, market_mode, brief=brief,
                          operator_api_base=operator_api_base,
-                         weather_mode=weather_mode)
+                         weather_mode=weather_mode,
+                         hormuz_transit_snap=hormuz_transit_snap)
     # D7-AE-RC2 — JSON island에 이미 주입된 weather_* 값을 그대로 되읽어(재요청/재조회 없음)
     # wxGrid/wxBadge를 서버에서 채운다 — JS(renderSiteWeather)와 동일 소스, 동일 결과.
     model_m = re.search(r'<script type="application/json" id="preview-model">(.*?)</script>',
@@ -2556,8 +2865,8 @@ def main(argv: list[str] | None = None) -> int:
                              "leaf가 네트워크 소유 · 실패 시 '기상 데이터 미수신')")
     parser.add_argument("--operator-api-base", metavar="URL", default="",
                         help="운영자 버튼이 호출할 공개 Operator API base URL(비밀값 아님). "
-                             "미지정(기본)이면 버튼은 비활성 + '운영 API 미설정' 안내만 표시한다"
-                             "(GitHub 이동 없음). 빌더는 env를 직접 읽지 않고 이 CLI로만 받는다.")
+                             "미지정(기본)이면 실행 버튼과 Operator API 미연결 상태를 표시한다. "
+                             "빌더는 env를 직접 읽지 않고 이 CLI로만 받는다.")
     args = parser.parse_args(argv)
 
     brief = build_brief_via_mock_pipeline()

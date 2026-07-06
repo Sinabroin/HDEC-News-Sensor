@@ -207,6 +207,23 @@
   .tag.amber{color:var(--amber); border:1px solid var(--amber-bd); background:var(--amber-tint);}
   .tag.sky{color:var(--sky); border:1px solid var(--sky-bd); background:var(--sky-tint);}
   .featured h2{margin:0; font-size:22px; line-height:1.38; font-weight:800; letter-spacing:-0.01em; color:var(--ink);}
+  .hormuz-watch{border:1px solid #E4D7BA; background:#FFFDF7; border-radius:13px;
+    padding:15px 18px; margin:0 0 12px; box-shadow:var(--shadow);}
+  .hormuz-watch-head{display:flex; align-items:flex-start; justify-content:space-between;
+    gap:14px; margin-bottom:9px;}
+  .hormuz-kicker{display:block; color:#8F6A2E; font-size:10.5px; font-weight:850;
+    letter-spacing:.04em; margin-bottom:2px;}
+  .hormuz-watch h3{margin:0; color:var(--ink2); font-size:16px; line-height:1.35;}
+  .hormuz-status{flex:none; border:1px solid #E4D7BA; background:#FFF8E7; color:#8F6A2E;
+    border-radius:999px; padding:4px 8px; font-size:10.5px; font-weight:800;}
+  .hormuz-title{font-size:13.5px; line-height:1.5; font-weight:800; color:var(--ink2);}
+  .hormuz-title a{color:inherit; text-decoration:none;}
+  .hormuz-title a:hover{text-decoration:underline;}
+  .hormuz-meta{display:flex; flex-wrap:wrap; gap:5px 10px; margin-top:6px;
+    color:var(--mute3); font-size:10.5px; font-weight:650;}
+  .hormuz-empty{display:flex; flex-direction:column; gap:3px; color:var(--mute2);
+    font-size:11.5px; line-height:1.45;}
+  .hormuz-empty strong{color:#8F6A2E; font-size:12.5px;}
   .meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--mute2); font-weight:500;}
   .meta b{font-weight:700; color:var(--ink4);}
   .meta .sep{color:#D3DCEA;}
@@ -579,11 +596,9 @@
     aside.lens{position:static; top:auto; z-index:auto;}
   }
 
-  /* ===== 운영자 실행 컨트롤 (D7-AA) =====
-     인플로우(static) 풀폭 패널 — 사이드/리스트를 절대 덮지 않는다(오버레이 회귀 방지).
-     '데이터 새로고침'과 '텔레그램 전송'은 분리된 별도 <button>이며, 클릭 시 운영 API(POST)를
-     호출해 즉시 실행한다. GitHub 페이지로 이동하지 않는다. 브라우저에 토큰/시크릿을 저장하지
-     않으며, 운영 API 미설정 시 버튼은 비활성 + 안내만 표시한다(이동 없음). */
+  /* ===== 운영자 실행 컨트롤 (D7-AG-2) =====
+     운영자 모드 summary와 3개 실행 버튼은 항상 보인다. 실제 POST는 Operator API가 연결된
+     빌드에서만 허용하고, 미연결 빌드는 링크로 대체하지 않고 상태를 명시한다. */
   .opctl{position:static; background:var(--card); border:1px solid var(--line); border-radius:12px;
     padding:16px 20px; margin-bottom:14px; box-shadow:var(--shadow);}
   /* D7-AD-U — 운영자 패널이 왼쪽 rail 하단에 들어간다. rail은 한 덩어리로 스크롤(nav 아래 운영자),
@@ -592,14 +607,8 @@
   .railcol .opctl{margin:0; padding:14px 15px 15px;}
   .railcol .opctl-actions{flex-direction:column; gap:8px;}
   .railcol .opctl-btn{flex:1 1 auto; width:100%; box-sizing:border-box;}
-  .opctl-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:13px;}
   .opctl-title{font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;}
   .opctl-sub{font-size:12px; color:var(--mute);}
-  .opctl-pinrow{display:flex; align-items:center; gap:9px; margin-bottom:11px; flex-wrap:wrap;}
-  .opctl-pinlbl{font-size:11.5px; font-weight:700; color:var(--ink4);}
-  .opctl-pin{flex:1 1 220px; min-width:0; font:inherit; font-size:13px; padding:8px 12px;
-    border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink);}
-  .opctl-pin:focus{outline:none; border-color:var(--sky-bd); box-shadow:0 0 0 3px var(--sky-tint);}
   .opctl-actions{display:flex; gap:12px; flex-wrap:wrap;}
   .opctl-btn{flex:1 1 280px; min-width:0; display:flex; flex-direction:column; gap:4px;
     appearance:none; -webkit-appearance:none; font:inherit; cursor:pointer; text-align:left;
@@ -617,15 +626,22 @@
   .opctl-btn.send{background:var(--amber-tint); border-color:var(--amber-bd);}
   .opctl-btn.send .opctl-btn-label{color:var(--amber);}
   .opctl-btn.send .opctl-btn-label::before{background:var(--amber);}
-  /* Teams 채널 전송 — 운영 API 미연결이라 항상 비활성([disabled] opacity로 흐려짐). 정직 표기용. */
   .opctl-btn.teams{background:#F2F1F8; border-color:#D9D7EC;}
   .opctl-btn.teams .opctl-btn-label{color:#5A5A86;}
   .opctl-btn.teams .opctl-btn-label::before{background:#8784B5;}
+  .opctl-connection{font-size:11.5px; line-height:1.5; color:var(--mute2);
+    border:1px solid var(--line); border-radius:9px; background:var(--hair2);
+    padding:8px 10px; margin-bottom:10px;}
+  .opctl-connection.connected{color:#38684A; border-color:#C8DDCE; background:#F1F7F2;}
+  .opctl-refresh-public{margin-top:9px; border:0; background:transparent; padding:2px 0;
+    color:var(--sky); font:inherit; font-size:11.5px; font-weight:750; cursor:pointer;}
+  .opctl-refresh-public:hover{text-decoration:underline;}
   .opctl-status{min-height:17px; margin-top:11px; font-size:12px; font-weight:700; color:var(--mute);}
   .opctl-status.running{color:var(--sky);}
   .opctl-status.ok{color:#38684A;}
   .opctl-status.fail{color:#A9433A;}
   .opctl-status.muted{color:var(--mute);}
+  .opctl-runlink{display:inline-block; margin-left:6px; color:var(--sky); font-weight:800;}
   .opctl-notes{list-style:none; margin:11px 0 0; padding:11px 0 0; border-top:1px solid var(--hair);
     display:flex; flex-direction:column; gap:5px;}
   .opctl-notes li{font-size:11.5px; color:var(--mute); padding-left:15px; position:relative; line-height:1.4;}
@@ -665,27 +681,11 @@
   .catnews .cnl-card .cnl-score .l{font-size:10.5px; font-weight:700; margin-top:2px;}
   .catnews .cnl-empty{padding:28px 16px; text-align:center; font-size:13px; font-weight:600; color:var(--mute);}
   .catnews .cnl-note{margin-top:10px; font-size:11.5px; color:var(--mute3);}
-  /* D7-AF Deal Watch — 기사 전문 없이 metadata·한 줄 시사점·원문 링크만 표시. */
-  .dealwatch{margin-top:18px; background:var(--card); border:1px solid var(--line);
-    border-radius:14px; box-shadow:var(--shadow); padding:17px 19px;}
-  .dealwatch .dw-head{display:flex; align-items:baseline; justify-content:space-between;
-    gap:12px; flex-wrap:wrap; margin-bottom:10px;}
-  .dealwatch .dw-title{font-size:15px; font-weight:800; color:var(--ink);}
-  .dealwatch .dw-note{font-size:10.5px; color:var(--mute3);}
-  .dealwatch .dw-list{display:flex; flex-direction:column;}
-  .dealwatch .dw-row{padding:11px 0; border-top:1px solid var(--hair);}
-  .dealwatch .dw-row:first-child{border-top:none; padding-top:4px;}
-  .dealwatch .dw-row-title{font-size:13.5px; font-weight:750; line-height:1.45; color:var(--ink2);}
-  .dealwatch .dw-row-meta{display:flex; flex-wrap:wrap; align-items:center; gap:7px;
-    margin-top:6px; font-size:10.5px; color:var(--mute3);}
-  .dealwatch .dw-label{font-weight:800; color:var(--sky); background:var(--sky-tint);
-    border:1px solid var(--sky-bd); border-radius:999px; padding:2px 7px;}
-  .dealwatch .dw-limited{font-weight:800; color:var(--amber); background:var(--amber-tint);
-    border:1px solid var(--amber-bd); border-radius:999px; padding:2px 7px;}
-  .dealwatch .dw-insight{font-size:11.5px; line-height:1.55; color:var(--ink4); margin-top:7px;}
-  .dealwatch .dw-link{font-size:11px; font-weight:750; color:var(--sky); text-decoration:none;}
-  .dealwatch .dw-link:hover{text-decoration:underline;}
-  .dealwatch .dw-empty{padding:15px 0 5px; font-size:12px; color:var(--mute3);}
+  /* D7-AG-1 뉴스 카드 보조 태그 — 별도 딜 섹션 없이 기사별 '근거 있는' 작은 태그(최대 3). */
+  .deal-tags{display:inline-flex; flex-wrap:wrap; gap:5px; vertical-align:middle;}
+  .deal-tags .deal-tag{font-size:10px; font-weight:800; line-height:1.5; letter-spacing:.01em;
+    color:var(--sky); background:var(--sky-tint); border:1px solid var(--sky-bd);
+    border-radius:999px; padding:1px 7px; white-space:nowrap;}
   @media (max-width:640px){
     .catnews .cnl-card{flex-direction:column;}
     .catnews .cnl-card .cnl-score{text-align:left;}
@@ -770,21 +770,26 @@
   .mktstatus .ms-item .ms-chip{align-self:flex-start;}
   .mktstatus .ms-why{font-size:10px; color:var(--mute3); line-height:1.45;}
   .mktstatus .ms-col.ms-priority .ms-why{color:var(--amber);}
-  /* 운영자 실행 — compact 접이식(D7-AE-RC1: 버튼 3개 자체가 기본 접힘 — 항상 보이는 건
-     opctl-head 요약 한 줄뿐. 비활성 CTA가 제품 기능처럼 크게 보이는 것을 막는다). */
-  .opctl.compact{padding:14px 18px;}
+  /* 운영자 실행 — summary 자체가 항상 활성인 운영자 모드 진입 버튼이다. */
+  .opctl.compact{padding:0;}
+  .railcol .opctl.compact{padding:0;}
   .opctl .opctl-oneline{font-size:12px; color:var(--mute2); font-weight:600;}
-  .opctl .opctl-oneline .off{color:#A9433A; font-weight:800;}
-  .opctl-panel{margin-top:10px;}
-  .opctl-panel>summary{list-style:none; cursor:pointer; font-size:12px; font-weight:700;
-    color:var(--mute2); display:inline-flex; align-items:center; gap:6px; padding:2px 0;}
+  .opctl-panel{margin:0;}
+  .opctl-panel>summary.opctl-mode-toggle{list-style:none; cursor:pointer; display:flex;
+    flex-direction:column; align-items:flex-start; gap:3px; padding:13px 14px; border-radius:11px;
+    position:relative;}
+  .opctl-panel>summary.opctl-mode-toggle:hover{background:var(--hair2);}
+  .opctl-panel>summary.opctl-mode-toggle:focus-visible{outline:2px solid var(--sky); outline-offset:2px;}
+  .opctl-panel>summary.opctl-mode-toggle::after{content:"펼치기 ▾"; position:absolute;
+    right:14px; top:15px; color:var(--mute3); font-size:10.5px; font-weight:700;}
+  .opctl-panel[open]>summary.opctl-mode-toggle::after{content:"접기 ▴";}
   .opctl-panel>summary::-webkit-details-marker{display:none;}
-  .opctl-panel[open]>summary{margin-bottom:12px;}
+  .opctl-panel[open]>summary{margin-bottom:0;}
+  .opctl-panel-body{padding:0 14px 14px;}
   .opctl-more{margin-top:12px; border-top:1px solid var(--hair); padding-top:10px;}
   .opctl-more>summary{list-style:none; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--mute2); display:inline-flex; align-items:center; gap:6px;}
   .opctl-more>summary::-webkit-details-marker{display:none;}
   .opctl-more>summary::after{content:"▾"; color:var(--mute4); font-size:10px;}
-  .opctl-more .opctl-pinrow{margin-top:10px;}
   .opctl-more .opctl-notes{margin-top:6px; padding-top:8px;}
 
 </style>
@@ -917,58 +922,56 @@
       <button class="nav navwx" data-weather="risk"><span class="l"><span class="ndot" style="background:#3E5C80;"></span><span class="nlabel">명일 정오 시공 리스크</span></span><span class="r"><span class="navgo">리스크 표 열기 ▸</span></span></button>
     </aside>
 
-    <!-- =========== OPERATOR CONTROLS — 왼쪽 rail 하단 (D7-AE-RC1) ===========
-         사용자 실사용 QA: "운영자 서버 미연결 상태인데 버튼이 크게 보여서 제품 기능처럼
-         보인다." 수정: 3버튼+상태는 기본 닫힌 <details>(id=opctlPanel) 뒤로 접는다 — 항상
-         보이는 건 요약 줄(운영자 모드 · 미연결)뿐이다. 펼쳐야만 버튼이 드러난다("작은 설정
-         안내 또는 운영자 모드 전용 접힘 영역"). 운영 API base가 주입된(운영자) 빌드에서는
-         JS(wireOperatorControls)가 details를 자동으로 연다 — 그 경우에만 버튼이 바로 보인다.
-         버튼은 운영 API(POST) 호출이며 GitHub로 이동하지 않는다. base URL은 preview-model
-         island의 operator_api_base에서 읽는다. 라벨/클래스/ID/endpoint/보안 문구는 운영
-         계약(verify_operator_controls)을 위해 그대로 둔다 — 바뀐 건 시각적 프로미넌스뿐. -->
-    <section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl">
-      <div class="opctl-head">
-        <span class="opctl-title">운영자 모드</span>
-        <span class="opctl-oneline" id="opUnsetLine"><span class="off">운영자 서버 미연결</span> · 설정 시에만 아래에서 실행할 수 있습니다</span>
-      </div>
+    <!-- =========== OPERATOR CONTROLS — 왼쪽 rail 하단 (D7-AG-2) ===========
+         정적 공개 페이지에는 인증값을 넣지 않는다. 브라우저는 주입된 Operator API base로만
+         POST하며 GitHub/Telegram/Teams privileged endpoint를 직접 호출하지 않는다. base가
+         없으면 링크로 대체하지 않고 동일한 3개 실행 버튼과 명확한 미연결 상태를 표시한다. -->
+    <section class="opctl compact" aria-label="운영자 실행 컨트롤" id="opctl"
+             data-operator-api-enabled="false">
       <details class="opctl-panel" id="opctlPanel">
-        <summary class="opctl-panel-summary">운영자 실행 패널 (설정 필요) ▸</summary>
-        <div class="opctl-actions">
-          <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
-                  title="뉴스 수집 워크플로 실행 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-            <span class="opctl-btn-label">데이터 새로고침 실행</span>
-            <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
-          </button>
-          <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
-                  title="승인 PIN 확인 후 텔레그램 전송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-            <span class="opctl-btn-label">텔레그램 전송 실행</span>
-            <span class="opctl-btn-help">승인 PIN 확인 후 리포트를 즉시 발송합니다</span>
-          </button>
-          <!-- Teams 채널 전송 (D7-AD-U) — 운영 API에 send-teams endpoint(operator_gateway.trigger_teams →
-               email-alert.yml dispatch)가 생겨 collect/telegram과 동일하게 배선됐다. 기본은 disabled로 두고
-               운영 API base가 주입된(운영자) 빌드에서 JS가 활성화한다. 정적 HTML은 GitHub Actions를 직접
-               호출하지 않는다 — 승인 PIN 검증·workflow_dispatch는 서버(operator_gateway)가 소유한다. -->
-          <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
-                  title="승인 PIN 확인 후 Teams 채널로 즉시 발송 · 운영 API 연결 시 활성화(운영자 서버 미연결 시 비활성)">
-            <span class="opctl-btn-label">Teams 채널 전송 실행</span>
-            <span class="opctl-btn-help">승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송합니다</span>
-          </button>
-        </div>
-        <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
-        <details class="opctl-more">
-          <summary>승인 PIN · 실행 안내 · 보안</summary>
-          <div class="opctl-pinrow">
-            <label class="opctl-pinlbl" for="opPin">승인 PIN</label>
-            <input class="opctl-pin" id="opPin" type="password" autocomplete="off" inputmode="numeric"
-                   placeholder="운영자 승인 PIN 입력" aria-label="운영자 승인 PIN">
+        <summary class="opctl-mode-toggle">
+          <span class="opctl-title">운영자 모드</span>
+          <span class="opctl-oneline" id="opModeSummary">Operator API 미연결</span>
+        </summary>
+        <div class="opctl-panel-body">
+          <div class="opctl-connection" id="opConnection">
+            Operator API 미연결 — 배포된 gateway base가 주입되기 전에는 실행할 수 없습니다.
           </div>
-          <ul class="opctl-notes">
-            <li>운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.</li>
-            <li>텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.</li>
-            <li>브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.</li>
-            <li>Teams 채널 전송은 승인 PIN 확인 후 Teams 채널 이메일로 즉시 발송됩니다(운영 API가 email-alert 워크플로를 실행).</li>
-          </ul>
-        </details>
+          <div id="opApiControls">
+            <div class="opctl-auth" id="opAuthNote"
+                 style="font-size:11px;color:var(--mute2);margin-bottom:8px;line-height:1.5;">
+              보호: <b>서버 앞단 운영자 인증</b>(사내 SSO · Cloudflare Access 등) — 이 페이지에는 비밀값·입력 인증란이 없습니다.
+            </div>
+            <div class="opctl-actions">
+              <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
+                      title="뉴스 수집 워크플로 실행">
+                <span class="opctl-btn-label">데이터 새로고침 실행</span>
+                <span class="opctl-btn-help">뉴스 수집 워크플로를 실행합니다 · 반영까지 약 1~3분</span>
+              </button>
+              <button class="opctl-btn send" id="opSendBtn" type="button" disabled aria-disabled="true"
+                      title="텔레그램 전송 실행">
+                <span class="opctl-btn-label">텔레그램 전송 실행</span>
+                <span class="opctl-btn-help">인증된 운영자 요청으로 리포트를 즉시 발송합니다</span>
+              </button>
+              <button class="opctl-btn teams" id="opTeamsBtn" type="button" disabled aria-disabled="true"
+                      title="Teams 채널 전송 실행">
+                <span class="opctl-btn-label">Teams 채널 전송 실행</span>
+                <span class="opctl-btn-help">인증된 운영자 요청으로 Teams 채널 이메일로 즉시 발송합니다</span>
+              </button>
+            </div>
+            <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
+            <button class="opctl-refresh-public" id="opPublicRefreshBtn" type="button">Public URL 새로고침 ↻</button>
+            <details class="opctl-more">
+              <summary>실행 안내 · 보안</summary>
+              <ul class="opctl-notes">
+                <li>브라우저는 Operator API gateway(base+경로)로만 실행 요청을 보냅니다.</li>
+                <li>운영자 인증은 <b>서버 앞단(사내 SSO · Access)</b>에서 처리됩니다 — 페이지에 PIN·토큰을 넣지 않습니다.</li>
+                <li>서버는 허용된 운영자 신원 · Origin · 요청 빈도만 통과시켜 GitHub Actions를 실행합니다.</li>
+                <li>텔레그램 · Teams 전송은 인증된 운영자 실행에서만 즉시 발송됩니다(자동발송 없음).</li>
+              </ul>
+            </details>
+          </div>
+        </div>
       </details>
     </section>
     </div><!-- /railcol -->
@@ -1029,6 +1032,20 @@
           </div>
         </article>
 
+        <!-- HORMUZ-RISK-WATCH — 기본 본문에 고정. 빌더가 실제 수집 기사 또는 정직한
+             '금일 신규 기사 없음 / 감시 유지' 상태로 서버 렌더한다. AIS 데모 수치 없음. -->
+        <section class="hormuz-watch" id="hormuzRiskWatch" data-state="watch"
+                 aria-label="호르무즈 핵심 리스크 감시">
+          <div class="hormuz-watch-head">
+            <div><span class="hormuz-kicker">핵심 리스크 감시</span><h3>호르무즈 해협</h3></div>
+            <span class="hormuz-status">금일 신규 기사 없음 / 감시 유지</span>
+          </div>
+          <div class="hormuz-empty">
+            <strong>금일 신규 기사 없음 / 감시 유지</strong>
+            <span>유가·에너지·해상운송·글로벌 리스크 핵심 감시 항목</span>
+          </div>
+        </section>
+
         <!-- SITE WATCH TREE (D7-N) — 현장/조직 감시 트리. 비공개 빌드(비공개 워치리스트 경로)에서만
              채워지고, 국내현장/해외현장/해외지사/해외법인 렌즈에서 펼쳐진다. 노드
              클릭 시 매칭 공개뉴스만 아래 목록에 필터링한다. '!'=최근 공개뉴스 매칭(위험 확정 아님). -->
@@ -1069,15 +1086,6 @@
           <div class="cnl-empty hidden" id="cnlEmpty">현재 수집된 항목 없음</div>
           <div class="cnl-note hidden" id="cnlNote"></div>
         </div>
-
-        <section class="dealwatch" id="dealWatchSection" aria-labelledby="dealWatchTitle">
-          <div class="dw-head">
-            <h2 class="dw-title" id="dealWatchTitle">Deal Watch</h2>
-            <span class="dw-note">프로젝트·그룹·AI 인프라·자본시장 공개 신호</span>
-          </div>
-          <div class="dw-list" id="dealWatchRows"></div>
-          <div class="dw-empty hidden" id="dealWatchEmpty">현재 수집된 Deal Watch 후보가 없습니다.</div>
-        </section>
       </section>
 
       <!-- ====== TAB: AI 신호 ====== -->
@@ -1511,7 +1519,8 @@
   "meta": {"published_kst": "2026·06·22 월 07:00", "news_data_mode": "mock",
            "collection": "수동 · OFF", "audience": "executive-preview", "demo": true},
   "operator_api_base": "",
-  "operator_endpoints": {"collect": "/api/operator/collect", "telegram": "/api/operator/send-telegram", "teams": "/api/operator/send-teams"},
+  "operator_api_enabled": false,
+  "operator_endpoints": {"collect": "/api/operator/collect", "telegram": "/api/operator/send", "teams": "/api/operator/send-teams"},
   "lens_policy": {
     "now": {"label": "즉시 확인", "query": "즉시 알림 후보·즉시 확인 등급에서 파생", "supported": true, "note": "", "collection": "derived"},
     "new": {"label": "신규 이슈", "query": "금일 처음 관측된 신규 신호에서 파생", "supported": true, "note": "", "collection": "derived"},
@@ -1742,7 +1751,6 @@
     (MODEL.nav_category_sections || []).forEach(function (section) {
       (section.articles || []).forEach(add);
     });
-    (MODEL.deal_watch_rows || []).forEach(add);
     return out;
   }
   function findReaderArticle(target) {
@@ -2107,7 +2115,7 @@ function displaySourceDomain(row){
     var tagHtml = tag ? '<span class="cnl-tag">' + esc(tag) + '</span>' : "";
     return '<article class="cnl-card">'
       + '<div class="cnl-body"><div class="cnl-ctitle">' + esc(article.title || "") + '</div>'
-      + '<div class="cnl-meta">' + tagHtml + '<span class="cnl-src">' + esc(src) + '</span>' + link + '</div></div>'
+      + '<div class="cnl-meta">' + tagHtml + '<span class="cnl-src">' + esc(src) + '</span>' + dealTagsHtml(article) + link + '</div></div>'
       + '<div class="cnl-score"><div class="v" style="color:' + col + '">' + esc(sc.v) + '</div>'
       + '<div class="l" style="color:' + col + '">' + esc(sc.l) + '</div></div></article>';
   }
@@ -2306,32 +2314,8 @@ function displaySourceDomain(row){
     });
   })();
 
-  /* ---------- D7-AF Deal Watch compact list ----------
-     수집 metadata만 표시한다. 제한 기사는 상태를 명시하고 원문 링크를 유지한다. */
-  (function renderDealWatch() {
-    var box = el("dealWatchRows"), empty = el("dealWatchEmpty");
-    if (!box) return;
-    var rows = MODEL.deal_watch_rows || [];
-    box.innerHTML = rows.map(function (row) {
-      var link = externalArticleUrl(row);
-      var published = String(row.published_at || "").replace("T", " ")
-        .replace(/([+-]\d\d:\d\d|Z)$/, "");
-      var access = row.access_limited || row.subscription_required
-        ? '<span class="dw-limited">유료/제한</span>' : "";
-      var sourceLink = link
-        ? '<a class="dw-link" href="' + esc(link)
-          + '" target="_blank" rel="noopener noreferrer">원문 보기 ↗</a>'
-        : "";
-      return '<article class="dw-row"><div class="dw-row-title">' + esc(row.title || "") + '</div>'
-        + '<div class="dw-row-meta"><span class="dw-label">'
-        + esc(row.deal_watch_label_name || row.deal_watch_label || "Deal Watch") + '</span>'
-        + '<span>' + esc(row.source || "출처 미상") + '</span>'
-        + (published ? '<span>' + esc(published) + '</span>' : "")
-        + access + sourceLink + '</div>'
-        + '<div class="dw-insight">' + esc(row.implication || "") + '</div></article>';
-    }).join("");
-    if (empty) empty.classList.toggle("hidden", !!rows.length);
-  })();
+  /* D7-AG-1: 딜 감시 독립 섹션은 제거 — 딜/투자/조달 신호는 각 뉴스 카드의 보조
+     태그(dealTagsHtml, row.deal_tags)로 흡수한다. 반복 시사점 문구도 렌더링하지 않는다. */
 
   /* D7-AD-V: 본문 위 뉴스 카테고리 칩 필터(newsCatFilter)는 제거 — 2차 pill은 #cnlPills만 사용. */
 
@@ -2880,6 +2864,14 @@ function displaySourceDomain(row){
     return '<span class="sep">·</span><span class="basischip" style="color:' + color +
       '; font-weight:800">' + esc(label) + '</span>';
   }
+  // D7-AG-1 — 뉴스 카드 보조 태그(최대 3). row.deal_tags(빌더가 근거 기반으로 부착)를 작은 pill로.
+  function dealTagsHtml(r) {
+    var tags = (r && r.deal_tags) || [];
+    if (!tags.length) return "";
+    return '<span class="deal-tags">' + tags.map(function (t) {
+      return '<span class="deal-tag">' + esc(t) + '</span>';
+    }).join("") + '</span>';
+  }
   function renderRows(targetId, rows) {
     var box = el(targetId); if (!box) return;
     box.innerHTML = "";
@@ -2896,7 +2888,7 @@ function displaySourceDomain(row){
         '<span>' + esc(r.time) + '</span><span class="sep">·</span><span>' + esc(r.related) + '</span>' +
         '<span class="sep">·</span><span>' + esc(r.sources) + '</span><span class="sep">·</span>' +
         '<span style="color:' + esc(r.catColor) + '; font-weight:700">' + esc(r.cat) + '</span>' +
-        freshChip(r.freshness) + whyChip(r.whyGlobal) + basisChip(r) + '</div>' +
+        freshChip(r.freshness) + whyChip(r.whyGlobal) + basisChip(r) + dealTagsHtml(r) + '</div>' +
         rowLink + '</div>' +
         '<div class="sc"><div><div class="v" style="color:' + esc(r.scoreColor) + '">' + esc(r.score) + '</div>' +
         '<div class="l" style="color:' + esc(r.scoreColor) + '">' + esc(r.scoreLabel) + '</div></div>' +
@@ -2946,7 +2938,7 @@ function displaySourceDomain(row){
           '<h4>' + esc(r.title) + '</h4>' +
           '<div class="aimeta"><b style="color:#6E7889">' + esc(r.source) + '</b><span class="sep">·</span>' +
             '<span>' + esc(r.time) + '</span><span class="sep">·</span><span>' + esc(r.related) + '</span>' +
-            '<span class="sep">·</span><span>' + esc(r.sources) + '</span></div>' +
+            '<span class="sep">·</span><span>' + esc(r.sources) + '</span>' + dealTagsHtml(r) + '</div>' +
         '</div>' +
         '<div class="aisc"><div class="v" style="color:' + esc(r.scoreColor) + '">' + esc(r.score) +
           '<small> / 5</small></div><div class="l" style="color:' + esc(r.scoreColor) + '">' + esc(r.scoreLabel) + '</div></div>' +
@@ -3834,22 +3826,16 @@ function displaySourceDomain(row){
     apply("24h");
   })();
 
-  /* 운영자 실행 컨트롤 JS는 별도 opctl-js 블록으로 분리했다(D7-AE-RC4) —
-     공개(운영 API 미설정) 빌드에서 빌더가 태그째 제거해도 이 메인 인터랙션 스크립트는
-     템플릿과 byte-identical로 유지된다(verify_dashboard_lens_filters 5c). */
+  /* 운영자 실행 컨트롤 JS는 별도 opctl-js 블록으로 분리한다. */
 
   /* initial chart draw (panel hidden ok — viewBox scales) */
   drawYieldChart();
 })();
 </script>
 <script id="opctl-js">
-  /* ---------- 운영자 실행 컨트롤 (D7-AA · D7-AE-RC4 분리 스크립트) ----------
-     운영 API POST 호출 전용 — GitHub 이동 없음, 토큰/시크릿 리터럴 0건. 메인 인터랙션
-     스크립트(5c byte-identity 계약 대상)와 분리한 자족 블록이다: 운영 API 미설정(공개)
-     빌드에서는 빌더(_strip_operator_controls)가 이 script 태그를 통째로 제거해 실행
-     문자열("데이터 새로고침 실행" 등)이 공개 raw HTML에 남지 않는다(D7-AE-RC4).
-     base URL은 preview-model island의 operator_api_base에서만 읽는다 — 메인 스크립트
-     스코프(el/MODEL)에 의존하지 않도록 island를 직접 파싱한다. */
+  /* ---------- 운영자 실행 컨트롤 (D7-AG-2) ----------
+     base URL은 preview-model island에서만 읽는다. 브라우저는 base+상대경로에만 POST한다.
+     base가 없으면 링크 fallback 없이 3개 실제 실행 버튼을 비활성화하고 미연결을 명시한다. */
   (function () {
     var el = function (id) { return document.getElementById(id); };
     var MODEL = {};
@@ -3857,34 +3843,46 @@ function displaySourceDomain(row){
     catch (err) { MODEL = {}; }
     var base = String(MODEL.operator_api_base || "").replace(/\/+$/, "");
     var endpoints = MODEL.operator_endpoints || {};
+    var root = el("opctl"), panel = el("opctlPanel");
+    var modeSummary = el("opModeSummary"), connection = el("opConnection");
     var collectBtn = el("opCollectBtn"), sendBtn = el("opSendBtn"), teamsBtn = el("opTeamsBtn");
-    var statusBox = el("opStatus"), pinInput = el("opPin");
-    var unsetLine = el("opUnsetLine");   // '운영자 서버 미연결' 한 줄 — base 설정 시 숨김(D7-AD-R)
+    var statusBox = el("opStatus"), publicRefresh = el("opPublicRefreshBtn");
     if (!collectBtn || !sendBtn) return;
-    // D7-AD-U — Teams 채널 전송도 collect/telegram과 같은 운영 API(POST) 경로로 배선한다. base가
-    // 설정된(운영자) 빌드에서만 세 버튼이 활성화되고, 미설정 공개 빌드는 전부 비활성 + 한 줄 안내만.
     var opBtns = [collectBtn, sendBtn, teamsBtn].filter(Boolean);   // 실행 중 일괄 잠금 대상
     function setBtns(disabled) { opBtns.forEach(function (b) { b.disabled = disabled; }); }
-    function setStatus(msg, kind) {
+    function setStatus(msg, kind, result) {
       if (!statusBox) return;
       statusBox.textContent = msg || "";
       statusBox.className = "opctl-status" + (kind ? " " + kind : "");
+      var runUrl = result && (result.run_url || result.workflow_url);
+      if (runUrl && /^https:\/\/github\.com\/Sinabroin\/HDEC-News-Sensor\/actions\//.test(runUrl)) {
+        var link = document.createElement("a");
+        link.className = "opctl-runlink";
+        link.href = runUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = result.run_id ? "run #" + result.run_id + " 열기 ↗" : "실행 목록 열기 ↗";
+        statusBox.appendChild(link);
+      }
     }
+    if (publicRefresh) publicRefresh.addEventListener("click", function () { window.location.reload(); });
     if (!base) {
-      // 운영 API 미설정 — 버튼 비활성 + 안내만. 어디로도 이동하지 않는다.
-      collectBtn.disabled = true; sendBtn.disabled = true;
+      if (root) root.setAttribute("data-operator-api-enabled", "false");
       setBtns(true);
-      if (pinInput) pinInput.disabled = true;
-      setStatus("운영 API가 아직 설정되지 않았습니다. GitHub로 이동하지 않습니다.", "muted");
+      setStatus("Operator API 미연결", "muted");
       return;
     }
+    if (root) root.setAttribute("data-operator-api-enabled", "true");
+    if (connection) {
+      connection.textContent = "Operator API 연결됨 — 서버 앞단 운영자 인증(SSO·Access) 후 서버에서 GitHub Actions를 실행합니다.";
+      connection.classList.add("connected");
+    }
+    if (modeSummary) modeSummary.textContent = "운영 API 연결됨 · 직접 실행";
     collectBtn.disabled = false; sendBtn.disabled = false;
     if (teamsBtn) teamsBtn.disabled = false;           // Teams endpoint 배선됨 → 연결 시 활성화(D7-AD-U)
     collectBtn.removeAttribute("aria-disabled"); sendBtn.removeAttribute("aria-disabled");
     if (teamsBtn) teamsBtn.removeAttribute("aria-disabled");
-    if (unsetLine) unsetLine.style.display = "none";   // 연결됨 → '운영자 서버 미연결' 한 줄 숨김
-    var panel = el("opctlPanel");                       // D7-AE-RC1: 연결된(운영자) 빌드는
-    if (panel) panel.open = true;                        // 접힌 패널을 자동으로 펼친다
+    if (panel) panel.open = true;
     var inflight = false;
     function run(btn, path, runningMsg, okMsg) {
       if (inflight || !path) return;                 // 중복 클릭 방지
@@ -3894,19 +3892,25 @@ function displaySourceDomain(row){
       var ctrl = new AbortController();
       var timer = setTimeout(function () { ctrl.abort(); }, 25000);   // timeout
       var headers = {"Content-Type": "application/json"};
-      var pin = pinInput ? pinInput.value : "";
-      if (pin) headers["X-Operator-Token"] = pin;     // PIN은 헤더로만 (저장 안 함)
-      fetch(base + path, {method: "POST", headers: headers, body: "{}", signal: ctrl.signal})
+      // 보호는 서버 앞단(edge SSO/Access)에서 처리 — 브라우저는 secret을 보유/전송하지 않는다.
+      // credentials:"include"로 경계 세션 쿠키가 실려 서버가 운영자 신원을 확인한다.
+      fetch(base + path, {method: "POST", headers: headers, body: "{}",
+                          credentials: "include", signal: ctrl.signal})
         .then(function (r) {
           return r.json().catch(function () { return {}; })
             .then(function (j) { return {ok: r.ok, code: r.status, body: j}; });
         })
         .then(function (res) {
           var s = (res.body && res.body.status) || "";
-          if (res.ok && s === "dispatched") setStatus(okMsg, "ok");
-          else if (res.code === 401 || s === "unauthorized") setStatus("승인 실패 — 승인 PIN을 확인하세요.", "fail");
-          else if (res.code === 503 || s === "not_configured") setStatus("운영 API가 아직 설정되지 않았습니다.", "muted");
-          else setStatus("실행 실패 — 잠시 후 다시 시도하세요.", "fail");
+          if (res.ok && s === "dispatched") setStatus(okMsg, "ok", res.body);
+          else if (res.code === 401 || s === "unauthorized") setStatus("운영자 인증 필요 — 운영자 콘솔(SSO·Access) 로그인 후 다시 시도하세요.", "fail");
+          else if (res.code === 403 || s === "forbidden") setStatus("접근이 허용되지 않았습니다 — 허용된 운영자만 실행할 수 있습니다.", "fail");
+          else if (res.code === 429 || s === "rate_limited") setStatus("요청이 많습니다 — 잠시 후 다시 시도하세요.", "fail");
+          else if (res.code === 503 || s === "not_configured") setStatus("Operator API 서버 설정 미완료", "muted");
+          else {
+            var reason = (res.body && res.body.detail) || ("HTTP " + res.code);
+            setStatus("실행 실패 — " + reason, "fail");
+          }
         })
         .catch(function (e) {
           setStatus(e && e.name === "AbortError" ? "시간 초과 — 응답이 없습니다."
@@ -3919,15 +3923,15 @@ function displaySourceDomain(row){
     }
     collectBtn.addEventListener("click", function () {
       run(collectBtn, endpoints.collect, "데이터 새로고침 실행 중…",
-          "데이터 새로고침을 실행했습니다. 반영까지 약 1~3분 걸립니다.");
+          "데이터 새로고침 실행 요청 접수 · 반영까지 약 1~3분");
     });
     sendBtn.addEventListener("click", function () {
       run(sendBtn, endpoints.telegram, "텔레그램 전송 실행 중…",
-          "텔레그램 전송을 실행했습니다.");
+          "텔레그램 전송 실행 요청 접수");
     });
     if (teamsBtn) teamsBtn.addEventListener("click", function () {
       run(teamsBtn, endpoints.teams, "Teams 채널 전송 실행 중…",
-          "Teams 채널 전송을 실행했습니다. 채널 이메일 도착은 별도 확인이 필요합니다.");
+          "Teams 채널 전송 실행 요청 접수 · 채널 도착은 별도 확인 필요");
     });
   })();
 </script>

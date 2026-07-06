@@ -1,297 +1,181 @@
 #!/usr/bin/env python3
-"""D7-AA verifier — operator action buttons call the Operator API, never GitHub navigation.
+"""D7-AG-2 Operator API UI/security verifier (offline, no dispatch)."""
 
-Runs fully offline (no network, DB writes, secrets, or send). It proves the operator
-control panel on the summary dashboard is *safe by construction under the new contract*:
-
-  · The two buttons ("데이터 새로고침 실행" / "텔레그램 전송 실행") are <button> elements that
-    call a server-side Operator API (POST) via JS fetch — they are NOT <a href> links to
-    GitHub Actions pages, and the public HTML contains no GitHub Actions manual-run URL.
-  · The fetch target base is read from the preview-model JSON island (operator_api_base),
-    so the bare interaction script stays byte-identical across template/build. When the
-    base is unset (the default in the committed public build) the buttons are disabled and
-    only a "운영 API가 아직 설정되지 않았습니다. GitHub로 이동하지 않습니다." notice is shown —
-    no navigation anywhere.
-  · No token/secret/chat-id is embedded; the PIN is a runtime input sent as a header only.
-  · The browser never POSTs directly to api.github.com / api.telegram.org and never calls
-    sendMessage; the privileged GitHub workflow_dispatch happens server-side in
-    app/operator_gateway.py (out of scope of the public page).
-
-This replaces the old D7-T contract (which required the buttons to *be* GitHub Actions
-links). The Telegram inline-button mapping for the report/dashboard links (send_telegram)
-is unrelated to the operator controls and is still checked (check 17).
-
-D7-AE-RC1: user QA found the three disabled buttons rendered as large always-visible CTAs
-("비활성 버튼이 제품 기능처럼 보인다") even though they were architecturally safe. Checks
-21-22 lock the new contract: the action buttons live inside a closed-by-default
-<details id="opctlPanel"> (only a one-line summary is unconditionally visible) and the JS
-auto-opens it when operator_api_base is actually configured. See
-verify_operator_panel_not_fake.py for the dedicated "not fake" prominence audit.
-
-Usage:
-    python3 scripts/verify_operator_controls.py
-"""
+from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
-OPERATOR = ROOT / "docs" / "daily" / "operator-latest.html"
-LATEST = ROOT / "docs" / "daily" / "latest.html"
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
+DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
+BUILDER = ROOT / "scripts" / "build_static_dashboard.py"
+API = ROOT / "app" / "operator_api.py"
+GATEWAY = ROOT / "app" / "operator_gateway.py"
 
-REFRESH_LABEL = "데이터 새로고침 실행"
-TELEGRAM_LABEL = "텔레그램 전송 실행"
-
-# 운영 API 미설정 시 정확히 이 안내(이동 없음)를 표시해야 한다 (task spec).
-UNSET_NOTICE = "운영 API가 아직 설정되지 않았습니다. GitHub로 이동하지 않습니다."
-
-# 운영자 버튼이 호출하는 상대 API 경로 (정적 페이지엔 base만 주입, 비밀값 0건).
-COLLECT_ENDPOINT = "/api/operator/collect"
-TELEGRAM_ENDPOINT = "/api/operator/send-telegram"
-TEAMS_ENDPOINT = "/api/operator/send-teams"   # D7-AD-U — Teams도 운영 API로 배선
-
-# 버튼/상태 요소 식별자 + 요청 상태(실행중/성공/실패/timeout) + 중복클릭 가드.
-REQUIRED_TOKENS = [
-    'id="opCollectBtn"', 'id="opSendBtn"', 'id="opStatus"', 'id="opPin"',
-    "MODEL.operator_api_base",          # base는 JSON island에서만 읽는다 (byte-identity)
-    "AbortController",                  # timeout
-    "실행 중",                          # 진행 상태
-    "시간 초과",                        # timeout 상태
-    "inflight",                         # 중복 클릭 방지
-]
-
-# 운영자 안내/경고 문구 (새 계약).
-REQUIRED_COPY = [
-    "운영 API 연결 시 버튼 클릭으로 즉시 실행됩니다.",
-    "텔레그램 전송은 승인 PIN 입력 후 즉시 발송됩니다.",
-    "브라우저에는 토큰·시크릿을 저장하지 않으며, GitHub로 이동하지 않습니다.",
-    UNSET_NOTICE,
-]
-
-# Telegram inline-button mapping labels (existing send_telegram contract, check 17).
-SUMMARY_LABEL = "대시보드 보기"
-FULL_REPORT_LABEL = "상세 리포트 보기"
-
-# Token / secret shapes that must never appear in public HTML/JS.
-TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")          # telegram bot token
-PAT_SHAPE = re.compile(r"ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}")  # GitHub PAT
-SECRET_NAMES = ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS", "NAVER_CLIENT_SECRET",
-                "GH_OPERATOR_TOKEN", "OPERATOR_SHARED_SECRET")
-
-_failures: list[str] = []
+ENDPOINTS = {
+    "collect": "/api/operator/collect",
+    "telegram": "/api/operator/send",
+    "teams": "/api/operator/send-teams",
+}
+BUTTONS = {
+    "데이터 새로고침 실행": "opCollectBtn",
+    "텔레그램 전송 실행": "opSendBtn",
+    "Teams 채널 전송 실행": "opTeamsBtn",
+}
+SECRET_NAMES = (
+    "GH_OPERATOR_TOKEN", "GITHUB_TOKEN", "OPERATOR_SHARED_SECRET", "OPERATOR_PIN",
+    "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS", "TEAMS_CHANNEL_EMAIL",
+    "NAVER_CLIENT_SECRET", "X-Naver-Client-Secret",
+)
+SECRET_SHAPES = (
+    re.compile(r"\b(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}\b"),
+    re.compile(r"\b\d{8,}:[A-Za-z0-9_-]{20,}\b"),
+    re.compile(r"https://[^\"'\s]*(?:webhook\.office\.com|powerautomate\.com)[^\"'\s]*", re.I),
+)
+ISLAND = re.compile(
+    r'<script type="application/json" id="preview-model">(.*?)</script>', re.S
+)
+failures: list[str] = []
 
 
-def check(name: str, ok: bool, detail: str = "") -> bool:
-    line = f"[{'PASS' if ok else 'FAIL'}] {name}"
-    if detail:
-        line += f" — {detail}"
-    print(line)
+def check(name: str, ok: bool, detail: str = "") -> None:
+    print(f"[{'PASS' if ok else 'FAIL'}] {name}" + (f" — {detail}" if detail else ""))
     if not ok:
-        _failures.append(name)
-    return ok
+        failures.append(name)
 
 
-def _read(path: Path) -> str:
+def read(path: Path) -> str:
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+def model(html: str) -> dict:
+    match = ISLAND.search(html)
     try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
+        return json.loads(match.group(1)) if match else {}
+    except json.JSONDecodeError:
+        return {}
 
 
-# ---------------------------------------------------------------------------
-# 1 · buttons call the Operator API and do NOT navigate to GitHub
-# ---------------------------------------------------------------------------
+def build(base: str = "") -> str:
+    with tempfile.TemporaryDirectory(prefix="hdec_d7ag2_operator_") as tmp:
+        output = Path(tmp) / "dashboard.html"
+        env = dict(os.environ)
+        for name in SECRET_NAMES:
+            env.pop(name, None)
+        cmd = [sys.executable, str(BUILDER), "--output", str(output)]
+        if base:
+            cmd += ["--operator-api-base", base]
+        proc = subprocess.run(
+            cmd, cwd=ROOT, env=env, text=True, capture_output=True, timeout=300
+        )
+        check(f"dashboard build(base={'set' if base else 'unset'})", proc.returncode == 0,
+              (proc.stderr or "")[-240:])
+        return read(output)
 
-def check_buttons(html: str) -> None:
-    check("3: '데이터 새로고침 실행' 컨트롤 존재", REFRESH_LABEL in html)
-    check("4: '텔레그램 전송 실행' 컨트롤 존재", TELEGRAM_LABEL in html)
 
-    # 5 · 버튼이 <button>이고 GitHub로 이동하는 <a href ...actions...> 링크가 아니다.
-    check("5: 운영자 버튼이 <button> 요소(직접 실행)", '<button class="opctl-btn refresh"' in html
-          and '<button class="opctl-btn send"' in html)
-    # 6 · 공개 HTML에 GitHub Actions 수동실행 URL이 없다 (버튼이 GitHub로 이동하지 않음).
-    check("6: GitHub Actions 워크플로 수동실행 URL 미포함 (/actions/workflows/)",
-          "/actions/workflows/" not in html)
-    check("6b: github.com 워크플로 페이지 링크 미포함",
-          not re.search(r'href="https://github\.com/[^"]*actions', html))
-    # 7 · 버튼이 운영 API(상대 경로)를 호출한다 (base는 JSON island에서 주입).
-    check("7: 수집 endpoint(/api/operator/collect) 참조", COLLECT_ENDPOINT in html)
-    check("7b: 텔레그램 endpoint(/api/operator/send-telegram) 참조", TELEGRAM_ENDPOINT in html)
-    # 8 · fetch는 운영 API base로 POST하며 github/telegram 호스트 리터럴을 쓰지 않는다.
-    check("8: fetch가 운영 API base로 POST(github/telegram 리터럴 아님)",
+def check_ui(html: str, label: str, *, enabled: bool) -> None:
+    parsed = model(html)
+    check(f"{label}: model JSON", bool(parsed))
+    check(f"{label}: operator flag={str(enabled).lower()}",
+          parsed.get("operator_api_enabled") is enabled
+          and f'data-operator-api-enabled="{str(enabled).lower()}"' in html)
+    for text, element_id in BUTTONS.items():
+        check(f"{label}: button {text}",
+              text in html and f'id="{element_id}" type="button"' in html)
+    check(f"{label}: endpoint map", parsed.get("operator_endpoints") == ENDPOINTS,
+          repr(parsed.get("operator_endpoints")))
+    check(f"{label}: browser POSTs only to base+path",
           "fetch(base + path" in html and 'method: "POST"' in html)
-    # 9 · 버튼/상태/PIN 요소 + 상태표시 + 중복클릭 가드 토큰.
-    for tok in REQUIRED_TOKENS:
-        check(f"9: 운영자 컨트롤 토큰 '{tok[:28]}' 존재", tok in html)
+    check(f"{label}: request/running/accepted/failure states",
+          "실행 중" in html and "실행 요청 접수" in html and "실행 실패" in html)
+    check(f"{label}: run URL/id rendering",
+          "result.run_url || result.workflow_url" in html
+          and "result.run_id" in html and "opctl-runlink" in html)
+    check(f"{label}: link fallback removed",
+          'id="opActionLinks"' not in html
+          and "GitHub Actions 열기" not in html
+          and "Scheduled Live Refresh 열기" not in html
+          and "Telegram Notify 열기" not in html)
+    # D7-AG-3 — 브라우저 PIN 제거 + 보호를 서버 앞단(edge)으로 이관.
+    check(f"{label}: PIN 입력 UI 제거", 'id="opPin"' not in html and "승인 PIN" not in html)
+    check(f"{label}: 브라우저는 secret 미보유(credentials로 경계 세션만 전달)",
+          'credentials: "include"' in html and 'X-Operator-Token"] = pin' not in html)
+    if enabled:
+        check(f"{label}: connected mode enables all three buttons",
+              "collectBtn.disabled = false" in html
+              and "sendBtn.disabled = false" in html
+              and "teamsBtn.disabled = false" in html)
+    else:
+        check(f"{label}: explicit disconnected state",
+              "Operator API 미연결" in html and "setBtns(true)" in html)
 
 
-def check_unset_behavior(html: str) -> None:
-    # 10 · 운영 API 미설정 시 GitHub로 이동하지 않고 안내만 표시한다.
-    check("10: 미설정 시 GitHub 이동 없이 안내 표시", UNSET_NOTICE in html)
-    # 미설정 기본(공개 빌드)에서 버튼은 disabled로 시작한다(JS가 base 있을 때만 활성화).
-    check("10b: 버튼은 disabled 기본값(JS가 base 있을 때만 활성화)",
-          'id="opCollectBtn" type="button" disabled' in html
-          and 'id="opSendBtn" type="button" disabled' in html)
+def check_public_safety(html: str, label: str) -> None:
+    leaks = [name for name in SECRET_NAMES if name in html]
+    leaks.extend(f"shape-{idx}" for idx, pattern in enumerate(SECRET_SHAPES)
+                 if pattern.search(html))
+    check(f"{label}: public secret/token/webhook 0", not leaks, ", ".join(leaks))
+    check(f"{label}: privileged browser endpoints 0",
+          "api.github.com" not in html
+          and "api.telegram.org" not in html
+          and "openapi.naver.com/v1/search/news.json" not in html)
 
 
-def check_copy(html: str) -> None:
-    for phrase in REQUIRED_COPY:
-        check(f"11: 안내 문구 '{phrase[:22]}…' 존재", phrase in html)
-
-
-def check_public_dash(html: str) -> None:
-    """D7-AE-RC3(B안) — 공개 산출물(운영 API base 미주입): 실행 버튼을 렌더하지 않는다.
-
-    사용자 QA: disabled 버튼이 제품 기능처럼 읽힘("아직도 안 된다"). 공개 빌드는 실행
-    UI(버튼 3개·PIN·패널) 0건 + '운영 API 설정 필요' 한 줄만. GitHub 이동 없음은 유지.
-    """
-    check("P1: 공개 산출물에 실행 버튼 마크업 0건(opctl-btn·opCollectBtn·opSendBtn·opTeamsBtn)",
-          'class="opctl-btn' not in html and 'id="opCollectBtn"' not in html
-          and 'id="opSendBtn"' not in html and 'id="opTeamsBtn"' not in html)
-    check("P2: 공개 산출물에 승인 PIN 입력(opPin) 0건", 'id="opPin"' not in html)
-    check("P3: '운영 API 설정 필요' 한 줄 존재", "운영 API 설정 필요" in html)
-    check("P4: opctl 섹션 자체는 유지(운영자 모드 표시)", 'id="opctl"' in html)
-    check("P5: GitHub Actions 수동실행 URL 미포함", "/actions/workflows/" not in html)
-    check("P6: 공개 raw에는 운영 API 호출 JS/opctl-js 0건",
-          "fetch(base + path" not in html and 'id="opctl-js"' not in html)
-
-
-# ---------------------------------------------------------------------------
-# 18~20 · Teams 채널 전송 버튼 — 운영 API로 배선 (D7-AD-U, endpoint 구현됨)
-# ---------------------------------------------------------------------------
-
-def check_teams_control(tpl: str) -> None:
-    """D7-AD-U — Teams 채널 전송이 collect/telegram과 동일하게 운영 API(POST)로 배선됐다.
-    운영 API에 send-teams endpoint(app/main.py + operator_gateway.trigger_teams → email-alert.yml
-    workflow_dispatch)가 생겨, 버튼은 기본 disabled로 두되 운영 API base가 주입된(운영자) 빌드에서
-    JS가 활성화한다. 정적 HTML은 GitHub Actions를 직접 호출하지 않는다 — 승인 PIN 검증과
-    workflow_dispatch는 서버(operator_gateway)가 소유한다. 운영자 패널은 빌더가 손대지 않는 정적
-    영역이라 템플릿으로 검증한다(공개 빌드는 base 미설정이라 세 버튼 모두 disabled)."""
-    check("18: 'Teams 채널 전송 실행' 컨트롤 존재", "Teams 채널 전송 실행" in tpl)
-    check('18b: Teams 버튼이 <button class="opctl-btn teams" id="opTeamsBtn"> 요소',
-          '<button class="opctl-btn teams" id="opTeamsBtn"' in tpl)
-    check("19: Teams 버튼은 disabled 기본값(운영 API base 주입 시 JS가 활성화)",
-          'id="opTeamsBtn" type="button" disabled' in tpl)
-    check("19b: JS가 Teams 버튼을 운영 API로 배선(el(opTeamsBtn) + base 설정 시 활성화)",
-          "teamsBtn.disabled = false" in tpl and 'el("opTeamsBtn")' in tpl)
-    check("20: Teams 전송은 운영 API 상대 endpoint(send-teams)로 POST(직접 GitHub/발송 아님)",
-          TEAMS_ENDPOINT in tpl)
-
-
-# ---------------------------------------------------------------------------
-# 2 · safety — no secrets / no direct privileged API from the browser
-# ---------------------------------------------------------------------------
-
-def check_safety(html: str, label: str) -> None:
-    low = html.lower()
-    leaks = []
-    if TOKEN_SHAPE.search(html):
-        leaks.append("token-shape")
-    if PAT_SHAPE.search(html):
-        leaks.append("pat-shape")
-    for name in SECRET_NAMES:
-        if name in html:
-            leaks.append(name)
-    check(f"12[{label}]: 토큰/시크릿 문자열 없음", not leaks, ", ".join(leaks))
-    check(f"13[{label}]: api.github.com 미포함", "api.github.com" not in low)
-    check(f"13b[{label}]: api.telegram.org 미포함", "api.telegram.org" not in low)
-    check(f"14[{label}]: sendMessage 미포함", "sendmessage" not in low)
-    auto = re.search(r"telegram_auto_send\s*[=:]\s*['\"]?1", low)
-    check(f"15[{label}]: TELEGRAM_AUTO_SEND=1 하드코딩 없음", not auto)
-    # 브라우저가 GitHub/Telegram 호스트로 직접 fetch/XHR POST하지 않는다.
-    xhr = "xmlhttprequest" in low
-    fetch_host = re.search(r"fetch\(\s*[`'\"][^`'\"]*(github|telegram)", low)
-    post_host = re.search(r"(github|telegram)[^\n]{0,200}?method\s*:\s*['\"]?post", low)
-    check(f"16[{label}]: GitHub/Telegram로의 브라우저 fetch/XHR POST 없음",
-          not (xhr or fetch_host or post_host),
-          "xhr" if xhr else ("fetch" if fetch_host else ("post" if post_host else "")))
-
-
-# ---------------------------------------------------------------------------
-# 17 · existing report/dashboard inline-button mapping unchanged (send_telegram)
-# ---------------------------------------------------------------------------
-
-def check_collapsed_by_default(html: str, tpl: str) -> None:
-    """21-22 · D7-AE-RC3 — 공개 산출물엔 패널이 아예 없고(B안), 템플릿(운영자 빌드 소스)의
-    패널은 기본 닫힘 + JS가 base 연결 시에만 연다(RC1 계약을 템플릿 표면으로 이동)."""
-    check("21: 공개 산출물에 opctlPanel 자체가 없음(B안 — 접힘이 아니라 제거)",
-          "opctlPanel" not in _strip_scripts(html))
-    check("21b: 템플릿(운영자 소스)의 opctlPanel은 기본 닫힘(open 속성 없음)",
-          '<details class="opctl-panel" id="opctlPanel">' in tpl
-          and '<details class="opctl-panel" id="opctlPanel" open' not in tpl)
-    check("22: JS가 base 연결 시 opctlPanel을 자동으로 엶(운영자는 바로 보임)",
-          'el("opctlPanel")' in tpl and "panel.open = true" in tpl)
-
-
-def _strip_scripts(html: str) -> str:
-    return re.sub(r"<script.*?</script>", "", html, flags=re.S)
-
-
-def check_report_dashboard_mapping() -> None:
-    sys.path.insert(0, str(ROOT / "scripts"))
-    try:
-        import send_telegram as st
-    except Exception as exc:  # noqa: BLE001
-        check("17: send_telegram import", False, str(exc))
-        return
-    payload = st.build_payload(
-        "DRY", "msg",
-        "https://example.github.io/repo/daily/latest.html", "",
-        "https://example.github.io/repo/daily/dashboard-latest.html")
-    buttons = json.loads(payload["reply_markup"])["inline_keyboard"][0]
-    by_label = {b["text"]: b["url"] for b in buttons}
-    summary = by_label.get(SUMMARY_LABEL, "")
-    full = by_label.get(FULL_REPORT_LABEL, "")
-    check("17a: '대시보드 보기' → 요약 대시보드(dashboard-latest.html)",
-          summary.endswith("/dashboard-latest.html"), summary)
-    check("17b: '상세 리포트 보기' → 전체 리포트(latest.html, dashboard 아님)",
-          full.endswith("/latest.html") and "dashboard-latest.html" not in full, full)
+def check_server() -> None:
+    api = read(API)
+    gateway = read(GATEWAY)
+    check("minimal deployment API exists", "app = FastAPI(" in api
+          and 'entrypoint = "app.operator_api:app"' in read(ROOT / "pyproject.toml"))
+    for path in ENDPOINTS.values():
+        check(f"server route {path}", f'@router.post("{path}")' in api)
+    check("legacy telegram alias retained",
+          '@router.post("/api/operator/send-telegram"' in api)
+    check("server-side edge 인가 함수 존재(authorize)", "def authorize(" in gateway)
+    check("Origin 허용목록 + 분당 레이트리밋 방어",
+          "_origin_allowed" in gateway and "_rate_ok" in gateway)
+    check("shared_secret 레거시 경로 상수시간 비교", "hmac.compare_digest" in gateway)
+    check("server dispatch workflows",
+          all(name in gateway for name in (
+              "scheduled-live-refresh.yml", "telegram-notify.yml", "email-alert.yml"
+          )))
+    check("dispatch response can include run id/url",
+          '"run_id"' in gateway and '"run_url"' in gateway
+          and '"workflow_url"' in gateway)
+    check("server fail-closed 상태들",
+          '"not_configured"' in gateway and '"unauthorized"' in gateway
+          and '"forbidden"' in gateway and '"rate_limited"' in gateway)
 
 
 def main() -> int:
-    print(f"== verify_operator_controls (D7-AA) @ {ROOT} ==")
+    print(f"== D7-AG-2 operator controls @ {ROOT} ==")
+    template = read(TEMPLATE)
+    committed = read(DASHBOARD)
+    unset = build()
+    connected_base = "https://operator.example.invalid"
+    connected = build(connected_base)
 
-    if not check("1: docs/daily/dashboard-latest.html 존재 (컨트롤 표면)", DASHBOARD.exists()):
-        print("\nRESULT: FAIL (대시보드 산출물 누락)")
-        return 1
-    dash = _read(DASHBOARD)
-    tpl = _read(TEMPLATE) if TEMPLATE.exists() else ""
-
-    # D7-AE-RC3(B안) — 버튼/POST 배선 계약은 버튼이 존재하는 표면(템플릿 = 운영자 빌드
-    # 소스)에서 검증한다. 공개 산출물은 버튼이 아예 없어야 한다(check_public_dash).
-    check_buttons(tpl)
-    check_unset_behavior(tpl)
-    check_copy(tpl)
-    check_public_dash(dash)
-    check_teams_control(_read(TEMPLATE) if TEMPLATE.exists() else "")
-    check_collapsed_by_default(dash, _read(TEMPLATE) if TEMPLATE.exists() else "")
-
-    # 11~16 · 공개 HTML 안전성 — 대시보드/운영자/리포트 + 소스 템플릿 모두 스캔.
-    safety_targets = [(dash, "dashboard")]
-    check("2: docs/daily/operator-latest.html 존재 시 함께 검사",
-          True, "존재" if OPERATOR.exists() else "미존재(스킵)")
-    if OPERATOR.exists():
-        safety_targets.append((_read(OPERATOR), "operator"))
-    if LATEST.exists():
-        safety_targets.append((_read(LATEST), "latest"))
-    if TEMPLATE.exists():
-        safety_targets.append((_read(TEMPLATE), "template"))
-    for html, label in safety_targets:
-        check_safety(html, label)
-
-    check_report_dashboard_mapping()
+    check_ui(template, "template", enabled=False)
+    check_ui(unset, "fresh-unset", enabled=False)
+    check_ui(connected, "fresh-connected", enabled=True)
+    check("connected base injected once into JSON island",
+          model(connected).get("operator_api_base") == connected_base
+          and connected.count(connected_base) == 1)
+    for html, label in ((template, "template"), (unset, "fresh-unset"),
+                        (connected, "fresh-connected"), (committed, "committed")):
+        check_public_safety(html, label)
+    check_server()
 
     print()
-    if _failures:
-        print(f"RESULT: FAIL ({len(_failures)} 항목)")
-        for f in _failures:
-            print(f"  - {f}")
+    if failures:
+        print(f"RESULT: FAIL ({len(failures)})")
         return 1
-    print("RESULT: PASS — 운영자 버튼이 운영 API(POST) 직접 실행 · GitHub 이동/시크릿 노출 없음 (D7-AA)")
+    print("RESULT: PASS — Operator API 3-button POST contract; no link fallback or public secrets")
     return 0
 
 

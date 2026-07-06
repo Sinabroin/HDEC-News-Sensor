@@ -1,28 +1,13 @@
 #!/usr/bin/env python3
-"""D7-AE-RC1 verifier — 운영자 CTA가 '제품 기능처럼' 크게 보이지 않는지 정직성 감사.
-
-사용자 실사용 QA 실패: "Teams / 메일 / 텔레그램 버튼이 비활성화되어 있다. 운영자 서버
-미연결 상태인데 버튼이 크게 보여서 제품 기능처럼 보인다." verify_operator_controls.py
-(D7-AA)는 버튼이 안전하게 배선됐는지(GitHub 미이동·시크릿 미노출·운영 API POST)만
-검증했지, 얼마나 "크게 보이는지"는 검증하지 않았다 — 문자열 존재 여부만 보는 검사라
-버튼이 상시 노출이든 접힘이든 통과했다(이 verifier가 그 공백을 메운다).
-
-수정(app/templates/dashboard_preview.html): 3개 CTA(데이터 새로고침/텔레그램 전송/
-Teams 채널 전송) + 상태줄을 기본 닫힌 <details id="opctlPanel">로 옮겼다. 항상 보이는
-건 opctl-head의 요약 한 줄("운영자 모드 · 운영자 서버 미연결 · 설정 시에만 아래에서
-실행할 수 있습니다")뿐이다. 운영 API base가 실제로 주입된 빌드에서만 JS가 패널을
-자동으로 연다.
+"""D7-AG-1 verifier — 공개 운영자 모드가 클릭 가능하고 무력하지 않은지 감사.
 
 이 verifier가 잠그는 계약:
-  A. 공개(미연결) 산출물에서 CTA 버튼은 닫힌 details 뒤에만 있다(상시 노출 마크업 0건).
-  B. 항상 보이는 영역(요약 줄)은 실제로 작다 — 접힌 패널 콘텐츠보다 훨씬 짧다(크기 휴리스틱).
-  C. operator_api_base가 비어 있으면 버튼은 disabled이고, "작은 설정 안내"만 보인다
-     (장황한 "운영자 서버 미연결" 큰 배너/알림 박스가 아니다 — 배너류 클래스에 안 실림).
-  D. secret이 필요한 기능은 정적 페이지에서 직접 호출하지 않는다(GitHub/Telegram 호스트
-     리터럴 0건, 토큰 모양 0건) — verify_operator_controls의 안전계약을 이 파일에서도
-     독립적으로 재확인한다(중복이 아니라 이 파일만 봐도 안전성이 증명되게).
+  A. 공개 산출물의 운영자 모드는 항상 클릭 가능한 details summary다.
+  B. 펼치면 Actions/워크플로/공개 URL의 실제 href 4개가 보인다.
+  C. 직접 실행 API UI는 hidden이며 비활성 CTA로 보이지 않는다.
+  D. GitHub/Telegram privileged API를 브라우저가 직접 호출하지 않고 인증값도 없다.
   E. 운영자 API가 실제로 연결된 빌드에서는 패널이 자동으로 펼쳐진다(운영자에게는
-     여전히 즉시 보인다 — 숨긴 게 아니라 청중에 맞게 접었을 뿐).
+     직접 실행 UI가 보인다).
 
 완전 OFFLINE · 네트워크 0건 · DB 미접근.
 """
@@ -80,44 +65,47 @@ def _opctl_section(html: str) -> str:
 # ---------------------------------------------------------------------------
 
 def check_public_build_collapsed(html: str, label: str) -> None:
-    """D7-AE-RC3(B안) — 공개(base 미설정) 빌드의 운영자 영역 계약.
-
-    RC1은 'disabled 버튼을 접어서 작게'였지만 사용자 QA가 재지적("비활성 버튼을 제품
-    기능처럼 남기지 마라") — 이제 공개 빌드는 실행 UI(버튼 3개·PIN·상태줄·details)를
-    아예 렌더하지 않고 '운영 API 설정 필요' 한 줄만 남긴다. 버튼이 존재하는 유일한
-    표면은 운영 API base가 주입된 운영자 빌드(템플릿 계약 — check_operator_build_expands).
-    """
+    """공개(base 미설정) 빌드는 3개 실행 버튼과 명확한 미연결 상태를 제공한다."""
     section = _opctl_section(html)
     if not check(f"A0[{label}]: opctl 섹션 존재", bool(section)):
         return
-    check(f"A1[{label}]: 실행 패널/버튼/PIN 마크업 0건(opctlPanel·opctl-btn·opPin)",
-          "opctlPanel" not in section and 'class="opctl-btn' not in section
-          and "opPin" not in section)
-    check(f"A2[{label}]: '운영 API 설정 필요' 한 줄 존재", "운영 API 설정 필요" in section)
-    check(f"A3[{label}]: 옛 문구('운영자 서버 미연결') 잔존 없음(섹션 내)",
-          "운영자 서버 미연결" not in section)
-    check(f"B1[{label}]: 섹션이 한 줄 안내 수준으로 작음(<800자)",
-          len(section) < 800, f"len={len(section)}")
+    check(f"A1[{label}]: 운영자 모드는 클릭 가능한 details summary",
+          '<details class="opctl-panel" id="opctlPanel">' in section
+          and '<summary class="opctl-mode-toggle">' in section)
+    check(f"A2[{label}]: 실행 UI visible + 링크 fallback 없음",
+          'id="opApiControls"' in section and 'id="opActionLinks"' not in section)
+    for label_text in ("데이터 새로고침 실행", "텔레그램 전송 실행",
+                       "Teams 채널 전송 실행"):
+        check(f"B1[{label}]: 실행 버튼 '{label_text}'",
+              re.search(r'<button[^>]+id="op[^"]+Btn"[^>]*>.*?'
+                        + re.escape(label_text), section, re.S) is not None)
+    check(f"B1[{label}]: 보조 Public URL 새로고침 버튼",
+          'id="opPublicRefreshBtn"' in section and "Public URL 새로고침" in section)
+    check(f"B2[{label}]: API 미연결 플래그 false",
+          'data-operator-api-enabled="false"' in section)
 
 
 def check_not_big_banner(html: str, label: str) -> None:
-    """'운영 API 설정 필요'가 배너/알림 박스가 아니라 한 줄(opctl-oneline)로만 표시된다."""
+    """미연결을 숨기거나 링크로 위장하지 않고 짧게 명시한다."""
     section = _opctl_section(html)
-    idx = section.find("운영 API 설정 필요")
-    check(f"C1[{label}]: '운영 API 설정 필요' 문구 존재(정직 표기)", idx >= 0)
-    window = section[max(0, idx - 220):idx]
-    check(f"C2[{label}]: 배너류 클래스(banner/alert/hero)에 실려있지 않음",
-          all(k not in window for k in ("banner", "alert", "hero")))
-    check(f"C3[{label}]: 한 줄 요약(<span class=\"opctl-oneline)으로만 표시",
-          'class="opctl-oneline' in window or 'class="opctl-oneline' in section)
+    check(f"C1[{label}]: 막힌 문구 없음",
+          "운영 API 설정 필요" not in section
+          and "실행 버튼은 운영 API가 연결된 빌드에서만 표시됩니다" not in section)
+    check(f"C2[{label}]: 정직한 Operator API 미연결 안내",
+          "Operator API 미연결" in section
+          and "gateway base가 주입되기 전에는 실행할 수 없습니다." in section)
+    check(f"C3[{label}]: summary가 Operator API 미연결로 안내",
+          'id="opModeSummary">Operator API 미연결</span>' in section)
 
 
 def check_no_direct_privileged_calls(html: str, label: str) -> None:
     low = html.lower()
     check(f"D1[{label}]: api.github.com 미포함", "api.github.com" not in low)
     check(f"D2[{label}]: api.telegram.org 미포함", "api.telegram.org" not in low)
-    check(f"D3[{label}]: GitHub Actions 수동실행 URL 미포함",
-          "/actions/workflows/" not in low)
+    check(f"D3[{label}]: GitHub Actions 링크 fallback 없음",
+          "api.github.com" not in low
+          and "github actions 열기" not in low
+          and "scheduled live refresh 열기" not in low)
     check(f"D4[{label}]: 텔레그램 봇 토큰 모양(숫자:문자) 미포함",
           re.search(r"\b\d{8,}:[a-z0-9_-]{20,}\b", low) is None)
     check(f"D5[{label}]: GitHub PAT 모양(ghp_/github_pat_) 미포함",

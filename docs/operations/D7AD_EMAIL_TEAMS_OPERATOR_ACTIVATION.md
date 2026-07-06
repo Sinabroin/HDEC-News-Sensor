@@ -7,7 +7,7 @@
 - 기본 실행은 dry-run이다. 실제 SMTP 연결은 `approve_send_email=true` 수동 승인 때만 허용한다.
 - 이메일 주소·SMTP 비밀번호·Teams 채널 주소는 GitHub Secrets에만 저장한다. 저장소 파일,
   Actions artifact, 공개 대시보드에는 넣지 않는다.
-- Operator API는 이번 작업에서 배포하지 않는다. `OPERATOR_API_BASE`가 비어 있어 공개
+- Operator API 배포 엔트리는 `app.operator_api:app`으로 분리돼 있다. `OPERATOR_API_BASE`가 비어 있으면 공개
   대시보드 버튼이 비활성인 현재 상태가 정상이다.
 
 ## 1. GitHub Secrets
@@ -136,12 +136,14 @@ CTA 라벨과 목적지 페이지의 역할이 어긋나지 않도록, 채널별
 
 이미 구현된 항목:
 
-- `app/main.py`: `/api/operator/collect`, `/api/operator/send-telegram` POST route와 CORS
+- `app/operator_api.py`: `/api/operator/collect`, `/api/operator/send`,
+  `/api/operator/send-teams` POST route와 CORS
 - `app/operator_gateway.py`: PIN 상수시간 비교, 서버측 GitHub `workflow_dispatch`, 오류 응답
 - `app/config.py`: `GH_OPERATOR_TOKEN`, `OPERATOR_SHARED_SECRET`/`OPERATOR_PIN`,
   `OPERATOR_ALLOWED_ORIGINS`
 - `build_static_dashboard.py`: `--operator-api-base`를 JSON island에만 주입
-- 공개 대시보드: base 미설정 시 버튼 비활성, 설정 시 Operator API에만 POST
+- 공개 대시보드: base 미설정 시 3개 버튼과 `Operator API 미연결` 상태, 설정 시
+  Operator API에만 POST
 
 GitHub Pages는 정적 호스팅이므로 서버측 secret을 보관하거나 GitHub Actions API를 안전하게
 호출할 수 없다. 브라우저 HTML에 GitHub token을 넣어 `workflow_dispatch`를 직접 호출하는

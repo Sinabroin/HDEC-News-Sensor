@@ -45,7 +45,7 @@ python3 scripts/build_static_dashboard.py --output /tmp/dash_operator.html \
 
 # 활성화 확인(가짜 없이 계약만): 세 버튼 활성화 코드 + 세 endpoint 주입
 grep -o 'collectBtn.disabled = false\|sendBtn.disabled = false\|teamsBtn.disabled = false' /tmp/dash_operator.html
-grep -o '/api/operator/collect\|/api/operator/send-telegram\|/api/operator/send-teams' /tmp/dash_operator.html
+grep -o '/api/operator/collect\|/api/operator/send\|/api/operator/send-teams' /tmp/dash_operator.html
 ```
 
 실제 클릭 실행까지 가려면 운영 API 서버(app.main)를 배포하고 서버 env

@@ -69,6 +69,35 @@ _IMPLICATION = {
     "capital_markets": "자금조달·지분·투자 구조가 프로젝트 실행력에 미칠 영향 점검 대상입니다.",
 }
 
+# D7-AG-1: 뉴스 카드 보조 태그. Deal Watch 독립 섹션 대신 기사별 작은 '근거 있는' 태그로 흡수한다.
+# label→태그 매핑을 기본으로 하고, 전용 label이 없는 '투자·딜'은 키워드 근거로만 붙인다.
+_LABEL_TAG = {
+    "hmg": "HMG",
+    "major_groups": "그룹 전략",
+    "ai_infra": "AI 인프라",
+    "capital_markets": "PF·조달",
+    "project": "개발사업",
+    "construction_industry": "건설테크",
+    "global_issues": "글로벌 리스크",
+}
+# '투자·딜'은 전용 label이 없어 아래 키워드가 있을 때만(근거 기반) 부착한다.
+_INVEST_DEAL_KEYWORDS = (
+    "투자", "지분", "인수", "매각", "m&a", "jv", "kkr", "자금조달",
+    "조달 구조", "본pf", "pf", "capex", "대규모 투자",
+)
+# project는 기본 '개발사업'이며, 조달성 키워드가 있으면 'PF·조달'도 함께 붙인다.
+_PROJECT_PF_KEYWORDS = (
+    "pf", "본pf", "자금조달", "선매각", "지분", "kkr", "m&a", "jv",
+)
+# 기사당 최대 3개로 자를 때의 우선순위(앞일수록 우선).
+_TAG_PRIORITY = (
+    "PF·조달", "개발사업", "투자·딜", "HMG",
+    "AI 인프라", "그룹 전략", "건설테크", "글로벌 리스크",
+)
+_TAG_RANK = {tag: index for index, tag in enumerate(_TAG_PRIORITY)}
+
+MAX_DISPLAY_TAGS = 3
+
 
 def classify_labels(title: str, snippet: str = "", source: str = "") -> list[str]:
     haystack = f"{title} {snippet} {source}".casefold()
@@ -78,6 +107,31 @@ def classify_labels(title: str, snippet: str = "", source: str = "") -> list[str
 
 def primary_label(labels: list[str]) -> str:
     return next((label for label in _PRIMARY_ORDER if label in labels), "")
+
+
+def display_tags(title: str, snippet: str = "", source: str = "") -> list[str]:
+    """뉴스 카드 보조 태그(최대 3개). 근거(라벨/키워드) 있을 때만 부착한다.
+
+    - deal_watch label→태그 매핑을 기본으로 한다.
+    - '투자·딜'은 전용 label이 없어 _INVEST_DEAL_KEYWORDS가 있을 때만 붙인다.
+    - project는 '개발사업'이 기본이고 _PROJECT_PF_KEYWORDS가 있으면 'PF·조달'도 붙인다.
+    - _TAG_PRIORITY로 정렬 후 상위 MAX_DISPLAY_TAGS개만 남긴다. 근거 없으면 빈 리스트.
+    """
+    labels = classify_labels(title, snippet, source)
+    haystack = f"{title} {snippet}".casefold()
+    tags: list[str] = []
+    for label in labels:
+        mapped = _LABEL_TAG.get(label)
+        if mapped:
+            tags.append(mapped)
+        if label == "project" and any(k in haystack for k in _PROJECT_PF_KEYWORDS):
+            tags.append("PF·조달")
+    if any(keyword in haystack for keyword in _INVEST_DEAL_KEYWORDS):
+        tags.append("투자·딜")
+    seen: set[str] = set()
+    unique = [tag for tag in tags if not (tag in seen or seen.add(tag))]
+    unique.sort(key=lambda tag: _TAG_RANK.get(tag, len(_TAG_RANK)))
+    return unique[:MAX_DISPLAY_TAGS]
 
 
 def _metadata(row: dict) -> dict:

@@ -5,7 +5,7 @@
   1 현장 노드 '관련 기사 없음' 정직 표시(무관 기사 미부착은 site_match_relevance가 소유)
   2 사업영역 렌즈 근거 게이팅 — lens_reasons 노출 + 기사당 사업 렌즈 상한
   3 2차 레이블 exclusive partition('기타' 포함 · 전체=합산 · 0건 pill 숨김)
-  4 운영 버튼 B안 — 공개 빌드 실행 UI 0건 + '운영 API 설정 필요' 한 줄
+  4 운영자 모드 — 공개 빌드에 클릭 가능한 Actions/새로고침 링크
   5 호르무즈 실연동 조사 문서(삭제로 끝내지 않음 · 확인된 repo 기록)
   6 공식 현대건설 CI 임베드(가짜 로고 금지 · data-URI)
   7 US 2Y FRED 일별 히스토리 계약 + 미연동 4분류 백로그 문서 + 공개 UI 백로그 강등
@@ -78,12 +78,17 @@ def check_template() -> None:
 def check_surface(html: str, label: str, *, expect_operator_hidden: bool) -> None:
     body = _no_script(html)
     model = _model(html)
-    # 4 · 운영 버튼 B안
+    # 4 · 공개 운영자 실행 버튼 + 미연결 fail-closed
     if expect_operator_hidden:
-        check(f"S4a[{label}]: 실행 버튼/PIN/패널 마크업 0건",
-              'class="opctl-btn' not in body and 'id="opPin"' not in body
-              and "opctlPanel" not in body)
-        check(f"S4b[{label}]: '운영 API 설정 필요' 한 줄", "운영 API 설정 필요" in body)
+        check(f"S4a[{label}]: 클릭 가능한 운영자 details + 실행 UI visible",
+              '<details class="opctl-panel" id="opctlPanel">' in body
+              and '<summary class="opctl-mode-toggle">' in body
+              and 'id="opApiControls"' in body)
+        check(f"S4b[{label}]: 실행 버튼 3개 + 보조 새로고침",
+              all(label_text in body for label_text in (
+                  "데이터 새로고침 실행", "텔레그램 전송 실행",
+                  "Teams 채널 전송 실행", "Public URL 새로고침"))
+              and 'id="opActionLinks"' not in body)
     # 8 · 시장 장문 설명 제거
     leftovers = [a for a in VERBOSE_MARKET_ANCHORS if a in html]
     check(f"S8a[{label}]: 시장 장문 설명 anchor 0건", not leftovers, str(leftovers[:2]))
