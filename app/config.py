@@ -115,11 +115,15 @@ OPERATOR_LOCAL_DEV = (os.environ.get("OPERATOR_LOCAL_DEV") or "").strip() in ("1
 # 로컬 검증용 — 설정 시 workflow_dispatch(네트워크)를 실제로 하지 않고 접수 응답만 반환한다.
 OPERATOR_DRY_RUN = (os.environ.get("OPERATOR_DRY_RUN") or "").strip() in ("1", "true", "on", "yes")
 
-# 공개 정적 페이지(GitHub Pages)에서 Operator API로의 cross-origin 호출을 허용할 origin 목록.
-# 기본은 프로젝트 Pages origin + loopback. 추가 origin은 콤마구분 env로 확장(비밀값 아님).
+# 공개 정적 페이지에서 Operator API로의 cross-origin 호출을 허용할 origin 목록.
+# 기본은 공개 대시보드 origin 2곳(커스텀 도메인 guides.playground-aidesignlab.co.kr +
+# 프로젝트 Pages sinabroin.github.io) + loopback. 둘 다 브라우저가 base+경로로 POST할 때 Origin
+# 헤더로 실려 오므로(operator_api CORS·operator_gateway 둘 다 이 목록을 사용) 기본값에 포함해 env
+# 누락에도 fail-open이 아니라 fail-closed를 유지한다. 추가 origin은 콤마구분 env로 확장(비밀값 아님).
 OPERATOR_ALLOWED_ORIGINS = [
     o.strip() for o in (
         (os.environ.get("OPERATOR_ALLOWED_ORIGINS") or "")
+        + ",https://guides.playground-aidesignlab.co.kr"
         + ",https://sinabroin.github.io"
         + ",http://127.0.0.1:8088,http://localhost:8088"
     ).split(",") if o.strip()
