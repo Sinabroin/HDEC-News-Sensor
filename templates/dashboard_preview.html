@@ -629,6 +629,10 @@
   .opctl-btn.teams{background:#F2F1F8; border-color:#D9D7EC;}
   .opctl-btn.teams .opctl-btn-label{color:#5A5A86;}
   .opctl-btn.teams .opctl-btn-label::before{background:#8784B5;}
+  /* D7-AG-5B 하이브리드 — 발송 2버튼은 인증 필요(auth-locked) 상태로 흐리게 표시한다(공개에서 미발송). */
+  .opctl-btn.authlocked{opacity:.5; cursor:not-allowed;}
+  .opctl-btn.authlocked:hover{box-shadow:none; transform:none;}
+  .opctl-authlock{font-size:11px; color:var(--mute2); line-height:1.5; margin:6px 0 0;}
   .opctl-connection{font-size:11.5px; line-height:1.5; color:var(--mute2);
     border:1px solid var(--line); border-radius:9px; background:var(--hair2);
     padding:8px 10px; margin-bottom:10px;}
@@ -959,6 +963,7 @@
                 <span class="opctl-btn-help">인증된 운영자 요청으로 Teams 채널 이메일로 즉시 발송합니다</span>
               </button>
             </div>
+            <p class="opctl-authlock" id="opSendLockNote" hidden>발송(텔레그램·Teams)은 운영자 인증 연결 후 사용 가능합니다 (D7-AG-5C).</p>
             <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
             <button class="opctl-refresh-public" id="opPublicRefreshBtn" type="button">Public URL 새로고침 ↻</button>
             <details class="opctl-more">
@@ -3874,20 +3879,35 @@ function displaySourceDomain(row){
     }
     if (root) root.setAttribute("data-operator-api-enabled", "true");
     if (connection) {
-      connection.textContent = "Operator API 연결됨 — 서버 앞단 운영자 인증(SSO·Access) 후 서버에서 GitHub Actions를 실행합니다.";
+      connection.textContent = "Operator API 연결됨 — '데이터 새로고침'은 실행됩니다. 발송(텔레그램·Teams)은 운영자 인증 연결 후 활성화됩니다(D7-AG-5C).";
       connection.classList.add("connected");
     }
-    if (modeSummary) modeSummary.textContent = "운영 API 연결됨 · 직접 실행";
-    collectBtn.disabled = false; sendBtn.disabled = false;
-    if (teamsBtn) teamsBtn.disabled = false;           // Teams endpoint 배선됨 → 연결 시 활성화(D7-AD-U)
-    collectBtn.removeAttribute("aria-disabled"); sendBtn.removeAttribute("aria-disabled");
-    if (teamsBtn) teamsBtn.removeAttribute("aria-disabled");
+    if (modeSummary) modeSummary.textContent = "운영 API 연결됨 · 데이터 새로고침 실행";
+    // D7-AG-5B 하이브리드 — 공개 Origin 인가는 저위험 collect만 실행한다. 발송 2버튼은 서버가
+    // origin 모드에서 인가하지 않으므로(auth_required) fetch에 배선하지 않고 '인증 필요'만 안내한다
+    // (D7-AG-5C에서 인증 경로가 생기면 활성화). 공개 페이지엔 secret을 넣지 않는다.
+    var sendLockNote = el("opSendLockNote");
+    function applyHybridState() {
+      collectBtn.disabled = false;
+      collectBtn.removeAttribute("aria-disabled");
+      [sendBtn, teamsBtn].forEach(function (b) {
+        if (!b) return;
+        b.removeAttribute("disabled");        // 클릭은 가능(안내 표시용) — 단, fetch 경로엔 배선하지 않음
+        b.setAttribute("aria-disabled", "true");
+        b.classList.add("authlocked");
+      });
+      if (sendLockNote) sendLockNote.hidden = false;
+    }
+    function showSendLocked() {
+      setStatus("발송(텔레그램·Teams)은 운영자 인증 연결 후 사용 가능합니다 (D7-AG-5C).", "muted");
+    }
+    applyHybridState();
     if (panel) panel.open = true;
     var inflight = false;
     function run(btn, path, runningMsg, okMsg) {
       if (inflight || !path) return;                 // 중복 클릭 방지
       inflight = true;
-      setBtns(true); btn.classList.add("busy");      // 실행 중 세 버튼 잠금(중복 클릭 방지)
+      collectBtn.disabled = true; btn.classList.add("busy");   // 실행 중 collect 잠금(중복 클릭 방지)
       setStatus(runningMsg, "running");
       var ctrl = new AbortController();
       var timer = setTimeout(function () { ctrl.abort(); }, 25000);   // timeout
@@ -3918,21 +3938,17 @@ function displaySourceDomain(row){
         })
         .then(function () {
           clearTimeout(timer); inflight = false;
-          collectBtn.disabled = false; sendBtn.disabled = false; setBtns(false); btn.classList.remove("busy");
+          btn.classList.remove("busy"); applyHybridState();
         });
     }
     collectBtn.addEventListener("click", function () {
       run(collectBtn, endpoints.collect, "데이터 새로고침 실행 중…",
           "데이터 새로고침 실행 요청 접수 · 반영까지 약 1~3분");
     });
-    sendBtn.addEventListener("click", function () {
-      run(sendBtn, endpoints.telegram, "텔레그램 전송 실행 중…",
-          "텔레그램 전송 실행 요청 접수");
-    });
-    if (teamsBtn) teamsBtn.addEventListener("click", function () {
-      run(teamsBtn, endpoints.teams, "Teams 채널 전송 실행 중…",
-          "Teams 채널 전송 실행 요청 접수 · 채널 도착은 별도 확인 필요");
-    });
+    // 발송 2버튼은 공개(origin) 인가로 열지 않는다 — 클릭해도 fetch하지 않고 인증 필요만 안내한다.
+    // (서버도 origin 모드에서 send/send-teams를 auth_required로 차단한다 — 이중 방어.)
+    if (sendBtn) sendBtn.addEventListener("click", showSendLocked);
+    if (teamsBtn) teamsBtn.addEventListener("click", showSendLocked);
   })();
 </script>
 </body>
