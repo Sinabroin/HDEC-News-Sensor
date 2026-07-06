@@ -197,11 +197,35 @@ def run() -> int:
         check(f"배선: {wired}", wired in api_src)
     check("요청 헤더/Origin을 게이트웨이에 전달", "request.headers" in api_src)
 
-    # 9) (선택) fastapi가 있으면 실제 라우트 등록 확인 — 없으면 소스 계약으로 대체
+    # 9) (선택) fastapi가 있으면 실제 라우트 등록 확인 — 없으면 소스 계약으로 대체.
+    #    신버전 fastapi는 include_router를 지연(lazy) 처리해 app.routes에 _IncludedRouter
+    #    placeholder만 두고 실제 라우트는 original_router.routes에 있다(구버전은 flat). 두 표현
+    #    모두에서 등록을 확인하도록 재귀 수집한다 — 계약(4개 라우트 등록)은 동일, fastapi 버전 불변.
     try:
         import fastapi  # noqa: F401
         from app.operator_api import app as fastapi_app
-        paths = {getattr(r, "path", None) for r in fastapi_app.routes}
+
+        def _registered_paths(app_obj) -> set:
+            seen: set[int] = set()
+            found: set = set()
+
+            def walk(routes) -> None:
+                for r in routes or ():
+                    if id(r) in seen:
+                        continue
+                    seen.add(id(r))
+                    path = getattr(r, "path", None)
+                    if isinstance(path, str):
+                        found.add(path)
+                    walk(getattr(r, "routes", None))
+                    included = getattr(r, "original_router", None)
+                    if included is not None:
+                        walk(getattr(included, "routes", None))
+
+            walk(getattr(app_obj, "routes", []))
+            return found
+
+        paths = _registered_paths(fastapi_app)
         for p in ("/api/operator/health", "/api/operator/collect", "/api/operator/send",
                   "/api/operator/send-teams"):
             check(f"FastAPI 등록 라우트: {p}", p in paths)
