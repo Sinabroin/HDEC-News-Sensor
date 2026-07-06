@@ -8,6 +8,9 @@ D7-AG-3/4에서 **코드·검증은 완료**했다(버튼 → Operator API → w
 > 상태 규칙: `OPERATOR_API_BASE` 미설정 = '코드 준비 완료 / 배포 미완료'. 공개 대시보드는 이때
 > 버튼을 **비활성**으로 두고 '미연결'을 명시한다(fail-closed, 링크로 대체하지 않음).
 
+> **Cloudflare 없이 순수 Vercel로 수집 버튼만 먼저 열려면** → `D7AG5B_OPERATOR_VERCEL_HYBRID.md`
+> (origin 모드 하이브리드: 수집 공개 · 발송은 인증잠금 · 발송 활성화는 D7-AG-5C).
+
 ## 0. 사전 로컬 증명 (이미 통과 — 배포 없이 확인 가능)
 
 ```bash
