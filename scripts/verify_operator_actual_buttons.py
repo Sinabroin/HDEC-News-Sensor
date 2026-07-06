@@ -114,8 +114,10 @@ def check_html(html: str, label: str, *, enabled: bool) -> None:
           and f'data-operator-api-enabled="{str(enabled).lower()}"' in html)
     if enabled:
         base = model.get("operator_api_base") or ""
+        expected_base = base == TEST_BASE if label == "fresh-connected" else bool(base)
         check(f"A[{label}]: base는 JSON island에만(문서 내 1회)",
-              base == TEST_BASE and html.count(TEST_BASE) == 1)
+              expected_base and html.count(base) == 1,
+              base)
         # 하이브리드(D7-AG-5B): 공개 Origin 인가는 저위험 collect만 실행 — 발송 2버튼은 인증 필요 상태.
         check(f"A[{label}]: 연결 빌드는 collect만 활성(발송은 인증 필요)",
               "collectBtn.disabled = false" in html

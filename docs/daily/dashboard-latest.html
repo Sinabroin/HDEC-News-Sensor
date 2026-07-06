@@ -14,7 +14,7 @@
       - 실데이터가 없는 자리는 demo/mock/미연동/정책·키 필요로 정직하게 표기한다.
       - 모든 시장 수치는 data_mode(지연/대용/보고/미연동)를 함께 노출하며 현재 체결값을 주장하지 않는다.
   · 자기완결 정적 페이지: 네트워크/DB/발송/비밀값 0건. JSON island(#preview-model)는 기존
-    /api/brief · market_snapshot 계약(키 구조)을 그대로 미러링한 데모 데이터다(실데이터 아님).
+    /api/brief · market_snapshot 계약(키 구조)을 그대로 미러링한 내부 고정 샘플이다(실데이터 아님).
 -->
 <html lang="ko">
 <head>
@@ -1025,7 +1025,7 @@
         <div class="emptylens hidden" id="newsEmpty" role="status" aria-live="polite">
           <div class="el-ico">◍</div>
           <div class="el-title">선택한 렌즈에 표시할 신호가 없습니다</div>
-          <div class="el-desc" id="newsEmptyDesc">이 렌즈는 데모 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
+          <div class="el-desc" id="newsEmptyDesc">이 렌즈는 수집 표본에 해당하는 기사가 없습니다 — <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">내부 고정 샘플</span></div>
         </div>
 
         <!-- BRIEFING SECTIONS removed (D7-AD-W) — 카테고리 분류는 #categoryNewsList flat list로 표시. -->
@@ -1071,7 +1071,7 @@
         <div class="emptylens hidden" id="aiEmpty" role="status" aria-live="polite">
           <div class="el-ico">◍</div>
           <div class="el-title">선택한 렌즈에 표시할 AI 신호가 없습니다</div>
-          <div class="el-desc" id="aiEmptyDesc">AI 피드에는 해당 렌즈와 겹치는 데모 기사가 없습니다 — <b>전체 종합</b> 또는 <b>AI 신호</b> 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">데모 데이터</span></div>
+          <div class="el-desc" id="aiEmptyDesc">AI 피드에는 해당 렌즈와 겹치는 데모 기사가 없습니다 — <b>전체 종합</b> 또는 <b>AI 신호</b> 렌즈를 선택하세요. <span class="previewflag" style="margin-left:4px;">내부 고정 샘플</span></div>
         </div>
 
         <!-- 참고: 테마 분포 (기사 상대 비중 · 전력 실측값 아님) — 실측 데이터가 아닌 보조 시각화 -->
@@ -1290,9 +1290,8 @@
   </div>
 
   <footer class="bottom">
-    <div class="previewflag">NON-PRODUCTION PREVIEW</div><br>
-    HDEC Executive Radar · 대시보드 미리보기 — 참고용 브리프 (데모/mock 데이터).<br>
-    모든 시장 지표는 지연 / 대용 / 보고 / 미연동 기준이며 현재 체결값이 아닙니다. 프로덕션 일일 리포트(docs/daily)와 무관합니다.
+    HDEC Executive Radar · 공개 데이터 기반 요약 대시보드.<br>
+    시장 지표는 지연 또는 공개 대용 데이터이며 현재 체결값이 아닙니다.
   </footer>
 </div>
 
@@ -1304,16 +1303,16 @@
     <div class="drawer-head">
       <div>
         <div class="dt" id="dwTitle">—</div>
-        <div class="dsub" id="dwSub">상세 차트 · 데모 미리보기</div>
+        <div class="dsub" id="dwSub">상세 차트 · 상세 보기</div>
       </div>
       <button class="drawer-close" id="dwClose" type="button" aria-label="닫기">×</button>
     </div>
     <div style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
       <span id="dwMode"></span>
       <!-- D7-AE-RC1: 이 배지는 openDrawer가 종목이 실제로 데모(mock_demo)일 때만 보이게
-           켠다(JS 기본 hidden) — 실측 지연 시세 종목에 '데모 데이터'가 상시 노출되던
+           켠다(JS 기본 hidden) — 실측 지연 시세 종목에 '내부 고정 샘플'이 상시 노출되던
            오탐을 없앤다. -->
-      <span class="previewflag hidden" id="dwDemoFlag" style="margin:0;">데모 데이터</span>
+      <span class="previewflag hidden" id="dwDemoFlag" style="margin:0;">내부 고정 샘플</span>
     </div>
     <div class="kpis">
       <div class="kpi"><div class="k">현재값 (지연/대용)</div><div class="v num" id="dwVal">—</div></div>
@@ -1333,7 +1332,7 @@
     <div class="chartbox"><svg id="dwChart" viewBox="0 0 520 260" width="100%" height="260" preserveAspectRatio="xMidYMid meet"></svg></div>
     <div class="axisnote" id="dwNote"></div>
     <div class="disc" style="margin-top:14px;">공개·무료 또는 대용 데이터 기준이며 현재 체결값이 아닙니다.
-      미연동 종목은 값/선을 생성하지 않습니다 (데모 미리보기).</div>
+      미연동 종목은 값/선을 생성하지 않습니다 (상세 보기).</div>
   </div>
 </div>
 
@@ -20347,14 +20346,14 @@ function displaySourceDomain(row){
     }
     return shown;
   }
-  /* 렌즈별 정직 빈 상태 — 일반 '데모 데이터'가 아니라 어떤 수집 정책의 렌즈가 왜 비었는지 설명.
-     live면 '금일 수집 결과 없음(데모 아님)', mock이면 '데모 표본 없음'으로 구분한다. */
+  /* 렌즈별 정직 빈 상태 — 일반 '내부 고정 샘플'이 아니라 어떤 수집 정책의 렌즈가 왜 비었는지 설명.
+     live면 '금일 수집 결과 없음(데모 아님)', mock이면 '수집 표본 없음'으로 구분한다. */
   function emptyDescHtml(key) {
     var p = (MODEL.lens_policy || {})[key];
     var live = !!(MODEL.meta && MODEL.meta.news_data_mode === "live");
     if (!p || key === "all") {
       return '표시할 신호가 없습니다 — <b>전체 종합</b>으로 돌아가세요.' +
-        (live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>');
+        (live ? '' : ' <span class="previewflag" style="margin-left:4px;">내부 고정 샘플</span>');
     }
     var unconfigured = (p.collection === "unconfigured") || (p.supported === false);
     var head;
@@ -20364,12 +20363,12 @@ function displaySourceDomain(row){
       head = '<b>' + esc(p.label) + '</b> 렌즈는 시장 탭 시세는 연동되어 있으나 금일 공개뉴스 매칭 결과 없음.';
     } else if (live) {                                  // 쿼리는 돌렸으나 금일 공개뉴스 매칭 결과 없음
       head = '<b>' + esc(p.label) + '</b> 렌즈는 금일 공개뉴스 매칭 결과 없음 (데모 아님 · 쿼리 수집 완료).';
-    } else {                                            // mock 데모 표본에 없음
-      head = '<b>' + esc(p.label) + '</b> 렌즈는 데모 표본에 해당하는 기사가 없습니다.';
+    } else {                                            // mock 수집 표본에 없음
+      head = '<b>' + esc(p.label) + '</b> 렌즈는 수집 표본에 해당하는 기사가 없습니다.';
     }
     var pol = ' 수집 쿼리: ' + esc(p.query) + '.';
     var note = p.note ? ' ' + esc(p.note) : '';
-    var tail = live ? '' : ' <span class="previewflag" style="margin-left:4px;">데모 데이터</span>';
+    var tail = live ? '' : ' <span class="previewflag" style="margin-left:4px;">내부 고정 샘플</span>';
     return head + pol + note + ' <b>전체 종합</b>으로 돌아가거나 다른 렌즈를 선택하세요.' + tail;
   }
   function applyLens(key, opts) {
@@ -20600,7 +20599,7 @@ function displaySourceDomain(row){
       box.innerHTML = '<div class="emptylens" style="margin:0;"><div class="el-ico">◍</div>' +
         '<div class="el-title">오늘 실질적 AI 사업 신호 없음</div>' +
         '<div class="el-desc">금일 수집분에 임원 의사결정용 AI·데이터센터·자동화 신호가 없습니다 — 과장하지 않습니다. ' +
-        '<span class="previewflag" style="margin-left:4px;">데모 데이터</span></div></div>';
+        '<span class="previewflag" style="margin-left:4px;">내부 고정 샘플</span></div></div>';
       return;
     }
     var order = {}; AI_CAT_ORDER.forEach(function (k, i) { order[k] = i; });
@@ -21414,7 +21413,7 @@ function displaySourceDomain(row){
       // 벤치마크라 정확한 국내 현물가가 아님을 별도로 명시(과장 금지).
       var isDemoNow = effectiveDataMode(current) === "mock_demo";
       el("dwSub").textContent = (CAT_LABEL[current.category] || "") + " · 상세 차트"
-        + (isDemoNow ? " · 데모 미리보기" : " · 공개 시세(지연) 실측")
+        + (isDemoNow ? " · 상세 보기" : " · 공개 시세(지연) 실측")
         + (current.proxy ? " · 대용(proxy) · " + (current.proxy_note || "정확한 국내 현물가 아님") : "");
       el("dwMode").innerHTML = dmBadge(effectiveDataMode(current));
       var demoFlag = el("dwDemoFlag");

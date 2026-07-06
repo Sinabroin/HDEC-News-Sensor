@@ -2689,11 +2689,11 @@ def _strip_public_preview_residuals(html: str, operator_api_base: str) -> str:
     """공개 export raw HTML에서 내부 preview/demo 표면을 제거한다 (D7-AE-RC4).
 
     템플릿은 /dashboard-preview 내부 설계 도구이므로 샘플 정직성 표기를 유지한다.
-    운영 API base가 없는 정적 export만 공개 임원 대시보드 계약으로 정리한다. visible DOM뿐
-    아니라 주석·숨김 template·JS literal까지 같은 raw 문자열 계약을 적용한다.
+    Operator API base가 주입된 hybrid export도 여전히 공개 임원 대시보드이므로 같은
+    정리 계약을 적용한다. visible DOM뿐 아니라 주석·숨김 template·JS literal까지 같은
+    raw 문자열 계약을 적용한다.
     """
-    if (operator_api_base or "").strip():
-        return html
+    _ = operator_api_base
     public_footer = (
         '<footer class="bottom">\n'
         '    HDEC Executive Radar · 공개 데이터 기반 요약 대시보드.<br>\n'
@@ -2706,6 +2706,10 @@ def _strip_public_preview_residuals(html: str, operator_api_base: str) -> str:
         ("기상 데이터 소스 미연동", "기상 데이터 미수신"),
         ("NON-PRODUCTION PREVIEW", "PUBLIC SUMMARY DASHBOARD"),
         ("데모/mock 데이터", "내부 고정 샘플"),
+        ("'데모 데이터'가", "'내부 고정 샘플'이"),
+        ("데모 데이터다", "내부 고정 샘플이다"),
+        ("데모 데이터가", "내부 고정 샘플이"),
+        ("데모 데이터는", "내부 고정 샘플은"),
         ("데모 데이터", "내부 고정 샘플"),
         ("데모 미리보기", "상세 보기"),
         ("데모 표본", "수집 표본"),
@@ -2842,7 +2846,7 @@ def format_summary(html: str, brief: dict) -> str:
         f"· ai_rows={meta['ai_row_count']} · lens_bank_rows={meta['lens_bank_count']}",
         f"[featured] {meta['featured_title']}",
         f"[html_chars] {meta['html_chars']}",
-        "[contract] 실기사 주입(brief 공유) · 시장/AIS 데모 라벨 유지 · 전체 리포트=latest.html",
+        "[contract] 실기사 주입(brief 공유) · 공개 정직성 라벨 유지 · 전체 리포트=latest.html",
     ])
 
 

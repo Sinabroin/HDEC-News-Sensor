@@ -55,6 +55,56 @@ def _read(path: Path) -> str:
         return ""
 
 
+def _model(html: str) -> dict:
+    m = re.search(r'<script type="application/json" id="preview-model">(.*?)</script>',
+                  html, re.S)
+    if not m:
+        return {}
+    try:
+        return json.loads(m.group(1))
+    except ValueError:
+        return {}
+
+
+def _public_dashboard_contract_ok(html: str) -> tuple[bool, str]:
+    model = _model(html)
+    meta = model.get("meta") if isinstance(model.get("meta"), dict) else {}
+    news_mode = str(meta.get("news_data_mode") or "")
+    operator_enabled = model.get("operator_api_enabled") is True
+    public_residuals = (
+        "데모 데이터",
+        "NON-PRODUCTION PREVIEW",
+        "데모/mock 데이터",
+        "대시보드 미리보기 — 참고용 브리프",
+    )
+    residual_hits = [token for token in public_residuals if token in html]
+    public_honesty = (
+        "현재 체결값 아님" in html
+        and "미연동" in html
+        and "기상 데이터 미수신" in html
+        and not residual_hits
+    )
+    news_honesty = True
+    if news_mode == "live":
+        news_honesty = (
+            "자동 수집 기사" in html
+            and "자동 수집 (live)" in html
+            and "데모 mock" not in html
+        )
+    operator_honesty = True
+    if operator_enabled:
+        operator_honesty = (
+            "데이터 새로고침 실행" in html
+            and "authlocked" in html
+            and "인증 필요" in html
+        )
+    detail = (
+        f"news_mode={news_mode or '(missing)'} "
+        f"operator_enabled={operator_enabled} residuals={residual_hits}"
+    )
+    return public_honesty and news_honesty and operator_honesty, detail
+
+
 def _clean_env(**extra: str) -> dict:
     env = {**os.environ, "APP_MODE": "mock", "NEWS_MODE": "mock"}
     for key in (
@@ -135,9 +185,9 @@ def check_committed_dashboard() -> None:
     check("dashboard export marker 포함", EXPORT_MARKER in dashboard)
     check("dashboard가 preview model/대시보드 구조 포함",
           'id="preview-model"' in dashboard and "HDEC Executive Radar" in dashboard)
-    check("dashboard가 public 정직성 라벨 유지 + demo residual 제거",
-          "데모 데이터" not in dashboard and "현재 체결값 아님" in dashboard
-          and "미연동" in dashboard and "기상 데이터 미수신" in dashboard)
+    contract_ok, contract_detail = _public_dashboard_contract_ok(dashboard)
+    check("dashboard가 public live/hybrid 정직성 라벨 유지 + demo residual 제거",
+          contract_ok, contract_detail)
     check("dashboard는 latest.html과 다른 파일", dashboard != latest)
     check("latest.html은 전체 Executive Daily Brief로 유지",
           "Executive Daily Brief" in latest and EXPORT_MARKER not in latest
