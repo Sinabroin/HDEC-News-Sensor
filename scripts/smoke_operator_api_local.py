@@ -146,6 +146,26 @@ def run() -> int:
         r_bad = actions["collect"]({"x-operator-token": "wrong"}, _ALLOWED_ORIGIN)
         check("shared_secret 틀린 토큰 → unauthorized", r_bad.get("status") == "unauthorized", str(r_bad))
 
+        # 6.5) origin 하이브리드(D7-AG-5B) — 신원 없는 공개 Origin 게이트: 허용 Origin이면 collect만
+        #      dispatch하고, 발송(telegram/teams)은 auth_required로 차단한다(비허용 Origin=forbidden).
+        reset(mode="origin", users=[], secret="")
+        check("origin 모드 = is_configured() True", og.is_configured() is True)
+        r_oc = actions["collect"]({}, _ALLOWED_ORIGIN)
+        check("origin collect(허용 Origin) → dispatched", r_oc.get("status") == "dispatched", str(r_oc))
+        check("origin collect → scheduled-live-refresh.yml(승인 입력 없음)",
+              ("scheduled-live-refresh.yml", {}) in dispatched, str(dispatched))
+        n_before = len(dispatched)
+        r_ot = actions["telegram"]({}, _ALLOWED_ORIGIN)
+        r_om = actions["teams"]({}, _ALLOWED_ORIGIN)
+        check("origin telegram → auth_required(발송 차단)",
+              r_ot.get("status") == "auth_required", str(r_ot))
+        check("origin teams → auth_required(발송 차단)",
+              r_om.get("status") == "auth_required", str(r_om))
+        check("origin 발송 dispatch 미도달", len(dispatched) == n_before,
+              f"{len(dispatched) - n_before}회")
+        r_oe = actions["collect"]({}, "https://evil.example")
+        check("origin collect(비허용 Origin) → forbidden", r_oe.get("status") == "forbidden", str(r_oe))
+
         # 7) dispatch 204 뒤 run 목록에서 run_id/run_url 조회 계약(스텁 응답)
         class _RunResponse:
             def __enter__(self):

@@ -191,9 +191,11 @@ def check_template() -> None:
         check(f"4c: 운영 계약 앵커 유지 '{anchor[:32]}'", anchor in t)
     check("4c-2: 브라우저 PIN 입력 제거(서버 앞단 인증)",
           'id="opPin"' not in t and "승인 PIN" not in t)
-    check("4d: Teams 버튼이 운영 API로 배선(el(opTeamsBtn)+활성화+send-teams endpoint)",
-          'el("opTeamsBtn")' in t and "teamsBtn.disabled = false" in t
-          and "/api/operator/send-teams" in t)
+    # 하이브리드(D7-AG-5B): Teams 버튼은 운영 API에 배선(endpoint 주입)되되, 공개 Origin 인가로는
+    # 발송을 열지 않으므로 인증잠금(authlocked) 상태다 — 가짜가 아니라 '인증 필요'로 정직하게 막는다.
+    check("4d: Teams 버튼이 운영 API로 배선(el(opTeamsBtn)+send-teams endpoint) · 인증잠금",
+          'el("opTeamsBtn")' in t and "/api/operator/send-teams" in t
+          and "authlocked" in t)
 
     check("V1: 별도 상단 목차(railNav) 제거", 'id="railNav"' not in t and 'class="railnav"' not in t)
     check("V1: '전체 탐색' 문구 제거(주석 포함)", "전체 탐색" not in t)

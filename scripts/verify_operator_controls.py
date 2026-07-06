@@ -107,10 +107,12 @@ def check_ui(html: str, label: str, *, enabled: bool) -> None:
     check(f"{label}: 브라우저는 secret 미보유(credentials로 경계 세션만 전달)",
           'credentials: "include"' in html and 'X-Operator-Token"] = pin' not in html)
     if enabled:
-        check(f"{label}: connected mode enables all three buttons",
+        # 하이브리드(D7-AG-5B): connected 빌드는 collect만 활성 · 발송(send/teams)은 인증 필요 상태.
+        check(f"{label}: connected enables collect only (sends stay auth-locked)",
               "collectBtn.disabled = false" in html
-              and "sendBtn.disabled = false" in html
-              and "teamsBtn.disabled = false" in html)
+              and "sendBtn.disabled = false" not in html
+              and "teamsBtn.disabled = false" not in html
+              and "authlocked" in html and "showSendLocked" in html)
     else:
         check(f"{label}: explicit disconnected state",
               "Operator API 미연결" in html and "setBtns(true)" in html)

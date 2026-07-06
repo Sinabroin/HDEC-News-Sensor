@@ -116,9 +116,14 @@ def check_html(html: str, label: str, *, enabled: bool) -> None:
         base = model.get("operator_api_base") or ""
         check(f"A[{label}]: base는 JSON island에만(문서 내 1회)",
               base == TEST_BASE and html.count(TEST_BASE) == 1)
-        check(f"A[{label}]: 연결 빌드가 3버튼을 활성화",
-              "collectBtn.disabled = false" in html and "sendBtn.disabled = false" in html
-              and "teamsBtn.disabled = false" in html)
+        # 하이브리드(D7-AG-5B): 공개 Origin 인가는 저위험 collect만 실행 — 발송 2버튼은 인증 필요 상태.
+        check(f"A[{label}]: 연결 빌드는 collect만 활성(발송은 인증 필요)",
+              "collectBtn.disabled = false" in html
+              and "sendBtn.disabled = false" not in html
+              and "teamsBtn.disabled = false" not in html
+              and "authlocked" in html and "showSendLocked" in html)
+        check(f"A[{label}]: 발송 버튼은 fetch 미배선 + 인증 필요 안내",
+              "운영자 인증 연결" in html)
     else:
         check(f"A[{label}]: 미설정은 '미연결' 명시(완료 아님)",
               'setStatus("Operator API 미연결"' in html and "setBtns(true)" in html)

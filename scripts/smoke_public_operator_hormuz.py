@@ -68,6 +68,10 @@ def main(argv: list[str] | None = None) -> int:
           ))
           and "fetch(base + path" in html
           and "GitHub Actions 열기" not in html)
+    # D7-AG-5B 하이브리드 — 공개 페이지는 저위험 collect만 실행하고, 발송(텔레그램·Teams)은
+    # auth-locked(클릭해도 fetch 없이 인증 필요만 안내) — 공개에서 임의 발송이 일어나지 않는다.
+    check("send/teams auth-locked (hybrid · no public send)",
+          "authlocked" in html and "showSendLocked" in html)
     check("Hormuz fixed risk visible",
           'id="hormuzRiskWatch"' in html and "호르무즈 해협" in html
           and "핵심 리스크 감시" in html)
