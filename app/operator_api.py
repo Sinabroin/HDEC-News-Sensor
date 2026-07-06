@@ -20,6 +20,7 @@ _OPERATOR_HTTP = {
     "dispatched": 200,
     "not_configured": 503,
     "unauthorized": 401,
+    "auth_required": 401,  # origin 모드에서 발송(telegram/teams)은 인증 필요 → 401
     "forbidden": 403,
     "rate_limited": 429,
     "error": 502,
@@ -40,6 +41,7 @@ def operator_health():
         "status": "ok",
         "operator_api_enabled": operator_gateway.is_configured(),
         "access_mode": operator_gateway.public_access_mode(),
+        "dry_run": bool(config.OPERATOR_DRY_RUN),
     }
 
 

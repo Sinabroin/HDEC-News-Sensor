@@ -88,6 +88,9 @@ GH_OPERATOR_TOKEN = (os.environ.get("GH_OPERATOR_TOKEN")
 # OPERATOR_ACCESS_MODE:
 #   "edge"          — 경계(SSO/Access)가 주입하는 신원 헤더(OPERATOR_ACCESS_HEADER)를 신뢰하고
 #                     그 값이 OPERATOR_ALLOWED_USERS 허용목록에 있을 때만 인가(권장·PIN 없음).
+#   "origin"        — (D7-AG-5B 하이브리드) 신원 없는 공개 Origin 게이트. 허용목록 Origin+레이트리밋
+#                     만으로 **저위험 수집(collect)만** 인가하고 발송(telegram/teams)은 막는다
+#                     (auth_required). bare Vercel 등 edge 없는 배포에서 수집 버튼만 여는 용도.
 #   "shared_secret" — 레거시/단순 배포용. X-Operator-Token == OPERATOR_SHARED_SECRET (브라우저 UI에는
 #                     노출하지 않음 — 경계가 주입하거나 서버-대-서버 호출에만 사용).
 #   ""(미설정)       — 인가 정책 없음 = fail-closed(어떤 트리거도 안 함).
