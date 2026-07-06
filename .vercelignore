@@ -1,0 +1,14 @@
+# D7-AG-5B — Vercel 업로드 최소화 + 비밀/무관 자산 제외.
+# 배포되는 것은 operator API leaf(app/config·operator_gateway·operator_api)와 진입점(api/)뿐이다.
+# 수집기/DB/발송/insight/문서/스크립트/목데이터는 운영 실행에 불필요하므로 업로드하지 않는다.
+# 비밀값은 어떤 파일로도 올리지 않는다(런타임 env 전용).
+.agents/
+design/
+tmp/
+docs/
+scripts/
+templates/
+data/
+*.db
+.env
+.env.*
