@@ -118,6 +118,26 @@ OPERATOR_LOCAL_DEV = (os.environ.get("OPERATOR_LOCAL_DEV") or "").strip() in ("1
 # 로컬 검증용 — 설정 시 workflow_dispatch(네트워크)를 실제로 하지 않고 접수 응답만 반환한다.
 OPERATOR_DRY_RUN = (os.environ.get("OPERATOR_DRY_RUN") or "").strip() in ("1", "true", "on", "yes")
 
+# D7-AG-5C — GitHub OAuth 기반 운영자 세션. 브라우저에는 client secret/session secret/GH token을
+# 절대 싣지 않고, Vercel server-side env에서만 읽는다. 세션은 DB 없이 HMAC 서명 쿠키로 검증한다.
+GITHUB_OAUTH_CLIENT_ID = (os.environ.get("GITHUB_OAUTH_CLIENT_ID") or "").strip()
+GITHUB_OAUTH_CLIENT_SECRET = (os.environ.get("GITHUB_OAUTH_CLIENT_SECRET") or "").strip()
+OPERATOR_SESSION_SECRET = (os.environ.get("OPERATOR_SESSION_SECRET") or "").strip()
+OPERATOR_ALLOWED_GITHUB_LOGINS = [
+    u.strip().lower()
+    for u in (os.environ.get("OPERATOR_ALLOWED_GITHUB_LOGINS") or "").split(",")
+    if u.strip()
+]
+OPERATOR_AUTH_CALLBACK_URL = (os.environ.get("OPERATOR_AUTH_CALLBACK_URL") or "").strip()
+OPERATOR_AUTH_SUCCESS_URL = (
+    os.environ.get("OPERATOR_AUTH_SUCCESS_URL")
+    or "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/daily/dashboard-latest.html"
+).strip()
+OPERATOR_SESSION_COOKIE = "hdec_operator_session"
+OPERATOR_OAUTH_STATE_COOKIE = "hdec_operator_oauth_state"
+OPERATOR_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
+OPERATOR_OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
+
 # 공개 정적 페이지에서 Operator API로의 cross-origin 호출을 허용할 origin 목록.
 # 기본은 공개 대시보드 origin 2곳(커스텀 도메인 guides.playground-aidesignlab.co.kr +
 # 프로젝트 Pages sinabroin.github.io) + loopback. 둘 다 브라우저가 base+경로로 POST할 때 Origin

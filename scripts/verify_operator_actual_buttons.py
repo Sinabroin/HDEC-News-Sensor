@@ -41,6 +41,7 @@ LINK_FALLBACKS = ("GitHub Actions 열기", "Scheduled Live Refresh 열기",
                   "Telegram Notify 열기", 'id="opActionLinks"')
 PRIVILEGED = ("api.github.com", "api.telegram.org", "webhook.office.com",
               "openapi.naver.com/v1/search/news.json", "X-Naver-Client-Secret")
+SERVER_ONLY_NAMES = ("GITHUB_OAUTH_CLIENT_SECRET", "OPERATOR_SESSION_SECRET")
 SECRET_SHAPES = (
     re.compile(r"\b(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}\b"),
     re.compile(r"\b\d{8,}:[A-Za-z0-9_-]{20,}\b"),
@@ -95,11 +96,13 @@ def check_html(html: str, label: str, *, enabled: bool) -> None:
           not any(x in html for x in LINK_FALLBACKS))
     # P — PIN 입력 제거 + 서버 보호 명시
     check(f"P[{label}]: 브라우저 PIN 입력 제거", 'id="opPin"' not in html and "승인 PIN" not in html)
-    check(f"P[{label}]: 대체 보호(서버 앞단 인증) 명시",
-          "서버 앞단" in html and 'id="opAuthNote"' in html)
+    check(f"P[{label}]: GitHub OAuth 운영자 로그인 UI",
+          "GitHub로 운영자 로그인" in html and 'id="opAuthNote"' in html
+          and 'id="opSessionState"' in html and 'id="opLogoutBtn"' in html)
     check(f"P[{label}]: public secret/토큰/webhook 0",
           not any(p.search(html) for p in SECRET_SHAPES)
-          and "OPERATOR_SHARED_SECRET" not in html and "GH_OPERATOR_TOKEN" not in html)
+          and "OPERATOR_SHARED_SECRET" not in html and "GH_OPERATOR_TOKEN" not in html
+          and not any(name in html for name in SERVER_ONLY_NAMES))
     # F — fetch(base+endpoint) + endpoint 3개 + privileged 직접호출 0
     check(f"F[{label}]: 브라우저는 fetch(base + path)로만 POST",
           "fetch(base + path" in html and 'method: "POST"' in html
@@ -118,14 +121,17 @@ def check_html(html: str, label: str, *, enabled: bool) -> None:
         check(f"A[{label}]: base는 JSON island에만(문서 내 1회)",
               expected_base and html.count(base) == 1,
               base)
-        # 하이브리드(D7-AG-5B): 공개 Origin 인가는 저위험 collect만 실행 — 발송 2버튼은 인증 필요 상태.
-        check(f"A[{label}]: 연결 빌드는 collect만 활성(발송은 인증 필요)",
+        # 하이브리드(D7-AG-5C): 공개 Origin 인가는 저위험 collect만 로그인 없이 실행.
+        # 발송 2버튼은 미인증 상태에서 authlocked, session 확인 후 fetch 실행된다.
+        check(f"A[{label}]: 연결 빌드는 collect 공개 + 미인증 발송 authlocked",
               "collectBtn.disabled = false" in html
-              and "sendBtn.disabled = false" not in html
-              and "teamsBtn.disabled = false" not in html
               and "authlocked" in html and "showSendLocked" in html)
-        check(f"A[{label}]: 발송 버튼은 fetch 미배선 + 인증 필요 안내",
-              "운영자 인증 연결" in html)
+        check(f"A[{label}]: 발송 버튼은 session 인증 후 fetch 배선",
+              'fetch(base + "/api/auth/session"' in html
+              and "/api/auth/github/login" in html
+              and "/api/auth/logout" in html
+              and "endpoints.telegram" in html and "endpoints.teams" in html
+              and "운영자 인증됨:" in html)
     else:
         check(f"A[{label}]: 미설정은 '미연결' 명시(완료 아님)",
               'setStatus("Operator API 미연결"' in html and "setBtns(true)" in html)
@@ -143,6 +149,20 @@ def check_server() -> None:
                                 '"rate_limited"')))
     check("S: API가 요청 헤더/Origin을 게이트웨이에 전달",
           "request.headers" in api and "trigger_collect(" in api)
+    check("S: OAuth/session auth routes registered",
+          all(route in api for route in (
+              '@router.get("/api/auth/github/login")',
+              '@router.get("/api/auth/github/callback")',
+              '@router.get("/api/auth/session")',
+              '@router.post("/api/auth/logout")',
+          )))
+    auth_src = (ROOT / "app" / "operator_auth.py").read_text(encoding="utf-8")
+    check("S: signed HttpOnly SameSite=None session cookie",
+          "hmac.new" in auth_src and "hmac.compare_digest" in auth_src
+          and 'httponly=True' in auth_src and 'secure=True' in auth_src
+          and 'samesite="none"' in auth_src)
+    check("S: origin send/teams require valid operator session",
+          "operator_auth.session_from_headers" in gw and '"auth_required"' in gw)
 
 
 def main() -> int:

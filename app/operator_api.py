@@ -7,14 +7,18 @@ D7-AG-3 — 브라우저 승인 PIN을 제거하고 보호를 **서버 앞단(ed
 이관했다. 배포 권장: 이 호스트를 Cloudflare Access / Vercel Protection / 사내 SSO / Basic Auth 뒤에
 두어 경계가 인증된 운영자 신원 헤더를 주입하게 한다. 서버(operator_gateway)는 그 신원이
 허용목록에 있고 Origin·레이트리밋을 통과할 때만 workflow_dispatch를 호출한다(fail-closed).
-전체 radar 앱/DB를 외부에 노출하지 않고 운영 실행 route만 제공한다.
+전체 radar 앱/DB를 외부에 노출하지 않고 운영 실행 route만 제공한다. D7-AG-5C에서는 GitHub OAuth
+로그인과 HttpOnly signed session cookie를 같은 최소 앱에 추가해, public dashboard의 발송 버튼만
+운영자 세션 뒤에 둔다. OAuth client secret/session secret은 server-side env에서만 읽는다.
 """
+
+import urllib.error
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from app import config, operator_gateway
+from app import config, operator_auth, operator_gateway
 
 _OPERATOR_HTTP = {
     "dispatched": 200,
@@ -43,6 +47,77 @@ def operator_health():
         "access_mode": operator_gateway.public_access_mode(),
         "dry_run": bool(config.OPERATOR_DRY_RUN),
     }
+
+
+@router.get("/api/auth/github/login")
+def github_login():
+    if not operator_auth.oauth_configured():
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_configured", "authenticated": False},
+        )
+    state = operator_auth.generate_state()
+    response = RedirectResponse(operator_auth.github_authorize_url(state), status_code=302)
+    operator_auth.set_state_cookie(response, state)
+    return response
+
+
+@router.get("/api/auth/github/callback")
+def github_callback(request: Request):
+    if not operator_auth.oauth_configured():
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_configured", "authenticated": False},
+        )
+    expected_state = request.cookies.get(config.OPERATOR_OAUTH_STATE_COOKIE) or ""
+    actual_state = request.query_params.get("state") or ""
+    code = request.query_params.get("code") or ""
+    if not expected_state or not actual_state or not code or expected_state != actual_state:
+        response = JSONResponse(
+            status_code=401,
+            content={"status": "auth_required", "authenticated": False},
+        )
+        operator_auth.clear_state_cookie(response)
+        return response
+    try:
+        token = operator_auth.exchange_code_for_token(code)
+        login = operator_auth.fetch_github_login(token)
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
+        response = JSONResponse(
+            status_code=401,
+            content={"status": "auth_required", "authenticated": False},
+        )
+        operator_auth.clear_state_cookie(response)
+        return response
+    if not operator_auth.allowed_github_login(login):
+        response = JSONResponse(
+            status_code=403,
+            content={"status": "forbidden", "authenticated": False},
+        )
+        operator_auth.clear_state_cookie(response)
+        return response
+    response = RedirectResponse(config.OPERATOR_AUTH_SUCCESS_URL, status_code=302)
+    operator_auth.clear_state_cookie(response)
+    operator_auth.set_session_cookie(response, login)
+    return response
+
+
+@router.get("/api/auth/session")
+def auth_session(request: Request):
+    session = operator_auth.session_from_cookie_header(
+        request.headers.get("cookie", "")
+    )
+    if not session:
+        return {"authenticated": False}
+    return {"authenticated": True, "login": session["login"]}
+
+
+@router.post("/api/auth/logout")
+def auth_logout():
+    response = JSONResponse(content={"authenticated": False})
+    operator_auth.clear_session_cookie(response)
+    operator_auth.clear_state_cookie(response)
+    return response
 
 
 @router.post("/api/operator/collect")

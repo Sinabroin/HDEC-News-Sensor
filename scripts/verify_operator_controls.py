@@ -32,6 +32,7 @@ SECRET_NAMES = (
     "GH_OPERATOR_TOKEN", "GITHUB_TOKEN", "OPERATOR_SHARED_SECRET", "OPERATOR_PIN",
     "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_IDS", "TEAMS_CHANNEL_EMAIL",
     "NAVER_CLIENT_SECRET", "X-Naver-Client-Secret",
+    "GITHUB_OAUTH_CLIENT_SECRET", "OPERATOR_SESSION_SECRET",
 )
 SECRET_SHAPES = (
     re.compile(r"\b(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}\b"),
@@ -102,17 +103,25 @@ def check_ui(html: str, label: str, *, enabled: bool) -> None:
           and "GitHub Actions 열기" not in html
           and "Scheduled Live Refresh 열기" not in html
           and "Telegram Notify 열기" not in html)
-    # D7-AG-3 — 브라우저 PIN 제거 + 보호를 서버 앞단(edge)으로 이관.
+    # D7-AG-3/5C — 브라우저 PIN 제거 + GitHub OAuth session으로 발송만 보호.
     check(f"{label}: PIN 입력 UI 제거", 'id="opPin"' not in html and "승인 PIN" not in html)
-    check(f"{label}: 브라우저는 secret 미보유(credentials로 경계 세션만 전달)",
+    check(f"{label}: 브라우저는 secret 미보유(credentials로 session cookie만 전달)",
           'credentials: "include"' in html and 'X-Operator-Token"] = pin' not in html)
+    check(f"{label}: GitHub 운영자 로그인 UI",
+          "GitHub로 운영자 로그인" in html and 'id="opLoginBtn"' in html
+          and 'id="opLogoutBtn"' in html and 'id="opSessionState"' in html)
     if enabled:
-        # 하이브리드(D7-AG-5B): connected 빌드는 collect만 활성 · 발송(send/teams)은 인증 필요 상태.
-        check(f"{label}: connected enables collect only (sends stay auth-locked)",
+        # 하이브리드(D7-AG-5C): connected 빌드는 collect 공개, 발송은 session 확인 전 authlocked.
+        check(f"{label}: connected enables collect and keeps unauth sends auth-locked",
               "collectBtn.disabled = false" in html
-              and "sendBtn.disabled = false" not in html
-              and "teamsBtn.disabled = false" not in html
-              and "authlocked" in html and "showSendLocked" in html)
+              and "authlocked" in html and "showSendLocked" in html
+              and "운영자 미인증" in html)
+        check(f"{label}: authenticated sends are fetch-wired",
+              'fetch(base + "/api/auth/session"' in html
+              and "/api/auth/github/login" in html
+              and "/api/auth/logout" in html
+              and "endpoints.telegram" in html and "endpoints.teams" in html
+              and "운영자 인증됨:" in html)
     else:
         check(f"{label}: explicit disconnected state",
               "Operator API 미연결" in html and "setBtns(true)" in html)
@@ -152,6 +161,21 @@ def check_server() -> None:
     check("server fail-closed 상태들",
           '"not_configured"' in gateway and '"unauthorized"' in gateway
           and '"forbidden"' in gateway and '"rate_limited"' in gateway)
+    check("GitHub OAuth auth routes exist",
+          all(route in api for route in (
+              '@router.get("/api/auth/github/login")',
+              '@router.get("/api/auth/github/callback")',
+              '@router.get("/api/auth/session")',
+              '@router.post("/api/auth/logout")',
+          )))
+    auth_src = read(ROOT / "app" / "operator_auth.py")
+    check("session cookie HMAC contract",
+          "hmac.new" in auth_src and "hmac.compare_digest" in auth_src
+          and 'samesite="none"' in auth_src and "httponly=True" in auth_src
+          and "OPERATOR_SESSION_MAX_AGE_SECONDS" in auth_src)
+    check("origin send path checks operator session",
+          "operator_auth.session_from_headers" in gateway
+          and '"auth_required"' in gateway)
 
 
 def main() -> int:

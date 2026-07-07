@@ -629,10 +629,21 @@
   .opctl-btn.teams{background:#F2F1F8; border-color:#D9D7EC;}
   .opctl-btn.teams .opctl-btn-label{color:#5A5A86;}
   .opctl-btn.teams .opctl-btn-label::before{background:#8784B5;}
-  /* D7-AG-5B 하이브리드 — 발송 2버튼은 인증 필요(auth-locked) 상태로 흐리게 표시한다(공개에서 미발송). */
+  /* D7-AG-5C 하이브리드 — 발송 2버튼은 GitHub OAuth session 확인 전까지 auth-locked 상태다. */
   .opctl-btn.authlocked{opacity:.5; cursor:not-allowed;}
   .opctl-btn.authlocked:hover{box-shadow:none; transform:none;}
   .opctl-authlock{font-size:11px; color:var(--mute2); line-height:1.5; margin:6px 0 0;}
+  .opctl-session{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:8px; border:1px solid var(--line); border-radius:9px; background:#fff; padding:8px 10px;
+    margin:0 0 10px;}
+  .opctl-session-state{font-size:11.5px; font-weight:750; color:var(--mute);}
+  .opctl-session-state.ok{color:#38684A;}
+  .opctl-auth-actions{display:flex; flex-wrap:wrap; gap:6px;}
+  .opctl-auth-btn{appearance:none; -webkit-appearance:none; border:1px solid var(--line);
+    border-radius:8px; background:var(--hair2); color:var(--ink3); font:inherit; font-size:11.5px;
+    font-weight:800; padding:6px 9px; cursor:pointer;}
+  .opctl-auth-btn:hover{background:#fff; box-shadow:var(--shadow);}
+  .opctl-auth-btn.secondary{background:#fff; color:var(--mute);}
   .opctl-connection{font-size:11.5px; line-height:1.5; color:var(--mute2);
     border:1px solid var(--line); border-radius:9px; background:var(--hair2);
     padding:8px 10px; margin-bottom:10px;}
@@ -944,7 +955,14 @@
           <div id="opApiControls">
             <div class="opctl-auth" id="opAuthNote"
                  style="font-size:11px;color:var(--mute2);margin-bottom:8px;line-height:1.5;">
-              보호: <b>서버 앞단 운영자 인증</b>(사내 SSO · Cloudflare Access 등) — 이 페이지에는 비밀값·입력 인증란이 없습니다.
+              보호: <b>GitHub OAuth 운영자 세션</b> — 이 페이지에는 OAuth client secret, GitHub token, 발송 secret이 없습니다.
+            </div>
+            <div class="opctl-session" id="opSessionBox">
+              <span class="opctl-session-state" id="opSessionState">운영자 인증 확인 중</span>
+              <span class="opctl-auth-actions">
+                <button class="opctl-auth-btn" id="opLoginBtn" type="button">GitHub로 운영자 로그인</button>
+                <button class="opctl-auth-btn secondary" id="opLogoutBtn" type="button" hidden>로그아웃</button>
+              </span>
             </div>
             <div class="opctl-actions">
               <button class="opctl-btn refresh" id="opCollectBtn" type="button" disabled aria-disabled="true"
@@ -963,15 +981,15 @@
                 <span class="opctl-btn-help">인증된 운영자 요청으로 Teams 채널 이메일로 즉시 발송합니다</span>
               </button>
             </div>
-            <p class="opctl-authlock" id="opSendLockNote" hidden>발송(텔레그램·Teams)은 운영자 인증 연결 후 사용 가능합니다 (D7-AG-5C).</p>
+            <p class="opctl-authlock" id="opSendLockNote" hidden>발송(텔레그램·Teams)은 GitHub 운영자 로그인 후 사용 가능합니다.</p>
             <div class="opctl-status" id="opStatus" role="status" aria-live="polite"></div>
             <button class="opctl-refresh-public" id="opPublicRefreshBtn" type="button">Public URL 새로고침 ↻</button>
             <details class="opctl-more">
               <summary>실행 안내 · 보안</summary>
               <ul class="opctl-notes">
                 <li>브라우저는 Operator API gateway(base+경로)로만 실행 요청을 보냅니다.</li>
-                <li>운영자 인증은 <b>서버 앞단(사내 SSO · Access)</b>에서 처리됩니다 — 페이지에 PIN·토큰을 넣지 않습니다.</li>
-                <li>서버는 허용된 운영자 신원 · Origin · 요청 빈도만 통과시켜 GitHub Actions를 실행합니다.</li>
+                <li>운영자 인증은 <b>GitHub OAuth session cookie</b>로 처리됩니다 — 페이지에 PIN·토큰을 넣지 않습니다.</li>
+                <li>서버는 허용된 GitHub login · Origin · 요청 빈도만 통과시켜 GitHub Actions를 실행합니다.</li>
                 <li>텔레그램 · Teams 전송은 인증된 운영자 실행에서만 즉시 발송됩니다(자동발송 없음).</li>
               </ul>
             </details>
@@ -3838,9 +3856,10 @@ function displaySourceDomain(row){
 })();
 </script>
 <script id="opctl-js">
-  /* ---------- 운영자 실행 컨트롤 (D7-AG-2) ----------
+  /* ---------- 운영자 실행 컨트롤 (D7-AG-5C) ----------
      base URL은 preview-model island에서만 읽는다. 브라우저는 base+상대경로에만 POST한다.
-     base가 없으면 링크 fallback 없이 3개 실제 실행 버튼을 비활성화하고 미연결을 명시한다. */
+     base가 없으면 링크 fallback 없이 3개 실제 실행 버튼을 비활성화하고 미연결을 명시한다.
+     Telegram/Teams 발송은 GitHub OAuth session cookie가 유효할 때만 활성화한다. */
   (function () {
     var el = function (id) { return document.getElementById(id); };
     var MODEL = {};
@@ -3852,9 +3871,12 @@ function displaySourceDomain(row){
     var modeSummary = el("opModeSummary"), connection = el("opConnection");
     var collectBtn = el("opCollectBtn"), sendBtn = el("opSendBtn"), teamsBtn = el("opTeamsBtn");
     var statusBox = el("opStatus"), publicRefresh = el("opPublicRefreshBtn");
+    var sessionState = el("opSessionState"), loginBtn = el("opLoginBtn"), logoutBtn = el("opLogoutBtn");
+    var sendLockNote = el("opSendLockNote");
     if (!collectBtn || !sendBtn) return;
     var opBtns = [collectBtn, sendBtn, teamsBtn].filter(Boolean);   // 실행 중 일괄 잠금 대상
     function setBtns(disabled) { opBtns.forEach(function (b) { b.disabled = disabled; }); }
+    var authenticated = false, operatorLogin = "", inflight = false;
     function setStatus(msg, kind, result) {
       if (!statusBox) return;
       statusBox.textContent = msg || "";
@@ -3874,46 +3896,89 @@ function displaySourceDomain(row){
     if (!base) {
       if (root) root.setAttribute("data-operator-api-enabled", "false");
       setBtns(true);
+      if (sessionState) sessionState.textContent = "Operator API 미연결";
+      if (loginBtn) loginBtn.disabled = true;
+      if (logoutBtn) logoutBtn.hidden = true;
       setStatus("Operator API 미연결", "muted");
       return;
     }
     if (root) root.setAttribute("data-operator-api-enabled", "true");
     if (connection) {
-      connection.textContent = "Operator API 연결됨 — '데이터 새로고침'은 실행됩니다. 발송(텔레그램·Teams)은 운영자 인증 연결 후 활성화됩니다(D7-AG-5C).";
+      connection.textContent = "Operator API 연결됨 — 데이터 새로고침은 로그인 없이 실행됩니다. 발송은 GitHub 운영자 세션이 필요합니다.";
       connection.classList.add("connected");
     }
-    if (modeSummary) modeSummary.textContent = "운영 API 연결됨 · 데이터 새로고침 실행";
-    // D7-AG-5B 하이브리드 — 공개 Origin 인가는 저위험 collect만 실행한다. 발송 2버튼은 서버가
-    // origin 모드에서 인가하지 않으므로(auth_required) fetch에 배선하지 않고 '인증 필요'만 안내한다
-    // (D7-AG-5C에서 인증 경로가 생기면 활성화). 공개 페이지엔 secret을 넣지 않는다.
-    var sendLockNote = el("opSendLockNote");
-    function applyHybridState() {
+    if (modeSummary) modeSummary.textContent = "운영 API 연결됨 · 인증 확인 중";
+    function setSessionUi(ok, login) {
+      authenticated = !!ok;
+      operatorLogin = authenticated ? String(login || "") : "";
+      if (sessionState) {
+        sessionState.textContent = authenticated
+          ? "운영자 인증됨: " + operatorLogin
+          : "운영자 미인증";
+        sessionState.className = "opctl-session-state" + (authenticated ? " ok" : "");
+      }
+      if (loginBtn) loginBtn.hidden = authenticated;
+      if (logoutBtn) logoutBtn.hidden = !authenticated;
+      if (sendLockNote) sendLockNote.hidden = authenticated;
+      if (modeSummary) {
+        modeSummary.textContent = authenticated
+          ? "운영 API 연결됨 · 운영자 인증됨"
+          : "운영 API 연결됨 · 데이터 새로고침 실행";
+      }
+      applyOperatorState();
+    }
+    function applyOperatorState() {
+      if (inflight) {
+        setBtns(true);
+        return;
+      }
       collectBtn.disabled = false;
       collectBtn.removeAttribute("aria-disabled");
       [sendBtn, teamsBtn].forEach(function (b) {
         if (!b) return;
-        b.removeAttribute("disabled");        // 클릭은 가능(안내 표시용) — 단, fetch 경로엔 배선하지 않음
-        b.setAttribute("aria-disabled", "true");
-        b.classList.add("authlocked");
+        b.disabled = false;
+        if (authenticated) {
+          b.removeAttribute("aria-disabled");
+          b.classList.remove("authlocked");
+        } else {
+          b.setAttribute("aria-disabled", "true");
+          b.classList.add("authlocked");
+        }
       });
-      if (sendLockNote) sendLockNote.hidden = false;
     }
     function showSendLocked() {
-      setStatus("발송(텔레그램·Teams)은 운영자 인증 연결 후 사용 가능합니다 (D7-AG-5C).", "muted");
+      setStatus("발송(텔레그램·Teams)은 GitHub 운영자 로그인 후 사용 가능합니다.", "muted");
     }
-    applyHybridState();
+    function refreshSession() {
+      if (sessionState) sessionState.textContent = "운영자 인증 확인 중";
+      return fetch(base + "/api/auth/session", {method: "GET", credentials: "include"})
+        .then(function (r) {
+          return r.json().catch(function () { return {}; })
+            .then(function (j) { return {ok: r.ok, body: j}; });
+        })
+        .then(function (res) {
+          var body = res.body || {};
+          setSessionUi(!!(res.ok && body.authenticated), body.login || "");
+        })
+        .catch(function () { setSessionUi(false, ""); });
+    }
+    setSessionUi(false, "");
+    refreshSession();
     if (panel) panel.open = true;
-    var inflight = false;
     function run(btn, path, runningMsg, okMsg) {
       if (inflight || !path) return;                 // 중복 클릭 방지
+      if ((btn === sendBtn || btn === teamsBtn) && !authenticated) {
+        showSendLocked();
+        return;
+      }
       inflight = true;
-      collectBtn.disabled = true; btn.classList.add("busy");   // 실행 중 collect 잠금(중복 클릭 방지)
+      setBtns(true); btn.classList.add("busy");       // 실행 중 중복 클릭 방지
       setStatus(runningMsg, "running");
       var ctrl = new AbortController();
       var timer = setTimeout(function () { ctrl.abort(); }, 25000);   // timeout
       var headers = {"Content-Type": "application/json"};
-      // 보호는 서버 앞단(edge SSO/Access)에서 처리 — 브라우저는 secret을 보유/전송하지 않는다.
-      // credentials:"include"로 경계 세션 쿠키가 실려 서버가 운영자 신원을 확인한다.
+      // 브라우저는 secret을 보유/전송하지 않는다. credentials:"include"로 HttpOnly operator session
+      // cookie만 실어 보내고, 서버가 GitHub login allowlist와 HMAC/만료를 검증한다.
       fetch(base + path, {method: "POST", headers: headers, body: "{}",
                           credentials: "include", signal: ctrl.signal})
         .then(function (r) {
@@ -3923,7 +3988,10 @@ function displaySourceDomain(row){
         .then(function (res) {
           var s = (res.body && res.body.status) || "";
           if (res.ok && s === "dispatched") setStatus(okMsg, "ok", res.body);
-          else if (res.code === 401 || s === "unauthorized") setStatus("운영자 인증 필요 — 운영자 콘솔(SSO·Access) 로그인 후 다시 시도하세요.", "fail");
+          else if (res.code === 401 || s === "unauthorized" || s === "auth_required") {
+            setStatus("운영자 인증 필요 — GitHub로 운영자 로그인 후 다시 시도하세요.", "fail");
+            if (btn === sendBtn || btn === teamsBtn) setSessionUi(false, "");
+          }
           else if (res.code === 403 || s === "forbidden") setStatus("접근이 허용되지 않았습니다 — 허용된 운영자만 실행할 수 있습니다.", "fail");
           else if (res.code === 429 || s === "rate_limited") setStatus("요청이 많습니다 — 잠시 후 다시 시도하세요.", "fail");
           else if (res.code === 503 || s === "not_configured") setStatus("Operator API 서버 설정 미완료", "muted");
@@ -3938,17 +4006,34 @@ function displaySourceDomain(row){
         })
         .then(function () {
           clearTimeout(timer); inflight = false;
-          btn.classList.remove("busy"); applyHybridState();
+          btn.classList.remove("busy"); applyOperatorState();
         });
     }
+    if (loginBtn) loginBtn.addEventListener("click", function () {
+      window.location.href = base + "/api/auth/github/login";
+    });
+    if (logoutBtn) logoutBtn.addEventListener("click", function () {
+      if (inflight) return;
+      setStatus("운영자 로그아웃 중…", "running");
+      fetch(base + "/api/auth/logout", {method: "POST", credentials: "include"})
+        .then(function () {
+          setSessionUi(false, "");
+          setStatus("운영자 로그아웃 완료", "muted");
+        })
+        .catch(function () {
+          setStatus("로그아웃 요청 실패 — 네트워크 상태를 확인하세요.", "fail");
+        });
+    });
     collectBtn.addEventListener("click", function () {
       run(collectBtn, endpoints.collect, "데이터 새로고침 실행 중…",
           "데이터 새로고침 실행 요청 접수 · 반영까지 약 1~3분");
     });
-    // 발송 2버튼은 공개(origin) 인가로 열지 않는다 — 클릭해도 fetch하지 않고 인증 필요만 안내한다.
-    // (서버도 origin 모드에서 send/send-teams를 auth_required로 차단한다 — 이중 방어.)
-    if (sendBtn) sendBtn.addEventListener("click", showSendLocked);
-    if (teamsBtn) teamsBtn.addEventListener("click", showSendLocked);
+    if (sendBtn) sendBtn.addEventListener("click", function () {
+      run(sendBtn, endpoints.telegram, "텔레그램 전송 실행 중…", "텔레그램 전송 실행 요청 접수");
+    });
+    if (teamsBtn) teamsBtn.addEventListener("click", function () {
+      run(teamsBtn, endpoints.teams, "Teams 채널 전송 실행 중…", "Teams 채널 전송 실행 요청 접수");
+    });
   })();
 </script>
 </body>
