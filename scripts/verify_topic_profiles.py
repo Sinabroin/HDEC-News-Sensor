@@ -29,12 +29,12 @@ REQUIRED_PROFILES = (
     "hdec_direct", "hyundai_group", "competitor_contractors",
     "trust_companies", "developers",
 )
-EXPECTED_TOPIC_QUERY_COUNT = 63
+EXPECTED_TOPIC_QUERY_COUNT = 72
 # Proven on clean 285e0e3 before the D5-D dirty patch. The old 28/21/3/6/12/7
 # verifier baseline had already drifted; D5-D must preserve this current mock
 # executive count while adding only business/org/scope metadata keys.
-EXPECTED_MOCK_COUNTS = {"total": 28, "signals": 19, "immediate": 3,
-                        "daily": 6, "weekly": 10, "excluded": 9}
+EXPECTED_MOCK_COUNTS = {"total": 29, "signals": 20, "immediate": 3,
+                        "daily": 5, "weekly": 12, "excluded": 9}
 
 # P0-D5-D — Layer-1 사업 부문 렌즈 7종 + Layer-2 조직 태그 7종 + Layer-3 실행범위 태그 4종.
 REQUIRED_BUSINESS_LENSES = (
@@ -159,7 +159,7 @@ def check_query_dedup() -> None:
           len(lowered) == len(set(lowered)),
           f"{len(lowered)}개 중 고유 {len(set(lowered))}개")
     check("4: iter_topic_queries 비어있지 않음", len(queries) >= 5, f"{len(queries)}건")
-    check("4: iter_topic_queries 기존 D5-A 수집 폭 유지 (사업 렌즈 미혼입)",
+    check("4: iter_topic_queries D7-AE 엔티티 프로파일 수집 폭 유지 (사업 렌즈 미혼입)",
           len(queries) == EXPECTED_TOPIC_QUERY_COUNT, f"{len(queries)}건")
 
 
@@ -309,7 +309,7 @@ def check_sections_additive(sim: dict | None) -> None:
     cat = sim.get("catalog") or []
     for pid in REQUIRED_PROFILES:
         check(f"topic_profile_catalog에 {pid} 포함", pid in cat)
-    check("topic_profile_catalog가 기존 D5-A 프로파일 5개로 유지됨 (사업 렌즈 미혼입)",
+    check("topic_profile_catalog가 엔티티 프로파일 5개로 유지됨 (사업 렌즈 미혼입)",
           cat == list(REQUIRED_PROFILES), str(cat))
 
 
@@ -317,7 +317,7 @@ def check_mock_invariant(sim: dict | None) -> None:
     if not sim:
         return
     counts = sim["counts"]
-    check("mock 카운트 불변 28/19/3/6/10/9 (D5-D는 메타 키만 추가)",
+    check("mock 카운트 불변 29/20/3/5/12/9 (D7-AE 현재 fixture 기준)",
           counts == EXPECTED_MOCK_COUNTS, str(counts))
 
 

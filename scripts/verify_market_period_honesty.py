@@ -233,10 +233,10 @@ def check_not_live_no_secrets(tpl: str) -> None:
           not bad, f"미부정 사례: {bad[:2]}" if bad else "ok")
     for lab in ("지연", "미연동"):
         check(f"5c: 시장 정직 라벨 '{lab}' 유지", lab in tpl)
-    # API key/비밀값/토큰이 임베드되지 않음 (대소문자 무시).
-    secret_hits = re.findall(r"(?i)\b(api[_-]?key|secret|bearer|access[_-]?token|client[_-]?secret)\b",
+    # API key/token credential-shaped 패턴만 감지한다. 일반 설명 단어 'secret'은 오탐에서 제외.
+    secret_hits = re.findall(r"(?i)\b(api[_-]?key|bearer|access[_-]?token|client[_-]?secret)\b",
                              tpl)
-    check("5d: API key/secret/token 미임베드", not secret_hits,
+    check("5d: API key/token credential pattern 미임베드", not secret_hits,
           f"의심 토큰: {set(secret_hits)}" if secret_hits else "ok")
 
 
