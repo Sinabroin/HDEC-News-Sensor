@@ -112,7 +112,7 @@ def _run_detector(old_model: dict, new_model: dict) -> tuple[subprocess.Complete
 
 def check_schedule_and_dispatch(text: str) -> None:
     crons = re.findall(r"cron:\s*[\"']([^\"']+)[\"']", text)
-    check("schedule is exactly hourly", crons == ["0 * * * *"], repr(crons))
+    check("schedule is exactly hourly", crons == ["17 * * * *"], repr(crons))
     check("workflow_dispatch is preserved", "workflow_dispatch:" in text)
     check("force_dry_run manual input is preserved", "force_dry_run:" in text)
     check("scheduled runs remain serialized", "group: scheduled-live-refresh" in text)

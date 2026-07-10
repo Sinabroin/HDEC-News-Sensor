@@ -1,7 +1,7 @@
 """D7-P 검증기 — 예약 라이브 갱신 + 게이트된 Telegram 자동 발송 (완전 오프라인).
 
 검사 계약:
-  A. 예약 워크플로가 매시간 정각 cron(0 * * * *)을 사용한다.
+  A. 예약 워크플로가 매시간 17분 cron(17 * * * *)을 사용한다.
   B. 예약 발송 기본값은 dry-run (발송 0건) — TELEGRAM_AUTO_SEND 미설정이면 보내지 않는다.
   C. 발송 opt-in 게이트(TELEGRAM_AUTO_SEND)가 소스/워크플로에 존재하고, 하드코딩 자동발송이 없다.
   D. 새 파일(스크립트·워크플로·검증기)에 토큰/시크릿 모양 문자열이 0건이다.
@@ -45,7 +45,7 @@ SENT_MARKERS = ("delivered=", "Send status: approved", "실제 발송 진행")
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 HEADER_TEXT = "HDEC Executive Radar"
 
-EXPECTED_HOURLY_CRON = "0 * * * *"
+EXPECTED_HOURLY_CRON = "17 * * * *"
 
 _failures = []
 
@@ -137,8 +137,8 @@ def check_workflow_schedule() -> None:
     crons = re.findall(r"cron:\s*[\"']([^\"']+)[\"']", text)
     check("A 정확히 1개 hourly cron", crons == [EXPECTED_HOURLY_CRON], repr(crons))
     parts = crons[0].split() if len(crons) == 1 else []
-    check("A 매시간 정각(minute=0, hour=*) 실행",
-          len(parts) == 5 and parts[:2] == ["0", "*"], repr(parts))
+    check("A 매시간 17분(minute=17, hour=*) 실행",
+          len(parts) == 5 and parts[:2] == ["17", "*"], repr(parts))
 
 
 # ---------- B. 기본은 dry-run (발송 0건) ----------
