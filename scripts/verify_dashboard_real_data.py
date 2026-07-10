@@ -91,6 +91,47 @@ def _run(args, env=None, timeout=300) -> subprocess.CompletedProcess:
                           env=env or _clean_env(), timeout=timeout)
 
 
+def _deterministic_mock_builder_meta() -> dict:
+    """Run the mock dashboard at a stable point inside the fixture's 30-day window."""
+    from datetime import datetime as real_datetime, timedelta
+
+    import build_executive_brief as brief_builder
+
+    fixtures = json.loads((ROOT / "data" / "mock_articles.json").read_text(encoding="utf-8"))
+    published = [real_datetime.fromisoformat(row["published_at"]) for row in fixtures]
+    reference = max(published) + timedelta(days=29)
+
+    class FixtureDateTime(real_datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return reference.astimezone(tz) if tz else reference.replace(tzinfo=None)
+
+    original_env = {key: os.environ.get(key) for key in ("APP_MODE", "NEWS_MODE", "DB_PATH")}
+    try:
+        os.environ["APP_MODE"] = "mock"
+        os.environ.pop("NEWS_MODE", None)
+        runtime = brief_builder._bootstrap()
+        import build_static_dashboard as dashboard_builder
+
+        patched = (runtime["scoring"], runtime["briefing"], runtime["db"])
+        original_datetimes = [module.datetime for module in patched]
+        try:
+            for module in patched:
+                module.datetime = FixtureDateTime
+            brief = brief_builder.build_brief_via_mock_pipeline()
+            html = dashboard_builder.render_dashboard_html(brief)
+            return dashboard_builder.dashboard_metadata(html, brief)
+        finally:
+            for module, original in zip(patched, original_datetimes):
+                module.datetime = original
+    finally:
+        for key, value in original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
 # ---------------------------------------------------------------------------
 # 1 · 빌더가 실기사 데이터를 주입한다 (시크릿/네트워크 0건)
 # ---------------------------------------------------------------------------
@@ -108,9 +149,18 @@ def check_builder() -> None:
           not re.search(r"^\s*(import|from)\s+(urllib|requests|httpx|socket)\b", src, re.M))
 
     proc = _run([sys.executable, str(BUILDER), "--json"])
-    if not check("1f: builder --json 동작", proc.returncode == 0, (proc.stderr or "")[-200:]):
+    try:
+        cli_meta = json.loads(proc.stdout) if proc.returncode == 0 else {}
+    except ValueError:
+        cli_meta = {}
+    if not check("1f: builder --json 동작", proc.returncode == 0 and bool(cli_meta),
+                 (proc.stderr or "")[-200:]):
         return
-    meta = json.loads(proc.stdout)
+    try:
+        meta = _deterministic_mock_builder_meta()
+    except Exception as exc:
+        check("1g: mock fixture 기준시각 고정 빌드", False, type(exc).__name__)
+        return
     check("1g: 빌더가 실기사 사용 플래그(uses_real_articles)",
           meta.get("uses_real_articles") is True)
     check("1h: 실 news 행 다수(>=5) + featured 제목 존재",
