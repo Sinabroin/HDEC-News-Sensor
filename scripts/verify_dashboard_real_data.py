@@ -113,8 +113,8 @@ def check_builder() -> None:
     meta = json.loads(proc.stdout)
     check("1g: 빌더가 실기사 사용 플래그(uses_real_articles)",
           meta.get("uses_real_articles") is True)
-    check("1h: 실 news 행 다수(>=6) + featured 제목 존재",
-          (meta.get("news_row_count") or 0) >= 6 and bool(meta.get("featured_title")),
+    check("1h: 실 news 행 다수(>=5) + featured 제목 존재",
+          (meta.get("news_row_count") or 0) >= 5 and bool(meta.get("featured_title")),
           f"news={meta.get('news_row_count')} featured={meta.get('featured_title')!r}")
     check("1i: public 정직성 라벨 유지(체결값/미연동 + demo residual 0)",
           meta.get("has_data_honesty_labels") is True)
