@@ -1,9 +1,9 @@
 name: Scheduled Live Refresh
 
-# D7-P — 하루 6회(KST) 라이브 리포트/대시보드 갱신 + 게이트된 예약 다이제스트 발송.
-# 기본은 게시(공개 Pages 갱신)만 하고 발송은 dry-run이다. 실제 발송은 repo Variable
-# TELEGRAM_AUTO_SEND='1' 명시 opt-in + 라이브 수집 성공(live_ok) + freshness/live 게이트
-# 통과일 때만 일어난다 (send_scheduled_telegram.py → send_telegram.py D3I 위임).
+# D7-AH-1 — 매시간 라이브 리포트/대시보드 갱신 + 변동 기반 예약 알림 발송.
+# 기본은 게시(공개 Pages 갱신)만 하고 발송은 닫혀 있다. 실제 발송은 repo Variable
+# HOURLY_DELTA_AUTO_SEND='1' + 라이브 수집 성공(live_ok) + 핵심 대시보드 변동(alert_delta)
+# 통과가 필요하다. Telegram은 기존 TELEGRAM_AUTO_SEND='1' opt-in도 함께 유지한다.
 on:
   workflow_dispatch:
     inputs:
@@ -12,13 +12,8 @@ on:
         required: false
         default: ""
   schedule:
-    # 6 KST 슬롯 → UTC (KST = UTC+9). GitHub schedule은 best-effort라 수분 지연될 수 있다.
-    - cron: "0 22 * * *"  # 07:00 KST (전일 UTC)
-    - cron: "0 2 * * *"   # 11:00 KST
-    - cron: "0 4 * * *"   # 13:00 KST
-    - cron: "0 7 * * *"   # 16:00 KST
-    - cron: "0 12 * * *"  # 21:00 KST
-    - cron: "0 15 * * *"  # 00:00 KST (전일 UTC)
+    # GitHub schedule은 UTC 기준이며 best-effort라 수분 지연될 수 있다.
+    - cron: '0 * * * *'
 
 # 공개 Pages는 main의 docs/를 서빙한다 — 갱신분을 commit/push 하려면 write 권한 필요.
 permissions:
@@ -49,7 +44,8 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py
+          python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py
+          python3 scripts/verify_hourly_delta_auto_send.py --skip-operator-verifier
           python3 scripts/verify_scheduled_refresh_and_telegram.py
           python3 scripts/verify_human_review_gate.py
           python3 scripts/verify_static_report.py
@@ -73,6 +69,9 @@ jobs:
           python3 scripts/verify_market_source_audit.py
           python3 scripts/verify_dashboard_ui_simplification.py
           python3 scripts/verify_rc3_public_truth.py
+
+      - name: Snapshot dashboard before live build
+        run: cp docs/daily/dashboard-latest.html "$RUNNER_TEMP/dashboard-before.html"
 
       # 2) live 리포트/대시보드 생성. build_static_report.py가 출력하는 news_data_mode로
       #    live 수집 성공(live_ok)을 판별한다 (단일 빌드 = 단일 수집). 실패(mock fallback)면
@@ -108,7 +107,18 @@ jobs:
             git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html || true
           fi
 
-      # 3) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
+      # 3) live 성공 시 이전/신규 대시보드의 핵심 알림 surface만 비교한다. 파싱 실패는
+      #    step 실패로 닫히며, 신규 핵심 후보가 0건인 경우 alert_delta=false다.
+      - name: Detect dashboard alert delta
+        id: delta
+        if: steps.build.outputs.live_ok == 'true'
+        run: |
+          python3 scripts/detect_dashboard_alert_delta.py \
+            "$RUNNER_TEMP/dashboard-before.html" \
+            docs/daily/dashboard-latest.html \
+            --github-output "$GITHUB_OUTPUT"
+
+      # 4) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
       - name: Publish to Pages (commit live docs)
         if: steps.build.outputs.live_ok == 'true'
         run: |
@@ -151,13 +161,12 @@ jobs:
             done
           fi
 
-      # 4) 예약 다이제스트 — 기본 dry-run. 실제 발송은 vars.TELEGRAM_AUTO_SEND='1' + live_ok +
-      #    send_scheduled_telegram.py의 freshness/live 게이트 통과일 때만 (그 뒤 send_telegram.py 위임).
-      #    live_ok가 아니면 이 step은 건너뛴다 (mock fallback 자동 발송 금지).
-      - name: Scheduled telegram digest (gated auto-send)
-        if: steps.build.outputs.live_ok == 'true'
+      # 5) 예약 Telegram — hourly opt-in + 기존 Telegram opt-in + live + delta가 모두 필요하다.
+      #    sender 내부 freshness/live 게이트도 그대로 통과해야 실제 발송된다.
+      - name: Hourly telegram digest (delta-gated auto-send)
+        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && vars.TELEGRAM_AUTO_SEND == '1'
         env:
-          # 예약 발송 opt-in — 평문 플래그라 비밀값이 아닌 repo Variable 권장. 미설정이면 dry-run.
+          # 두 repo Variable이 모두 열린 step에서만 기존 sender opt-in을 주입한다.
           TELEGRAM_AUTO_SEND: ${{ vars.TELEGRAM_AUTO_SEND || '' }}
           TELEGRAM_ALLOW_MOCK: ${{ vars.TELEGRAM_ALLOW_MOCK || '' }}
           TELEGRAM_MAX_AGE_HOURS: ${{ vars.TELEGRAM_MAX_AGE_HOURS || '' }}
@@ -179,3 +188,30 @@ jobs:
           DRY_FLAG=""
           if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
           python3 scripts/send_scheduled_telegram.py $DRY_FLAG
+
+      # 6) Teams 채널 이메일 — 이 step에 진입한 경우에만 SMTP send/approval/Teams gate를
+      #    주입한다. sender 로그는 SMTP accepted와 실제 Teams 수신(unverified)을 분리한다.
+      - name: Hourly Teams channel email (delta-gated auto-send)
+        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1'
+        env:
+          EMAIL_SEND_MODE: send
+          APPROVE_SEND_EMAIL: "true"
+          SEND_TO_TEAMS: "true"
+          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
+          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
+          GMAIL_SMTP_PASSWORD: ${{ secrets.GMAIL_SMTP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
+          NEWS_MODE: live
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: python3 scripts/send_email_alert.py
+
+      - name: Skip automatic alerts (no delta)
+        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.alert_delta != 'true'
+        run: |
+          echo "no alert delta — skip telegram"
+          echo "no alert delta — skip teams"

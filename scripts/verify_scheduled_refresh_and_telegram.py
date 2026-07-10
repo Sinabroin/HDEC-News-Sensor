@@ -1,7 +1,7 @@
 """D7-P 검증기 — 예약 라이브 갱신 + 게이트된 Telegram 자동 발송 (완전 오프라인).
 
 검사 계약:
-  A. 예약 워크플로가 6개 KST 슬롯(07·11·13·16·21·00)을 정확히 UTC cron으로 매핑한다.
+  A. 예약 워크플로가 매시간 정각 cron(0 * * * *)을 사용한다.
   B. 예약 발송 기본값은 dry-run (발송 0건) — TELEGRAM_AUTO_SEND 미설정이면 보내지 않는다.
   C. 발송 opt-in 게이트(TELEGRAM_AUTO_SEND)가 소스/워크플로에 존재하고, 하드코딩 자동발송이 없다.
   D. 새 파일(스크립트·워크플로·검증기)에 토큰/시크릿 모양 문자열이 0건이다.
@@ -45,8 +45,7 @@ SENT_MARKERS = ("delivered=", "Send status: approved", "실제 발송 진행")
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 HEADER_TEXT = "HDEC Executive Radar"
 
-# 6 KST 슬롯 (사용자 명세). UTC cron이 이 집합으로 정확히 환산돼야 한다.
-EXPECTED_KST_SLOTS = {7, 11, 13, 16, 21, 0}
+EXPECTED_HOURLY_CRON = "0 * * * *"
 
 _failures = []
 
@@ -112,7 +111,7 @@ def _write_dashboard(tmp: Path, mode: str, generated_kst: str) -> tuple[str, str
     return str(dash), str(tmp / "noreport.html")
 
 
-# ---------- A. 워크플로 구조 + 6 KST cron 매핑 ----------
+# ---------- A. 워크플로 구조 + hourly cron ----------
 
 def check_workflow_schedule() -> None:
     if not check("A 예약 워크플로 scheduled-live-refresh.yml 존재", WORKFLOW.exists()):
@@ -136,23 +135,10 @@ def check_workflow_schedule() -> None:
     check("A contents: write 권한 존재 (Pages commit)", "contents: write" in text)
 
     crons = re.findall(r"cron:\s*[\"']([^\"']+)[\"']", text)
-    check("A 정확히 6개 cron 슬롯", len(crons) == 6, f"{len(crons)}개")
-
-    kst_slots = set()
-    all_minute_zero = True
-    for expr in crons:
-        parts = expr.split()
-        if len(parts) != 5:
-            all_minute_zero = False
-            continue
-        minute, hour = parts[0], parts[1]
-        if minute != "0" or not hour.isdigit():
-            all_minute_zero = False
-            continue
-        kst_slots.add((int(hour) + 9) % 24)
-    check("A 모든 cron 분(minute)=0", all_minute_zero)
-    check("A 6 UTC cron → KST {07·11·13·16·21·00} 정확 매핑",
-          kst_slots == EXPECTED_KST_SLOTS, f"got KST={sorted(kst_slots)}")
+    check("A 정확히 1개 hourly cron", crons == [EXPECTED_HOURLY_CRON], repr(crons))
+    parts = crons[0].split() if len(crons) == 1 else []
+    check("A 매시간 정각(minute=0, hour=*) 실행",
+          len(parts) == 5 and parts[:2] == ["0", "*"], repr(parts))
 
 
 # ---------- B. 기본은 dry-run (발송 0건) ----------
