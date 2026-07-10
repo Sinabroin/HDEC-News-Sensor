@@ -2039,13 +2039,17 @@ def build_brief(pipeline_counts: dict | None = None,
         issue_candidates, TOP_ISSUES, decisions=decisions,
         surface="top_new_issues", state=surface_state, max_article_surfaces=1)
     if not issue_rows:
+        # All high-quality new-issue candidates may already be occupied by higher
+        # priority executive surfaces. In that fallback-only case, allow one
+        # controlled re-exposure so the user-facing top_new_issues contract
+        # remains 1~5 items instead of rendering an empty "new issues" card.
         issue_rows = _diverse_top(
             top_issue_pool, categories, TOP_ISSUES,
             sort_key=lambda r: _top_exposure_sort_key(r, decisions[r["id"]]))
         issue_rows = _filter_surface_exposures(
             issue_rows, TOP_ISSUES, decisions=decisions,
             surface="top_new_issues", state=surface_state,
-            max_article_surfaces=1)
+            max_article_surfaces=2)
     top_issues = [
         _entry(i, r)
         for i, r in enumerate(issue_rows, start=1)
