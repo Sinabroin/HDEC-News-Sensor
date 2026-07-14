@@ -14,6 +14,7 @@
 """
 
 import argparse
+import contextlib
 import json
 import os
 import sys
@@ -58,39 +59,125 @@ def _bootstrap():
     return _RUNTIME[0]
 
 
-def build_brief_via_mock_pipeline() -> dict:
+# --- D7-AJ-1 — 결정적 mock 기준시각(단일 owner) --------------------------------
+# mock fixture는 고정된 과거 published_at을 갖는다. 실행 날짜가 지나면 scoring의 age-cap
+# (>30일 → 상한 1.0)과 briefing freshness에서 전부 탈락해 즉시/신규/테마 신호가 0건이 된다.
+# 아래 owner가 fixture의 최신 published_at + 6h를 KST 기준시각으로 고정해, 실행 날짜와
+# 무관하게 mock 신호가 결정적으로 살아 있게 한다. mock 전용이며 live 경로는 손대지 않는다.
+# (verify_dashboard_real_data.py 도 이 owner를 재사용한다 — 시각 계약 중복 금지.)
+MOCK_REFERENCE_OFFSET = timedelta(hours=6)
+_MOCK_ARTICLES_PATH = REPO_ROOT / "data" / "mock_articles.json"
+
+
+def _coerce_kst(value) -> datetime:
+    """명시적으로 넘어온 reference_now를 timezone-aware KST datetime으로 정규화한다."""
+    dt = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_KST)
+    return dt.astimezone(_KST)
+
+
+def deterministic_mock_reference_time(fixtures=None) -> datetime:
+    """mock fixture 상대 기준시각(KST, tz-aware) — 최신 published_at + 6h.
+
+    fixture가 갱신되면 기준시각도 자동으로 따라간다(날짜 하드코딩 없음). 항상 최신 기사보다
+    이후를 돌려주므로 어떤 fixture 기사도 기준시각보다 미래가 되지 않는다. 유효한 published_at이
+    하나도 없으면 실제 벽시계(KST)로 폴백한다(빈 fixture 방어).
+    """
+    if fixtures is None:
+        try:
+            fixtures = json.loads(_MOCK_ARTICLES_PATH.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            fixtures = []
+    published = []
+    for row in fixtures or []:
+        try:
+            dt = datetime.fromisoformat(str((row or {}).get("published_at")))
+        except (TypeError, ValueError):
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_KST)
+        published.append(dt)
+    if not published:
+        return datetime.now(_KST)
+    return (max(published) + MOCK_REFERENCE_OFFSET).astimezone(_KST)
+
+
+@contextlib.contextmanager
+def mock_reference_clock(reference, modules):
+    """reference(고정 KST)를 파이프라인 모듈의 datetime.now()에 주입한다(mock 전용).
+
+    freshness/age-cap을 소유한 scoring·briefing과 collected_at을 찍는 db의 datetime만
+    고정한다(검증된 최소 집합). reference가 None이면(=live) 아무것도 하지 않는다 —
+    production 벽시계·freshness 계약은 그대로다.
+    """
+    if reference is None:
+        yield
+        return
+
+    class _FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return reference.astimezone(tz) if tz else reference.replace(tzinfo=None)
+
+    targets = [modules["scoring"], modules["briefing"], modules["db"]]
+    saved = [mod.datetime for mod in targets]
+    try:
+        for mod in targets:
+            mod.datetime = _FixedDateTime
+        yield
+    finally:
+        for mod, original in zip(targets, saved):
+            mod.datetime = original
+
+
+def build_brief_via_mock_pipeline(*, reference_now=None) -> dict:
     """임시 DB에서 파이프라인을 돌리고 brief 구조체를 반환한다.
 
     수집 경로는 collector가 NEWS_MODE에 따라 고른다 (mock 기본 / live 공개 RSS).
     출처/대체 여부(provenance)를 build_brief에 넘겨 live·mock·fallback을 정직하게 표기한다.
+
+    mock 모드(NEWS_MODE != "live")에서는 fixture-relative deterministic reference time을
+    datetime.now()에 주입해, 실행 날짜가 fixture보다 수개월 뒤여도 mock 신호가 age-cap/
+    freshness에서 0건이 되지 않게 한다(D7-AJ-1). reference_now를 명시하면 그 값을 최우선으로
+    쓴다(테스트). live 모드는 production 벽시계(datetime.now(KST))를 그대로 유지한다.
     """
     m = _bootstrap()
-    m["db"].init_db()
-    collect_stats = m["collector"].run("mock")
-    score_stats = m["scoring"].score_all()
-    m["insight"].generate_all()
-    return m["briefing"].build_brief(
-        pipeline_counts={
-            "collected": collect_stats["collected"],
-            "deduplicated": collect_stats["deduplicated"],
-            "inserted": collect_stats["inserted"],
-            "scored": score_stats["scored"],
-            "alert_candidates": score_stats["alert_candidates"],
-        },
-        news_provenance={
-            "news_source": collect_stats.get("news_source"),
-            "fallback_used": collect_stats.get("fallback_used"),
-            "attempted_mode": collect_stats.get("attempted_mode"),
-            "source_filtered": collect_stats.get("source_filtered"),
-            "google_query_audit": collect_stats.get("google_query_audit"),
-            "thebell_candidates": collect_stats.get("thebell_candidates"),
-            "thebell_watch_status": collect_stats.get("thebell_watch_status"),
-            # D7-AD-X — provider 상태(Google RSS + Naver API의 status/raw/dedup 카운트)를
-            # brief까지 전달해 대시보드/리포트가 provider provenance를 표시할 수 있게 한다.
-            # collector가 넘긴 값을 그대로 전달할 뿐이며 비밀값은 담기지 않는다 (rules.md §4).
-            "provider_status": collect_stats.get("provider_status"),
-        },
-    )
+    news_mode = os.environ.get("NEWS_MODE", "").strip().lower()
+    if reference_now is not None:
+        reference = _coerce_kst(reference_now)
+    elif news_mode != "live":
+        reference = deterministic_mock_reference_time()
+    else:
+        reference = None  # live: production 벽시계 유지 (freshness 계약 불변)
+
+    with mock_reference_clock(reference, m):
+        m["db"].init_db()
+        collect_stats = m["collector"].run("mock")
+        score_stats = m["scoring"].score_all()
+        m["insight"].generate_all()
+        return m["briefing"].build_brief(
+            pipeline_counts={
+                "collected": collect_stats["collected"],
+                "deduplicated": collect_stats["deduplicated"],
+                "inserted": collect_stats["inserted"],
+                "scored": score_stats["scored"],
+                "alert_candidates": score_stats["alert_candidates"],
+            },
+            news_provenance={
+                "news_source": collect_stats.get("news_source"),
+                "fallback_used": collect_stats.get("fallback_used"),
+                "attempted_mode": collect_stats.get("attempted_mode"),
+                "source_filtered": collect_stats.get("source_filtered"),
+                "google_query_audit": collect_stats.get("google_query_audit"),
+                "thebell_candidates": collect_stats.get("thebell_candidates"),
+                "thebell_watch_status": collect_stats.get("thebell_watch_status"),
+                # D7-AD-X — provider 상태(Google RSS + Naver API의 status/raw/dedup 카운트)를
+                # brief까지 전달해 대시보드/리포트가 provider provenance를 표시할 수 있게 한다.
+                # collector가 넘긴 값을 그대로 전달할 뿐이며 비밀값은 담기지 않는다 (rules.md §4).
+                "provider_status": collect_stats.get("provider_status"),
+            },
+        )
 
 
 def _fmt_score(value) -> str:

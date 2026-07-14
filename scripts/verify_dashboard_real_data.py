@@ -92,19 +92,13 @@ def _run(args, env=None, timeout=300) -> subprocess.CompletedProcess:
 
 
 def _deterministic_mock_builder_meta() -> dict:
-    """Run the mock dashboard at a stable point inside the fixture's 30-day window."""
-    from datetime import datetime as real_datetime, timedelta
+    """Build the mock dashboard on the shared deterministic mock reference.
 
+    Reuses build_executive_brief's single mock-clock owner (fixture-relative KST
+    reference = 최신 published_at + 6h) instead of a local monkeypatch, so the dashboard
+    stays deterministic on the same fixture regardless of the run date (D7-AJ-1). The
+    render runs inside the same clock so freshness labels align with brief.generated_at."""
     import build_executive_brief as brief_builder
-
-    fixtures = json.loads((ROOT / "data" / "mock_articles.json").read_text(encoding="utf-8"))
-    published = [real_datetime.fromisoformat(row["published_at"]) for row in fixtures]
-    reference = max(published) + timedelta(days=29)
-
-    class FixtureDateTime(real_datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return reference.astimezone(tz) if tz else reference.replace(tzinfo=None)
 
     original_env = {key: os.environ.get(key) for key in ("APP_MODE", "NEWS_MODE", "DB_PATH")}
     try:
@@ -113,17 +107,11 @@ def _deterministic_mock_builder_meta() -> dict:
         runtime = brief_builder._bootstrap()
         import build_static_dashboard as dashboard_builder
 
-        patched = (runtime["scoring"], runtime["briefing"], runtime["db"])
-        original_datetimes = [module.datetime for module in patched]
-        try:
-            for module in patched:
-                module.datetime = FixtureDateTime
+        reference = brief_builder.deterministic_mock_reference_time()
+        with brief_builder.mock_reference_clock(reference, runtime):
             brief = brief_builder.build_brief_via_mock_pipeline()
             html = dashboard_builder.render_dashboard_html(brief)
             return dashboard_builder.dashboard_metadata(html, brief)
-        finally:
-            for module, original in zip(patched, original_datetimes):
-                module.datetime = original
     finally:
         for key, value in original_env.items():
             if value is None:
