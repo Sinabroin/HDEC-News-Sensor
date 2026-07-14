@@ -3,6 +3,12 @@
 MESSAGE env가 비어 있지 않으면 그 메시지를, 비어 있으면
 scripts/build_telegram_digest.py로 mock daily digest를 생성해 발송한다.
 
+P0-D7-AJ-2 — 시간당 변동(delta) 알림: DELTA_ARTIFACT_FILE(공유 delta 아티팩트)가 설정돼
+있으면 재수집 없이 그 파일만 읽어 '변동 우선' 메시지를 만든다(app/delta_alert.py 렌더,
+source=live-delta/mock-delta · 실제 KST 제목 · 고정 07:00 없음). 아티팩트가 깨졌으면
+fail-closed로 발송을 중단하고, 보낼 신규 변동이 없으면(alert_delta=false) 발송 0건으로
+끝낸다. Telegram과 Teams(send_email_alert.py)가 같은 파일을 소비해 재수집·불일치가 없다.
+
 REPORT_URL env가 설정돼 있으면 메시지에 "상세 리포트 보기" inline URL 버튼을
 붙인다 (정적 리포트 페이지 — P0-B5). DASHBOARD_URL env가 설정돼 있으면
 "대시보드 보기" 버튼도 함께 붙인다. DASHBOARD_URL이 없고 REPORT_URL이
@@ -89,13 +95,47 @@ def review_approved() -> bool:
                for key in APPROVAL_ENVS)
 
 
-def resolve_message() -> tuple[str, str]:
-    """발송할 메시지와 그 출처 라벨을 결정한다."""
+def _ensure_import_paths() -> None:
+    """repo root + scripts 디렉터리를 sys.path에 얹는다 (app.* / 형제 스크립트 import용)."""
+    for path in (os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                 os.path.dirname(os.path.abspath(__file__))):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+
+def resolve_delta_alert():
+    """DELTA_ARTIFACT_FILE가 있으면 검증된 DeltaAlert를 돌려준다 (없으면 None).
+
+    D7-AJ-2 — 시간당 변동 알림의 단일 진실원이다(재수집 없음). 파일이 없거나 스키마를
+    위반하면 fail-closed로 발송을 중단한다(가짜/빈 알림 위장 금지). MESSAGE env가 우선이면
+    delta는 건너뛴다."""
+    path = os.environ.get("DELTA_ARTIFACT_FILE", "").strip()
+    if not path or os.environ.get("MESSAGE", "").strip():
+        return None
+    _ensure_import_paths()
+    from app.delta_alert import InvalidDeltaArtifact, load_delta_alert
+    dashboard_url, report_url = resolve_button_targets()
+    try:
+        return load_delta_alert(path, dashboard_url=dashboard_url, report_url=report_url)
+    except InvalidDeltaArtifact as exc:
+        fail(f"delta 아티팩트가 유효하지 않음 — 발송 중단(fail-closed): {type(exc).__name__}")
+
+
+def resolve_message(delta=None) -> tuple[str, str]:
+    """발송할 메시지와 그 출처 라벨을 결정한다.
+
+    우선순위: MESSAGE env(env-message) > 공유 delta 아티팩트(live-delta/mock-delta) >
+    mock daily digest(mock-digest). delta는 호출자(main)가 미리 로드해 넘긴다 — 넘기지
+    않으면 delta 경로를 타지 않아 직접 호출/검증기 호환(빈 MESSAGE → mock-digest)이 유지된다."""
     message = os.environ.get("MESSAGE", "").strip()
     if message:
         # Payloads are sent with Telegram HTML parse mode. Treat MESSAGE env as
         # plain text so literal '<'/'&' cannot break the fallback send path.
         return escape(message, quote=False), "env-message"
+    if delta is not None:
+        _ensure_import_paths()
+        from app.delta_alert import render_telegram
+        return render_telegram(delta), delta.source
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from build_telegram_digest import build_digest_message
 
@@ -405,6 +445,15 @@ def main() -> None:
     approved = review_approved()
     will_send = send_mode == SEND_MODE_SEND and approved
 
+    # D7-AJ-2 — 공유 delta 아티팩트가 단일 진실원(재수집 없음). 깨졌으면 위에서 fail-closed로
+    # 이미 중단되고, 유효하지만 보낼 신규 변동이 없으면(alert_delta=false) 자격증명 없이도
+    # 조용히 발송 0건으로 끝낸다 (workflow 게이트가 여는 드문 '변경=삭제뿐' 시각 방어).
+    delta = resolve_delta_alert()
+    if delta is not None and not delta.sendable:
+        print(f"Message source: {delta.source} (0 chars)")
+        print("Send status: no_delta — 보낼 신규 변동이 없어 발송하지 않음 (alert_delta=false)")
+        return
+
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_ids_raw = os.environ.get("TELEGRAM_CHAT_IDS", "").strip()
 
@@ -421,7 +470,7 @@ def main() -> None:
         fail("No valid chat ids found")
     recipient_count = len(chat_ids)
 
-    message, message_source = resolve_message()
+    message, message_source = resolve_message(delta)
     # 정식 버튼 타겟(뒤바뀜·중복·누락 자가교정) — 발송도 dry-run/preflight와 같은 진실원을 쓴다.
     dashboard_url, report_url = resolve_button_targets()
     personal_url = resolve_personal_bot_url()

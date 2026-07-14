@@ -5,6 +5,13 @@ The detector reads only the ``script#preview-model`` JSON island. It emits a
 stable fingerprint from article identity and ranking fields, never article
 content or environment values. A malformed input fails closed. An empty new
 candidate set is valid but can never open the alert gate.
+
+Its ``--github-output`` (``alert_delta`` only) and stdout log stay content-free
+and are unchanged. With the optional ``--delta-artifact PATH`` it additionally
+writes a shared delta payload (new/changed articles, newest first, at most 5) so
+the Telegram and Teams senders consume one file instead of each re-fetching the
+news. That artifact carries only the short reason/summary already public in the
+dashboard — no raw body, no secrets, no environment values.
 """
 
 from __future__ import annotations
@@ -12,7 +19,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
@@ -262,6 +271,185 @@ def detect_delta(old_model: dict[str, Any], new_model: dict[str, Any]) -> tuple[
     return alert_delta, changed_count, old_hash, new_hash, len(new_records)
 
 
+# ── delta 아티팩트 (D7-AJ-2) ─────────────────────────────────────────────────
+# 시간당 delta 알림 payload를 '한 번' 생성해 Telegram/Teams가 재수집 없이 공유한다.
+# 기존 fingerprint/GITHUB_OUTPUT 계약은 불변이며, 이 블록은 --delta-artifact를 줄 때만
+# 활성화된다. stdout에는 기사 본문/제목을 절대 출력하지 않는다(내용 없는 로그 유지).
+_KST = timezone(timedelta(hours=9))
+LIVE_SOURCE = "live-delta"
+MOCK_SOURCE = "mock-delta"
+VALID_SOURCE_OVERRIDES = (LIVE_SOURCE, MOCK_SOURCE, "test-delta")
+ARTIFACT_MAX_ARTICLES = 5
+ARTIFACT_SUMMARY_MAX = 200
+_NEWS_MODE_MARKER = re.compile(r"<!--news-data-mode:([a-z_]+)-->")
+
+
+def _fmt_kst(iso: Any) -> str:
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_KST).strftime("%Y-%m-%d %H:%M")
+
+
+def _parse_dt(iso: Any) -> datetime | None:
+    try:
+        dt = datetime.fromisoformat(str(iso))
+    except (TypeError, ValueError):
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
+def _row_published(row: dict[str, Any]) -> str:
+    pub = row.get("published_at")
+    if not pub:
+        pub = (row.get("provenance") or {}).get("published_at") if isinstance(row.get("provenance"), dict) else None
+    return _text(pub)
+
+
+def _article_key(row: dict[str, Any]) -> str:
+    for field in ("article_id", "canonical_url", "external_url", "url", "title"):
+        value = _text(row.get(field))
+        if value:
+            return value
+    return ""
+
+
+def _row_url(row: dict[str, Any]) -> str:
+    for field in ("external_url", "url", "canonical_url", "original_url"):
+        value = _text(row.get(field))
+        if value.lower().startswith(("http://", "https://")):
+            return value
+    return ""
+
+
+def _surface_records(model: dict[str, Any]) -> Iterable[tuple[tuple[str, ...], dict[str, Any]]]:
+    """fingerprint_records와 동일한 surface 순회를 하되, (record, row) 쌍을 함께 돌려준다."""
+    for surface in CORE_SURFACES:
+        rows = _direct_surface_rows(model, surface)
+        if not rows:
+            rows = _projected_surface_rows(model, surface)
+        for row in rows:
+            record = _record(surface, row)
+            if record is not None:
+                yield record, row
+    for row in _site_rows(model):
+        record = _record("site_article_rows", row)
+        if record is not None:
+            yield record, row
+
+
+def _delta_rows(old_model: dict[str, Any], new_model: dict[str, Any]) -> list[dict[str, Any]]:
+    """new에는 있고 old에는 없는(신규·변경) 기사 행을 최신 published 우선으로 돌려준다.
+
+    article_key(또는 URL) 기준으로 중복을 제거한다 — 한 기사가 여러 surface에 나와도 1건."""
+    old_records = fingerprint_records(old_model)
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for record, row in _surface_records(new_model):
+        if record in old_records:
+            continue
+        key = _article_key(row)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    _epoch = datetime.min.replace(tzinfo=timezone.utc)
+    out.sort(key=lambda r: (_parse_dt(_row_published(r)) or _epoch), reverse=True)
+    return out
+
+
+def _artifact_entry(row: dict[str, Any]) -> dict[str, str]:
+    published_at = _row_published(row)
+    category = (row.get("cat") or row.get("category_label")
+                or row.get("aiCategoryLabel") or row.get("tag"))
+    summary = _text(row.get("snippet") or row.get("whyImportant"))
+    return {
+        "article_key": _article_key(row),
+        "title": _text(row.get("title")),
+        "published_at": published_at,
+        "published_kst": _fmt_kst(published_at),
+        "source": _text(row.get("source") or row.get("display_source")),
+        "category": _text(category),
+        "hdec_relevance": _text(row.get("radarReason") or row.get("whyImportant")),
+        "summary": summary[:ARTIFACT_SUMMARY_MAX],
+        "url": _row_url(row),
+    }
+
+
+def _news_data_mode(path: Path) -> str:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    match = _NEWS_MODE_MARKER.search(text)
+    return match.group(1) if match else ""
+
+
+def _judgment(model: dict[str, Any]) -> str:
+    for value in _walk_named_values(model, "executive_one_liner"):
+        text = _text(value)
+        if text:
+            return text[:200]
+    return ""
+
+
+def _now_kst(override: str | None) -> datetime:
+    raw = (override or "").strip()
+    if raw:
+        try:
+            dt = datetime.fromisoformat(raw)
+            return (dt if dt.tzinfo else dt.replace(tzinfo=_KST)).astimezone(_KST)
+        except ValueError:
+            pass
+    return datetime.now(_KST)
+
+
+def build_delta_payload(
+    old_model: dict[str, Any],
+    new_model: dict[str, Any],
+    *,
+    alert_delta: bool,
+    changed_count: int,
+    news_mode: str,
+    source_override: str | None = None,
+    now_override: str | None = None,
+) -> dict[str, Any]:
+    """공유 delta 아티팩트(dict)를 만든다. 신규·변경 기사만·최신순·최대 5건.
+
+    source는 명시 override가 있으면 그것을, 없으면 new 대시보드의 news-data-mode 마커로
+    live-delta/mock-delta를 판별한다(가짜 live 방지 — 마커가 live가 아니면 mock-delta).
+    alert_delta는 '보여줄 신규 기사가 있을 때'만 참으로 내려, delta=false → 발송 0건 계약을 지킨다.
+    """
+    rows = _delta_rows(old_model, new_model)
+    articles = [_artifact_entry(row) for row in rows[:ARTIFACT_MAX_ARTICLES]]
+    if source_override in VALID_SOURCE_OVERRIDES:
+        source = source_override
+    else:
+        source = LIVE_SOURCE if news_mode == "live" else MOCK_SOURCE
+    now = _now_kst(now_override)
+    return {
+        "schema_version": 1,
+        "generated_at": now.isoformat(timespec="minutes"),
+        "generated_kst": now.strftime("%Y-%m-%d %H:%M"),
+        "source": source,
+        "alert_delta": bool(alert_delta and articles),
+        "changed_count": int(changed_count),
+        "new_candidate_count": len(rows),
+        "judgment": _judgment(new_model),
+        "articles": articles,
+    }
+
+
+def write_delta_artifact(path: str, payload: dict[str, Any]) -> None:
+    Path(path).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def _write_github_output(path: str, alert_delta: bool) -> None:
     with Path(path).open("a", encoding="utf-8") as output:
         output.write(f"alert_delta={'true' if alert_delta else 'false'}\n")
@@ -272,6 +460,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("old_dashboard", type=Path)
     parser.add_argument("new_dashboard", type=Path)
     parser.add_argument("--github-output", metavar="PATH")
+    parser.add_argument("--delta-artifact", metavar="PATH",
+                        help="신규·변경 기사 delta payload(JSON)를 이 경로에 생성 (Telegram/Teams 공유)")
+    parser.add_argument("--source", metavar="LABEL",
+                        help="delta source 라벨 override (기본은 new 대시보드 마커로 판별)")
+    parser.add_argument("--now", metavar="ISO",
+                        help="generated_at 기준 시각 override (테스트용; 기본은 실제 벽시계 KST)")
     args = parser.parse_args(argv)
 
     try:
@@ -294,6 +488,24 @@ def main(argv: list[str] | None = None) -> int:
     print(f"alert_delta={'true' if alert_delta else 'false'}")
     if args.github_output:
         _write_github_output(args.github_output, alert_delta)
+
+    if args.delta_artifact:
+        payload = build_delta_payload(
+            old_model, new_model,
+            alert_delta=alert_delta, changed_count=changed_count,
+            news_mode=_news_data_mode(args.new_dashboard),
+            source_override=args.source, now_override=args.now)
+        try:
+            write_delta_artifact(args.delta_artifact, payload)
+        except OSError:
+            print("ERROR: could not write delta artifact; alert gate remains closed",
+                  file=sys.stderr)
+            return 2
+        # 내용 없는 로그(제목/본문 미노출) — source/카운트만.
+        print(f"delta artifact: source={payload['source']} "
+              f"alert_delta={'true' if payload['alert_delta'] else 'false'} "
+              f"articles={len(payload['articles'])} "
+              f"new_candidates={payload['new_candidate_count']}")
     return 0
 
 

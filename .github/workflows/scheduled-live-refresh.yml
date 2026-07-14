@@ -112,11 +112,17 @@ jobs:
       - name: Detect dashboard alert delta
         id: delta
         if: steps.build.outputs.live_ok == 'true'
+        env:
+          # 신규·변경 기사 delta payload를 runner temp에 '한 번' 생성한다 — 아래 Telegram/Teams가
+          # 이 동일 파일을 소비해 각자 재수집하지 않는다(단일 fetch·채널 간 불일치 없음). alert_delta
+          # GITHUB_OUTPUT 계약과 stdout(내용 없음)은 그대로다.
+          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
         run: |
           python3 scripts/detect_dashboard_alert_delta.py \
             "$RUNNER_TEMP/dashboard-before.html" \
             docs/daily/dashboard-latest.html \
-            --github-output "$GITHUB_OUTPUT"
+            --github-output "$GITHUB_OUTPUT" \
+            --delta-artifact "$DELTA_ARTIFACT_FILE"
 
       # 4) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
       - name: Publish to Pages (commit live docs)
@@ -184,6 +190,9 @@ jobs:
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
+          # 위 delta 스텝이 만든 공유 delta payload — 재수집 없이 이 파일만 읽어 변동 우선(실제 KST)
+          # 발송한다. Teams와 동일 파일 → 제목 시각·기사 목록이 채널 간 완전히 일치한다.
+          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
         run: |
           DRY_FLAG=""
           if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
@@ -208,6 +217,8 @@ jobs:
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          # Telegram과 동일한 공유 delta payload를 소비한다(재수집 없음·채널 간 동일 시각/목록).
+          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
         run: python3 scripts/send_email_alert.py
 
       - name: Skip automatic alerts (no delta)

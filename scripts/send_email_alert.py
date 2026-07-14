@@ -11,6 +11,11 @@ SMTP acceptance only proves that the Gmail relay accepted the message.  It
 does not prove inbox delivery or a Teams channel post.  Logs therefore report
 the SMTP transport result separately from the unverified recipient-policy
 state.
+
+D7-AJ-2 — when DELTA_ARTIFACT_FILE points at the shared delta payload the sender
+renders the delta-first, real-KST alert (app/delta_alert) instead of the daily
+07:00 brief, consuming the same file Telegram uses (no re-fetch).  An invalid
+artifact fails closed; a valid-but-empty delta sends nothing.
 """
 
 from __future__ import annotations
@@ -32,6 +37,8 @@ for _path in (ROOT, SCRIPTS_DIR):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from app import delta_alert  # noqa: E402
+from app.delta_alert import DeltaAlert, InvalidDeltaArtifact, load_delta_alert  # noqa: E402
 from app.executive_digest import (  # noqa: E402
     ExecutiveDigest,
     build_executive_digest,
@@ -124,13 +131,29 @@ def resolve_targets() -> list[DeliveryTarget]:
     return targets
 
 
-def build_message(digest: ExecutiveDigest, from_address: str, target: DeliveryTarget) -> EmailMessage:
+def _render_message(payload) -> tuple[str, str, str]:
+    """(subject, text, html)을 payload 유형에 맞게 렌더한다.
+
+    DeltaAlert(시간당 변동 알림)면 delta_alert(실제 KST · 변동 우선)로, ExecutiveDigest
+    (일일 브리프)면 executive_digest(07:00 아침 브리프)로 렌더한다 — 두 계약은 서로 침범하지
+    않는다. build_message/send_target 시그니처(검증기 계약)는 그대로 유지된다."""
+    if isinstance(payload, DeltaAlert):
+        return (
+            delta_alert.render_subject(payload),
+            delta_alert.render_email_text(payload),
+            delta_alert.render_email_html(payload),
+        )
+    return render_subject(payload), render_email_text(payload), render_email_html(payload)
+
+
+def build_message(payload, from_address: str, target: DeliveryTarget) -> EmailMessage:
+    subject, text_body, html_body = _render_message(payload)
     message = EmailMessage()
-    message["Subject"] = render_subject(digest)
+    message["Subject"] = subject
     message["From"] = from_address
     message["To"] = target.address
-    message.set_content(render_email_text(digest))
-    message.add_alternative(render_email_html(digest), subtype="html")
+    message.set_content(text_body)
+    message.add_alternative(html_body, subtype="html")
     return message
 
 
@@ -230,6 +253,25 @@ def _print_result(result: DeliveryResult) -> None:
         )
 
 
+def resolve_delta_alert():
+    """DELTA_ARTIFACT_FILE가 있으면 검증된 DeltaAlert를 돌려준다 (없으면 None).
+
+    D7-AJ-2 — 시간당 변동 알림은 이 공유 아티팩트가 단일 진실원(재수집 없음)이다. Telegram과
+    같은 파일을 소비해 불일치·재수집이 없다. 깨졌거나 스키마를 위반하면 fail-closed로 발송을
+    중단한다(가짜/빈 알림 위장 금지). CTA URL은 기존 REPORT_URL/DASHBOARD_URL 계약을 재사용한다."""
+    path = os.environ.get("DELTA_ARTIFACT_FILE", "").strip()
+    if not path:
+        return None
+    report_url = resolve_report_url()
+    dashboard_url = resolve_dashboard_url(report_url)
+    try:
+        return load_delta_alert(path, dashboard_url=dashboard_url, report_url=report_url)
+    except InvalidDeltaArtifact as exc:
+        print(f"ERROR: delta artifact invalid — 발송 중단(fail-closed): {type(exc).__name__}",
+              file=sys.stderr)
+        raise SystemExit(2)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="HDEC executive email + Teams channel-email sender (default dry-run)"
@@ -241,22 +283,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    # 대시보드/리포트 CTA URL은 기존 REPORT_URL/DASHBOARD_URL 계약(send_telegram)을
-    # 그대로 재사용한다. env 미설정이면 executive_digest의 공개 fallback 상수가 적용된다.
-    report_url = resolve_report_url()
-    dashboard_url = resolve_dashboard_url(report_url)
-    digest = build_executive_digest(
-        build_digest_data(),
-        dashboard_url=dashboard_url,
-        report_url=report_url,
-    )
+    # D7-AJ-2 — 공유 delta 아티팩트가 있으면 재수집 없이 그 파일만 렌더(변동 우선·실제 KST).
+    # 없으면 기존 일일 executive 브리프(07:00 아침 브리프)를 만든다. 깨진 아티팩트는 fail-closed.
+    # CTA URL은 기존 REPORT_URL/DASHBOARD_URL 계약(send_telegram)을 그대로 재사용한다.
+    delta = resolve_delta_alert()
+    if delta is not None:
+        payload = delta
+    else:
+        report_url = resolve_report_url()
+        dashboard_url = resolve_dashboard_url(report_url)
+        payload = build_executive_digest(
+            build_digest_data(),
+            dashboard_url=dashboard_url,
+            report_url=report_url,
+        )
+    subject, text_body, _html_body = _render_message(payload)
     mode = os.environ.get("EMAIL_SEND_MODE", "").strip().lower() or DEFAULT_SEND_MODE
     approved = _true_env("APPROVE_SEND_EMAIL")
     should_send = mode == "send" and approved and not args.dry_run
 
+    # 유효하지만 보낼 신규 변동이 없으면(alert_delta=false) 발송 0건 (graceful no-send).
+    if delta is not None and not delta.sendable:
+        print(subject)
+        print("Email send status: no_delta (alert_delta=false, smtp_connections=0)")
+        return 0
+
     if not should_send:
-        print(render_subject(digest))
-        print(render_email_text(digest))
+        print(subject)
+        print(text_body)
         print(
             "Email send status: dry_run "
             f"(mode={mode}, approved={'true' if approved else 'false'}, smtp_connections=0)"
@@ -293,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         f"(targets={len(targets)}, teams_enabled={'true' if _true_env('SEND_TO_TEAMS') else 'false'})"
     )
     results = [
-        send_target(digest, target, smtp_user, smtp_password, from_address)
+        send_target(payload, target, smtp_user, smtp_password, from_address)
         for target in targets
     ]
     for result in results:
