@@ -219,6 +219,9 @@ jobs:
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
           # Telegram과 동일한 공유 delta payload를 소비한다(재수집 없음·채널 간 동일 시각/목록).
           DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
+          # Teams Adaptive Card webhook(Power Automate Workflows) — 설정 시 카드를 우선 전송하고,
+          # 실패/미설정이면 위 Teams 채널 이메일로 fallback한다. backend 전용 비밀값(값 미출력).
+          TEAMS_WORKFLOW_WEBHOOK_URL: ${{ secrets.TEAMS_WORKFLOW_WEBHOOK_URL }}
         run: python3 scripts/send_email_alert.py
 
       - name: Skip automatic alerts (no delta)

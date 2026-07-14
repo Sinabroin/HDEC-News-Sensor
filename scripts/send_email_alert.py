@@ -16,15 +16,24 @@ D7-AJ-2 — when DELTA_ARTIFACT_FILE points at the shared delta payload the send
 renders the delta-first, real-KST alert (app/delta_alert) instead of the daily
 07:00 brief, consuming the same file Telegram uses (no re-fetch).  An invalid
 artifact fails closed; a valid-but-empty delta sends nothing.
+
+D7-AJ-3 — for the delta alert Teams is delivered as an Adaptive Card posted to
+the TEAMS_WORKFLOW_WEBHOOK_URL secret (server-side only, never printed or placed
+in any artifact).  A successful card post suppresses the Teams channel email (no
+duplicate); a missing or failing webhook falls back to that email.  Mailbox
+recipients (ALERT_EMAIL_TO) are unaffected.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import smtplib
 import ssl
 import sys
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from email.message import EmailMessage
 from email.policy import SMTP
@@ -272,6 +281,57 @@ def resolve_delta_alert():
         raise SystemExit(2)
 
 
+TEAMS_WEBHOOK_ENV = "TEAMS_WORKFLOW_WEBHOOK_URL"
+WEBHOOK_TIMEOUT_SECONDS = 20
+
+
+def resolve_teams_webhook_url() -> str:
+    """Teams Workflows(Power Automate) webhook URL을 env(secret)에서 읽는다.
+
+    https만 허용하고, 잘못된 값이면 빈 문자열을 돌려줘 이메일 fallback으로 흐르게 한다.
+    이 값은 backend 전용 비밀값이다 — 어떤 로그/artifact/응답에도 출력하지 않는다(rules.md §4)."""
+    url = os.environ.get(TEAMS_WEBHOOK_ENV, "").strip()
+    return url if url.lower().startswith("https://") else ""
+
+
+def post_teams_card(webhook_url: str, card: dict, opener=urllib.request.urlopen) -> tuple[bool, str]:
+    """Adaptive Card를 Teams webhook에 POST한다 → (성공여부, 상태 라벨).
+
+    webhook URL·응답 본문은 절대 출력/반환하지 않는다 — HTTP 상태코드 범주만 라벨로 돌려준다
+    (accepted_2xx / rejected_Nxx / http_error_N / transport_error). opener는 검증기가 네트워크
+    없이 주입할 수 있게 분리한다(send_target의 smtp_factory와 동일한 격리 패턴)."""
+    data = json.dumps(card, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        webhook_url, data=data, method="POST",
+        headers={"Content-Type": "application/json"})
+    try:
+        with opener(request, timeout=WEBHOOK_TIMEOUT_SECONDS) as response:
+            code = int(getattr(response, "status", None) or response.getcode())
+    except urllib.error.HTTPError as exc:
+        return False, f"http_error_{exc.code}"
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError):
+        return False, "transport_error"
+    if 200 <= code < 300:
+        return True, f"accepted_{code}"
+    return False, f"rejected_{code}"
+
+
+def plan_teams_delivery(delta, targets, webhook_url, poster=post_teams_card):
+    """Teams webhook-first 전달 계획 → (card_delivered, email_targets, status).
+
+    · delta 알림이고 webhook이 설정되면 Adaptive Card를 먼저 POST한다.
+    · 성공: Teams 채널 이메일 target을 제거한다(중복 발송 0). 메일박스 수신자는 그대로 유지.
+    · 실패/미설정: 원래 target을 그대로 두어 Teams 채널 이메일로 fallback한다.
+    네트워크·비밀값은 poster가 캡슐화한다 — 이 함수는 URL을 반환/출력하지 않는다."""
+    if delta is None or not webhook_url:
+        return False, list(targets), "webhook_skipped"
+    delivered, status = poster(webhook_url, delta_alert.build_teams_card(delta))
+    if not delivered:
+        return False, list(targets), status
+    email_targets = [t for t in targets if t.recipient_kind != "teams_channel"]
+    return True, email_targets, status
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="HDEC executive email + Teams channel-email sender (default dry-run)"
@@ -338,17 +398,32 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
-    if not targets:
+
+    # D7-AJ-3 — Teams는 Adaptive Card webhook을 우선 시도하고, 미설정/실패면 채널 이메일로
+    # fallback한다. webhook 성공 시 Teams 채널 이메일은 보내지 않는다(같은 run 중복 0).
+    # webhook URL은 어떤 로그에도 출력하지 않는다 — 상태 라벨만 노출한다(rules.md §4).
+    webhook_url = resolve_teams_webhook_url()
+    card_delivered, email_targets, teams_status = plan_teams_delivery(
+        delta, targets, webhook_url)
+    if delta is not None and webhook_url:
+        print(f"Teams delivery: channel=workflow_webhook_card status={teams_status} "
+              f"delivered={'true' if card_delivered else 'false'}")
+        if not card_delivered:
+            print("Teams delivery: webhook 실패 — Teams 채널 이메일로 fallback")
+
+    if not email_targets and not card_delivered:
         print("ERROR: ALERT_EMAIL_TO has no recipients", file=sys.stderr)
         return 2
 
     print(
         "Email send gate: approved "
-        f"(targets={len(targets)}, teams_enabled={'true' if _true_env('SEND_TO_TEAMS') else 'false'})"
+        f"(targets={len(email_targets)}, "
+        f"teams_enabled={'true' if _true_env('SEND_TO_TEAMS') else 'false'}, "
+        f"teams_card={'true' if card_delivered else 'false'})"
     )
     results = [
         send_target(payload, target, smtp_user, smtp_password, from_address)
-        for target in targets
+        for target in email_targets
     ]
     for result in results:
         _print_result(result)
@@ -357,7 +432,7 @@ def main(argv: list[str] | None = None) -> int:
     accepted = len(results) - failed
     print(
         f"Email SMTP summary: accepted={accepted} rejected={failed} "
-        "recipient_delivery_verified=0"
+        f"recipient_delivery_verified=0 teams_card_delivered={'1' if card_delivered else '0'}"
     )
     return 1 if failed else 0
 
