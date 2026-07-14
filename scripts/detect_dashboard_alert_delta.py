@@ -26,6 +26,14 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
 
+# app 도메인(delta_classifier)을 import하기 위해 repo 루트를 sys.path에 올린다
+# (`python3 scripts/…`로 실행되면 sys.path[0]가 scripts/라 app을 못 찾는다).
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from app import delta_classifier  # noqa: E402
+
 
 CORE_SURFACES = (
     "top_immediate_signals",
@@ -343,6 +351,17 @@ def _surface_records(model: dict[str, Any]) -> Iterable[tuple[tuple[str, ...], d
             yield record, row
 
 
+def _surface_pairs(model: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    """delta_classifier에 넘길 (surface, row) 쌍. fingerprint와 동일한 surface 순회."""
+    return [(record[0], row) for record, row in _surface_records(model)]
+
+
+def _raw_candidate_count(old_model: dict[str, Any], new_model: dict[str, Any]) -> int:
+    """dedup 이전 raw 변동 후보 수 — new surface record 중 old에 정확히 없는 것(진단용)."""
+    old_records = fingerprint_records(old_model)
+    return sum(1 for record, _ in _surface_records(new_model) if record not in old_records)
+
+
 def _delta_rows(old_model: dict[str, Any], new_model: dict[str, Any]) -> list[dict[str, Any]]:
     """new에는 있고 old에는 없는(신규·변경) 기사 행을 최신 published 우선으로 돌려준다.
 
@@ -381,6 +400,18 @@ def _artifact_entry(row: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _artifact_entry_from_classified(article: "delta_classifier.ClassifiedArticle") -> dict[str, Any]:
+    """분류된 기사(대표 row)에 change_type/change_reasons/before/after를 붙여 아티팩트 항목화.
+
+    새 classifier가 만든 아티팩트의 모든 기사에는 change_type과 change_reasons가 반드시 있다."""
+    entry = _artifact_entry(article.representative)
+    entry["change_type"] = article.change_type
+    entry["change_reasons"] = list(article.change_reasons)
+    entry["before"] = article.before
+    entry["after"] = article.after
+    return entry
+
+
 def _news_data_mode(path: Path) -> str:
     try:
         text = path.read_text(encoding="utf-8")
@@ -410,23 +441,27 @@ def _now_kst(override: str | None) -> datetime:
 
 
 def build_delta_payload(
-    old_model: dict[str, Any],
     new_model: dict[str, Any],
+    classification: "delta_classifier.DeltaClassification",
     *,
-    alert_delta: bool,
+    raw_alert_delta: bool,
     changed_count: int,
+    raw_candidate_count: int,
     news_mode: str,
     source_override: str | None = None,
     now_override: str | None = None,
 ) -> dict[str, Any]:
-    """공유 delta 아티팩트(dict)를 만든다. 신규·변경 기사만·최신순·최대 5건.
+    """공유 delta 아티팩트(dict)를 만든다. '의미 있는' 변동 기사만·표시정렬·최대 5건.
 
     source는 명시 override가 있으면 그것을, 없으면 new 대시보드의 news-data-mode 마커로
     live-delta/mock-delta를 판별한다(가짜 live 방지 — 마커가 live가 아니면 mock-delta).
-    alert_delta는 '보여줄 신규 기사가 있을 때'만 참으로 내려, delta=false → 발송 0건 계약을 지킨다.
+    alert_delta는 meaningful_count>=1일 때만 참이며(GITHUB_OUTPUT과 동일 경로), 무의미 변동만
+    있으면 false → 발송 0건 계약을 지킨다. raw fingerprint 변화는 진단 필드로만 남긴다.
     """
-    rows = _delta_rows(old_model, new_model)
-    articles = [_artifact_entry(row) for row in rows[:ARTIFACT_MAX_ARTICLES]]
+    articles = [
+        _artifact_entry_from_classified(article)
+        for article in classification.meaningful[:ARTIFACT_MAX_ARTICLES]
+    ]
     if source_override in VALID_SOURCE_OVERRIDES:
         source = source_override
     else:
@@ -437,9 +472,19 @@ def build_delta_payload(
         "generated_at": now.isoformat(timespec="minutes"),
         "generated_kst": now.strftime("%Y-%m-%d %H:%M"),
         "source": source,
-        "alert_delta": bool(alert_delta and articles),
+        "alert_delta": classification.meaningful_count >= 1,
+        # 진단 카운트 (raw fingerprint 변화는 게이트가 아니라 관측용).
         "changed_count": int(changed_count),
-        "new_candidate_count": len(rows),
+        "raw_alert_delta": bool(raw_alert_delta),
+        "raw_changed_count": int(changed_count),
+        "raw_candidate_count": int(raw_candidate_count),
+        "deduplicated_candidate_count": classification.deduplicated_count,
+        "meaningful_candidate_count": classification.meaningful_count,
+        "ignored_candidate_count": classification.ignored_count,
+        # 하위호환: 기존 소비자는 new_candidate_count를 읽는다(= dedup된 변동 후보 수).
+        "new_candidate_count": classification.deduplicated_count,
+        "change_type_counts": dict(classification.change_type_counts),
+        "duplicate_collapsed_count": classification.duplicate_collapsed_count,
         "judgment": _judgment(new_model),
         "articles": articles,
     }
@@ -450,9 +495,31 @@ def write_delta_artifact(path: str, payload: dict[str, Any]) -> None:
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _write_github_output(path: str, alert_delta: bool) -> None:
+def _write_github_output(
+    path: str,
+    *,
+    alert_delta: bool,
+    raw_alert_delta: bool = False,
+    changed_count: int = 0,
+    raw_candidate_count: int = 0,
+    deduplicated_candidate_count: int = 0,
+    meaningful_count: int = 0,
+    ignored_count: int = 0,
+) -> None:
+    """GITHUB_OUTPUT에 alert_delta(=meaningful>=1)와 진단 카운트만 쓴다.
+
+    기사 제목/URL/본문·비밀값은 절대 쓰지 않는다(전부 bool/int)."""
+    def flag(value: bool) -> str:
+        return "true" if value else "false"
+
     with Path(path).open("a", encoding="utf-8") as output:
-        output.write(f"alert_delta={'true' if alert_delta else 'false'}\n")
+        output.write(f"alert_delta={flag(alert_delta)}\n")
+        output.write(f"raw_alert_delta={flag(raw_alert_delta)}\n")
+        output.write(f"changed_count={int(changed_count)}\n")
+        output.write(f"raw_candidate_count={int(raw_candidate_count)}\n")
+        output.write(f"deduplicated_candidate_count={int(deduplicated_candidate_count)}\n")
+        output.write(f"meaningful_count={int(meaningful_count)}\n")
+        output.write(f"ignored_count={int(ignored_count)}\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -471,28 +538,54 @@ def main(argv: list[str] | None = None) -> int:
     try:
         old_model = load_preview_model(args.old_dashboard)
         new_model = load_preview_model(args.new_dashboard)
-        alert_delta, changed_count, old_hash, new_hash, new_count = detect_delta(
+        # raw fingerprint 변화(진단) — 게이트가 아니라 관측용으로만 쓴다.
+        raw_alert_delta, changed_count, old_hash, new_hash, new_count = detect_delta(
             old_model, new_model
         )
+        # 의미 기반 분류 — --delta-artifact 유무와 무관하게 항상 실행하며,
+        # GITHUB_OUTPUT alert_delta와 artifact alert_delta가 이 단일 결과를 공유한다.
+        classification = delta_classifier.classify_delta(
+            _surface_pairs(old_model), _surface_pairs(new_model)
+        )
+        raw_candidate_count = _raw_candidate_count(old_model, new_model)
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
         if args.github_output:
-            _write_github_output(args.github_output, False)
+            _write_github_output(args.github_output, alert_delta=False)
         print("ERROR: dashboard alert delta input is invalid; alert gate remains closed", file=sys.stderr)
         return 2
 
+    alert_delta = classification.meaningful_count >= 1
+
+    # 내용 없는 로그 — 카운트/해시만(기사 제목/본문 미노출).
     print(
         "dashboard alert delta: "
-        f"changed_count={changed_count} old_hash={old_hash} new_hash={new_hash} "
-        f"new_candidates={new_count}"
+        f"changed_count={changed_count} raw_candidates={raw_candidate_count} "
+        f"deduplicated={classification.deduplicated_count} "
+        f"meaningful={classification.meaningful_count} "
+        f"ignored={classification.ignored_count} "
+        f"old_hash={old_hash} new_hash={new_hash} new_records={new_count}"
     )
-    print(f"alert_delta={'true' if alert_delta else 'false'}")
+    print(
+        f"alert_delta={'true' if alert_delta else 'false'} "
+        f"raw_alert_delta={'true' if raw_alert_delta else 'false'}"
+    )
     if args.github_output:
-        _write_github_output(args.github_output, alert_delta)
+        _write_github_output(
+            args.github_output,
+            alert_delta=alert_delta,
+            raw_alert_delta=raw_alert_delta,
+            changed_count=changed_count,
+            raw_candidate_count=raw_candidate_count,
+            deduplicated_candidate_count=classification.deduplicated_count,
+            meaningful_count=classification.meaningful_count,
+            ignored_count=classification.ignored_count,
+        )
 
     if args.delta_artifact:
         payload = build_delta_payload(
-            old_model, new_model,
-            alert_delta=alert_delta, changed_count=changed_count,
+            new_model, classification,
+            raw_alert_delta=raw_alert_delta, changed_count=changed_count,
+            raw_candidate_count=raw_candidate_count,
             news_mode=_news_data_mode(args.new_dashboard),
             source_override=args.source, now_override=args.now)
         try:
@@ -504,6 +597,8 @@ def main(argv: list[str] | None = None) -> int:
         # 내용 없는 로그(제목/본문 미노출) — source/카운트만.
         print(f"delta artifact: source={payload['source']} "
               f"alert_delta={'true' if payload['alert_delta'] else 'false'} "
+              f"meaningful={payload['meaningful_candidate_count']} "
+              f"ignored={payload['ignored_candidate_count']} "
               f"articles={len(payload['articles'])} "
               f"new_candidates={payload['new_candidate_count']}")
     return 0

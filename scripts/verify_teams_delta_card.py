@@ -98,8 +98,8 @@ def check_card_structure() -> None:
     body_texts = [b.get("text", "") for b in content.get("body", [])]
     check("A 카드 상단: HDEC EXECUTIVE RADAR",
           any("HDEC EXECUTIVE RADAR" in t for t in body_texts))
-    check("A 카드 상단: 실제 KST + 신규 N건",
-          any("2026-07-14 12:32 KST · 신규 2건" == t for t in body_texts))
+    check("A 카드 상단: 실제 KST + 중요 N건",
+          any("2026-07-14 12:32 KST · 중요 2건" == t for t in body_texts))
     check("A 07:00 잔재 0건", all("07:00" not in t for t in body_texts))
     check("A 오늘의 판단 포함", any("오늘의 판단:" in t for t in body_texts))
     actions = content.get("actions") or []

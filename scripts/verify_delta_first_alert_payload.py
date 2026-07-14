@@ -195,8 +195,8 @@ def check_telegram_delta() -> None:
     check("B live 아티팩트 → Message source: live-delta", "Message source: live-delta" in out)
     check("B mock-digest fallback 0건", "mock-digest" not in out)
     check("B 실제 발송 0건(manual review gate)", "review_required" in out and proc.returncode == 0)
-    check("D 실제 KST 제목(12:32 핵심 변동 — 신규 2건)",
-          "12:32 핵심 변동 — 신규 2건" in out)
+    check("D 실제 KST 제목(12:32 핵심 변동 — 중요 2건)",
+          "12:32 핵심 변동 — 중요 2건" in out)
     check("D 07:00 잔재 0건", "07:00" not in out)
     # 최신 변동이 최상단
     check("D 신규 변동 뉴스 최상단(최신 기사가 이전 변동보다 먼저)",
@@ -240,8 +240,8 @@ def check_email_delta() -> None:
                           capture_output=True, timeout=120, env=env)
     out = proc.stdout or ""
     check("C 이메일 delta dry-run 성공", proc.returncode == 0)
-    check("C 실제 KST 제목([HDEC News Sensor] 12:32 핵심 변동 — 신규 1건)",
-          "[HDEC News Sensor] 12:32 핵심 변동 — 신규 1건" in out)
+    check("C 실제 KST 제목([HDEC News Sensor] 12:32 핵심 변동 — 중요 1건)",
+          "[HDEC News Sensor] 12:32 핵심 변동 — 중요 1건" in out)
     check("C 07:00 잔재 0건", "07:00" not in out)
     check("C SMTP 연결 0건(dry-run)", "smtp_connections=0" in out)
 
@@ -259,8 +259,8 @@ def check_email_delta() -> None:
                                               "javascript:", "@import")))
     # 채널 간 동일 시각 — Telegram/이메일이 같은 아티팩트로 같은 제목 시각을 쓴다
     check("D Telegram/이메일 제목 시각 완전 동일(같은 generated_kst)",
-          da.title_text(alert) == "12:32 핵심 변동 — 신규 1건"
-          and da.render_subject(alert).endswith("12:32 핵심 변동 — 신규 1건"))
+          da.title_text(alert) == "12:32 핵심 변동 — 중요 1건"
+          and da.render_subject(alert).endswith("12:32 핵심 변동 — 중요 1건"))
 
 
 # ── E. 기존 계약 보존 (workflow 게이트 + 단일 아티팩트 배선) ──────────────────

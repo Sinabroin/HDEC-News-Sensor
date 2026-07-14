@@ -55,6 +55,8 @@ class DeltaArticle:
     hdec_relevance: str
     summary: str
     url: str
+    # 대표 change_type (D7-AK-1). legacy v1 아티팩트에는 없을 수 있어 기본값 ""(뱃지 생략).
+    change_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,8 @@ class DeltaAlert:
     articles: tuple[DeltaArticle, ...]
     dashboard_url: str
     report_url: str
+    # 의미 있는 변동 총수 (제목의 '중요 N건'과 요약줄 기준). legacy 입력이면 기사 수로 보수적 기본.
+    meaningful_candidate_count: int = 0
 
     @property
     def sendable(self) -> bool:
@@ -133,6 +137,7 @@ def _parse_article(obj: object) -> DeltaArticle | None:
         hdec_relevance=_clip(obj.get("hdec_relevance"), _RELEVANCE_MAX),
         summary=_clip(obj.get("summary"), _SUMMARY_MAX),
         url=url,
+        change_type=str(obj.get("change_type") or "").strip(),
     )
 
 
@@ -181,6 +186,8 @@ def parse_delta_alert(obj: object, *, dashboard_url: str = "", report_url: str =
 
     new_candidate_count = _cnt("new_candidate_count", len(articles))
     changed_count = _cnt("changed_count", new_candidate_count)
+    # legacy v1 아티팩트에는 meaningful_candidate_count가 없다 → 표시 기사 수로 보수적 기본.
+    meaningful_candidate_count = _cnt("meaningful_candidate_count", len(articles))
 
     return DeltaAlert(
         schema_version=SCHEMA_VERSION,
@@ -194,6 +201,7 @@ def parse_delta_alert(obj: object, *, dashboard_url: str = "", report_url: str =
         articles=tuple(articles),
         dashboard_url=dashboard_url if _is_http(dashboard_url) else DEFAULT_DASHBOARD_URL,
         report_url=report_url if _is_http(report_url) else DEFAULT_REPORT_URL,
+        meaningful_candidate_count=meaningful_candidate_count,
     )
 
 
@@ -215,13 +223,41 @@ def load_delta_alert(path, *, dashboard_url: str = "", report_url: str = "") -> 
 
 # ── 실제 KST 제목/기준시각 계약 (단일 owner · 고정 07:00 없음) ─────────────────
 
+# change_type → 노출 뱃지 라벨 (D7-AK-1). 내부 유형(rank_only/surface_move/metadata_only 등)은
+# 노출하지 않는다 — meaningful 4종만 뱃지가 있고, 그 외/legacy는 뱃지 없이 표시한다.
+_CHANGE_BADGES = {
+    "new_article": "신규",
+    "priority_upgrade": "중요도 상승",
+    "hdec_relevance_upgrade": "현대건설 연관 상승",
+    "material_content_update": "내용 갱신",
+}
+_CHANGE_SUMMARY_ORDER = (
+    "new_article", "priority_upgrade", "hdec_relevance_upgrade", "material_content_update",
+)
+
+
+def _badge(article: DeltaArticle) -> str:
+    label = _CHANGE_BADGES.get(article.change_type)
+    return f"[{label}]" if label else ""
+
+
+def change_summary_line(alert: DeltaAlert) -> str:
+    """표시된 기사들의 변동 유형 요약 — '신규 2 · 중요도 상승 1'. 유형이 없으면 ''(줄 생략)."""
+    counts: dict[str, int] = {}
+    for article in alert.articles:
+        if article.change_type in _CHANGE_BADGES:
+            counts[article.change_type] = counts.get(article.change_type, 0) + 1
+    parts = [f"{_CHANGE_BADGES[t]} {counts[t]}" for t in _CHANGE_SUMMARY_ORDER if counts.get(t)]
+    return " · ".join(parts)
+
+
 def _count_for_title(alert: DeltaAlert) -> int:
-    return alert.new_candidate_count or len(alert.articles)
+    return alert.meaningful_candidate_count or len(alert.articles)
 
 
 def title_text(alert: DeltaAlert) -> str:
-    """'12:32 핵심 변동 — 신규 3건' — 실제 발송 시각(KST) + 신규 변동 건수."""
-    return f"{_hhmm(alert.generated_kst)} 핵심 변동 — 신규 {_count_for_title(alert)}건"
+    """'12:32 핵심 변동 — 중요 3건' — 실제 발송 시각(KST) + 의미 있는 변동 건수."""
+    return f"{_hhmm(alert.generated_kst)} 핵심 변동 — 중요 {_count_for_title(alert)}건"
 
 
 def render_subject(alert: DeltaAlert) -> str:
@@ -253,19 +289,22 @@ def render_telegram(alert: DeltaAlert) -> str:
 
     요약 대시보드/전체 리포트는 send_telegram이 inline 버튼으로 붙이므로 본문에는 raw URL을
     넣지 않는다(포인터 문장만). 기사별 '원문 링크'는 제목 앵커로 제공한다."""
+    summary = change_summary_line(alert)
     lines = [
         "🔔 HDEC Executive Radar",
         f"<b>{escape(title_text(alert))}</b>",
         escape(first_line(alert)),
-        "",
-        "<b>새로 감지된 핵심 변동</b>",
     ]
+    if summary:
+        lines.append(escape(summary))
+    lines += ["", "<b>새로 감지된 핵심 변동</b>"]
     for index, article in enumerate(alert.articles, start=1):
+        prefix = f"{escape(_badge(article))} " if _badge(article) else ""
         if article.url:
-            head = (f'{index}. <a href="{escape(article.url, quote=True)}">'
+            head = (f'{index}. {prefix}<a href="{escape(article.url, quote=True)}">'
                     f"{escape(article.title)}</a>")
         else:
-            head = f"{index}. {escape(article.title)}"
+            head = f"{index}. {prefix}{escape(article.title)}"
         lines.append(head)
         meta = _meta_line(article)
         if meta:
@@ -283,9 +322,14 @@ def render_email_text(alert: DeltaAlert) -> str:
     """plain text 본문 — 버튼이 깨져도 접근 가능하게 CTA URL을 세로로 명시한다.
 
     라벨↔URL을 각 줄로 분리해 '요약 대시보드 보기전체 리포트 보기'처럼 붙는 결합을 원천 차단한다."""
-    lines = [title_text(alert), "", first_line(alert), "", "새로 감지된 핵심 변동"]
+    summary = change_summary_line(alert)
+    lines = [title_text(alert), "", first_line(alert)]
+    if summary:
+        lines.append(summary)
+    lines += ["", "새로 감지된 핵심 변동"]
     for index, article in enumerate(alert.articles, start=1):
-        lines.append(f"{index}. [{article.category or '변동'}] {article.title}")
+        prefix = f"{_badge(article)} " if _badge(article) else ""
+        lines.append(f"{index}. {prefix}[{article.category or '변동'}] {article.title}")
         meta = _meta_line(article)
         if meta:
             lines.append(f"   {meta}")
@@ -324,8 +368,12 @@ def _article_li(article: DeltaArticle) -> str:
         f'<a href="{escape(article.url, quote=True)}">{escape(article.title)}</a>'
         if article.url else escape(article.title)
     )
+    badge = _badge(article)
+    badge_html = (
+        f'<span style="color:#b42318;font-weight:bold">{escape(badge)}</span> ' if badge else ""
+    )
     parts = [
-        f'<span style="color:#667085">[{escape(article.category or "변동")}]</span> {title_html}'
+        f'{badge_html}<span style="color:#667085">[{escape(article.category or "변동")}]</span> {title_html}'
     ]
     meta = _meta_line(article)
     if meta:
@@ -341,10 +389,16 @@ def render_email_html(alert: DeltaAlert) -> str:
     """단순 inline-style HTML(외부 JS/CSS/이미지/첨부 없음). 변동 기사 최상단 · 세로 CTA.
 
     버튼이 깨져도 하단 plain URL fallback으로 대시보드/리포트에 접근할 수 있다."""
+    summary = change_summary_line(alert)
+    summary_html = (
+        f'<p style="margin:0 0 16px;color:#0b1f4d;font-size:13px;font-weight:bold">'
+        f"{escape(summary)}</p>" if summary else ""
+    )
     header = (
         f'<h1 style="font-size:18px;margin:0 0 4px">{escape(title_text(alert))}</h1>'
-        f'<p style="margin:0 0 16px;color:#667085;font-size:13px">'
+        f'<p style="margin:0 0 4px;color:#667085;font-size:13px">'
         f"{escape(first_line(alert))}</p>"
+        f"{summary_html}"
     )
     items = "".join(_article_li(article) for article in alert.articles)
     articles_html = (
@@ -395,14 +449,19 @@ def build_teams_card(alert: DeltaAlert) -> dict:
     상단: HDEC EXECUTIVE RADAR · 실제 KST 시각 · 신규 N건. 본문: 최신 변동 기사 + 현대건설
     관련성 + 오늘의 판단. actions: 기사별 원문 · 요약 대시보드 · 전체 리포트(Action.OpenUrl).
     비밀값/webhook URL은 담기지 않는다(호출자가 전송 시에만 사용)."""
+    summary = change_summary_line(alert)
     body: list[dict] = [
         _text_block("HDEC EXECUTIVE RADAR", weight="Bolder", size="Medium"),
-        _text_block(f"{alert.generated_kst} KST · 신규 {_count_for_title(alert)}건",
+        _text_block(f"{alert.generated_kst} KST · 중요 {_count_for_title(alert)}건",
                     isSubtle=True, spacing="None"),
-        _text_block("새로 감지된 핵심 변동", weight="Bolder", spacing="Medium"),
     ]
+    if summary:
+        body.append(_text_block(summary, isSubtle=True, spacing="None"))
+    body.append(_text_block("새로 감지된 핵심 변동", weight="Bolder", spacing="Medium"))
     for article in alert.articles:
-        body.append(_text_block(article.title, weight="Bolder", spacing="Medium"))
+        badge = _badge(article)
+        title_line = f"{badge} {article.title}" if badge else article.title
+        body.append(_text_block(title_line, weight="Bolder", spacing="Medium"))
         meta = _meta_line(article)
         prefix = f"[{article.category}] " if article.category else ""
         if prefix or meta:

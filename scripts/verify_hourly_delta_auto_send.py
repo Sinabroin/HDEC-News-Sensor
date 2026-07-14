@@ -84,6 +84,11 @@ def _article(**overrides: object) -> dict:
     return row
 
 
+def _parse_output(text: str) -> dict:
+    """detector GITHUB_OUTPUT(key=value 여러 줄)를 dict으로 — alert_delta는 meaningful 게이트."""
+    return dict(line.split("=", 1) for line in text.splitlines() if "=" in line)
+
+
 def _run_detector(old_model: dict, new_model: dict) -> tuple[subprocess.CompletedProcess, str]:
     with tempfile.TemporaryDirectory(prefix="hdec_hourly_delta_") as tmp:
         tmp_path = Path(tmp)
@@ -143,44 +148,92 @@ def check_delta_wiring(text: str) -> None:
 
 
 def check_detector_behavior() -> None:
+    # D7-AK-1: GITHUB_OUTPUT alert_delta는 raw fingerprint 변화가 아니라 '의미 있는' 변동
+    # (meaningful_count>=1)일 때만 열린다. 아래는 과거 coarse-fingerprint 계약을 대체하는
+    # 의미 기반 시나리오다. raw fingerprint/changed_count는 진단으로만 남는다.
     base = {"top_immediate_signals": [_article()]}
     same_proc, same_output = _run_detector(base, base)
+    same_parsed = _parse_output(same_output)
     same_log = (same_proc.stdout or "") + (same_proc.stderr or "")
     check(
-        "unchanged fingerprint closes alert delta",
-        same_proc.returncode == 0 and same_output == "alert_delta=false\n",
+        "unchanged dashboard closes alert delta (meaningful=0)",
+        same_proc.returncode == 0 and same_parsed.get("alert_delta") == "false"
+        and same_parsed.get("meaningful_count") == "0",
         f"rc={same_proc.returncode} output={same_output.strip()}",
     )
     check(
         "detector log is human-readable and content-free",
-        all(label in same_log for label in ("changed_count=", "old_hash=", "new_hash="))
+        all(label in same_log for label in ("changed_count=", "old_hash=", "new_hash=", "meaningful="))
         and "Hourly alert fixture" not in same_log,
     )
 
-    field_changes = {
-        "article_id": "article-2",
-        "title": "Updated hourly alert fixture",
-        "source": "updated.example",
-        "url": "https://fixture.example/article-2",
-        "category_label": "Risk",
-        "score": 4.8,
+    # 의미 있는 변동 → alert_delta=true.
+    meaningful_cases = {
+        "new article (new canonical identity)": {
+            "top_immediate_signals": [
+                _article(article_id="article-2", url="https://fixture.example/article-2",
+                         title="Brand new signal")
+            ]
+        },
+        "material title change (same url)": {
+            "top_immediate_signals": [_article(title="Hyundai wins large EPC contract")]
+        },
+        "score crosses 4.5 instant threshold": {
+            "top_immediate_signals": [_article(score=4.8)]
+        },
+        "hdec relevance tier improved": {
+            "top_immediate_signals": [_article(provenance={"hdec_relevance_tier": 2})]
+        },
     }
-    failed_fields: list[str] = []
-    for field, value in field_changes.items():
-        changed = {"top_immediate_signals": [_article(**{field: value})]}
-        changed_proc, changed_output = _run_detector(base, changed)
-        if changed_proc.returncode != 0 or changed_output != "alert_delta=true\n":
-            failed_fields.append(field)
+    meaningful_failed: list[str] = []
+    for name, new_model in meaningful_cases.items():
+        proc, output = _run_detector(base, new_model)
+        parsed = _parse_output(output)
+        if proc.returncode != 0 or parsed.get("alert_delta") != "true":
+            meaningful_failed.append(f"{name} -> {parsed.get('alert_delta')}")
+    check("meaningful changes open alert delta", not meaningful_failed, "; ".join(meaningful_failed))
+
+    # score가 3.5를 상향 통과 → priority_upgrade (별도 base: 3.2 → 3.8).
+    low_old = {"top_immediate_signals": [_article(score=3.2)]}
+    low_new = {"top_immediate_signals": [_article(score=3.8)]}
+    low_proc, low_output = _run_detector(low_old, low_new)
+    check("score crossing 3.5 daily threshold opens alert delta",
+          low_proc.returncode == 0 and _parse_output(low_output).get("alert_delta") == "true",
+          low_output.strip())
+
+    # 무의미 변동 → raw fingerprint는 바뀌지만(alert_delta 진단=true, changed_count>0)
+    # 의미 게이트는 닫힌다(alert_delta=false, meaningful=0).
+    meaningless_cases = {
+        "source only (metadata)": {"top_immediate_signals": [_article(source="updated.example")]},
+        "category only (metadata)": {"top_immediate_signals": [_article(category_label="Risk")]},
+        "tracking-url only (duplicate)": {
+            "top_immediate_signals": [_article(url="https://fixture.example/article-1?utm_source=x")]
+        },
+        "score jitter below threshold (metadata)": {
+            "top_immediate_signals": [_article(score=4.3)]
+        },
+        "surface move only": {"business_signals": [_article()]},
+    }
+    meaningless_failed: list[str] = []
+    for name, new_model in meaningless_cases.items():
+        proc, output = _run_detector(base, new_model)
+        parsed = _parse_output(output)
+        ok = (proc.returncode == 0
+              and parsed.get("alert_delta") == "false"
+              and parsed.get("meaningful_count") == "0"
+              and parsed.get("raw_alert_delta") == "true"
+              and int(parsed.get("changed_count", "0")) > 0)
+        if not ok:
+            meaningless_failed.append(f"{name} -> {dict(parsed)}")
     check(
-        "all requested article fields participate in the fingerprint",
-        not failed_fields,
-        ", ".join(failed_fields),
+        "meaningless changes keep alert delta closed while raw fingerprint diagnostics stay true",
+        not meaningless_failed, "; ".join(meaningless_failed),
     )
 
     empty_proc, empty_output = _run_detector(base, {"top_immediate_signals": []})
     check(
         "empty new candidate set closes alert delta",
-        empty_proc.returncode == 0 and empty_output == "alert_delta=false\n",
+        empty_proc.returncode == 0 and _parse_output(empty_output).get("alert_delta") == "false",
         f"rc={empty_proc.returncode} output={empty_output.strip()}",
     )
 
@@ -194,8 +247,8 @@ def check_detector_behavior() -> None:
     }
     site_proc, site_output = _run_detector(site_old, site_new)
     check(
-        "site article_keys participate in the fingerprint",
-        site_proc.returncode == 0 and site_output == "alert_delta=true\n",
+        "site article material change opens alert delta",
+        site_proc.returncode == 0 and _parse_output(site_output).get("alert_delta") == "true",
         f"rc={site_proc.returncode} output={site_output.strip()}",
     )
 
@@ -223,7 +276,7 @@ def check_detector_behavior() -> None:
         invalid_output = output_path.read_text(encoding="utf-8")
     check(
         "invalid dashboard fails closed",
-        invalid.returncode != 0 and invalid_output == "alert_delta=false\n",
+        invalid.returncode != 0 and _parse_output(invalid_output).get("alert_delta") == "false",
         f"rc={invalid.returncode} output={invalid_output.strip()}",
     )
 

@@ -44,8 +44,9 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py
+          python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_hourly_delta_auto_send.py --skip-operator-verifier
+          python3 scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_scheduled_refresh_and_telegram.py
           python3 scripts/verify_human_review_gate.py
           python3 scripts/verify_static_report.py
