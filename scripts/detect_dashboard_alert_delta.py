@@ -6,12 +6,19 @@ stable fingerprint from article identity and ranking fields, never article
 content or environment values. A malformed input fails closed. An empty new
 candidate set is valid but can never open the alert gate.
 
-Its ``--github-output`` (``alert_delta`` only) and stdout log stay content-free
-and are unchanged. With the optional ``--delta-artifact PATH`` it additionally
-writes a shared delta payload (new/changed articles, newest first, at most 5) so
-the Telegram and Teams senders consume one file instead of each re-fetching the
-news. That artifact carries only the short reason/summary already public in the
-dashboard — no raw body, no secrets, no environment values.
+Its ``--github-output`` and stdout log stay content-free (counts and hashes only).
+``alert_delta`` opens only for changes that are both classified meaningful and
+eligible for an immediate hourly alert (value + recency, D7-AK-2); the raw
+fingerprint change stays a diagnostic. With the optional ``--delta-artifact
+PATH`` it additionally writes a shared delta payload (eligible articles only, at
+most 5) so the Telegram and Teams senders consume one file instead of each
+re-fetching the news. That artifact carries only the short reason/summary already
+public in the dashboard — no raw body, no secrets, no environment values.
+
+This module owns the dashboard parsing, the surface traversal, and the single
+resolution of the reference time (``--now``) and news mode that the eligibility
+gate, the GITHUB_OUTPUT, and the artifact all share. The classification and
+eligibility rules themselves live in ``app/delta_classifier.py``.
 """
 
 from __future__ import annotations
@@ -401,21 +408,29 @@ def _artifact_entry(row: dict[str, Any]) -> dict[str, str]:
 
 
 def _artifact_entry_from_classified(article: "delta_classifier.ClassifiedArticle") -> dict[str, Any]:
-    """분류된 기사(대표 row)에 change_type/change_reasons/before/after를 붙여 아티팩트 항목화.
+    """분류된 기사(대표 row)에 change_type/change_reasons/before/after + 정책 결과를 붙인다.
 
-    새 classifier가 만든 아티팩트의 모든 기사에는 change_type과 change_reasons가 반드시 있다."""
+    아티팩트에 실리는 기사는 전부 hourly_eligible=true·hourly_suppression_reasons=[]다
+    (정책에서 걸린 기사는 articles에 넣지 않고 카운트로만 남긴다). 필드를 명시적으로 싣는
+    이유는 소비자가 '이건 통과한 것'임을 아티팩트만 보고 확인할 수 있게 하기 위함이다."""
     entry = _artifact_entry(article.representative)
     entry["change_type"] = article.change_type
     entry["change_reasons"] = list(article.change_reasons)
     entry["before"] = article.before
     entry["after"] = article.after
+    entry["hourly_eligible"] = article.hourly_eligible
+    entry["hourly_suppression_reasons"] = list(article.hourly_suppression_reasons)
     return entry
 
 
 def _news_data_mode(path: Path) -> str:
+    """new 대시보드의 news-data-mode 마커. 읽기 실패/마커 없음이면 ''(= live가 아님 → mock 취급).
+
+    이 헬퍼는 절대 예외를 던지지 않는다 — 입력 검증(load_preview_model)보다 먼저 호출되므로,
+    깨진 파일은 여기서 죽지 않고 검증 단계의 fail-closed 경로로 넘어가야 한다."""
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
         return ""
     match = _NEWS_MODE_MARKER.search(text)
     return match.group(1) if match else ""
@@ -449,14 +464,19 @@ def build_delta_payload(
     raw_candidate_count: int,
     news_mode: str,
     source_override: str | None = None,
-    now_override: str | None = None,
+    now: datetime,
 ) -> dict[str, Any]:
-    """공유 delta 아티팩트(dict)를 만든다. '의미 있는' 변동 기사만·표시정렬·최대 5건.
+    """공유 delta 아티팩트(dict)를 만든다. 발송 자격을 통과한 기사만·표시정렬·최대 5건.
 
     source는 명시 override가 있으면 그것을, 없으면 new 대시보드의 news-data-mode 마커로
     live-delta/mock-delta를 판별한다(가짜 live 방지 — 마커가 live가 아니면 mock-delta).
-    alert_delta는 meaningful_count>=1일 때만 참이며(GITHUB_OUTPUT과 동일 경로), 무의미 변동만
-    있으면 false → 발송 0건 계약을 지킨다. raw fingerprint 변화는 진단 필드로만 남긴다.
+    alert_delta는 hourly_eligible_count>=1일 때만 참이며(GITHUB_OUTPUT과 동일 경로), 무의미
+    변동/저가치/stale만 있으면 false → 발송 0건 계약을 지킨다. raw fingerprint 변화와 정책에서
+    걸린 건수는 진단 카운트로만 남긴다(기사 자체는 articles에 넣지 않는다).
+
+    now는 호출자가 이미 해석한 기준시각이다 — GITHUB_OUTPUT/신선도 게이트와 같은 값을 쓴다.
+    schema_version은 1을 유지한다: 추가 필드는 전부 optional additive라 legacy v1 loader가
+    그대로 안전하고, 새 아티팩트도 legacy 소비자에게 v1으로 읽힌다.
     """
     articles = [
         _artifact_entry_from_classified(article)
@@ -466,21 +486,27 @@ def build_delta_payload(
         source = source_override
     else:
         source = LIVE_SOURCE if news_mode == "live" else MOCK_SOURCE
-    now = _now_kst(now_override)
     return {
         "schema_version": 1,
         "generated_at": now.isoformat(timespec="minutes"),
         "generated_kst": now.strftime("%Y-%m-%d %H:%M"),
         "source": source,
-        "alert_delta": classification.meaningful_count >= 1,
+        "alert_delta": classification.hourly_eligible_count >= 1,
         # 진단 카운트 (raw fingerprint 변화는 게이트가 아니라 관측용).
         "changed_count": int(changed_count),
         "raw_alert_delta": bool(raw_alert_delta),
         "raw_changed_count": int(changed_count),
         "raw_candidate_count": int(raw_candidate_count),
         "deduplicated_candidate_count": classification.deduplicated_count,
+        # 분류상 meaningful 전체(정책 적용 전) — 무엇을 걸렀는지 추적용.
+        "pre_policy_meaningful_count": classification.pre_policy_meaningful_count,
+        # 발송 대상 수 — meaningful_candidate_count == hourly_eligible_count (단일 값).
         "meaningful_candidate_count": classification.meaningful_count,
+        "hourly_eligible_count": classification.hourly_eligible_count,
         "ignored_candidate_count": classification.ignored_count,
+        "suppressed_low_value_count": classification.suppressed_low_value_count,
+        "suppressed_stale_count": classification.suppressed_stale_count,
+        "suppressed_unknown_time_count": classification.suppressed_unknown_time_count,
         # 하위호환: 기존 소비자는 new_candidate_count를 읽는다(= dedup된 변동 후보 수).
         "new_candidate_count": classification.deduplicated_count,
         "change_type_counts": dict(classification.change_type_counts),
@@ -503,10 +529,15 @@ def _write_github_output(
     changed_count: int = 0,
     raw_candidate_count: int = 0,
     deduplicated_candidate_count: int = 0,
+    pre_policy_meaningful_count: int = 0,
     meaningful_count: int = 0,
+    hourly_eligible_count: int = 0,
     ignored_count: int = 0,
+    suppressed_low_value_count: int = 0,
+    suppressed_stale_count: int = 0,
+    suppressed_unknown_time_count: int = 0,
 ) -> None:
-    """GITHUB_OUTPUT에 alert_delta(=meaningful>=1)와 진단 카운트만 쓴다.
+    """GITHUB_OUTPUT에 alert_delta(=hourly_eligible>=1)와 진단 카운트만 쓴다.
 
     기사 제목/URL/본문·비밀값은 절대 쓰지 않는다(전부 bool/int)."""
     def flag(value: bool) -> str:
@@ -518,8 +549,13 @@ def _write_github_output(
         output.write(f"changed_count={int(changed_count)}\n")
         output.write(f"raw_candidate_count={int(raw_candidate_count)}\n")
         output.write(f"deduplicated_candidate_count={int(deduplicated_candidate_count)}\n")
+        output.write(f"pre_policy_meaningful_count={int(pre_policy_meaningful_count)}\n")
         output.write(f"meaningful_count={int(meaningful_count)}\n")
+        output.write(f"hourly_eligible_count={int(hourly_eligible_count)}\n")
         output.write(f"ignored_count={int(ignored_count)}\n")
+        output.write(f"suppressed_low_value_count={int(suppressed_low_value_count)}\n")
+        output.write(f"suppressed_stale_count={int(suppressed_stale_count)}\n")
+        output.write(f"suppressed_unknown_time_count={int(suppressed_unknown_time_count)}\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -532,8 +568,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", metavar="LABEL",
                         help="delta source 라벨 override (기본은 new 대시보드 마커로 판별)")
     parser.add_argument("--now", metavar="ISO",
-                        help="generated_at 기준 시각 override (테스트용; 기본은 실제 벽시계 KST)")
+                        help="기준 시각 override — generated_at과 신선도 게이트가 함께 쓴다 "
+                             "(테스트/재현용; 기본은 실제 벽시계 KST)")
     args = parser.parse_args(argv)
+
+    # 기준시각과 news_mode를 '한 번' 해석해 분류 게이트·GITHUB_OUTPUT·아티팩트가 모두
+    # 같은 값을 쓰게 한다 — 셋이 다른 기준시각을 보면 안 된다(D7-AK-2 §5).
+    reference_dt = _now_kst(args.now)
+    news_mode = _news_data_mode(args.new_dashboard)
 
     try:
         old_model = load_preview_model(args.old_dashboard)
@@ -542,10 +584,11 @@ def main(argv: list[str] | None = None) -> int:
         raw_alert_delta, changed_count, old_hash, new_hash, new_count = detect_delta(
             old_model, new_model
         )
-        # 의미 기반 분류 — --delta-artifact 유무와 무관하게 항상 실행하며,
+        # 의미 기반 분류 + 시간당 알림 자격 — --delta-artifact 유무와 무관하게 항상 실행하며,
         # GITHUB_OUTPUT alert_delta와 artifact alert_delta가 이 단일 결과를 공유한다.
         classification = delta_classifier.classify_delta(
-            _surface_pairs(old_model), _surface_pairs(new_model)
+            _surface_pairs(old_model), _surface_pairs(new_model),
+            news_mode=news_mode, reference_dt=reference_dt,
         )
         raw_candidate_count = _raw_candidate_count(old_model, new_model)
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
@@ -554,16 +597,25 @@ def main(argv: list[str] | None = None) -> int:
         print("ERROR: dashboard alert delta input is invalid; alert gate remains closed", file=sys.stderr)
         return 2
 
-    alert_delta = classification.meaningful_count >= 1
+    alert_delta = classification.hourly_eligible_count >= 1
 
     # 내용 없는 로그 — 카운트/해시만(기사 제목/본문 미노출).
     print(
         "dashboard alert delta: "
         f"changed_count={changed_count} raw_candidates={raw_candidate_count} "
         f"deduplicated={classification.deduplicated_count} "
+        f"pre_policy_meaningful={classification.pre_policy_meaningful_count} "
         f"meaningful={classification.meaningful_count} "
         f"ignored={classification.ignored_count} "
         f"old_hash={old_hash} new_hash={new_hash} new_records={new_count}"
+    )
+    print(
+        "delta quality: "
+        f"news_mode={news_mode or 'unknown'} "
+        f"hourly_eligible={classification.hourly_eligible_count} "
+        f"suppressed_low_value={classification.suppressed_low_value_count} "
+        f"suppressed_stale={classification.suppressed_stale_count} "
+        f"suppressed_unknown_time={classification.suppressed_unknown_time_count}"
     )
     print(
         f"alert_delta={'true' if alert_delta else 'false'} "
@@ -577,8 +629,13 @@ def main(argv: list[str] | None = None) -> int:
             changed_count=changed_count,
             raw_candidate_count=raw_candidate_count,
             deduplicated_candidate_count=classification.deduplicated_count,
+            pre_policy_meaningful_count=classification.pre_policy_meaningful_count,
             meaningful_count=classification.meaningful_count,
+            hourly_eligible_count=classification.hourly_eligible_count,
             ignored_count=classification.ignored_count,
+            suppressed_low_value_count=classification.suppressed_low_value_count,
+            suppressed_stale_count=classification.suppressed_stale_count,
+            suppressed_unknown_time_count=classification.suppressed_unknown_time_count,
         )
 
     if args.delta_artifact:
@@ -586,8 +643,8 @@ def main(argv: list[str] | None = None) -> int:
             new_model, classification,
             raw_alert_delta=raw_alert_delta, changed_count=changed_count,
             raw_candidate_count=raw_candidate_count,
-            news_mode=_news_data_mode(args.new_dashboard),
-            source_override=args.source, now_override=args.now)
+            news_mode=news_mode,
+            source_override=args.source, now=reference_dt)
         try:
             write_delta_artifact(args.delta_artifact, payload)
         except OSError:

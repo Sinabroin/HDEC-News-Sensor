@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
-"""Offline verifier for D7-AK-1 — meaningful hourly-delta quality gate.
+"""Offline verifier for D7-AK-1/2 — meaningful hourly-delta quality gate.
 
-시간당 delta 알림이 '임원에게 의미 있는' 변동에서만 열리는지 검증한다. 네트워크·비밀값·
-실제 발송 0건. 대시보드 재정렬·surface 이동·tracking URL·메타/시각 변화만으로는 절대 알림이
-열려선 안 되고, 신규 기사·중요도 상승·현대건설 관련성 상승·실질 내용 변경에서만 열려야 한다.
+시간당 delta 알림이 '임원에게 의미 있는' 변동에서만, 그리고 '지금 보낼 가치가 있을 때만'
+열리는지 검증한다. 네트워크·비밀값·실제 발송 0건. 대시보드 재정렬·surface 이동·tracking
+URL·메타/시각 변화만으로는 절대 알림이 열려선 안 되고, 신규 기사·중요도 상승·현대건설
+관련성 상승·실질 내용 변경에서만 열려야 한다.
 
 핵심 계약:
-  · GITHUB_OUTPUT alert_delta = meaningful_count>=1 (raw fingerprint 변화는 진단용).
+  · 두 계층 분리 — change classification(무슨 변화인가)과 hourly eligibility(보낼 가치가
+    있는가)는 별개다. 저가치/stale이어도 change_type은 그대로 남고, 정책 결과만 덧붙는다.
+  · GITHUB_OUTPUT alert_delta = hourly_eligible_count>=1 (raw fingerprint 변화는 진단용).
+  · meaningful_candidate_count == hourly_eligible_count == 실제 발송 대상 수.
+  · 카운트 항등식 — dedup = pre_policy_meaningful + ignored,
+    pre_policy_meaningful = hourly_eligible + low_value + stale + unknown_time.
   · --delta-artifact 유무와 무관하게 동일 classifier가 판단한다.
   · 무의미 변동 실행에서는 raw_alert_delta=true·changed_count>0여도 meaningful=0·alert_delta=false
     이며, 워크플로 Telegram/Teams step 조건이 false, Skip step 조건이 true다.
   · legacy v1 아티팩트(change_type 없음)도 loader가 깨지지 않는다.
-  · 새 classifier가 만든 아티팩트의 모든 기사에는 change_type·change_reasons가 있다.
+  · 새 classifier가 만든 아티팩트의 모든 기사에는 change_type·change_reasons가 있고
+    전부 hourly_eligible=true·hourly_suppression_reasons=[]다.
   · scheduled-live-refresh.yml의 Verify pipeline이 이 검증기를 실제로 호출한다.
+
+결정성: 모든 detector 실행에 고정 --now(NOW_ISO)를 넘긴다. 픽스처의 published_at도 전부
+고정 상수라, 이 검증기를 실행하는 실제 날짜가 바뀌어도 결과가 변하지 않는다(D7-AJ-1의
+fixture-aging 재발 방지). 날짜를 주기적으로 갱신하는 방식은 쓰지 않는다.
 """
 
 from __future__ import annotations
@@ -37,6 +48,12 @@ WORKFLOW = ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml"
 from app import delta_alert as da  # noqa: E402
 
 NOW_ISO = "2026-07-14T12:32:00+09:00"
+# 고정 기준시각(NOW_ISO)에 대한 상대 위치를 상수로 고정한다 — 벽시계를 쓰지 않는다.
+FRESH_2H = "2026-07-14T10:00:00+09:00"    # NOW - 2.5h  (즉시확인 창 안)
+FRESH_NEW = "2026-07-14T12:20:00+09:00"   # NOW - 0.2h
+STALE_80H = "2026-07-11T04:32:00+09:00"   # NOW - 80h   (IMMEDIATE_MAX_AGE_HOURS=72 초과)
+HDEC_DIRECT_PROV = {"hdec_relevance_tier": 1, "executive_section": "hdec_direct"}
+
 _failures: list[str] = []
 
 
@@ -73,14 +90,18 @@ def _article(**overrides: object) -> dict:
 
 
 def run_detector(old_model: dict, new_model: dict, *, artifact: bool = True,
-                 valid_new: bool = True):
-    """detector를 subprocess로 실행하고 (proc, github_dict, artifact_data)를 돌려준다."""
+                 valid_new: bool = True, mode: str = "live", now: str = NOW_ISO):
+    """detector를 subprocess로 실행하고 (proc, github_dict, artifact_data)를 돌려준다.
+
+    --now는 항상 명시적으로 넘긴다(기본 NOW_ISO). 신선도 게이트가 벽시계가 아니라 이 값을
+    보므로, 검증기는 실행 날짜와 무관하게 같은 결과를 낸다."""
     tmp = Path(tempfile.mkdtemp(prefix="hdec_ak1_"))
     old_p, new_p, gh, art = tmp / "o.html", tmp / "n.html", tmp / "gh.txt", tmp / "d.json"
-    old_p.write_text(_html(old_model), encoding="utf-8")
-    new_p.write_text(_html(new_model) if valid_new else "<html>invalid</html>", encoding="utf-8")
+    old_p.write_text(_html(old_model, mode), encoding="utf-8")
+    new_p.write_text(_html(new_model, mode) if valid_new else "<html>invalid</html>",
+                     encoding="utf-8")
     cmd = [sys.executable, str(DETECTOR), str(old_p), str(new_p),
-           "--github-output", str(gh), "--now", NOW_ISO]
+           "--github-output", str(gh), "--now", now]
     if artifact:
         cmd += ["--delta-artifact", str(art)]
     proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=60)
@@ -92,6 +113,14 @@ def run_detector(old_model: dict, new_model: dict, *, artifact: bool = True,
 
 def _types(data: dict) -> dict:
     return (data or {}).get("change_type_counts", {})
+
+
+def _gh_counts(gh: dict) -> dict:
+    """GITHUB_OUTPUT의 정책 카운트만 int로 뽑아 비교하기 쉽게 만든다."""
+    keys = ("deduplicated_candidate_count", "pre_policy_meaningful_count", "meaningful_count",
+            "hourly_eligible_count", "ignored_count", "suppressed_low_value_count",
+            "suppressed_stale_count", "suppressed_unknown_time_count")
+    return {k: int(gh.get(k, "0")) for k in keys}
 
 
 # ── A. 무의미 변동 → 게이트 닫힘 ──────────────────────────────────────────────
@@ -347,6 +376,19 @@ def check_log_hygiene() -> None:
           canary_title not in log and canary_url not in log
           and canary_title not in gh_text and canary_url not in gh_text)
 
+    # 정책에서 걸린 기사도 마찬가지 — suppression 진단은 카운트만 남기고 제목/URL은 안 남긴다.
+    sup_title, sup_url = "SUPPRESSEDCANARYTITLE", "https://leak.example/suppressed-path"
+    proc2, gh2, data2 = run_detector(old, {"top_immediate_signals": [
+        _article(), _article(article_id="c2", url=sup_url, title=sup_title,
+                             score=1.0, published_at=STALE_80H)]})
+    log2 = (proc2.stdout or "") + (proc2.stderr or "")
+    gh2_text = "\n".join(f"{k}={v}" for k, v in gh2.items())
+    check("정책에서 걸린 기사의 제목/URL도 stdout/GITHUB_OUTPUT/아티팩트에 남지 않는다",
+          sup_title not in log2 and sup_url not in log2
+          and sup_title not in gh2_text and sup_url not in gh2_text
+          and sup_title not in json.dumps(data2, ensure_ascii=False)
+          and int(gh2.get("suppressed_low_value_count", "0")) == 1)
+
 
 def check_pipeline_wiring() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
@@ -358,8 +400,250 @@ def check_pipeline_wiring() -> None:
           and "scripts/verify_meaningful_delta_quality.py" in verify_block)
 
 
+# ── F. 시간당 알림 자격 — 가치 × 신선도 게이트 (D7-AK-2) ─────────────────────
+# 분류(change_type)는 그대로 두고, '지금 보낼 가치가 있는가'만 따로 판정하는 계층이다.
+
+def check_value_gate() -> None:
+    base = {"top_immediate_signals": [_article()]}
+
+    def _new(**kw) -> dict:
+        return {"top_immediate_signals": [_article(), _article(**kw)]}
+
+    # 1) fresh + score 4.2 + 비직접 → 자격 있음 (점수만으로 통과)
+    _, gh, data = run_detector(base, _new(
+        article_id="v1", url="https://ex.com/v1", title="가치 있는 신규 기사",
+        score=4.2, published_at=FRESH_NEW))
+    check("fresh + score 4.2 + 비직접 → hourly_eligible=1 · alert_delta=true",
+          gh.get("hourly_eligible_count") == "1" and gh.get("alert_delta") == "true"
+          and len(data["articles"]) == 1)
+
+    # 2) fresh + score 2.0 + 현대건설 직접 → 자격 있음 (점수 미달이어도 직접이면 통과)
+    _, gh, _ = run_detector(base, _new(
+        article_id="v2", url="https://ex.com/v2", title="저점수 현대건설 직접 기사",
+        score=2.0, published_at=FRESH_NEW, provenance=HDEC_DIRECT_PROV))
+    check("fresh + score 2.0 + 현대건설 직접 → hourly_eligible=1 (점수 미달이어도 통과)",
+          gh.get("hourly_eligible_count") == "1" and gh.get("alert_delta") == "true")
+
+    # 3) fresh + score 2.0 + 비직접 → 분류는 new_article이지만 자격 없음(저가치)
+    _, gh, data = run_detector(base, _new(
+        article_id="v3", url="https://ex.com/v3", title="저가치 신규 기사",
+        score=2.0, published_at=FRESH_NEW))
+    counts = _gh_counts(gh)
+    check("fresh + score 2.0 + 비직접 → pre_policy=1 ∧ eligible=0 ∧ low_value=1 ∧ alert_delta=false",
+          counts["pre_policy_meaningful_count"] == 1 and counts["hourly_eligible_count"] == 0
+          and counts["suppressed_low_value_count"] == 1 and gh.get("alert_delta") == "false",
+          str(counts))
+    check("저가치로 걸려도 change_type은 new_article로 보존된다(분류≠정책)",
+          _types(data).get("new_article") == 1 and data["articles"] == [])
+    reasons = [a for a in (data or {}).get("articles", [])]
+    check("정책에서 걸린 기사는 articles에 넣지 않는다(카운트로만 남김)", reasons == [])
+
+
+def check_recency_gate() -> None:
+    base = {"top_immediate_signals": [_article()]}
+
+    def _new(**kw) -> dict:
+        return {"top_immediate_signals": [_article(), _article(**kw)]}
+
+    # 4) stale 80h + score 4.8 + 현대건설 직접 → 고가치여도 즉시 알림 자격 없음
+    _, gh, data = run_detector(base, _new(
+        article_id="s1", url="https://ex.com/s1", title="80시간 지난 고가치 기사",
+        score=4.8, published_at=STALE_80H, provenance=HDEC_DIRECT_PROV))
+    counts = _gh_counts(gh)
+    check("stale 80h + score 4.8 + 직접 → pre_policy=1 ∧ eligible=0 ∧ stale=1 ∧ alert_delta=false",
+          counts["pre_policy_meaningful_count"] == 1 and counts["hourly_eligible_count"] == 0
+          and counts["suppressed_stale_count"] == 1 and gh.get("alert_delta") == "false",
+          str(counts))
+    check("stale로 걸려도 change_type은 보존(대시보드/일간 리포트에서 삭제하지 않음)",
+          _types(data).get("new_article") == 1)
+
+    # 5) live + published_at 없음 → fail-closed (시각 불명은 즉시 알림에 올리지 않는다)
+    _, gh, _ = run_detector(base, _new(
+        article_id="s2", url="https://ex.com/s2", title="게시시각 불명 기사",
+        score=4.8, published_at="", provenance=HDEC_DIRECT_PROV))
+    counts = _gh_counts(gh)
+    check("live + published_at 없음 → eligible=0 ∧ unknown_time=1 (fail-closed)",
+          counts["hourly_eligible_count"] == 0
+          and counts["suppressed_unknown_time_count"] == 1
+          and gh.get("alert_delta") == "false", str(counts))
+
+    # 6) mock 모드 → 기존 news_recency mock 계약 유지(창 적용 안 함). 가치 게이트는 그대로.
+    _, gh, _ = run_detector(base, _new(
+        article_id="s3", url="https://ex.com/s3", title="mock 데모의 오래된 기사",
+        score=4.2, published_at=STALE_80H), mode="mock")
+    check("mock 모드 → stale이어도 자격 유지 (기존 news_recency mock 계약)",
+          gh.get("hourly_eligible_count") == "1" and gh.get("suppressed_stale_count") == "0")
+    _, gh, _ = run_detector(base, _new(
+        article_id="s4", url="https://ex.com/s4", title="mock 시각 불명",
+        score=4.2, published_at=""), mode="mock")
+    check("mock 모드 → 시각 불명이어도 자격 유지 (mock 계약)",
+          gh.get("hourly_eligible_count") == "1"
+          and gh.get("suppressed_unknown_time_count") == "0")
+    # mock이어도 저가치는 걸린다 — 신선도만 모드 의존이고 가치는 모드 무관.
+    _, gh, _ = run_detector(base, _new(
+        article_id="s5", url="https://ex.com/s5", title="mock 저가치",
+        score=1.0, published_at=FRESH_NEW), mode="mock")
+    check("mock 모드여도 가치 게이트는 적용된다 (low_value=1)",
+          gh.get("suppressed_low_value_count") == "1"
+          and gh.get("hourly_eligible_count") == "0")
+
+
+def check_content_update_gate() -> None:
+    # 7) fresh material_content_update + score 4.2 → 자격 있음 (check#10 계약 유지)
+    old = {"top_immediate_signals": [_article()]}
+    _, gh, data = run_detector(
+        old, {"top_immediate_signals": [_article(snippet="전혀 다른 새로운 핵심 내용으로 갱신됨")]})
+    check("fresh 내용 갱신 + score 4.2 → material_content_update ∧ eligible=1 ∧ alert_delta=true",
+          _types(data).get("material_content_update") == 1
+          and gh.get("hourly_eligible_count") == "1" and gh.get("alert_delta") == "true")
+
+    # 8) stale material_content_update + 현대건설 직접 → 자격 없음.
+    #    오래된 기사의 요약/출처 표기가 흔들릴 때마다 매시간 재알림되던 경로를 막는다
+    #    (D7-AK-2A: 16일 지난 기사 1건이 스니펫 진동만으로 4회 재분류됨).
+    stale_direct = dict(article_id="osc", url="https://ex.com/osc", title="오래된 진동 기사",
+                        score=4.8, published_at=STALE_80H, provenance=HDEC_DIRECT_PROV)
+    old_osc = {"top_immediate_signals": [_article(**stale_direct, snippet="원본 요약")]}
+    new_osc = {"top_immediate_signals": [_article(**stale_direct, snippet="출처 표기만 바뀐 요약")]}
+    _, gh, data = run_detector(old_osc, new_osc)
+    counts = _gh_counts(gh)
+    check("stale 내용 갱신 + 직접 → material_content_update로 분류되되 eligible=0 ∧ stale=1",
+          _types(data).get("material_content_update") == 1
+          and counts["hourly_eligible_count"] == 0 and counts["suppressed_stale_count"] == 1
+          and gh.get("alert_delta") == "false", str(counts))
+
+
+def check_low_value_run_closes_workflow() -> None:
+    """9) 저가치 신규 기사만 있는 실행 → 발송 step 전부 닫히고 Skip이 열린다."""
+    text = WORKFLOW.read_text(encoding="utf-8")
+    tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
+    teams_if = _step_if(text, "Hourly Teams channel email (delta-gated auto-send)")
+    skip_if = _step_if(text, "Skip automatic alerts (no delta)")
+
+    base = {"top_immediate_signals": [_article()]}
+    low = {"top_immediate_signals": [_article()] + [
+        _article(article_id=f"lo{i}", url=f"https://ex.com/lo{i}", title=f"저가치 신규 {i}",
+                 score=1.0 + i * 0.2, published_at=FRESH_NEW) for i in range(6)]}
+    _, gh, data = run_detector(base, low)
+    counts = _gh_counts(gh)
+    check("저가치 신규만: raw_alert_delta=true ∧ pre_policy>0 ∧ eligible=0 ∧ alert_delta=false",
+          gh.get("raw_alert_delta") == "true" and counts["pre_policy_meaningful_count"] == 6
+          and counts["hourly_eligible_count"] == 0 and gh.get("alert_delta") == "false"
+          and data["alert_delta"] is False and data["articles"] == [], str(counts))
+
+    ctx = {
+        "steps.build.outputs.live_ok": "true",
+        "steps.delta.outputs.alert_delta": gh.get("alert_delta", ""),
+        "vars.HOURLY_DELTA_AUTO_SEND": "1",
+        "vars.TELEGRAM_AUTO_SEND": "1",
+    }
+    check("저가치 신규만 → Telegram step = false",  _eval_gate(tg_if, ctx) is False)
+    check("저가치 신규만 → Teams step = false", _eval_gate(teams_if, ctx) is False)
+    check("저가치 신규만 → Skip automatic alerts = true", _eval_gate(skip_if, ctx) is True)
+
+
+def check_eligible_ordering() -> None:
+    """10) 자격 통과 8건 → 아티팩트 5건 cap + 점수/현대건설 직접 우선 정렬.
+
+    회귀 방지: 저가치 기사에 '가장 최신' 게시시각을 주고 고가치를 오래되게 만든다. 예전
+    최신순 우선 정렬이었다면 top-5가 저가치 5건으로 채워진다(D7-AK-2A의 실제 결함).
+    """
+    base = {"top_immediate_signals": [_article()]}
+    #                 id     score  direct  published(오래된↔최신)
+    spec = [("d47", 4.7, True,  "2026-07-14T04:00:00+09:00"),
+            ("d20", 2.0, True,  "2026-07-14T05:00:00+09:00"),
+            ("s49", 4.9, False, "2026-07-14T06:00:00+09:00"),
+            ("s40", 4.0, False, "2026-07-14T07:00:00+09:00"),
+            ("s39", 3.9, False, "2026-07-14T08:00:00+09:00"),
+            ("s38", 3.8, False, "2026-07-14T09:00:00+09:00"),
+            ("s37", 3.7, False, "2026-07-14T10:00:00+09:00"),
+            ("s36", 3.6, False, "2026-07-14T11:00:00+09:00")]
+    rows = [_article(article_id=k, url=f"https://ex.com/{k}", title=f"신규 {k}",
+                     score=sc, published_at=pub,
+                     provenance=HDEC_DIRECT_PROV if direct else
+                     {"hdec_relevance_tier": 5, "executive_section": "business"})
+            for k, sc, direct, pub in spec]
+    _, gh, data = run_detector(base, {"top_immediate_signals": [_article()] + rows})
+    check("자격 8건 → hourly_eligible=8 ∧ 아티팩트 5건 cap",
+          gh.get("hourly_eligible_count") == "8" and len(data["articles"]) == 5,
+          f"eligible={gh.get('hourly_eligible_count')} articles={len(data['articles'])}")
+    keys = [a["article_key"] for a in data["articles"]]
+    check("정렬: 현대건설 직접 우선 → 점수 높은 순 (최신순은 마지막 tiebreaker)",
+          keys == ["d47", "d20", "s49", "s40", "s39"], str(keys))
+    check("아티팩트 기사는 전부 hourly_eligible=true ∧ suppression 사유 없음",
+          all(a.get("hourly_eligible") is True and a.get("hourly_suppression_reasons") == []
+              for a in data["articles"]))
+
+
+def check_reference_time_determinism() -> None:
+    """11) 결과는 --now에만 의존한다 — 검증기 실행 날짜가 바뀌어도 불변.
+
+    같은 픽스처를 서로 다른 --now로 두 번 돌려 신선도 판정이 --now를 따라 뒤집히는지 본다.
+    벽시계를 봤다면 두 실행이 같은 결과를 냈을 것이다. 픽스처 날짜를 주기적으로 갱신하는
+    대신 이 방식으로 고정한다.
+    """
+    base = {"top_immediate_signals": [_article()]}
+    new = {"top_immediate_signals": [
+        _article(), _article(article_id="t1", url="https://ex.com/t1", title="시각 기준 검증 기사",
+                             score=4.2, published_at=FRESH_NEW)]}
+    _, gh_now, _ = run_detector(base, new, now=NOW_ISO)
+    # 같은 기사, 기준시각만 7일 뒤 → 동일 published_at이 stale로 뒤집힌다.
+    _, gh_later, _ = run_detector(base, new, now="2026-07-21T12:32:00+09:00")
+    check("--now=NOW_ISO → fresh (eligible=1)", gh_now.get("hourly_eligible_count") == "1")
+    check("--now=+7d → 같은 기사가 stale (eligible=0 ∧ stale=1) — 기준시각은 --now만 본다",
+          gh_later.get("hourly_eligible_count") == "0"
+          and gh_later.get("suppressed_stale_count") == "1",
+          f"later={_gh_counts(gh_later)}")
+    # 동일 입력 재실행 → 완전 동일 결과(실행 시점 비의존).
+    _, gh_repeat, _ = run_detector(base, new, now=NOW_ISO)
+    check("동일 입력·동일 --now 재실행 → GITHUB_OUTPUT 완전 동일(결정적)",
+          _gh_counts(gh_repeat) == _gh_counts(gh_now))
+
+
+def check_count_identities() -> None:
+    """카운트 항등식 — 어떤 실행에서도 합이 어긋나면 안 된다(진단 신뢰성)."""
+    base = {"top_immediate_signals": [_article()]}
+    mixed = {"top_immediate_signals": [
+        _article(),  # 불변
+        _article(article_id="ok", url="https://ex.com/ok", title="자격 통과",
+                 score=4.2, published_at=FRESH_NEW),
+        _article(article_id="lo", url="https://ex.com/lo", title="저가치",
+                 score=1.0, published_at=FRESH_NEW),
+        _article(article_id="st", url="https://ex.com/st", title="오래됨",
+                 score=4.6, published_at=STALE_80H),
+        _article(article_id="ut", url="https://ex.com/ut", title="시각 불명",
+                 score=4.6, published_at=""),
+    ], "business_signals": [_article()]}  # surface move → ignored
+    _, gh, data = run_detector(base, mixed)
+    c = _gh_counts(gh)
+    check("항등식: dedup == pre_policy_meaningful + ignored",
+          c["deduplicated_candidate_count"]
+          == c["pre_policy_meaningful_count"] + c["ignored_count"], str(c))
+    check("항등식: pre_policy == eligible + low_value + stale + unknown_time",
+          c["pre_policy_meaningful_count"] == c["hourly_eligible_count"]
+          + c["suppressed_low_value_count"] + c["suppressed_stale_count"]
+          + c["suppressed_unknown_time_count"], str(c))
+    check("meaningful_count == hourly_eligible_count == 실제 아티팩트 기사 수",
+          c["meaningful_count"] == c["hourly_eligible_count"] == len(data["articles"]) == 1)
+    check("아티팩트 카운트가 GITHUB_OUTPUT과 동일(단일 경로)",
+          data["pre_policy_meaningful_count"] == c["pre_policy_meaningful_count"]
+          and data["hourly_eligible_count"] == c["hourly_eligible_count"]
+          and data["meaningful_candidate_count"] == c["meaningful_count"]
+          and data["suppressed_low_value_count"] == c["suppressed_low_value_count"]
+          and data["suppressed_stale_count"] == c["suppressed_stale_count"]
+          and data["suppressed_unknown_time_count"] == c["suppressed_unknown_time_count"])
+    check("schema_version은 1 유지(추가 필드는 전부 optional additive)",
+          data["schema_version"] == 1)
+    # 새 아티팩트도 legacy v1 loader로 그대로 읽힌다.
+    try:
+        alert = da.parse_delta_alert(data)
+        ok = alert.schema_version == 1 and len(alert.articles) == 1
+    except da.InvalidDeltaArtifact:
+        ok = False
+    check("새 아티팩트를 기존 v1 loader가 그대로 파싱한다(하위호환)", ok)
+
+
 def main() -> int:
-    print(f"== verify_meaningful_delta_quality (D7-AK-1) @ {ROOT} ==")
+    print(f"== verify_meaningful_delta_quality (D7-AK-1/2) @ {ROOT} ==")
     check_ignored_changes()
     check_meaningful_changes()
     check_identity_matching()
@@ -368,6 +652,13 @@ def main() -> int:
     check_schema_compat()
     check_log_hygiene()
     check_pipeline_wiring()
+    check_value_gate()
+    check_recency_gate()
+    check_content_update_gate()
+    check_low_value_run_closes_workflow()
+    check_eligible_ordering()
+    check_reference_time_determinism()
+    check_count_identities()
 
     # invalid 입력 → fail-closed (rc!=0 · alert_delta=false · 아티팩트 미생성)
     proc, gh, data = run_detector({"top_immediate_signals": [_article()]}, {}, valid_new=False)
@@ -380,8 +671,9 @@ def main() -> int:
         for name in _failures:
             print(f"  - {name}")
         return 1
-    print("RESULT: PASS — meaningful-delta gate: noise suppressed, real signals kept, "
-          "sender gates closed on zero meaningful, schema-compatible, content-free")
+    print("RESULT: PASS — hourly delta gate: noise suppressed, classification preserved, "
+          "low-value/stale alerts withheld, high-value ordering first, deterministic on --now, "
+          "sender gates closed on zero eligible, schema-compatible, content-free")
     return 0
 
 
