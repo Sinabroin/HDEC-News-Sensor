@@ -42,6 +42,21 @@ _DECISION = (
     if isinstance(_POLICY.get("decision"), dict)
     else {}
 )
+_HOURLY_URGENCY_SHADOW = (
+    _POLICY.get("hourly_urgency_shadow")
+    if isinstance(_POLICY.get("hourly_urgency_shadow"), dict)
+    else {}
+)
+
+_SHADOW_GROUP_KEYS = (
+    "positive_event_groups",
+    "ambiguous_event_groups",
+    "negative_context_groups",
+    "actor_or_target_groups",
+)
+_SHADOW_STATUSES = frozenset(
+    {"confirmed", "ambiguous", "blocked", "none", "unavailable"}
+)
 
 
 def policy_loaded() -> bool:
@@ -99,6 +114,220 @@ def _matched_terms(text: str, spec: dict) -> list[str]:
 
     # Preserve policy order but do not repeat terms that matched two clauses.
     return list(dict.fromkeys(hits))
+
+
+def _shadow_policy_valid(policy: object) -> bool:
+    """Validate only the isolated shadow namespace, never the radar policy."""
+    def term_spec_valid(spec: dict) -> bool:
+        any_terms = spec.get("any")
+        clauses = spec.get("all_of")
+        any_valid = (
+            isinstance(any_terms, list)
+            and bool(any_terms)
+            and all(isinstance(term, str) and term.strip() for term in any_terms)
+        )
+        clauses_valid = (
+            isinstance(clauses, list)
+            and bool(clauses)
+            and all(
+                isinstance(clause, list)
+                and bool(clause)
+                and all(isinstance(term, str) and term.strip() for term in clause)
+                for clause in clauses
+            )
+        )
+        return any_valid or clauses_valid
+
+    if not isinstance(policy, dict):
+        return False
+    for key in _SHADOW_GROUP_KEYS:
+        groups = policy.get(key)
+        if not isinstance(groups, dict) or not groups:
+            return False
+        if not all(
+            isinstance(group_id, str)
+            and isinstance(spec, dict)
+            and term_spec_valid(spec)
+            for group_id, spec in groups.items()
+        ):
+            return False
+    decision = policy.get("decision")
+    if not isinstance(decision, dict):
+        return False
+    negatives = policy["negative_context_groups"]
+    for key in ("blocking_negative_groups", "conflicting_negative_groups"):
+        values = decision.get(key)
+        if not isinstance(values, list) or not all(
+            isinstance(value, str) and value in negatives for value in values
+        ):
+            return False
+    contexts = policy["actor_or_target_groups"]
+    ambiguous = policy["ambiguous_event_groups"]
+    for spec in policy["positive_event_groups"].values():
+        required = spec.get("required_context_groups")
+        if not isinstance(required, list) or not required or not all(
+            isinstance(value, str) and value in contexts for value in required
+        ):
+            return False
+        conflicts = spec.get("ambiguous_conflicts")
+        if not isinstance(conflicts, list) or not all(
+            isinstance(value, str) and value in ambiguous for value in conflicts
+        ):
+            return False
+    return True
+
+
+def shadow_urgency_policy_loaded() -> bool:
+    """Return whether the isolated hourly shadow contract is available."""
+    return _shadow_policy_valid(_HOURLY_URGENCY_SHADOW)
+
+
+def _shadow_group_matches(text: str, groups: dict) -> dict[str, list[str]]:
+    matches: dict[str, list[str]] = {}
+    for group_id, spec in groups.items():
+        terms = _matched_terms(text, spec)
+        if terms:
+            matches[group_id] = terms
+    return matches
+
+
+def evaluate_hourly_urgency_shadow(
+    article: dict,
+    *,
+    change_type: str = "",
+    change_reasons: tuple[str, ...] | list[str] = (),
+    policy_override: dict | None = None,
+) -> dict:
+    """Extract title-first confirmed-event evidence for hourly shadow telemetry.
+
+    The result is categorical and pure.  It does not inspect score, HDEC tier,
+    section, freshness, environment, clock, network, or persistent history.
+    Snippet matches are retained separately but can never open ``confirmed``.
+    ``policy_override`` exists for deterministic malformed-policy verification;
+    normal callers omit it and use the isolated policy namespace loaded above.
+    """
+    policy = _HOURLY_URGENCY_SHADOW if policy_override is None else policy_override
+    empty = {
+        "shadow_urgency_status": "unavailable",
+        "shadow_would_pass": False,
+        "shadow_confirmed_event_types": [],
+        "shadow_ambiguous_event_types": [],
+        "shadow_negative_contexts": [],
+        "shadow_evidence_source": "none",
+        "title_positive_groups": [],
+        "snippet_positive_groups": [],
+        "title_ambiguous_groups": [],
+        "snippet_ambiguous_groups": [],
+        "title_negative_groups": [],
+        "snippet_negative_groups": [],
+        "title_actor_or_target_groups": [],
+    }
+    if not _shadow_policy_valid(policy):
+        return empty
+
+    title = _norm(str(article.get("title") or ""))
+    snippet = _norm(str(article.get("snippet") or article.get("whyImportant") or ""))
+    positive_groups = policy["positive_event_groups"]
+    ambiguous_groups = policy["ambiguous_event_groups"]
+    negative_groups = policy["negative_context_groups"]
+    context_groups = policy["actor_or_target_groups"]
+
+    title_positive_matches = _shadow_group_matches(title, positive_groups)
+    snippet_positive_matches = _shadow_group_matches(snippet, positive_groups)
+    title_ambiguous_matches = _shadow_group_matches(title, ambiguous_groups)
+    snippet_ambiguous_matches = _shadow_group_matches(snippet, ambiguous_groups)
+    title_negative_matches = _shadow_group_matches(title, negative_groups)
+    snippet_negative_matches = _shadow_group_matches(snippet, negative_groups)
+    title_context_matches = _shadow_group_matches(title, context_groups)
+
+    qualifying_title_positive: list[str] = []
+    for group_id in title_positive_matches:
+        required = positive_groups[group_id]["required_context_groups"]
+        if any(context in title_context_matches for context in required):
+            qualifying_title_positive.append(group_id)
+
+    title_positive = list(title_positive_matches)
+    snippet_positive = list(snippet_positive_matches)
+    title_ambiguous = list(title_ambiguous_matches)
+    snippet_ambiguous = list(snippet_ambiguous_matches)
+    title_negative = list(title_negative_matches)
+    snippet_negative = list(snippet_negative_matches)
+
+    title_has_evidence = bool(title_positive or title_ambiguous or title_negative)
+    snippet_has_evidence = bool(
+        snippet_positive or snippet_ambiguous or snippet_negative
+    )
+    if title_has_evidence and snippet_has_evidence:
+        evidence_source = "title+snippet"
+    elif title_has_evidence:
+        evidence_source = "title"
+    elif snippet_has_evidence:
+        evidence_source = "snippet_only"
+    else:
+        evidence_source = "none"
+
+    decision = policy["decision"]
+    blocking = set(decision["blocking_negative_groups"])
+    conflicting = set(decision["conflicting_negative_groups"])
+    title_blocking = blocking.intersection(title_negative)
+    title_conflicting = conflicting.intersection(title_negative)
+    ambiguous_conflicts: set[str] = set()
+    for group_id in qualifying_title_positive:
+        ambiguous_conflicts.update(
+            positive_groups[group_id]["ambiguous_conflicts"]
+        )
+    title_event_conflicts = ambiguous_conflicts.intersection(title_ambiguous)
+    reasons = tuple(str(reason) for reason in change_reasons)
+    score_crossing_only = (
+        change_type == "priority_upgrade"
+        and bool(reasons)
+        and all("score crossed" in reason for reason in reasons)
+    )
+
+    if title_blocking:
+        status = "blocked"
+    elif score_crossing_only and not qualifying_title_positive:
+        status = "blocked"
+    elif qualifying_title_positive:
+        status = (
+            "ambiguous"
+            if title_event_conflicts or title_conflicting
+            else "confirmed"
+        )
+    elif title_positive or title_ambiguous or title_conflicting:
+        status = "ambiguous"
+    elif snippet_positive:
+        # Aggregated snippets may contain a different article's action words.
+        status = "ambiguous"
+    else:
+        status = "none"
+
+    if status not in _SHADOW_STATUSES:  # defensive categorical contract
+        status = "unavailable"
+    confirmed_event_types = (
+        qualifying_title_positive if status == "confirmed" else []
+    )
+    ambiguous_event_types = list(title_ambiguous)
+    if status == "ambiguous":
+        ambiguous_event_types.extend(qualifying_title_positive)
+        if not title_has_evidence:
+            ambiguous_event_types.extend(snippet_positive)
+    ambiguous_event_types = list(dict.fromkeys(ambiguous_event_types))
+    return {
+        "shadow_urgency_status": status,
+        "shadow_would_pass": status == "confirmed",
+        "shadow_confirmed_event_types": confirmed_event_types,
+        "shadow_ambiguous_event_types": ambiguous_event_types,
+        "shadow_negative_contexts": title_negative,
+        "shadow_evidence_source": evidence_source,
+        "title_positive_groups": title_positive,
+        "snippet_positive_groups": snippet_positive,
+        "title_ambiguous_groups": title_ambiguous,
+        "snippet_ambiguous_groups": snippet_ambiguous,
+        "title_negative_groups": title_negative,
+        "snippet_negative_groups": snippet_negative,
+        "title_actor_or_target_groups": list(title_context_matches),
+    }
 
 
 def extract_ai_radar_signals(article: dict) -> dict:

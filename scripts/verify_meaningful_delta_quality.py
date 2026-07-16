@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline verifier for D7-AK-1/2 — meaningful hourly-delta quality gate.
+"""Offline verifier for D7-AK-1/2/4B — hourly gate + shadow evidence contract.
 
 시간당 delta 알림이 '임원에게 의미 있는' 변동에서만, 그리고 '지금 보낼 가치가 있을 때만'
 열리는지 검증한다. 네트워크·비밀값·실제 발송 0건. 대시보드 재정렬·surface 이동·tracking
@@ -34,6 +34,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,8 @@ TELEGRAM = ROOT / "scripts" / "send_telegram.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml"
 
 from app import delta_alert as da  # noqa: E402
+from app import delta_classifier as dc  # noqa: E402
+from app import radar_signals as rs  # noqa: E402
 
 NOW_ISO = "2026-07-14T12:32:00+09:00"
 # 고정 기준시각(NOW_ISO)에 대한 상대 위치를 상수로 고정한다 — 벽시계를 쓰지 않는다.
@@ -120,6 +123,15 @@ def _gh_counts(gh: dict) -> dict:
     keys = ("deduplicated_candidate_count", "pre_policy_meaningful_count", "meaningful_count",
             "hourly_eligible_count", "ignored_count", "suppressed_low_value_count",
             "suppressed_stale_count", "suppressed_unknown_time_count")
+    return {k: int(gh.get(k, "0")) for k in keys}
+
+
+def _shadow_counts(gh: dict) -> dict:
+    keys = (
+        "shadow_would_pass_count", "shadow_confirmed_count",
+        "shadow_ambiguous_count", "shadow_blocked_count", "shadow_none_count",
+        "shadow_unavailable_count",
+    )
     return {k: int(gh.get(k, "0")) for k in keys}
 
 
@@ -642,8 +654,322 @@ def check_count_identities() -> None:
     check("새 아티팩트를 기존 v1 loader가 그대로 파싱한다(하위호환)", ok)
 
 
+# ── I. D7-AK-4B confirmed-event evidence shadow 계약 ────────────────────────
+
+def check_shadow_evidence_contract() -> None:
+    """Shadow evidence is title-first, categorical, additive, and gate-neutral."""
+
+    def evidence(
+        title: str,
+        snippet: str = "",
+        *,
+        change_type: str = "",
+        change_reasons: tuple[str, ...] = (),
+        policy_override: dict | None = None,
+    ) -> dict:
+        return rs.evaluate_hourly_urgency_shadow(
+            {"title": title, "snippet": snippet},
+            change_type=change_type,
+            change_reasons=change_reasons,
+            policy_override=policy_override,
+        )
+
+    positive_cases = (
+        ("확정 수주·계약", "현대건설, UAE 원전 EPC 계약 체결",
+         "confirmed_contract_order_award"),
+        ("공식 협약/MOU", "현대건설, ABC와 원전 사업 MOU 체결",
+         "confirmed_formal_partnership"),
+        ("Meta 구체 buildout", "메타, 5GW 하이페리온 데이터센터 구축...500억달러 투입",
+         "confirmed_investment_buildout"),
+        ("PF 조달 완료", "A건설 프로젝트 PF 조달 완료",
+         "confirmed_finance_credit_liquidity"),
+        ("중대재해 특별감독", "현대건설 현장 중대재해 발생…고용노동부 특별감독 착수",
+         "confirmed_safety_enforcement"),
+        ("규제 취소·중단 명령", "정부, 데이터센터 인허가 취소·사업 중단 명령",
+         "confirmed_regulatory_decision"),
+        ("프로젝트 상업운전", "현대건설 원전 프로젝트 상업운전 개시",
+         "confirmed_project_milestone"),
+    )
+    for name, title, event_type in positive_cases:
+        result = evidence(title)
+        check(
+            f"shadow confirmed: {name}",
+            result["shadow_urgency_status"] == "confirmed"
+            and result["shadow_would_pass"] is True
+            and event_type in result["shadow_confirmed_event_types"],
+            str(result),
+        )
+
+    ambiguous_cases = (
+        ("미래 기술 협력", "현대건설, 철도기술연구원과 미래 인프라 기술 협력"),
+        ("사업 확대 추진", "대우건설, 데이터센터 사업 확대 추진"),
+        ("시장 진출 검토", "현대엔지니어링, 미국 플랜트 시장 진출 검토"),
+        ("장기 비전", "현대건설, 원전·SMR 장기 비전 공개"),
+        ("자금 확보 계획", "현대건설, 신사업 자금 확보 계획"),
+        ("portfolio 확대 전략", "대우건설, 에너지 portfolio 확대 전략"),
+        ("정책 방향 발표", "정부, 데이터센터 정책 방향 발표"),
+    )
+    for name, title in ambiguous_cases:
+        result = evidence(title)
+        check(
+            f"shadow ambiguous: {name}",
+            result["shadow_urgency_status"] == "ambiguous"
+            and result["shadow_would_pass"] is False,
+            str(result),
+        )
+
+    blocked_cases = (
+        ("책 출간", "AI 시대 전력산업 구조 개편 책 출간"),
+        ("인터뷰", "건설사 대표 인터뷰…데이터센터 전략을 말하다"),
+        ("채용 기사", "효성, 창사 첫 문과생 전용 공채"),
+        ("업계 종합 기획", "[기획] 건설업계 AI 데이터센터 수주 경쟁"),
+    )
+    for name, title in blocked_cases:
+        result = evidence(title, "다른 기업이 데이터센터 공급 계약을 체결했다")
+        check(
+            f"shadow blocked: {name}",
+            result["shadow_urgency_status"] == "blocked"
+            and result["shadow_would_pass"] is False,
+            str(result),
+        )
+
+    outlook = evidence("AI 데이터센터 시장 확대 가능성…수주 증가 전망")
+    check("전망·가능성은 confirmed가 아닌 ambiguous",
+          outlook["shadow_urgency_status"] == "ambiguous"
+          and outlook["shadow_would_pass"] is False, str(outlook))
+    readiness = evidence("현대건설, 원전 신사업 준비·대비")
+    check("준비·대비는 confirmed가 아닌 ambiguous",
+          readiness["shadow_urgency_status"] == "ambiguous"
+          and readiness["shadow_would_pass"] is False, str(readiness))
+
+    snippet_only = evidence(
+        "건설산업 일반 동향",
+        "메타, 5GW 데이터센터 구축에 500억달러 투입",
+    )
+    check("snippet-only 계약/buildout 표현은 confirmed를 열지 않는다",
+          snippet_only["shadow_urgency_status"] == "ambiguous"
+          and snippet_only["shadow_would_pass"] is False
+          and snippet_only["title_positive_groups"] == []
+          and "confirmed_investment_buildout" in snippet_only["snippet_positive_groups"]
+          and snippet_only["shadow_evidence_source"] == "snippet_only", str(snippet_only))
+
+    domain_only = evidence("현대건설 SMR 플랜트 사업 현황")
+    check("HDEC 이름 + SMR/플랜트 domain만으로 confirmed가 열리지 않는다",
+          domain_only["shadow_urgency_status"] == "none"
+          and domain_only["shadow_would_pass"] is False, str(domain_only))
+
+    crossing = evidence(
+        "포스코, 티타늄 판재 사업 재검토…고부가 철강 선택과 집중",
+        change_type="priority_upgrade",
+        change_reasons=("score crossed 3.5 threshold (2.6->3.6)",),
+    )
+    check("priority_upgrade score crossing-only는 shadow blocked",
+          crossing["shadow_urgency_status"] == "blocked"
+          and crossing["shadow_would_pass"] is False, str(crossing))
+    crossing_with_event = evidence(
+        "현대건설, UAE 원전 EPC 계약 체결",
+        change_type="priority_upgrade",
+        change_reasons=("score crossed 3.5 threshold (2.6->3.6)",),
+    )
+    check("priority crossing과 별개인 title 확정 사건은 독립 평가",
+          crossing_with_event["shadow_urgency_status"] == "confirmed"
+          and crossing_with_event["shadow_would_pass"] is True,
+          str(crossing_with_event))
+
+    unavailable = evidence("현대건설, UAE 원전 EPC 계약 체결", policy_override={})
+    check("missing/malformed shadow policy → unavailable·fail-closed",
+          unavailable["shadow_urgency_status"] == "unavailable"
+          and unavailable["shadow_would_pass"] is False, str(unavailable))
+    malformed_policy = json.loads(json.dumps(rs._HOURLY_URGENCY_SHADOW))
+    malformed_policy["positive_event_groups"]["confirmed_contract_order_award"]["any"] = "bad"
+    malformed_shape = evidence(
+        "현대건설, UAE 원전 EPC 계약 체결",
+        policy_override=malformed_policy,
+    )
+    check("malformed shadow term shape → unavailable·fail-closed",
+          malformed_shape["shadow_urgency_status"] == "unavailable"
+          and malformed_shape["shadow_would_pass"] is False, str(malformed_shape))
+
+    policy = json.loads((ROOT / "data" / "radar_signal_policy.json").read_text(encoding="utf-8"))
+    namespace = policy.get("hourly_urgency_shadow")
+
+    def has_numeric(value: object) -> bool:
+        if isinstance(value, bool):
+            return False
+        if isinstance(value, (int, float)):
+            return True
+        if isinstance(value, dict):
+            return any(has_numeric(item) for item in value.values())
+        if isinstance(value, list):
+            return any(has_numeric(item) for item in value)
+        return False
+
+    check("isolated shadow policy namespace loads", rs.shadow_urgency_policy_loaded())
+    check("shadow namespace adds no numeric threshold",
+          isinstance(namespace, dict) and not has_numeric(namespace))
+    policy_text = json.dumps(namespace, ensure_ascii=False)
+    check("shadow policy contains no audited full-title allowlist",
+          all(title not in policy_text for _, title, _ in positive_cases)
+          and all(title not in policy_text for _, title in ambiguous_cases))
+
+    # Existing actor/event/infra/exclusion extraction remains pinned to its old semantics.
+    existing = rs.extract_ai_radar_signals({
+        "title": "현대건설, 美 FANCO와 차세대 SMR 협력…4세대 원자로 협력망 확대",
+        "snippet": "",
+    })
+    check("existing radar extractor result unchanged by isolated namespace",
+          existing["signals"] == {
+              "actor": ["hdec"],
+              "event": [],
+              "infra": ["advanced_energy"],
+              "exclusion": [],
+          }, str(existing["signals"]))
+
+    # Detector integration: current gate is open for both confirmed and none.
+    base = {"top_immediate_signals": [_article()]}
+    confirmed_model = {"top_immediate_signals": [
+        _article(),
+        _article(article_id="shadow-confirmed", url="https://ex.com/shadow-confirmed",
+                 title="메타, 5GW 데이터센터 구축...500억달러 투입",
+                 published_at=FRESH_NEW),
+    ]}
+    proc_c, gh_c, data_c = run_detector(base, confirmed_model)
+    article_c = data_c["articles"][0]
+    shadow_article_fields = {
+        "shadow_urgency_status", "shadow_would_pass",
+        "shadow_confirmed_event_types", "shadow_ambiguous_event_types",
+        "shadow_negative_contexts", "shadow_evidence_source",
+    }
+    check("shadow confirmed여도 current alert_delta/eligible/artifact count 유지",
+          proc_c.returncode == 0 and gh_c.get("alert_delta") == "true"
+          and gh_c.get("hourly_eligible_count") == "1"
+          and len(data_c["articles"]) == 1 and data_c["alert_delta"] is True
+          and gh_c.get("shadow_alert_delta") == "true"
+          and gh_c.get("shadow_confirmed_count") == "1"
+          and shadow_article_fields.issubset(article_c), str(gh_c))
+
+    none_model = {"top_immediate_signals": [
+        _article(),
+        _article(article_id="shadow-none", url="https://ex.com/shadow-none",
+                 title="현대건설 SMR 플랜트 사업 현황", published_at=FRESH_NEW),
+    ]}
+    _, gh_n, data_n = run_detector(base, none_model)
+    check("shadow none이어도 current alert_delta=true·artifact 기사 유지",
+          gh_n.get("alert_delta") == "true"
+          and gh_n.get("hourly_eligible_count") == "1"
+          and gh_n.get("shadow_alert_delta") == "false"
+          and gh_n.get("shadow_none_count") == "1"
+          and len(data_n["articles"]) == 1 and data_n["alert_delta"] is True,
+          str(gh_n))
+
+    ordered = {"top_immediate_signals": [
+        _article(),
+        _article(article_id="shadow-d", url="https://ex.com/shadow-d",
+                 title="현대건설 SMR 플랜트 사업 현황", score=2.0,
+                 published_at=FRESH_NEW, provenance=HDEC_DIRECT_PROV),
+        _article(article_id="shadow-s49", url="https://ex.com/shadow-s49",
+                 title="메타, 5GW 데이터센터 구축...500억달러 투입", score=4.9,
+                 published_at=FRESH_NEW),
+        _article(article_id="shadow-s40", url="https://ex.com/shadow-s40",
+                 title="건설산업 일반 동향", score=4.0, published_at=FRESH_NEW),
+    ]}
+    _, gh_o, data_o = run_detector(base, ordered)
+    check("shadow telemetry does not change current article ordering",
+          [a["article_key"] for a in data_o["articles"]]
+          == ["shadow-d", "shadow-s49", "shadow-s40"])
+    shadow_o = _shadow_counts(gh_o)
+    check("shadow count identity over D7-AK-2 eligible articles",
+          int(gh_o["hourly_eligible_count"]) == sum(
+              shadow_o[key] for key in (
+                  "shadow_confirmed_count", "shadow_ambiguous_count",
+                  "shadow_blocked_count", "shadow_none_count",
+                  "shadow_unavailable_count",
+              )
+          )
+          and shadow_o["shadow_would_pass_count"]
+          == shadow_o["shadow_confirmed_count"], str(shadow_o))
+
+    mixed = {"top_immediate_signals": [
+        _article(),
+        _article(article_id="shadow-ok", url="https://ex.com/shadow-ok",
+                 title="메타, 5GW 데이터센터 구축...500억달러 투입",
+                 score=4.2, published_at=FRESH_NEW),
+        _article(article_id="shadow-low", url="https://ex.com/shadow-low",
+                 title="현대건설, UAE 원전 EPC 계약 체결",
+                 score=1.0, published_at=FRESH_NEW),
+        _article(article_id="shadow-stale", url="https://ex.com/shadow-stale",
+                 title="현대건설, ABC와 원전 사업 MOU 체결",
+                 score=4.8, published_at=STALE_80H),
+    ]}
+    _, gh_m, _ = run_detector(base, mixed)
+    check("low-value/stale/ignored articles are outside shadow evaluator counts",
+          gh_m.get("pre_policy_meaningful_count") == "3"
+          and gh_m.get("hourly_eligible_count") == "1"
+          and gh_m.get("suppressed_low_value_count") == "1"
+          and gh_m.get("suppressed_stale_count") == "1"
+          and gh_m.get("shadow_confirmed_count") == "1", str(gh_m))
+
+    # The classifier must also aggregate unavailable when its loaded namespace fails.
+    original_shadow_policy = rs._HOURLY_URGENCY_SHADOW
+    try:
+        rs._HOURLY_URGENCY_SHADOW = {}
+        unavailable_classification = dc.classify_delta(
+            [],
+            [("top_immediate_signals", _article(
+                article_id="shadow-unavailable", url="https://ex.com/shadow-unavailable",
+                title="현대건설, UAE 원전 EPC 계약 체결", published_at=FRESH_NEW,
+            ))],
+            news_mode="live",
+            reference_dt=datetime.fromisoformat(NOW_ISO),
+        )
+    finally:
+        rs._HOURLY_URGENCY_SHADOW = original_shadow_policy
+    check("eligible article under unavailable policy remains current-eligible but shadow-closed",
+          unavailable_classification.hourly_eligible_count == 1
+          and unavailable_classification.shadow_unavailable_count == 1
+          and unavailable_classification.shadow_would_pass_count == 0)
+
+    # Static wiring: sender and current gate never reference the shadow decision.
+    workflow_text = WORKFLOW.read_text(encoding="utf-8")
+    detector_text = DETECTOR.read_text(encoding="utf-8")
+    tg_if = _step_if(workflow_text, "Hourly telegram digest (delta-gated auto-send)")
+    teams_if = _step_if(workflow_text, "Hourly Teams channel email (delta-gated auto-send)")
+    check("sender step gates remain current alert_delta-only",
+          "shadow" not in tg_if and "shadow" not in teams_if
+          and "steps.delta.outputs.alert_delta == 'true'" in tg_if
+          and "steps.delta.outputs.alert_delta == 'true'" in teams_if)
+    check("detector current alert_delta formula remains hourly_eligible_count>=1",
+          "alert_delta = classification.hourly_eligible_count >= 1" in detector_text)
+    check("workflow YAML has no shadow wiring", "shadow_" not in workflow_text)
+
+    # Count-only stdout/GITHUB_OUTPUT; the artifact may contain the title by contract.
+    canary_title = "SHADOWSECRET 계약 체결"
+    canary_url = "https://leak.example/shadow-secret"
+    proc_l, gh_l, _ = run_detector(base, {"top_immediate_signals": [
+        _article(),
+        _article(article_id="shadow-log", url=canary_url, title=canary_title,
+                 score=4.2, published_at=FRESH_NEW),
+    ]})
+    logs = (proc_l.stdout or "") + (proc_l.stderr or "")
+    gh_log = "\n".join(f"{key}={value}" for key, value in gh_l.items())
+    check("shadow stdout/GITHUB_OUTPUT expose counts only",
+          canary_title not in logs and canary_url not in logs
+          and canary_title not in gh_log and canary_url not in gh_log
+          and "shadow urgency:" in logs)
+
+    # Only the hourly delta classifier may consume the evaluator; daily/report paths stay isolated.
+    consumers = []
+    for path in (ROOT / "app").glob("*.py"):
+        if path.name == "radar_signals.py":
+            continue
+        if "evaluate_hourly_urgency_shadow" in path.read_text(encoding="utf-8"):
+            consumers.append(path.name)
+    check("daily/report classifiers do not consume shadow evaluator",
+          consumers == ["delta_classifier.py"], str(consumers))
+
+
 def main() -> int:
-    print(f"== verify_meaningful_delta_quality (D7-AK-1/2) @ {ROOT} ==")
+    print(f"== verify_meaningful_delta_quality (D7-AK-1/2/4B) @ {ROOT} ==")
     check_ignored_changes()
     check_meaningful_changes()
     check_identity_matching()
@@ -659,6 +985,7 @@ def main() -> int:
     check_eligible_ordering()
     check_reference_time_determinism()
     check_count_identities()
+    check_shadow_evidence_contract()
 
     # invalid 입력 → fail-closed (rc!=0 · alert_delta=false · 아티팩트 미생성)
     proc, gh, data = run_detector({"top_immediate_signals": [_article()]}, {}, valid_new=False)
@@ -673,7 +1000,8 @@ def main() -> int:
         return 1
     print("RESULT: PASS — hourly delta gate: noise suppressed, classification preserved, "
           "low-value/stale alerts withheld, high-value ordering first, deterministic on --now, "
-          "sender gates closed on zero eligible, schema-compatible, content-free")
+          "sender gates closed on zero eligible, shadow evidence additive/gate-neutral, "
+          "schema-compatible, content-free")
     return 0
 
 

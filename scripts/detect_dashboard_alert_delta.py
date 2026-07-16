@@ -420,6 +420,17 @@ def _artifact_entry_from_classified(article: "delta_classifier.ClassifiedArticle
     entry["after"] = article.after
     entry["hourly_eligible"] = article.hourly_eligible
     entry["hourly_suppression_reasons"] = list(article.hourly_suppression_reasons)
+    # D7-AK-4B shadow telemetry. 기존 articles 선택·정렬에는 관여하지 않는다.
+    entry["shadow_urgency_status"] = article.shadow_urgency_status
+    entry["shadow_would_pass"] = article.shadow_would_pass
+    entry["shadow_confirmed_event_types"] = list(
+        article.shadow_confirmed_event_types
+    )
+    entry["shadow_ambiguous_event_types"] = list(
+        article.shadow_ambiguous_event_types
+    )
+    entry["shadow_negative_contexts"] = list(article.shadow_negative_contexts)
+    entry["shadow_evidence_source"] = article.shadow_evidence_source
     return entry
 
 
@@ -507,6 +518,14 @@ def build_delta_payload(
         "suppressed_low_value_count": classification.suppressed_low_value_count,
         "suppressed_stale_count": classification.suppressed_stale_count,
         "suppressed_unknown_time_count": classification.suppressed_unknown_time_count,
+        # confirmed-event evidence는 진단용 shadow 계약이며 alert_delta를 바꾸지 않는다.
+        "shadow_alert_delta": classification.shadow_would_pass_count >= 1,
+        "shadow_would_pass_count": classification.shadow_would_pass_count,
+        "shadow_confirmed_count": classification.shadow_confirmed_count,
+        "shadow_ambiguous_count": classification.shadow_ambiguous_count,
+        "shadow_blocked_count": classification.shadow_blocked_count,
+        "shadow_none_count": classification.shadow_none_count,
+        "shadow_unavailable_count": classification.shadow_unavailable_count,
         # 하위호환: 기존 소비자는 new_candidate_count를 읽는다(= dedup된 변동 후보 수).
         "new_candidate_count": classification.deduplicated_count,
         "change_type_counts": dict(classification.change_type_counts),
@@ -536,6 +555,13 @@ def _write_github_output(
     suppressed_low_value_count: int = 0,
     suppressed_stale_count: int = 0,
     suppressed_unknown_time_count: int = 0,
+    shadow_alert_delta: bool = False,
+    shadow_would_pass_count: int = 0,
+    shadow_confirmed_count: int = 0,
+    shadow_ambiguous_count: int = 0,
+    shadow_blocked_count: int = 0,
+    shadow_none_count: int = 0,
+    shadow_unavailable_count: int = 0,
 ) -> None:
     """GITHUB_OUTPUT에 alert_delta(=hourly_eligible>=1)와 진단 카운트만 쓴다.
 
@@ -556,6 +582,13 @@ def _write_github_output(
         output.write(f"suppressed_low_value_count={int(suppressed_low_value_count)}\n")
         output.write(f"suppressed_stale_count={int(suppressed_stale_count)}\n")
         output.write(f"suppressed_unknown_time_count={int(suppressed_unknown_time_count)}\n")
+        output.write(f"shadow_alert_delta={flag(shadow_alert_delta)}\n")
+        output.write(f"shadow_would_pass_count={int(shadow_would_pass_count)}\n")
+        output.write(f"shadow_confirmed_count={int(shadow_confirmed_count)}\n")
+        output.write(f"shadow_ambiguous_count={int(shadow_ambiguous_count)}\n")
+        output.write(f"shadow_blocked_count={int(shadow_blocked_count)}\n")
+        output.write(f"shadow_none_count={int(shadow_none_count)}\n")
+        output.write(f"shadow_unavailable_count={int(shadow_unavailable_count)}\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -621,6 +654,16 @@ def main(argv: list[str] | None = None) -> int:
         f"alert_delta={'true' if alert_delta else 'false'} "
         f"raw_alert_delta={'true' if raw_alert_delta else 'false'}"
     )
+    print(
+        "shadow urgency: "
+        f"eligible={classification.hourly_eligible_count} "
+        f"confirmed={classification.shadow_confirmed_count} "
+        f"ambiguous={classification.shadow_ambiguous_count} "
+        f"blocked={classification.shadow_blocked_count} "
+        f"none={classification.shadow_none_count} "
+        f"unavailable={classification.shadow_unavailable_count} "
+        f"shadow_alert_delta={'true' if classification.shadow_would_pass_count >= 1 else 'false'}"
+    )
     if args.github_output:
         _write_github_output(
             args.github_output,
@@ -636,6 +679,13 @@ def main(argv: list[str] | None = None) -> int:
             suppressed_low_value_count=classification.suppressed_low_value_count,
             suppressed_stale_count=classification.suppressed_stale_count,
             suppressed_unknown_time_count=classification.suppressed_unknown_time_count,
+            shadow_alert_delta=classification.shadow_would_pass_count >= 1,
+            shadow_would_pass_count=classification.shadow_would_pass_count,
+            shadow_confirmed_count=classification.shadow_confirmed_count,
+            shadow_ambiguous_count=classification.shadow_ambiguous_count,
+            shadow_blocked_count=classification.shadow_blocked_count,
+            shadow_none_count=classification.shadow_none_count,
+            shadow_unavailable_count=classification.shadow_unavailable_count,
         )
 
     if args.delta_artifact:

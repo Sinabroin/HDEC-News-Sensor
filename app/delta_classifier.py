@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 from app.news_recency import hours_since_published, passes_immediate_recency
+from app.radar_signals import evaluate_hourly_urgency_shadow
 from app.scoring import (
     DAILY_THRESHOLD,
     GRADE_DAILY,
@@ -104,6 +105,13 @@ class ClassifiedArticle:
     # ── 정책 계층 (분류와 분리). 분류가 meaningful인 기사에만 판정한다.
     hourly_eligible: bool = False
     hourly_suppression_reasons: tuple[str, ...] = ()
+    # ── D7-AK-4B shadow 전용. hourly_eligible/alert_delta 판정에는 사용하지 않는다.
+    shadow_urgency_status: str = "none"
+    shadow_would_pass: bool = False
+    shadow_confirmed_event_types: tuple[str, ...] = ()
+    shadow_ambiguous_event_types: tuple[str, ...] = ()
+    shadow_negative_contexts: tuple[str, ...] = ()
+    shadow_evidence_source: str = "none"
 
 
 @dataclass(frozen=True)
@@ -122,6 +130,13 @@ class DeltaClassification:
     suppressed_low_value_count: int = 0
     suppressed_stale_count: int = 0
     suppressed_unknown_time_count: int = 0
+    # D7-AK-2 eligible 기사만 합산하는 shadow 진단. 발송 게이트와 완전히 분리한다.
+    shadow_confirmed_count: int = 0
+    shadow_ambiguous_count: int = 0
+    shadow_blocked_count: int = 0
+    shadow_none_count: int = 0
+    shadow_unavailable_count: int = 0
+    shadow_would_pass_count: int = 0
 
     @property
     def hourly_eligible_count(self) -> int:
@@ -564,6 +579,29 @@ def classify_delta(
                 hourly_eligible=eligible,
                 hourly_suppression_reasons=tuple(reasons),
             )
+            # Shadow evaluator는 현재 D7-AK-2 자격을 모두 통과한 기사에만 적용한다.
+            # 결과는 관측용 필드일 뿐 eligible/reasons/bucket을 다시 쓰지 않는다.
+            if eligible:
+                shadow = evaluate_hourly_urgency_shadow(
+                    classified.representative,
+                    change_type=classified.change_type,
+                    change_reasons=classified.change_reasons,
+                )
+                classified = replace(
+                    classified,
+                    shadow_urgency_status=shadow["shadow_urgency_status"],
+                    shadow_would_pass=shadow["shadow_would_pass"],
+                    shadow_confirmed_event_types=tuple(
+                        shadow["shadow_confirmed_event_types"]
+                    ),
+                    shadow_ambiguous_event_types=tuple(
+                        shadow["shadow_ambiguous_event_types"]
+                    ),
+                    shadow_negative_contexts=tuple(
+                        shadow["shadow_negative_contexts"]
+                    ),
+                    shadow_evidence_source=shadow["shadow_evidence_source"],
+                )
             if bucket:
                 suppressed[bucket] += 1
         candidates.append(classified)
@@ -576,6 +614,18 @@ def classify_delta(
         (c for c in candidates if c.change_type in MEANINGFUL_TYPES), key=_sort_key
     )
     eligible_articles = [c for c in pre_policy if c.hourly_eligible]
+    shadow_counts = {
+        "confirmed": 0,
+        "ambiguous": 0,
+        "blocked": 0,
+        "none": 0,
+        "unavailable": 0,
+    }
+    for article in eligible_articles:
+        status = article.shadow_urgency_status
+        if status not in shadow_counts:
+            status = "unavailable"
+        shadow_counts[status] += 1
     return DeltaClassification(
         meaningful=tuple(eligible_articles),
         pre_policy_meaningful=tuple(pre_policy),
@@ -589,4 +639,10 @@ def classify_delta(
         suppressed_low_value_count=suppressed[SUPPRESSED_LOW_VALUE],
         suppressed_stale_count=suppressed[SUPPRESSED_STALE],
         suppressed_unknown_time_count=suppressed[SUPPRESSED_UNKNOWN_TIME],
+        shadow_confirmed_count=shadow_counts["confirmed"],
+        shadow_ambiguous_count=shadow_counts["ambiguous"],
+        shadow_blocked_count=shadow_counts["blocked"],
+        shadow_none_count=shadow_counts["none"],
+        shadow_unavailable_count=shadow_counts["unavailable"],
+        shadow_would_pass_count=shadow_counts["confirmed"],
     )

@@ -375,5 +375,522 @@
       "advanced_energy",
       "ai_product"
     ]
+  },
+  "hourly_urgency_shadow": {
+    "note": "시간당 발송과 분리된 categorical confirmed-event evidence 계약. title 사건+대상 증거만 confirmed를 열며 snippet은 보강·진단에만 사용한다.",
+    "positive_event_groups": {
+      "confirmed_contract_order_award": {
+        "any": [
+          "계약 체결",
+          "계약을 체결",
+          "본계약 전환",
+          "본계약 체결",
+          "수주 확정",
+          "수주에 성공",
+          "수주했다",
+          "발주 확정",
+          "발주 공고",
+          "낙찰",
+          "사업권 확보",
+          "사업권을 확보",
+          "공급계약",
+          "공급 계약",
+          "EPC 계약"
+        ],
+        "required_context_groups": [
+          "organization_actor",
+          "contract_target"
+        ],
+        "ambiguous_conflicts": [
+        ]
+      },
+      "confirmed_formal_partnership": {
+        "any": [
+          "협약 체결",
+          "협약을 체결",
+          "기본 협약 체결",
+          "본협약 체결",
+          "MOU 체결",
+          "양해각서 체결",
+          "공식 파트너십",
+          "파트너십 체결",
+          "합작법인 설립",
+          "조인트벤처 설립",
+          "컨소시엄 구성",
+          "컨소시엄 결성",
+          "공동사업 협약"
+        ],
+        "all_of": [
+          [
+            "협력",
+            "협약",
+            "파트너십"
+          ],
+          [
+            "와 ",
+            "과 ",
+            "with "
+          ]
+        ],
+        "required_context_groups": [
+          "organization_actor",
+          "partnership_target"
+        ],
+        "ambiguous_conflicts": [
+          "strategic_cooperation",
+          "technology_cooperation"
+        ]
+      },
+      "confirmed_investment_buildout": {
+        "any": [
+          "투자 확정",
+          "투자를 확정",
+          "투자 결정",
+          "투자를 결정",
+          "투자액 투입",
+          "달러 투입",
+          "억원 투입",
+          "조원 투입",
+          "착공",
+          "구축 착수",
+          "건설 확정",
+          "생산시설 건설",
+          "데이터센터 구축",
+          "전력시설 건설",
+          "증설 확정",
+          "용량 확정"
+        ],
+        "required_context_groups": [
+          "organization_actor",
+          "buildout_target"
+        ],
+        "ambiguous_conflicts": [
+          "business_expansion_plan",
+          "market_entry_plan"
+        ]
+      },
+      "confirmed_finance_credit_liquidity": {
+        "any": [
+          "PF 조달 완료",
+          "프로젝트파이낸싱 조달 완료",
+          "자금 조달 완료",
+          "자금조달 확정",
+          "조달 확정",
+          "채무보증",
+          "유동성 위기",
+          "신용등급 상향",
+          "신용등급 하향",
+          "신용등급 강등",
+          "대규모 손실",
+          "대규모 충당금",
+          "법정관리",
+          "워크아웃",
+          "채무조정"
+        ],
+        "required_context_groups": [
+          "organization_actor",
+          "finance_target"
+        ],
+        "ambiguous_conflicts": [
+          "financing_intention"
+        ]
+      },
+      "confirmed_safety_enforcement": {
+        "any": [
+          "중대재해",
+          "사망 사고",
+          "사망사고",
+          "붕괴 사고",
+          "붕괴사고",
+          "특별감독",
+          "수사 착수",
+          "수사에 착수",
+          "기소",
+          "제재",
+          "과징금",
+          "영업정지",
+          "입찰제한",
+          "공식 처분"
+        ],
+        "required_context_groups": [
+          "organization_actor",
+          "safety_target"
+        ],
+        "ambiguous_conflicts": [
+        ]
+      },
+      "confirmed_regulatory_decision": {
+        "any": [
+          "최종 승인",
+          "승인했다",
+          "승인을 받",
+          "허가했다",
+          "허가를 받",
+          "인허가 취소",
+          "허가 취소",
+          "규제 확정",
+          "법안 통과",
+          "법률 시행",
+          "행정명령",
+          "사업 중단 명령",
+          "중단 명령",
+          "금지 결정",
+          "허용 결정"
+        ],
+        "required_context_groups": [
+          "government_regulator",
+          "regulatory_target"
+        ],
+        "ambiguous_conflicts": [
+          "policy_direction"
+        ]
+      },
+      "confirmed_project_milestone": {
+        "any": [
+          "착공",
+          "준공",
+          "상업운전",
+          "상업 운전",
+          "프로젝트 중단",
+          "사업 중단",
+          "프로젝트 취소",
+          "사업 취소",
+          "공사 재개",
+          "사업 재개",
+          "우선협상대상자 선정",
+          "우선 협상 대상자 선정",
+          "본계약 전환"
+        ],
+        "required_context_groups": [
+          "organization_actor",
+          "project_target"
+        ],
+        "ambiguous_conflicts": [
+          "business_expansion_plan"
+        ]
+      }
+    },
+    "ambiguous_event_groups": {
+      "strategic_cooperation": {
+        "any": [
+          "전략적 협력",
+          "협력 논의",
+          "협력 추진",
+          "협력 계획",
+          "협력 강화"
+        ]
+      },
+      "technology_cooperation": {
+        "any": [
+          "기술 협력",
+          "기술협력",
+          "공동 연구",
+          "공동연구",
+          "기술 개발 협력"
+        ]
+      },
+      "business_expansion_plan": {
+        "any": [
+          "사업 확대",
+          "사업확대",
+          "확대 추진",
+          "사업 강화",
+          "인프라 강화"
+        ]
+      },
+      "market_entry_plan": {
+        "any": [
+          "시장 진출",
+          "진출 추진",
+          "진출 검토",
+          "시장 공략"
+        ]
+      },
+      "portfolio_strategy": {
+        "any": [
+          "포트폴리오",
+          "선택과 집중",
+          "사업구조 개편",
+          "사업 구조 개편",
+          "체질개선",
+          "체질 개선"
+        ]
+      },
+      "policy_direction": {
+        "any": [
+          "정책 방향",
+          "육성한다",
+          "지원 방안",
+          "추진 계획",
+          "정책 제언"
+        ]
+      },
+      "financing_intention": {
+        "any": [
+          "자금 확보",
+          "실탄 확보",
+          "조달 계획",
+          "재원 마련",
+          "자금조달 계획"
+        ]
+      }
+    },
+    "negative_context_groups": {
+      "review_or_consideration": {
+        "any": [
+          "검토",
+          "재검토",
+          "논의 중",
+          "고려 중"
+        ]
+      },
+      "outlook_or_forecast": {
+        "any": [
+          "전망",
+          "예고",
+          "예측",
+          "관측",
+          "전망한다"
+        ]
+      },
+      "preparation_or_readiness": {
+        "any": [
+          "준비",
+          "대비",
+          "채비",
+          "정조준"
+        ]
+      },
+      "long_term_vision": {
+        "any": [
+          "장기 비전",
+          "미래 비전",
+          "청사진",
+          "도약",
+          "미래상"
+        ]
+      },
+      "general_strategy": {
+        "any": [
+          "전략",
+          "경쟁력 강화",
+          "선점",
+          "생태계 육성"
+        ]
+      },
+      "interview_or_commentary": {
+        "any": [
+          "인터뷰",
+          "대담",
+          "기고",
+          "칼럼",
+          "에게 듣는다",
+          "전문가 진단"
+        ]
+      },
+      "book_or_report_publication": {
+        "any": [
+          "출간",
+          "책 발간",
+          "보고서 발간",
+          "백서 발간"
+        ]
+      },
+      "recruiting_or_hr": {
+        "any": [
+          "채용",
+          "공채",
+          "인재 영입"
+        ]
+      },
+      "industry_roundup": {
+        "any": [
+          "[기획]",
+          "[초점]",
+          "산업계 동향",
+          "업계 동향"
+        ]
+      },
+      "background_reference": {
+        "any": [
+          "배경은",
+          "무엇이 달라지나",
+          "알아보니"
+        ]
+      },
+      "possibility_or_expectation": {
+        "any": [
+          "가능성",
+          "기대",
+          "수혜 예상",
+          "할 수 있을까"
+        ]
+      },
+      "promotional_feature": {
+        "any": [
+          "[영상]",
+          "홍보",
+          "브랜드 스토리",
+          "특집"
+        ]
+      }
+    },
+    "actor_or_target_groups": {
+      "organization_actor": {
+        "any": [
+          "현대건설",
+          "현대 건설",
+          "현대엔지니어링",
+          "현대ENG",
+          "Hyundai E&C",
+          "HDEC",
+          "Meta",
+          "메타",
+          "Microsoft",
+          "마이크로소프트",
+          "Amazon",
+          "AWS",
+          "Google",
+          "Oracle",
+          "OpenAI",
+          "건설사",
+          "시공사",
+          "발주처",
+          "사업자",
+          "기업",
+          "그룹",
+          "공사",
+          "연구원"
+        ]
+      },
+      "government_regulator": {
+        "any": [
+          "정부",
+          "국회",
+          "법원",
+          "검찰",
+          "경찰",
+          "국토교통부",
+          "고용노동부",
+          "산업통상자원부",
+          "금융위원회",
+          "공정거래위원회",
+          "지자체",
+          "주정부",
+          "당국"
+        ]
+      },
+      "contract_target": {
+        "any": [
+          "계약",
+          "수주",
+          "발주",
+          "낙찰",
+          "사업권",
+          "공급",
+          "EPC",
+          "프로젝트"
+        ]
+      },
+      "partnership_target": {
+        "any": [
+          "협약",
+          "MOU",
+          "양해각서",
+          "파트너십",
+          "합작",
+          "조인트벤처",
+          "컨소시엄",
+          "협력"
+        ]
+      },
+      "buildout_target": {
+        "any": [
+          "데이터센터",
+          "데이터 센터",
+          "발전소",
+          "전력시설",
+          "전력 시설",
+          "전력망",
+          "생산시설",
+          "생산 시설",
+          "공장",
+          "설비",
+          "시설",
+          "용량",
+          "GW",
+          "MW"
+        ]
+      },
+      "finance_target": {
+        "any": [
+          "PF",
+          "프로젝트파이낸싱",
+          "자금",
+          "유동성",
+          "신용등급",
+          "채무",
+          "손실",
+          "충당금",
+          "법정관리",
+          "워크아웃"
+        ]
+      },
+      "safety_target": {
+        "any": [
+          "현장",
+          "사업장",
+          "공사",
+          "사고",
+          "재해",
+          "안전"
+        ]
+      },
+      "regulatory_target": {
+        "any": [
+          "승인",
+          "허가",
+          "인허가",
+          "규제",
+          "법안",
+          "법률",
+          "행정",
+          "사업",
+          "프로젝트"
+        ]
+      },
+      "project_target": {
+        "any": [
+          "프로젝트",
+          "사업",
+          "공사",
+          "시설",
+          "데이터센터",
+          "데이터 센터",
+          "발전소",
+          "원전",
+          "플랜트",
+          "노선"
+        ]
+      }
+    },
+    "decision": {
+      "blocking_negative_groups": [
+        "interview_or_commentary",
+        "book_or_report_publication",
+        "recruiting_or_hr",
+        "industry_roundup",
+        "promotional_feature"
+      ],
+      "conflicting_negative_groups": [
+        "review_or_consideration",
+        "outlook_or_forecast",
+        "preparation_or_readiness",
+        "long_term_vision",
+        "general_strategy",
+        "background_reference",
+        "possibility_or_expectation"
+      ]
+    }
   }
 }
