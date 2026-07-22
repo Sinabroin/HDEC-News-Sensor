@@ -48,6 +48,17 @@ EXISTING_VERIFIERS = [
 # mock macro 고정값 중 점수(0~5)/테마 강도(~140)와 절대 충돌하지 않는 식별용 수치
 DISTINCTIVE_MACRO_VALUES = ("1480.5", "2864.7")
 
+
+def _distinctive_macro_leaks(text: str) -> list[str]:
+    """완전한 숫자 토큰이 mock 고정값과 일치할 때만 누출로 판정한다."""
+    return [
+        value for value in DISTINCTIVE_MACRO_VALUES
+        if re.search(
+            rf"(?<![\d.]){re.escape(value)}(?![\d.])",
+            text,
+        )
+    ]
+
 # 시장지표 문맥 토큰 — 이 토큰이 있는 줄만 claim 검사한다
 # (mock 기사 snippet의 "실시간 경보 체계" 같은 뉴스 본문 표현은 대상이 아니다)
 MACRO_CONTEXT = ("macro", "시장지표", "시세", "시장값")
@@ -217,8 +228,9 @@ def check_macro_module() -> None:
           bool(ok.get("source")) and bool(ok.get("updated_at")))
     check("live 성공(최근 기준시각) → is_stale False", ok.get("is_stale") is False)
     check("live 성공 → 공개 시세 values 노출", bool(ok.get("values")))
-    leak = [v for v in DISTINCTIVE_MACRO_VALUES
-            if v in json.dumps(ok, ensure_ascii=False)]
+    leak = _distinctive_macro_leaks(
+        json.dumps(ok, ensure_ascii=False)
+    )
     check("live 성공 → mock 고정값(1480.5/2864.7) 혼입 없음", not leak, ", ".join(leak))
 
     def stale_fetch():
@@ -281,7 +293,7 @@ def check_brief_provenance() -> None:
     if check("brief --dry-run 동작", text_proc.returncode == 0):
         text = text_proc.stdout
         check("brief 텍스트에 '시장지표 미연동' 표기", "시장지표 미연동" in text)
-        leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in text]
+        leaked = _distinctive_macro_leaks(text)
         check("brief 텍스트에 mock macro 수치 없음", not leaked, ", ".join(leaked))
         bad = claim_violations(text)
         check("brief 텍스트에 부정 없는 live/현재성 주장 없음", not bad, "; ".join(bad))
@@ -295,7 +307,7 @@ def check_digest_output() -> None:
     message = proc.stdout
     check("digest 헤더에 데이터 출처 표기",
           "mock 데이터 기반" in message or "뉴스/시장지표 미연동" in message)
-    leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in message]
+    leaked = _distinctive_macro_leaks(message)
     check("digest에 mock macro 고정값 수치 없음", not leaked, ", ".join(leaked))
     # P0-C1.12 — mock/미연동 상태에서 digest는 Macro Snapshot/미연동 placeholder를 넣지
     # 않는다 (거시경제는 리포트로 위임). live 데이터일 때만 수치를 노출한다(아래 단위 검사).
@@ -379,7 +391,7 @@ def _check_report_html(html: str, label: str, committed: bool = False) -> None:
         check(f"{label}: mock/데모 표기 포함", "데모" in html or "mock" in html.lower())
     check(f"{label}: 'LIVE'·'공개 RSS' 기술 표기 없음 (임원 화면)",
           "LIVE" not in html and "공개 RSS" not in html)
-    leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
+    leaked = _distinctive_macro_leaks(html)
     check(f"{label}: mock macro 고정값 수치 미노출", not leaked, ", ".join(leaked))
     bad = claim_violations(_visible_text(html))
     check(f"{label}: 부정 없는 live/현재성 주장 없음", not bad, "; ".join(bad))
@@ -418,7 +430,7 @@ def check_dashboard_template() -> None:
     html = TEMPLATE.read_text(encoding="utf-8")
     check("대시보드: '시장지표 미연동' 라벨 존재", "시장지표 미연동" in html)
     check("대시보드: macro_data_mode 분기 존재", "macro_data_mode" in html)
-    leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
+    leaked = _distinctive_macro_leaks(html)
     check("대시보드: macro 고정값 하드코딩 없음", not leaked, ", ".join(leaked))
     reader_html = DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
     check("대시보드: 원문 접근 상태를 정직하게 표시",
