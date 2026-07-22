@@ -472,7 +472,12 @@ def _check_html_content(html: str, label: str, committed: bool = False) -> None:
                   ", ".join(decimals))
         check(f"{label}: macro 경고(현재 시장값 아님) 포함",
               bool(re.search(r"현재 시장값(?:이|은)? 아니", html)))
-    leaked = [v for v in DISTINCTIVE_MACRO_VALUES if v in html]
+    # 숫자 토큰 전체가 mock 고정값과 일치할 때만 누출로 판정한다.
+    # 예: live 환율 1480.58은 mock 값 1480.5의 누출이 아니다.
+    leaked = [
+        v for v in DISTINCTIVE_MACRO_VALUES
+        if re.search(rf"(?<![\d.]){re.escape(v)}(?![\d.])", html)
+    ]
     check(f"{label}: mock macro 고정값 수치 미노출", not leaked, ", ".join(leaked))
 
     lowered = html.lower()
