@@ -45,6 +45,10 @@ jobs:
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
           python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 scripts/verify_teams_ai_push.py
+          python3 scripts/verify_teams_push_state.py
+          python3 scripts/verify_teams_ai_push_dry_run.py
+          python3 scripts/verify_teams_ai_push_workflow_dry_run.py
           python3 scripts/verify_hourly_delta_auto_send.py --skip-operator-verifier
           python3 scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_scheduled_refresh_and_telegram.py
@@ -124,6 +128,58 @@ jobs:
             docs/daily/dashboard-latest.html \
             --github-output "$GITHUB_OUTPUT" \
             --delta-artifact "$DELTA_ARTIFACT_FILE"
+
+      # 3A) 기사별 Teams AI 카드를 실제 발송 없이 준비한다. 같은 delta artifact를 읽고,
+      #     runner temp의 빈 state만 읽기 때문에 운영 dedup state·webhook·SMTP를 건드리지 않는다.
+      - name: Prepare Teams AI article cards (dry-run only)
+        id: teams_ai_push_dry_run
+        if: steps.build.outputs.live_ok == 'true'
+        env:
+          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
+          TEAMS_PUSH_STATE_PATH: ${{ runner.temp }}/teams_push_state_readonly.json
+          TEAMS_AI_PUSH_DRY_RUN_DIR: ${{ runner.temp }}/teams-ai-push-dry-run
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          rm -rf "$TEAMS_AI_PUSH_DRY_RUN_DIR"
+          python3 scripts/prepare_teams_ai_push_dry_run.py \
+            --artifact "$DELTA_ARTIFACT_FILE" \
+            --state "$TEAMS_PUSH_STATE_PATH" \
+            --output-dir "$TEAMS_AI_PUSH_DRY_RUN_DIR" \
+            --dashboard-url "$DASHBOARD_URL" \
+            --report-url "$REPORT_URL"
+          python3 - "$TEAMS_AI_PUSH_DRY_RUN_DIR/manifest.json" "$GITHUB_OUTPUT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          safety = manifest.get("safety") or {}
+          if safety.get("webhook_calls") != 0 or safety.get("smtp_connections") != 0:
+              raise SystemExit("dry-run safety contract violated: network call count")
+          if safety.get("state_write") is not False:
+              raise SystemExit("dry-run safety contract violated: state write")
+          with Path(sys.argv[2]).open("a", encoding="utf-8") as output:
+              output.write(f"card_count={int(manifest.get('card_count') or 0)}\n")
+              output.write(
+                  f"dedup_blocked_count={int(manifest.get('dedup_blocked_count') or 0)}\n"
+              )
+          print(
+              "Teams AI card dry-run summary: "
+              f"cards={int(manifest.get('card_count') or 0)} "
+              f"dedup_blocked={int(manifest.get('dedup_blocked_count') or 0)} "
+              "webhook_calls=0 smtp_connections=0 state_writes=0"
+          )
+          PY
+
+      - name: Upload Teams AI article cards dry-run artifact
+        if: steps.build.outputs.live_ok == 'true' && steps.teams_ai_push_dry_run.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-ai-news-push-dry-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/teams-ai-push-dry-run
+          if-no-files-found: error
+          retention-days: 3
 
       # 4) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
       - name: Publish to Pages (commit live docs)
