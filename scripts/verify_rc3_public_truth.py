@@ -159,12 +159,46 @@ def check_committed() -> None:
         items = {i.get("id"): i for i in model.get("market_items") or []}
         us2 = items.get("us_2y") or {}
         hist = us2.get("history") or {}
-        periods_ok = (len(hist.get("1w") or []) >= 2 and len(hist.get("1y") or []) >= 2
-                      and hist.get("3m") != hist.get("1y"))
-        check("C7: live 산출물 us_2y — FRED 일별 기간 히스토리(3개월≠1년) + delayed",
-              periods_ok and us2.get("data_mode") == "delayed_market"
-              and "FRED" in str(us2.get("history_source") or ""),
-              f"mode={us2.get('data_mode')} src={us2.get('history_source')}")
+
+        # FRED DGS2 히스토리는 외부 공개 소스의 성공분만 주입된다.
+        # 성공 시에는 기간·출처·히스토리 모드를 엄격히 검증하고,
+        # 수집 실패 시에는 가짜 히스토리나 잔존 provenance 없이 비어 있는
+        # 정직한 상태를 허용한다. 현재값 data_mode와 history_data_mode는
+        # 서로 다른 계약이므로 혼용하지 않는다.
+        if hist:
+            periods_ok = (
+                len(hist.get("1w") or []) >= 2
+                and len(hist.get("1y") or []) >= 2
+                and hist.get("3m") != hist.get("1y")
+            )
+            check(
+                "C7a: live 산출물 us_2y — FRED 성공 시 일별 기간 히스토리"
+                "(3개월≠1년) + delayed",
+                periods_ok
+                and us2.get("history_data_mode") == "delayed_market"
+                and "FRED" in str(us2.get("history_source") or ""),
+                (
+                    f"current_mode={us2.get('data_mode')} "
+                    f"history_mode={us2.get('history_data_mode')} "
+                    f"src={us2.get('history_source')}"
+                ),
+            )
+        else:
+            honest_absence = (
+                not us2.get("history_source")
+                and not us2.get("history_data_mode")
+                and not us2.get("history_updated_at")
+            )
+            check(
+                "C7b: live 산출물 us_2y — FRED 미수신 시 "
+                "히스토리·출처·시각을 정직하게 비움",
+                honest_absence,
+                (
+                    f"current_mode={us2.get('data_mode')} "
+                    f"history_mode={us2.get('history_data_mode')} "
+                    f"src={us2.get('history_source')}"
+                ),
+            )
     else:
         check("C7: (mock 산출물) us_2y는 unavailable·히스토리 없음(정직)",
               not (model and (dict((i.get('id'), i) for i in model.get('market_items') or [])
