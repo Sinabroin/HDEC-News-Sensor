@@ -77,7 +77,7 @@ class DeltaAlert:
 
     @property
     def sendable(self) -> bool:
-        """실제 발송해도 되는 상태인가 — delta가 열려 있고 보여줄 기사가 있을 때만 True."""
+        """실제 발송 가능 여부 — 유효한 생산 게이트가 열리고 표시할 확정 기사가 있을 때만 True."""
         return bool(self.alert_delta and self.articles)
 
 
@@ -156,6 +156,27 @@ def parse_delta_alert(obj: object, *, dashboard_url: str = "", report_url: str =
         raise InvalidDeltaArtifact(f"unknown source: {source!r}")
     if not isinstance(obj.get("alert_delta"), bool):
         raise InvalidDeltaArtifact("alert_delta must be a boolean")
+
+    # D7-AK-4B-R7C:
+    # 새 artifact는 current eligibility와 별도로 shadow confirmed 발송 결정을 싣는다.
+    # 이 필드가 존재하는 경우 sender는 반드시 shadow 결정을 실제 발송 계약으로 사용한다.
+    # 필드가 없는 legacy v1 artifact만 기존 alert_delta 계약을 유지한다.
+    shadow_contract = "shadow_alert_delta" in obj
+
+    if shadow_contract and not isinstance(
+        obj.get("shadow_alert_delta"),
+        bool,
+    ):
+        raise InvalidDeltaArtifact(
+            "shadow_alert_delta must be a boolean"
+        )
+
+    effective_alert_delta = (
+        bool(obj.get("shadow_alert_delta"))
+        if shadow_contract
+        else bool(obj.get("alert_delta"))
+    )
+
     raw_articles = obj.get("articles")
     if not isinstance(raw_articles, list):
         raise InvalidDeltaArtifact("articles must be a list")
@@ -169,7 +190,18 @@ def parse_delta_alert(obj: object, *, dashboard_url: str = "", report_url: str =
 
     seen: set[str] = set()
     articles: list[DeltaArticle] = []
+
     for item in raw_articles:
+        # 새 shadow 계약에서는 확정 긴급성 판정을 통과한 기사만 sender가 소비한다.
+        # ambiguous/blocked/none/unavailable 기사는 artifact에 진단용으로 남아 있어도
+        # Telegram·Teams 본문에는 절대 포함하지 않는다.
+        if shadow_contract:
+            if (
+                not isinstance(item, dict)
+                or item.get("shadow_would_pass") is not True
+            ):
+                continue
+
         parsed = _parse_article(item)
         if parsed is None or parsed.article_key in seen:
             continue
@@ -186,15 +218,20 @@ def parse_delta_alert(obj: object, *, dashboard_url: str = "", report_url: str =
 
     new_candidate_count = _cnt("new_candidate_count", len(articles))
     changed_count = _cnt("changed_count", new_candidate_count)
-    # legacy v1 아티팩트에는 meaningful_candidate_count가 없다 → 표시 기사 수로 보수적 기본.
-    meaningful_candidate_count = _cnt("meaningful_candidate_count", len(articles))
+    # 새 shadow 계약의 제목 건수는 current eligible 전체가 아니라 confirmed 총수다.
+    # legacy v1 artifact만 기존 meaningful_candidate_count 계약을 유지한다.
+    meaningful_candidate_count = (
+        _cnt("shadow_would_pass_count", len(articles))
+        if shadow_contract
+        else _cnt("meaningful_candidate_count", len(articles))
+    )
 
     return DeltaAlert(
         schema_version=SCHEMA_VERSION,
         generated_at=generated_at,
         generated_kst=generated_kst,
         source=source,
-        alert_delta=bool(obj.get("alert_delta")),
+        alert_delta=effective_alert_delta,
         changed_count=changed_count,
         new_candidate_count=new_candidate_count,
         judgment=_clip(obj.get("judgment"), _JUDGMENT_MAX),

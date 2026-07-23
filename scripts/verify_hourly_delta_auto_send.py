@@ -288,14 +288,14 @@ def check_send_gates(text: str) -> None:
     email_sender = EMAIL_SENDER.read_text(encoding="utf-8")
     required_delta = (
         "steps.build.outputs.live_ok == 'true'",
-        "steps.delta.outputs.alert_delta == 'true'",
+        "steps.delta.outputs.shadow_alert_delta == 'true'",
         "vars.HOURLY_DELTA_AUTO_SEND == '1'",
     )
     check("Telegram auto-send step exists", bool(telegram))
     check("Teams auto-send step exists", bool(teams))
-    check("Telegram opens only for live + delta + hourly opt-in", all(x in telegram for x in required_delta))
+    check("Telegram opens only for live + confirmed urgency + hourly opt-in", all(x in telegram for x in required_delta))
     check("Telegram keeps existing explicit opt-in", "vars.TELEGRAM_AUTO_SEND == '1'" in telegram)
-    check("Teams opens only for live + delta + hourly opt-in", all(x in teams for x in required_delta))
+    check("Teams opens only for live + confirmed urgency + hourly opt-in", all(x in teams for x in required_delta))
     check(
         "hourly opt-in absent means no automatic sender can run",
         "vars.HOURLY_DELTA_AUTO_SEND == '1'" in telegram
@@ -316,10 +316,10 @@ def check_send_gates(text: str) -> None:
         and "unverified" in email_sender,
     )
     check(
-        "no-delta path skips both Telegram and Teams",
-        "steps.delta.outputs.alert_delta != 'true'" in skip
-        and "no alert delta — skip telegram" in skip
-        and "no alert delta — skip teams" in skip,
+        "no-confirmed-urgency path skips both Telegram and Teams",
+        "steps.delta.outputs.shadow_alert_delta != 'true'" in skip
+        and "no confirmed urgency — skip telegram" in skip
+        and "no confirmed urgency — skip teams" in skip,
     )
 
 
