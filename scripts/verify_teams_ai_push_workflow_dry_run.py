@@ -30,9 +30,13 @@ def main() -> int:
     prepare = '- name: Prepare Teams AI article cards (dry-run only)'
     upload = '- name: Upload Teams AI article cards dry-run artifact'
     publish = '- name: Publish to Pages (commit live docs)'
+    telegram = '- name: Hourly telegram digest (delta-gated auto-send)'
     real_teams = '- name: Hourly Teams channel email (delta-gated auto-send)'
+    skip_alerts = '- name: Skip automatic alerts (no delta)'
 
-    for marker in (detect, prepare, upload, publish, real_teams):
+    for marker in (
+        detect, prepare, upload, publish, telegram, real_teams, skip_alerts
+    ):
         require(text.count(marker) == 1, f'workflow marker count invalid: {marker}')
 
     require(text.index(detect) < text.index(prepare) < text.index(upload) < text.index(publish),
@@ -40,6 +44,9 @@ def main() -> int:
 
     prepare_block = block_between(text, prepare, upload)
     upload_block = block_between(text, upload, publish)
+    publish_block = block_between(text, publish, telegram)
+    telegram_block = block_between(text, telegram, real_teams)
+    real_block = block_between(text, real_teams, skip_alerts)
 
     required_prepare = (
         "id: teams_ai_push_dry_run",
@@ -82,15 +89,46 @@ def main() -> int:
     require('TEAMS_WORKFLOW_WEBHOOK_URL' not in upload_block,
             'upload step must not receive webhook secret')
 
-    # Existing production sender remains untouched and closed by the original variable gate.
-    real_block = text[text.index(real_teams):]
-    require(
-        "if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1'"
-        in real_block,
-        'production Teams gate changed or missing',
+    # Publish와 실제 발송은 main에서만 허용한다. workflow_dispatch force_dry_run=true
+    # 실행에서는 Pages push·Telegram send·Teams send가 모두 step 수준에서 닫혀야 한다.
+    main_only_guard = "github.ref == 'refs/heads/main'"
+    force_dry_run_guard = (
+        "(github.event_name != 'workflow_dispatch' || "
+        "github.event.inputs.force_dry_run != 'true')"
     )
-    require('run: python3 scripts/send_email_alert.py' in real_block,
-            'existing production Teams sender entrypoint changed or missing')
+
+    for step_name, block in (
+        ('Pages publish', publish_block),
+        ('Telegram sender', telegram_block),
+        ('Teams sender', real_block),
+    ):
+        require(
+            main_only_guard in block,
+            f'{step_name} missing main-only guard',
+        )
+        require(
+            force_dry_run_guard in block,
+            f'{step_name} missing force-dry-run guard',
+        )
+
+    require(
+        'git push origin HEAD:main' in publish_block,
+        'Pages publisher entrypoint changed or missing',
+    )
+    require(
+        "vars.HOURLY_DELTA_AUTO_SEND == '1'"
+        in telegram_block
+        and "vars.TELEGRAM_AUTO_SEND == '1'" in telegram_block,
+        'production Telegram variable gates changed or missing',
+    )
+    require(
+        "vars.HOURLY_DELTA_AUTO_SEND == '1'" in real_block,
+        'production Teams variable gate changed or missing',
+    )
+    require(
+        'run: python3 scripts/send_email_alert.py' in real_block,
+        'existing production Teams sender entrypoint changed or missing',
+    )
 
     for verifier in (
         'python3 scripts/verify_teams_ai_push.py',
@@ -106,7 +144,7 @@ def main() -> int:
             'dry-run artifact upload must occur exactly once')
 
     print('RESULT=D7-AK-5D_TEAMS_AI_PUSH_WORKFLOW_DRY_RUN_VERIFIER_PASS')
-    print('network_send_steps_added=0 state_write_steps_added=0 artifact_upload_steps=1')
+    print('network_send_steps_added=0 state_write_steps_added=0 artifact_upload_steps=1 publish_send_guards=3')
     return 0
 
 

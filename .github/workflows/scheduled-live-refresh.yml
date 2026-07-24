@@ -183,7 +183,7 @@ jobs:
 
       # 4) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
       - name: Publish to Pages (commit live docs)
-        if: steps.build.outputs.live_ok == 'true'
+        if: steps.build.outputs.live_ok == 'true' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -227,7 +227,7 @@ jobs:
       # 5) 예약 Telegram — hourly opt-in + 기존 Telegram opt-in + live + shadow confirmed urgency가 모두 필요하다.
       #    sender 내부 freshness/live 게이트도 그대로 통과해야 실제 발송된다.
       - name: Hourly telegram digest (delta-gated auto-send)
-        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && vars.TELEGRAM_AUTO_SEND == '1'
+        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && vars.TELEGRAM_AUTO_SEND == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
         env:
           # 두 repo Variable이 모두 열린 step에서만 기존 sender opt-in을 주입한다.
           TELEGRAM_AUTO_SEND: ${{ vars.TELEGRAM_AUTO_SEND || '' }}
@@ -258,7 +258,7 @@ jobs:
       # 6) Teams 채널 이메일 — 이 step에 진입한 경우에만 SMTP send/approval/Teams gate를
       #    주입한다. sender 로그는 SMTP accepted와 실제 Teams 수신(unverified)을 분리한다.
       - name: Hourly Teams channel email (delta-gated auto-send)
-        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1'
+        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
         env:
           EMAIL_SEND_MODE: send
           APPROVE_SEND_EMAIL: "true"
