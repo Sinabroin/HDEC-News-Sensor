@@ -277,20 +277,70 @@ def _step_if(text: str, name: str) -> str:
 
 
 def _eval_gate(expr: str, ctx: dict) -> bool | None:
-    """`A == 'x' && B != 'y' && …` 형태의 GitHub Actions if 식을 평가한다."""
+    """현재 workflow가 쓰는 비교/AND/괄호 OR GitHub Actions if 식만 평가한다."""
     if not expr:
         return None
-    for term in expr.split("&&"):
-        m = re.match(r"(.+?)\s*(==|!=)\s*'([^']*)'\s*$", term.strip())
+
+    def split_top_level(value: str, operator: str) -> list[str] | None:
+        parts = []
+        start = 0
+        depth = 0
+        quoted = False
+        i = 0
+        while i < len(value):
+            char = value[i]
+            if char == "'":
+                quoted = not quoted
+                i += 1
+                continue
+            if not quoted:
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    depth -= 1
+                    if depth < 0:
+                        return None
+                elif depth == 0 and value.startswith(operator, i):
+                    parts.append(value[start:i].strip())
+                    start = i + len(operator)
+                    i = start
+                    continue
+            i += 1
+        if quoted or depth != 0:
+            return None
+        parts.append(value[start:].strip())
+        return parts
+
+    def comparison(term: str) -> bool | None:
+        m = re.fullmatch(
+            r"([A-Za-z_][A-Za-z0-9_.]*)\s*(==|!=)\s*'([^']*)'",
+            term.strip(),
+        )
         if not m:
             return None
-        lhs, op, literal = m.group(1).strip(), m.group(2), m.group(3)
+        lhs, op, literal = m.group(1), m.group(2), m.group(3)
         actual = ctx.get(lhs, "")
-        if op == "==" and actual != literal:
-            return False
-        if op == "!=" and not (actual != literal):
-            return False
-    return True
+        return actual == literal if op == "==" else actual != literal
+
+    terms = split_top_level(expr, "&&")
+    if terms is None:
+        return None
+    values = []
+    for term in terms:
+        if term.startswith("(") and term.endswith(")"):
+            alternatives = split_top_level(term[1:-1], "||")
+            if alternatives is None or len(alternatives) < 2:
+                return None
+            alternative_values = [comparison(item) for item in alternatives]
+            if any(value is None for value in alternative_values):
+                return None
+            values.append(any(alternative_values))
+            continue
+        value = comparison(term)
+        if value is None:
+            return None
+        values.append(value)
+    return all(values)
 
 
 def check_sender_gates_closed_on_zero_meaningful() -> None:
@@ -322,6 +372,9 @@ def check_sender_gates_closed_on_zero_meaningful() -> None:
         ),
         "vars.HOURLY_DELTA_AUTO_SEND": "1",
         "vars.TELEGRAM_AUTO_SEND": "1",
+        "github.ref": "refs/heads/main",
+        "github.event_name": "schedule",
+        "github.event.inputs.force_dry_run": "",
     }
     check("meaningless → Telegram step condition = false", _eval_gate(tg_if, ctx_zero) is False)
     check("meaningless → Teams step condition = false", _eval_gate(teams_if, ctx_zero) is False)
@@ -395,6 +448,65 @@ def check_sender_gates_closed_on_zero_meaningful() -> None:
         and _eval_gate(tg_if, ctx_confirmed) is True
         and _eval_gate(teams_if, ctx_confirmed) is True
         and _eval_gate(skip_if, ctx_confirmed) is False,
+    )
+
+
+def check_workflow_production_guards() -> None:
+    """Production effect 단계의 main/forced-dry-run guard를 실제 if 식으로 평가한다."""
+    text = WORKFLOW.read_text(encoding="utf-8")
+    publish_if = _step_if(text, "Publish to Pages (commit live docs)")
+    tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
+    teams_if = _step_if(text, "Hourly Teams channel email (delta-gated auto-send)")
+    skip_if = _step_if(text, "Skip automatic alerts (no delta)")
+
+    production = {
+        "steps.build.outputs.live_ok": "true",
+        "steps.delta.outputs.shadow_alert_delta": "true",
+        "vars.HOURLY_DELTA_AUTO_SEND": "1",
+        "vars.TELEGRAM_AUTO_SEND": "1",
+        "github.ref": "refs/heads/main",
+        "github.event_name": "schedule",
+        "github.event.inputs.force_dry_run": "",
+    }
+
+    def effect_results(ctx: dict) -> tuple[bool | None, bool | None, bool | None]:
+        return (
+            _eval_gate(publish_if, ctx),
+            _eval_gate(tg_if, ctx),
+            _eval_gate(teams_if, ctx),
+        )
+
+    check(
+        "production scheduled main → Publish/Telegram/Teams open ∧ Skip closed",
+        effect_results(production) == (True, True, True)
+        and _eval_gate(skip_if, production) is False,
+    )
+
+    non_main = dict(production)
+    non_main["github.ref"] = "refs/heads/fix/test"
+    check(
+        "non-main branch → Publish/Telegram/Teams closed",
+        effect_results(non_main) == (False, False, False),
+    )
+
+    forced_dry_run = dict(production)
+    forced_dry_run.update({
+        "github.event_name": "workflow_dispatch",
+        "github.event.inputs.force_dry_run": "true",
+    })
+    check(
+        "forced dry-run → Publish/Telegram/Teams closed",
+        effect_results(forced_dry_run) == (False, False, False),
+    )
+
+    manual_non_dry = dict(production)
+    manual_non_dry.update({
+        "github.event_name": "workflow_dispatch",
+        "github.event.inputs.force_dry_run": "false",
+    })
+    check(
+        "main manual non-dry → Publish/Telegram/Teams open",
+        effect_results(manual_non_dry) == (True, True, True),
     )
 
 
@@ -616,6 +728,9 @@ def check_low_value_run_closes_workflow() -> None:
         ),
         "vars.HOURLY_DELTA_AUTO_SEND": "1",
         "vars.TELEGRAM_AUTO_SEND": "1",
+        "github.ref": "refs/heads/main",
+        "github.event_name": "schedule",
+        "github.event.inputs.force_dry_run": "",
     }
     check("저가치 신규만 → Telegram step = false",  _eval_gate(tg_if, ctx) is False)
     check("저가치 신규만 → Teams step = false", _eval_gate(teams_if, ctx) is False)
@@ -1203,6 +1318,7 @@ def main() -> int:
     check_meaningful_changes()
     check_identity_matching()
     check_sender_gates_closed_on_zero_meaningful()
+    check_workflow_production_guards()
     check_sender_second_defense()
     check_schema_compat()
     check_log_hygiene()
