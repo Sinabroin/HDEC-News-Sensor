@@ -1,0 +1,52 @@
+{
+  "article_ids": {
+    "live_5c148d78cd83": {
+      "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
+      "delivery_id": "teams_ai_push:cb5d472fd04d",
+      "first_sent_at": "2026-07-24T18:43:58+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
+      "sent_at": "2026-07-24T18:43:58+09:00",
+      "source": "아시아투데이"
+    }
+  },
+  "cluster_keys": {
+    "title:현대건설ai디지털역량갖춘스마트건설인재찾는다": {
+      "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
+      "delivery_id": "teams_ai_push:cb5d472fd04d",
+      "first_sent_at": "2026-07-24T18:43:58+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
+      "sent_at": "2026-07-24T18:43:58+09:00",
+      "source": "아시아투데이"
+    }
+  },
+  "last_successful_send_at": "2026-07-24T18:43:58+09:00",
+  "normalized_urls": {
+    "https://news.google.com/rss/articles/CBMibkFVX3lxTE5lemtpUVFrM1p3TWpjOEpaLW9vTloxWlRHU2ZTbXk1bHV5SUhpcnd6WXUtUGw1Z1RqNUQ0aV9PSzR4ZFVNVmpCUTNwWUpQMWw1TDFiUVp1blpEY1ZnbUo1ZTlfRTNqVVQtOHNUUHRn?oc=5": {
+      "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
+      "delivery_id": "teams_ai_push:cb5d472fd04d",
+      "first_sent_at": "2026-07-24T18:43:58+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
+      "sent_at": "2026-07-24T18:43:58+09:00",
+      "source": "아시아투데이"
+    }
+  },
+  "title_fingerprints": {
+    "현대건설ai디지털역량갖춘스마트건설인재찾는다": {
+      "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
+      "delivery_id": "teams_ai_push:cb5d472fd04d",
+      "first_sent_at": "2026-07-24T18:43:58+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
+      "sent_at": "2026-07-24T18:43:58+09:00",
+      "source": "아시아투데이"
+    }
+  },
+  "version": 1
+}
