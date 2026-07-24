@@ -31,22 +31,26 @@ def main() -> int:
     upload = '- name: Upload Teams AI article cards dry-run artifact'
     publish = '- name: Publish to Pages (commit live docs)'
     telegram = '- name: Hourly telegram digest (delta-gated auto-send)'
-    real_teams = '- name: Hourly Teams channel email (delta-gated auto-send)'
+    real_teams = '- name: Hourly Teams AI article cards (delta-gated auto-send)'
+    persist = '- name: Persist Teams AI push dedup state'
     skip_alerts = '- name: Skip automatic alerts (no delta)'
 
     for marker in (
-        detect, prepare, upload, publish, telegram, real_teams, skip_alerts
+        detect, prepare, upload, publish, telegram, real_teams, persist, skip_alerts
     ):
         require(text.count(marker) == 1, f'workflow marker count invalid: {marker}')
 
     require(text.index(detect) < text.index(prepare) < text.index(upload) < text.index(publish),
             'dry-run steps must be between delta detection and Pages publish')
+    require(text.index(publish) < text.index(telegram) < text.index(real_teams) < text.index(persist),
+            'production order must be publish -> telegram -> teams cards -> state persist')
 
     prepare_block = block_between(text, prepare, upload)
     upload_block = block_between(text, upload, publish)
     publish_block = block_between(text, publish, telegram)
     telegram_block = block_between(text, telegram, real_teams)
-    real_block = block_between(text, real_teams, skip_alerts)
+    real_block = block_between(text, real_teams, persist)
+    persist_block = block_between(text, persist, skip_alerts)
 
     required_prepare = (
         "id: teams_ai_push_dry_run",
@@ -125,16 +129,53 @@ def main() -> int:
         "vars.HOURLY_DELTA_AUTO_SEND == '1'" in real_block,
         'production Teams variable gate changed or missing',
     )
+    # D7-AK-6A — 실제 Teams step은 기사별 production sender다. generic 채널 이메일
+    # 다이제스트(SMTP)로 되돌아가면 '기사별 Adaptive Card' 계약이 조용히 깨지므로,
+    # 이 step 안에서는 send_email_alert.py와 SMTP 자격증명을 모두 금지한다.
     require(
-        'run: python3 scripts/send_email_alert.py' in real_block,
-        'existing production Teams sender entrypoint changed or missing',
+        'run: python3 scripts/send_teams_ai_push.py' in real_block,
+        'article-level Teams production sender entrypoint changed or missing',
     )
+    for token in (
+        'send_email_alert.py', 'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL',
+        'SEND_TO_TEAMS', 'GMAIL_', 'TEAMS_CHANNEL_EMAIL', 'smtplib',
+    ):
+        require(token not in real_block,
+                f'SMTP fallback token must not appear in the Teams card step: {token}')
+    for token in (
+        'TEAMS_AI_PUSH_MODE: send',
+        'APPROVE_TEAMS_AI_PUSH: "true"',
+        'TEAMS_WORKFLOW_WEBHOOK_URL: ${{ secrets.TEAMS_WORKFLOW_WEBHOOK_URL }}',
+        'TEAMS_PUSH_STATE_PATH: data/teams_push_state.json',
+        'DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json',
+    ):
+        require(token in real_block, f'Teams card step missing token: {token}')
+
+    # 부분 실패에도 이미 전송된 기사는 재발송되면 안 된다 → always()로 진입하되
+    # sender가 실행됐고 state_changed=true일 때만 state 파일 하나를 commit한다.
+    for token in (
+        'if: always()',
+        "steps.teams_ai_push.outcome != 'skipped'",
+        "steps.teams_ai_push.outputs.state_changed == 'true'",
+        'git add -- data/teams_push_state.json',
+        "git commit -m \"chore: persist Teams AI push dedup state\"",
+        'git rebase --abort',
+        'git push origin HEAD:main',
+    ):
+        require(token in persist_block, f'state persist step missing token: {token}')
+    require(persist_block.count('git add') == 1,
+            'state persist step must stage exactly one path')
+    for token in ('docs/daily', 'scripts/', 'app/', '.github/', '--force', '-f origin',
+                  'git add .', 'git add -A', 'git commit -am'):
+        require(token not in persist_block,
+                f'state persist step must not touch/force beyond the state file: {token}')
 
     for verifier in (
         'python3 scripts/verify_teams_ai_push.py',
         'python3 scripts/verify_teams_push_state.py',
         'python3 scripts/verify_teams_ai_push_dry_run.py',
         'python3 scripts/verify_teams_ai_push_workflow_dry_run.py',
+        'python3 scripts/verify_teams_ai_push_production.py',
     ):
         require(text.count(verifier) == 1, f'pipeline verifier missing/duplicated: {verifier}')
 
@@ -144,7 +185,9 @@ def main() -> int:
             'dry-run artifact upload must occur exactly once')
 
     print('RESULT=D7-AK-5D_TEAMS_AI_PUSH_WORKFLOW_DRY_RUN_VERIFIER_PASS')
-    print('network_send_steps_added=0 state_write_steps_added=0 artifact_upload_steps=1 publish_send_guards=3')
+    print('artifact_upload_steps=1 publish_send_guards=3 '
+          'teams_production_sender=send_teams_ai_push.py smtp_fallback_steps=0 '
+          'state_persist_steps=1 state_persist_staged_paths=1')
     return 0
 
 

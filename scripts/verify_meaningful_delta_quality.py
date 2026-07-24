@@ -346,7 +346,7 @@ def _eval_gate(expr: str, ctx: dict) -> bool | None:
 def check_sender_gates_closed_on_zero_meaningful() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
     tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams_if = _step_if(text, "Hourly Teams channel email (delta-gated auto-send)")
+    teams_if = _step_if(text, "Hourly Teams AI article cards (delta-gated auto-send)")
     skip_if = _step_if(text, "Skip automatic alerts (no delta)")
     check("workflow if-conditions found for telegram/teams/skip",
           bool(tg_if and teams_if and skip_if))
@@ -456,7 +456,7 @@ def check_workflow_production_guards() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
     publish_if = _step_if(text, "Publish to Pages (commit live docs)")
     tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams_if = _step_if(text, "Hourly Teams channel email (delta-gated auto-send)")
+    teams_if = _step_if(text, "Hourly Teams AI article cards (delta-gated auto-send)")
     skip_if = _step_if(text, "Skip automatic alerts (no delta)")
 
     production = {
@@ -706,7 +706,7 @@ def check_low_value_run_closes_workflow() -> None:
     """9) 저가치 신규 기사만 있는 실행 → 발송 step 전부 닫히고 Skip이 열린다."""
     text = WORKFLOW.read_text(encoding="utf-8")
     tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams_if = _step_if(text, "Hourly Teams channel email (delta-gated auto-send)")
+    teams_if = _step_if(text, "Hourly Teams AI article cards (delta-gated auto-send)")
     skip_if = _step_if(text, "Skip automatic alerts (no delta)")
 
     base = {"top_immediate_signals": [_article()]}
@@ -1260,7 +1260,7 @@ def check_shadow_evidence_contract() -> None:
     )
     teams_if = _step_if(
         workflow_text,
-        "Hourly Teams channel email (delta-gated auto-send)",
+        "Hourly Teams AI article cards (delta-gated auto-send)",
     )
     skip_if = _step_if(
         workflow_text,

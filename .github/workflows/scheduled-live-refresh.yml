@@ -49,6 +49,7 @@ jobs:
           python3 scripts/verify_teams_push_state.py
           python3 scripts/verify_teams_ai_push_dry_run.py
           python3 scripts/verify_teams_ai_push_workflow_dry_run.py
+          python3 scripts/verify_teams_ai_push_production.py
           python3 scripts/verify_hourly_delta_auto_send.py --skip-operator-verifier
           python3 scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_scheduled_refresh_and_telegram.py
@@ -255,31 +256,69 @@ jobs:
           if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
           python3 scripts/send_scheduled_telegram.py $DRY_FLAG
 
-      # 6) Teams 채널 이메일 — 이 step에 진입한 경우에만 SMTP send/approval/Teams gate를
-      #    주입한다. sender 로그는 SMTP accepted와 실제 Teams 수신(unverified)을 분리한다.
-      - name: Hourly Teams channel email (delta-gated auto-send)
+      # 6) Teams 기사별 AI 카드 — 이 step에 진입한 경우에만 webhook/approval을 주입한다.
+      #    dry-run에서 검증된 것과 동일한 선택·카드·dedup 계약(app.teams_ai_push +
+      #    app.teams_push_state)을 그대로 실제 발송에 쓴다(최대 3건, 기사당 카드 1개).
+      #    SMTP fallback은 두지 않는다 — 계약이 '기사별 Adaptive Card'이므로 webhook이
+      #    없거나 실패하면 generic 채널 이메일 다이제스트로 위장하지 않고 fail-closed한다.
+      #    기존 send_email_alert.py는 별도 email workflow용으로 그대로 유지된다.
+      - name: Hourly Teams AI article cards (delta-gated auto-send)
+        id: teams_ai_push
         if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
         env:
-          EMAIL_SEND_MODE: send
-          APPROVE_SEND_EMAIL: "true"
-          SEND_TO_TEAMS: "true"
-          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
-          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
-          GMAIL_SMTP_PASSWORD: ${{ secrets.GMAIL_SMTP_PASSWORD }}
-          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
-          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
-          NEWS_MODE: live
-          NAVER_NEWS_ENABLED: "1"
-          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
-          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          TEAMS_AI_PUSH_MODE: send
+          APPROVE_TEAMS_AI_PUSH: "true"
+          # backend 전용 비밀값 — 어떤 로그/artifact에도 값이 출력되지 않는다.
+          TEAMS_WORKFLOW_WEBHOOK_URL: ${{ secrets.TEAMS_WORKFLOW_WEBHOOK_URL }}
+          # 운영 dedup state(영속). 성공한 기사만 여기에 기록되고 아래 step이 commit한다.
+          TEAMS_PUSH_STATE_PATH: data/teams_push_state.json
           # Telegram과 동일한 공유 delta payload를 소비한다(재수집 없음·채널 간 동일 시각/목록).
           DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
-          # Teams Adaptive Card webhook(Power Automate Workflows) — 설정 시 카드를 우선 전송하고,
-          # 실패/미설정이면 위 Teams 채널 이메일로 fallback한다. backend 전용 비밀값(값 미출력).
-          TEAMS_WORKFLOW_WEBHOOK_URL: ${{ secrets.TEAMS_WORKFLOW_WEBHOOK_URL }}
-        run: python3 scripts/send_email_alert.py
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: python3 scripts/send_teams_ai_push.py
+
+      # 7) 전송에 성공한 기사만 영속 dedup state에 남긴다. 부분 실패로 위 step이 실패해도
+      #    이미 발송된 기사는 재발송되면 안 되므로 always()로 진입하되, sender가 실제로
+      #    실행됐고(state_changed=true) 파일 변경이 있을 때만 commit한다.
+      #    docs/daily(Pages publish commit)를 덮지 않도록 state 파일 한 개만 stage한다.
+      - name: Persist Teams AI push dedup state
+        if: always() && steps.teams_ai_push.outcome != 'skipped' && steps.teams_ai_push.outputs.state_changed == 'true'
+        run: |
+          # 최초 성공 시 state 파일은 untracked로 생성되므로 git diff가 아니라 status로 본다.
+          if [ -z "$(git status --porcelain -- data/teams_push_state.json)" ]; then
+            echo "teams push state unchanged — skip commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/teams_push_state.json
+          git commit -m "chore: persist Teams AI push dedup state"
+
+          for attempt in 1 2 3; do
+            echo "state persist attempt ${attempt}/3: fetch + rebase + push"
+            git fetch origin main
+
+            if ! git rebase origin/main; then
+              echo "ERROR: rebase onto origin/main failed during Teams state persist"
+              git rebase --abort || true
+              exit 1
+            fi
+
+            if git push origin HEAD:main; then
+              echo "teams push state committed: $(git rev-parse HEAD)"
+              exit 0
+            fi
+
+            echo "WARN: git push failed on attempt ${attempt}/3"
+            if [ "${attempt}" -eq 3 ]; then
+              echo "ERROR: teams push state push failed after 3 attempts"
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
 
       - name: Skip automatic alerts (no delta)
         if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta != 'true'
