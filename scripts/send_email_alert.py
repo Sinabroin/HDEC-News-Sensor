@@ -203,13 +203,38 @@ def send_target(
     smtp_user: str,
     smtp_password: str,
     from_address: str,
-    smtp_factory=smtplib.SMTP,
+    smtp_factory=None,
 ) -> DeliveryResult:
-    """Send one target and retain SMTP response codes without logging response text."""
+    """Render the digest for one target and deliver it over the Gmail SMTP transport."""
 
     message = build_message(digest, from_address, target)
+    return deliver_email_message(
+        message, target, smtp_user, smtp_password, from_address, smtp_factory=smtp_factory
+    )
+
+
+def deliver_email_message(
+    message: EmailMessage,
+    target: DeliveryTarget,
+    smtp_user: str,
+    smtp_password: str,
+    from_address: str,
+    smtp_factory=None,
+) -> DeliveryResult:
+    """Deliver a pre-built message over the verified Gmail SMTP transport.
+
+    This is the single, proven SMTP handshake — reused by every sender (the
+    executive digest email and the article-level Teams channel-email cards). SMTP
+    response codes are retained without logging response text; acceptance is a
+    transport result only, so the recipient policy stays ``unverified``.
+
+    ``smtp_factory`` is resolved at call time (``smtplib.SMTP`` by default) so an
+    offline verifier can inject a fake transport by patching it — production leaves
+    it unset and connects to Gmail."""
+
+    factory = smtp_factory if smtp_factory is not None else smtplib.SMTP
     try:
-        with smtp_factory(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as smtp:
+        with factory(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as smtp:
             code, _response = smtp.ehlo()
             if code >= 400:
                 return _smtp_failure(target, "ehlo_rejected", code)

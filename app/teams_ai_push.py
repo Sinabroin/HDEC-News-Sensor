@@ -12,6 +12,7 @@ A caller must perform delivery and then record success through ``app.teams_push_
 
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -548,3 +549,110 @@ def build_candidate_card(alert: object, candidate: TeamsPushCandidate, *, detect
         detected_at=detected_at,
         is_update=candidate.is_update,
     )
+
+
+def render_article_email(
+    alert: object,
+    candidate: TeamsPushCandidate,
+    *,
+    detected_at: str = "",
+) -> tuple[str, str, str]:
+    """Render one article as ``(subject, text_body, html_body)`` for the Teams channel email.
+
+    This is the message body for the email_channel production transport (Gmail SMTP →
+    Teams channel email). It carries the same seven fields as the Adaptive Card —
+    importance, title, core summary, HDEC impact, source, original link, dashboard link —
+    for exactly one article. Callers send one email per article and never merge a digest.
+
+    The body is self-contained: no external script/style/image, only anchor links to the
+    article, dashboard, and full report. All dynamic values are HTML-escaped."""
+    if not candidate.topic.eligible or not candidate.importance.sendable:
+        raise ValueError("non-sendable article cannot be rendered as a Teams push email")
+
+    article = candidate.article
+    importance = candidate.importance
+    topic = candidate.topic
+
+    title = _article_field(article, "title") or "제목 없음"
+    summary = _article_field(article, "summary", "snippet") or "핵심 요약이 제공되지 않았습니다."
+    hdec_impact = _article_field(
+        article, "hdec_relevance", "radarReason", "whyImportant"
+    ) or "현대건설 영향은 원문과 대시보드에서 추가 확인이 필요합니다."
+    source = _article_field(article, "source", "display_source") or "출처 미상"
+    published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
+    detected = _fmt_kst(detected_at or _value(alert, "generated_at") or _value(alert, "generated_kst")) or "시각 미상"
+    article_url = _safe_http(_value(article, "url"))
+    dashboard_url = _safe_http(_value(alert, "dashboard_url"))
+    report_url = _safe_http(_value(alert, "report_url"))
+
+    importance_label = importance.label or IMPORTANCE_LABELS.get(importance.level, "중요")
+    title_prefix = "[업데이트] " if candidate.is_update else ""
+    published_line = f"{published} KST" if published != "시각 미상" else published
+    detected_line = f"{detected} KST" if detected != "시각 미상" else detected
+
+    subject = f"[HDEC AI 레이더] {importance_label} · {title_prefix}{title}".strip()
+
+    text_lines: list[str] = [f"[중요도] {importance_label}"]
+    if topic.topic_label:
+        text_lines.append(f"[AI 주제] {topic.topic_label}")
+    text_lines += [
+        "",
+        "■ 제목",
+        f"{title_prefix}{title}",
+        "",
+        "■ 핵심 요약",
+        summary,
+        "",
+        "■ 현대건설 영향",
+        hdec_impact,
+        "",
+        "■ 출처 정보",
+        f"- 출처: {source}",
+        f"- 게시시각: {published_line}",
+        f"- 감지시각: {detected_line}",
+        "",
+        "■ 링크",
+    ]
+    for label, url in (
+        ("원문 보기", article_url),
+        ("요약 대시보드", dashboard_url),
+        ("전체 리포트", report_url),
+    ):
+        if url:
+            text_lines.append(f"- {label}: {url}")
+    text_body = "\n".join(text_lines).rstrip() + "\n"
+
+    def _p(text: str) -> str:
+        return html.escape(text).replace("\n", "<br>")
+
+    html_links = []
+    if article_url:
+        html_links.append(f'<a href="{html.escape(article_url)}" style="display:block;margin:4px 0;">원문 보기</a>')
+    if dashboard_url:
+        html_links.append(f'<a href="{html.escape(dashboard_url)}" style="display:block;margin:4px 0;">요약 대시보드 보기</a>')
+    if report_url:
+        html_links.append(f'<a href="{html.escape(report_url)}" style="display:block;margin:4px 0;">전체 리포트 보기</a>')
+    links_html = "".join(html_links) or "<p>제공된 링크가 없습니다.</p>"
+
+    html_body = (
+        "<div style=\"font-family:Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;"
+        "max-width:640px;line-height:1.6;\">"
+        f"<p style=\"font-weight:bold;margin:0 0 4px;\">{_p(importance_label)}</p>"
+        + (f"<p style=\"color:#666;margin:0 0 12px;\">{_p(topic.topic_label)}</p>" if topic.topic_label else "")
+        + f"<h2 style=\"margin:0 0 16px;\">{_p(title_prefix + title)}</h2>"
+        "<h3 style=\"margin:16px 0 4px;\">핵심 요약</h3>"
+        f"<p style=\"margin:0 0 12px;\">{_p(summary)}</p>"
+        "<h3 style=\"margin:16px 0 4px;\">현대건설 영향</h3>"
+        f"<p style=\"margin:0 0 12px;\">{_p(hdec_impact)}</p>"
+        "<h3 style=\"margin:16px 0 4px;\">출처 정보</h3>"
+        "<ul style=\"margin:0 0 12px;padding-left:18px;\">"
+        f"<li>출처: {_p(source)}</li>"
+        f"<li>게시시각: {_p(published_line)}</li>"
+        f"<li>감지시각: {_p(detected_line)}</li>"
+        "</ul>"
+        "<h3 style=\"margin:16px 0 4px;\">링크</h3>"
+        f"{links_html}"
+        "</div>"
+    )
+
+    return subject, text_body, html_body
