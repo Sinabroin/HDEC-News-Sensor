@@ -283,7 +283,7 @@ def check_detector_behavior() -> None:
 
 def check_send_gates(text: str) -> None:
     telegram = _step(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams = _step(text, "Hourly Teams channel email (delta-gated auto-send)")
+    teams = _step(text, "Hourly Teams AI article cards (delta-gated auto-send)")
     skip = _step(text, "Skip automatic alerts (no delta)")
     email_sender = EMAIL_SENDER.read_text(encoding="utf-8")
     required_delta = (
@@ -303,14 +303,20 @@ def check_send_gates(text: str) -> None:
     )
     check(
         "Teams send approvals exist only inside its guarded step",
-        'APPROVE_SEND_EMAIL: "true"' in teams
-        and 'SEND_TO_TEAMS: "true"' in teams
-        and text.count('APPROVE_SEND_EMAIL: "true"') == 1
-        and text.count('SEND_TO_TEAMS: "true"') == 1,
+        "TEAMS_AI_PUSH_MODE: send" in teams
+        and 'APPROVE_TEAMS_AI_PUSH: "true"' in teams
+        and text.count("TEAMS_AI_PUSH_MODE: send") == 1
+        and text.count('APPROVE_TEAMS_AI_PUSH: "true"') == 1,
     )
-    check("Teams reuses gated email sender", "python3 scripts/send_email_alert.py" in teams)
     check(
-        "SMTP acceptance remains separate from actual Teams receipt",
+        "Teams uses the article-level production sender, not the SMTP digest",
+        "python3 scripts/send_teams_ai_push.py" in teams
+        and "send_email_alert.py" not in teams
+        and 'APPROVE_SEND_EMAIL: "true"' not in teams
+        and 'SEND_TO_TEAMS: "true"' not in teams,
+    )
+    check(
+        "email sender keeps its honest SMTP-vs-receipt language for the email workflow",
         "SMTP acceptance only proves" in email_sender
         and "does not prove inbox delivery or a Teams channel post" in email_sender
         and "unverified" in email_sender,
