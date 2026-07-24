@@ -130,6 +130,16 @@ def main() -> int:
         shadow_confirmed_event_types=[],
     )
     assert classify_ai_topic(recruit).exclusion_reason == "non_news_recruit_or_book", classify_ai_topic(recruit)
+    # Regression (D7-AK-6C canary): talent-seeking HR PR must not reach 최우선 via hdec_direct.
+    # Aggregated-snippet action noise (e.g. another article's '수주') must not rescue it either.
+    seek_talent = article(
+        article_key="a-8b", title="현대건설, AI·디지털 역량 갖춘 스마트건설 인재 찾는다",
+        summary="현대건설이 스마트건설 수주 확대를 위해 인재를 찾는다.", source="아시아투데이",
+        score=4.2, shadow_urgency_status="none", shadow_would_pass=False,
+        shadow_confirmed_event_types=[],
+    )
+    assert classify_ai_topic(seek_talent).exclusion_reason == "non_news_recruit_or_book", classify_ai_topic(seek_talent)
+    assert not map_importance(seek_talent, classify_ai_topic(seek_talent)).sendable
 
     # confirmed 대형 이벤트(정책 확정)는 점수와 무관하게 최우선.
     policy = article(
