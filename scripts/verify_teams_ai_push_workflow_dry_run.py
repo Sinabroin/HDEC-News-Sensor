@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
-"""Verify D7-AK-5D workflow-only Teams AI card dry-run wiring."""
+"""Verify the D7-AK-6C Teams AI news watch workflow wiring and its safety gating.
+
+The article-level Teams sender now lives solely in ``teams-ai-news-watch.yml`` (a 10-minute
+best-effort watch). This verifier checks that workflow's structure and safety contract, and
+asserts the hourly ``scheduled-live-refresh.yml`` no longer sends Teams (single owner, no
+double-send). The sender's delivery behaviour is proven separately in
+verify_teams_ai_push_production.py.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-WORKFLOW = Path('.github/workflows/scheduled-live-refresh.yml')
+WATCH = Path('.github/workflows/teams-ai-news-watch.yml')
+SCHEDULED = Path('.github/workflows/scheduled-live-refresh.yml')
 
 
 def require(condition: bool, message: str) -> None:
@@ -23,126 +31,74 @@ def block_between(text: str, start: str, end: str) -> str:
 
 
 def main() -> int:
-    text = WORKFLOW.read_text(encoding='utf-8')
-    require('\t' not in text, 'workflow contains tab characters')
+    watch = WATCH.read_text(encoding='utf-8')
+    scheduled = SCHEDULED.read_text(encoding='utf-8')
+    require('\t' not in watch, 'watch workflow contains tab characters')
 
-    detect = '- name: Detect dashboard alert delta'
-    prepare = '- name: Prepare Teams AI article cards (dry-run only)'
-    upload = '- name: Upload Teams AI article cards dry-run artifact'
-    publish = '- name: Publish to Pages (commit live docs)'
-    telegram = '- name: Hourly telegram digest (delta-gated auto-send)'
-    real_teams = '- name: Hourly Teams AI article cards (delta-gated auto-send)'
+    verify = '- name: Verify pipeline (mock-safe, no secrets)'
+    build = '- name: Build live news metadata (temp only)'
+    delta = '- name: Detect new-article delta (temp artifact)'
+    teams = '- name: Teams AI news article cards (watch auto-send)'
     persist = '- name: Persist Teams AI push dedup state'
-    skip_alerts = '- name: Skip automatic alerts (no delta)'
+    skip = '- name: Skip Teams send (watch closed or not main)'
 
-    for marker in (
-        detect, prepare, upload, publish, telegram, real_teams, persist, skip_alerts
-    ):
-        require(text.count(marker) == 1, f'workflow marker count invalid: {marker}')
-
-    require(text.index(detect) < text.index(prepare) < text.index(upload) < text.index(publish),
-            'dry-run steps must be between delta detection and Pages publish')
-    require(text.index(publish) < text.index(telegram) < text.index(real_teams) < text.index(persist),
-            'production order must be publish -> telegram -> teams cards -> state persist')
-
-    prepare_block = block_between(text, prepare, upload)
-    upload_block = block_between(text, upload, publish)
-    publish_block = block_between(text, publish, telegram)
-    telegram_block = block_between(text, telegram, real_teams)
-    real_block = block_between(text, real_teams, persist)
-    persist_block = block_between(text, persist, skip_alerts)
-
-    required_prepare = (
-        "id: teams_ai_push_dry_run",
-        "if: steps.build.outputs.live_ok == 'true'",
-        'DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json',
-        'TEAMS_PUSH_STATE_PATH: ${{ runner.temp }}/teams_push_state_readonly.json',
-        'TEAMS_AI_PUSH_DRY_RUN_DIR: ${{ runner.temp }}/teams-ai-push-dry-run',
-        'python3 scripts/prepare_teams_ai_push_dry_run.py',
-        '--artifact "$DELTA_ARTIFACT_FILE"',
-        '--state "$TEAMS_PUSH_STATE_PATH"',
-        '--output-dir "$TEAMS_AI_PUSH_DRY_RUN_DIR"',
-        'manifest.json',
-        'card_count=',
-        'dedup_blocked_count=',
-        'webhook_calls=0',
-        'state_writes=0',
+    for marker in (verify, build, delta, teams, persist, skip):
+        require(watch.count(marker) == 1, f'watch marker count invalid: {marker}')
+    require(
+        watch.index(verify) < watch.index(build) < watch.index(delta)
+        < watch.index(teams) < watch.index(persist) < watch.index(skip),
+        'watch step order must be verify -> build -> delta -> teams -> persist -> skip',
     )
-    for token in required_prepare:
-        require(token in prepare_block, f'prepare step missing token: {token}')
 
-    forbidden_prepare = (
-        'TEAMS_WORKFLOW_WEBHOOK_URL', 'TEAMS_CHANNEL_EMAIL', 'GMAIL_',
-        'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL', 'SEND_TO_TEAMS',
-        'send_email_alert.py', 'curl ', 'requests.', 'urllib.request',
-    )
-    for token in forbidden_prepare:
-        require(token not in prepare_block, f'network/send token leaked into dry-run step: {token}')
+    # 10-minute best-effort schedule + concurrency + manual dispatch (with force_dry_run).
+    require("cron: '*/10 * * * *'" in watch, 'watch must run on a 10-minute schedule')
+    require('best-effort' in watch, 'watch must document GitHub best-effort scheduling')
+    require('group: teams-ai-news-watch' in watch, 'watch must serialize runs (concurrency group)')
+    require('workflow_dispatch:' in watch and 'force_dry_run:' in watch,
+            'watch must preserve manual dispatch and the force-dry-run input')
+    require('canary_cap:' in watch, 'watch must expose the bounded-canary cap input')
 
-    required_upload = (
-        "if: steps.build.outputs.live_ok == 'true' && steps.teams_ai_push_dry_run.outcome == 'success'",
-        'uses: actions/upload-artifact@v4',
-        'name: teams-ai-news-push-dry-run-${{ github.run_id }}-${{ github.run_attempt }}',
-        'path: ${{ runner.temp }}/teams-ai-push-dry-run',
-        'if-no-files-found: error',
-        'retention-days: 3',
-    )
-    for token in required_upload:
-        require(token in upload_block, f'upload step missing token: {token}')
+    build_block = block_between(watch, build, delta)
+    delta_block = block_between(watch, delta, teams)
+    teams_block = block_between(watch, teams, persist)
+    persist_block = block_between(watch, persist, skip)
 
-    require('TEAMS_WORKFLOW_WEBHOOK_URL' not in upload_block,
-            'upload step must not receive webhook secret')
+    # Build: live news metadata to a temp file only. No full dashboard/Pages republish and no
+    # docs/daily writes — the committed dashboard is read only as the delta 'before' baseline.
+    require('NEWS_MODE: live' in build_block, 'build step must collect live news')
+    require('--output "$RUNNER_TEMP/dashboard-now.html"' in build_block,
+            'build step must write the dashboard to a temp file, not docs/daily')
+    require('live_ok=true' in build_block and 'live_ok=false' in build_block,
+            'build step must fail closed when live collection fails')
+    for forbidden in ('build_static_report.py', 'Publish to Pages', 'git push',
+                      'docs/daily/latest.html', 'docs/daily/operator-latest.html'):
+        require(forbidden not in build_block,
+                f'build step must not run the heavy publish path: {forbidden}')
 
-    # Publish와 실제 발송은 main에서만 허용한다. workflow_dispatch force_dry_run=true
-    # 실행에서는 Pages push·Telegram send·Teams send가 모두 step 수준에서 닫혀야 한다.
-    main_only_guard = "github.ref == 'refs/heads/main'"
-    force_dry_run_guard = (
+    # Delta: read the committed dashboard as baseline; give Teams headroom for up to ten.
+    require('detect_dashboard_alert_delta.py' in delta_block, 'delta step must run the detector')
+    require('docs/daily/dashboard-latest.html' in delta_block,
+            'delta step must read the committed dashboard as the before-baseline')
+    require('DELTA_ARTIFACT_MAX_ARTICLES:' in delta_block,
+            'delta step must widen the artifact cap for the Teams path')
+    require('--delta-artifact "$DELTA_ARTIFACT_FILE"' in delta_block,
+            'delta step must emit the shared delta artifact')
+
+    # Teams send: the article-level production sender, email_channel secrets, watch opt-in gate,
+    # per-run canary cap — and never the SMTP digest entrypoint.
+    require('run: python3 scripts/send_teams_ai_push.py' in teams_block,
+            'watch Teams step must invoke the article-level production sender')
+    teams_if = next((line for line in teams_block.splitlines() if line.strip().startswith('if:')), '')
+    require("vars.TEAMS_AI_NEWS_WATCH == '1'" in teams_if,
+            'watch Teams step must gate on the TEAMS_AI_NEWS_WATCH opt-in')
+    require('shadow_alert_delta' not in teams_if,
+            'watch Teams step must NOT gate on shadow_alert_delta (D7-AK-6C)')
+    require("github.ref == 'refs/heads/main'" in teams_if, 'watch Teams step must be main-only')
+    require(
         "(github.event_name != 'workflow_dispatch' || "
-        "github.event.inputs.force_dry_run != 'true')"
+        "github.event.inputs.force_dry_run != 'true')" in teams_if,
+        'watch Teams step must honour the force-dry-run guard',
     )
-
-    for step_name, block in (
-        ('Pages publish', publish_block),
-        ('Telegram sender', telegram_block),
-        ('Teams sender', real_block),
-    ):
-        require(
-            main_only_guard in block,
-            f'{step_name} missing main-only guard',
-        )
-        require(
-            force_dry_run_guard in block,
-            f'{step_name} missing force-dry-run guard',
-        )
-
-    require(
-        'git push origin HEAD:main' in publish_block,
-        'Pages publisher entrypoint changed or missing',
-    )
-    require(
-        "vars.HOURLY_DELTA_AUTO_SEND == '1'"
-        in telegram_block
-        and "vars.TELEGRAM_AUTO_SEND == '1'" in telegram_block,
-        'production Telegram variable gates changed or missing',
-    )
-    require(
-        "vars.HOURLY_DELTA_AUTO_SEND == '1'" in real_block,
-        'production Teams variable gate changed or missing',
-    )
-    # D7-AK-6A — 실제 Teams step은 기사별 production sender다. 공식 production transport는
-    # email_channel(검증된 Gmail SMTP → Teams 채널 이메일, 기사당 1통)이므로 이 step은 발송
-    # 자격증명을 주입한다. 다만 별도 email workflow의 다이제스트 경로(send_email_alert.py를 직접
-    # 실행하거나 그 다이제스트 게이트를 켜는 것)로 되돌아가면 '기사당 1통' 계약이 조용히 깨지므로
-    # 그 진입점만 금지한다. webhook은 향후 선택 transport로만 남고 필수 조건이 아니다.
-    require(
-        'run: python3 scripts/send_teams_ai_push.py' in real_block,
-        'article-level Teams production sender entrypoint changed or missing',
-    )
-    for token in (
-        'send_email_alert.py', 'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL', 'SEND_TO_TEAMS',
-    ):
-        require(token not in real_block,
-                f'email digest entrypoint must not appear in the Teams card step: {token}')
     for token in (
         'TEAMS_AI_PUSH_MODE: send',
         'APPROVE_TEAMS_AI_PUSH: "true"',
@@ -152,46 +108,52 @@ def main() -> int:
         'TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}',
         'TEAMS_PUSH_STATE_PATH: data/teams_push_state.json',
         'DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json',
+        'TEAMS_AI_PUSH_MAX_ARTICLES:',
     ):
-        require(token in real_block, f'Teams card step missing token: {token}')
+        require(token in teams_block, f'watch Teams step missing token: {token}')
+    for token in ('send_email_alert.py', 'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL', 'SEND_TO_TEAMS'):
+        require(token not in teams_block,
+                f'email digest entrypoint must not appear in the watch Teams step: {token}')
 
-    # 부분 실패에도 이미 전송된 기사는 재발송되면 안 된다 → always()로 진입하되
-    # sender가 실행됐고 state_changed=true일 때만 state 파일 하나를 commit한다.
+    # Persist: exactly one staged path, never a force-push, nothing beyond the state file.
     for token in (
         'if: always()',
         "steps.teams_ai_push.outcome != 'skipped'",
         "steps.teams_ai_push.outputs.state_changed == 'true'",
         'git add -- data/teams_push_state.json',
-        "git commit -m \"chore: persist Teams AI push dedup state\"",
+        'git commit -m "chore: persist Teams AI push dedup state"',
         'git rebase --abort',
         'git push origin HEAD:main',
     ):
         require(token in persist_block, f'state persist step missing token: {token}')
-    require(persist_block.count('git add') == 1,
-            'state persist step must stage exactly one path')
+    require(persist_block.count('git add') == 1, 'state persist step must stage exactly one path')
     for token in ('docs/daily', 'scripts/', 'app/', '.github/', '--force', '-f origin',
                   'git add .', 'git add -A', 'git commit -am'):
         require(token not in persist_block,
                 f'state persist step must not touch/force beyond the state file: {token}')
 
-    for verifier in (
-        'python3 scripts/verify_teams_ai_push.py',
-        'python3 scripts/verify_teams_push_state.py',
-        'python3 scripts/verify_teams_ai_push_dry_run.py',
-        'python3 scripts/verify_teams_ai_push_workflow_dry_run.py',
-        'python3 scripts/verify_teams_ai_push_production.py',
-    ):
-        require(text.count(verifier) == 1, f'pipeline verifier missing/duplicated: {verifier}')
+    # Telegram is never run by the watch (Teams-only owner).
+    for token in ('send_telegram', 'send_scheduled_telegram', 'TELEGRAM_AUTO_SEND',
+                  'TELEGRAM_BOT_TOKEN'):
+        require(token not in watch, f'watch must never run any Telegram path: {token}')
 
-    require(text.count('python3 scripts/prepare_teams_ai_push_dry_run.py') == 1,
-            'dry-run preparer must run exactly once')
-    require(text.count('actions/upload-artifact@v4') == 1,
-            'dry-run artifact upload must occur exactly once')
+    # No webhook secret anywhere; the watch runs the production verifier in its gate.
+    require('secrets.TEAMS_WORKFLOW_WEBHOOK_URL' not in watch,
+            'no webhook secret may be injected in the watch workflow')
+    require(watch.count('python3 scripts/verify_teams_ai_push_production.py') == 1,
+            'watch must run the Teams production verifier in its gate')
 
-    print('RESULT=D7-AK-5D_TEAMS_AI_PUSH_WORKFLOW_DRY_RUN_VERIFIER_PASS')
-    print('artifact_upload_steps=1 publish_send_guards=3 '
-          'teams_production_sender=send_teams_ai_push.py teams_transport=email_channel '
-          'state_persist_steps=1 state_persist_staged_paths=1')
+    # Mutual exclusion — the hourly scheduled-live-refresh no longer sends Teams (single owner).
+    require('python3 scripts/send_teams_ai_push.py' not in scheduled,
+            'scheduled-live-refresh must not invoke the Teams sender (single owner)')
+    require('TEAMS_AI_PUSH_MODE: send' not in scheduled,
+            'scheduled-live-refresh must inject no Teams send mode')
+    require('git add -- data/teams_push_state.json' not in scheduled,
+            'scheduled-live-refresh must persist no Teams dedup state')
+
+    print('RESULT=D7-AK-6C_TEAMS_AI_NEWS_WATCH_WORKFLOW_VERIFIER_PASS')
+    print('watch_owner=teams-ai-news-watch.yml teams_transport=email_channel '
+          'schedule=10min best_effort=documented single_owner=true telegram_in_watch=0')
     return 0
 
 

@@ -1,0 +1,173 @@
+name: Teams AI News Watch
+
+# D7-AK-6C — 10분 주기 경량 Teams 발송 감시.
+# 새로 감지된 '중요·최우선' AI 기사만 기사별로 Teams 테스트1 채널(email_channel)에 발송한다.
+# 전체 대시보드/Pages를 재빌드하거나 docs/daily를 수정하지 않는다 — 라이브 뉴스 메타데이터와
+# delta artifact만 임시 파일(runner.temp)로 생성해 발송 판단에만 쓴다. 시장/기상 라이브 실측은
+# 하지 않는다(뉴스 delta에는 불필요 → 경량 유지).
+#
+# ※ GitHub schedule은 UTC 기준 best-effort라 정확히 10분 간격을 보장하지 않는다(수 분 지연/건너뜀 가능).
+#
+# 실제 발송은 repo Variable TEAMS_AI_NEWS_WATCH='1' + 라이브 수집 성공(live_ok) + main branch +
+# force_dry_run 아님 이 모두 필요하다. shadow_alert_delta는 더 이상 발송 조건이 아니다(중요도는
+# 기사별 재사용 신호로 판정). 이 워크플로는 Teams 기사별 자동발송의 유일한 production owner이며,
+# Telegram은 이 워크플로에서 절대 실행하지 않는다.
+on:
+  workflow_dispatch:
+    inputs:
+      force_dry_run:
+        description: "Type 'true' to force dry-run (no send) even when the watch is enabled"
+        required: false
+        default: ""
+      canary_cap:
+        description: "Optional per-run send cap for a bounded canary (e.g. 3). Empty = default up to 10."
+        required: false
+        default: ""
+  schedule:
+    # GitHub schedule은 UTC 기준이며 best-effort라 정확히 10분 간격을 보장하지 않는다.
+    - cron: '*/10 * * * *'
+
+# state 파일(data/teams_push_state.json) 한 개만 commit/push 하려면 write 권한이 필요하다.
+permissions:
+  contents: write
+
+# 10분 슬롯 실행을 직렬화해 겹침/중복 발송·state push 충돌을 막는다.
+concurrency:
+  group: teams-ai-news-watch
+  cancel-in-progress: false
+
+env:
+  # 검증/기본은 항상 mock 안전 모드 (네트워크/비밀값 0건). live 수집은 아래 build step에서만 활성화.
+  APP_MODE: mock
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  teams-ai-news-watch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # 1) 게이트 (mock-safe · 비밀값/네트워크 0건). Teams 기사별 발송 계약 verifier들.
+      - name: Verify pipeline (mock-safe, no secrets)
+        run: |
+          python3 -m py_compile scripts/send_teams_ai_push.py scripts/detect_dashboard_alert_delta.py app/teams_ai_push.py app/delta_classifier.py
+          python3 scripts/verify_teams_ai_push.py
+          python3 scripts/verify_teams_push_state.py
+          python3 scripts/verify_teams_ai_push_dry_run.py
+          python3 scripts/verify_teams_ai_push_workflow_dry_run.py
+          python3 scripts/verify_teams_ai_push_production.py
+
+      # 2) 라이브 뉴스 메타데이터만 임시 파일로 생성한다(공개 docs/daily·Pages 미변경·미게시).
+      #    시장/기상은 기본 mock으로 두어 라이브 실측을 건너뛴다(뉴스 delta에는 불필요) — 경량 유지.
+      #    build_static_dashboard.py는 NEWS_MODE=live일 때 공개 RSS/Naver로 실뉴스를 수집한다
+      #    (build_static_report.py와 동일 collector·classifier 재사용). live 수집 실패면 fail-closed.
+      - name: Build live news metadata (temp only)
+        id: build
+        env:
+          NEWS_MODE: live
+          # Naver 보조 provider — 이미 생성된 repo secrets로 안전 주입 (값 미출력). 자격증명이
+          # 없거나 실패해도 collector가 정직하게 skip하므로 live_ok 판정에는 영향이 없다.
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: |
+          OUT="$(python3 scripts/build_static_dashboard.py --output "$RUNNER_TEMP/dashboard-now.html")"
+          echo "$OUT"
+          if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
+            echo "live_ok=true" >> "$GITHUB_OUTPUT"
+            echo "NEWS_MODE=live · built live news metadata (temp, not published)"
+          else
+            echo "live_ok=false" >> "$GITHUB_OUTPUT"
+            echo "NEWS_MODE=live · live collection failed/empty — fail-closed, no send"
+          fi
+
+      # 3) 마지막으로 공개된 대시보드(committed docs/daily) 대비 신규·변경 기사 delta artifact만 만든다.
+      #    Teams가 최대 10건까지 실을 수 있도록 artifact 기사 상한만 넓힌다(env override, 다른 소비자 불변).
+      #    파싱 실패는 step 실패로 닫히며, 신규 후보가 없으면 발송 대상이 0건이 된다.
+      - name: Detect new-article delta (temp artifact)
+        id: delta
+        if: steps.build.outputs.live_ok == 'true'
+        env:
+          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
+          DELTA_ARTIFACT_MAX_ARTICLES: "12"
+        run: |
+          python3 scripts/detect_dashboard_alert_delta.py \
+            docs/daily/dashboard-latest.html \
+            "$RUNNER_TEMP/dashboard-now.html" \
+            --github-output "$GITHUB_OUTPUT" \
+            --delta-artifact "$DELTA_ARTIFACT_FILE"
+
+      # 4) 신규 중요·최우선 AI 기사만 기사별 이메일(email_channel)로 Teams 채널에 발송한다.
+      #    shadow_alert_delta는 발송 조건이 아니다(중요도는 app.teams_ai_push의 기사별 재사용 신호로 판정) — D7-AK-6C.
+      #    공식 production transport = email_channel: 검증된 Gmail SMTP(scripts/send_email_alert.py 계약 재사용)로
+      #    각 기사를 Teams 채널 이메일(TEAMS_CHANNEL_EMAIL)로 보낸다(기사당 1통·다이제스트 병합 없음·최대 10건).
+      #    SMTP 250 accepted인 기사만 성공으로 판정해 dedup state에 남긴다(부분 실패는 실패 기사만 다음 run 재발송).
+      #    canary_cap 입력이 있으면 그 값으로 이 실행의 발송 상한을 낮춘다(예: 3). 비어 있으면 기본 10.
+      - name: Teams AI news article cards (watch auto-send)
+        id: teams_ai_push
+        if: steps.build.outputs.live_ok == 'true' && vars.TEAMS_AI_NEWS_WATCH == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
+        env:
+          TEAMS_AI_PUSH_MODE: send
+          APPROVE_TEAMS_AI_PUSH: "true"
+          # 발송 자격증명 — GitHub Secrets에서만 주입되며 값은 어떤 로그/artifact에도 출력되지 않는다.
+          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
+          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
+          # 운영 dedup state(영속). 성공(250 accepted)한 기사만 여기에 기록되고 아래 step이 commit한다.
+          TEAMS_PUSH_STATE_PATH: data/teams_push_state.json
+          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
+          TEAMS_AI_PUSH_MAX_ARTICLES: ${{ github.event.inputs.canary_cap || '' }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: python3 scripts/send_teams_ai_push.py
+
+      # 5) 전송에 성공한 기사만 영속 dedup state에 남긴다. 부분 실패로 위 step이 실패해도
+      #    이미 발송된 기사는 재발송되면 안 되므로 always()로 진입하되, sender가 실제로 실행됐고
+      #    (state_changed=true) 파일 변경이 있을 때만 state 파일 한 개만 commit한다.
+      - name: Persist Teams AI push dedup state
+        if: always() && steps.teams_ai_push.outcome != 'skipped' && steps.teams_ai_push.outputs.state_changed == 'true'
+        run: |
+          # 최초 성공 시 state 파일은 untracked로 생성되므로 git diff가 아니라 status로 본다.
+          if [ -z "$(git status --porcelain -- data/teams_push_state.json)" ]; then
+            echo "teams push state unchanged — skip commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/teams_push_state.json
+          git commit -m "chore: persist Teams AI push dedup state"
+
+          for attempt in 1 2 3; do
+            echo "state persist attempt ${attempt}/3: fetch + rebase + push"
+            git fetch origin main
+
+            if ! git rebase origin/main; then
+              echo "ERROR: rebase onto origin/main failed during Teams state persist"
+              git rebase --abort || true
+              exit 1
+            fi
+
+            if git push origin HEAD:main; then
+              echo "teams push state committed: $(git rev-parse HEAD)"
+              exit 0
+            fi
+
+            echo "WARN: git push failed on attempt ${attempt}/3"
+            if [ "${attempt}" -eq 3 ]; then
+              echo "ERROR: teams push state push failed after 3 attempts"
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+      - name: Skip Teams send (watch closed or not main)
+        if: always() && steps.teams_ai_push.outcome == 'skipped'
+        run: echo "watch disabled / not main / force dry-run — skip teams"

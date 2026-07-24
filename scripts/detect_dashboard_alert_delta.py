@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
@@ -295,6 +296,7 @@ LIVE_SOURCE = "live-delta"
 MOCK_SOURCE = "mock-delta"
 VALID_SOURCE_OVERRIDES = (LIVE_SOURCE, MOCK_SOURCE, "test-delta")
 ARTIFACT_MAX_ARTICLES = 5
+ARTIFACT_MAX_ARTICLES_CEILING = 20
 ARTIFACT_SUMMARY_MAX = 200
 _NEWS_MODE_MARKER = re.compile(r"<!--news-data-mode:([a-z_]+)-->")
 
@@ -466,6 +468,25 @@ def _now_kst(override: str | None) -> datetime:
     return datetime.now(_KST)
 
 
+def _resolve_artifact_max_articles() -> int:
+    """How many meaningful articles to carry in the shared artifact.
+
+    Default is ``ARTIFACT_MAX_ARTICLES`` (5) so the hourly dashboard/Telegram path is
+    unchanged. The Teams AI news watch (D7-AK-6C) overrides ``DELTA_ARTIFACT_MAX_ARTICLES``
+    to give the article-level Teams sender headroom to select up to ten — without
+    widening any other consumer's scope. Missing/invalid → the default; clamped to a
+    ceiling so a bad value can never flood the artifact.
+    """
+    raw = os.environ.get("DELTA_ARTIFACT_MAX_ARTICLES", "").strip()
+    if not raw:
+        return ARTIFACT_MAX_ARTICLES
+    try:
+        value = int(raw)
+    except ValueError:
+        return ARTIFACT_MAX_ARTICLES
+    return max(1, min(value, ARTIFACT_MAX_ARTICLES_CEILING))
+
+
 def build_delta_payload(
     new_model: dict[str, Any],
     classification: "delta_classifier.DeltaClassification",
@@ -491,7 +512,7 @@ def build_delta_payload(
     """
     articles = [
         _artifact_entry_from_classified(article)
-        for article in classification.meaningful[:ARTIFACT_MAX_ARTICLES]
+        for article in classification.meaningful[:_resolve_artifact_max_articles()]
     ]
     if source_override in VALID_SOURCE_OVERRIDES:
         source = source_override

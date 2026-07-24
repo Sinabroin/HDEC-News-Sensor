@@ -5,7 +5,7 @@ This entrypoint wires the already-verified leaves into the scheduled production
 path — it adds delivery, and nothing else:
 
 * ``app.teams_ai_push``    — Teams-only AI topic classification, importance
-  mapping, one message per article (max three), and the per-article email body.
+  mapping, one message per article (up to ten), and the per-article email body.
 * ``app.teams_push_state`` — persistent dedup over article id / normalized URL /
   title fingerprint / event cluster, including material-update re-send.
 
@@ -25,8 +25,14 @@ resendable on the next run.
 Default execution is dry-run and performs zero network operations. A real send
 requires all of GITHUB_ACTIONS=true, TEAMS_AI_PUSH_MODE=send,
 APPROVE_TEAMS_AI_PUSH=true, complete Gmail SMTP credentials plus a Teams channel
-address, and a ``live-delta`` artifact whose shadow_alert_delta gate is open. Any
-other state fails closed before a message is built.
+address, and a ``live-delta`` artifact. Any other state fails closed before a
+message is built.
+
+D7-AK-6C — selection is no longer gated on the artifact-level ``shadow_alert_delta``
+flag: important/top-priority AI articles are sent even when nothing is
+shadow-confirmed (importance derives from the reused scoring/confirmed-event signals
+per article). The per-run article cap defaults to ten and can be lowered for a
+bounded canary via ``--max-articles`` / ``TEAMS_AI_PUSH_MAX_ARTICLES``.
 
 The Teams Workflows webhook (``TEAMS_WORKFLOW_WEBHOOK_URL``) is a reserved,
 currently-inactive optional transport: it is never a required condition and its
@@ -54,6 +60,7 @@ for _path in (REPO_ROOT, SCRIPTS_DIR):
         sys.path.insert(0, str(_path))
 
 from app.teams_ai_push import (  # noqa: E402
+    MAX_TEAMS_ARTICLES,
     render_article_email,
     select_teams_push_from_artifact,
 )
@@ -112,6 +119,21 @@ def _true_env(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in APPROVAL_TRUE
 
 
+def _resolve_max_articles(raw: str) -> int:
+    """Resolve the per-run article cap. Empty/invalid → the default ceiling (ten).
+
+    The value is clamped into ``[1, MAX_TEAMS_ARTICLES]``: a bounded canary can lower it
+    (e.g. 3) but nothing can raise it above the hard ceiling the leaf enforces."""
+    text = str(raw or "").strip()
+    if not text:
+        return MAX_TEAMS_ARTICLES
+    try:
+        value = int(text)
+    except ValueError:
+        return MAX_TEAMS_ARTICLES
+    return max(1, min(value, MAX_TEAMS_ARTICLES))
+
+
 def resolve_email_channel_credentials() -> EmailChannelCredentials:
     """Resolve the email_channel credentials from env (secrets only).
 
@@ -160,8 +182,6 @@ def load_artifact(path: Path) -> Mapping[str, Any]:
         raise FailClosed("artifact_root_not_object")
     if " ".join(str(payload.get("source") or "").split()) != "live-delta":
         raise FailClosed("artifact_not_live_delta")
-    if payload.get("shadow_alert_delta") is not True:
-        raise FailClosed("shadow_alert_delta_closed")
     return payload
 
 
@@ -234,9 +254,10 @@ def deliver(
     dashboard_url: str = "",
     report_url: str = "",
     detected_at: str = "",
+    max_articles: int = MAX_TEAMS_ARTICLES,
     smtp_factory=None,
 ) -> dict[str, Any]:
-    """Select, dedup, and deliver at most three article emails.
+    """Select, dedup, and deliver up to ``max_articles`` (default ten) article emails.
 
     Each article is handled independently: one SMTP failure never skips the
     remaining articles, and only delivered (250 accepted) articles reach persistent
@@ -247,7 +268,7 @@ def deliver(
     except InvalidTeamsPushState as exc:
         raise FailClosed("state_invalid") from exc
 
-    candidates = select_teams_push_from_artifact(payload)
+    candidates = select_teams_push_from_artifact(payload, max_articles=max_articles)
     # Contract reuse: the same helper the dry-run path uses. Its decisions are the
     # baseline; each article is then re-checked against the state as it evolves within
     # this run so two near-identical articles cannot both be delivered.
@@ -392,6 +413,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--detected-at", default="")
     parser.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT", ""))
     parser.add_argument(
+        "--max-articles",
+        default=os.environ.get("TEAMS_AI_PUSH_MAX_ARTICLES", ""),
+        help=(
+            "per-run article cap (default: MAX_TEAMS_ARTICLES=10; a bounded canary "
+            "may lower it, e.g. 3). Never raises the hard ceiling."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="force preview only; no email request and no state write",
@@ -405,6 +434,7 @@ def main(argv: list[str] | None = None) -> int:
 
     mode = os.environ.get("TEAMS_AI_PUSH_MODE", "").strip().lower() or DEFAULT_MODE
     send_requested = mode == SEND_MODE and not args.dry_run
+    max_articles = _resolve_max_articles(args.max_articles)
     credentials = resolve_email_channel_credentials()
     webhook_url = resolve_webhook_url()
     # The webhook is a reserved, inactive optional transport — logged for
@@ -425,6 +455,7 @@ def main(argv: list[str] | None = None) -> int:
             dashboard_url=args.dashboard_url,
             report_url=args.report_url,
             detected_at=args.detected_at,
+            max_articles=max_articles,
         )
     except FailClosed as exc:
         print(

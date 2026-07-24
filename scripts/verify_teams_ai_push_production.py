@@ -44,9 +44,12 @@ from verify_meaningful_delta_quality import _eval_gate, _step_block, _step_if  #
 
 SCRIPT = ROOT / "scripts" / "send_teams_ai_push.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml"
+WATCH_WORKFLOW = ROOT / ".github" / "workflows" / "teams-ai-news-watch.yml"
 PRODUCTION_STATE = ROOT / "data" / "teams_push_state.json"
 
-TEAMS_STEP = "Hourly Teams AI article cards (delta-gated auto-send)"
+# D7-AK-6C — the article-level Teams sender now lives solely in the 10-minute watch
+# workflow. The hourly scheduled-live-refresh no longer runs it (single owner).
+TEAMS_STEP = "Teams AI news article cards (watch auto-send)"
 PERSIST_STEP = "Persist Teams AI push dedup state"
 
 # Fixture credentials — all fictitious. The Teams channel uses the RFC 2606
@@ -122,6 +125,40 @@ def _payload(articles, **overrides):
 def _write(path: Path, payload) -> Path:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+# Twelve distinct, genuinely-sendable AI events (each an AI topic + a confirmed action),
+# with distinct titles/URLs/sources so none collapse into one dedup cluster within a run.
+_CAP_TITLES = (
+    "OpenAI, 미국 AI 데이터센터에 대규모 투자 계약 체결",
+    "Microsoft, 유럽 AI 데이터센터 전력공급 계약 체결",
+    "Google, 아시아 AI 데이터센터 신설 투자 확정",
+    "Amazon, 원전 SMR 기반 AI 전력공급 계약 승인",
+    "Meta, BIM 디지털 트윈 플랫폼 정식 출시",
+    "엔비디아, 차세대 GPU 클러스터 공급 계약 체결",
+    "삼성전자, AI 반도체 파운드리 증설 투자 확정",
+    "SK하이닉스, HBM 데이터센터 공급 계약 체결",
+    "오라클, 클라우드 AI 데이터센터 신규 착공",
+    "앤트로픽, 대규모 AI 인프라 투자 계약 공개",
+    "현대건설, AI 데이터센터 EPC 계약 체결",
+    "포스코이앤씨, 스마트건설 AI 자율 시공 계약 체결",
+)
+
+
+def _cap_articles(n: int) -> list:
+    sources = ("Reuters", "연합뉴스", "전자신문", "블룸버그")
+    return [
+        _article(
+            article_key=f"cap-{i}",
+            title=_CAP_TITLES[i],
+            summary=f"{_CAP_TITLES[i]} — 상세 내용.",
+            source=sources[i % len(sources)],
+            url=f"https://example.com/cap/{i}",
+            score=round(4.7 - i * 0.05, 3),
+            shadow_confirmed_event_types=["investment_confirmed"],
+        )
+        for i in range(n)
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -395,9 +432,6 @@ def check_fail_closed(tmp: Path) -> None:
         ("non live-delta artifact blocks send", approved,
          _write(tmp / "mock.json", _payload([_article()], source="mock-delta")),
          "artifact_not_live_delta"),
-        ("shadow_alert_delta=false sends nothing", approved,
-         _write(tmp / "noshadow.json", _payload([_article()], shadow_alert_delta=False)),
-         "shadow_alert_delta_closed"),
         ("missing artifact fails closed", approved, tmp / "absent.json", "artifact_missing"),
     )
     for name, env, art, reason in cases:
@@ -520,40 +554,56 @@ def check_delivery(tmp: Path) -> None:
           summary["records"][0]["status"] == "recipient_rejected", str(summary["records"]))
     check("rejected recipient never reaches the DATA phase", len(rec.messages) == 0)
 
+    # Fixture 16 — shadow_alert_delta=false no longer blocks: an important AI article still
+    # delivers when the artifact flag is closed (the flag is not a send gate anymore).
+    noflag_state = tmp / "noflag-state.json"
+    summary, rec = _deliver(
+        tmp,
+        _payload(
+            [_article(article_key="noflag", url="https://example.com/news/noflag")],
+            shadow_alert_delta=False,
+        ),
+        noflag_state,
+    )
+    check("shadow_alert_delta=false still delivers an important article (fixture 16)",
+          summary["candidate_count"] == 1 and summary["delivered_count"] == 1
+          and len(rec.attempts) == 1, str(summary))
+
 
 def check_cap_and_partial(tmp: Path) -> None:
-    articles = [
-        _article(article_key="c1", title="OpenAI, AI 데이터센터 신규 투자 계약 체결",
-                 url="https://example.com/c1"),
-        _article(article_key="c2", title="현대건설, 스마트건설 로봇 자율 시공 계약 체결",
-                 summary="스마트건설 로봇 자율 시공 계약을 체결했다.",
-                 url="https://example.com/c2", score=4.6,
-                 shadow_confirmed_event_types=["contract_awarded"]),
-        _article(article_key="c3", title="Amazon, 원전 SMR 전력 공급 계약 승인",
-                 summary="SMR 전력 공급 계약이 승인됐다.",
-                 url="https://example.com/c3", score=4.55,
-                 shadow_confirmed_event_types=["agreement_signed"]),
-        _article(article_key="c4", title="Meta, BIM 디지털 트윈 플랫폼 정식 출시",
-                 summary="BIM 디지털 트윈 플랫폼을 정식 출시했다.",
-                 url="https://example.com/c4", score=4.52,
-                 shadow_confirmed_event_types=["product_available"]),
-    ]
-
+    # Fixture 12 — twelve qualifying candidates select down to the top ten.
     cap_state = tmp / "cap-state.json"
-    summary, rec = _deliver(tmp, _payload(articles), cap_state)
-    check("at most three articles are ever selected", summary["candidate_count"] == 3, str(summary))
-    check("three articles produce exactly three SMTP sends",
-          summary["attempted_count"] == 3 and len(rec.attempts) == 3, str(summary))
-    check("one email per article, three distinct messages",
-          len(rec.messages) == 3
-          and len({_parse_message(m["raw"])["subject"] for m in rec.messages}) == 3)
+    summary, rec = _deliver(tmp, _payload(_cap_articles(12)), cap_state)
+    check("twelve candidates select at most ten (fixture 12)",
+          summary["candidate_count"] == 10, str(summary))
+    # Fixture 13 — each of the ten selected articles produces exactly one email (ten total).
+    check("ten selected articles produce exactly ten SMTP sends (fixture 13)",
+          summary["attempted_count"] == 10 and len(rec.attempts) == 10, str(summary))
+    check("one email per article, ten distinct messages",
+          len(rec.messages) == 10
+          and len({_parse_message(m["raw"])["subject"] for m in rec.messages}) == 10)
     check("every send targets the Teams channel address only",
           set(rec.attempts) == {FIXTURE_TEAMS_CHANNEL})
+    check("ten deliveries, zero failures",
+          summary["delivered_count"] == 10 and summary["failed_count"] == 0, str(summary))
 
+    # Fixture 17 — zero eligible candidates → zero SMTP connections and no state file.
+    zero_state = tmp / "zero-state.json"
+    blocked_only = _article(article_key="blocked-only", url="https://example.com/blocked",
+                            shadow_urgency_status="blocked", shadow_would_pass=False,
+                            shadow_confirmed_event_types=[])
+    summary0, rec0 = _deliver(tmp, _payload([blocked_only]), zero_state)
+    check("zero eligible candidates → zero SMTP connections (fixture 17)",
+          summary0["candidate_count"] == 0 and summary0["attempted_count"] == 0
+          and len(rec0.attempts) == 0 and not zero_state.exists(), str(summary0))
+
+    # Fixtures 14 & 15 — ten articles, eight accepted (250) / two rejected (550): only the
+    # eight delivered persist; the two failed stay resendable on a later run.
+    ten = _cap_articles(10)
     partial_state = tmp / "partial-state.json"
-    artifact = _write(tmp / "partial.json", _payload(articles))
+    artifact = _write(tmp / "partial.json", _payload(ten))
     gh_output = tmp / "partial-output.txt"
-    recorder = _SMTPRecorder((250, 550, 250))
+    recorder = _SMTPRecorder((250,) * 8 + (550,) * 2)
     rc, logs = _run_main_approved(
         ["--artifact", str(artifact), "--state", str(partial_state),
          "--github-output", str(gh_output)],
@@ -561,26 +611,25 @@ def check_cap_and_partial(tmp: Path) -> None:
     )
 
     check("partial failure exits non-zero", rc == 1, f"rc={rc}")
-    check("partial failure still attempts every article", len(recorder.attempts) == 3,
-          str(len(recorder.attempts)))
+    check("partial failure still attempts every one of ten articles",
+          len(recorder.attempts) == 10, str(len(recorder.attempts)))
 
-    # Which article lands in the middle depends on the importance ranking, so the
-    # expectation is derived from the run's own per-email outcomes rather than from the
-    # fixture order. The contract under test is the mapping itself: persisted set ==
-    # delivered set, exactly.
-    ref_to_key = {sender.article_ref(item): item["article_key"] for item in articles}
+    # Which articles land on the two 550s depends on the importance ranking, so the
+    # expectation is derived from the run's own per-email outcomes. The contract under
+    # test is the mapping itself: persisted set == delivered set, exactly.
+    ref_to_key = {sender.article_ref(item): item["article_key"] for item in ten}
     outcomes: dict[str, set[str]] = {"delivered": set(), "failed": set()}
     for ref, outcome in re.findall(r"article=([0-9a-f]{12}) outcome=(delivered|failed)", logs):
         outcomes[outcome].add(ref_to_key[ref])
     persisted = json.loads(partial_state.read_text(encoding="utf-8"))
     delivered_ids = set(persisted["article_ids"])
 
-    check("run reports two delivered and one failed email",
-          len(outcomes["delivered"]) == 2 and len(outcomes["failed"]) == 1, str(outcomes))
-    check("only delivered articles are persisted",
+    check("run reports eight delivered and two failed emails (fixture 14)",
+          len(outcomes["delivered"]) == 8 and len(outcomes["failed"]) == 2, str(outcomes))
+    check("only delivered articles are persisted (fixture 14)",
           delivered_ids == outcomes["delivered"],
           f"persisted={sorted(delivered_ids)} delivered={sorted(outcomes['delivered'])}")
-    check("failed article stays resendable",
+    check("failed articles stay resendable (fixture 15)",
           not (delivered_ids & outcomes["failed"]), str(sorted(outcomes["failed"])))
     output_text = gh_output.read_text(encoding="utf-8")
     check("partial success still reports state_changed=true",
@@ -629,63 +678,90 @@ def check_no_leaks(tmp: Path) -> None:
 # 4. workflow wiring
 # --------------------------------------------------------------------------
 def check_workflow() -> None:
-    text = WORKFLOW.read_text(encoding="utf-8")
-    teams_if = _step_if(text, TEAMS_STEP)
-    teams_block = _step_block(text, TEAMS_STEP)
-    persist_block = _step_block(text, PERSIST_STEP)
+    watch = WATCH_WORKFLOW.read_text(encoding="utf-8")
+    scheduled = WORKFLOW.read_text(encoding="utf-8")
+    teams_if = _step_if(watch, TEAMS_STEP)
+    teams_block = _step_block(watch, TEAMS_STEP)
+    persist_block = _step_block(watch, PERSIST_STEP)
 
-    check("production Teams step exists", bool(teams_if) and bool(teams_block))
-    check("state persistence step exists", bool(persist_block))
+    check("watch Teams sender step exists", bool(teams_if) and bool(teams_block))
+    check("watch state persistence step exists", bool(persist_block))
 
+    # D7-AK-6C gate — TEAMS_AI_NEWS_WATCH is the send opt-in; shadow_alert_delta is not a gate.
     open_ctx = {
         "steps.build.outputs.live_ok": "true",
-        "steps.delta.outputs.shadow_alert_delta": "true",
-        "vars.HOURLY_DELTA_AUTO_SEND": "1",
+        "vars.TEAMS_AI_NEWS_WATCH": "1",
         "github.ref": "refs/heads/main",
         "github.event_name": "schedule",
         "github.event.inputs.force_dry_run": "",
     }
-    check("scheduled main + hourly opt-in + live + confirmed delta → step is eligible",
+    check("scheduled main + watch opt-in + live → step is eligible",
           _eval_gate(teams_if, open_ctx) is True, teams_if)
+    check("watch gate no longer references shadow_alert_delta (fixture 16)",
+          "shadow_alert_delta" not in teams_if, teams_if)
     check("non-main ref → step is skipped",
           _eval_gate(teams_if, {**open_ctx, "github.ref": "refs/heads/fix/x"}) is False)
     check("workflow_dispatch force_dry_run=true → step is skipped",
           _eval_gate(teams_if, {**open_ctx, "github.event_name": "workflow_dispatch",
                                 "github.event.inputs.force_dry_run": "true"}) is False)
-    check("hourly opt-in disabled → step is skipped",
-          _eval_gate(teams_if, {**open_ctx, "vars.HOURLY_DELTA_AUTO_SEND": "0"}) is False)
-    check("no confirmed urgency → step is skipped",
-          _eval_gate(teams_if, {**open_ctx,
-                                "steps.delta.outputs.shadow_alert_delta": "false"}) is False)
+    check("watch opt-in disabled → step is skipped",
+          _eval_gate(teams_if, {**open_ctx, "vars.TEAMS_AI_NEWS_WATCH": "0"}) is False)
     check("live collection failure → step is skipped",
           _eval_gate(teams_if, {**open_ctx, "steps.build.outputs.live_ok": "false"}) is False)
 
-    check("Teams step invokes the article-level production sender",
+    check("watch Teams step invokes the article-level production sender",
           "python3 scripts/send_teams_ai_push.py" in teams_block)
-    check("Teams step never invokes the SMTP digest sender",
+    check("watch Teams step never invokes the SMTP digest sender",
           "send_email_alert.py" not in teams_block
           and "EMAIL_SEND_MODE" not in teams_block
           and "APPROVE_SEND_EMAIL" not in teams_block
           and "SEND_TO_TEAMS" not in teams_block)
-    check("Teams step injects send mode and approval only here",
+    check("watch Teams step injects send mode and approval only here",
           "TEAMS_AI_PUSH_MODE: send" in teams_block
           and 'APPROVE_TEAMS_AI_PUSH: "true"' in teams_block
-          and text.count("TEAMS_AI_PUSH_MODE: send") == 1
-          and text.count('APPROVE_TEAMS_AI_PUSH: "true"') == 1)
+          and watch.count("TEAMS_AI_PUSH_MODE: send") == 1
+          and watch.count('APPROVE_TEAMS_AI_PUSH: "true"') == 1)
     for secret_line in (
         "GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}",
         "GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}",
         "ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}",
         "TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}",
     ):
-        check(f"Teams step injects email_channel secret: {secret_line.split(':')[0]}",
+        check(f"watch Teams step injects email_channel secret: {secret_line.split(':')[0]}",
               secret_line in teams_block)
-    check("Teams step uses the production state path",
+    check("watch Teams step uses the production state path",
           "TEAMS_PUSH_STATE_PATH: data/teams_push_state.json" in teams_block)
-    check("Teams step consumes the shared delta artifact",
+    check("watch Teams step consumes the temp delta artifact",
           "DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json" in teams_block)
-    check("no webhook secret is injected anywhere in the workflow",
-          "secrets.TEAMS_WORKFLOW_WEBHOOK_URL" not in text)
+    check("watch Teams step honours the per-run canary cap",
+          "TEAMS_AI_PUSH_MAX_ARTICLES:" in teams_block)
+    check("no webhook secret is injected anywhere in the watch workflow",
+          "secrets.TEAMS_WORKFLOW_WEBHOOK_URL" not in watch)
+
+    # Fixture 18 — Telegram is never run by the watch (Teams-only owner).
+    for tele in ("send_telegram", "send_scheduled_telegram", "TELEGRAM_AUTO_SEND",
+                 "TELEGRAM_BOT_TOKEN"):
+        check(f"watch never runs any Telegram path: {tele}", tele not in watch)
+
+    # 10-minute best-effort schedule, serialized runs, manual dispatch preserved.
+    check("watch runs on a 10-minute schedule", "cron: '*/10 * * * *'" in watch)
+    check("watch documents GitHub best-effort scheduling", "best-effort" in watch)
+    check("watch serializes runs with a concurrency group",
+          "group: teams-ai-news-watch" in watch)
+    check("watch preserves manual dispatch and the force-dry-run input",
+          "workflow_dispatch:" in watch and "force_dry_run:" in watch)
+
+    # Lightweight — live news metadata to a temp file only; no full dashboard/Pages republish,
+    # no docs/daily writes. The committed dashboard is read as the delta 'before' baseline.
+    check("watch builds live news metadata to a temp file, not docs/daily",
+          'build_static_dashboard.py --output "$RUNNER_TEMP/dashboard-now.html"' in watch)
+    for heavy in ("docs/daily/latest.html", "docs/daily/operator-latest.html",
+                  "python3 scripts/build_static_report.py", "actions/upload-pages",
+                  "Publish to Pages"):
+        check(f"watch does not run the heavy publish path: {heavy}", heavy not in watch)
+    check("watch pushes only inside the state-persist step",
+          watch.count("git push origin HEAD:main") == 1
+          and "git push origin HEAD:main" in persist_block)
 
     check("persistence survives a partial sender failure",
           "if: always()" in persist_block
@@ -714,8 +790,21 @@ def check_workflow() -> None:
           "secrets." not in persist_block
           and not re.search(r"(cat|echo)[^\n]*teams_push_state\.json", persist_block))
 
-    check("workflow runs this verifier in its gate",
-          text.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
+    # Mutual exclusion — the hourly scheduled-live-refresh no longer sends Teams (single
+    # production owner), so the two workflows can never double-send the same article.
+    check("scheduled-live-refresh no longer invokes the Teams sender (single owner)",
+          "python3 scripts/send_teams_ai_push.py" not in scheduled)
+    check("scheduled-live-refresh injects no Teams send mode/approval",
+          "TEAMS_AI_PUSH_MODE: send" not in scheduled
+          and 'APPROVE_TEAMS_AI_PUSH: "true"' not in scheduled)
+    check("scheduled-live-refresh persists no Teams dedup state",
+          "git add -- data/teams_push_state.json" not in scheduled
+          and "TEAMS_PUSH_STATE_PATH: data/teams_push_state.json" not in scheduled)
+
+    check("watch runs this verifier in its gate",
+          watch.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
+    check("scheduled-live-refresh still runs this verifier in its gate",
+          scheduled.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
 
 
 def main() -> int:

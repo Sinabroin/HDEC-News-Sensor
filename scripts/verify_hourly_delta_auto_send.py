@@ -283,8 +283,7 @@ def check_detector_behavior() -> None:
 
 def check_send_gates(text: str) -> None:
     telegram = _step(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams = _step(text, "Hourly Teams AI article cards (delta-gated auto-send)")
-    skip = _step(text, "Skip automatic alerts (no delta)")
+    skip = _step(text, "Skip automatic Telegram alert (no confirmed urgency)")
     email_sender = EMAIL_SENDER.read_text(encoding="utf-8")
     required_delta = (
         "steps.build.outputs.live_ok == 'true'",
@@ -292,29 +291,19 @@ def check_send_gates(text: str) -> None:
         "vars.HOURLY_DELTA_AUTO_SEND == '1'",
     )
     check("Telegram auto-send step exists", bool(telegram))
-    check("Teams auto-send step exists", bool(teams))
-    check("Telegram opens only for live + confirmed urgency + hourly opt-in", all(x in telegram for x in required_delta))
+    check("Telegram opens only for live + confirmed urgency + hourly opt-in",
+          all(x in telegram for x in required_delta))
     check("Telegram keeps existing explicit opt-in", "vars.TELEGRAM_AUTO_SEND == '1'" in telegram)
-    check("Teams opens only for live + confirmed urgency + hourly opt-in", all(x in teams for x in required_delta))
-    check(
-        "hourly opt-in absent means no automatic sender can run",
-        "vars.HOURLY_DELTA_AUTO_SEND == '1'" in telegram
-        and "vars.HOURLY_DELTA_AUTO_SEND == '1'" in teams,
-    )
-    check(
-        "Teams send approvals exist only inside its guarded step",
-        "TEAMS_AI_PUSH_MODE: send" in teams
-        and 'APPROVE_TEAMS_AI_PUSH: "true"' in teams
-        and text.count("TEAMS_AI_PUSH_MODE: send") == 1
-        and text.count('APPROVE_TEAMS_AI_PUSH: "true"') == 1,
-    )
-    check(
-        "Teams uses the article-level production sender, not the SMTP digest",
-        "python3 scripts/send_teams_ai_push.py" in teams
-        and "send_email_alert.py" not in teams
-        and 'APPROVE_SEND_EMAIL: "true"' not in teams
-        and 'SEND_TO_TEAMS: "true"' not in teams,
-    )
+    # D7-AK-6C — the article-level Teams sender moved out to teams-ai-news-watch.yml (the single
+    # Teams production owner). This hourly refresh must NOT run it, so the Teams policy change can
+    # never widen Telegram's send scope and the two workflows can never double-send an article.
+    check("hourly refresh no longer runs the Teams article sender (moved to watch)",
+          "python3 scripts/send_teams_ai_push.py" not in text)
+    check("hourly refresh injects no Teams send mode/approval",
+          "TEAMS_AI_PUSH_MODE: send" not in text
+          and 'APPROVE_TEAMS_AI_PUSH: "true"' not in text)
+    check("hourly refresh persists no Teams dedup state",
+          "git add -- data/teams_push_state.json" not in text)
     check(
         "email sender keeps its honest SMTP-vs-receipt language for the email workflow",
         "SMTP acceptance only proves" in email_sender
@@ -322,10 +311,9 @@ def check_send_gates(text: str) -> None:
         and "unverified" in email_sender,
     )
     check(
-        "no-confirmed-urgency path skips both Telegram and Teams",
+        "no-confirmed-urgency path skips the Telegram send",
         "steps.delta.outputs.shadow_alert_delta != 'true'" in skip
-        and "no confirmed urgency — skip telegram" in skip
-        and "no confirmed urgency — skip teams" in skip,
+        and "no confirmed urgency — skip telegram" in skip,
     )
 
 
