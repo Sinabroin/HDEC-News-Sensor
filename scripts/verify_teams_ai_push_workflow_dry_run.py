@@ -129,23 +129,27 @@ def main() -> int:
         "vars.HOURLY_DELTA_AUTO_SEND == '1'" in real_block,
         'production Teams variable gate changed or missing',
     )
-    # D7-AK-6A — 실제 Teams step은 기사별 production sender다. generic 채널 이메일
-    # 다이제스트(SMTP)로 되돌아가면 '기사별 Adaptive Card' 계약이 조용히 깨지므로,
-    # 이 step 안에서는 send_email_alert.py와 SMTP 자격증명을 모두 금지한다.
+    # D7-AK-6A — 실제 Teams step은 기사별 production sender다. 공식 production transport는
+    # email_channel(검증된 Gmail SMTP → Teams 채널 이메일, 기사당 1통)이므로 이 step은 발송
+    # 자격증명을 주입한다. 다만 별도 email workflow의 다이제스트 경로(send_email_alert.py를 직접
+    # 실행하거나 그 다이제스트 게이트를 켜는 것)로 되돌아가면 '기사당 1통' 계약이 조용히 깨지므로
+    # 그 진입점만 금지한다. webhook은 향후 선택 transport로만 남고 필수 조건이 아니다.
     require(
         'run: python3 scripts/send_teams_ai_push.py' in real_block,
         'article-level Teams production sender entrypoint changed or missing',
     )
     for token in (
-        'send_email_alert.py', 'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL',
-        'SEND_TO_TEAMS', 'GMAIL_', 'TEAMS_CHANNEL_EMAIL', 'smtplib',
+        'send_email_alert.py', 'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL', 'SEND_TO_TEAMS',
     ):
         require(token not in real_block,
-                f'SMTP fallback token must not appear in the Teams card step: {token}')
+                f'email digest entrypoint must not appear in the Teams card step: {token}')
     for token in (
         'TEAMS_AI_PUSH_MODE: send',
         'APPROVE_TEAMS_AI_PUSH: "true"',
-        'TEAMS_WORKFLOW_WEBHOOK_URL: ${{ secrets.TEAMS_WORKFLOW_WEBHOOK_URL }}',
+        'GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}',
+        'GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}',
+        'ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}',
+        'TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}',
         'TEAMS_PUSH_STATE_PATH: data/teams_push_state.json',
         'DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json',
     ):
@@ -186,7 +190,7 @@ def main() -> int:
 
     print('RESULT=D7-AK-5D_TEAMS_AI_PUSH_WORKFLOW_DRY_RUN_VERIFIER_PASS')
     print('artifact_upload_steps=1 publish_send_guards=3 '
-          'teams_production_sender=send_teams_ai_push.py smtp_fallback_steps=0 '
+          'teams_production_sender=send_teams_ai_push.py teams_transport=email_channel '
           'state_persist_steps=1 state_persist_staged_paths=1')
     return 0
 

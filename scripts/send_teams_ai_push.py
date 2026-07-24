@@ -1,33 +1,38 @@
 #!/usr/bin/env python3
-"""Article-level Teams AI production sender (D7-AK-6A).
+"""Article-level Teams AI production sender (D7-AK-6A · email_channel transport).
 
 This entrypoint wires the already-verified leaves into the scheduled production
 path — it adds delivery, and nothing else:
 
 * ``app.teams_ai_push``    — Teams-only AI topic classification, importance
-  mapping, and one Adaptive Card per article (max three).
+  mapping, one message per article (max three), and the per-article email body.
 * ``app.teams_push_state`` — persistent dedup over article id / normalized URL /
   title fingerprint / event cluster, including material-update re-send.
 
 Selection and dedup logic is reused, never re-implemented here. The only new
-behaviour is: POST one card per eligible article, then record success.
+behaviour is: deliver one Teams channel email per eligible article, then record
+success.
 
-Default execution is dry-run and performs zero network operations. A real POST
-requires all of GITHUB_ACTIONS=true, TEAMS_AI_PUSH_MODE=send,
-APPROVE_TEAMS_AI_PUSH=true, an https TEAMS_WORKFLOW_WEBHOOK_URL, and a
-``live-delta`` artifact whose shadow_alert_delta gate is open. Any other state
-fails closed before a request is built.
-
-There is deliberately no SMTP fallback: the contract is article-level Adaptive
-Cards, so an unavailable webhook must fail loudly rather than be disguised as a
-generic Teams channel-email digest. ``scripts/send_email_alert.py`` keeps owning
-the separate email workflow.
-
-Persistent state is mutated only after HTTP 2xx for that specific article, so a
+Production transport is ``email_channel``: exactly one email per eligible article
+is sent to the Teams channel address (``TEAMS_CHANNEL_EMAIL``) over the verified
+Gmail SMTP contract owned by ``scripts/send_email_alert.py`` (reused, not
+duplicated). This is the official production transport, not a fallback. Several
+articles are never merged into one digest. An article counts as delivered only on
+an SMTP ``250 accepted`` response, and only delivered articles are recorded, so a
 partial failure keeps delivered articles recorded and leaves failed ones
-resendable on the next run. Webhook URL, article URLs, and credentials are never
-printed — logs carry only counts, a non-reversible article reference hash, and an
-HTTP status category.
+resendable on the next run.
+
+Default execution is dry-run and performs zero network operations. A real send
+requires all of GITHUB_ACTIONS=true, TEAMS_AI_PUSH_MODE=send,
+APPROVE_TEAMS_AI_PUSH=true, complete Gmail SMTP credentials plus a Teams channel
+address, and a ``live-delta`` artifact whose shadow_alert_delta gate is open. Any
+other state fails closed before a message is built.
+
+The Teams Workflows webhook (``TEAMS_WORKFLOW_WEBHOOK_URL``) is a reserved,
+currently-inactive optional transport: it is never a required condition and its
+absence never fails a run. SMTP credentials, recipient/channel addresses, and
+article URLs are never printed — logs carry only counts, a non-reversible article
+reference hash, and an SMTP status category.
 """
 
 from __future__ import annotations
@@ -37,18 +42,19 @@ import hashlib
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+SCRIPTS_DIR = REPO_ROOT / "scripts"
+for _path in (REPO_ROOT, SCRIPTS_DIR):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 from app.teams_ai_push import (  # noqa: E402
-    build_candidate_card,
+    render_article_email,
     select_teams_push_from_artifact,
 )
 from app.teams_push_state import (  # noqa: E402
@@ -61,8 +67,18 @@ from app.teams_push_state import (  # noqa: E402
     resolve_state_path,
 )
 
+# Reuse the single proven Gmail SMTP contract — never a second copy of the handshake.
+from send_email_alert import (  # noqa: E402
+    DeliveryTarget,
+    _smtp_password,
+    _valid_address,
+    deliver_email_message,
+)
+
 WEBHOOK_ENV = "TEAMS_WORKFLOW_WEBHOOK_URL"
-WEBHOOK_TIMEOUT_SECONDS = 20
+SMTP_USER_ENV = "GMAIL_SMTP_USER"
+FROM_ENV = "ALERT_EMAIL_FROM"
+TEAMS_CHANNEL_ENV = "TEAMS_CHANNEL_EMAIL"
 DEFAULT_MODE = "dry_run"
 SEND_MODE = "send"
 APPROVAL_TRUE = {"1", "true", "yes", "approved"}
@@ -76,15 +92,46 @@ class FailClosed(RuntimeError):
         self.reason = reason
 
 
+@dataclass(frozen=True)
+class EmailChannelCredentials:
+    """Gmail SMTP + Teams channel address, resolved from secrets (never printed)."""
+
+    smtp_user: str = ""
+    smtp_password: str = ""
+    from_address: str = ""
+    teams_address: str = ""
+
+    @property
+    def complete(self) -> bool:
+        return bool(
+            self.smtp_user and self.smtp_password and self.from_address and self.teams_address
+        )
+
+
 def _true_env(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in APPROVAL_TRUE
 
 
-def resolve_webhook_url() -> str:
-    """Read the Teams Workflows webhook from env (secret); https only.
+def resolve_email_channel_credentials() -> EmailChannelCredentials:
+    """Resolve the email_channel credentials from env (secrets only).
 
-    An invalid or missing value yields "" so the caller fails closed. This value
-    is backend-only and is never printed to any log or artifact (rules.md §4)."""
+    Addresses are validated with the same helpers the proven email sender uses and
+    are never printed. Missing/invalid values yield empty fields so the caller fails
+    closed before any message is built."""
+    return EmailChannelCredentials(
+        smtp_user=_valid_address(os.environ.get(SMTP_USER_ENV, "")),
+        smtp_password=_smtp_password(),
+        from_address=_valid_address(os.environ.get(FROM_ENV, "")),
+        teams_address=_valid_address(os.environ.get(TEAMS_CHANNEL_ENV, "")),
+    )
+
+
+def resolve_webhook_url() -> str:
+    """Reserved optional Teams Workflows webhook transport (currently inactive).
+
+    Returned https-only for observability, but it is never a required condition and
+    its absence never fails a run — the production transport is email_channel. This
+    is a backend-only value: it is never printed to any log or artifact (rules.md §4)."""
     url = os.environ.get(WEBHOOK_ENV, "").strip()
     return url if url.lower().startswith("https://") else ""
 
@@ -100,38 +147,6 @@ def article_ref(article: object) -> str:
     if not basis:
         return "unknown"
     return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:12]
-
-
-def post_card(
-    webhook_url: str,
-    card: Mapping[str, Any],
-    opener=None,
-) -> tuple[bool, str]:
-    """POST exactly one Adaptive Card → (delivered, status category label).
-
-    Neither the webhook URL nor the response body is returned or printed; only a
-    coarse category (accepted_2xx / rejected_Nxx / http_error_N / transport_error).
-    ``opener`` is injectable and resolved at call time so verifiers exercise this
-    path with zero network, mirroring the isolation pattern already used by the
-    email sender."""
-    opener = urllib.request.urlopen if opener is None else opener
-    data = json.dumps(card, ensure_ascii=False).encode("utf-8")
-    request = urllib.request.Request(
-        webhook_url,
-        data=data,
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    try:
-        with opener(request, timeout=WEBHOOK_TIMEOUT_SECONDS) as response:
-            code = int(getattr(response, "status", None) or response.getcode())
-    except urllib.error.HTTPError as exc:
-        return False, f"http_error_{exc.code}"
-    except (urllib.error.URLError, OSError, TimeoutError, ValueError):
-        return False, "transport_error"
-    if 200 <= code < 300:
-        return True, f"accepted_{code}"
-    return False, f"rejected_{code}"
 
 
 def load_artifact(path: Path) -> Mapping[str, Any]:
@@ -150,31 +165,82 @@ def load_artifact(path: Path) -> Mapping[str, Any]:
     return payload
 
 
-def check_send_preconditions(webhook_url: str) -> None:
-    """Every real-send requirement, evaluated before any card is built."""
+def check_send_preconditions(credentials: EmailChannelCredentials) -> None:
+    """Every real-send requirement, evaluated before any message is built."""
     if os.environ.get("GITHUB_ACTIONS", "").strip().lower() != "true":
         raise FailClosed("not_github_actions")
     if not _true_env("APPROVE_TEAMS_AI_PUSH"):
         raise FailClosed("send_not_approved")
-    if not webhook_url:
-        raise FailClosed("webhook_missing_or_not_https")
+    if not credentials.smtp_user:
+        raise FailClosed("smtp_user_missing")
+    if not credentials.smtp_password:
+        raise FailClosed("smtp_credential_missing")
+    if not credentials.from_address:
+        raise FailClosed("from_address_missing")
+    if not credentials.teams_address:
+        raise FailClosed("teams_channel_missing")
+
+
+def send_article_email(
+    candidate,
+    *,
+    alert_context: Mapping[str, Any],
+    credentials: EmailChannelCredentials,
+    detected_at: str,
+    smtp_factory=None,
+) -> tuple[bool, str, int | None]:
+    """Deliver exactly one Teams channel email for one article → (ok, status, smtp_code).
+
+    ``ok`` is True only on an SMTP ``250 accepted`` response. Neither the recipient
+    address nor the article URL is returned or printed; ``status`` is a coarse
+    category label. ``smtp_factory`` is injectable for offline verification."""
+    subject, text_body, html_body = render_article_email(
+        alert_context, candidate, detected_at=detected_at
+    )
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = credentials.from_address
+    message["To"] = credentials.teams_address
+    message.set_content(text_body)
+    message.add_alternative(html_body, subtype="html")
+
+    target = DeliveryTarget(
+        label="teams_channel",
+        address=credentials.teams_address,
+        recipient_kind="teams_channel",
+    )
+    result = deliver_email_message(
+        message,
+        target,
+        credentials.smtp_user,
+        credentials.smtp_password,
+        credentials.from_address,
+        smtp_factory=smtp_factory,
+    )
+    ok = result.smtp_status == "accepted"
+    if ok:
+        status = f"accepted_{result.smtp_code}"
+    else:
+        status = result.detail or f"rejected_{result.smtp_code}"
+    return ok, status, result.smtp_code
 
 
 def deliver(
     *,
     artifact_path: Path,
     state_path: Path,
-    webhook_url: str,
+    credentials: EmailChannelCredentials,
     should_send: bool,
     dashboard_url: str = "",
     report_url: str = "",
     detected_at: str = "",
-    opener=None,
+    smtp_factory=None,
 ) -> dict[str, Any]:
-    """Select, dedup, and deliver at most three article cards.
+    """Select, dedup, and deliver at most three article emails.
 
-    Each card is handled independently: one failure never skips the remaining
-    cards, and only delivered articles reach persistent state."""
+    Each article is handled independently: one SMTP failure never skips the
+    remaining articles, and only delivered (250 accepted) articles reach persistent
+    state — failed ones stay resendable."""
     payload = load_artifact(artifact_path)
     try:
         state = load_state(state_path)
@@ -183,7 +249,7 @@ def deliver(
 
     candidates = select_teams_push_from_artifact(payload)
     # Contract reuse: the same helper the dry-run path uses. Its decisions are the
-    # baseline; each card is then re-checked against the state as it evolves within
+    # baseline; each article is then re-checked against the state as it evolves within
     # this run so two near-identical articles cannot both be delivered.
     _accepted, _baseline = filter_unsent_candidates(state, candidates)
 
@@ -219,12 +285,6 @@ def deliver(
             )
             continue
 
-        card = build_candidate_card(
-            alert_context,
-            replace(candidate, is_update=decision.is_update),
-            detected_at=resolved_detected_at,
-        )
-
         if not should_send:
             records.append(
                 {
@@ -238,7 +298,13 @@ def deliver(
             continue
 
         attempted += 1
-        ok, status = post_card(webhook_url, card, opener=opener)
+        ok, status, _code = send_article_email(
+            replace(candidate, is_update=decision.is_update),
+            alert_context=alert_context,
+            credentials=credentials,
+            detected_at=resolved_detected_at,
+            smtp_factory=smtp_factory,
+        )
         if ok:
             delivered += 1
             state = persist_after_success(
@@ -299,26 +365,25 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
 def _print_summary(summary: Mapping[str, Any]) -> None:
     for record in summary.get("records", ()):
         print(
-            "Teams AI card: "
+            "Teams AI email: "
             f"article={record['article_ref']} outcome={record['outcome']} "
             f"dedup={record['dedup_reason']} status={record['status']}"
         )
     print(
-        "Teams AI push summary: "
+        "Teams AI push summary: transport=email_channel "
         f"mode={summary['mode']} "
         f"candidates={summary['candidate_count']} "
         f"dedup_blocked={summary['dedup_blocked_count']} "
         f"attempted={summary['attempted_count']} "
         f"delivered={summary['delivered_count']} "
         f"failed={summary['failed_count']} "
-        f"state_changed={'true' if summary['state_changed'] else 'false'} "
-        "smtp_connections=0"
+        f"state_changed={'true' if summary['state_changed'] else 'false'}"
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Article-level Teams AI Adaptive Card sender (default dry-run)"
+        description="Article-level Teams AI channel-email sender (default dry-run)"
     )
     parser.add_argument("--artifact", default=os.environ.get("DELTA_ARTIFACT_FILE", ""))
     parser.add_argument("--state", default=os.environ.get("TEAMS_PUSH_STATE_PATH", ""))
@@ -329,7 +394,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="force preview only; no webhook request and no state write",
+        help="force preview only; no email request and no state write",
     )
     args = parser.parse_args(argv)
 
@@ -340,15 +405,22 @@ def main(argv: list[str] | None = None) -> int:
 
     mode = os.environ.get("TEAMS_AI_PUSH_MODE", "").strip().lower() or DEFAULT_MODE
     send_requested = mode == SEND_MODE and not args.dry_run
+    credentials = resolve_email_channel_credentials()
     webhook_url = resolve_webhook_url()
+    # The webhook is a reserved, inactive optional transport — logged for
+    # observability only, never gating and never printed as a value.
+    print(
+        "Teams AI push transport: production=email_channel "
+        f"optional_webhook={'configured' if webhook_url else 'absent'}"
+    )
 
     try:
         if send_requested:
-            check_send_preconditions(webhook_url)
+            check_send_preconditions(credentials)
         summary = deliver(
             artifact_path=Path(args.artifact).expanduser().resolve(),
             state_path=resolve_state_path(args.state or None).expanduser().resolve(),
-            webhook_url=webhook_url,
+            credentials=credentials,
             should_send=send_requested,
             dashboard_url=args.dashboard_url,
             report_url=args.report_url,
@@ -357,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     except FailClosed as exc:
         print(
             f"ERROR: Teams AI push failed closed: {exc.reason} "
-            "(webhook_calls=0 smtp_connections=0 state_writes=0)",
+            "(email_sends=0 state_writes=0)",
             file=sys.stderr,
         )
         _write_github_output(args.github_output, {"state_changed": False})
@@ -367,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
     _print_summary(summary)
     if summary["failed_count"]:
         print(
-            f"ERROR: {summary['failed_count']} Teams AI card(s) failed to deliver",
+            f"ERROR: {summary['failed_count']} Teams AI email(s) failed to deliver",
             file=sys.stderr,
         )
         return 1

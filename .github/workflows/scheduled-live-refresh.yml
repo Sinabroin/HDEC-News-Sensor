@@ -256,21 +256,26 @@ jobs:
           if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
           python3 scripts/send_scheduled_telegram.py $DRY_FLAG
 
-      # 6) Teams 기사별 AI 카드 — 이 step에 진입한 경우에만 webhook/approval을 주입한다.
-      #    dry-run에서 검증된 것과 동일한 선택·카드·dedup 계약(app.teams_ai_push +
-      #    app.teams_push_state)을 그대로 실제 발송에 쓴다(최대 3건, 기사당 카드 1개).
-      #    SMTP fallback은 두지 않는다 — 계약이 '기사별 Adaptive Card'이므로 webhook이
-      #    없거나 실패하면 generic 채널 이메일 다이제스트로 위장하지 않고 fail-closed한다.
-      #    기존 send_email_alert.py는 별도 email workflow용으로 그대로 유지된다.
+      # 6) Teams 기사별 AI 카드(이메일) — 이 step에 진입한 경우에만 발송 자격증명을 주입한다.
+      #    dry-run에서 검증된 것과 동일한 선택·중요도·confirmed·dedup 계약(app.teams_ai_push +
+      #    app.teams_push_state)을 그대로 실제 발송에 쓴다(최대 3건, 기사당 이메일 1통·다이제스트 병합 없음).
+      #    공식 production transport = email_channel: 검증된 Gmail SMTP(scripts/send_email_alert.py의
+      #    계약 재사용)로 각 기사를 Teams 채널 이메일(TEAMS_CHANNEL_EMAIL)로 보낸다. SMTP 250 accepted인
+      #    기사만 성공으로 판정해 dedup state에 남긴다(부분 실패는 실패 기사만 다음 run에 재발송).
+      #    webhook(TEAMS_WORKFLOW_WEBHOOK_URL)은 향후 선택 transport로 예약되어 있을 뿐 필수 조건이
+      #    아니며 없어도 실패하지 않는다. 별도 email workflow의 다이제스트 sender는 그대로 불변이다.
       - name: Hourly Teams AI article cards (delta-gated auto-send)
         id: teams_ai_push
         if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
         env:
           TEAMS_AI_PUSH_MODE: send
           APPROVE_TEAMS_AI_PUSH: "true"
-          # backend 전용 비밀값 — 어떤 로그/artifact에도 값이 출력되지 않는다.
-          TEAMS_WORKFLOW_WEBHOOK_URL: ${{ secrets.TEAMS_WORKFLOW_WEBHOOK_URL }}
-          # 운영 dedup state(영속). 성공한 기사만 여기에 기록되고 아래 step이 commit한다.
+          # 발송 자격증명 — GitHub Secrets에서만 주입되며 값은 어떤 로그/artifact에도 출력되지 않는다.
+          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
+          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
+          # 운영 dedup state(영속). 성공(250 accepted)한 기사만 여기에 기록되고 아래 step이 commit한다.
           TEAMS_PUSH_STATE_PATH: data/teams_push_state.json
           # Telegram과 동일한 공유 delta payload를 소비한다(재수집 없음·채널 간 동일 시각/목록).
           DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
