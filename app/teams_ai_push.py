@@ -21,7 +21,8 @@ from typing import Any, Iterable, Mapping, Sequence
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
 KST = timezone(timedelta(hours=9))
-MAX_TEAMS_ARTICLES = 3
+# D7-AK-6C: up to ten important/top-priority AI articles per run (was three).
+MAX_TEAMS_ARTICLES = 10
 
 IMPORTANCE_TOP = "top"
 IMPORTANCE_IMPORTANT = "important"
@@ -113,6 +114,14 @@ _STOCK_TERMS = (
 _PROMO_REVIEW_TERMS = (
     "협찬", "광고", "프로모션", "할인", "최저가", "사용 후기", "직접 써본", "리뷰",
     "체험기", "구매 가이드", "sponsored", "review",
+)
+# 채용·도서 출간·게시판 공지 등 사건이 아닌 콘텐츠. 제목이 이런 성격이면 Teams 발송에서
+# 제외한다(rules §E). 판정은 제목만 본다 — 집계 스니펫의 잡음(예: 다른 기사의 '수주')이 채용
+# 공지를 뉴스로 둔갑시키지 못하게 한다. 단, 제목 자체에 확정 행위(착공/계약 등)가 함께 있으면
+# 실제 사건으로 보고 배제하지 않는다.
+_NONNEWS_TERMS = (
+    "채용", "구인", "모집", "인재 영입", "경력직", "신입 공채", "공채", "hiring", "recruit",
+    "출간", "신간", "도서 출간", "book launch", "저자 인터뷰", "게시판",
 )
 _SPECULATION_TERMS = (
     "전망", "예상", "관측", "가능성", "수혜 기대", "기대감", "추측", "할 수도",
@@ -225,6 +234,18 @@ def _confirmed_event_types(article: object) -> tuple[str, ...]:
     return tuple(_clean(item).lower() for item in raw if _clean(item))
 
 
+# The isolated hourly shadow contract (app.radar_signals) emits exactly these five
+# categorical statuses. Anything else (missing field, malformed value) is treated as
+# ``unavailable`` so a malformed article always fails closed rather than sending.
+_SHADOW_KNOWN_STATUSES = ("confirmed", "ambiguous", "blocked", "none", "unavailable")
+
+
+def _shadow_status(article: object) -> str:
+    """Return the hourly shadow-confirmed status; missing/unknown → ``unavailable``."""
+    status = _lower(_value(article, "shadow_urgency_status"))
+    return status if status in _SHADOW_KNOWN_STATUSES else "unavailable"
+
+
 def _source_quality(article: object) -> str:
     for owner in (article, _mapping(article, "after"), _mapping(article, "provenance")):
         value = _value(owner, "source_quality") or _value(owner, "quality")
@@ -246,6 +267,13 @@ def classify_ai_topic(article: object) -> TopicDecision:
     promo_hits = _has(text, _PROMO_REVIEW_TERMS)
     if promo_hits:
         return TopicDecision(False, matched_terms=promo_hits, exclusion_reason="promo_or_product_review")
+
+    title_text = f" {_lower(_value(article, 'title'))} "
+    nonnews_hits = _has(title_text, _NONNEWS_TERMS)
+    if nonnews_hits and not _has(title_text, _CONFIRMED_ACTION_TERMS):
+        return TopicDecision(
+            False, matched_terms=nonnews_hits, exclusion_reason="non_news_recruit_or_book"
+        )
 
     if _source_quality(article) in _LOW_SOURCE_VALUES:
         return TopicDecision(False, exclusion_reason="low_or_excluded_source")
@@ -315,48 +343,76 @@ def _hdec_direct(article: object) -> bool:
 
 
 def map_importance(article: object, topic: TopicDecision | None = None) -> ImportanceDecision:
-    """Map importance using existing shadow-confirmed and scoring thresholds only."""
+    """Map importance from existing scoring/confirmed-event signals; shadow status is a signal.
+
+    D7-AK-6C — the hourly shadow-confirmed status is no longer a hard send gate. Its role
+    now depends on its category (rules.md-approved policy):
+
+    * ``blocked``     — hard block (title-level negative / score-crossing-only). Never sent.
+    * ``unavailable`` — fail-closed (policy missing / malformed status). Never sent.
+    * ``confirmed``   — strongest positive: a top-priority basis and a ranking boost.
+    * ``ambiguous``   — never an automatic block; may still send on another importance basis.
+    * ``none``        — never an automatic block; may still send on another importance basis.
+
+    Existing thresholds are reused verbatim (INSTANT 4.5 / DAILY 3.5) — no new numeric
+    threshold is invented. Stock/theme, promo/review, speculation-only, and low-source
+    articles are already excluded upstream in :func:`classify_ai_topic`.
+    """
     topic = topic or classify_ai_topic(article)
     if not topic.eligible:
         return ImportanceDecision(False, reason=topic.exclusion_reason)
 
-    if _value(article, "shadow_would_pass", None) is not True:
-        status = _lower(_value(article, "shadow_urgency_status")) or "not_confirmed"
-        return ImportanceDecision(False, reason=f"shadow_gate_closed:{status}")
-
-    confirmed_types = _confirmed_event_types(article)
-    if not confirmed_types:
-        return ImportanceDecision(False, reason="confirmed_event_evidence_missing")
+    shadow = _shadow_status(article)
+    if shadow == "blocked":
+        return ImportanceDecision(False, reason="shadow_blocked")
+    if shadow == "unavailable":
+        return ImportanceDecision(False, reason="shadow_unavailable")
 
     score = _parse_score(article)
     hdec_direct = _hdec_direct(article)
-    major_confirmed = any(
+    confirmed = shadow == "confirmed"
+    confirmed_types = _confirmed_event_types(article)
+    major_confirmed = confirmed and any(
         token in event_type
         for event_type in confirmed_types
         for token in _MAJOR_CONFIRMED_EVENT_TOKENS
     )
+    has_confirmed_action = _has_confirmed_action(article, f" {_article_text(article)} ")
+    is_material_update = _lower(_value(article, "change_type")) == "material_content_update"
 
-    if hdec_direct or (score is not None and score >= INSTANT_THRESHOLD) or major_confirmed:
-        reasons = []
-        if hdec_direct:
-            reasons.append("현대건설 직접 영향")
-        if score is not None and score >= INSTANT_THRESHOLD:
-            reasons.append("기존 INSTANT 기준 통과")
-        if major_confirmed:
-            reasons.append("대규모 계약·투자·출시·규제 등 확정 이벤트")
+    # 최우선(TOP): 기존 INSTANT 이상 · 현대건설 직접 영향 · confirmed 대형 이벤트 · 중대한 material update
+    top_reasons: list[str] = []
+    if hdec_direct:
+        top_reasons.append("현대건설 직접 영향")
+    if score is not None and score >= INSTANT_THRESHOLD:
+        top_reasons.append("기존 INSTANT 기준 통과")
+    if major_confirmed:
+        top_reasons.append("대규모 계약·투자·출시·규제 등 확정 이벤트")
+    if is_material_update and confirmed and (score is None or score >= DAILY_THRESHOLD):
+        top_reasons.append("중대한 내용 업데이트")
+    if top_reasons:
         return ImportanceDecision(
-            True, IMPORTANCE_TOP, IMPORTANCE_LABELS[IMPORTANCE_TOP], " · ".join(reasons), score, hdec_direct
+            True, IMPORTANCE_TOP, IMPORTANCE_LABELS[IMPORTANCE_TOP],
+            " · ".join(top_reasons), score, hdec_direct,
         )
 
-    if score is None or score >= DAILY_THRESHOLD:
-        reason = "확정 이벤트 + AI 핵심 주제"
-        if score is not None:
-            reason += " + 기존 DAILY 기준 통과"
+    # 중요(IMPORTANT): 기존 DAILY 이상 · confirmed 이벤트 · 발표·계약·출시 등 사실 기반 사건
+    important_reasons: list[str] = []
+    if score is not None and score >= DAILY_THRESHOLD:
+        important_reasons.append("기존 DAILY 기준 통과")
+    if confirmed:
+        important_reasons.append("확정 이벤트 + AI 핵심 주제")
+    if has_confirmed_action:
+        important_reasons.append("발표·계약·출시 등 사실 기반 사건")
+    if important_reasons:
         return ImportanceDecision(
-            True, IMPORTANCE_IMPORTANT, IMPORTANCE_LABELS[IMPORTANCE_IMPORTANT], reason, score, hdec_direct
+            True, IMPORTANCE_IMPORTANT, IMPORTANCE_LABELS[IMPORTANCE_IMPORTANT],
+            " · ".join(important_reasons), score, hdec_direct,
         )
 
-    return ImportanceDecision(False, reason="below_existing_daily_threshold", score=score, hdec_direct=hdec_direct)
+    return ImportanceDecision(
+        False, reason="insufficient_importance_basis", score=score, hdec_direct=hdec_direct
+    )
 
 
 def _published_sort_value(article: object) -> float:
@@ -379,14 +435,15 @@ def select_teams_push_from_artifact(
 ) -> tuple[TeamsPushCandidate, ...]:
     """Fail-closed entrypoint for a raw delta artifact.
 
-    Only a live artifact with an explicitly open shadow-confirmed gate can produce
-    candidates. Mock/test artifacts and malformed article collections always return zero.
+    D7-AK-6C — the artifact-level ``shadow_alert_delta`` flag is no longer required: a
+    live-delta artifact can produce candidates even when no article is shadow-confirmed,
+    because importance now derives from the reused scoring/confirmed-event signals per
+    article (see :func:`map_importance`). Only the live-source guard remains, so
+    mock/fallback artifacts and malformed article collections always return zero.
     """
     if not isinstance(payload, Mapping):
         return ()
     if _clean(payload.get("source")) != "live-delta":
-        return ()
-    if payload.get("shadow_alert_delta") is not True:
         return ()
     articles = payload.get("articles")
     if not isinstance(articles, list):
@@ -399,7 +456,11 @@ def select_teams_push_candidates(
     *,
     max_articles: int = MAX_TEAMS_ARTICLES,
 ) -> tuple[TeamsPushCandidate, ...]:
-    """Filter, rank, and cap confirmed Teams AI push candidates (default: three)."""
+    """Filter, rank, and cap important Teams AI push candidates (default: up to ten).
+
+    Ranking is highest-importance first, then 현대건설 직접 영향, then score, then recency —
+    so the cap keeps the most decision-relevant articles when more than ``max_articles``
+    qualify."""
     from app.teams_push_state import derive_event_cluster_key, material_signature
 
     candidates: list[TeamsPushCandidate] = []

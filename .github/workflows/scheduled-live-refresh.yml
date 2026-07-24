@@ -130,57 +130,9 @@ jobs:
             --github-output "$GITHUB_OUTPUT" \
             --delta-artifact "$DELTA_ARTIFACT_FILE"
 
-      # 3A) 기사별 Teams AI 카드를 실제 발송 없이 준비한다. 같은 delta artifact를 읽고,
-      #     runner temp의 빈 state만 읽기 때문에 운영 dedup state·webhook·SMTP를 건드리지 않는다.
-      - name: Prepare Teams AI article cards (dry-run only)
-        id: teams_ai_push_dry_run
-        if: steps.build.outputs.live_ok == 'true'
-        env:
-          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
-          TEAMS_PUSH_STATE_PATH: ${{ runner.temp }}/teams_push_state_readonly.json
-          TEAMS_AI_PUSH_DRY_RUN_DIR: ${{ runner.temp }}/teams-ai-push-dry-run
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
-          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
-        run: |
-          rm -rf "$TEAMS_AI_PUSH_DRY_RUN_DIR"
-          python3 scripts/prepare_teams_ai_push_dry_run.py \
-            --artifact "$DELTA_ARTIFACT_FILE" \
-            --state "$TEAMS_PUSH_STATE_PATH" \
-            --output-dir "$TEAMS_AI_PUSH_DRY_RUN_DIR" \
-            --dashboard-url "$DASHBOARD_URL" \
-            --report-url "$REPORT_URL"
-          python3 - "$TEAMS_AI_PUSH_DRY_RUN_DIR/manifest.json" "$GITHUB_OUTPUT" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          safety = manifest.get("safety") or {}
-          if safety.get("webhook_calls") != 0 or safety.get("smtp_connections") != 0:
-              raise SystemExit("dry-run safety contract violated: network call count")
-          if safety.get("state_write") is not False:
-              raise SystemExit("dry-run safety contract violated: state write")
-          with Path(sys.argv[2]).open("a", encoding="utf-8") as output:
-              output.write(f"card_count={int(manifest.get('card_count') or 0)}\n")
-              output.write(
-                  f"dedup_blocked_count={int(manifest.get('dedup_blocked_count') or 0)}\n"
-              )
-          print(
-              "Teams AI card dry-run summary: "
-              f"cards={int(manifest.get('card_count') or 0)} "
-              f"dedup_blocked={int(manifest.get('dedup_blocked_count') or 0)} "
-              "webhook_calls=0 smtp_connections=0 state_writes=0"
-          )
-          PY
-
-      - name: Upload Teams AI article cards dry-run artifact
-        if: steps.build.outputs.live_ok == 'true' && steps.teams_ai_push_dry_run.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: teams-ai-news-push-dry-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/teams-ai-push-dry-run
-          if-no-files-found: error
-          retention-days: 3
+      # 3A) 기사별 Teams AI 카드 발송은 이 워크플로에서 하지 않는다 — D7-AK-6C에서 별도
+      #      teams-ai-news-watch.yml(10분 주기)이 Teams 기사별 자동발송의 유일한 owner다.
+      #      이 예약 새로고침은 대시보드 build/publish + Telegram 전용으로 남는다.
 
       # 4) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
       - name: Publish to Pages (commit live docs)
@@ -256,77 +208,11 @@ jobs:
           if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
           python3 scripts/send_scheduled_telegram.py $DRY_FLAG
 
-      # 6) Teams 기사별 AI 카드(이메일) — 이 step에 진입한 경우에만 발송 자격증명을 주입한다.
-      #    dry-run에서 검증된 것과 동일한 선택·중요도·confirmed·dedup 계약(app.teams_ai_push +
-      #    app.teams_push_state)을 그대로 실제 발송에 쓴다(최대 3건, 기사당 이메일 1통·다이제스트 병합 없음).
-      #    공식 production transport = email_channel: 검증된 Gmail SMTP(scripts/send_email_alert.py의
-      #    계약 재사용)로 각 기사를 Teams 채널 이메일(TEAMS_CHANNEL_EMAIL)로 보낸다. SMTP 250 accepted인
-      #    기사만 성공으로 판정해 dedup state에 남긴다(부분 실패는 실패 기사만 다음 run에 재발송).
-      #    webhook(TEAMS_WORKFLOW_WEBHOOK_URL)은 향후 선택 transport로 예약되어 있을 뿐 필수 조건이
-      #    아니며 없어도 실패하지 않는다. 별도 email workflow의 다이제스트 sender는 그대로 불변이다.
-      - name: Hourly Teams AI article cards (delta-gated auto-send)
-        id: teams_ai_push
-        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
-        env:
-          TEAMS_AI_PUSH_MODE: send
-          APPROVE_TEAMS_AI_PUSH: "true"
-          # 발송 자격증명 — GitHub Secrets에서만 주입되며 값은 어떤 로그/artifact에도 출력되지 않는다.
-          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
-          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
-          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
-          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
-          # 운영 dedup state(영속). 성공(250 accepted)한 기사만 여기에 기록되고 아래 step이 commit한다.
-          TEAMS_PUSH_STATE_PATH: data/teams_push_state.json
-          # Telegram과 동일한 공유 delta payload를 소비한다(재수집 없음·채널 간 동일 시각/목록).
-          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
-          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
-        run: python3 scripts/send_teams_ai_push.py
+      # 6) Teams 기사별 AI 카드 발송은 여기서 하지 않는다 — teams-ai-news-watch.yml(10분 주기,
+      #    TEAMS_AI_NEWS_WATCH=1)이 유일한 Teams 발송 owner다. 이 예약 새로고침은 대시보드
+      #    build/publish + Telegram 전용이며, 동일 delta artifact를 두 워크플로가 재수집 없이 각자
+      #    소비한다(중복 sender 없음). state(data/teams_push_state.json) commit도 watch가 소유한다.
 
-      # 7) 전송에 성공한 기사만 영속 dedup state에 남긴다. 부분 실패로 위 step이 실패해도
-      #    이미 발송된 기사는 재발송되면 안 되므로 always()로 진입하되, sender가 실제로
-      #    실행됐고(state_changed=true) 파일 변경이 있을 때만 commit한다.
-      #    docs/daily(Pages publish commit)를 덮지 않도록 state 파일 한 개만 stage한다.
-      - name: Persist Teams AI push dedup state
-        if: always() && steps.teams_ai_push.outcome != 'skipped' && steps.teams_ai_push.outputs.state_changed == 'true'
-        run: |
-          # 최초 성공 시 state 파일은 untracked로 생성되므로 git diff가 아니라 status로 본다.
-          if [ -z "$(git status --porcelain -- data/teams_push_state.json)" ]; then
-            echo "teams push state unchanged — skip commit"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- data/teams_push_state.json
-          git commit -m "chore: persist Teams AI push dedup state"
-
-          for attempt in 1 2 3; do
-            echo "state persist attempt ${attempt}/3: fetch + rebase + push"
-            git fetch origin main
-
-            if ! git rebase origin/main; then
-              echo "ERROR: rebase onto origin/main failed during Teams state persist"
-              git rebase --abort || true
-              exit 1
-            fi
-
-            if git push origin HEAD:main; then
-              echo "teams push state committed: $(git rev-parse HEAD)"
-              exit 0
-            fi
-
-            echo "WARN: git push failed on attempt ${attempt}/3"
-            if [ "${attempt}" -eq 3 ]; then
-              echo "ERROR: teams push state push failed after 3 attempts"
-              exit 1
-            fi
-
-            sleep $((attempt * 5))
-          done
-
-      - name: Skip automatic alerts (no delta)
+      - name: Skip automatic Telegram alert (no confirmed urgency)
         if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta != 'true'
-        run: |
-          echo "no confirmed urgency — skip telegram"
-          echo "no confirmed urgency — skip teams"
+        run: echo "no confirmed urgency — skip telegram"

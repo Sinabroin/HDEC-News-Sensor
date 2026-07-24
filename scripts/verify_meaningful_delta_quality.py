@@ -344,12 +344,17 @@ def _eval_gate(expr: str, ctx: dict) -> bool | None:
 
 
 def check_sender_gates_closed_on_zero_meaningful() -> None:
+    # D7-AK-6C — the article-level Teams sender moved to teams-ai-news-watch.yml and is no
+    # longer shadow-gated. This hourly workflow only auto-sends Telegram (shadow-gated), so
+    # these gate checks cover Telegram + the skip step; Teams' "0 candidates → 0 send" is
+    # proven in verify_teams_ai_push_production.py.
     text = WORKFLOW.read_text(encoding="utf-8")
     tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams_if = _step_if(text, "Hourly Teams AI article cards (delta-gated auto-send)")
-    skip_if = _step_if(text, "Skip automatic alerts (no delta)")
-    check("workflow if-conditions found for telegram/teams/skip",
-          bool(tg_if and teams_if and skip_if))
+    skip_if = _step_if(text, "Skip automatic Telegram alert (no confirmed urgency)")
+    check("workflow if-conditions found for telegram/skip",
+          bool(tg_if and skip_if))
+    check("hourly workflow no longer runs the Teams sender (moved to watch)",
+          "python3 scripts/send_teams_ai_push.py" not in text)
 
     # 무의미 변동을 실제로 흘려 alert_delta=false를 얻는다.
     old = {"top_immediate_signals": [_article()]}
@@ -377,8 +382,7 @@ def check_sender_gates_closed_on_zero_meaningful() -> None:
         "github.event.inputs.force_dry_run": "",
     }
     check("meaningless → Telegram step condition = false", _eval_gate(tg_if, ctx_zero) is False)
-    check("meaningless → Teams step condition = false", _eval_gate(teams_if, ctx_zero) is False)
-    check("meaningless → Skip automatic alerts condition = true", _eval_gate(skip_if, ctx_zero) is True)
+    check("meaningless → Skip Telegram alert condition = true", _eval_gate(skip_if, ctx_zero) is True)
 
     # 대조군 1: current meaningful이더라도 shadow 확정 사건이 아니면 sender는 닫힌다.
     _, gh_meaningful, _ = run_detector(
@@ -407,11 +411,10 @@ def check_sender_gates_closed_on_zero_meaningful() -> None:
         },
     )
     check(
-        "meaningful but unconfirmed → Telegram/Teams closed ∧ Skip open",
+        "meaningful but unconfirmed → Telegram closed ∧ Skip open",
         gh_meaningful.get("alert_delta") == "true"
         and gh_meaningful.get("shadow_alert_delta") == "false"
         and _eval_gate(tg_if, ctx_meaningful) is False
-        and _eval_gate(teams_if, ctx_meaningful) is False
         and _eval_gate(skip_if, ctx_meaningful) is True,
     )
 
@@ -442,11 +445,10 @@ def check_sender_gates_closed_on_zero_meaningful() -> None:
         },
     )
     check(
-        "shadow confirmed → Telegram/Teams open ∧ Skip closed",
+        "shadow confirmed → Telegram open ∧ Skip closed",
         gh_confirmed.get("alert_delta") == "true"
         and gh_confirmed.get("shadow_alert_delta") == "true"
         and _eval_gate(tg_if, ctx_confirmed) is True
-        and _eval_gate(teams_if, ctx_confirmed) is True
         and _eval_gate(skip_if, ctx_confirmed) is False,
     )
 
@@ -456,8 +458,7 @@ def check_workflow_production_guards() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
     publish_if = _step_if(text, "Publish to Pages (commit live docs)")
     tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams_if = _step_if(text, "Hourly Teams AI article cards (delta-gated auto-send)")
-    skip_if = _step_if(text, "Skip automatic alerts (no delta)")
+    skip_if = _step_if(text, "Skip automatic Telegram alert (no confirmed urgency)")
 
     production = {
         "steps.build.outputs.live_ok": "true",
@@ -469,24 +470,23 @@ def check_workflow_production_guards() -> None:
         "github.event.inputs.force_dry_run": "",
     }
 
-    def effect_results(ctx: dict) -> tuple[bool | None, bool | None, bool | None]:
+    def effect_results(ctx: dict) -> tuple[bool | None, bool | None]:
         return (
             _eval_gate(publish_if, ctx),
             _eval_gate(tg_if, ctx),
-            _eval_gate(teams_if, ctx),
         )
 
     check(
-        "production scheduled main → Publish/Telegram/Teams open ∧ Skip closed",
-        effect_results(production) == (True, True, True)
+        "production scheduled main → Publish/Telegram open ∧ Skip closed",
+        effect_results(production) == (True, True)
         and _eval_gate(skip_if, production) is False,
     )
 
     non_main = dict(production)
     non_main["github.ref"] = "refs/heads/fix/test"
     check(
-        "non-main branch → Publish/Telegram/Teams closed",
-        effect_results(non_main) == (False, False, False),
+        "non-main branch → Publish/Telegram closed",
+        effect_results(non_main) == (False, False),
     )
 
     forced_dry_run = dict(production)
@@ -495,8 +495,8 @@ def check_workflow_production_guards() -> None:
         "github.event.inputs.force_dry_run": "true",
     })
     check(
-        "forced dry-run → Publish/Telegram/Teams closed",
-        effect_results(forced_dry_run) == (False, False, False),
+        "forced dry-run → Publish/Telegram closed",
+        effect_results(forced_dry_run) == (False, False),
     )
 
     manual_non_dry = dict(production)
@@ -505,8 +505,8 @@ def check_workflow_production_guards() -> None:
         "github.event.inputs.force_dry_run": "false",
     })
     check(
-        "main manual non-dry → Publish/Telegram/Teams open",
-        effect_results(manual_non_dry) == (True, True, True),
+        "main manual non-dry → Publish/Telegram open",
+        effect_results(manual_non_dry) == (True, True),
     )
 
 
@@ -706,8 +706,7 @@ def check_low_value_run_closes_workflow() -> None:
     """9) 저가치 신규 기사만 있는 실행 → 발송 step 전부 닫히고 Skip이 열린다."""
     text = WORKFLOW.read_text(encoding="utf-8")
     tg_if = _step_if(text, "Hourly telegram digest (delta-gated auto-send)")
-    teams_if = _step_if(text, "Hourly Teams AI article cards (delta-gated auto-send)")
-    skip_if = _step_if(text, "Skip automatic alerts (no delta)")
+    skip_if = _step_if(text, "Skip automatic Telegram alert (no confirmed urgency)")
 
     base = {"top_immediate_signals": [_article()]}
     low = {"top_immediate_signals": [_article()] + [
@@ -733,8 +732,7 @@ def check_low_value_run_closes_workflow() -> None:
         "github.event.inputs.force_dry_run": "",
     }
     check("저가치 신규만 → Telegram step = false",  _eval_gate(tg_if, ctx) is False)
-    check("저가치 신규만 → Teams step = false", _eval_gate(teams_if, ctx) is False)
-    check("저가치 신규만 → Skip automatic alerts = true", _eval_gate(skip_if, ctx) is True)
+    check("저가치 신규만 → Skip Telegram alert = true", _eval_gate(skip_if, ctx) is True)
 
 
 def check_eligible_ordering() -> None:
@@ -1258,21 +1256,15 @@ def check_shadow_evidence_contract() -> None:
         workflow_text,
         "Hourly telegram digest (delta-gated auto-send)",
     )
-    teams_if = _step_if(
-        workflow_text,
-        "Hourly Teams AI article cards (delta-gated auto-send)",
-    )
     skip_if = _step_if(
         workflow_text,
-        "Skip automatic alerts (no delta)",
+        "Skip automatic Telegram alert (no confirmed urgency)",
     )
 
     check(
-        "sender step gates use shadow confirmed urgency",
+        "Telegram sender step gate uses shadow confirmed urgency",
         "steps.delta.outputs.shadow_alert_delta == 'true'" in tg_if
-        and "steps.delta.outputs.shadow_alert_delta == 'true'" in teams_if
-        and "steps.delta.outputs.alert_delta == 'true'" not in tg_if
-        and "steps.delta.outputs.alert_delta == 'true'" not in teams_if,
+        and "steps.delta.outputs.alert_delta == 'true'" not in tg_if,
     )
     check(
         "detector current alert_delta formula remains hourly_eligible_count>=1",
@@ -1282,8 +1274,7 @@ def check_shadow_evidence_contract() -> None:
     check(
         "workflow skip path uses shadow confirmed urgency",
         "steps.delta.outputs.shadow_alert_delta != 'true'" in skip_if
-        and "no confirmed urgency — skip telegram" in workflow_text
-        and "no confirmed urgency — skip teams" in workflow_text,
+        and "no confirmed urgency — skip telegram" in workflow_text,
     )
 
     # Count-only stdout/GITHUB_OUTPUT; the artifact may contain the title by contract.
