@@ -31,6 +31,9 @@ from app.teams_ai_push import (
     select_teams_push_candidates,
     select_teams_push_from_artifact,
 )
+from app.news_access import choose_direct_article_url
+
+GOOGLE_AGGREGATOR_URL = "https://news.google.com/rss/articles/teams-fixture"
 
 
 def article(**overrides):
@@ -41,7 +44,7 @@ def article(**overrides):
         "hdec_relevance": "데이터센터 EPC와 전력 인프라 사업기회에 직접 영향",
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
-        "url": "https://example.com/news/1?utm_source=test",
+        "url": "https://publisher.example.test/news/1?utm_source=test",
         "score": 4.7,
         "shadow_urgency_status": "confirmed",
         "shadow_would_pass": True,
@@ -157,6 +160,41 @@ def main() -> int:
     )
     assert not classify_ai_topic(boundary).eligible
 
+    # D7-AK-6D direct-link contract: common news_access precedence is reused and
+    # aggregator-only articles stay on the dashboard but never enter Teams immediate send.
+    canonical_direct = "https://canonical.publisher.example.test/story/1"
+    external_direct = "https://external.publisher.example.test/story/1"
+    original_direct = "https://original.publisher.example.test/story/1"
+    naver_originallink = "https://www.yna.co.kr/view/AKR202607270001"
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "canonical_url": canonical_direct,
+        "external_url": external_direct,
+        "original_url": original_direct,
+    }) == canonical_direct
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "external_url": external_direct,
+    }) == external_direct
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "original_url": original_direct,
+    }) == original_direct
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "source_metadata": {
+            "provider": "naver_news_api",
+            "originallink": naver_originallink,
+        },
+    }) == naver_originallink
+    assert select_teams_push_candidates([
+        article(article_key="aggregator-only", url=GOOGLE_AGGREGATOR_URL)
+    ]) == ()
+    assert select_teams_push_candidates([
+        article(article_key="naver-search-only", url="https://search.naver.com/search.naver?query=ai"),
+        article(article_key="daum-search-only", url="https://search.daum.net/search?q=ai"),
+    ]) == ()
+
     # 16. shadow_alert_delta=false 여도 중요 후보가 있으면 후보를 만든다(플래그는 더 이상 게이트가 아님).
     live_payload = {
         "source": "live-delta",
@@ -187,7 +225,7 @@ def main() -> int:
 
     # 12. 12건 후보 → 상위 10건만 선택.
     twelve = [
-        article(article_key=f"m-{i}", url=f"https://example.com/m/{i}",
+        article(article_key=f"m-{i}", url=f"https://publisher.example.test/m/{i}",
                 title=f"OpenAI, AI 데이터센터 투자 계약 체결 {i}", score=4.6)
         for i in range(12)
     ]

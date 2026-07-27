@@ -14,7 +14,8 @@ is sent to the Teams channel address over the verified Gmail SMTP contract owned
 ``scripts/send_email_alert.py``. Every delivery path here runs through an injected
 fake SMTP transport, so Gmail is never contacted and no message leaves this
 machine. All state fixtures live in a temporary directory; the production state
-path ``data/teams_push_state.json`` is asserted absent before and after.
+path ``data/teams_push_state.json`` is validated read-only when present and its
+SHA256 must remain exactly unchanged. An absent production state is also valid.
 
 Workflow gate expressions are evaluated with the same ``_eval_gate`` the existing
 hourly-gate verifier uses, so both verifiers agree on what the YAML means.
@@ -40,12 +41,21 @@ for _p in (str(ROOT), str(ROOT / "scripts")):
 
 import send_email_alert  # noqa: E402
 import send_teams_ai_push as sender  # noqa: E402
+from app.teams_push_state import (  # noqa: E402
+    InvalidTeamsPushState,
+    empty_state,
+    load_state,
+    save_state,
+)
 from verify_meaningful_delta_quality import _eval_gate, _step_block, _step_if  # noqa: E402
 
 SCRIPT = ROOT / "scripts" / "send_teams_ai_push.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml"
 WATCH_WORKFLOW = ROOT / ".github" / "workflows" / "teams-ai-news-watch.yml"
 PRODUCTION_STATE = ROOT / "data" / "teams_push_state.json"
+DIRECT_ARTICLE_URL = "https://publisher.example.test/news/a"
+GOOGLE_AGGREGATOR_URL = "https://news.google.com/rss/articles/teams-production-fixture"
+REPRESENTATIVE_IMAGE_URL = "https://images.publisher.example.test/news/a.jpg"
 
 # D7-AK-6C — the article-level Teams sender now lives solely in the 10-minute watch
 # workflow. The hourly scheduled-live-refresh no longer runs it (single owner).
@@ -78,6 +88,17 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else "absent"
 
 
+def _state_status(path: Path) -> str:
+    """Classify state without logging its contents and without writing to its path."""
+    if not path.exists():
+        return "absent"
+    try:
+        load_state(path)
+    except InvalidTeamsPushState:
+        return "malformed"
+    return "valid"
+
+
 def _fixture_credentials():
     return sender.EmailChannelCredentials(
         smtp_user=FIXTURE_SMTP_USER,
@@ -98,7 +119,7 @@ def _article(**overrides):
         "hdec_relevance": "데이터센터 EPC와 전력 인프라 사업 기회에 직접 영향",
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
-        "url": "https://example.com/news/a",
+        "url": DIRECT_ARTICLE_URL,
         "score": 4.7,
         "shadow_urgency_status": "confirmed",
         "shadow_would_pass": True,
@@ -153,7 +174,7 @@ def _cap_articles(n: int) -> list:
             title=_CAP_TITLES[i],
             summary=f"{_CAP_TITLES[i]} — 상세 내용.",
             source=sources[i % len(sources)],
-            url=f"https://example.com/cap/{i}",
+            url=f"https://publisher.example.test/cap/{i}",
             score=round(4.7 - i * 0.05, 3),
             shadow_confirmed_event_types=["investment_confirmed"],
         )
@@ -285,6 +306,29 @@ def _deliver(tmp: Path, payload, state_path: Path, *, send=True, statuses=(250,)
         smtp_factory=recorder,
     )
     return summary, recorder
+
+
+def check_state_read_only_contract(tmp: Path) -> None:
+    """Regression fixtures for absent, valid-present, and malformed state."""
+    absent = tmp / "state-contract-absent.json"
+    check("absent production-state shape passes read-only validation",
+          _state_status(absent) == "absent")
+
+    present = tmp / "state-contract-present.json"
+    save_state(empty_state(), present)
+    present_before = _sha(present)
+    check("existing production-state shape passes read-only validation",
+          _state_status(present) == "valid")
+    check("existing state fixture is byte-identical after read-only validation",
+          _sha(present) == present_before)
+
+    malformed = tmp / "state-contract-malformed.json"
+    malformed.write_text("{malformed", encoding="utf-8")
+    malformed_before = _sha(malformed)
+    check("malformed production-state shape fails read-only validation",
+          _state_status(malformed) == "malformed")
+    check("malformed state fixture is byte-identical after read-only validation",
+          _sha(malformed) == malformed_before)
 
 
 # --------------------------------------------------------------------------
@@ -475,7 +519,19 @@ def check_fail_closed(tmp: Path) -> None:
 def check_delivery(tmp: Path) -> None:
     state = tmp / "state.json"
 
-    summary, rec = _deliver(tmp, _payload([_article()]), state)
+    first_article = _article(
+        url=GOOGLE_AGGREGATOR_URL,
+        canonical_url=DIRECT_ARTICLE_URL,
+        image_url=REPRESENTATIVE_IMAGE_URL,
+        summary=(
+            "양사가 AI 데이터센터 투자 계약을 공식 체결했다. "
+            "투자 범위에는 GPU 인프라와 전력 설비가 포함된다. "
+            "사업 일정도 함께 확정됐다. "
+            "이 문장은 3줄 요약 상한 밖이므로 이메일에 끝까지 노출되면 안 된다. "
+            + "추가 상세 " * 80
+        ),
+    )
+    summary, rec = _deliver(tmp, _payload([first_article]), state)
     check("new article: exactly one SMTP send attempt",
           summary["attempted_count"] == 1 and len(rec.attempts) == 1, str(summary))
     check("new article: delivered and state written",
@@ -494,16 +550,43 @@ def check_delivery(tmp: Path) -> None:
     for field_name, token in (
         ("중요도", "최우선"),
         ("기사 제목", "AI 데이터센터 투자 계약 체결"),
-        ("핵심 요약", "핵심 요약"),
-        ("현대건설 영향", "현대건설 영향"),
+        ("핵심 요약", "양사가 AI 데이터센터 투자 계약을 공식 체결했다."),
         ("출처", "Reuters"),
-        ("원문 링크", "example.com/news/a"),
+        ("언론사 원문 링크", DIRECT_ARTICLE_URL),
         ("대시보드 링크", "example.com/dashboard"),
+        ("전체 리포트 링크", "example.com/report"),
     ):
         check(f"email carries required field: {field_name}", token in body,
               f"missing {token!r}")
+    check("plain-text first line is the direct publisher URL",
+          parsed["text"].splitlines()[0] == DIRECT_ARTICLE_URL)
+    check("email title is fully linked to the direct publisher URL",
+          re.search(
+              rf'<h2[^>]*>\s*<a href="{re.escape(DIRECT_ARTICLE_URL)}"[^>]*>'
+              r"\[?[^<]*AI 데이터센터 투자 계약 체결[^<]*</a></h2>",
+              parsed["html"],
+          ) is not None)
+    check("representative image is clickable when the collected field exists",
+          f'<a href="{DIRECT_ARTICLE_URL}" style="display:block;margin:16px 0;">'
+          in parsed["html"]
+          and f'<img src="{REPRESENTATIVE_IMAGE_URL}"' in parsed["html"])
+    check("Google News aggregator URL appears zero times in the email",
+          GOOGLE_AGGREGATOR_URL not in body)
+    check("summary is capped and long tail is omitted",
+          "이 문장은 3줄 요약 상한 밖이므로" in body
+          and body.count("추가 상세") < 80)
+    check("long HDEC-impact section is removed", "현대건설 영향" not in body)
+    check("detected time is removed from the body", "감지시각" not in body)
+    check("importance is rendered as a small badge",
+          "font-size:12px" in parsed["html"] and "border-radius:12px" in parsed["html"])
+    check("dashboard and report links are separate auxiliary rows",
+          parsed["html"].count('<div style="margin:8px 0;">') == 2)
+    check("email embeds no external CSS or JavaScript",
+          "<script" not in parsed["html"].lower()
+          and "<link" not in parsed["html"].lower()
+          and "<style" not in parsed["html"].lower())
 
-    summary, rec = _deliver(tmp, _payload([_article()]), state)
+    summary, rec = _deliver(tmp, _payload([first_article]), state)
     check("same article re-run: zero attempts, one dedup block",
           summary["attempted_count"] == 0 and summary["dedup_blocked_count"] == 1
           and len(rec.attempts) == 0, str(summary))
@@ -514,7 +597,7 @@ def check_delivery(tmp: Path) -> None:
         title="AI 데이터센터 투자 계약 공식화한 Microsoft·OpenAI",
         summary="같은 사건을 다른 매체가 보도했다.",
         source="연합뉴스",
-        url="https://example.com/news/b",
+        url="https://wire.publisher.example.test/news/b",
     )
     summary, rec = _deliver(tmp, _payload([other_publisher]), state)
     blocked_reason = summary["records"][0]["dedup_reason"] if summary["records"] else ""
@@ -541,7 +624,7 @@ def check_delivery(tmp: Path) -> None:
         article_key="evt-fail",
         title="Google, 스마트건설 로봇 자율 시공 솔루션 출시",
         summary="건설 로봇 자율 시공 솔루션을 정식 출시했다.",
-        url="https://example.com/news/fail",
+        url="https://publisher.example.test/news/fail",
         score=3.9,
         shadow_confirmed_event_types=["product_available"],
     )
@@ -560,7 +643,7 @@ def check_delivery(tmp: Path) -> None:
     summary, rec = _deliver(
         tmp,
         _payload(
-            [_article(article_key="noflag", url="https://example.com/news/noflag")],
+            [_article(article_key="noflag", url="https://publisher.example.test/news/noflag")],
             shadow_alert_delta=False,
         ),
         noflag_state,
@@ -589,13 +672,30 @@ def check_cap_and_partial(tmp: Path) -> None:
 
     # Fixture 17 — zero eligible candidates → zero SMTP connections and no state file.
     zero_state = tmp / "zero-state.json"
-    blocked_only = _article(article_key="blocked-only", url="https://example.com/blocked",
+    blocked_only = _article(article_key="blocked-only", url="https://publisher.example.test/blocked",
                             shadow_urgency_status="blocked", shadow_would_pass=False,
                             shadow_confirmed_event_types=[])
     summary0, rec0 = _deliver(tmp, _payload([blocked_only]), zero_state)
     check("zero eligible candidates → zero SMTP connections (fixture 17)",
           summary0["candidate_count"] == 0 and summary0["attempted_count"] == 0
           and len(rec0.attempts) == 0 and not zero_state.exists(), str(summary0))
+
+    aggregator_state = tmp / "aggregator-only-state.json"
+    aggregator_article = _article(
+        article_key="aggregator-only",
+        url=GOOGLE_AGGREGATOR_URL,
+    )
+    aggregator_summary, aggregator_rec = _deliver(
+        tmp,
+        _payload([aggregator_article]),
+        aggregator_state,
+    )
+    check("aggregator-only article is excluded from Teams immediate send",
+          aggregator_summary["candidate_count"] == 0
+          and aggregator_summary["attempted_count"] == 0
+          and len(aggregator_rec.attempts) == 0
+          and not aggregator_state.exists(),
+          str(aggregator_summary))
 
     # Fixtures 14 & 15 — ten articles, eight accepted (250) / two rejected (550): only the
     # eight delivered persist; the two failed stay resendable on a later run.
@@ -641,7 +741,16 @@ def check_cap_and_partial(tmp: Path) -> None:
 
 def check_no_leaks(tmp: Path) -> None:
     state = tmp / "leak-state.json"
-    artifact = _write(tmp / "leak.json", _payload([_article()]))
+    direct_url = "https://publisher.example.test/news/no-log-leak"
+    artifact = _write(
+        tmp / "leak.json",
+        _payload([
+            _article(
+                url=GOOGLE_AGGREGATOR_URL,
+                external_url=direct_url,
+            )
+        ]),
+    )
     gh_output = tmp / "leak-output.txt"
     recorder = _SMTPRecorder((250,))
     rc, logs = _run_main_approved(
@@ -655,7 +764,8 @@ def check_no_leaks(tmp: Path) -> None:
     check("SMTP credential never appears in logs", FIXTURE_SMTP_PASSWORD not in logs)
     check("SMTP user / from address never appear in logs",
           FIXTURE_SMTP_USER not in logs and FIXTURE_FROM not in logs)
-    check("article URL never appears in logs", "example.com/news" not in logs)
+    check("direct publisher URL never appears in summary logs", direct_url not in logs)
+    check("aggregator URL never appears in summary logs", GOOGLE_AGGREGATOR_URL not in logs)
     check("logs carry only a hashed article reference",
           re.search(r"article=[0-9a-f]{12} ", logs) is not None, logs.strip()[:200])
     # The normalized article URL is a legitimate dedup key in state; credentials,
@@ -672,6 +782,8 @@ def check_no_leaks(tmp: Path) -> None:
     check("email body never embeds the SMTP credential or approval token",
           FIXTURE_SMTP_PASSWORD not in message_text
           and "APPROVE_TEAMS_AI_PUSH" not in message_text)
+    check("no representative-image field means no invented image",
+          "<img" not in parsed["html"].lower())
 
 
 # --------------------------------------------------------------------------
@@ -808,16 +920,35 @@ def check_workflow() -> None:
 
 
 def main() -> int:
-    check("production state absent before verification", not PRODUCTION_STATE.exists())
+    production_sha_before = _sha(PRODUCTION_STATE)
+    production_status_before = _state_status(PRODUCTION_STATE)
+    print(f"production_state_sha256_before={production_sha_before}")
+    check(
+        "production state is absent or valid before verification",
+        production_status_before in {"absent", "valid"},
+        "malformed production state" if production_status_before == "malformed" else "",
+    )
     check_sender_source()
     with tempfile.TemporaryDirectory(prefix="hdec-ak6a-") as raw:
         tmp = Path(raw)
+        check_state_read_only_contract(tmp)
         check_fail_closed(tmp)
         check_delivery(tmp)
         check_cap_and_partial(tmp)
         check_no_leaks(tmp)
     check_workflow()
-    check("production state absent after verification", not PRODUCTION_STATE.exists())
+    production_sha_after = _sha(PRODUCTION_STATE)
+    production_status_after = _state_status(PRODUCTION_STATE)
+    print(f"production_state_sha256_after={production_sha_after}")
+    check(
+        "production state remains absent or valid after verification",
+        production_status_after in {"absent", "valid"},
+        "malformed production state" if production_status_after == "malformed" else "",
+    )
+    check(
+        "production state SHA256 is exactly unchanged after verification",
+        production_sha_after == production_sha_before,
+    )
 
     print(f"checks={CHECKS} failures={len(FAILURES)}")
     if FAILURES:
@@ -825,7 +956,10 @@ def main() -> int:
             print(f"FAILED: {name}")
         return 1
     print("RESULT=D7-AK-6A_TEAMS_AI_PUSH_PRODUCTION_VERIFIER_PASS")
-    print("transport=email_channel real_smtp_connections=0 production_state_writes=0")
+    print(
+        "transport=email_channel network_calls=0 real_smtp_connections=0 "
+        "actual_smtp_sends=0 production_state_writes=0"
+    )
     return 0
 
 

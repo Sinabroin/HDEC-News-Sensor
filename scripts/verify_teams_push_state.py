@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.teams_ai_push import select_teams_push_candidates
 from app.teams_push_state import (
     InvalidTeamsPushState,
+    article_identity,
     derive_event_cluster_key,
     empty_state,
     evaluate_dedup,
@@ -33,7 +34,7 @@ def article(**overrides):
         "summary": "양사가 데이터센터 투자 계약을 공식 체결했다.",
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
-        "url": "https://example.com/news/1?utm_source=x&ref=y",
+        "url": "https://publisher.example.test/news/1?utm_source=x&ref=y",
         "shadow_confirmed_event_types": ["contract_signed"],
         "change_type": "new_article",
     }
@@ -73,17 +74,55 @@ def main() -> int:
     accepted, decisions = filter_unsent_candidates(sent, selected)
     assert accepted == () and len(decisions) == 1 and not decisions[0].send_allowed
 
-    tracking_variant = article(url="https://example.com/news/1?utm_campaign=z")
+    tracking_variant = article(url="https://publisher.example.test/news/1?utm_campaign=z")
     tracking_duplicate = evaluate_dedup(
         sent, tracking_variant, cluster_key=cluster,
         signature=material_signature(tracking_variant), is_material_update=False,
     )
     assert not tracking_duplicate.send_allowed
 
+    # URL identity follows the shared publisher-direct contract, not an aggregator URL.
+    google_url = "https://news.google.com/rss/articles/state-fixture"
+    canonical_url = "https://publisher.example.test/news/canonical"
+    canonical_article = article(
+        article_key="canonical-a",
+        title="OpenAI, AI 데이터센터 신규 투자 계약 체결",
+        url=google_url,
+        canonical_url=canonical_url,
+    )
+    assert article_identity(canonical_article)["normalized_url"] == canonical_url
+    canonical_state = mark_sent_after_success(
+        empty_state(),
+        canonical_article,
+        cluster_key="fixture:canonical-a",
+        signature=material_signature(canonical_article),
+        importance="top",
+        source="Reuters",
+        send_succeeded=True,
+        sent_at="2026-07-23T09:30:00+09:00",
+    )
+    canonical_variant = article(
+        article_key="canonical-b",
+        title="Microsoft, 별도 제목으로 전한 AI 인프라 계약",
+        url="https://news.google.com/rss/articles/state-fixture-variant",
+        external_url=canonical_url,
+    )
+    canonical_duplicate = evaluate_dedup(
+        canonical_state,
+        canonical_variant,
+        cluster_key="fixture:canonical-b",
+        signature=material_signature(canonical_variant),
+        is_material_update=False,
+    )
+    assert (
+        not canonical_duplicate.send_allowed
+        and canonical_duplicate.reason == "duplicate:normalized_url"
+    )
+
     syndication = article(
         article_key="article-2",
         title="Microsoft·OpenAI, AI 데이터센터 계약 공식 체결",
-        url="https://other.example/story/99",
+        url="https://wire.publisher.example.test/story/99",
     )
     same_cluster = derive_event_cluster_key(syndication, "ai_datacenter")
     assert same_cluster == cluster

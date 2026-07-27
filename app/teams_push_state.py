@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from app import config
+from app.news_access import choose_direct_article_url
 from app.watch_state import normalize_url, title_fingerprint
 
 KST = timezone(timedelta(hours=9))
@@ -140,9 +141,20 @@ def article_identity(article: object) -> dict[str, str]:
     article_id = _clean(
         _value(article, "article_key") or _value(article, "article_id") or _value(article, "id")
     )
+    url_contract = article if isinstance(article, Mapping) else {
+        "canonical_url": _value(article, "canonical_url"),
+        "external_url": _value(article, "external_url"),
+        "original_url": _value(article, "original_url"),
+        "publisher_url": _value(article, "publisher_url"),
+        "source_metadata": _value(article, "source_metadata"),
+        "source_metadata_json": _value(article, "source_metadata_json"),
+        "url": _value(article, "url"),
+    }
     return {
         "article_id": article_id,
-        "normalized_url": normalize_url(_clean(_value(article, "url"))),
+        # Canonical publisher URL is the preferred URL identity. Aggregator-only
+        # articles never reach the Teams sender and therefore create no new URL key.
+        "normalized_url": normalize_url(choose_direct_article_url(url_contract)),
         "title_fingerprint": title_fingerprint(_clean(_value(article, "title"))),
     }
 

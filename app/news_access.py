@@ -28,7 +28,7 @@ _PORTAL_DOMAINS = (
     "news.naver.com", "n.news.naver.com", "v.daum.net", "news.daum.net",
 )
 _SEARCH_DOMAINS = (
-    "news.google.com", "google.com", "bing.com", "search.naver.com",
+    "news.google.com", "google.com", "bing.com", "search.naver.com", "search.daum.net",
 )
 _LICENSED_DOMAINS = ("bigkinds.or.kr",)
 _WARNING_BODY_SIGNATURES = (
@@ -247,10 +247,10 @@ def choose_external_article_url(article: dict) -> str:
     """외부 '원문 사이트' 링크로 쓸, 가장 원본에 가깝고 접근 가능한 URL을 고른다.
 
     우선순위 (D7-AD-X — 퍼블리셔 직링크 우선, news.google.com/포털 경유는 fallback):
-      1) ``canonical_url`` / ``original_url`` (퍼블리셔 직링크 필드)
+      1) ``canonical_url`` / ``external_url`` / ``original_url`` (퍼블리셔 직링크 필드)
       2) source_metadata의 ``canonical_url`` / ``original_url`` / ``publisher_url``
          (Naver originallink 등 provider가 준 원문 직링크)
-      3) ``url`` (수집된 기본 링크) — 퍼블리셔 직링크일 때
+      3) ``publisher_url`` / ``url`` (수집된 기본 링크) — 퍼블리셔 직링크일 때
       4) source_metadata의 ``source_url`` — 퍼블리셔 직링크일 때
       5) **fallback**: 위 후보가 하나도 없고 ``url``/``source_url``이 news.google.com·
          포털·검색 경유 URL이면 그대로 쓴다(링크를 통째로 없애지 않는다 — 임원이 원문에
@@ -266,10 +266,13 @@ def choose_external_article_url(article: dict) -> str:
     # 1~4) 퍼블리셔 직링크 우선 — 경유(aggregator/portal/search) URL은 이 패스에서 제외한다.
     for candidate in (
         article.get("canonical_url"),
+        article.get("external_url"),
         article.get("original_url"),
         metadata.get("canonical_url"),
         metadata.get("original_url"),
+        metadata.get("originallink"),
         metadata.get("publisher_url"),
+        article.get("publisher_url"),
         article.get("url"),
         metadata.get("source_url"),
     ):
@@ -279,7 +282,8 @@ def choose_external_article_url(article: dict) -> str:
 
     # 5) fallback — 퍼블리셔 직링크가 없을 때만 news.google.com/포털/검색 경유 URL을 쓴다.
     for candidate in (article.get("url"), metadata.get("source_url"),
-                      article.get("canonical_url"), article.get("original_url")):
+                      article.get("canonical_url"), article.get("external_url"),
+                      article.get("original_url"), article.get("publisher_url")):
         chosen = _http_nonwarning(candidate)
         if chosen:
             return chosen
@@ -292,6 +296,18 @@ def choose_external_article_url(article: dict) -> str:
         if base_domain and _domain(final) == base_domain:
             return final
     return ""
+
+
+def choose_direct_article_url(article: dict) -> str:
+    """퍼블리셔 원문 직링크만 반환한다.
+
+    대시보드는 :func:`choose_external_article_url`의 aggregator fallback을 계속 쓸 수
+    있지만, 즉시발송 surface는 경유 링크를 원문으로 가장하면 안 된다. 선택 우선순위는
+    공통 helper 한 곳에서만 관리하고 이 함수는 그 결과가 publisher URL인지 판정만 한다.
+    네트워크 호출은 없으며 direct URL이 없으면 빈 문자열을 반환한다.
+    """
+    chosen = choose_external_article_url(article)
+    return "" if not chosen or is_aggregator_url(chosen) else chosen
 
 
 def build_source_inventory(articles) -> list[dict]:
