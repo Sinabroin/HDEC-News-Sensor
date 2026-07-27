@@ -81,7 +81,7 @@ def main() -> int:
     )
     assert not tracking_duplicate.send_allowed
 
-    # URL identity follows the shared publisher-direct contract, not an aggregator URL.
+    # URL identity prefers the shared publisher-direct contract.
     google_url = "https://news.google.com/rss/articles/state-fixture"
     canonical_url = "https://publisher.example.test/news/canonical"
     canonical_article = article(
@@ -117,6 +117,44 @@ def main() -> int:
     assert (
         not canonical_duplicate.send_allowed
         and canonical_duplicate.reason == "duplicate:normalized_url"
+    )
+
+    # Aggregator-only articles still get a normalized URL identity. Tracking variants
+    # must dedup even when no publisher URL was resolved.
+    google_fallback = article(
+        article_key="google-fallback-a",
+        title="현대건설, 공간 AI 컨퍼런스 개최 확정",
+        url="https://news.google.com/rss/articles/fallback-id?oc=5&utm_source=watch",
+    )
+    google_identity = article_identity(google_fallback)
+    assert google_identity["normalized_url"] == (
+        "https://news.google.com/rss/articles/fallback-id?oc=5"
+    )
+    google_state = mark_sent_after_success(
+        empty_state(),
+        google_fallback,
+        cluster_key="fixture:google-fallback-a",
+        signature=material_signature(google_fallback),
+        importance="top",
+        source="팍스경제TV",
+        send_succeeded=True,
+        sent_at="2026-07-23T09:30:00+09:00",
+    )
+    google_variant = article(
+        article_key="google-fallback-b",
+        title="별도 제목으로 전한 공간 AI 행사",
+        url="https://news.google.com/rss/articles/fallback-id?utm_campaign=retry&oc=5",
+    )
+    google_duplicate = evaluate_dedup(
+        google_state,
+        google_variant,
+        cluster_key="fixture:google-fallback-b",
+        signature=material_signature(google_variant),
+        is_material_update=False,
+    )
+    assert (
+        not google_duplicate.send_allowed
+        and google_duplicate.reason == "duplicate:normalized_url"
     )
 
     syndication = article(
