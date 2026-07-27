@@ -23,6 +23,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
+from html.parser import HTMLParser
 
 from app import (config, global_press, lens_queries, news_access, news_coverage,
                  site_watchlist, source_quality, topic_profiles)
@@ -529,17 +530,64 @@ def _decode_google_news_url(gnews_url: str, timeout: float = LINK_RESOLVE_TIMEOU
         return None
 
 
+class _CanonicalUrlParser(HTMLParser):
+    """Extract canonical/og:url metadata without retaining article body text."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.canonical_url = ""
+        self.og_url = ""
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        values = {str(key).lower(): str(value or "") for key, value in attrs}
+        if tag.lower() == "link" and "canonical" in values.get("rel", "").lower().split():
+            self.canonical_url = self.canonical_url or values.get("href", "")
+        if tag.lower() == "meta" and values.get("property", "").lower() == "og:url":
+            self.og_url = self.og_url or values.get("content", "")
+
+
+def _resolve_http_publisher_url(url: str, timeout: float = LINK_RESOLVE_TIMEOUT):
+    """Resolve a redirect or canonical metadata URL, best-effort and bounded.
+
+    This network helper is owned by the live collector only. It reads at most 512 KiB
+    and returns no page content. Aggregator/warning/mock endpoints are never promoted.
+    """
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            final_url = response.geturl()
+            content_type = str(response.headers.get("Content-Type") or "").lower()
+            body = response.read(512_000) if "html" in content_type else b""
+
+        parser = _CanonicalUrlParser()
+        if body:
+            parser.feed(body.decode("utf-8", errors="replace"))
+        candidates = []
+        if parser.canonical_url:
+            candidates.append(urllib.parse.urljoin(final_url, parser.canonical_url))
+        if parser.og_url:
+            candidates.append(urllib.parse.urljoin(final_url, parser.og_url))
+        candidates.append(final_url)
+        for candidate in candidates:
+            chosen = news_access.choose_direct_article_url({"url": candidate})
+            if chosen:
+                return chosen
+    except Exception:
+        pass
+    return None
+
+
 def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                            max_items: int = LINK_RESOLVE_MAX_ITEMS,
                            deadline: float = LINK_RESOLVE_DEADLINE) -> int:
-    """수집된 행 중 aggregator(Google News 경유) URL을 실제 퍼블리셔 URL로 최선노력 치환한다.
+    """수집된 aggregator URL을 실제 퍼블리셔 URL로 최선노력 치환한다.
 
     성공한 항목은 row["source_metadata"]["source_url"]을 실제 퍼블리셔 URL로 덮어쓴다
     (row["url"]은 원본 수집값 그대로 — dedup/url_hash 계약 불변). 이 필드는 이미
-    news_access.choose_external_article_url의 fallback 후보라 별도 배선 없이 그대로
-    '원문 사이트' 버튼에 반영된다. 상한(max_items)·누적 시간상한(deadline) 이내에서만
-    시도하고, 초과하면 남은 행은 그대로 둔다(collector 전체를 절대 지연시키지 않는다).
-    반환값은 실제로 해석에 성공한 건수(감사/로그용, 점수/등급과 무관).
+    news_access.choose_article_link의 resolved publisher 후보라 별도 선택 로직 없이
+    ``원문``으로 반영된다. Google News는 전용 decoder를 먼저 쓰고, 실패하거나 포털
+    링크인 경우 bounded HTTP redirect/canonical resolver를 시도한다. 상한(max_items)·
+    누적 시간상한(deadline) 이내에서만 시도한다.
     """
     if not rows or max_items <= 0:
         return 0
@@ -553,10 +601,17 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
         if not url or not news_access.is_aggregator_url(url):
             continue  # 이미 퍼블리셔 직링크(Naver 등)면 해석할 필요 없음
         attempted += 1
-        try:
-            resolved = _decode_google_news_url(url, timeout=timeout)
-        except Exception:
-            resolved = None
+        resolved = None
+        if news_access.classify_source_type(url) == "search" and "news.google.com" in url:
+            try:
+                resolved = _decode_google_news_url(url, timeout=timeout)
+            except Exception:
+                resolved = None
+        if not resolved:
+            try:
+                resolved = _resolve_http_publisher_url(url, timeout=timeout)
+            except Exception:
+                resolved = None
         if resolved and not news_access.is_aggregator_url(resolved):
             meta = row.get("source_metadata")
             if isinstance(meta, dict):

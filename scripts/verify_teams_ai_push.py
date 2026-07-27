@@ -28,9 +28,19 @@ from app.teams_ai_push import (
     build_candidate_card,
     classify_ai_topic,
     map_importance,
+    render_article_email,
     select_teams_push_candidates,
     select_teams_push_from_artifact,
 )
+from app.news_access import (
+    LINK_KIND_GOOGLE_NEWS_FALLBACK,
+    LINK_KIND_PORTAL_FALLBACK,
+    LINK_KIND_PUBLISHER_DIRECT,
+    choose_article_link,
+    choose_direct_article_url,
+)
+
+GOOGLE_AGGREGATOR_URL = "https://news.google.com/rss/articles/teams-fixture"
 
 
 def article(**overrides):
@@ -41,7 +51,7 @@ def article(**overrides):
         "hdec_relevance": "데이터센터 EPC와 전력 인프라 사업기회에 직접 영향",
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
-        "url": "https://example.com/news/1?utm_source=test",
+        "url": "https://publisher.example.test/news/1?utm_source=test",
         "score": 4.7,
         "shadow_urgency_status": "confirmed",
         "shadow_would_pass": True,
@@ -157,6 +167,93 @@ def main() -> int:
     )
     assert not classify_ai_topic(boundary).eligible
 
+    # D7-AK-6D labeled-link contract: publisher URLs retain precedence, while a usable
+    # aggregator hop no longer causes an important article to disappear.
+    canonical_direct = "https://canonical.publisher.example.test/story/1"
+    external_direct = "https://external.publisher.example.test/story/1"
+    original_direct = "https://original.publisher.example.test/story/1"
+    naver_originallink = "https://www.yna.co.kr/view/AKR202607270001"
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "canonical_url": canonical_direct,
+        "external_url": external_direct,
+        "original_url": original_direct,
+    }) == canonical_direct
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "external_url": external_direct,
+    }) == external_direct
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "original_url": original_direct,
+    }) == original_direct
+    assert choose_direct_article_url({
+        "url": GOOGLE_AGGREGATOR_URL,
+        "source_metadata": {
+            "provider": "naver_news_api",
+            "originallink": naver_originallink,
+        },
+    }) == naver_originallink
+    for fixture, expected_url in (
+        ({"url": GOOGLE_AGGREGATOR_URL, "canonical_url": canonical_direct}, canonical_direct),
+        ({"url": GOOGLE_AGGREGATOR_URL, "external_url": external_direct}, external_direct),
+        ({"url": GOOGLE_AGGREGATOR_URL, "original_url": original_direct}, original_direct),
+        ({"url": GOOGLE_AGGREGATOR_URL,
+          "source_metadata": {"originallink": naver_originallink}}, naver_originallink),
+    ):
+        selected = choose_article_link(fixture)
+        assert (
+            selected.url == expected_url
+            and selected.kind == LINK_KIND_PUBLISHER_DIRECT
+            and selected.label == "원문"
+            and selected.is_direct
+        ), selected
+
+    google_link = choose_article_link({"url": GOOGLE_AGGREGATOR_URL})
+    assert (
+        google_link.url == GOOGLE_AGGREGATOR_URL
+        and google_link.kind == LINK_KIND_GOOGLE_NEWS_FALLBACK
+        and google_link.label == "Google News 경유"
+        and not google_link.is_direct
+    ), google_link
+    google_candidates = select_teams_push_candidates([
+        article(article_key="aggregator-only", url=GOOGLE_AGGREGATOR_URL)
+    ])
+    assert len(google_candidates) == 1
+
+    naver_portal = "https://n.news.naver.com/article/001/0012345678"
+    daum_portal = "https://v.daum.net/v/20260727090000123"
+    for portal_url in (naver_portal, daum_portal):
+        portal_link = choose_article_link({"url": portal_url})
+        assert (
+            portal_link.url == portal_url
+            and portal_link.kind == LINK_KIND_PORTAL_FALLBACK
+            and portal_link.label == "포털 경유"
+            and not portal_link.is_direct
+        ), portal_link
+        assert len(select_teams_push_candidates([
+            article(article_key=f"portal-{portal_url}", url=portal_url)
+        ])) == 1
+
+    assert select_teams_push_candidates([
+        article(article_key="no-url", url="", canonical_url="")
+    ]) == ()
+
+    alert = {
+        "generated_at": "2026-07-23T09:31:00+09:00",
+        "dashboard_url": "https://example.com/dashboard",
+        "report_url": "https://example.com/report",
+    }
+    _subject, fallback_text, fallback_html = render_article_email(
+        alert, google_candidates[0]
+    )
+    assert fallback_text.splitlines()[0] == (
+        f"[Google News 경유] {GOOGLE_AGGREGATOR_URL}"
+    )
+    assert f'href="{GOOGLE_AGGREGATOR_URL}"' in fallback_html
+    assert "[Google News 경유]" in fallback_html
+    assert "[원문]" not in fallback_text and "[원문]" not in fallback_html
+
     # 16. shadow_alert_delta=false 여도 중요 후보가 있으면 후보를 만든다(플래그는 더 이상 게이트가 아님).
     live_payload = {
         "source": "live-delta",
@@ -187,7 +284,7 @@ def main() -> int:
 
     # 12. 12건 후보 → 상위 10건만 선택.
     twelve = [
-        article(article_key=f"m-{i}", url=f"https://example.com/m/{i}",
+        article(article_key=f"m-{i}", url=f"https://publisher.example.test/m/{i}",
                 title=f"OpenAI, AI 데이터센터 투자 계약 체결 {i}", score=4.6)
         for i in range(12)
     ]

@@ -270,15 +270,6 @@ def _run_live() -> dict:
         google_query_audit = []
     google_status = "active" if google_rows else "skipped"
 
-    # D7-AE-RC1 — 원문 URL 최선노력 해석. fetch_all 자체는 오프라인 테스트 표면이라 자동
-    # 실행하지 않으므로, 실제 live 진입점인 여기서만 명시적으로 켠다. 실패해도(네트워크
-    # 없음/타임아웃/포맷 변경) google_rows는 원래 값 그대로 쓰인다 — 수집을 막지 않는다.
-    if google_rows:
-        try:
-            live_collector.resolve_publisher_urls(google_rows)
-        except Exception:  # noqa: BLE001 — 최선노력, 실패해도 수집 결과는 그대로 진행
-            pass
-
     # Naver 보조 provider — 기본 off면 네트워크 0건(status=disabled), 자격증명 없으면 정직 skip.
     naver_filtered: list[dict] = []
     try:
@@ -287,6 +278,16 @@ def _run_live() -> dict:
         naver_result = {"provider": naver_news_provider.PROVIDER,
                         "status": naver_news_provider.STATUS_ERROR, "articles": []}
     naver_rows = naver_result.get("articles") or []
+    # D7-AK-6D — 실제 live 진입점에서만 bounded publisher URL 해석을 opt-in한다.
+    # Google News 전용 decode를 먼저 쓰고, 이후 HTTP redirect/canonical metadata를
+    # best-effort로 확인한다. Naver/Daum portal-only 항목도 같은 공통 resolver를 타며,
+    # 실패하면 source_url/url fallback은 그대로 보존되어 labeled 경유 링크가 된다.
+    resolvable_rows = google_rows + naver_rows
+    if resolvable_rows:
+        try:
+            live_collector.resolve_publisher_urls(resolvable_rows)
+        except Exception:  # noqa: BLE001 — 실패해도 수집 결과는 그대로 진행
+            pass
     # TheBell은 Naver 검색 metadata에서만 후보를 파생한다. 별도 기사 페이지 요청이나
     # 제한 우회는 없으며 제목·짧은 snippet·시각·링크만 보존한다.
     thebell_candidates = thebell_watch.extract_candidates(naver_rows)

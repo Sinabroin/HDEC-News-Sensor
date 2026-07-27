@@ -187,8 +187,13 @@ def check_resolver_failure_graceful() -> None:
     def failing_decode(url, timeout=0):
         raise TimeoutError("simulated network timeout")
 
+    def failing_http(url, timeout=0):
+        raise TimeoutError("simulated HTTP resolver timeout")
+
     original = lc._decode_google_news_url
+    original_http = lc._resolve_http_publisher_url
     lc._decode_google_news_url = failing_decode
+    lc._resolve_http_publisher_url = failing_http
     try:
         rows = [{"url": "https://news.google.com/rss/articles/A?oc=5",
                 "source_metadata": {"provider": "google_news_rss", "query": "x",
@@ -202,6 +207,46 @@ def check_resolver_failure_graceful() -> None:
         check("D3: 실패 건은 반환 카운트에 포함 안 됨", n == 0, str(n))
     finally:
         lc._decode_google_news_url = original
+        lc._resolve_http_publisher_url = original_http
+
+
+def check_resolver_priority_and_portal() -> None:
+    decode_calls = []
+    http_calls = []
+
+    def no_google_result(url, timeout=0):
+        decode_calls.append(url)
+        return None
+
+    def fake_http(url, timeout=0):
+        http_calls.append(url)
+        return f"https://publisher.example/resolved/{len(http_calls)}"
+
+    original_decode = lc._decode_google_news_url
+    original_http = lc._resolve_http_publisher_url
+    lc._decode_google_news_url = no_google_result
+    lc._resolve_http_publisher_url = fake_http
+    try:
+        google = "https://news.google.com/rss/articles/RESOLVE?oc=5"
+        portal = "https://n.news.naver.com/article/001/0012345678"
+        rows = [
+            {"url": google, "source_metadata": {"source_url": google}},
+            {"url": portal, "source_metadata": {"source_url": portal}},
+        ]
+        resolved = lc.resolve_publisher_urls(rows)
+        check("D4: Google News 전용 resolver를 HTTP resolver보다 먼저 시도",
+              decode_calls == [google] and http_calls[0] == google,
+              f"decode={decode_calls} http={http_calls}")
+        check("D5: Google 실패 후 HTTP canonical/redirect resolver 사용",
+              rows[0]["source_metadata"]["source_url"]
+              == "https://publisher.example/resolved/1")
+        check("D6: 포털 링크는 HTTP canonical/redirect resolver 사용",
+              rows[1]["source_metadata"]["source_url"]
+              == "https://publisher.example/resolved/2")
+        check("D7: resolver 성공 건수 정확", resolved == 2, str(resolved))
+    finally:
+        lc._decode_google_news_url = original_decode
+        lc._resolve_http_publisher_url = original_http
 
 
 def check_fetch_all_offline_unaffected() -> None:
@@ -330,6 +375,7 @@ def main() -> int:
     check_parser_offline()
     check_resolver_gating()
     check_resolver_failure_graceful()
+    check_resolver_priority_and_portal()
     check_fetch_all_offline_unaffected()
     check_template_contract()
     check_model_integrity()

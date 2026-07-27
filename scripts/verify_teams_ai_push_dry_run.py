@@ -23,6 +23,7 @@ from app.teams_push_state import (
 )
 
 SCRIPT = REPO_ROOT / "scripts" / "prepare_teams_ai_push_dry_run.py"
+GOOGLE_AGGREGATOR_URL = "https://news.google.com/rss/articles/dry-run-fallback"
 
 
 def _sha(path: Path) -> str:
@@ -37,7 +38,7 @@ def _article(**overrides):
         "hdec_relevance": "데이터센터 EPC와 전력 인프라 사업 기회에 직접 영향",
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
-        "url": "https://example.com/news/top?utm_source=test",
+        "url": "https://publisher.example.test/news/top?utm_source=test",
         "score": 4.7,
         "shadow_urgency_status": "confirmed",
         "shadow_would_pass": True,
@@ -62,20 +63,28 @@ def _payload():
                 title="BIM 기반 설계 자동화 솔루션 정식 출시",
                 summary="건설 BIM 자동화 제품이 정식 출시됐다.",
                 source="전자신문",
-                url="https://example.com/news/bim",
+                url="https://publisher.example.test/news/bim",
                 score=3.6,
                 shadow_confirmed_event_types=["product_available"],
             ),
             _article(
+                article_key="article-google-fallback",
+                title="현대건설, 공간 AI 기반 스마트건설 계약 체결",
+                summary="현대건설이 공간 AI 적용 계약을 체결했다.",
+                source="팍스경제TV",
+                url=GOOGLE_AGGREGATOR_URL,
+                score=4.8,
+            ),
+            _article(
                 article_key="article-stock",
                 title="AI 데이터센터 관련주 급등, 목표주가 상향",
-                url="https://example.com/news/stock",
+                url="https://publisher.example.test/news/stock",
             ),
             _article(
                 article_key="article-ambiguous",
                 title="AI 전력망 투자가 늘어날 전망",
                 summary="향후 확대될 가능성이 제기됐다.",
-                url="https://example.com/news/forecast",
+                url="https://publisher.example.test/news/forecast",
                 shadow_urgency_status="ambiguous",
                 shadow_would_pass=False,
                 shadow_confirmed_event_types=[],
@@ -128,8 +137,8 @@ def main() -> int:
         assert first.returncode == 0, first.stderr
         assert "RESULT=D7-AK-5C_TEAMS_AI_PUSH_DRY_RUN_COMPLETE" in first.stdout
         manifest1 = json.loads((output1 / "manifest.json").read_text(encoding="utf-8"))
-        assert manifest1["candidate_count_before_dedup"] == 2
-        assert manifest1["card_count"] == 2
+        assert manifest1["candidate_count_before_dedup"] == 3
+        assert manifest1["card_count"] == 3
         assert manifest1["dedup_blocked_count"] == 0
         assert manifest1["safety"] == {
             "send_count": 0,
@@ -147,8 +156,19 @@ def main() -> int:
             assert card["type"] == "message"
             assert len(card["attachments"]) == 1
             rendered = json.dumps(card, ensure_ascii=False)
-            assert rendered.count("원문 보기") == 1
+            assert (
+                rendered.count("원문 보기") + rendered.count("Google News 경유 보기")
+            ) == 1
             assert "TEAMS_WORKFLOW_WEBHOOK_URL" not in rendered
+        fallback_cards = [
+            json.loads((output1 / entry["card_file"]).read_text(encoding="utf-8"))
+            for entry in manifest1["cards"]
+            if entry["article_key"] == "article-google-fallback"
+        ]
+        assert len(fallback_cards) == 1
+        fallback_rendered = json.dumps(fallback_cards[0], ensure_ascii=False)
+        assert "Google News 경유 보기" in fallback_rendered
+        assert GOOGLE_AGGREGATOR_URL in fallback_rendered
 
         candidates = select_teams_push_from_artifact(_payload())
         first_candidate = candidates[0]
@@ -170,8 +190,8 @@ def main() -> int:
         second = _run(artifact, state, output2)
         assert second.returncode == 0, second.stderr
         manifest2 = json.loads((output2 / "manifest.json").read_text(encoding="utf-8"))
-        assert manifest2["candidate_count_before_dedup"] == 2
-        assert manifest2["card_count"] == 1
+        assert manifest2["candidate_count_before_dedup"] == 3
+        assert manifest2["card_count"] == 2
         assert manifest2["dedup_blocked_count"] == 1
         assert _sha(state) == state_before
         assert _sha(artifact) == artifact_before
@@ -196,7 +216,7 @@ def main() -> int:
         assert manifest3["card_count"] == 0
 
     print("RESULT=D7-AK-5C_TEAMS_AI_PUSH_DRY_RUN_VERIFIER_PASS")
-    print("network_calls=0 state_writes=0 first_cards=2 dedup_cards=1")
+    print("network_calls=0 state_writes=0 first_cards=3 dedup_cards=2")
     return 0
 
 

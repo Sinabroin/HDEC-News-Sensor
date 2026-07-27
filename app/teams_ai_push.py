@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
+from app.news_access import choose_article_link
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
 KST = timezone(timedelta(hours=9))
@@ -470,7 +471,9 @@ def select_teams_push_candidates(
     for article in articles:
         topic = classify_ai_topic(article)
         importance = map_importance(article, topic)
-        if not importance.sendable:
+        # Publisher resolution is preferred but not mandatory. A truthful labeled
+        # Google News/portal hop is safer than silently dropping an important article.
+        if not importance.sendable or not choose_article_link(article).url:
             continue
         candidates.append(
             TeamsPushCandidate(
@@ -533,6 +536,14 @@ def _article_field(article: object, *keys: str) -> str:
     return ""
 
 
+def _compact_summary(value: object, *, max_chars: int = 320) -> str:
+    """Keep the email summary brief enough for roughly two or three display lines."""
+    text = _clean(value)
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "…"
+
+
 def build_teams_article_card(
     alert: object,
     article: object,
@@ -554,7 +565,8 @@ def build_teams_article_card(
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
     detected = _fmt_kst(detected_at or _value(alert, "generated_at") or _value(alert, "generated_kst")) or "시각 미상"
-    article_url = _safe_http(_value(article, "url"))
+    article_link = choose_article_link(article)
+    article_url = article_link.url
     dashboard_url = _safe_http(_value(alert, "dashboard_url"))
     report_url = _safe_http(_value(alert, "report_url"))
 
@@ -581,7 +593,11 @@ def build_teams_article_card(
 
     actions: list[dict[str, str]] = []
     if article_url:
-        actions.append({"type": "Action.OpenUrl", "title": "원문 보기", "url": article_url})
+        actions.append({
+            "type": "Action.OpenUrl",
+            "title": f"{article_link.label} 보기",
+            "url": article_url,
+        })
     if dashboard_url:
         actions.append({"type": "Action.OpenUrl", "title": "대시보드 보기", "url": dashboard_url})
     if report_url:
@@ -623,13 +639,10 @@ def render_article_email(
 ) -> tuple[str, str, str]:
     """Render one article as ``(subject, text_body, html_body)`` for the Teams channel email.
 
-    This is the message body for the email_channel production transport (Gmail SMTP →
-    Teams channel email). It carries the same seven fields as the Adaptive Card —
-    importance, title, core summary, HDEC impact, source, original link, dashboard link —
-    for exactly one article. Callers send one email per article and never merge a digest.
-
-    The body is self-contained: no external script/style/image, only anchor links to the
-    article, dashboard, and full report. All dynamic values are HTML-escaped."""
+    This is the compact, direct-link-first message body for the email_channel production
+    transport (Gmail SMTP → Teams channel email). Callers send one email per article and
+    never merge a digest. The body uses no external CSS or JavaScript. A collected
+    representative image is optional; no placeholder image is invented."""
     if not candidate.topic.eligible or not candidate.importance.sendable:
         raise ValueError("non-sendable article cannot be rendered as a Teams push email")
 
@@ -638,85 +651,114 @@ def render_article_email(
     topic = candidate.topic
 
     title = _article_field(article, "title") or "제목 없음"
-    summary = _article_field(article, "summary", "snippet") or "핵심 요약이 제공되지 않았습니다."
-    hdec_impact = _article_field(
-        article, "hdec_relevance", "radarReason", "whyImportant"
-    ) or "현대건설 영향은 원문과 대시보드에서 추가 확인이 필요합니다."
+    summary = _compact_summary(
+        _article_field(article, "summary", "snippet")
+        or "핵심 요약이 제공되지 않았습니다."
+    )
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
-    detected = _fmt_kst(detected_at or _value(alert, "generated_at") or _value(alert, "generated_kst")) or "시각 미상"
-    article_url = _safe_http(_value(article, "url"))
+    article_link = choose_article_link(article)
+    article_url = article_link.url
+    if not article_url:
+        raise ValueError("a valid article URL is required for a Teams push email")
+    image_url = _safe_http(
+        _article_field(
+            article,
+            "image_url",
+            "representative_image_url",
+            "thumbnail_url",
+            "og_image_url",
+        )
+    )
     dashboard_url = _safe_http(_value(alert, "dashboard_url"))
     report_url = _safe_http(_value(alert, "report_url"))
 
     importance_label = importance.label or IMPORTANCE_LABELS.get(importance.level, "중요")
     title_prefix = "[업데이트] " if candidate.is_update else ""
     published_line = f"{published} KST" if published != "시각 미상" else published
-    detected_line = f"{detected} KST" if detected != "시각 미상" else detected
 
     subject = f"[HDEC AI 레이더] {importance_label} · {title_prefix}{title}".strip()
 
-    text_lines: list[str] = [f"[중요도] {importance_label}"]
-    if topic.topic_label:
-        text_lines.append(f"[AI 주제] {topic.topic_label}")
-    text_lines += [
+    text_lines: list[str] = [
+        f"[{article_link.label}] {article_url}",
         "",
-        "■ 제목",
+        f"{importance_label}" + (f" · {topic.topic_label}" if topic.topic_label else ""),
+        "",
         f"{title_prefix}{title}",
         "",
-        "■ 핵심 요약",
         summary,
         "",
-        "■ 현대건설 영향",
-        hdec_impact,
+        f"{source} · {published_line}",
         "",
-        "■ 출처 정보",
-        f"- 출처: {source}",
-        f"- 게시시각: {published_line}",
-        f"- 감지시각: {detected_line}",
-        "",
-        "■ 링크",
+        "────────────────────",
+        "보조 링크",
     ]
     for label, url in (
-        ("원문 보기", article_url),
-        ("요약 대시보드", dashboard_url),
-        ("전체 리포트", report_url),
+        ("대시보드 보기", dashboard_url),
+        ("전체 리포트 보기", report_url),
     ):
         if url:
+            if text_lines[-1] != "보조 링크":
+                text_lines.append("")
             text_lines.append(f"- {label}: {url}")
     text_body = "\n".join(text_lines).rstrip() + "\n"
 
     def _p(text: str) -> str:
         return html.escape(text).replace("\n", "<br>")
 
+    escaped_article_url = html.escape(article_url, quote=True)
     html_links = []
-    if article_url:
-        html_links.append(f'<a href="{html.escape(article_url)}" style="display:block;margin:4px 0;">원문 보기</a>')
     if dashboard_url:
-        html_links.append(f'<a href="{html.escape(dashboard_url)}" style="display:block;margin:4px 0;">요약 대시보드 보기</a>')
+        html_links.append(
+            f'<div style="margin:8px 0;"><a href="{html.escape(dashboard_url, quote=True)}">'
+            "대시보드 보기</a></div>"
+        )
     if report_url:
-        html_links.append(f'<a href="{html.escape(report_url)}" style="display:block;margin:4px 0;">전체 리포트 보기</a>')
-    links_html = "".join(html_links) or "<p>제공된 링크가 없습니다.</p>"
+        html_links.append(
+            f'<div style="margin:8px 0;"><a href="{html.escape(report_url, quote=True)}">'
+            "전체 리포트 보기</a></div>"
+        )
+    links_html = "".join(html_links)
+    image_html = (
+        f'<a href="{escaped_article_url}" style="display:block;margin:16px 0;">'
+        f'<img src="{html.escape(image_url, quote=True)}" alt="" '
+        'style="display:block;max-width:100%;height:auto;border:0;"></a>'
+        if image_url
+        else ""
+    )
+    badge_color = "#b42318" if importance.level == IMPORTANCE_TOP else "#b54708"
+    badge_background = "#fef3f2" if importance.level == IMPORTANCE_TOP else "#fffaeb"
 
     html_body = (
         "<div style=\"font-family:Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;"
-        "max-width:640px;line-height:1.6;\">"
-        f"<p style=\"font-weight:bold;margin:0 0 4px;\">{_p(importance_label)}</p>"
-        + (f"<p style=\"color:#666;margin:0 0 12px;\">{_p(topic.topic_label)}</p>" if topic.topic_label else "")
-        + f"<h2 style=\"margin:0 0 16px;\">{_p(title_prefix + title)}</h2>"
-        "<h3 style=\"margin:16px 0 4px;\">핵심 요약</h3>"
-        f"<p style=\"margin:0 0 12px;\">{_p(summary)}</p>"
-        "<h3 style=\"margin:16px 0 4px;\">현대건설 영향</h3>"
-        f"<p style=\"margin:0 0 12px;\">{_p(hdec_impact)}</p>"
-        "<h3 style=\"margin:16px 0 4px;\">출처 정보</h3>"
-        "<ul style=\"margin:0 0 12px;padding-left:18px;\">"
-        f"<li>출처: {_p(source)}</li>"
-        f"<li>게시시각: {_p(published_line)}</li>"
-        f"<li>감지시각: {_p(detected_line)}</li>"
-        "</ul>"
-        "<h3 style=\"margin:16px 0 4px;\">링크</h3>"
-        f"{links_html}"
-        "</div>"
+        "max-width:640px;line-height:1.55;color:#101828;\">"
+        + f'<p style="margin:0 0 14px;word-break:break-all;">'
+        + f'<strong>[{_p(article_link.label)}]</strong> '
+        + f'<a href="{escaped_article_url}">{escaped_article_url}</a></p>'
+        + f'<span style="display:inline-block;font-size:12px;font-weight:600;color:{badge_color};'
+        + f'background:{badge_background};border-radius:12px;padding:3px 8px;">'
+        + f"{_p(importance_label)}</span>"
+        + (
+            f'<span style="font-size:12px;color:#667085;margin-left:8px;">'
+            f"{_p(topic.topic_label)}</span>"
+            if topic.topic_label
+            else ""
+        )
+        + image_html
+        + f'<h2 style="font-size:22px;line-height:1.35;margin:16px 0 12px;">'
+        + f'<a href="{escaped_article_url}" style="color:#101828;text-decoration:none;">'
+        + f"{_p(title_prefix + title)}</a></h2>"
+        + f'<p style="margin:0 0 14px;max-height:4.65em;overflow:hidden;">{_p(summary)}</p>'
+        + f'<p style="font-size:13px;color:#667085;margin:0;">'
+        + f"{_p(source)} · {_p(published_line)}</p>"
+        + (
+            '<hr style="border:0;border-top:1px solid #e4e7ec;margin:22px 0 14px;">'
+            '<p style="font-size:12px;color:#667085;margin:0 0 6px;">보조 링크</p>'
+            + links_html
+            if links_html
+            else ""
+        )
+        + "</div>"
     )
 
     return subject, text_body, html_body

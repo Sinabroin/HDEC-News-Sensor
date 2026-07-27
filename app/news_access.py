@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Mapping
 from urllib.parse import urlparse
 
 ACCESS_STATUSES = {
@@ -28,7 +30,7 @@ _PORTAL_DOMAINS = (
     "news.naver.com", "n.news.naver.com", "v.daum.net", "news.daum.net",
 )
 _SEARCH_DOMAINS = (
-    "news.google.com", "google.com", "bing.com", "search.naver.com",
+    "news.google.com", "google.com", "bing.com", "search.naver.com", "search.daum.net",
 )
 _LICENSED_DOMAINS = ("bigkinds.or.kr",)
 _WARNING_BODY_SIGNATURES = (
@@ -43,6 +45,23 @@ _TRACKING_MARKERS = (
     "doubleclick.", "adservice.", "/click?", "/track?", "utm_redirect",
 )
 _HARMFUL_CATEGORIES = {"malware", "phishing", "adult", "gambling", "command_and_control"}
+
+LINK_KIND_PUBLISHER_DIRECT = "publisher_direct"
+LINK_KIND_GOOGLE_NEWS_FALLBACK = "google_news_fallback"
+LINK_KIND_PORTAL_FALLBACK = "portal_fallback"
+LINK_LABEL_PUBLISHER_DIRECT = "원문"
+LINK_LABEL_GOOGLE_NEWS_FALLBACK = "Google News 경유"
+LINK_LABEL_PORTAL_FALLBACK = "포털 경유"
+
+
+@dataclass(frozen=True)
+class ArticleLinkSelection:
+    """A safe article URL together with its truthful reader-facing classification."""
+
+    url: str = ""
+    kind: str = ""
+    label: str = ""
+    is_direct: bool = False
 
 
 def _domain(url: str | None) -> str:
@@ -232,7 +251,7 @@ def is_aggregator_url(value) -> bool:
     return classify_source_type(value) in {"portal", "search"}
 
 
-def _parse_metadata(article: dict) -> dict:
+def _parse_metadata(article: Mapping) -> dict:
     """source_metadata_json(문자열) 또는 source_metadata(dict)를 dict로 정규화한다."""
     metadata = article.get("source_metadata_json") or article.get("source_metadata") or {}
     if isinstance(metadata, str):
@@ -243,55 +262,121 @@ def _parse_metadata(article: dict) -> dict:
     return metadata if isinstance(metadata, dict) else {}
 
 
-def choose_external_article_url(article: dict) -> str:
+def _link_selection(value) -> ArticleLinkSelection:
+    chosen = _http_nonwarning(value)
+    if not chosen:
+        return ArticleLinkSelection()
+    domain = _domain(chosen)
+    if domain == "news.google.com" or domain.endswith(".news.google.com"):
+        return ArticleLinkSelection(
+            chosen,
+            LINK_KIND_GOOGLE_NEWS_FALLBACK,
+            LINK_LABEL_GOOGLE_NEWS_FALLBACK,
+            False,
+        )
+    if is_aggregator_url(chosen):
+        return ArticleLinkSelection(
+            chosen,
+            LINK_KIND_PORTAL_FALLBACK,
+            LINK_LABEL_PORTAL_FALLBACK,
+            False,
+        )
+    return ArticleLinkSelection(
+        chosen,
+        LINK_KIND_PUBLISHER_DIRECT,
+        LINK_LABEL_PUBLISHER_DIRECT,
+        True,
+    )
+
+
+def choose_article_link(article: Mapping) -> ArticleLinkSelection:
+    """Choose one usable Teams/dashboard link without mislabeling aggregators.
+
+    Publisher fields win in their established order. ``source_metadata.source_url`` is
+    the shared hand-off used by the live collector after either Google News decoding or
+    bounded HTTP redirect/canonical resolution. If no publisher URL can be recovered,
+    the original aggregator is retained and explicitly labeled as a Google News or
+    portal hop. This helper is deterministic and performs no network access.
+    """
+    metadata = _parse_metadata(article)
+
+    # Explicit publisher contracts first.
+    for candidate in (
+        article.get("canonical_url"),
+        article.get("external_url"),
+        article.get("original_url"),
+        metadata.get("canonical_url"),
+        metadata.get("original_url"),
+        metadata.get("originallink"),
+        metadata.get("publisher_url"),
+        article.get("publisher_url"),
+        article.get("url"),
+    ):
+        selected = _link_selection(candidate)
+        if selected.is_direct:
+            return selected
+
+    # The live resolver writes only a successfully resolved publisher URL here.
+    for candidate in (
+        metadata.get("source_url"),
+        metadata.get("resolved_url"),
+        article.get("resolved_url"),
+        article.get("resolved_publisher_url"),
+    ):
+        selected = _link_selection(candidate)
+        if selected.is_direct:
+            return selected
+
+    # Publisher resolution is best-effort. Preserve a usable hop when it fails.
+    for candidate in (
+        article.get("url"),
+        metadata.get("source_url"),
+        article.get("canonical_url"),
+        article.get("external_url"),
+        article.get("original_url"),
+        metadata.get("canonical_url"),
+        metadata.get("original_url"),
+        metadata.get("originallink"),
+        metadata.get("publisher_url"),
+        article.get("publisher_url"),
+    ):
+        selected = _link_selection(candidate)
+        if selected.url:
+            return selected
+
+    return ArticleLinkSelection()
+
+
+def choose_external_article_url(article: Mapping) -> str:
     """외부 '원문 사이트' 링크로 쓸, 가장 원본에 가깝고 접근 가능한 URL을 고른다.
 
     우선순위 (D7-AD-X — 퍼블리셔 직링크 우선, news.google.com/포털 경유는 fallback):
-      1) ``canonical_url`` / ``original_url`` (퍼블리셔 직링크 필드)
+      1) ``canonical_url`` / ``external_url`` / ``original_url`` (퍼블리셔 직링크 필드)
       2) source_metadata의 ``canonical_url`` / ``original_url`` / ``publisher_url``
          (Naver originallink 등 provider가 준 원문 직링크)
-      3) ``url`` (수집된 기본 링크) — 퍼블리셔 직링크일 때
-      4) source_metadata의 ``source_url`` — 퍼블리셔 직링크일 때
+      3) ``publisher_url`` / ``url`` (수집된 기본 링크) — 퍼블리셔 직링크일 때
+      4) source_metadata의 ``source_url`` — resolver가 확보한 퍼블리셔 직링크일 때
       5) **fallback**: 위 후보가 하나도 없고 ``url``/``source_url``이 news.google.com·
          포털·검색 경유 URL이면 그대로 쓴다(링크를 통째로 없애지 않는다 — 임원이 원문에
          닿을 최소 경로를 유지한다).
-      6) ``final_url`` — **진단용 메타**. warning이 아니고 원본과 같은 퍼블리셔 도메인일
-         때에 한해 최후 후보로만 쓴다(기본 href로 승격하지 않는다).
 
     ``hdec.kr/warning`` / ``WARNING.jpg`` warning URL은 어떤 경우에도 외부 href로
     선택하지 않는다. 접근 상태(:func:`classify_link_access`)·점수·분류·최신성 판단과
     독립이며 네트워크 호출은 하지 않는다. 후보가 하나도 없으면 "" (링크 미생성).
     """
-    metadata = _parse_metadata(article)
-    # 1~4) 퍼블리셔 직링크 우선 — 경유(aggregator/portal/search) URL은 이 패스에서 제외한다.
-    for candidate in (
-        article.get("canonical_url"),
-        article.get("original_url"),
-        metadata.get("canonical_url"),
-        metadata.get("original_url"),
-        metadata.get("publisher_url"),
-        article.get("url"),
-        metadata.get("source_url"),
-    ):
-        chosen = _http_nonwarning(candidate)
-        if chosen and not is_aggregator_url(chosen):
-            return chosen
+    return choose_article_link(article).url
 
-    # 5) fallback — 퍼블리셔 직링크가 없을 때만 news.google.com/포털/검색 경유 URL을 쓴다.
-    for candidate in (article.get("url"), metadata.get("source_url"),
-                      article.get("canonical_url"), article.get("original_url")):
-        chosen = _http_nonwarning(candidate)
-        if chosen:
-            return chosen
 
-    # 6) final_url은 리다이렉트/차단 진단 결과다 — 원본과 같은 퍼블리셔이고 warning이 아닐
-    # 때만 최후 후보. warning/redirect endpoint를 외부 href로 승격하지 않는다.
-    final = _http_nonwarning(article.get("final_url"))
-    if final:
-        base_domain = _domain(article.get("url") or article.get("original_url"))
-        if base_domain and _domain(final) == base_domain:
-            return final
-    return ""
+def choose_direct_article_url(article: Mapping) -> str:
+    """퍼블리셔 원문 직링크만 반환한다.
+
+    대시보드는 :func:`choose_external_article_url`의 aggregator fallback을 계속 쓸 수
+    있지만, 즉시발송 surface는 경유 링크를 원문으로 가장하면 안 된다. 선택 우선순위는
+    공통 helper 한 곳에서만 관리하고 이 함수는 그 결과가 publisher URL인지 판정만 한다.
+    네트워크 호출은 없으며 direct URL이 없으면 빈 문자열을 반환한다.
+    """
+    selected = choose_article_link(article)
+    return selected.url if selected.is_direct else ""
 
 
 def build_source_inventory(articles) -> list[dict]:
