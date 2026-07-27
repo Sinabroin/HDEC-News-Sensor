@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="editorial-edition" content="{{EDITION_KEY}}">
+<title>{{PAGE_TITLE}}</title>
+<style>
+:root{
+  --navy:#102945;--navy-2:#193d61;--paper:#f5f3ed;--white:#fff;
+  --ink:#202832;--muted:#69717d;--line:#d9d7cf;--accent:#176a4c;
+  --chip:#e8eef5;--chip-ink:#244662;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);font-family:Pretendard,-apple-system,
+  BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif;
+  font-size:15px;line-height:1.65;overflow-wrap:anywhere;
+}
+.page{width:min(100%,680px);margin:0 auto;background:var(--white);padding:24px 24px 40px}
+.masthead{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
+.brand{display:inline-block;background:var(--navy);color:#fff;border-radius:999px;
+  padding:5px 12px;font-size:12px;font-weight:800;letter-spacing:.04em}
+.masthead h1{font-family:Georgia,"Times New Roman",serif;font-size:31px;line-height:1.16;
+  letter-spacing:-.035em;margin:14px 0 5px;color:#17202b}
+.issue{color:var(--muted);font-size:13px}
+.hero{border-radius:10px;overflow:hidden;background:var(--navy);color:#fff;margin-bottom:0}
+.hero-media{display:block;width:100%;height:230px;object-fit:cover}
+.hero-body{padding:24px}
+.chip{display:inline-block;border-radius:999px;background:var(--chip);color:var(--chip-ink);
+  padding:3px 9px;font-size:11px;font-weight:800;letter-spacing:.03em}
+.hero .chip{background:rgba(255,255,255,.15);color:#fff}
+.hero h2{font-family:Georgia,"Times New Roman",serif;font-size:28px;line-height:1.28;
+  letter-spacing:-.025em;margin:12px 0}
+.summary{margin:0;color:#ecf1f5}
+.meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:15px;font-size:12px;color:#c8d3dc}
+.link{color:inherit;text-underline-offset:3px;font-weight:750}
+.editor-note{margin:0 10px 26px;padding:20px 22px;background:#f1eee6;border:1px solid #e0dbce;
+  border-top:0;border-radius:0 0 9px 9px}
+.editor-note h3{margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--navy)}
+.editor-note ul{margin:0;padding-left:19px}
+.editor-note li+li{margin-top:5px}
+.section-title{font-family:Georgia,"Times New Roman",serif;font-size:23px;margin:0 0 14px;
+  padding-bottom:8px;border-bottom:2px solid var(--navy)}
+.articles{display:flex;flex-direction:column;gap:0}
+.card{display:grid;grid-template-columns:148px 1fr;gap:18px;padding:18px 0;
+  border-bottom:1px solid var(--line);min-height:142px}
+.card.no-image{grid-template-columns:1fr;min-height:0}
+.thumb{width:148px;height:108px;object-fit:cover;border-radius:6px;background:#eee}
+.card h3{font-size:18px;line-height:1.38;letter-spacing:-.018em;margin:7px 0}
+.card p{font-size:13px;line-height:1.56;color:#4f5863;margin:0}
+.card .meta{color:var(--muted);margin-top:9px}
+.empty{border:1px solid var(--line);padding:18px;color:var(--muted)}
+.footer{border-top:2px solid var(--navy);margin-top:28px;padding-top:14px;
+  color:var(--muted);font-size:11px;line-height:1.55}
+.footer strong{color:var(--ink)}
+@media(max-width:560px){
+  .page{padding:14px 14px 30px}
+  .masthead h1{font-size:27px}
+  .hero-media{height:190px}
+  .hero-body{padding:20px}
+  .hero h2{font-size:24px}
+  .editor-note{margin-left:6px;margin-right:6px;padding:17px}
+  .card{grid-template-columns:96px 1fr;gap:13px;min-height:112px}
+  .card.no-image{grid-template-columns:1fr;min-height:0}
+  .thumb{width:96px;height:82px}
+  .card h3{font-size:16px;margin-top:5px}
+}
+@media print{
+  @page{size:A4 portrait;margin:14mm 12mm 16mm}
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{width:100%;max-width:none;padding:0}
+  .hero,.editor-note,.card{break-inside:avoid;page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<main class="page" data-edition-type="daily" data-edition-key="{{EDITION_KEY}}">
+  <header class="masthead">
+    <span class="brand">HDEC AI DAILY BRIEF</span>
+    <h1>오늘의 AI 경영 브리프</h1>
+    <div class="issue">{{EDITION_LABEL}} · {{COVERAGE_LABEL}}</div>
+  </header>
+  {{HEADLINE_HTML}}
+  <aside class="editor-note" aria-labelledby="editor-summary-title">
+    <h3 id="editor-summary-title">Editor's Summary</h3>
+    <ul>{{EDITOR_SUMMARY_HTML}}</ul>
+  </aside>
+  <section aria-labelledby="articles-title">
+    <h2 class="section-title" id="articles-title">주요 기사</h2>
+    <div class="articles">{{ARTICLE_CARDS_HTML}}</div>
+  </section>
+  <footer class="footer">
+    <strong>발행 기준</strong> {{EDITION_LABEL}} KST 실행일 기준<br>
+    <strong>Coverage</strong> {{COVERAGE_LABEL}} (양 끝 시각 포함)<br>
+    공개 기사 메타데이터와 제공된 요약만 사용했으며 원문은 각 링크에서 확인할 수 있습니다.
+  </footer>
+</main>
+</body>
+</html>

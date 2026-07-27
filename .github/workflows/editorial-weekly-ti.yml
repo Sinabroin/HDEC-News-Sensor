@@ -1,0 +1,140 @@
+name: Editorial Weekly T&I
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_dry_run:
+        description: "Run offline preview only"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+  schedule:
+    - cron: "30 22 * * 2"
+    - cron: "50 22 * * 2"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: editorial-weekly-ti
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify editorial contracts offline
+        run: |
+          python3 -m py_compile app/editorial_briefings.py app/editorial_briefing_state.py scripts/run_editorial_briefing.py scripts/verify_editorial_briefings.py
+          python3 scripts/verify_editorial_briefings.py
+
+      - name: Offline preview when production gate is closed
+        if: github.ref != 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_dry_run == 'true')
+        run: |
+          python3 scripts/run_editorial_briefing.py \
+            --edition-type weekly \
+            --preview \
+            --preview-root "$RUNNER_TEMP/editorial-preview"
+
+      - name: Build Weekly publication
+        id: publish
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          EDITORIAL_RUNTIME_DIR: ${{ runner.temp }}/editorial-weekly
+          NEWS_MODE: live
+          NAVER_NEWS_ENABLED: "1"
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/run_editorial_briefing.py \
+            --edition-type weekly \
+            --publish \
+            --runtime-dir "$EDITORIAL_RUNTIME_DIR"
+
+      - name: Commit and push exact Weekly publication files
+        if: steps.publish.outputs.skipped == 'false'
+        env:
+          EDITION: ${{ steps.publish.outputs.edition }}
+        run: |
+          DATED_PATH="docs/editorial/weekly/${EDITION}.html"
+          LATEST_PATH="docs/editorial/weekly/latest.html"
+          if [ -z "$(git status --porcelain -- "$DATED_PATH" "$LATEST_PATH")" ]; then
+            echo "Weekly publication already matches; continue to public verification"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$DATED_PATH" "$LATEST_PATH"
+          git commit -m "chore: publish Weekly editorial brief ${EDITION}"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if ! git rebase origin/main; then
+              echo "ERROR: Weekly publication rebase conflict; fail closed"
+              exit 1
+            fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "ERROR: Weekly publication push failed"
+              exit 1
+            fi
+          done
+
+      - name: Verify public dated page, send link, and record exact-250 success
+        id: send
+        if: steps.publish.outputs.skipped == 'false'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          EDITORIAL_RUNTIME_DIR: ${{ runner.temp }}/editorial-weekly
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
+          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
+        run: |
+          python3 scripts/run_editorial_briefing.py \
+            --edition-type weekly \
+            --send \
+            --runtime-dir "$EDITORIAL_RUNTIME_DIR"
+
+      - name: Commit and push exact Weekly state file
+        if: steps.send.outputs.state_changed == 'true'
+        run: |
+          STATE_PATH="data/editorial_weekly_state.json"
+          if [ -z "$(git status --porcelain -- "$STATE_PATH")" ]; then
+            echo "ERROR: Weekly state output was declared but file is unchanged"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$STATE_PATH"
+          git commit -m "chore: record Weekly editorial delivery"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if ! git rebase origin/main; then
+              echo "ERROR: Weekly state rebase conflict; fail closed"
+              exit 1
+            fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "ERROR: Weekly state push failed"
+              exit 1
+            fi
+          done
