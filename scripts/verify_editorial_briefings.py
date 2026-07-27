@@ -352,15 +352,53 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
         check(f"Weekly DOM section exists: {section}",
               f'data-section="{section}"' in dominant.html)
     weekly_template = read("templates/editorial_weekly.html")
+    daily_template = read("templates/editorial_daily.html")
     check("Weekly page keeps 794px × min-height 1123px",
           "width:794px;min-height:1123px" in weekly_template)
+    check("Weekly page keeps max-width viewport protection",
+          re.search(r"\.page\{[^{}]*max-width:100%", weekly_template) is not None)
     check("Weekly keeps A4 portrait @page", re.search(
         r"@page\{size:A4 portrait;", weekly_template) is not None)
     check("Weekly keeps print media and color adjustment",
           "@media print" in weekly_template and "print-color-adjust:exact" in weekly_template)
     check("Weekly keeps break-inside protections",
           "break-inside:avoid" in weekly_template and "page-break-inside:avoid" in weekly_template)
-    check("Weekly keeps 768px mobile breakpoint", "@media(max-width:768px)" in weekly_template)
+    check("Weekly print starts comparison on a new page",
+          re.search(
+              r'@media print\{[\s\S]*?\[data-section="comparison"\]'
+              r"\{[^{}]*break-before:page;[^{}]*page-break-before:always",
+              weekly_template,
+          ) is not None)
+    check("Weekly keeps a screen-only 768px mobile breakpoint",
+          "@media screen and (max-width:768px)" in weekly_template)
+    check("Weekly mobile comparison scroll hint is rendered and visible",
+          dominant.html.count('class="table-scroll-hint"') == 1
+          and "좌우로 스크롤해 전체 내용을 확인하세요" in dominant.html
+          and re.search(
+              r"@media screen and \(max-width:768px\)\{[\s\S]*?\.table-scroll-hint"
+              r"\{[^{}]*display:block",
+              weekly_template,
+          ) is not None)
+    check("Weekly comparison scroll hint is hidden in print",
+          re.search(
+              r"@media print\{[\s\S]*?\.table-scroll-hint[^{}]*"
+              r"\{[^{}]*display:none!important",
+              weekly_template,
+          ) is not None)
+    check("Daily mobile links keep 24px touch targets",
+          re.search(
+              r"@media\(max-width:560px\)\{[\s\S]*?\.link"
+              r"\{[^{}]*display:inline-flex;[^{}]*min-width:24px;"
+              r"[^{}]*min-height:24px",
+              daily_template,
+          ) is not None)
+    check("Weekly mobile links keep 24px touch targets",
+          re.search(
+              r"@media screen and \(max-width:768px\)\{[\s\S]*?\.link,\.source-link"
+              r"\{[^{}]*display:inline-flex;[^{}]*min-width:24px;"
+              r"[^{}]*min-height:24px",
+              weekly_template,
+          ) is not None)
     check("Weekly keeps PDF save control",
           'onclick="window.print()"' in weekly_template and "PDF 저장" in weekly_template)
 

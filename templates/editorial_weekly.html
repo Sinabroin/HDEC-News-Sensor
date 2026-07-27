@@ -13,7 +13,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#e8e8e8;font-family:"Malgun Gothic","Apple SD Gothic Neo",
   Arial,sans-serif;color:var(--text);font-size:12px;line-height:1.5}
-.page{width:794px;min-height:1123px;margin:28px auto;background:#fff;padding:28px 34px;
+.page{width:794px;min-height:1123px;max-width:100%;margin:28px auto;background:#fff;padding:28px 34px;
   box-shadow:0 4px 24px rgba(0,0,0,.18)}
 .hd-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px}
 .hd-logo{font-size:22px;font-weight:900;color:#111;line-height:1;letter-spacing:-.03em}
@@ -57,6 +57,7 @@ body{background:#e8e8e8;font-family:"Malgun Gothic","Apple SD Gothic Neo",
   background:#FCFDFE;padding:6px 9px}
 .time-title{font-size:10.8px;font-weight:800;color:#111;margin-bottom:2px}
 .time-desc{font-size:9.9px;color:#556070;line-height:1.4}
+.table-scroll-hint{display:none}
 .table-wrap{overflow-x:auto}
 .table{width:100%;border-collapse:collapse;font-size:10.5px}
 .table th{background:#EEF3FA;color:var(--blue);border:1px solid var(--line);padding:5px 7px;
@@ -81,7 +82,7 @@ body{background:#e8e8e8;font-family:"Malgun Gothic","Apple SD Gothic Neo",
 .btn-pdf{position:fixed;top:20px;right:20px;z-index:9999;background:var(--blue);color:#fff;
   font-family:"Malgun Gothic",Arial,sans-serif;font-size:13px;font-weight:700;padding:10px 18px;
   border:0;border-radius:6px;box-shadow:0 4px 14px rgba(0,48,135,.35);cursor:pointer}
-@media(max-width:768px){
+@media screen and (max-width:768px){
   body{font-size:15px}.page{width:100%;margin:0;padding:20px 16px;box-shadow:none;min-height:auto}
   .hd-header{flex-direction:column;align-items:flex-start;gap:8px}.hd-date{text-align:left;font-size:15px}
   .hd-logo{font-size:26px}.hd-logo span{font-size:13px}.doc-title{font-size:19px}
@@ -94,13 +95,17 @@ body{background:#e8e8e8;font-family:"Malgun Gothic","Apple SD Gothic Neo",
   .time-title{font-size:14px}.time-desc{font-size:12px}.table{min-width:690px}
   .j-txt{font-size:13px}.av-title{font-size:13px}.av-body{font-size:12.5px}
   .source{font-size:11px}.btn-pdf{top:10px;right:10px;font-size:11px;padding:8px 12px}
+  .table-scroll-hint{display:block;margin:0 0 5px;color:var(--sub);font-size:11px}
+  .link,.source-link{display:inline-flex;align-items:center;justify-content:center;
+    min-width:24px;min-height:24px}
 }
 @media print{
   @page{size:A4 portrait;margin:14mm 10mm 18mm}
   @page:first{margin-top:8mm}
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .page{width:100%;margin:0;padding:0 4px;box-shadow:none;min-height:unset}
-  .btn-pdf{display:none!important}
+  .btn-pdf,.table-scroll-hint{display:none!important}
+  [data-section="comparison"]{break-before:page;page-break-before:always}
   .hero,.top-card,.section,.fact-item,.time-item,.judgement,.j-item,.alt-view,.footer{
     break-inside:avoid;page-break-inside:avoid}
 }
@@ -141,6 +146,7 @@ body{background:#e8e8e8;font-family:"Malgun Gothic","Apple SD Gothic Neo",
   <div class="section-div"></div>
   <section class="section" data-section="comparison">
     <h2 class="sec-title"><span class="bar"></span>데이터 · 비교</h2>
+    <p class="table-scroll-hint">좌우로 스크롤해 전체 내용을 확인하세요</p>
     <div class="table-wrap">
       <table class="table">
         <thead><tr><th>구분</th><th>확인 내용</th><th>출처</th><th>게시시각 KST</th><th>링크</th></tr></thead>
