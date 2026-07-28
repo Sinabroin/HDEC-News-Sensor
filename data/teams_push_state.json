@@ -100,6 +100,26 @@
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
     },
+    "naver_97c426517b14": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
+    },
+    "naver_a382f87471c0": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
+    },
     "naver_e68bd976b111": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -162,6 +182,16 @@
       "sent_at": "2026-07-28T20:34:00+09:00",
       "source": "newsworks.co.kr"
     },
+    "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
+    },
     "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
@@ -201,6 +231,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
     },
     "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
@@ -263,8 +303,18 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-28T20:34:00+09:00",
+  "last_successful_send_at": "2026-07-29T00:36:39+09:00",
   "normalized_urls": {
+    "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
+    },
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
@@ -294,6 +344,16 @@
       "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
       "sent_at": "2026-07-28T13:20:48+09:00",
       "source": "cbci.co.kr"
+    },
+    "https://www.chosun.com/economy/industry-company/2026/07/29/5SURFMPPBNFAVPBARIHT24F6YY": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
     },
     "https://www.chosun.com/economy/tech_it/2026/07/28/V52UFHPU6RFDBLVKDRRRWSPU7I": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
@@ -427,6 +487,16 @@
       "sent_at": "2026-07-28T20:34:00+09:00",
       "source": "newsworks.co.kr"
     },
+    "두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
+    },
     "메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
@@ -466,6 +536,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
     },
     "전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
