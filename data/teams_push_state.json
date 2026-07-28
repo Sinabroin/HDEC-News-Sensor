@@ -40,6 +40,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "naver_42c47e367b43": {
+      "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
+      "delivery_id": "teams_ai_push:755189289545",
+      "first_sent_at": "2026-07-28T15:45:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
+      "sent_at": "2026-07-28T15:45:43+09:00",
+      "source": "sidae.com"
+    },
     "naver_814cf01a1212": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
       "delivery_id": "teams_ai_push:2ecee238f08c",
@@ -132,6 +142,16 @@
       "sent_at": "2026-07-28T13:20:48+09:00",
       "source": "cbci.co.kr"
     },
+    "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대": {
+      "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
+      "delivery_id": "teams_ai_push:755189289545",
+      "first_sent_at": "2026-07-28T15:45:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
+      "sent_at": "2026-07-28T15:45:43+09:00",
+      "source": "sidae.com"
+    },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -183,7 +203,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-28T13:20:48+09:00",
+  "last_successful_send_at": "2026-07-28T15:45:43+09:00",
   "normalized_urls": {
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -265,6 +285,16 @@
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
     },
+    "https://www.sidae.com/article/2026072814463436475": {
+      "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
+      "delivery_id": "teams_ai_push:755189289545",
+      "first_sent_at": "2026-07-28T15:45:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
+      "sent_at": "2026-07-28T15:45:43+09:00",
+      "source": "sidae.com"
+    },
     "https://www.thebell.co.kr/free/content/ArticleView.asp?key=202607231554104200106421": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
       "delivery_id": "teams_ai_push:2ecee238f08c",
@@ -316,6 +346,16 @@
       "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
       "sent_at": "2026-07-28T13:20:48+09:00",
       "source": "cbci.co.kr"
+    },
+    "변동성증시의식했나대우건설실적발표연기빅배스효과기대": {
+      "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
+      "delivery_id": "teams_ai_push:755189289545",
+      "first_sent_at": "2026-07-28T15:45:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
+      "sent_at": "2026-07-28T15:45:43+09:00",
+      "source": "sidae.com"
     },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
