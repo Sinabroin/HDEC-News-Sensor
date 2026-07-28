@@ -20,6 +20,16 @@
       "sent_at": "2026-07-27T11:52:46+09:00",
       "source": "팍스경제TV"
     },
+    "naver_151671ced81a": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
     "naver_2f048683f51e": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
       "delivery_id": "teams_ai_push:87cc2aaf987c",
@@ -142,6 +152,16 @@
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
     },
+    "title:대미투자1호로가스복합발전소건설사업유력": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
     "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
@@ -243,7 +263,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-28T18:27:42+09:00",
+  "last_successful_send_at": "2026-07-28T20:34:00+09:00",
   "normalized_urls": {
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -335,6 +355,16 @@
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
     },
+    "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
     "https://www.sedaily.com/article/20072947": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
       "delivery_id": "teams_ai_push:449508c2ca7a",
@@ -386,6 +416,16 @@
       "material_signature": "b03292c94f1aebbc87312bd672b19070bab22382231f8d7d3c7325b9a06140ee",
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
+    },
+    "대미투자1호로가스복합발전소건설사업유력": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
     },
     "메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
