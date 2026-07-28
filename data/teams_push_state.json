@@ -120,6 +120,16 @@
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
     },
+    "naver_cb7b45a17e78": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
+    },
     "naver_e68bd976b111": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -161,6 +171,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
     },
     "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
@@ -303,7 +323,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-29T00:36:39+09:00",
+  "last_successful_send_at": "2026-07-29T04:59:02+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -405,6 +425,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "https://www.hankookilbo.com/news/article/A2026072814260005038?did=NA": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
+    },
     "https://www.hankyung.com/article/202607278751i": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -466,6 +496,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
     },
     "네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
