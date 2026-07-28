@@ -29,7 +29,7 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import collector, editorial_briefing_state, editorial_briefings  # noqa: E402
+from app import collector, editorial_briefing_state, editorial_briefings, news_access  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
 RUNTIME_MANIFEST = "runtime-manifest.json"
@@ -106,18 +106,79 @@ def _require_production_gate() -> None:
 
 def collect_live_articles() -> list[dict]:
     """Collect real metadata from the established providers without DB writes."""
+    articles, _audit = collect_live_article_bundle()
+    return articles
+
+
+def _provider_tokens(row: dict) -> set[str]:
+    metadata = row.get("source_metadata") or {}
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except (TypeError, ValueError):
+            metadata = {}
+    provider = str((metadata or {}).get("provider") or "")
+    return {item for item in provider.split("+") if item}
+
+
+def collect_live_article_bundle() -> tuple[list[dict], dict]:
+    """Collect live metadata plus non-secret provider counters for preview audit."""
     from app import live_collector, naver_news_provider
 
-    google_rows = live_collector.fetch_all()
-    naver_result = naver_news_provider.fetch()
+    naver_enabled = bool(naver_news_provider.config.NAVER_NEWS_ENABLED)
+    naver_credentials_present = bool(
+        naver_news_provider.config.NAVER_CLIENT_ID
+        and naver_news_provider.config.NAVER_CLIENT_SECRET
+    )
+    try:
+        google_rows = live_collector.fetch_all()
+    except Exception:  # noqa: BLE001 - preview keeps other providers alive
+        google_rows = []
+    try:
+        naver_result = naver_news_provider.fetch()
+    except Exception:  # noqa: BLE001 - never expose provider exception details
+        naver_result = {
+            "provider": naver_news_provider.PROVIDER,
+            "status": naver_news_provider.STATUS_ERROR,
+            "articles": [],
+            "queries_attempted": 0,
+            "queries_ok": 0,
+            "credentials_present": naver_credentials_present,
+        }
+    naver_status = str(naver_result.get("status") or "unknown")
+    naver_requests = int(naver_result.get("queries_attempted") or 0)
+    naver_queries_ok = int(naver_result.get("queries_ok") or 0)
+    naver_credentials_present = bool(
+        naver_result.get("credentials_present") or naver_credentials_present
+    )
+    naver_activation_error = bool(
+        naver_enabled and naver_credentials_present and naver_requests == 0
+    )
+    if naver_activation_error:
+        raise OrchestratorError(
+            "Naver provider activation error: enabled provider with credentials made zero API requests"
+        )
     naver_rows = list(naver_result.get("articles") or [])
     resolvable = list(google_rows) + naver_rows
-    if resolvable:
-        live_collector.resolve_publisher_urls(resolvable)
     combined = collector.merge_provider_articles(resolvable)
     if not combined:
         raise OrchestratorError("live collection returned no articles; fail closed")
-    return combined
+    audit = {
+        "naver_provider_enabled": naver_enabled,
+        "naver_provider_status": naver_status,
+        "naver_credentials_present": naver_credentials_present,
+        "naver_provider_activation_error": naver_activation_error,
+        "naver_provider_queries_ok": naver_queries_ok,
+        "naver_api_requests": naver_requests,
+        "naver_articles_collected": len(naver_rows),
+        "naver_originallinks_collected": sum(
+            1
+            for row in naver_rows
+            if news_access.choose_article_link(row).is_direct
+        ),
+        "google_news_articles_collected": len(google_rows),
+    }
+    return combined, audit
 
 
 def _runtime_dir(value: str | None, edition_type: str) -> Path:
@@ -197,6 +258,145 @@ def run_preview(
     return manifest
 
 
+def _live_preview_root(value: str | Path) -> Path:
+    path = Path(value).resolve()
+    system_tmp = Path("/tmp").resolve()
+    if path == system_tmp or system_tmp not in path.parents:
+        raise OrchestratorError("live-preview output must be a child of /tmp")
+    if path == ROOT or ROOT in path.parents:
+        raise OrchestratorError("live-preview output must be outside repository")
+    return path
+
+
+def run_live_preview(
+    *,
+    run_at: datetime,
+    preview_root: Path,
+    fixture_root: str,
+    collect: Callable[[], list[dict]] = collect_live_articles,
+    image_page_fetcher=None,
+    image_probe=None,
+    image_opener=None,
+    image_downloader=None,
+    publisher_fetcher=None,
+    publisher_opener=None,
+) -> dict:
+    """Build one Daily preview from live metadata without any production side effect."""
+    output_root = _live_preview_root(preview_root)
+    collection_audit = {
+        "naver_provider_enabled": False,
+        "naver_provider_status": "not_used",
+        "naver_credentials_present": False,
+        "naver_provider_activation_error": False,
+        "naver_provider_queries_ok": 0,
+        "naver_api_requests": 0,
+        "naver_articles_collected": 0,
+        "naver_originallinks_collected": 0,
+        "google_news_articles_collected": 0,
+    }
+    if collect is collect_live_articles:
+        raw_articles, collection_audit = collect_live_article_bundle()
+    else:
+        raw_articles = collect()
+    counters = editorial_briefings.ImageResolutionCounters()
+    publisher_counters = editorial_briefings.PublisherUrlResolutionCounters()
+    selection_counters = editorial_briefings.SelectionAuditCounters()
+    coverage = editorial_briefings.daily_coverage(run_at)
+    articles = editorial_briefings.normalize_articles(
+        raw_articles,
+        coverage,
+        limit=editorial_briefings.DAILY_MAX_ARTICLES,
+        resolve_images=True,
+        allow_image_network=True,
+        image_counters=counters,
+        image_page_fetcher=image_page_fetcher,
+        image_probe=image_probe,
+        image_opener=image_opener,
+        publisher_counters=publisher_counters,
+        publisher_fetcher=publisher_fetcher,
+        publisher_opener=publisher_opener,
+        selection_audit=selection_counters,
+        selection_mode=editorial_briefings.SELECTION_MODE_DIRECT_AWARE_DAILY,
+    )
+    if not articles:
+        raise OrchestratorError("live preview found no Daily articles in exact coverage")
+    output_dir = output_root / "daily"
+    articles, materialization_counters = editorial_briefings.materialize_preview_images(
+        articles,
+        output_root,
+        html_dir=output_dir,
+        downloader=image_downloader,
+        opener=image_opener,
+    )
+    edition = editorial_briefings.render_daily(
+        articles, run_at=run_at, root_url=fixture_root
+    )
+    editorial_briefings.validate_rendered(edition)
+
+    latest_path = output_dir / "latest.html"
+    dated_path = output_dir / f"{edition.edition_key}.html"
+    payload = edition.html.encode("utf-8")
+    editorial_briefings.atomic_write_bytes(latest_path, payload)
+    editorial_briefings.atomic_write_bytes(dated_path, payload)
+    image_records = [
+        editorial_briefings.resolved_image_record(
+            article,
+            is_headline=index == 0,
+        )
+        for index, article in enumerate(articles)
+    ]
+    resolved_path = output_root / "resolved-images.json"
+    editorial_briefings.atomic_write_bytes(
+        resolved_path,
+        (json.dumps(image_records, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+    )
+    manifest = {
+        "version": 1,
+        "mode": "live-preview",
+        "edition_type": "daily",
+        "edition_key": edition.edition_key,
+        "coverage_start": coverage.start.isoformat(),
+        "coverage_end": coverage.end.isoformat(),
+        "article_count": len(articles),
+        "dated_html": str(dated_path),
+        "latest_html": str(latest_path),
+        "resolved_images": str(resolved_path),
+        **publisher_counters.manifest_fields(),
+        **counters.manifest_fields(),
+        **materialization_counters.manifest_fields(),
+        **selection_counters.manifest_fields(),
+        **collection_audit,
+        "publisher_page_gets": counters.network_page_gets,
+        "images_resolved_actual": sum(
+            1 for article in articles if article.image_remote_url
+        ),
+        "images_resolved_actual_semantics": "remote image URL candidates selected",
+        "smtp_attempts": 0,
+        "teams_sends": 0,
+        "telegram_calls": 0,
+        "state_reads": 0,
+        "state_writes": 0,
+        "docs_writes": 0,
+        "git_writes": 0,
+    }
+    manifest_path = output_root / "manifest.json"
+    editorial_briefings.atomic_write_bytes(
+        manifest_path,
+        (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+    )
+    print(
+        f"live_preview_ok edition_type=daily edition={edition.edition_key} "
+        f"articles={len(articles)} "
+        f"aggregator_page_gets={publisher_counters.aggregator_page_gets} "
+        f"publisher_page_gets={counters.network_page_gets} "
+        f"images_resolved_actual={manifest['images_resolved_actual']} "
+        "smtp_attempts=0 teams_sends=0 telegram_calls=0 state_reads=0 "
+        "state_writes=0 docs_writes=0 git_writes=0"
+    )
+    print(f"live_preview_path={output_root}")
+    return manifest
+
+
 def run_publish(
     edition_type: str,
     *,
@@ -214,7 +414,11 @@ def run_publish(
         return None
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     edition = editorial_briefings.render_edition(
-        edition_type, collect(), run_at=run_at, root_url=root_url
+        edition_type,
+        collect(),
+        run_at=run_at,
+        root_url=root_url,
+        allow_image_network=edition_type == "daily",
     )
     editorial_briefings.validate_rendered(edition)
     dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
@@ -263,9 +467,8 @@ def verify_public_page_once(
             body = response.read(2_000_000).decode("utf-8", errors="replace")
     except (OSError, TimeoutError, urllib.error.URLError, ValueError):
         return False
-    expected_meta = f'<meta name="editorial-edition" content="{expected_edition}">'
     expected_data = f'data-edition-key="{expected_edition}"'
-    return expected_meta in body and expected_data in body
+    return expected_data in body
 
 
 def poll_public_dated_page(
@@ -420,6 +623,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--edition-type", choices=("daily", "weekly"), required=True)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--preview", action="store_true")
+    mode.add_argument("--live-preview", action="store_true")
     mode.add_argument("--publish", action="store_true")
     mode.add_argument("--send", action="store_true")
     parser.add_argument("--run-at", default="")
@@ -443,6 +647,14 @@ def main(argv: list[str] | None = None) -> int:
                 preview_root=Path(args.preview_root).resolve(),
                 fixture_root=args.fixture_root,
                 fixture_profile=args.fixture_profile,
+            )
+        elif args.live_preview:
+            if args.edition_type != "daily":
+                raise OrchestratorError("--live-preview supports Daily only")
+            run_live_preview(
+                run_at=run_at,
+                preview_root=Path(args.preview_root),
+                fixture_root=args.fixture_root,
             )
         elif args.publish:
             run_publish(

@@ -299,6 +299,116 @@ def _fetch(url: str, timeout: int) -> str:
         return resp.read().decode(charset, errors="replace")
 
 
+class _RssAnchorParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag.casefold() != "a":
+            return
+        values = {str(key).casefold(): str(value or "") for key, value in attrs}
+        href = values.get("href", "").strip()
+        if href.startswith(("http://", "https://")) and href not in self.links:
+            self.links.append(href)
+
+
+def _rss_html_links(value: object) -> list[str]:
+    parser = _RssAnchorParser()
+    try:
+        parser.feed(unescape(str(value or ""))[:500_000])
+    except (TypeError, ValueError):
+        return []
+    return parser.links
+
+
+def _rss_publisher_fields(item) -> dict:
+    """Extract only direct-link candidates from RSS metadata; never retain raw HTML."""
+    output: dict[str, object] = {}
+    description_links: list[str] = []
+    content_links: list[str] = []
+    atom_links: list[str] = []
+    for child in list(item):
+        tag = str(child.tag or "")
+        local = tag.rsplit("}", 1)[-1].casefold()
+        namespace = tag[1:].split("}", 1)[0].casefold() if tag.startswith("{") else ""
+        attrs = {str(key).casefold(): str(value or "") for key, value in child.attrib.items()}
+        text = str(child.text or "").strip()
+        if local == "origlink" and text.startswith(("http://", "https://")):
+            output.setdefault("rss_orig_link", text)
+        elif local == "description":
+            description_links.extend(_rss_html_links(text))
+        elif local in {"encoded", "content"} and "search.yahoo.com/mrss" not in namespace:
+            content_links.extend(_rss_html_links(text))
+        elif local == "link" and attrs.get("href", "").startswith(("http://", "https://")):
+            rel = attrs.get("rel", "alternate").casefold()
+            if rel in {"", "alternate"}:
+                atom_links.append(attrs["href"])
+        elif local in {"guid", "identifier"} and text.startswith(("http://", "https://")):
+            key = "rss_guid" if local == "guid" else "dc_identifier"
+            output.setdefault(key, text)
+        elif local == "source":
+            source_home = attrs.get("url", "").strip()
+            if source_home.startswith(("http://", "https://")):
+                output.setdefault("rss_source_home_url", source_home)
+                output.setdefault("rss_source_url", source_home)
+    if description_links:
+        output["rss_description_links"] = list(dict.fromkeys(description_links))
+    if content_links:
+        output["rss_content_links"] = list(dict.fromkeys(content_links))
+    if atom_links:
+        output["rss_atom_links"] = list(dict.fromkeys(atom_links))
+    return output
+
+
+def _rss_image_fields(item) -> dict:
+    """Preserve feed-supplied representative image metadata for editorial preview.
+
+    These optional top-level fields remain transient raw metadata. The dashboard DB
+    allowlist is unchanged, while the editorial image resolver can honor feed images
+    before making a bounded publisher-page metadata request.
+    """
+    output: dict[str, object] = {}
+    media_content: list[dict] = []
+    media_thumbnail: list[dict] = []
+    enclosures: list[dict] = []
+    for child in list(item):
+        tag = str(child.tag or "")
+        local = tag.rsplit("}", 1)[-1].casefold()
+        namespace = tag[1:].split("}", 1)[0].casefold() if tag.startswith("{") else ""
+        attrs = {str(key).casefold(): str(value or "") for key, value in child.attrib.items()}
+        if "search.yahoo.com/mrss" in namespace and local in {"content", "thumbnail"}:
+            candidate = {
+                "url": attrs.get("url", ""),
+                "width": attrs.get("width", ""),
+                "height": attrs.get("height", ""),
+                "type": attrs.get("type", ""),
+            }
+            if candidate["url"]:
+                (media_content if local == "content" else media_thumbnail).append(candidate)
+        elif local == "enclosure" and attrs.get("url"):
+            content_type = attrs.get("type", "")
+            if content_type.casefold().startswith("image/"):
+                enclosures.append(
+                    {
+                        "url": attrs["url"],
+                        "type": content_type,
+                        "length": attrs.get("length", ""),
+                    }
+                )
+        elif local == "image":
+            image_url = (child.findtext("url") or child.text or "").strip()
+            if image_url.startswith(("http://", "https://")):
+                output.setdefault("image_url", image_url)
+    if media_content:
+        output["media_content"] = media_content
+    if media_thumbnail:
+        output["media_thumbnail"] = media_thumbnail
+    if enclosures:
+        output["enclosure"] = enclosures
+    return output
+
+
 def _parse_items(xml_text: str, query: str, collected_at: str,
                  max_items: int, filtered_sink: list | None = None) -> list[dict]:
     """RSS 2.0 <item>에서 메타데이터만 추출한다 (본문 전문 없음).
@@ -354,21 +464,25 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
         published_at = _to_iso(item.findtext("pubDate") or "") or collected_at
         url_hash = hashlib.sha256(link.lower().rstrip("/").encode("utf-8")).hexdigest()
 
-        rows.append({
+        source_metadata = {
+            "provider": PROVIDER,
+            "query": query,
+            "source_url": link,
+            "collected_at": collected_at,
+            "provider_response_id": url_hash[:16],
+        }
+        source_metadata.update(_rss_publisher_fields(item))
+        row = {
             "id": f"live_{url_hash[:12]}",
             "title": title,
             "source": source,
             "published_at": published_at,
             "url": link,
             "snippet": snippet,
-            "source_metadata": {
-                "provider": PROVIDER,
-                "query": query,
-                "source_url": link,
-                "collected_at": collected_at,
-                "provider_response_id": url_hash[:16],
-            },
-        })
+            "source_metadata": source_metadata,
+        }
+        row.update(_rss_image_fields(item))
+        rows.append(row)
         if len(rows) >= max_items:
             break
     return rows

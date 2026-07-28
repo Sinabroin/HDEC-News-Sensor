@@ -35,6 +35,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install editorial image dependency
+        run: |
+          python3 -m pip install --disable-pip-version-check --no-cache-dir "Pillow==12.3.0"
+
       - name: Verify editorial contracts offline
         run: |
           python3 -m py_compile app/editorial_briefings.py app/editorial_briefing_state.py scripts/run_editorial_briefing.py scripts/verify_editorial_briefings.py

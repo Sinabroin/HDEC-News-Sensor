@@ -1,104 +1,289 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="editorial-edition" content="{{EDITION_KEY}}">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>{{PAGE_TITLE}}</title>
 <style>
-:root{
-  --navy:#102945;--navy-2:#193d61;--paper:#f5f3ed;--white:#fff;
-  --ink:#202832;--muted:#69717d;--line:#d9d7cf;--accent:#176a4c;
-  --chip:#e8eef5;--chip-ink:#244662;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  background:var(--paper);color:var(--ink);font-family:Pretendard,-apple-system,
-  BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif;
-  font-size:15px;line-height:1.65;overflow-wrap:anywhere;
-}
-.page{width:min(100%,680px);margin:0 auto;background:var(--white);padding:24px 24px 40px}
-.masthead{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
-.brand{display:inline-block;background:var(--navy);color:#fff;border-radius:999px;
-  padding:5px 12px;font-size:12px;font-weight:800;letter-spacing:.04em}
-.masthead h1{font-family:Georgia,"Times New Roman",serif;font-size:31px;line-height:1.16;
-  letter-spacing:-.035em;margin:14px 0 5px;color:#17202b}
-.issue{color:var(--muted);font-size:13px}
-.hero{border-radius:10px;overflow:hidden;background:var(--navy);color:#fff;margin-bottom:0}
-.hero-media{display:block;width:100%;height:230px;object-fit:cover}
-.hero-body{padding:24px}
-.chip{display:inline-block;border-radius:999px;background:var(--chip);color:var(--chip-ink);
-  padding:3px 9px;font-size:11px;font-weight:800;letter-spacing:.03em}
-.hero .chip{background:rgba(255,255,255,.15);color:#fff}
-.hero h2{font-family:Georgia,"Times New Roman",serif;font-size:28px;line-height:1.28;
-  letter-spacing:-.025em;margin:12px 0}
-.summary{margin:0;color:#ecf1f5}
-.meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:15px;font-size:12px;color:#c8d3dc}
-.link{color:inherit;text-underline-offset:3px;font-weight:750}
-.editor-note{margin:0 10px 26px;padding:20px 22px;background:#f1eee6;border:1px solid #e0dbce;
-  border-top:0;border-radius:0 0 9px 9px}
-.editor-note h3{margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--navy)}
-.editor-note ul{margin:0;padding-left:19px}
-.editor-note li+li{margin-top:5px}
-.section-title{font-family:Georgia,"Times New Roman",serif;font-size:23px;margin:0 0 14px;
-  padding-bottom:8px;border-bottom:2px solid var(--navy)}
-.articles{display:flex;flex-direction:column;gap:0}
-.card{display:grid;grid-template-columns:148px 1fr;gap:18px;padding:18px 0;
-  border-bottom:1px solid var(--line);min-height:142px}
-.card.no-image{grid-template-columns:1fr;min-height:0}
-.thumb{width:148px;height:108px;object-fit:cover;border-radius:6px;background:#eee}
-.card h3{font-size:18px;line-height:1.38;letter-spacing:-.018em;margin:7px 0}
-.card p{font-size:13px;line-height:1.56;color:#4f5863;margin:0}
-.card .meta{color:var(--muted);margin-top:9px}
-.empty{border:1px solid var(--line);padding:18px;color:var(--muted)}
-.footer{border-top:2px solid var(--navy);margin-top:28px;padding-top:14px;
-  color:var(--muted);font-size:11px;line-height:1.55}
-.footer strong{color:var(--ink)}
-@media(max-width:560px){
-  .page{padding:14px 14px 30px}
-  .masthead h1{font-size:27px}
-  .hero-media{height:190px}
-  .hero-body{padding:20px}
-  .hero h2{font-size:24px}
-  .editor-note{margin-left:6px;margin-right:6px;padding:17px}
-  .card{grid-template-columns:96px 1fr;gap:13px;min-height:112px}
-  .card.no-image{grid-template-columns:1fr;min-height:0}
-  .thumb{width:96px;height:82px}
-  .card h3{font-size:16px;margin-top:5px}
-  .link{display:inline-flex;align-items:center;justify-content:center;
-    min-width:24px;min-height:24px}
-}
-@media print{
-  @page{size:A4 portrait;margin:14mm 12mm 16mm}
-  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .page{width:100%;max-width:none;padding:0}
-  .hero,.editor-note,.card{break-inside:avoid;page-break-inside:avoid}
-}
+  :root{
+    --bg:#F2F3F6;
+    --card:#FFFFFF;
+    --ink:#101218;
+    --ink-2:#3A4150;
+    --muted:#777F8D;
+    --faint:#9CA3B0;
+    --line:rgba(16,18,24,.10);
+    --navy:#002C5F;
+    --navy-2:#004B93;
+    --c-invest:#A26B12;
+    --c-corp:#0D9488;
+    --c-tech:#4F46E5;
+    --r-lg:22px;
+    --r-md:16px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,Arial,sans-serif;
+    line-height:1.6;letter-spacing:-.012em;-webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  .page{max-width:680px;margin:0 auto;padding:0 20px 56px;}
+  .masthead{text-align:center;padding:8px 0 10px;}
+  .flow-break{
+    margin:46px auto 40px;max-width:120px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line) 25%,var(--line) 75%,transparent);
+  }
+  .brandmark{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:18px;font-weight:800;letter-spacing:.1em;color:var(--navy);
+    text-transform:uppercase;
+  }
+  .brandmark .sq{display:inline-block;width:14px;height:14px;background:var(--navy);border-radius:4px;}
+  .brandmark .sq2{width:14px;height:14px;border:3px solid var(--navy);border-radius:4px;background:transparent;}
+  .masthead h1{
+    margin:14px 0 10px;font-size:clamp(40px,9vw,58px);font-weight:800;
+    letter-spacing:-.045em;line-height:1.04;color:var(--ink);
+  }
+  .masthead .desc{margin:0;font-size:13.5px;color:var(--ink-2);font-weight:600;}
+  .issue{
+    margin-top:26px;font-size:15px;font-weight:700;color:var(--ink);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .issue .dot{width:4px;height:4px;border-radius:50%;background:var(--faint);}
+  .issue .date{color:var(--muted);font-weight:600;}
+  .sec-label{
+    display:inline-block;
+    font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
+    border:2px solid var(--ink);border-radius:999px;
+    padding:6px 18px;background:var(--card);
+    margin:44px 0 16px;
+  }
+  .intro{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:22px 26px 22px;margin-top:34px;
+    box-shadow:0 10px 28px -20px rgba(16,18,24,.16);
+  }
+  .intro .welcome{
+    position:absolute;left:0;top:1px;
+    display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.06em;
+    color:var(--navy);background:#EAF1FA;border-radius:999px;padding:3px 11px;
+  }
+  .intro .lead{
+    position:relative;padding-left:56px;
+    margin:0 0 16px;font-size:17px;font-weight:700;line-height:1.55;color:var(--ink);letter-spacing:-.02em;
+  }
+  .intro .lead b{color:var(--navy);}
+  .intro .ix-group{
+    border:1px solid var(--line);border-radius:11px;
+    overflow:hidden;background:#FAFBFC;
+  }
+  .intro details.ix{margin:0;background:transparent;}
+  .intro details.ix + details.ix{border-top:1px solid var(--line);}
+  .intro details.ix summary{
+    list-style:none;cursor:pointer;user-select:none;
+    display:flex;align-items:center;gap:9px;padding:11px 15px;
+  }
+  .intro details.ix summary::-webkit-details-marker{display:none;}
+  .intro details.ix .ix-tit{
+    font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.02em;flex:none;
+  }
+  .intro details.ix .ix-tag{font-size:12px;font-weight:700;color:var(--muted);}
+  .intro details.ix .ix-plus{margin-left:auto;flex:none;position:relative;width:15px;height:15px;}
+  .intro details.ix .ix-plus::before,
+  .intro details.ix .ix-plus::after{
+    content:"";position:absolute;background:var(--navy);border-radius:2px;
+    top:50%;left:50%;transform:translate(-50%,-50%);
+  }
+  .intro details.ix .ix-plus::before{width:13px;height:2.5px;}
+  .intro details.ix .ix-plus::after{width:2.5px;height:13px;transition:transform .18s ease;}
+  .intro details.ix[open] .ix-plus::after{transform:translate(-50%,-50%) rotate(90deg);opacity:0;}
+  .intro details.ix > p{
+    margin:0;padding:0 15px 13px;font-size:14px;line-height:1.62;color:var(--ink-2);
+  }
+  .hero{
+    position:relative;overflow:hidden;border-radius:var(--r-lg);
+    background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);
+    color:#fff;padding:34px 30px 30px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .hero svg.motif{position:absolute;right:-30px;top:-20px;height:130%;opacity:.5;pointer-events:none;}
+  .hero .hero-week{
+    position:relative;display:inline-block;font-size:12.5px;font-weight:800;color:var(--navy);
+    background:#fff;border-radius:999px;padding:4px 13px;margin-bottom:18px;
+  }
+  .hero h2{
+    position:relative;margin:0;font-size:clamp(25px,5.6vw,33px);font-weight:800;
+    letter-spacing:-.035em;line-height:1.28;
+  }
+  .hero .hero-rule{position:relative;height:1px;background:rgba(255,255,255,.35);margin:22px 0 12px;max-width:340px;}
+  .hero .hero-foot{
+    position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    flex-wrap:wrap;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);
+  }
+  .ednote{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:0 0 var(--r-lg) var(--r-lg);margin-top:-14px;padding:30px 30px 24px;
+    box-shadow:0 10px 28px -18px rgba(16,18,24,.18);
+  }
+  .ednote .ed-k{margin:0 0 12px;font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+  .ednote p{margin:0 0 13px;font-size:17.5px;line-height:1.74;color:var(--ink-2);}
+  .ednote p:last-of-type{margin-bottom:0;}
+  .ednote .ed-sign{margin-top:14px;font-size:13px;font-weight:700;color:var(--muted);text-align:right;}
+  .card{
+    display:grid;grid-template-columns:128px 1fr;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+    overflow:hidden;margin-bottom:12px;
+    box-shadow:0 1px 2px rgba(16,18,24,.03),0 10px 24px -18px rgba(16,18,24,.14);
+  }
+  .thumb{position:relative;min-height:128px;background:#1a1a2e;overflow:hidden;}
+  .thumb svg{position:absolute;inset:0;width:100%;height:100%;}
+  .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .card-body{padding:16px 18px 14px;min-width:0;}
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;
+    letter-spacing:.02em;color:var(--cat);background:var(--tint);
+    border-radius:999px;padding:3px 10px;margin-bottom:8px;
+  }
+  .chip .d{width:5px;height:5px;border-radius:50%;background:var(--cat);}
+  .card h3{
+    margin:0 0 8px;font-size:18.5px;font-weight:800;letter-spacing:-.025em;
+    line-height:1.38;color:var(--ink);
+  }
+  .card .sum{margin:0;font-size:15.5px;line-height:1.62;color:var(--ink-2);}
+  .card .sum b{font-weight:700;color:var(--ink);}
+  details.insight{margin-top:10px;border-top:1px dashed var(--line);}
+  details.insight summary{
+    list-style:none;cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;
+    padding:9px 0 2px;font-size:12.5px;font-weight:800;color:var(--cat);
+  }
+  details.insight summary::-webkit-details-marker{display:none;}
+  details.insight summary .chev{
+    width:7px;height:7px;border-right:2px solid var(--cat);border-bottom:2px solid var(--cat);
+    transform:rotate(45deg);transition:transform .16s ease;opacity:.75;margin-top:-2px;
+  }
+  details.insight[open] summary .chev{transform:rotate(-135deg);}
+  details.insight p{
+    margin:6px 0 2px;font-size:13.5px;line-height:1.62;color:var(--ink-2);
+    background:var(--tint);border-radius:10px;padding:10px 13px;
+  }
+  details.insight p b{color:var(--ink);font-weight:700;}
+  .src{
+    margin-top:10px;font-size:11.5px;color:var(--faint);font-weight:600;
+    display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
+  }
+  .src a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);}
+  .src a:hover{color:var(--ink);border-color:var(--ink);}
+  .src .dt{color:var(--faint);font-weight:500;margin-left:3px;}
+  .hero-detail{margin-top:18px;border-top:1px solid var(--line);padding-top:16px;}
+  .hero-detail .sum{margin:0;font-size:15px;line-height:1.7;color:var(--ink-2);}
+  .hero-detail .sum b{font-weight:700;color:var(--ink);}
+  .taxo{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:16px 18px;display:grid;gap:8px;
+  }
+  .taxo .t-row{display:flex;gap:10px;align-items:baseline;font-size:13px;}
+  .taxo .t-name{flex:none;width:84px;font-weight:800;color:var(--ink);display:inline-flex;align-items:center;gap:6px;}
+  .taxo .t-dot{width:7px;height:7px;border-radius:50%;flex:none;}
+  .taxo .t-desc{color:var(--muted);font-weight:500;}
+  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:22px;text-align:center;}
+  footer .pub{font-size:13.5px;font-weight:800;color:var(--ink-2);margin:0 0 8px;}
+  footer .note{font-size:12px;color:var(--muted);line-height:1.8;margin:0;}
+  footer .meta-line{margin-top:14px;font-size:11px;color:var(--faint);letter-spacing:.05em;}
+  @media (max-width:560px){
+    .page{padding:0 14px 44px;}
+    .card{grid-template-columns:96px 1fr;}
+    .thumb{min-height:96px;}
+    .hero{padding:26px 20px 24px;}
+    .ednote{padding:24px 20px 20px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  @media print{
+    body{background:#fff;}
+    .page{max-width:none;padding:0;}
+    .card,.hero,.ednote{break-inside:avoid;page-break-inside:avoid;box-shadow:none;}
+    details.insight summary .chev{display:none;}
+  }
 </style>
 </head>
 <body>
-<main class="page" data-edition-type="daily" data-edition-key="{{EDITION_KEY}}">
-  <header class="masthead">
-    <span class="brand">HDEC AI DAILY BRIEF</span>
-    <h1>오늘의 AI 경영 브리프</h1>
-    <div class="issue">{{EDITION_LABEL}} · {{COVERAGE_LABEL}}</div>
-  </header>
-  {{HEADLINE_HTML}}
-  <aside class="editor-note" aria-labelledby="editor-summary-title">
-    <h3 id="editor-summary-title">Editor's Summary</h3>
-    <ul>{{EDITOR_SUMMARY_HTML}}</ul>
-  </aside>
-  <section aria-labelledby="articles-title">
-    <h2 class="section-title" id="articles-title">주요 기사</h2>
-    <div class="articles">{{ARTICLE_CARDS_HTML}}</div>
+<div class="page" data-edition-type="daily" data-edition-key="{{EDITION_KEY}}" style="max-width:680px;margin:0 auto;padding:0 20px 56px;font-family:'Pretendard Variable',Pretendard,'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',system-ui,Arial,sans-serif;color:#101218;line-height:1.6;">
+  <section class="intro">
+    <p class="lead" style="margin:0 0 16px 0;"><span class="welcome">안내</span>AI 산업의 주요 동향을 선별·분석하여 전해 드리는<br /><b>『HDEC AI Daily Brief』</b>입니다.</p>
+    <div style="height:4px;line-height:1px;font-size:1px;">&nbsp;</div>
+    <div class="ix-group" style="border:1px solid rgba(16,18,24,.10);border-radius:11px;overflow:hidden;background:#FAFBFC;">
+      <details class="ix" style="background:transparent;">
+        <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:11px 15px;">
+          <span style="font-size:15px;font-weight:800;color:#101218;letter-spacing:-.02em;">Daily Brief</span>
+          <span style="font-size:12px;font-weight:700;color:#777F8D;">매일 오전 정기 발행</span>
+          <span aria-hidden="true" style="margin-left:auto;font-size:20px;font-weight:700;color:#002C5F;line-height:1;">+</span>
+        </summary>
+        <p style="margin:0;padding:0 15px 13px;font-size:14px;line-height:1.62;color:#3A4150;">전일 07:00부터 당일 06:40 KST까지 확인된 주요 AI 정책, 기업 동향, 핵심 기술·투자 이슈를 선별해 핵심만 정리합니다.</p>
+      </details>
+      <div style="border-top:1px solid rgba(16,18,24,.10);height:0;line-height:0;font-size:0;">&nbsp;</div>
+      <details class="ix" style="background:transparent;">
+        <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:11px 15px;">
+          <span style="font-size:15px;font-weight:800;color:#101218;letter-spacing:-.02em;">Coverage</span>
+          <span style="font-size:12px;font-weight:700;color:#777F8D;">{{COVERAGE_LABEL}}</span>
+          <span aria-hidden="true" style="margin-left:auto;font-size:20px;font-weight:700;color:#002C5F;line-height:1;">+</span>
+        </summary>
+        <p style="margin:0;padding:0 15px 13px;font-size:14px;line-height:1.62;color:#3A4150;">공개 기사 메타데이터와 제공된 요약만 사용하며, 각 기사 원문은 표시된 링크에서 확인할 수 있습니다.</p>
+      </details>
+    </div>
   </section>
-  <footer class="footer">
-    <strong>발행 기준</strong> {{EDITION_LABEL}} KST 실행일 기준<br>
-    <strong>Coverage</strong> {{COVERAGE_LABEL}} (양 끝 시각 포함)<br>
-    공개 기사 메타데이터와 제공된 요약만 사용했으며 원문은 각 링크에서 확인할 수 있습니다.
+  <div style="height:46px;line-height:1px;font-size:1px;">&nbsp;</div>
+  <hr style="border:none;border-top:1px solid #DDE1E8;max-width:120px;margin:0 auto;" />
+  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
+  <header class="masthead" style="text-align:center;padding:0;">
+    <div class="brandmark" style="display:inline-block;background:#002C5F;color:#fff;padding:10px 26px;border-radius:999px;font-size:22px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;">HDEC AI</div>
+    <h1 style="margin:14px 0 10px;font-size:45px;font-weight:800;letter-spacing:-.035em;line-height:1.1;color:#101218;">Daily Brief</h1>
+    <p class="desc" style="margin:0;font-size:13.5px;color:#3A4150;font-weight:600;">AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p>
+    <div class="issue" style="margin-top:22px;font-size:15px;font-weight:700;color:#101218;display:inline-flex;align-items:center;gap:10px;">{{EDITION_LABEL}}</div>
+  </header>
+  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
+  <div class="sec-label" style="display:inline-block;font-size:15px;font-weight:800;color:#101218;border:2px solid #101218;border-radius:999px;padding:6px 18px;background:#fff;margin:0 0 16px;">오늘의 헤드라인</div>
+  {{HEADLINE_HTML}}
+  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
+  <div class="sec-label" style="display:inline-block;font-size:15px;font-weight:800;color:#101218;border:2px solid #101218;border-radius:999px;padding:6px 18px;background:#fff;margin:0 0 16px;">오늘의 브리핑</div>
+  {{ARTICLE_CARDS_HTML}}
+  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
+  <div class="sec-label" style="display:inline-block;font-size:15px;font-weight:800;color:#101218;border:2px solid #101218;border-radius:999px;padding:6px 18px;background:#fff;margin:0 0 16px;">정보 분류 기준</div>
+  <div class="taxo" style="background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;padding:16px 18px;">
+    <div class="t-row" style="display:flex;gap:10px;align-items:baseline;font-size:13px;margin:0 0 8px;">
+      <span class="t-name" style="width:84px;flex:none;font-weight:800;color:#101218;"><span style="color:#A26B12;font-size:12px;margin-right:6px;">●</span>투자·산업</span>
+      <span class="t-desc" style="color:#777F8D;font-weight:500;">자본과 인프라의 흐름 — 대규모 투자, 시장 재편, 정책·글로벌 동향</span>
+    </div>
+    <div class="t-row" style="display:flex;gap:10px;align-items:baseline;font-size:13px;margin:0 0 8px;">
+      <span class="t-name" style="width:84px;flex:none;font-weight:800;color:#101218;"><span style="color:#0D9488;font-size:12px;margin-right:6px;">●</span>기업동향</span>
+      <span class="t-desc" style="color:#777F8D;font-weight:500;">경쟁사 및 선도 기업의 AI 도입·전환 전략과 움직임</span>
+    </div>
+    <div class="t-row" style="display:flex;gap:10px;align-items:baseline;font-size:13px;">
+      <span class="t-name" style="width:84px;flex:none;font-weight:800;color:#101218;"><span style="color:#4F46E5;font-size:12px;margin-right:6px;">●</span>기술정보</span>
+      <span class="t-desc" style="color:#777F8D;font-weight:500;">신규 AI 모델·제품·기술의 등장과 영향</span>
+    </div>
+  </div>
+  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
+  <footer style="border-top:1px solid rgba(16,18,24,.10);padding-top:22px;text-align:center;">
+    <p class="pub">발행 — 워크이노베이션센터 | AI디자인랩</p>
+    <p class="note">본 브리핑은 주요 외신 및 국내 언론, 공신력 있는 전문지 등의 외부 보도를 중심으로 요약한 자료로, 세부 내용은 원문 기준입니다.</p>
+    <div class="meta-line">HDEC AI · DAILY BRIEF · {{EDITION_LABEL}} · {{COVERAGE_LABEL}}</div>
   </footer>
-</main>
+</div>
+<script>
+  (function(){
+    var opened = [];
+    window.addEventListener('beforeprint', function(){
+      opened = [];
+      document.querySelectorAll('details.insight:not([open])').forEach(function(d){
+        d.setAttribute('open',''); opened.push(d);
+      });
+    });
+    window.addEventListener('afterprint', function(){
+      opened.forEach(function(d){ d.removeAttribute('open'); });
+      opened = [];
+    });
+  })();
+</script>
 </body>
 </html>
