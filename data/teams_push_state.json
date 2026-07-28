@@ -20,6 +20,16 @@
       "sent_at": "2026-07-27T11:52:46+09:00",
       "source": "팍스경제TV"
     },
+    "naver_151671ced81a": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
     "naver_2f048683f51e": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
       "delivery_id": "teams_ai_push:87cc2aaf987c",
@@ -40,6 +50,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "naver_3c33a822cb14": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "naver_42c47e367b43": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
       "delivery_id": "teams_ai_push:755189289545",
@@ -49,6 +69,16 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "naver_6be55cc051bb": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "naver_814cf01a1212": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
@@ -69,6 +99,46 @@
       "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
+    },
+    "naver_97c426517b14": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
+    },
+    "naver_a382f87471c0": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
+    },
+    "naver_a68cae770152": {
+      "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
+      "delivery_id": "teams_ai_push:b8e9ea2f9b11",
+      "first_sent_at": "2026-07-29T07:14:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
+      "sent_at": "2026-07-29T07:14:49+09:00",
+      "source": "더벨"
+    },
+    "naver_cb7b45a17e78": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
     },
     "naver_e68bd976b111": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
@@ -112,6 +182,26 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "title:oci홀딩스14조증설승부수차입5000억시": {
+      "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
+      "delivery_id": "teams_ai_push:b8e9ea2f9b11",
+      "first_sent_at": "2026-07-29T07:14:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
+      "sent_at": "2026-07-29T07:14:49+09:00",
+      "source": "더벨"
+    },
+    "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
+    },
     "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
       "delivery_id": "teams_ai_push:87cc2aaf987c",
@@ -121,6 +211,26 @@
       "material_signature": "b03292c94f1aebbc87312bd672b19070bab22382231f8d7d3c7325b9a06140ee",
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
+    },
+    "title:대미투자1호로가스복합발전소건설사업유력": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
+    "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
     },
     "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -162,6 +272,26 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
+    },
+    "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "title:제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -171,6 +301,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "title:초과이윤분배우리가착각하는것들": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "title:한국대체투자자산운용가평데이터센터개발사업추진": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
@@ -203,8 +343,18 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-28T15:45:43+09:00",
+  "last_successful_send_at": "2026-07-29T07:14:49+09:00",
   "normalized_urls": {
+    "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
+    },
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
@@ -235,6 +385,16 @@
       "sent_at": "2026-07-28T13:20:48+09:00",
       "source": "cbci.co.kr"
     },
+    "https://www.chosun.com/economy/industry-company/2026/07/29/5SURFMPPBNFAVPBARIHT24F6YY": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
+    },
     "https://www.chosun.com/economy/tech_it/2026/07/28/V52UFHPU6RFDBLVKDRRRWSPU7I": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
       "delivery_id": "teams_ai_push:87cc2aaf987c",
@@ -254,6 +414,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "https://www.energydaily.co.kr/news/articleView.html?idxno=201813": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
     },
     "https://www.etnews.com/20260728000172": {
       "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
@@ -275,6 +445,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "https://www.hankookilbo.com/news/article/A2026072814260005038?did=NA": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
+    },
     "https://www.hankyung.com/article/202607278751i": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -284,6 +464,26 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
+    "https://www.sedaily.com/article/20072947": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "https://www.sidae.com/article/2026072814463436475": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
@@ -304,6 +504,16 @@
       "material_signature": "a12018f13487cd8a3ed2c573d993c13bf2dbdd90b72a0f6c90244a74c1ad6302",
       "sent_at": "2026-07-28T07:45:33+09:00",
       "source": "더벨"
+    },
+    "https://www.thebell.co.kr/free/content/ArticleView.asp?key=202607271334497160109071": {
+      "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
+      "delivery_id": "teams_ai_push:b8e9ea2f9b11",
+      "first_sent_at": "2026-07-29T07:14:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
+      "sent_at": "2026-07-29T07:14:49+09:00",
+      "source": "더벨"
     }
   },
   "title_fingerprints": {
@@ -317,6 +527,26 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "oci홀딩스14조증설승부수차입5000억시": {
+      "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
+      "delivery_id": "teams_ai_push:b8e9ea2f9b11",
+      "first_sent_at": "2026-07-29T07:14:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
+      "sent_at": "2026-07-29T07:14:49+09:00",
+      "source": "더벨"
+    },
+    "건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
+      "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
+      "delivery_id": "teams_ai_push:96dd8c741197",
+      "first_sent_at": "2026-07-29T04:59:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
+      "sent_at": "2026-07-29T04:59:02+09:00",
+      "source": "한국일보"
+    },
     "네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
       "delivery_id": "teams_ai_push:87cc2aaf987c",
@@ -326,6 +556,26 @@
       "material_signature": "b03292c94f1aebbc87312bd672b19070bab22382231f8d7d3c7325b9a06140ee",
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
+    },
+    "대미투자1호로가스복합발전소건설사업유력": {
+      "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
+      "delivery_id": "teams_ai_push:3c2a4a528552",
+      "first_sent_at": "2026-07-28T20:34:00+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
+      "sent_at": "2026-07-28T20:34:00+09:00",
+      "source": "newsworks.co.kr"
+    },
+    "두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
+      "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
+      "delivery_id": "teams_ai_push:2d85b2b3d756",
+      "first_sent_at": "2026-07-29T00:36:38+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
+      "sent_at": "2026-07-29T00:36:38+09:00",
+      "source": "biztribune.co.kr"
     },
     "메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -367,6 +617,26 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
+      "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
+      "delivery_id": "teams_ai_push:3d5292cb1db5",
+      "first_sent_at": "2026-07-29T00:36:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
+      "sent_at": "2026-07-29T00:36:39+09:00",
+      "source": "조선일보"
+    },
+    "전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -376,6 +646,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "초과이윤분배우리가착각하는것들": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "한국대체투자자산운용가평데이터센터개발사업추진": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
