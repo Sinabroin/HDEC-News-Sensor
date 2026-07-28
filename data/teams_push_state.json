@@ -40,6 +40,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "naver_3c33a822cb14": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "naver_42c47e367b43": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
       "delivery_id": "teams_ai_push:755189289545",
@@ -49,6 +59,16 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "naver_6be55cc051bb": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "naver_814cf01a1212": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
@@ -162,6 +182,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "title:제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -171,6 +201,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "title:초과이윤분배우리가착각하는것들": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "title:한국대체투자자산운용가평데이터센터개발사업추진": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
@@ -203,7 +243,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-28T15:45:43+09:00",
+  "last_successful_send_at": "2026-07-28T18:27:42+09:00",
   "normalized_urls": {
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -255,6 +295,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "https://www.energydaily.co.kr/news/articleView.html?idxno=201813": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "https://www.etnews.com/20260728000172": {
       "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
       "delivery_id": "teams_ai_push:99cd09574b34",
@@ -284,6 +334,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "https://www.sedaily.com/article/20072947": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "https://www.sidae.com/article/2026072814463436475": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
@@ -367,6 +427,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
+      "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
+      "delivery_id": "teams_ai_push:9f4f184e2db4",
+      "first_sent_at": "2026-07-28T18:27:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
+      "sent_at": "2026-07-28T18:27:41+09:00",
+      "source": "energydaily.co.kr"
+    },
     "제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -376,6 +446,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "초과이윤분배우리가착각하는것들": {
+      "cluster_key": "title:초과이윤분배우리가착각하는것들",
+      "delivery_id": "teams_ai_push:449508c2ca7a",
+      "first_sent_at": "2026-07-28T18:27:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
+      "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
     },
     "한국대체투자자산운용가평데이터센터개발사업추진": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
