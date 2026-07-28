@@ -50,6 +50,16 @@
       "sent_at": "2026-07-28T07:45:33+09:00",
       "source": "더벨"
     },
+    "naver_8c76fbc641f3": {
+      "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
+      "delivery_id": "teams_ai_push:99cd09574b34",
+      "first_sent_at": "2026-07-28T13:20:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
+      "sent_at": "2026-07-28T13:20:47+09:00",
+      "source": "전자신문"
+    },
     "naver_e68bd976b111": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -69,6 +79,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "naver_fc6506fd7d02": {
+      "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
+      "delivery_id": "teams_ai_push:9d73b7a8f012",
+      "first_sent_at": "2026-07-28T13:20:48+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
+      "sent_at": "2026-07-28T13:20:48+09:00",
+      "source": "cbci.co.kr"
     }
   },
   "cluster_keys": {
@@ -101,6 +121,16 @@
       "material_signature": "3d9a7e3fca3ae48a9c95a62360d88a2bfd8035bb529b8c3f22145d38c75575a0",
       "sent_at": "2026-07-27T11:52:46+09:00",
       "source": "팍스경제TV"
+    },
+    "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
+      "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
+      "delivery_id": "teams_ai_push:9d73b7a8f012",
+      "first_sent_at": "2026-07-28T13:20:48+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
+      "sent_at": "2026-07-28T13:20:48+09:00",
+      "source": "cbci.co.kr"
     },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
@@ -141,9 +171,19 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "title:호남반도체산단전력망구축본격화기후부실무협의체출범": {
+      "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
+      "delivery_id": "teams_ai_push:99cd09574b34",
+      "first_sent_at": "2026-07-28T13:20:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
+      "sent_at": "2026-07-28T13:20:47+09:00",
+      "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-28T08:47:17+09:00",
+  "last_successful_send_at": "2026-07-28T13:20:48+09:00",
   "normalized_urls": {
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -165,6 +205,16 @@
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
     },
+    "https://www.cbci.co.kr/news/articleView.html?idxno=592459": {
+      "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
+      "delivery_id": "teams_ai_push:9d73b7a8f012",
+      "first_sent_at": "2026-07-28T13:20:48+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
+      "sent_at": "2026-07-28T13:20:48+09:00",
+      "source": "cbci.co.kr"
+    },
     "https://www.chosun.com/economy/tech_it/2026/07/28/V52UFHPU6RFDBLVKDRRRWSPU7I": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
       "delivery_id": "teams_ai_push:87cc2aaf987c",
@@ -184,6 +234,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "https://www.etnews.com/20260728000172": {
+      "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
+      "delivery_id": "teams_ai_push:99cd09574b34",
+      "first_sent_at": "2026-07-28T13:20:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
+      "sent_at": "2026-07-28T13:20:47+09:00",
+      "source": "전자신문"
     },
     "https://www.etoday.co.kr/news/view/2608068": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
@@ -247,6 +307,16 @@
       "sent_at": "2026-07-27T11:52:46+09:00",
       "source": "팍스경제TV"
     },
+    "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
+      "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
+      "delivery_id": "teams_ai_push:9d73b7a8f012",
+      "first_sent_at": "2026-07-28T13:20:48+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
+      "sent_at": "2026-07-28T13:20:48+09:00",
+      "source": "cbci.co.kr"
+    },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -286,6 +356,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "호남반도체산단전력망구축본격화기후부실무협의체출범": {
+      "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
+      "delivery_id": "teams_ai_push:99cd09574b34",
+      "first_sent_at": "2026-07-28T13:20:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
+      "sent_at": "2026-07-28T13:20:47+09:00",
+      "source": "전자신문"
     }
   },
   "version": 1
