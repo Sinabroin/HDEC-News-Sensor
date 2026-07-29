@@ -20,6 +20,16 @@
       "sent_at": "2026-07-27T11:52:46+09:00",
       "source": "팍스경제TV"
     },
+    "naver_0127ac5224ae": {
+      "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
+      "delivery_id": "teams_ai_push:5b1d4d0e1222",
+      "first_sent_at": "2026-07-29T15:17:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
+      "sent_at": "2026-07-29T15:17:41+09:00",
+      "source": "newsinside.kr"
+    },
     "naver_151671ced81a": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
       "delivery_id": "teams_ai_push:3c2a4a528552",
@@ -180,6 +190,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "naver_fa066dcb8cd4": {
+      "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
+      "delivery_id": "teams_ai_push:f96cb62ee902",
+      "first_sent_at": "2026-07-29T15:17:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fdf59a0e50f3e7ff8c20c49b77d745e2287f3cc77f4b550c7eadfcc984447b7b",
+      "sent_at": "2026-07-29T15:17:40+09:00",
+      "source": "cbci.co.kr"
+    },
     "naver_fc6506fd7d02": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
       "delivery_id": "teams_ai_push:9d73b7a8f012",
@@ -222,6 +242,16 @@
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
     },
+    "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
+      "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
+      "delivery_id": "teams_ai_push:f96cb62ee902",
+      "first_sent_at": "2026-07-29T15:17:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fdf59a0e50f3e7ff8c20c49b77d745e2287f3cc77f4b550c7eadfcc984447b7b",
+      "sent_at": "2026-07-29T15:17:40+09:00",
+      "source": "cbci.co.kr"
+    },
     "title:oci홀딩스14조증설승부수차입5000억시": {
       "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
       "delivery_id": "teams_ai_push:b8e9ea2f9b11",
@@ -231,6 +261,16 @@
       "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
+    },
+    "title:sk이노베트남에lngsmr단계별협력방안제시": {
+      "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
+      "delivery_id": "teams_ai_push:5b1d4d0e1222",
+      "first_sent_at": "2026-07-29T15:17:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
+      "sent_at": "2026-07-29T15:17:41+09:00",
+      "source": "newsinside.kr"
     },
     "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
@@ -403,7 +443,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-29T12:34:37+09:00",
+  "last_successful_send_at": "2026-07-29T15:17:41+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -473,6 +513,16 @@
       "last_material_update_at": null,
       "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
       "sent_at": "2026-07-28T13:20:48+09:00",
+      "source": "cbci.co.kr"
+    },
+    "https://www.cbci.co.kr/news/articleView.html?idxno=592874": {
+      "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
+      "delivery_id": "teams_ai_push:f96cb62ee902",
+      "first_sent_at": "2026-07-29T15:17:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fdf59a0e50f3e7ff8c20c49b77d745e2287f3cc77f4b550c7eadfcc984447b7b",
+      "sent_at": "2026-07-29T15:17:40+09:00",
       "source": "cbci.co.kr"
     },
     "https://www.chosun.com/economy/industry-company/2026/07/29/5SURFMPPBNFAVPBARIHT24F6YY": {
@@ -555,6 +605,16 @@
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
     },
+    "https://www.newsinside.kr/news/articleView.html?idxno=4875153": {
+      "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
+      "delivery_id": "teams_ai_push:5b1d4d0e1222",
+      "first_sent_at": "2026-07-29T15:17:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
+      "sent_at": "2026-07-29T15:17:41+09:00",
+      "source": "newsinside.kr"
+    },
     "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
       "delivery_id": "teams_ai_push:3c2a4a528552",
@@ -627,6 +687,16 @@
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
     },
+    "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
+      "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
+      "delivery_id": "teams_ai_push:f96cb62ee902",
+      "first_sent_at": "2026-07-29T15:17:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fdf59a0e50f3e7ff8c20c49b77d745e2287f3cc77f4b550c7eadfcc984447b7b",
+      "sent_at": "2026-07-29T15:17:40+09:00",
+      "source": "cbci.co.kr"
+    },
     "oci홀딩스14조증설승부수차입5000억시": {
       "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
       "delivery_id": "teams_ai_push:b8e9ea2f9b11",
@@ -636,6 +706,16 @@
       "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
+    },
+    "sk이노베트남에lngsmr단계별협력방안제시": {
+      "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
+      "delivery_id": "teams_ai_push:5b1d4d0e1222",
+      "first_sent_at": "2026-07-29T15:17:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
+      "sent_at": "2026-07-29T15:17:41+09:00",
+      "source": "newsinside.kr"
     },
     "건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
