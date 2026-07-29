@@ -250,6 +250,16 @@
       "sent_at": "2026-07-30T01:46:09+09:00",
       "source": "slownews.kr"
     },
+    "naver_debbf8d3a079": {
+      "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
+      "delivery_id": "teams_ai_push:f20639b627fa",
+      "first_sent_at": "2026-07-30T07:11:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffaca4dce56d58e2c8c6c8592caf2aa7243cd332524b579255753a5fc1229283",
+      "sent_at": "2026-07-30T07:11:03+09:00",
+      "source": "뉴스1"
+    },
     "naver_e68bd976b111": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -442,6 +452,16 @@
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
     },
+    "title:멈추지않는공항삼성물산대만하늘길의심장을짓다": {
+      "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
+      "delivery_id": "teams_ai_push:f20639b627fa",
+      "first_sent_at": "2026-07-30T07:11:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffaca4dce56d58e2c8c6c8592caf2aa7243cd332524b579255753a5fc1229283",
+      "sent_at": "2026-07-30T07:11:03+09:00",
+      "source": "뉴스1"
+    },
     "title:메가프로젝트발전소짓는것보다더시급한게있다": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
       "delivery_id": "teams_ai_push:804a3484809f",
@@ -623,7 +643,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-30T06:11:10+09:00",
+  "last_successful_send_at": "2026-07-30T07:11:03+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -844,6 +864,16 @@
       "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
       "sent_at": "2026-07-30T03:58:35+09:00",
       "source": "중앙일보"
+    },
+    "https://www.news1.kr/realestate/general/6242752": {
+      "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
+      "delivery_id": "teams_ai_push:f20639b627fa",
+      "first_sent_at": "2026-07-30T07:11:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffaca4dce56d58e2c8c6c8592caf2aa7243cd332524b579255753a5fc1229283",
+      "sent_at": "2026-07-30T07:11:03+09:00",
+      "source": "뉴스1"
     },
     "https://www.newsinside.kr/news/articleView.html?idxno=4875153": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
@@ -1066,6 +1096,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "멈추지않는공항삼성물산대만하늘길의심장을짓다": {
+      "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
+      "delivery_id": "teams_ai_push:f20639b627fa",
+      "first_sent_at": "2026-07-30T07:11:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffaca4dce56d58e2c8c6c8592caf2aa7243cd332524b579255753a5fc1229283",
+      "sent_at": "2026-07-30T07:11:03+09:00",
+      "source": "뉴스1"
     },
     "메가프로젝트발전소짓는것보다더시급한게있다": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
