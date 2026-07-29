@@ -30,6 +30,16 @@
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
     },
+    "naver_03839d5b87dc": {
+      "cluster_key": "title:대미투자1호사업아이템원전서가스복합발전으로선회한이유",
+      "delivery_id": "teams_ai_push:e09e6344ac64",
+      "first_sent_at": "2026-07-29T18:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "16f717c4c51db605cef60929687b8591b4dad3a66ef824a9c509c7d4d31d3ef6",
+      "sent_at": "2026-07-29T18:11:51+09:00",
+      "source": "daily.hankooki.com"
+    },
     "naver_151671ced81a": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
       "delivery_id": "teams_ai_push:3c2a4a528552",
@@ -39,6 +49,16 @@
       "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
       "sent_at": "2026-07-28T20:34:00+09:00",
       "source": "newsworks.co.kr"
+    },
+    "naver_23375d9d3e4b": {
+      "cluster_key": "title:sk이노베이션베트남에lngsmr협력방안제시",
+      "delivery_id": "teams_ai_push:3e9e58dc129f",
+      "first_sent_at": "2026-07-29T18:11:48+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "7cb7190d67ec1a50d70fa6e5bf46d3a279d01b78360a5e8a0f034e65abda5699",
+      "sent_at": "2026-07-29T18:11:48+09:00",
+      "source": "srtimes.kr"
     },
     "naver_2f048683f51e": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
@@ -119,6 +139,16 @@
       "material_signature": "a12018f13487cd8a3ed2c573d993c13bf2dbdd90b72a0f6c90244a74c1ad6302",
       "sent_at": "2026-07-28T07:45:33+09:00",
       "source": "더벨"
+    },
+    "naver_855113b4672c": {
+      "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
+      "delivery_id": "teams_ai_push:e3cce31ce214",
+      "first_sent_at": "2026-07-29T18:11:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3bb791bad7b4df4c00891906c17bc154311e637f1757b6e39a01fea6e6917707",
+      "sent_at": "2026-07-29T18:11:49+09:00",
+      "source": "비즈워치"
     },
     "naver_8c76fbc641f3": {
       "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
@@ -262,6 +292,16 @@
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
     },
+    "title:sk이노베이션베트남에lngsmr협력방안제시": {
+      "cluster_key": "title:sk이노베이션베트남에lngsmr협력방안제시",
+      "delivery_id": "teams_ai_push:3e9e58dc129f",
+      "first_sent_at": "2026-07-29T18:11:48+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "7cb7190d67ec1a50d70fa6e5bf46d3a279d01b78360a5e8a0f034e65abda5699",
+      "sent_at": "2026-07-29T18:11:48+09:00",
+      "source": "srtimes.kr"
+    },
     "title:sk이노베트남에lngsmr단계별협력방안제시": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
       "delivery_id": "teams_ai_push:5b1d4d0e1222",
@@ -301,6 +341,16 @@
       "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
       "sent_at": "2026-07-28T20:34:00+09:00",
       "source": "newsworks.co.kr"
+    },
+    "title:대미투자1호사업아이템원전서가스복합발전으로선회한이유": {
+      "cluster_key": "title:대미투자1호사업아이템원전서가스복합발전으로선회한이유",
+      "delivery_id": "teams_ai_push:e09e6344ac64",
+      "first_sent_at": "2026-07-29T18:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "16f717c4c51db605cef60929687b8591b4dad3a66ef824a9c509c7d4d31d3ef6",
+      "sent_at": "2026-07-29T18:11:51+09:00",
+      "source": "daily.hankooki.com"
     },
     "title:대미투자1호텍사스가스복합발전유력수익성고려": {
       "cluster_key": "title:대미투자1호텍사스가스복합발전유력수익성고려",
@@ -392,6 +442,16 @@
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
     },
+    "title:청사진에서실행으로네이버sktai인프라베팅본격화": {
+      "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
+      "delivery_id": "teams_ai_push:e3cce31ce214",
+      "first_sent_at": "2026-07-29T18:11:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3bb791bad7b4df4c00891906c17bc154311e637f1757b6e39a01fea6e6917707",
+      "sent_at": "2026-07-29T18:11:49+09:00",
+      "source": "비즈워치"
+    },
     "title:초과이윤분배우리가착각하는것들": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
       "delivery_id": "teams_ai_push:449508c2ca7a",
@@ -443,7 +503,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-29T15:17:41+09:00",
+  "last_successful_send_at": "2026-07-29T18:11:51+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -454,6 +514,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "http://www.srtimes.kr/news/articleView.html?idxno=208652": {
+      "cluster_key": "title:sk이노베이션베트남에lngsmr협력방안제시",
+      "delivery_id": "teams_ai_push:3e9e58dc129f",
+      "first_sent_at": "2026-07-29T18:11:48+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "7cb7190d67ec1a50d70fa6e5bf46d3a279d01b78360a5e8a0f034e65abda5699",
+      "sent_at": "2026-07-29T18:11:48+09:00",
+      "source": "srtimes.kr"
     },
     "https://biz.heraldcorp.com/article/10823717": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
@@ -474,6 +544,26 @@
       "material_signature": "dc1cc50135605ccf4d26192983227eb778f72d4f70b1c82211fda28ea2532948",
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
+    },
+    "https://daily.hankooki.com/news/articleView.html?idxno=1390580": {
+      "cluster_key": "title:대미투자1호사업아이템원전서가스복합발전으로선회한이유",
+      "delivery_id": "teams_ai_push:e09e6344ac64",
+      "first_sent_at": "2026-07-29T18:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "16f717c4c51db605cef60929687b8591b4dad3a66ef824a9c509c7d4d31d3ef6",
+      "sent_at": "2026-07-29T18:11:51+09:00",
+      "source": "daily.hankooki.com"
+    },
+    "https://news.bizwatch.co.kr/article/mobile/2026/07/28/0025": {
+      "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
+      "delivery_id": "teams_ai_push:e3cce31ce214",
+      "first_sent_at": "2026-07-29T18:11:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3bb791bad7b4df4c00891906c17bc154311e637f1757b6e39a01fea6e6917707",
+      "sent_at": "2026-07-29T18:11:49+09:00",
+      "source": "비즈워치"
     },
     "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFB4S1pZSUQ0cWpWYUl6TnBoWDJMMmZCeW5oTjZ0c3oyUjMxV2pSajlRSmxrdGZoWDlaX1U1QWtxMXJyY2NsdURGdl80Ql84QlhuYUpRYWRJUllnY1hVZmJGQXV6NXZ4blU?oc=5": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
@@ -707,6 +797,16 @@
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
     },
+    "sk이노베이션베트남에lngsmr협력방안제시": {
+      "cluster_key": "title:sk이노베이션베트남에lngsmr협력방안제시",
+      "delivery_id": "teams_ai_push:3e9e58dc129f",
+      "first_sent_at": "2026-07-29T18:11:48+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "7cb7190d67ec1a50d70fa6e5bf46d3a279d01b78360a5e8a0f034e65abda5699",
+      "sent_at": "2026-07-29T18:11:48+09:00",
+      "source": "srtimes.kr"
+    },
     "sk이노베트남에lngsmr단계별협력방안제시": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
       "delivery_id": "teams_ai_push:5b1d4d0e1222",
@@ -746,6 +846,16 @@
       "material_signature": "0e34c8819483fb5adf5ac890226793f1810c55f4b03423914478577bd75e557e",
       "sent_at": "2026-07-28T20:34:00+09:00",
       "source": "newsworks.co.kr"
+    },
+    "대미투자1호사업아이템원전서가스복합발전으로선회한이유": {
+      "cluster_key": "title:대미투자1호사업아이템원전서가스복합발전으로선회한이유",
+      "delivery_id": "teams_ai_push:e09e6344ac64",
+      "first_sent_at": "2026-07-29T18:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "16f717c4c51db605cef60929687b8591b4dad3a66ef824a9c509c7d4d31d3ef6",
+      "sent_at": "2026-07-29T18:11:51+09:00",
+      "source": "daily.hankooki.com"
     },
     "대미투자1호텍사스가스복합발전유력수익성고려": {
       "cluster_key": "title:대미투자1호텍사스가스복합발전유력수익성고려",
@@ -836,6 +946,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "청사진에서실행으로네이버sktai인프라베팅본격화": {
+      "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
+      "delivery_id": "teams_ai_push:e3cce31ce214",
+      "first_sent_at": "2026-07-29T18:11:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3bb791bad7b4df4c00891906c17bc154311e637f1757b6e39a01fea6e6917707",
+      "sent_at": "2026-07-29T18:11:49+09:00",
+      "source": "비즈워치"
     },
     "초과이윤분배우리가착각하는것들": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
