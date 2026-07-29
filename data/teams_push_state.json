@@ -15,10 +15,10 @@
       "delivery_id": "teams_ai_push:20d94d4644a1",
       "first_sent_at": "2026-07-27T11:52:46+09:00",
       "importance": "top",
-      "last_material_update_at": null,
-      "material_signature": "3d9a7e3fca3ae48a9c95a62360d88a2bfd8035bb529b8c3f22145d38c75575a0",
-      "sent_at": "2026-07-27T11:52:46+09:00",
-      "source": "팍스경제TV"
+      "last_material_update_at": "2026-07-30T01:45:53+09:00",
+      "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
+      "sent_at": "2026-07-30T01:45:53+09:00",
+      "source": "news.google.com"
     },
     "naver_0127ac5224ae": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
@@ -230,6 +230,16 @@
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
     },
+    "naver_cf229d68d44b": {
+      "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
+      "delivery_id": "teams_ai_push:804a3484809f",
+      "first_sent_at": "2026-07-30T01:46:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
+      "sent_at": "2026-07-30T01:46:09+09:00",
+      "source": "slownews.kr"
+    },
     "naver_e68bd976b111": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -412,15 +422,25 @@
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
     },
+    "title:메가프로젝트발전소짓는것보다더시급한게있다": {
+      "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
+      "delivery_id": "teams_ai_push:804a3484809f",
+      "first_sent_at": "2026-07-30T01:46:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
+      "sent_at": "2026-07-30T01:46:09+09:00",
+      "source": "slownews.kr"
+    },
     "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
       "first_sent_at": "2026-07-27T11:52:46+09:00",
       "importance": "top",
-      "last_material_update_at": null,
-      "material_signature": "3d9a7e3fca3ae48a9c95a62360d88a2bfd8035bb529b8c3f22145d38c75575a0",
-      "sent_at": "2026-07-27T11:52:46+09:00",
-      "source": "팍스경제TV"
+      "last_material_update_at": "2026-07-30T01:45:53+09:00",
+      "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
+      "sent_at": "2026-07-30T01:45:53+09:00",
+      "source": "news.google.com"
     },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
@@ -563,7 +583,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-30T00:22:54+09:00",
+  "last_successful_send_at": "2026-07-30T01:46:09+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -630,10 +650,10 @@
       "delivery_id": "teams_ai_push:20d94d4644a1",
       "first_sent_at": "2026-07-27T11:52:46+09:00",
       "importance": "top",
-      "last_material_update_at": null,
-      "material_signature": "3d9a7e3fca3ae48a9c95a62360d88a2bfd8035bb529b8c3f22145d38c75575a0",
-      "sent_at": "2026-07-27T11:52:46+09:00",
-      "source": "팍스경제TV"
+      "last_material_update_at": "2026-07-30T01:45:53+09:00",
+      "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
+      "sent_at": "2026-07-30T01:45:53+09:00",
+      "source": "news.google.com"
     },
     "https://news.google.com/rss/articles/CBMibkFVX3lxTE5lemtpUVFrM1p3TWpjOEpaLW9vTloxWlRHU2ZTbXk1bHV5SUhpcnd6WXUtUGw1Z1RqNUQ0aV9PSzR4ZFVNVmpCUTNwWUpQMWw1TDFiUVp1blpEY1ZnbUo1ZTlfRTNqVVQtOHNUUHRn?oc=5": {
       "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
@@ -644,6 +664,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "https://slownews.kr/163961": {
+      "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
+      "delivery_id": "teams_ai_push:804a3484809f",
+      "first_sent_at": "2026-07-30T01:46:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
+      "sent_at": "2026-07-30T01:46:09+09:00",
+      "source": "slownews.kr"
     },
     "https://www.bloter.net/news/articleView.html?idxno=669160": {
       "cluster_key": "title:5자금고객전력성패가를3대변수",
@@ -977,15 +1007,25 @@
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
     },
+    "메가프로젝트발전소짓는것보다더시급한게있다": {
+      "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
+      "delivery_id": "teams_ai_push:804a3484809f",
+      "first_sent_at": "2026-07-30T01:46:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
+      "sent_at": "2026-07-30T01:46:09+09:00",
+      "source": "slownews.kr"
+    },
     "메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시": {
       "cluster_key": "title:메이사공간ai컨퍼런스주최현대건설롯데건설과건설ai미래제시",
       "delivery_id": "teams_ai_push:20d94d4644a1",
       "first_sent_at": "2026-07-27T11:52:46+09:00",
       "importance": "top",
-      "last_material_update_at": null,
-      "material_signature": "3d9a7e3fca3ae48a9c95a62360d88a2bfd8035bb529b8c3f22145d38c75575a0",
-      "sent_at": "2026-07-27T11:52:46+09:00",
-      "source": "팍스경제TV"
+      "last_material_update_at": "2026-07-30T01:45:53+09:00",
+      "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
+      "sent_at": "2026-07-30T01:45:53+09:00",
+      "source": "news.google.com"
     },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
