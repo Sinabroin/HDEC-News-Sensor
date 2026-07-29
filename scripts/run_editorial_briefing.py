@@ -2,9 +2,9 @@
 """Common orchestrator for Daily and Weekly editorial briefings.
 
 Preview is fully offline and writes outside the repository. Production is split
-into ``--publish`` (collect/render/write dated+latest) and ``--send`` (verify the
-dated public page, send one link-only message, then persist exact-250 state) so
-the workflow can commit/push the publication between those phases.
+into ``--publish`` (collect/render/write dated+latest), ``--claim`` (verify the
+public dated page and durably reserve its delivery), and ``--send`` (require the
+exact durable claim, send one link-only message, then convert exact-250 state).
 """
 
 from __future__ import annotations
@@ -102,6 +102,20 @@ def _require_production_gate() -> None:
     ref = os.environ.get("GITHUB_REF", "").strip()
     if ref != "refs/heads/main":
         raise OrchestratorError("production is main-only")
+
+
+def _github_claim_owner() -> str:
+    components = []
+    for name in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT"):
+        raw = os.environ.get(name)
+        if (
+            raw is None
+            or raw != raw.strip()
+            or re.fullmatch(r"[1-9][0-9]*", raw) is None
+        ):
+            raise OrchestratorError(f"{name} is missing or malformed")
+        components.append(raw)
+    return f"github-run:{components[0]}:attempt:{components[1]}"
 
 
 def collect_live_articles() -> list[dict]:
@@ -407,10 +421,17 @@ def run_publish(
     _require_production_gate()
     key = editorial_briefings.edition_key(edition_type, run_at)
     state = editorial_briefing_state.load_state(edition_type)
-    if editorial_briefing_state.has_success(state, key):
+    if editorial_briefing_state.has_success(state, key) or editorial_briefing_state.has_claim(
+        state, key
+    ):
         _github_output("skipped", "true")
         _github_output("edition", key)
-        print(f"publish_skip edition_type={edition_type} edition={key} reason=already_successful")
+        reason = (
+            "already_successful"
+            if editorial_briefing_state.has_success(state, key)
+            else "already_claimed"
+        )
+        print(f"publish_skip edition_type={edition_type} edition={key} reason={reason}")
         return None
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     edition = editorial_briefings.render_edition(
@@ -528,31 +549,181 @@ def _verify_local_publication(manifest: dict) -> None:
         raise OrchestratorError("local publication edition marker mismatch")
 
 
+def _manifest_identity(manifest: dict) -> dict:
+    return {
+        "edition_key": manifest["edition_key"],
+        "coverage_start": manifest["coverage_start"],
+        "coverage_end": manifest["coverage_end"],
+        "html_sha256": manifest["html_sha256"],
+        "public_url": manifest["public_dated_url"],
+    }
+
+
+def _state_output_path(edition_type: str, path: Path | None) -> str:
+    target = Path(path) if path is not None else editorial_briefing_state.state_path(
+        edition_type
+    )
+    try:
+        return target.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(target.resolve())
+
+
+def _emit_claim_outputs(
+    edition_type: str,
+    edition_key: str,
+    claim_owner: str,
+    *,
+    state_changed: bool,
+    send_authorized: bool,
+    path: Path | None,
+) -> None:
+    _github_output("state_changed", str(state_changed).lower())
+    _github_output("state_path", _state_output_path(edition_type, path))
+    _github_output("send_authorized", str(send_authorized).lower())
+    _github_output("edition", edition_key)
+    _github_output("claim_owner", claim_owner)
+
+
+def run_claim(
+    edition_type: str,
+    *,
+    run_at: datetime,
+    runtime_dir: Path,
+    opener: Callable | None = None,
+    state_path: Path | None = None,
+    publication_timeout_seconds: int = PUBLICATION_TIMEOUT_SECONDS,
+    publication_interval_seconds: int = PUBLICATION_INTERVAL_SECONDS,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> dict | None:
+    _require_production_gate()
+    key = editorial_briefings.edition_key(edition_type, run_at)
+    manifest = _load_runtime_manifest(runtime_dir, edition_type)
+    if manifest["edition_key"] != key:
+        raise OrchestratorError("runtime edition does not match current catch-up edition")
+    _verify_local_publication(manifest)
+    root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
+    dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
+    if manifest["public_dated_url"] != dated_url or manifest["public_latest_url"] != latest_url:
+        raise OrchestratorError("runtime public URL mismatch")
+    current = editorial_briefing_state.load_state(edition_type, path=state_path)
+    existing = current["delivery_claims"].get(key)
+    if editorial_briefing_state.has_success(current, key):
+        claim_owner = _github_claim_owner()
+        _emit_claim_outputs(
+            edition_type,
+            key,
+            claim_owner,
+            state_changed=False,
+            send_authorized=False,
+            path=state_path,
+        )
+        print(
+            f"claim_skip edition_type={edition_type} edition={key} "
+            "reason=already_successful "
+            "send_authorized=false"
+        )
+        return None
+    identity = _manifest_identity(manifest)
+    if existing is not None:
+        claim_owner = _github_claim_owner()
+        if existing["claim_owner"] != claim_owner:
+            _emit_claim_outputs(
+                edition_type,
+                key,
+                claim_owner,
+                state_changed=False,
+                send_authorized=False,
+                path=state_path,
+            )
+            print(
+                f"claim_skip edition_type={edition_type} edition={key} "
+                "reason=claimed_by_another_owner send_authorized=false"
+            )
+            return None
+        editorial_briefing_state.require_claim_owner(
+            current,
+            edition_type,
+            key,
+            claim_owner,
+            identity=identity,
+        )
+        _emit_claim_outputs(
+            edition_type,
+            key,
+            claim_owner,
+            state_changed=False,
+            send_authorized=True,
+            path=state_path,
+        )
+        print(
+            f"claim_ready edition_type={edition_type} edition={key} "
+            "state_changed=false send_authorized=true"
+        )
+        return current
+    if not poll_public_dated_page(
+        dated_url,
+        key,
+        timeout_seconds=publication_timeout_seconds,
+        interval_seconds=publication_interval_seconds,
+        opener=opener,
+        sleeper=sleeper,
+    ):
+        raise OrchestratorError("dated public page did not reach matching HTTP 200 state")
+    claim_owner = _github_claim_owner()
+    claim = {
+        **identity,
+        "claim_owner": claim_owner,
+        "claimed_at": _now().isoformat(timespec="seconds"),
+    }
+    updated = editorial_briefing_state.add_claim(
+        current,
+        edition_type,
+        claim,
+    )
+    editorial_briefing_state.atomic_write_state(
+        edition_type,
+        updated,
+        path=state_path,
+    )
+    _emit_claim_outputs(
+        edition_type,
+        key,
+        claim_owner,
+        state_changed=True,
+        send_authorized=True,
+        path=state_path,
+    )
+    print(
+        f"claim_ready edition_type={edition_type} edition={key} "
+        "state_changed=true send_authorized=true smtp_attempts=0"
+    )
+    return updated
+
+
 def persist_exact_250_success(
     edition_type: str,
     manifest: dict,
     *,
+    claim_owner: str,
     smtp_status: str,
     smtp_code: int | None,
     sent_at: datetime,
     path: Path | None = None,
 ) -> dict:
-    if smtp_status != "accepted" or smtp_code != 250:
+    if smtp_status != "accepted" or type(smtp_code) is not int or smtp_code != 250:
         raise OrchestratorError("state requires exact SMTP DATA 250")
     state = editorial_briefing_state.load_state(edition_type, path=path)
-    updated = editorial_briefing_state.add_success(
+    updated = editorial_briefing_state.convert_claim_to_success(
         state,
         edition_type,
         {
-            "edition_key": manifest["edition_key"],
-            "coverage_start": manifest["coverage_start"],
-            "coverage_end": manifest["coverage_end"],
-            "html_sha256": manifest["html_sha256"],
-            "public_url": manifest["public_dated_url"],
+            **_manifest_identity(manifest),
             "smtp_status": smtp_status,
             "smtp_code": smtp_code,
             "sent_at": sent_at.astimezone(KST).isoformat(timespec="seconds"),
         },
+        claim_owner,
     )
     editorial_briefing_state.atomic_write_state(edition_type, updated, path=path)
     return updated
@@ -565,14 +736,12 @@ def run_send(
     runtime_dir: Path,
     smtp_factory=None,
     opener: Callable | None = None,
+    state_path: Path | None = None,
 ) -> dict | None:
     _require_production_gate()
     key = editorial_briefings.edition_key(edition_type, run_at)
-    state = editorial_briefing_state.load_state(edition_type)
-    if editorial_briefing_state.has_success(state, key):
-        _github_output("skipped", "true")
-        print(f"send_skip edition_type={edition_type} edition={key} reason=already_successful")
-        return None
+    claim_owner = _github_claim_owner()
+    state = editorial_briefing_state.load_state(edition_type, path=state_path)
     manifest = _load_runtime_manifest(runtime_dir, edition_type)
     if manifest["edition_key"] != key:
         raise OrchestratorError("runtime edition does not match current catch-up edition")
@@ -581,8 +750,13 @@ def run_send(
     dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
     if manifest["public_dated_url"] != dated_url or manifest["public_latest_url"] != latest_url:
         raise OrchestratorError("runtime public URL mismatch")
-    if not poll_public_dated_page(dated_url, key, opener=opener):
-        raise OrchestratorError("dated public page did not reach matching HTTP 200 state")
+    editorial_briefing_state.require_claim_owner(
+        state,
+        edition_type,
+        key,
+        claim_owner,
+        identity=_manifest_identity(manifest),
+    )
 
     smtp_user, password, from_address, recipient = _production_credentials()
     message = build_link_message(manifest, from_address, recipient)
@@ -604,13 +778,14 @@ def run_send(
     updated = persist_exact_250_success(
         edition_type,
         manifest,
+        claim_owner=claim_owner,
         smtp_status=result.smtp_status,
         smtp_code=result.smtp_code,
         sent_at=_now(),
+        path=state_path,
     )
-    state_target = editorial_briefing_state.state_path(edition_type)
     _github_output("state_changed", "true")
-    _github_output("state_path", state_target.relative_to(ROOT).as_posix())
+    _github_output("state_path", _state_output_path(edition_type, state_path))
     print(
         f"send_ok edition_type={edition_type} edition={key} "
         "smtp_status=accepted smtp_code=250 state_changed=true"
@@ -625,6 +800,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--preview", action="store_true")
     mode.add_argument("--live-preview", action="store_true")
     mode.add_argument("--publish", action="store_true")
+    mode.add_argument("--claim", action="store_true")
     mode.add_argument("--send", action="store_true")
     parser.add_argument("--run-at", default="")
     parser.add_argument("--runtime-dir", default="")
@@ -658,6 +834,12 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.publish:
             run_publish(
+                args.edition_type,
+                run_at=run_at,
+                runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),
+            )
+        elif args.claim:
+            run_claim(
                 args.edition_type,
                 run_at=run_at,
                 runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),

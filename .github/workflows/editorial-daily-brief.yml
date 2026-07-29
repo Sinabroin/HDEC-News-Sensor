@@ -100,9 +100,51 @@ jobs:
             fi
           done
 
-      - name: Verify public dated page, send link, and record exact-250 success
+      - name: Claim exact Daily edition after public verification
+        id: claim
+        if: success() && steps.publish.outputs.skipped == 'false'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          EDITORIAL_RUNTIME_DIR: ${{ runner.temp }}/editorial-daily
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/run_editorial_briefing.py \
+            --edition-type daily \
+            --claim \
+            --runtime-dir "$EDITORIAL_RUNTIME_DIR"
+
+      - name: Commit and push exact Daily claim state file
+        if: success() && steps.claim.outputs.state_changed == 'true'
+        env:
+          EDITION: ${{ steps.claim.outputs.edition }}
+        run: |
+          STATE_PATH="data/editorial_daily_state.json"
+          if [ -z "$(git status --porcelain -- "$STATE_PATH")" ]; then
+            echo "ERROR: Daily claim state output was declared but file is unchanged"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$STATE_PATH"
+          git commit -m "chore: claim Daily editorial delivery ${EDITION}"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if ! git rebase origin/main; then
+              echo "ERROR: Daily claim state rebase conflict; fail closed"
+              exit 1
+            fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "ERROR: Daily claim state push failed"
+              exit 1
+            fi
+          done
+
+      - name: Send claimed Daily edition
         id: send
-        if: steps.publish.outputs.skipped == 'false'
+        if: success() && steps.claim.outputs.send_authorized == 'true'
         env:
           EDITORIAL_PRODUCTION: "1"
           EDITORIAL_RUNTIME_DIR: ${{ runner.temp }}/editorial-daily
@@ -117,29 +159,31 @@ jobs:
             --send \
             --runtime-dir "$EDITORIAL_RUNTIME_DIR"
 
-      - name: Commit and push exact Daily state file
-        if: steps.send.outputs.state_changed == 'true'
+      - name: Commit and push exact Daily success state file
+        if: success() && steps.send.outputs.state_changed == 'true'
+        env:
+          EDITION: ${{ steps.claim.outputs.edition }}
         run: |
           STATE_PATH="data/editorial_daily_state.json"
           if [ -z "$(git status --porcelain -- "$STATE_PATH")" ]; then
-            echo "ERROR: Daily state output was declared but file is unchanged"
+            echo "ERROR: Daily success state output was declared but file is unchanged"
             exit 1
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$STATE_PATH"
-          git commit -m "chore: record Daily editorial delivery"
+          git commit -m "chore: record Daily editorial delivery ${EDITION}"
           for attempt in 1 2 3; do
             git fetch origin main
             if ! git rebase origin/main; then
-              echo "ERROR: Daily state rebase conflict; fail closed"
+              echo "ERROR: Daily success state rebase conflict; fail closed"
               exit 1
             fi
             if git push origin HEAD:main; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
-              echo "ERROR: Daily state push failed"
+              echo "ERROR: Daily success state push failed"
               exit 1
             fi
           done
