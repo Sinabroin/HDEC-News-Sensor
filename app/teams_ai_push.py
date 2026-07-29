@@ -108,6 +108,94 @@ _AI_GENERAL_TERMS = (
     "llm", "대규모 언어모델", "머신러닝", "machine learning", "gpu", "npu",
 )
 
+_AI_CORE_TERMS = (
+    "ai",
+    "인공지능",
+    "artificial intelligence",
+    "생성형 ai",
+    "generative ai",
+    "llm",
+    "대규모 언어모델",
+    "머신러닝",
+    "machine learning",
+    "딥러닝",
+    "deep learning",
+    "컴퓨터 비전",
+    "computer vision",
+    "ai agent",
+    "ai 에이전트",
+    "agentic ai",
+    "에이전틱 ai",
+    "openai",
+    "오픈ai",
+    "chatgpt",
+    "챗gpt",
+    "gpt",
+    "claude",
+    "클로드",
+    "gemini",
+    "제미나이",
+    "gpu",
+    "npu",
+    "hbm",
+)
+
+_AI_LEAD_PREFIX_LIMIT = 96
+
+_HDEC_RELEVANT_TOPIC_KEYS = frozenset(
+    {
+        "ai_datacenter",
+        "ai_power_infrastructure",
+        "nuclear_smr_ai_power",
+        "smart_construction",
+        "bim_digital_twin",
+        "construction_robotics",
+        "generative_ai_work",
+        "hdec_competitor_ai",
+    }
+)
+
+_HDEC_CONTEXT_TERMS = (
+    "현대건설",
+    "hyundai e&c",
+    "hyundai engineering & construction",
+    "건설",
+    "construction",
+    "epc",
+    "데이터센터",
+    "데이터 센터",
+    "data center",
+    "전력 인프라",
+    "전력망",
+    "송전",
+    "변전",
+    "송배전",
+    "원전",
+    "원자력",
+    "smr",
+    "플랜트",
+    "스마트건설",
+    "스마트 건설",
+    "bim",
+    "디지털 트윈",
+    "건설 로봇",
+    "자율 시공",
+    "설계",
+    "시공",
+    "현장",
+    "안전",
+    "조달",
+    "엔지니어링",
+    "도시정비",
+)
+
+_HDEC_SECTION_VALUES = {
+    "hdec_direct",
+    "order_overseas",
+    "competitor",
+    "competitor_supplier",
+}
+
 _STOCK_TERMS = (
     "주가", "목표주가", "투자의견", "테마주", "관련주", "수혜주", "대장주", "급등주",
     "상한가", "증권가", "증권사", "stock price", "price target",
@@ -210,6 +298,95 @@ def _article_text(article: object) -> str:
     return " ".join(_lower(v) for v in values if _clean(v))
 
 
+def _core_article_text(article: object) -> str:
+    """기사 제목·리드 요약만 반환한다."""
+    after = _mapping(article, "after")
+    values = (
+        _value(article, "title"),
+        _value(article, "summary"),
+        _value(article, "snippet"),
+        after.get("title"),
+        after.get("summary"),
+        after.get("snippet"),
+    )
+    return " ".join(
+        _lower(value)
+        for value in values
+        if _clean(value)
+    )
+
+
+def _first_sentence(value: object) -> str:
+    text = _lower(value)
+    if not text:
+        return ""
+
+    first = re.split(
+        r"[.!?。！？]\s*|\n+",
+        text,
+        maxsplit=1,
+    )[0]
+
+    return first[:_AI_LEAD_PREFIX_LIMIT]
+
+
+def _ai_core_evidence(article: object) -> tuple[str, ...]:
+    title = f" {_lower(_value(article, 'title'))} "
+    title_hits = _has(title, _AI_CORE_TERMS)
+
+    if title_hits:
+        return title_hits
+
+    after = _mapping(article, "after")
+    lead_values = (
+        _value(article, "summary"),
+        _value(article, "snippet"),
+        after.get("summary"),
+        after.get("snippet"),
+    )
+
+    first_sentences = " ".join(
+        _first_sentence(value)
+        for value in lead_values
+        if _clean(value)
+    )
+
+    return _has(
+        f" {first_sentences} ",
+        _AI_CORE_TERMS,
+    )
+
+
+def _hdec_context_text(article: object) -> str:
+    after = _mapping(article, "after")
+    provenance = (
+        _mapping(article, "provenance")
+        or _mapping(after, "provenance")
+    )
+
+    values = (
+        _value(article, "hdec_relevance"),
+        _value(article, "whyImportant"),
+        _value(article, "radarReason"),
+        _value(article, "executive_section"),
+        _value(article, "radar_section"),
+        after.get("hdec_relevance"),
+        after.get("whyImportant"),
+        after.get("radarReason"),
+        after.get("executive_section"),
+        after.get("radar_section"),
+        provenance.get("hdec_relevance"),
+        provenance.get("executive_section"),
+        provenance.get("radar_section"),
+    )
+
+    return " ".join(
+        _lower(value)
+        for value in values
+        if _clean(value)
+    )
+
+
 def _contains_term(text: str, term: str) -> bool:
     needle = term.lower()
     if re.fullmatch(r"[a-z0-9.&-]+", needle):
@@ -258,63 +435,124 @@ def _source_quality(article: object) -> str:
     return ""
 
 
+
 def classify_ai_topic(article: object) -> TopicDecision:
-    """Return the Teams-only AI topic decision without changing dashboard taxonomy."""
-    text = f" {_article_text(article)} "
+    """기사 자체에서 AI가 핵심일 때만 Teams AI 주제로 인정한다."""
+    text = f" {_core_article_text(article)} "
+
     if not text.strip():
-        return TopicDecision(False, exclusion_reason="empty_article_text")
+        return TopicDecision(
+            False,
+            exclusion_reason="empty_article_text",
+        )
 
     stock_hits = _has(text, _STOCK_TERMS)
     if stock_hits:
-        return TopicDecision(False, matched_terms=stock_hits, exclusion_reason="stock_or_theme_article")
+        return TopicDecision(
+            False,
+            matched_terms=stock_hits,
+            exclusion_reason="stock_or_theme_article",
+        )
 
     promo_hits = _has(text, _PROMO_REVIEW_TERMS)
     if promo_hits:
-        return TopicDecision(False, matched_terms=promo_hits, exclusion_reason="promo_or_product_review")
+        return TopicDecision(
+            False,
+            matched_terms=promo_hits,
+            exclusion_reason="promo_or_product_review",
+        )
 
     title_text = f" {_lower(_value(article, 'title'))} "
     nonnews_hits = _has(title_text, _NONNEWS_TERMS)
-    if nonnews_hits and not _has(title_text, _CONFIRMED_ACTION_TERMS):
+
+    if nonnews_hits and not _has(
+        title_text,
+        _CONFIRMED_ACTION_TERMS,
+    ):
         return TopicDecision(
-            False, matched_terms=nonnews_hits, exclusion_reason="non_news_recruit_or_book"
+            False,
+            matched_terms=nonnews_hits,
+            exclusion_reason="non_news_recruit_or_book",
         )
 
     if _source_quality(article) in _LOW_SOURCE_VALUES:
-        return TopicDecision(False, exclusion_reason="low_or_excluded_source")
+        return TopicDecision(
+            False,
+            exclusion_reason="low_or_excluded_source",
+        )
 
     speculative_hits = _has(text, _SPECULATION_TERMS)
-    if speculative_hits and not _has_confirmed_action(article, text):
+
+    if speculative_hits and not _has_confirmed_action(
+        article,
+        text,
+    ):
         return TopicDecision(
             False,
             matched_terms=speculative_hits,
             exclusion_reason="speculation_without_confirmed_event",
         )
 
-    for topic_key, topic_label, primary_terms, required_terms in _TOPIC_RULES:
+    ai_core_hits = _ai_core_evidence(article)
+
+    if not ai_core_hits:
+        return TopicDecision(
+            False,
+            exclusion_reason="ai_not_core_topic",
+        )
+
+    for (
+        topic_key,
+        topic_label,
+        primary_terms,
+        required_terms,
+    ) in _TOPIC_RULES:
         primary_hits = _has(text, primary_terms)
+
         if not primary_hits:
             continue
+
         required_hits = _has(text, required_terms)
+
         if required_terms and not required_hits:
             continue
+
         return TopicDecision(
             True,
             topic_key=topic_key,
             topic_label=topic_label,
-            matched_terms=tuple(dict.fromkeys(primary_hits + required_hits)),
+            matched_terms=tuple(
+                dict.fromkeys(
+                    ai_core_hits
+                    + primary_hits
+                    + required_hits
+                )
+            ),
         )
 
-    # A generic AI signal remains eligible only when it is paired with a confirmed material action.
-    generic_hits = _has(text, _AI_GENERAL_TERMS)
-    if generic_hits and _has_confirmed_action(article, text):
+    generic_hits = tuple(
+        dict.fromkeys(
+            ai_core_hits
+            + _has(text, _AI_GENERAL_TERMS)
+        )
+    )
+
+    if generic_hits and _has_confirmed_action(
+        article,
+        text,
+    ):
         return TopicDecision(
             True,
             topic_key="ai_material_event",
             topic_label="AI 주요 확정 이벤트",
             matched_terms=generic_hits,
         )
-    return TopicDecision(False, exclusion_reason="not_in_teams_ai_topics")
 
+    return TopicDecision(
+        False,
+        matched_terms=ai_core_hits,
+        exclusion_reason="not_in_teams_ai_topics",
+    )
 
 def _parse_score(article: object) -> float | None:
     owners = (article, _mapping(article, "after"), _mapping(article, "provenance"))
@@ -346,6 +584,72 @@ def _hdec_direct(article: object) -> bool:
     )
 
 
+def is_hdec_relevant_for_push(
+    article: object,
+    topic: TopicDecision | None = None,
+) -> bool:
+    """Teams 발송에 필요한 현대건설 사업·기술 연관성을 판정한다."""
+    topic = topic or classify_ai_topic(article)
+
+    if not topic.eligible:
+        return False
+
+    if _hdec_direct(article):
+        return True
+
+    if topic.topic_key in _HDEC_RELEVANT_TOPIC_KEYS:
+        return True
+
+    for owner in (
+        article,
+        _mapping(article, "after"),
+        _mapping(article, "provenance"),
+    ):
+        section = _lower(
+            _value(owner, "executive_section")
+            or _value(owner, "radar_section")
+        )
+
+        if section in _HDEC_SECTION_VALUES:
+            return True
+
+        for key in (
+            "hdec_relevance_score",
+            "decision_relevance_score",
+        ):
+            raw = _value(owner, key, None)
+
+            if raw in (None, "", "-"):
+                continue
+
+            try:
+                if float(raw) >= DAILY_THRESHOLD:
+                    return True
+            except (TypeError, ValueError):
+                pass
+
+        tier = _value(owner, "hdec_relevance_tier", None)
+
+        if tier not in (None, "", "-"):
+            try:
+                if int(tier) <= 3:
+                    return True
+            except (TypeError, ValueError):
+                pass
+
+    context = (
+        f" {_core_article_text(article)} "
+        f"{_hdec_context_text(article)} "
+    )
+
+    return bool(
+        _has(
+            context,
+            _HDEC_CONTEXT_TERMS,
+        )
+    )
+
+
 def map_importance(article: object, topic: TopicDecision | None = None) -> ImportanceDecision:
     """Map importance from existing scoring/confirmed-event signals; shadow status is a signal.
 
@@ -365,6 +669,12 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
     topic = topic or classify_ai_topic(article)
     if not topic.eligible:
         return ImportanceDecision(False, reason=topic.exclusion_reason)
+
+    if not is_hdec_relevant_for_push(article, topic):
+        return ImportanceDecision(
+            False,
+            reason="insufficient_hdec_relevance",
+        )
 
     shadow = _shadow_status(article)
     if shadow == "blocked":
@@ -473,7 +783,12 @@ def select_teams_push_candidates(
         importance = map_importance(article, topic)
         # Publisher resolution is preferred but not mandatory. A truthful labeled
         # Google News/portal hop is safer than silently dropping an important article.
-        if not importance.sendable or not choose_article_link(article).url:
+        if (
+            not topic.eligible
+            or not is_hdec_relevant_for_push(article, topic)
+            or not importance.sendable
+            or not choose_article_link(article).url
+        ):
             continue
         candidates.append(
             TeamsPushCandidate(

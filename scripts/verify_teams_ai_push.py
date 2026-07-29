@@ -27,6 +27,7 @@ from app.teams_ai_push import (
     MAX_TEAMS_ARTICLES,
     build_candidate_card,
     classify_ai_topic,
+    is_hdec_relevant_for_push,
     map_importance,
     render_article_email,
     select_teams_push_candidates,
@@ -166,6 +167,135 @@ def main() -> int:
         summary="No machine terms are present.",
     )
     assert not classify_ai_topic(boundary).eligible
+
+    # R2M — 대시보드 해설에 AI가 있어도 기사 자체가 비AI이면 미발송.
+    historical_non_ai_titles = (
+        "OCI홀딩스 1.4조 증설 승부수, 차입 5000억",
+        "건설을 넘어 에너지 인프라 선도, 대우건설 K원전 주역으로 뛴다",
+        "원전·가스터빈 앞세운 두산에너빌리티, 수주잔고 26조 쌓여",
+        "두산에너빌리티, 라이양원전 핵심소재 공급계약 체결",
+        "대미투자 1호로 가스복합발전소 건설사업 유력",
+        "초과이윤 분배, 우리가 착각하는 것들",
+        "전기산업계 유휴 시험설비 공유로 시험 적체 해소",
+        "변동성 증시 의식했나, 대우건설 실적발표 연기",
+        "호남 반도체산단 전력망 구축 본격화",
+        "엔비디아 네이버 3대주주 합류, SK이터닉스는 폭락",
+        "가평 데이터센터 개발사업 추진",
+        "제12차 전기본에 원전 4기·SMR 2기 추가해야",
+    )
+
+    for index, title in enumerate(historical_non_ai_titles):
+        contaminated = article(
+            article_key=f"historical-non-ai-{index}",
+            title=title,
+            summary="건설·에너지·투자 관련 확정 소식이다.",
+            whyImportant=(
+                "AI 데이터센터와 현대건설 사업 관점에서 참고할 수 있다."
+            ),
+            radarReason="AI 전력 인프라 레이더 분류",
+            category_label="AI 관련",
+            provenance={
+                "ai_topic": "ai_power_infrastructure",
+                "ai_category": "ai",
+            },
+            score=4.9,
+            shadow_urgency_status="confirmed",
+            shadow_confirmed_event_types=[
+                "contract_confirmed",
+            ],
+        )
+
+        decision = classify_ai_topic(contaminated)
+
+        assert not decision.eligible, (title, decision)
+        assert decision.exclusion_reason == "ai_not_core_topic", (
+            title,
+            decision,
+        )
+        assert not _sendable(contaminated).sendable
+
+    # 기사 뒤쪽의 부수적 AI 언급은 핵심 주제가 아니다.
+    minor_ai_mention = article(
+        article_key="minor-ai-mention",
+        title="가스복합발전소 건설 투자계획 확정",
+        summary=(
+            "가스복합발전소 건설과 자금조달, 설비 공급 및 착공 일정이 "
+            "구체적으로 공개됐다. 사업비와 지분구조, 준공 시점도 발표됐다. "
+            "프로젝트 관계자는 장기적으로 일부 AI 활용 가능성도 검토한다고 밝혔다."
+        ),
+        score=4.9,
+    )
+
+    minor_decision = classify_ai_topic(minor_ai_mention)
+
+    assert not minor_decision.eligible, minor_decision
+    assert minor_decision.exclusion_reason == "ai_not_core_topic"
+
+    # LNG는 전면 차단하지 않는다. AI가 핵심이고 HDEC 적용성이 있으면 발송 가능.
+    ai_lng = article(
+        article_key="ai-lng-core",
+        title="AI 기반 LNG 플랜트 운영 최적화 시스템 계약 체결",
+        summary=(
+            "AI가 LNG 플랜트 에너지 사용량과 설비 이상을 "
+            "실시간으로 예측하는 시스템 계약이 체결됐다."
+        ),
+        hdec_relevance=(
+            "현대건설 LNG 플랜트 EPC와 운영기술에 직접 적용 가능"
+        ),
+        score=4.6,
+        shadow_urgency_status="confirmed",
+        shadow_confirmed_event_types=[
+            "contract_confirmed",
+        ],
+    )
+
+    ai_lng_topic = classify_ai_topic(ai_lng)
+
+    assert ai_lng_topic.eligible, ai_lng_topic
+    assert is_hdec_relevant_for_push(
+        ai_lng,
+        ai_lng_topic,
+    )
+    assert _sendable(ai_lng).sendable
+
+    # AI 핵심 기사라도 현대건설 사업 관련성이 없으면 대시보드만.
+    consumer_ai = article(
+        article_key="consumer-ai-no-hdec",
+        title="OpenAI, 개인용 AI 사진 꾸미기 앱 정식 출시",
+        summary=(
+            "개인 소비자가 사진 필터를 만드는 AI 앱을 출시했다."
+        ),
+        hdec_relevance="",
+        whyImportant="",
+        radarReason="",
+        category="",
+        category_label="",
+        provenance={},
+        score=4.9,
+        shadow_urgency_status="confirmed",
+        shadow_confirmed_event_types=[
+            "product_launch_confirmed",
+        ],
+    )
+
+    consumer_topic = classify_ai_topic(consumer_ai)
+
+    assert consumer_topic.eligible, consumer_topic
+    assert not is_hdec_relevant_for_push(
+        consumer_ai,
+        consumer_topic,
+    )
+
+    consumer_importance = map_importance(
+        consumer_ai,
+        consumer_topic,
+    )
+
+    assert not consumer_importance.sendable
+    assert (
+        consumer_importance.reason
+        == "insufficient_hdec_relevance"
+    )
 
     # D7-AK-6D labeled-link contract: publisher URLs retain precedence, while a usable
     # aggregator hop no longer causes an important article to disappear.
