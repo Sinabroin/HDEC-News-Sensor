@@ -260,6 +260,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "naver_f02cdf474db2": {
+      "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
+      "delivery_id": "teams_ai_push:61eabb648494",
+      "first_sent_at": "2026-07-30T03:58:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
+      "sent_at": "2026-07-30T03:58:35+09:00",
+      "source": "중앙일보"
+    },
     "naver_fa066dcb8cd4": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
       "delivery_id": "teams_ai_push:f96cb62ee902",
@@ -502,6 +512,16 @@
       "sent_at": "2026-07-29T00:36:39+09:00",
       "source": "조선일보"
     },
+    "title:원전멈춰서는데호남반도체수명연장부": {
+      "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
+      "delivery_id": "teams_ai_push:61eabb648494",
+      "first_sent_at": "2026-07-30T03:58:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
+      "sent_at": "2026-07-30T03:58:35+09:00",
+      "source": "중앙일보"
+    },
     "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
       "delivery_id": "teams_ai_push:9f4f184e2db4",
@@ -583,7 +603,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-30T01:46:09+09:00",
+  "last_successful_send_at": "2026-07-30T03:58:35+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -784,6 +804,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "https://www.joongang.co.kr/article/25449302": {
+      "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
+      "delivery_id": "teams_ai_push:61eabb648494",
+      "first_sent_at": "2026-07-30T03:58:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
+      "sent_at": "2026-07-30T03:58:35+09:00",
+      "source": "중앙일보"
     },
     "https://www.newsinside.kr/news/articleView.html?idxno=4875153": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
@@ -1086,6 +1116,16 @@
       "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
       "sent_at": "2026-07-29T00:36:39+09:00",
       "source": "조선일보"
+    },
+    "원전멈춰서는데호남반도체수명연장부": {
+      "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
+      "delivery_id": "teams_ai_push:61eabb648494",
+      "first_sent_at": "2026-07-30T03:58:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
+      "sent_at": "2026-07-30T03:58:35+09:00",
+      "source": "중앙일보"
     },
     "전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
