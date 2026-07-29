@@ -27,6 +27,8 @@ from app.teams_ai_push import (
     MAX_TEAMS_ARTICLES,
     build_candidate_card,
     classify_ai_topic,
+    is_ai_strategically_significant,
+    is_executive_relevant_for_push,
     is_hdec_relevant_for_push,
     map_importance,
     render_article_email,
@@ -285,6 +287,14 @@ def main() -> int:
         consumer_ai,
         consumer_topic,
     )
+    assert not is_ai_strategically_significant(
+        consumer_ai,
+        consumer_topic,
+    )
+    assert not is_executive_relevant_for_push(
+        consumer_ai,
+        consumer_topic,
+    )
 
     consumer_importance = map_importance(
         consumer_ai,
@@ -294,7 +304,213 @@ def main() -> int:
     assert not consumer_importance.sendable
     assert (
         consumer_importance.reason
-        == "insufficient_hdec_relevance"
+        == "insufficient_executive_relevance"
+    )
+
+    manager_strategy_gold = (
+        (
+            "구글, AI 투자 2050억달러로 확대",
+            "AI 데이터센터와 전력 인프라 수요에 대응하는 자본지출 계획을 확대했다.",
+        ),
+        (
+            "불붙은 AI 신냉전…중국 따라붙자 미국은 제재 카드",
+            "미중 AI 패권 경쟁과 기술 수출통제 정책이 강화됐다.",
+        ),
+        (
+            "대통령 미주 순방…AI 동맹·핵심광물 공급망 확장",
+            "AI 메가프로젝트와 반도체 공급망 협력을 위한 정상외교가 진행됐다.",
+        ),
+        (
+            "현대차·엔비디아 AI 협력 속도",
+            "피지컬 AI, 자율주행, 로봇, 제조 AI와 데이터센터 협력을 확대했다.",
+        ),
+        (
+            "젠슨 황, 지금은 한국 AI 황금시대…메가프로젝트 세계 모범",
+            "국가 AI 메가프로젝트와 글로벌 기업 협력 계획이 공개됐다.",
+        ),
+        (
+            "샌프란시스코 AI 선언…한국을 대체불가 공급망 핵심 국가로",
+            "AI 반도체와 전략 공급망에 관한 국가 비전을 선언했다.",
+        ),
+        (
+            "현대차그룹, 피지컬 AI 선도 기업 되겠다",
+            "로봇과 도시, 제조 현장을 연결하는 피지컬 AI 투자를 확대한다.",
+        ),
+        (
+            "3대 메가프로젝트, AI 핵심 병목 선점 승부수",
+            "전력·용수·인력·소부장 공급이 AI 인프라의 핵심 병목으로 지목됐다.",
+        ),
+        (
+            "AI 빅샷, K반도체 깃발 아래 메가 동맹",
+            "반도체와 AI 인프라 공급망을 위한 대규모 국제 동맹이 발표됐다.",
+        ),
+        (
+            "실리콘밸리 오픈웨이트 AI 논쟁 격화",
+            "오픈웨이트 모델과 첨단 칩 수출통제를 둘러싼 정책 논쟁이 격화됐다.",
+        ),
+        (
+            "AI가 생물학 무기 제조·살포법도 답변",
+            "생성형 AI의 생물학적 위험과 안전 통제 문제가 제기됐다.",
+        ),
+        (
+            "미중 AI 패권경쟁, 실리콘밸리 내부전으로 번져",
+            "중국산 오픈모델과 미국의 수출통제를 둘러싼 패권 논쟁이 확대됐다.",
+        ),
+        (
+            "포스코DX, AI 네이티브 기업 전환 선언",
+            "제조 AI와 로봇이 협업하는 인텔리전트 팩토리 전략을 공개했다.",
+        ),
+        (
+            "메타, 블랙록과 20조원 규모 AI 데이터센터 구축",
+            "대규모 AI 데이터센터 투자와 금융 조달 계획을 확정했다.",
+        ),
+    )
+
+    for index, (title, summary) in enumerate(manager_strategy_gold):
+        fixture = article(
+            article_key=f"manager-strategy-gold-{index}",
+            title=title,
+            summary=summary,
+            hdec_relevance="",
+            whyImportant="",
+            radarReason="",
+            category="",
+            category_label="",
+            provenance={},
+            score=4.7,
+            shadow_urgency_status="confirmed",
+            shadow_confirmed_event_types=[
+                "investment_confirmed",
+            ],
+            url=(
+                "https://publisher.example.test/"
+                f"manager-strategy-gold/{index}"
+            ),
+        )
+
+        fixture_topic = classify_ai_topic(fixture)
+
+        assert fixture_topic.eligible, (
+            title,
+            fixture_topic,
+        )
+        assert is_executive_relevant_for_push(
+            fixture,
+            fixture_topic,
+        ), (
+            title,
+            fixture_topic,
+        )
+        assert map_importance(
+            fixture,
+            fixture_topic,
+        ).sendable
+        assert len(
+            select_teams_push_candidates([fixture])
+        ) == 1
+
+    manager_dashboard_references = (
+        (
+            "신세계백화점 초개인화 AI 연구, ICML 논문 채택",
+            "머신러닝 기반 고객 분석 연구가 국제 학회 논문으로 채택됐다.",
+        ),
+        (
+            "펜타포트 10만 관중 AI가 지킨다…도시관제 실증",
+            "AI 군중 위험상황 모니터링 솔루션을 축제 현장에서 실증한다.",
+        ),
+        (
+            "AI와 함께 일하는 새로운 직업이 늘어난다",
+            "AI 트레이너 등 인간과 AI 협업형 일자리와 고용 변화가 나타나고 있다.",
+        ),
+        (
+            "어디까지 도구이고 어디부터 사기…고전번역 AI 논란",
+            "AI 번역의 고지 의무와 저작권·윤리 문제가 논란이 됐다.",
+        ),
+        (
+            "삼성 첫 스마트글래스, 무게는 덜고 AI는 더했다",
+            "AI 기능을 탑재한 스마트글래스와 웨어러블 기기를 개발하고 있다.",
+        ),
+    )
+
+    for index, (title, summary) in enumerate(
+        manager_dashboard_references
+    ):
+        fixture = article(
+            article_key=f"manager-dashboard-{index}",
+            title=title,
+            summary=summary,
+            hdec_relevance="",
+            whyImportant="",
+            radarReason="",
+            category="",
+            category_label="",
+            provenance={},
+            score=3.2,
+            shadow_urgency_status="none",
+            shadow_would_pass=False,
+            shadow_confirmed_event_types=[],
+            url=(
+                "https://publisher.example.test/"
+                f"manager-dashboard/{index}"
+            ),
+        )
+
+        fixture_topic = classify_ai_topic(fixture)
+
+        assert fixture_topic.eligible, (
+            title,
+            fixture_topic,
+        )
+        assert is_ai_strategically_significant(
+            fixture,
+            fixture_topic,
+        ), (
+            title,
+            fixture_topic,
+        )
+        assert is_executive_relevant_for_push(
+            fixture,
+            fixture_topic,
+        )
+        assert not map_importance(
+            fixture,
+            fixture_topic,
+        ).sendable
+        assert (
+            select_teams_push_candidates([fixture])
+            == ()
+        )
+
+    dashboard_only_non_ai = article(
+        article_key="manager-dashboard-non-ai",
+        title="아반떼 무한 진화 시킬 커넥티드카 플랫폼",
+        summary=(
+            "차량용 운영체제와 애플리케이션 생태계를 소개한다. "
+            "기사 제목과 첫 리드에는 AI 핵심 주제가 없다."
+        ),
+        hdec_relevance="",
+        whyImportant="AI 산업 변화 관점에서 참고",
+        radarReason="AI 모빌리티",
+        provenance={
+            "ai_topic": "physical_ai_industrial",
+        },
+        score=4.9,
+    )
+
+    non_ai_decision = classify_ai_topic(
+        dashboard_only_non_ai
+    )
+
+    assert not non_ai_decision.eligible
+    assert (
+        non_ai_decision.exclusion_reason
+        == "ai_not_core_topic"
+    )
+    assert (
+        select_teams_push_candidates(
+            [dashboard_only_non_ai]
+        )
+        == ()
     )
 
     # D7-AK-6D labeled-link contract: publisher URLs retain precedence, while a usable

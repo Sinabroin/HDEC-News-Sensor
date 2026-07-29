@@ -79,6 +79,119 @@ _TOPIC_RULES: tuple[tuple[str, str, tuple[str, ...], tuple[str, ...]], ...] = (
         (),
     ),
     (
+        "physical_ai_industrial",
+        "피지컬 AI·산업 전환",
+        (
+            "피지컬 ai",
+            "physical ai",
+            "제조 ai",
+            "산업 ai",
+            "ai 네이티브",
+            "ai-native",
+            "인텔리전트 팩토리",
+        ),
+        (),
+    ),
+    (
+        "ai_national_strategy_supply_chain",
+        "AI 국가전략·패권·공급망",
+        (
+            "ai",
+            "인공지능",
+            "artificial intelligence",
+        ),
+        (
+            "동맹",
+            "공급망",
+            "패권",
+            "제재",
+            "수출통제",
+            "수출 통제",
+            "미중",
+            "미·중",
+            "중국",
+            "메가프로젝트",
+            "메가 프로젝트",
+            "국가 전략",
+            "서밋",
+            "선언",
+            "정상회담",
+        ),
+    ),
+    (
+        "ai_risk_governance",
+        "AI 위험·안전·거버넌스",
+        (
+            "ai",
+            "인공지능",
+            "생성형 ai",
+            "generative ai",
+            "오픈웨이트",
+            "open-weight",
+        ),
+        (
+            "안전",
+            "위험",
+            "보안",
+            "생물학",
+            "무기",
+            "오남용",
+            "저품질",
+            "가짜",
+            "사기",
+            "윤리",
+            "책임",
+            "저작권",
+            "통제",
+            "규제",
+            "논쟁",
+            "논란",
+            "일자리",
+            "고용",
+        ),
+    ),
+    (
+        "ai_research_industry_application",
+        "AI 연구·산업 적용",
+        (
+            "ai",
+            "인공지능",
+            "머신러닝",
+            "machine learning",
+        ),
+        (
+            "연구",
+            "논문",
+            "학회",
+            "icml",
+            "실증",
+            "산학",
+            "산학협력",
+            "솔루션",
+            "도시관제",
+            "군중",
+        ),
+    ),
+    (
+        "ai_devices_wearables",
+        "AI 디바이스·웨어러블",
+        (
+            "ai",
+            "인공지능",
+            "artificial intelligence",
+        ),
+        (
+            "스마트글래스",
+            "스마트 글래스",
+            "웨어러블",
+            "wearable",
+            "xr",
+            "확장현실",
+            "스마트 안경",
+            "ai 안경",
+        ),
+    ),
+    (
         "ai_policy_regulation",
         "AI 규제·정책",
         ("ai", "인공지능", "artificial intelligence"),
@@ -153,6 +266,98 @@ _HDEC_RELEVANT_TOPIC_KEYS = frozenset(
         "generative_ai_work",
         "hdec_competitor_ai",
     }
+)
+
+_AI_ALWAYS_STRATEGIC_TOPIC_KEYS = frozenset(
+    {
+        "physical_ai_industrial",
+        "ai_national_strategy_supply_chain",
+        "ai_risk_governance",
+        "ai_policy_regulation",
+    }
+)
+
+_AI_CONDITIONAL_STRATEGIC_TOPIC_KEYS = frozenset(
+    {
+        "major_ai_company_move",
+        "ai_material_event",
+        "ai_research_industry_application",
+        "ai_devices_wearables",
+    }
+)
+
+_AI_STRATEGIC_SIGNALS = (
+    "투자",
+    "자본지출",
+    "capex",
+    "데이터센터",
+    "데이터 센터",
+    "data center",
+    "반도체",
+    "첨단 칩",
+    "ai 칩",
+    "gpu",
+    "hbm",
+    "전력",
+    "용수",
+    "공급망",
+    "동맹",
+    "패권",
+    "제재",
+    "수출통제",
+    "수출 통제",
+    "피지컬 ai",
+    "physical ai",
+    "제조 ai",
+    "로봇",
+    "자율주행",
+    "자율 시공",
+    "ai 네이티브",
+    "ai-native",
+    "인텔리전트 팩토리",
+    "국가 전략",
+    "메가프로젝트",
+    "메가 프로젝트",
+    "서밋",
+    "선언",
+    "안전",
+    "위험",
+    "보안",
+    "생물학",
+    "무기",
+    "오픈웨이트",
+    "open-weight",
+    "오픈소스",
+    "연구",
+    "논문",
+    "학회",
+    "icml",
+    "실증",
+    "도시관제",
+    "군중",
+    "스마트글래스",
+    "스마트 글래스",
+    "스마트 안경",
+    "웨어러블",
+    "wearable",
+    "xr",
+    "확장현실",
+    "일자리",
+    "고용",
+    "저작권",
+    "윤리",
+    "사기",
+    "저품질",
+)
+
+_CONSUMER_AI_ONLY_SIGNALS = (
+    "사진 꾸미기",
+    "사진 필터",
+    "셀카 필터",
+    "개인용 ai 사진",
+    "개인용 사진 앱",
+    "게임 캐릭터",
+    "연예인 합성",
 )
 
 _HDEC_CONTEXT_TERMS = (
@@ -650,6 +855,53 @@ def is_hdec_relevant_for_push(
     )
 
 
+def is_ai_strategically_significant(
+    article: object,
+    topic: TopicDecision | None = None,
+) -> bool:
+    """현대건설 직접 언급이 없어도 임원이 알아야 할 AI 전략 변화를 판정한다."""
+    topic = topic or classify_ai_topic(article)
+
+    if not topic.eligible:
+        return False
+
+    # 전략성은 기사 제목·리드 요약에서만 판정한다.
+    # 대시보드 해설, category, provenance의 AI 문구는 사용하지 않는다.
+    text = f" {_core_article_text(article)} "
+    strategic_hits = _has(text, _AI_STRATEGIC_SIGNALS)
+    consumer_only_hits = _has(text, _CONSUMER_AI_ONLY_SIGNALS)
+
+    if consumer_only_hits and not strategic_hits:
+        return False
+
+    if topic.topic_key in _AI_ALWAYS_STRATEGIC_TOPIC_KEYS:
+        return True
+
+    if (
+        topic.topic_key in _AI_CONDITIONAL_STRATEGIC_TOPIC_KEYS
+        and strategic_hits
+    ):
+        return True
+
+    return False
+
+
+def is_executive_relevant_for_push(
+    article: object,
+    topic: TopicDecision | None = None,
+) -> bool:
+    """Teams 자격 = 현대건설 연관성 또는 독립적인 AI 전략 중요성."""
+    topic = topic or classify_ai_topic(article)
+
+    if not topic.eligible:
+        return False
+
+    return (
+        is_hdec_relevant_for_push(article, topic)
+        or is_ai_strategically_significant(article, topic)
+    )
+
+
 def map_importance(article: object, topic: TopicDecision | None = None) -> ImportanceDecision:
     """Map importance from existing scoring/confirmed-event signals; shadow status is a signal.
 
@@ -670,10 +922,10 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
     if not topic.eligible:
         return ImportanceDecision(False, reason=topic.exclusion_reason)
 
-    if not is_hdec_relevant_for_push(article, topic):
+    if not is_executive_relevant_for_push(article, topic):
         return ImportanceDecision(
             False,
-            reason="insufficient_hdec_relevance",
+            reason="insufficient_executive_relevance",
         )
 
     shadow = _shadow_status(article)
@@ -785,7 +1037,7 @@ def select_teams_push_candidates(
         # Google News/portal hop is safer than silently dropping an important article.
         if (
             not topic.eligible
-            or not is_hdec_relevant_for_push(article, topic)
+            or not is_executive_relevant_for_push(article, topic)
             or not importance.sendable
             or not choose_article_link(article).url
         ):
