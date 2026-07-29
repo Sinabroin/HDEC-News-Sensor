@@ -130,6 +130,16 @@
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
     },
+    "naver_4e6dd2800c68": {
+      "cluster_key": "title:원전굴기의두얼굴두산엔기회k원전엔최대경쟁자",
+      "delivery_id": "teams_ai_push:c20b3b6541de",
+      "first_sent_at": "2026-07-30T06:11:10+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "bdd196ca38bdd066ea0dde6c91f40d92251129ae46fe16a86975e39ad692d7ae",
+      "sent_at": "2026-07-30T06:11:10+09:00",
+      "source": "news.mtn.co.kr"
+    },
     "naver_68bfb641a2f0": {
       "cluster_key": "title:대미투자1호텍사스가스복합발전유력수익성고려",
       "delivery_id": "teams_ai_push:aee89933cc31",
@@ -512,6 +522,16 @@
       "sent_at": "2026-07-29T00:36:39+09:00",
       "source": "조선일보"
     },
+    "title:원전굴기의두얼굴두산엔기회k원전엔최대경쟁자": {
+      "cluster_key": "title:원전굴기의두얼굴두산엔기회k원전엔최대경쟁자",
+      "delivery_id": "teams_ai_push:c20b3b6541de",
+      "first_sent_at": "2026-07-30T06:11:10+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "bdd196ca38bdd066ea0dde6c91f40d92251129ae46fe16a86975e39ad692d7ae",
+      "sent_at": "2026-07-30T06:11:10+09:00",
+      "source": "news.mtn.co.kr"
+    },
     "title:원전멈춰서는데호남반도체수명연장부": {
       "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
       "delivery_id": "teams_ai_push:61eabb648494",
@@ -603,7 +623,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-30T03:58:35+09:00",
+  "last_successful_send_at": "2026-07-30T06:11:10+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -684,6 +704,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "https://news.mtn.co.kr/news-detail/2026072912412837947": {
+      "cluster_key": "title:원전굴기의두얼굴두산엔기회k원전엔최대경쟁자",
+      "delivery_id": "teams_ai_push:c20b3b6541de",
+      "first_sent_at": "2026-07-30T06:11:10+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "bdd196ca38bdd066ea0dde6c91f40d92251129ae46fe16a86975e39ad692d7ae",
+      "sent_at": "2026-07-30T06:11:10+09:00",
+      "source": "news.mtn.co.kr"
     },
     "https://slownews.kr/163961": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
@@ -1116,6 +1146,16 @@
       "material_signature": "58c5e9d459ff843555a9fe1d6dfadd7676ad98fdc21e5d1d4641f903af51670f",
       "sent_at": "2026-07-29T00:36:39+09:00",
       "source": "조선일보"
+    },
+    "원전굴기의두얼굴두산엔기회k원전엔최대경쟁자": {
+      "cluster_key": "title:원전굴기의두얼굴두산엔기회k원전엔최대경쟁자",
+      "delivery_id": "teams_ai_push:c20b3b6541de",
+      "first_sent_at": "2026-07-30T06:11:10+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "bdd196ca38bdd066ea0dde6c91f40d92251129ae46fe16a86975e39ad692d7ae",
+      "sent_at": "2026-07-30T06:11:10+09:00",
+      "source": "news.mtn.co.kr"
     },
     "원전멈춰서는데호남반도체수명연장부": {
       "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
