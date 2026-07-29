@@ -150,6 +150,16 @@
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
     },
+    "naver_747dfaa984b9": {
+      "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
+      "delivery_id": "teams_ai_push:3d7f0fda4114",
+      "first_sent_at": "2026-07-30T00:22:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
+      "sent_at": "2026-07-30T00:22:54+09:00",
+      "source": "pressian.com"
+    },
     "naver_814cf01a1212": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
       "delivery_id": "teams_ai_push:2ecee238f08c",
@@ -341,6 +351,16 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
+      "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
+      "delivery_id": "teams_ai_push:3d7f0fda4114",
+      "first_sent_at": "2026-07-30T00:22:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
+      "sent_at": "2026-07-30T00:22:54+09:00",
+      "source": "pressian.com"
     },
     "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
@@ -543,7 +563,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-29T22:19:24+09:00",
+  "last_successful_send_at": "2026-07-30T00:22:54+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -765,6 +785,16 @@
       "sent_at": "2026-07-28T20:34:00+09:00",
       "source": "newsworks.co.kr"
     },
+    "https://www.pressian.com/pages/articles/2026072923045020112": {
+      "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
+      "delivery_id": "teams_ai_push:3d7f0fda4114",
+      "first_sent_at": "2026-07-30T00:22:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
+      "sent_at": "2026-07-30T00:22:54+09:00",
+      "source": "pressian.com"
+    },
     "https://www.sedaily.com/article/20072947": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
       "delivery_id": "teams_ai_push:449508c2ca7a",
@@ -886,6 +916,16 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
+      "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
+      "delivery_id": "teams_ai_push:3d7f0fda4114",
+      "first_sent_at": "2026-07-30T00:22:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
+      "sent_at": "2026-07-30T00:22:54+09:00",
+      "source": "pressian.com"
     },
     "네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
