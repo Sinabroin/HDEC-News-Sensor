@@ -200,6 +200,16 @@
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
     },
+    "naver_8f33822021fc": {
+      "cluster_key": "title:smr데이터센터배팅글로벌체질",
+      "delivery_id": "teams_ai_push:f6b4db1592a5",
+      "first_sent_at": "2026-07-30T08:12:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4ad327472003fb494108cd43d1795a9f359738dbfcb56529285aaeb4aa825318",
+      "sent_at": "2026-07-30T08:12:26+09:00",
+      "source": "dealsite.co.kr"
+    },
     "naver_97c426517b14": {
       "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
       "delivery_id": "teams_ai_push:3d5292cb1db5",
@@ -230,6 +240,16 @@
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
     },
+    "naver_c8b23e1d7e9c": {
+      "cluster_key": "title:네이버ai팩토리뜬다13조프로젝트에건설사군침",
+      "delivery_id": "teams_ai_push:33e7e3f99807",
+      "first_sent_at": "2026-07-30T08:12:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7841671475fcd7dda1d6e55c31a75fd8c68607a89c552046371c6b9646af26e9",
+      "sent_at": "2026-07-30T08:12:29+09:00",
+      "source": "dealsite.co.kr"
+    },
     "naver_cb7b45a17e78": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
       "delivery_id": "teams_ai_push:96dd8c741197",
@@ -239,6 +259,16 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "naver_cd7305339c91": {
+      "cluster_key": "title:빌게이츠내달방한목skhd현대와공급망확대논의전망",
+      "delivery_id": "teams_ai_push:edec3cfb2964",
+      "first_sent_at": "2026-07-30T08:12:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f64d193e5a92d56bbc8667aad97a80ebd5cc8f91cb2a66ed1de5e4465579b75f",
+      "sent_at": "2026-07-30T08:12:27+09:00",
+      "source": "econovill.com"
     },
     "naver_cf229d68d44b": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
@@ -382,6 +412,16 @@
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
     },
+    "title:smr데이터센터배팅글로벌체질": {
+      "cluster_key": "title:smr데이터센터배팅글로벌체질",
+      "delivery_id": "teams_ai_push:f6b4db1592a5",
+      "first_sent_at": "2026-07-30T08:12:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4ad327472003fb494108cd43d1795a9f359738dbfcb56529285aaeb4aa825318",
+      "sent_at": "2026-07-30T08:12:26+09:00",
+      "source": "dealsite.co.kr"
+    },
     "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
       "delivery_id": "teams_ai_push:96dd8c741197",
@@ -411,6 +451,16 @@
       "material_signature": "b03292c94f1aebbc87312bd672b19070bab22382231f8d7d3c7325b9a06140ee",
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
+    },
+    "title:네이버ai팩토리뜬다13조프로젝트에건설사군침": {
+      "cluster_key": "title:네이버ai팩토리뜬다13조프로젝트에건설사군침",
+      "delivery_id": "teams_ai_push:33e7e3f99807",
+      "first_sent_at": "2026-07-30T08:12:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7841671475fcd7dda1d6e55c31a75fd8c68607a89c552046371c6b9646af26e9",
+      "sent_at": "2026-07-30T08:12:29+09:00",
+      "source": "dealsite.co.kr"
     },
     "title:대미투자1호로가스복합발전소건설사업유력": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
@@ -501,6 +551,16 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "title:빌게이츠내달방한목skhd현대와공급망확대논의전망": {
+      "cluster_key": "title:빌게이츠내달방한목skhd현대와공급망확대논의전망",
+      "delivery_id": "teams_ai_push:edec3cfb2964",
+      "first_sent_at": "2026-07-30T08:12:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f64d193e5a92d56bbc8667aad97a80ebd5cc8f91cb2a66ed1de5e4465579b75f",
+      "sent_at": "2026-07-30T08:12:27+09:00",
+      "source": "econovill.com"
     },
     "title:빌게이츠이르면내달방한ai차세대원전논의할듯": {
       "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
@@ -643,7 +703,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-30T07:11:03+09:00",
+  "last_successful_send_at": "2026-07-30T08:12:29+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -694,6 +754,26 @@
       "material_signature": "16f717c4c51db605cef60929687b8591b4dad3a66ef824a9c509c7d4d31d3ef6",
       "sent_at": "2026-07-29T18:11:51+09:00",
       "source": "daily.hankooki.com"
+    },
+    "https://dealsite.co.kr/articles/166078": {
+      "cluster_key": "title:네이버ai팩토리뜬다13조프로젝트에건설사군침",
+      "delivery_id": "teams_ai_push:33e7e3f99807",
+      "first_sent_at": "2026-07-30T08:12:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7841671475fcd7dda1d6e55c31a75fd8c68607a89c552046371c6b9646af26e9",
+      "sent_at": "2026-07-30T08:12:29+09:00",
+      "source": "dealsite.co.kr"
+    },
+    "https://dealsite.co.kr/articles/166095": {
+      "cluster_key": "title:smr데이터센터배팅글로벌체질",
+      "delivery_id": "teams_ai_push:f6b4db1592a5",
+      "first_sent_at": "2026-07-30T08:12:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4ad327472003fb494108cd43d1795a9f359738dbfcb56529285aaeb4aa825318",
+      "sent_at": "2026-07-30T08:12:26+09:00",
+      "source": "dealsite.co.kr"
     },
     "https://news.bizwatch.co.kr/article/mobile/2026/07/28/0025": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
@@ -804,6 +884,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "https://www.econovill.com/news/articleView.html?idxno=746603": {
+      "cluster_key": "title:빌게이츠내달방한목skhd현대와공급망확대논의전망",
+      "delivery_id": "teams_ai_push:edec3cfb2964",
+      "first_sent_at": "2026-07-30T08:12:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f64d193e5a92d56bbc8667aad97a80ebd5cc8f91cb2a66ed1de5e4465579b75f",
+      "sent_at": "2026-07-30T08:12:27+09:00",
+      "source": "econovill.com"
     },
     "https://www.energydaily.co.kr/news/articleView.html?idxno=201813": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
@@ -1027,6 +1117,16 @@
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
     },
+    "smr데이터센터배팅글로벌체질": {
+      "cluster_key": "title:smr데이터센터배팅글로벌체질",
+      "delivery_id": "teams_ai_push:f6b4db1592a5",
+      "first_sent_at": "2026-07-30T08:12:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4ad327472003fb494108cd43d1795a9f359738dbfcb56529285aaeb4aa825318",
+      "sent_at": "2026-07-30T08:12:26+09:00",
+      "source": "dealsite.co.kr"
+    },
     "건설을넘어에너지인프라선도대우건설k원전주역으로뛴다": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
       "delivery_id": "teams_ai_push:96dd8c741197",
@@ -1056,6 +1156,16 @@
       "material_signature": "b03292c94f1aebbc87312bd672b19070bab22382231f8d7d3c7325b9a06140ee",
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
+    },
+    "네이버ai팩토리뜬다13조프로젝트에건설사군침": {
+      "cluster_key": "title:네이버ai팩토리뜬다13조프로젝트에건설사군침",
+      "delivery_id": "teams_ai_push:33e7e3f99807",
+      "first_sent_at": "2026-07-30T08:12:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7841671475fcd7dda1d6e55c31a75fd8c68607a89c552046371c6b9646af26e9",
+      "sent_at": "2026-07-30T08:12:29+09:00",
+      "source": "dealsite.co.kr"
     },
     "대미투자1호로가스복합발전소건설사업유력": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
@@ -1146,6 +1256,16 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "빌게이츠내달방한목skhd현대와공급망확대논의전망": {
+      "cluster_key": "title:빌게이츠내달방한목skhd현대와공급망확대논의전망",
+      "delivery_id": "teams_ai_push:edec3cfb2964",
+      "first_sent_at": "2026-07-30T08:12:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f64d193e5a92d56bbc8667aad97a80ebd5cc8f91cb2a66ed1de5e4465579b75f",
+      "sent_at": "2026-07-30T08:12:27+09:00",
+      "source": "econovill.com"
     },
     "빌게이츠이르면내달방한ai차세대원전논의할듯": {
       "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
