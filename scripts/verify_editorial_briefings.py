@@ -4174,6 +4174,249 @@ def live_preview_contracts() -> None:
     )
 
 
+
+def source_priority_and_link_integrity_contracts() -> None:
+    primary = (
+        "연합뉴스", "MBC", "KBS", "조선일보", "YTN",
+        "JTBC", "중앙일보", "매일경제", "한국경제", "SBS",
+    )
+    secondary = ("동아일보", "한겨레", "경향신문")
+    domains = (
+        "yna.co.kr", "imbc.com", "kbs.co.kr", "chosun.com",
+        "ytn.co.kr", "jtbc.co.kr", "joongang.co.kr",
+        "mk.co.kr", "hankyung.com", "sbs.co.kr",
+    )
+
+    check(
+        "locked primary and secondary publisher priority is exact",
+        brief.PRIMARY_PUBLISHER_PRIORITY == primary
+        and brief.SECONDARY_PUBLISHER_PRIORITY == secondary
+        and brief.PREFERRED_PUBLISHER_DAILY_TARGET == 4
+        and brief.PREFERRED_PUBLISHER_WEEKLY_TARGET == 8,
+    )
+
+    jtbc = brief.source_quality.classify("JTBC", "AI 데이터센터 건설")
+    check(
+        "JTBC is classified as a trusted news publisher",
+        jtbc["source_quality"] == "trusted"
+        and jtbc["source_type"] == "news",
+    )
+
+    safe_url = (
+        "https://teams.public.onecdn.static.microsoft/"
+        "evergreen-assets/safelinks/2/atp-safelinks.html"
+    )
+    safe_selection = news_access.choose_article_link({"url": safe_url})
+
+    check(
+        "Microsoft Safe Links intermediary is never publisher-direct",
+        news_access.classify_source_type(safe_url) == "unknown"
+        and not safe_selection.url
+        and not safe_selection.is_direct
+        and not news_access.choose_direct_article_url({"url": safe_url}),
+    )
+
+    daily_run = dt("2026-07-29T07:00:00+09:00")
+    weekly_run = dt("2026-07-29T07:30:00+09:00")
+
+    def rows_for(coverage):
+        rows = []
+
+        for index, (source, domain) in enumerate(
+            zip(primary, domains),
+            start=1,
+        ):
+            rows.append({
+                "title": f"AI 데이터센터 건설 투자 우선매체 {index}",
+                "source": source,
+                "published_at": coverage.end.isoformat(),
+                "url": f"https://{domain}/news/priority-{index}",
+                "snippet": (
+                    "AI 데이터센터 건설 및 전력 인프라 투자 계획이 발표됐다. "
+                    "건설 산업과 경영 의사결정에 영향을 줄 수 있다."
+                ),
+                "source_metadata": {"provider": "offline_fixture"},
+            })
+
+        for index, source in enumerate(secondary, start=1):
+            rows.append({
+                "title": f"AI 건설 안전 정책 보조매체 {index}",
+                "source": source,
+                "published_at": coverage.end.isoformat(),
+                "url": f"https://secondary{index}.fixture.test/news/{index}",
+                "snippet": (
+                    "AI 기반 건설 안전 정책과 적용 범위가 공개됐다. "
+                    "후속 제도 변화를 확인할 필요가 있다."
+                ),
+                "source_metadata": {"provider": "offline_fixture"},
+            })
+
+        rows.append({
+            "title": "국토부 AI 건설 안전 정책 발표",
+            "source": "국토교통부",
+            "published_at": coverage.end.isoformat(),
+            "url": "https://molit.go.kr/news/official-ai-construction",
+            "snippet": (
+                "건설현장 AI 안전관리 정책과 적용 일정이 발표됐다. "
+                "건설사 대응 범위를 점검할 필요가 있다."
+            ),
+            "source_metadata": {"provider": "offline_fixture"},
+        })
+
+        for index in range(1, 4):
+            rows.append({
+                "title": f"AI 건설 일반매체 후보 {index}",
+                "source": f"일반경제매체 {index}",
+                "published_at": coverage.end.isoformat(),
+                "url": f"https://other{index}.fixture.test/news/{index}",
+                "snippet": (
+                    "AI 건설 기술 도입 계획이 공개됐다. "
+                    "시장 적용 가능성이 논의되고 있다."
+                ),
+                "source_metadata": {"provider": "offline_fixture"},
+            })
+
+        rows.append({
+            "title": "지역 축제 프로그램 안내",
+            "source": "MBC",
+            "published_at": coverage.end.isoformat(),
+            "url": "https://imbc.com/news/irrelevant-local-event",
+            "snippet": "지역 행사 일정이 공개됐다. 관람 방법이 안내됐다.",
+            "source_metadata": {
+                "provider": "google_news_rss",
+                "query": "",
+            },
+        })
+
+        return rows
+
+    daily_coverage = brief.daily_coverage(daily_run)
+    weekly_coverage = brief.weekly_coverage(weekly_run)
+
+    daily_articles = brief.normalize_articles(
+        rows_for(daily_coverage),
+        daily_coverage,
+        limit=brief.DAILY_MAX_ARTICLES,
+        resolve_images=False,
+        selection_mode=brief.SELECTION_MODE_EDITORIAL_PRIORITY,
+    )
+    weekly_articles = brief.normalize_articles(
+        rows_for(weekly_coverage),
+        weekly_coverage,
+        limit=brief.WEEKLY_MAX_ARTICLES,
+        resolve_images=False,
+        selection_mode=brief.SELECTION_MODE_EDITORIAL_PRIORITY,
+    )
+
+    def priority(article):
+        return brief._publisher_priority(  # noqa: SLF001
+            article.source,
+            article.selected_url,
+        )
+
+    daily_primary = [
+        article for article in daily_articles
+        if priority(article)[0] == "primary"
+    ]
+    weekly_primary = [
+        article for article in weekly_articles
+        if priority(article)[0] == "primary"
+    ]
+
+    check(
+        "Daily fills at least four relevance-qualified primary publishers",
+        len(daily_articles) == 6 and len(daily_primary) >= 4,
+        repr([article.source for article in daily_articles]),
+    )
+    check(
+        "Weekly fills at least eight relevance-qualified primary publishers",
+        len(weekly_articles) == 12 and len(weekly_primary) >= 8,
+        repr([article.source for article in weekly_articles]),
+    )
+    check(
+        "Daily primary publishers preserve the locked rank order",
+        [priority(article)[1] for article in daily_primary]
+        == sorted(priority(article)[1] for article in daily_primary),
+    )
+    check(
+        "Weekly primary publishers preserve the locked rank order",
+        [priority(article)[1] for article in weekly_primary]
+        == sorted(priority(article)[1] for article in weekly_primary),
+    )
+    check(
+        "official institution source is preserved in Daily and Weekly",
+        "국토교통부" in {article.source for article in daily_articles}
+        and "국토교통부" in {article.source for article in weekly_articles},
+        repr({
+            "daily": [article.source for article in daily_articles],
+            "weekly": [article.source for article in weekly_articles],
+        }),
+    )
+    check(
+        "primary publisher below relevance floor is never quota-filled",
+        all(
+            article.title != "지역 축제 프로그램 안내"
+            for article in daily_articles
+        )
+        and all(
+            article.title != "지역 축제 프로그램 안내"
+            for article in weekly_articles
+        ),
+    )
+
+    runner_source = read("scripts/run_editorial_briefing.py")
+    check(
+        "production publish explicitly activates editorial priority mode",
+        (
+            "selection_mode=(" in runner_source
+            and "editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY"
+            in runner_source
+        ),
+    )
+
+    root_url = "https://preview.fixture.test/HDEC-News-Sensor"
+    daily = brief.render_daily(
+        daily_articles,
+        run_at=daily_run,
+        root_url=root_url,
+    )
+    weekly = brief.render_weekly(
+        weekly_articles,
+        run_at=weekly_run,
+        root_url=root_url,
+    )
+
+    brief.validate_rendered(daily)
+    brief.validate_rendered(weekly)
+
+    daily_urls = {article.selected_url for article in daily_articles}
+    weekly_urls = {article.selected_url for article in weekly_articles}
+
+    check(
+        "Daily Teams text contains only the public brief URL",
+        daily.public_dated_url in daily.teams_text
+        and all(url not in daily.teams_text for url in daily_urls),
+    )
+    check(
+        "Daily Teams HTML has one CTA and no article links",
+        daily.teams_html.count("<a ") == 1
+        and daily.public_dated_url in daily.teams_html
+        and all(url not in daily.teams_html for url in daily_urls),
+    )
+    check(
+        "Weekly Teams surfaces contain only the public brief CTA",
+        weekly.teams_html.count("<a ") == 1
+        and weekly.public_dated_url in weekly.teams_html
+        and weekly.public_dated_url in weekly.teams_text
+        and all(url not in weekly.teams_html for url in weekly_urls)
+        and all(url not in weekly.teams_text for url in weekly_urls),
+    )
+    check(
+        "public briefing pages preserve selected article links",
+        all(url in daily.html for url in daily_urls)
+        and all(url in weekly.html for url in weekly_urls),
+    )
+
 def main() -> int:
     source_contracts()
     workflow_contracts()
@@ -4185,6 +4428,7 @@ def main() -> int:
     naver_provider_contracts()
     naver_provider_activation_contracts()
     selection_policy_contracts()
+    source_priority_and_link_integrity_contracts()
     computed_style_contracts()
     url_and_publication_contracts(daily)
     smtp_and_state_contracts(daily)

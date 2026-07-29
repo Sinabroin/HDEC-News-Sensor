@@ -33,6 +33,10 @@ _SEARCH_DOMAINS = (
     "news.google.com", "google.com", "bing.com", "search.naver.com", "search.daum.net",
 )
 _LICENSED_DOMAINS = ("bigkinds.or.kr",)
+_SECURITY_INTERMEDIARY_DOMAINS = (
+    "safelinks.protection.outlook.com",
+    "teams.public.onecdn.static.microsoft",
+)
 _WARNING_BODY_SIGNATURES = (
     "hdec.kr/warning",
     "warning.jpg",
@@ -71,6 +75,14 @@ def _domain(url: str | None) -> str:
         return ""
 
 
+def _is_security_intermediary_domain(domain: str) -> bool:
+    host = str(domain or "").casefold().rstrip(".")
+    return any(
+        host == item or host.endswith("." + item)
+        for item in _SECURITY_INTERMEDIARY_DOMAINS
+    )
+
+
 def detect_corp_warning_url(url: str) -> bool:
     """HDEC warning 이미지/페이지 URL이면 True.
 
@@ -96,6 +108,8 @@ def classify_source_type(url: str | None) -> str:
     domain = _domain(value)
     lowered = value.lower()
     if not domain:
+        return "unknown"
+    if _is_security_intermediary_domain(domain):
         return "unknown"
     if any(domain == item or domain.endswith("." + item) for item in _LICENSED_DOMAINS):
         return "licensed_db"
@@ -236,6 +250,8 @@ def _http_nonwarning(value) -> str:
         return ""
     host = _domain(text)
     lowered = text.lower()
+    if _is_security_intermediary_domain(host):
+        return ""
     if host in {"example.com", "www.example.com", "example.invalid"} or "/mock-" in lowered:
         return ""
     return text

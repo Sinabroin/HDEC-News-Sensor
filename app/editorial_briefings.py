@@ -32,7 +32,7 @@ from urllib.parse import parse_qsl, quote, unquote, urlencode, urljoin, urlparse
 
 from PIL import Image, UnidentifiedImageError
 
-from app import config, news_access, news_coverage
+from app import config, news_access, news_coverage, source_quality
 
 KST = timezone(timedelta(hours=9))
 DAILY_REPORT_SUFFIX = "/daily/latest.html"
@@ -66,10 +66,50 @@ CATEGORY_DIVERSITY_SOFT_CAP = 3
 TITLE_CLUSTER_TIME_WINDOW = timedelta(hours=6)
 SELECTION_MODE_LEGACY = "legacy"
 SELECTION_MODE_DIRECT_AWARE_DAILY = "direct_aware_daily"
+SELECTION_MODE_EDITORIAL_PRIORITY = SELECTION_MODE_DIRECT_AWARE_DAILY
+
 _SELECTION_MODES = {
     SELECTION_MODE_LEGACY,
     SELECTION_MODE_DIRECT_AWARE_DAILY,
 }
+
+PRIMARY_PUBLISHER_PRIORITY = (
+    "연합뉴스",
+    "MBC",
+    "KBS",
+    "조선일보",
+    "YTN",
+    "JTBC",
+    "중앙일보",
+    "매일경제",
+    "한국경제",
+    "SBS",
+)
+
+SECONDARY_PUBLISHER_PRIORITY = (
+    "동아일보",
+    "한겨레",
+    "경향신문",
+)
+
+PREFERRED_PUBLISHER_DAILY_TARGET = 4
+PREFERRED_PUBLISHER_WEEKLY_TARGET = 8
+
+_PUBLISHER_PRIORITY_POLICIES = (
+    ("primary", 1, ("연합뉴스", "yonhap"), ("yna.co.kr",)),
+    ("primary", 2, ("mbc",), ("imbc.com", "mbc.co.kr")),
+    ("primary", 3, ("kbs",), ("kbs.co.kr",)),
+    ("primary", 4, ("조선일보",), ("chosun.com",)),
+    ("primary", 5, ("ytn",), ("ytn.co.kr",)),
+    ("primary", 6, ("jtbc",), ("jtbc.co.kr",)),
+    ("primary", 7, ("중앙일보",), ("joongang.co.kr",)),
+    ("primary", 8, ("매일경제", "매경"), ("mk.co.kr",)),
+    ("primary", 9, ("한국경제", "한경"), ("hankyung.com",)),
+    ("primary", 10, ("sbs",), ("sbs.co.kr",)),
+    ("secondary", 1, ("동아일보",), ("donga.com",)),
+    ("secondary", 2, ("한겨레",), ("hani.co.kr",)),
+    ("secondary", 3, ("경향신문",), ("khan.co.kr",)),
+)
 
 _SENTENCE_RE = re.compile(r"(?<=[.!?。！？])\s+")
 _WORD_RE = re.compile(r"[0-9A-Za-z가-힣]+")
@@ -736,6 +776,42 @@ def _url_host(value: object) -> str:
         return ""
 
 
+def _publisher_priority(source: str, selected_url: str) -> tuple[str, int]:
+    quality = source_quality.classify(source)
+    if quality.get("source_type") == "institution":
+        return "institution", 0
+
+    source_key = re.sub(
+        r"\s+",
+        "",
+        unicodedata.normalize("NFKC", str(source or "")).casefold(),
+    )
+    host = _url_host(selected_url)
+
+    for group, rank, aliases, domains in _PUBLISHER_PRIORITY_POLICIES:
+        alias_match = any(
+            re.sub(r"\s+", "", alias.casefold()) in source_key
+            for alias in aliases
+        )
+        domain_match = any(
+            host == domain or host.endswith("." + domain)
+            for domain in domains
+        )
+        if alias_match or domain_match:
+            return group, rank
+
+    return "other", 999
+
+
+def _preferred_publisher_target(limit: int) -> int:
+    configured = (
+        PREFERRED_PUBLISHER_DAILY_TARGET
+        if limit <= DAILY_MAX_ARTICLES
+        else PREFERRED_PUBLISHER_WEEKLY_TARGET
+    )
+    return min(limit, configured)
+
+
 def parse_published_at(value: object) -> datetime:
     raw = str(value or "").strip()
     if raw.endswith("Z"):
@@ -1015,6 +1091,21 @@ class _ArticleCandidate:
     def direct_priority_eligible(self) -> bool:
         return self.is_direct and self.relevance_score >= DIRECT_PRIORITY_RELEVANCE_FLOOR
 
+    @property
+    def publisher_priority(self) -> tuple[str, int]:
+        return _publisher_priority(
+            self.article.source,
+            self.selected_url,
+        )
+
+    @property
+    def is_primary_publisher(self) -> bool:
+        return self.publisher_priority[0] == "primary"
+
+    @property
+    def is_official_institution(self) -> bool:
+        return self.publisher_priority[0] == "institution"
+
 
 def _provider_tokens(raw: Mapping) -> frozenset[str]:
     return frozenset(
@@ -1058,6 +1149,18 @@ def _candidate_relevance(
     if category != "기업·산업":
         score += 0.5
         reasons.append(f"category:{category}")
+
+    quality = source_quality.classify(
+        str(raw.get("source") or ""),
+        title,
+    )
+    if (
+        quality.get("source_type") == "institution"
+        and category != "기업·산업"
+    ):
+        score += 0.5
+        reasons.append("institution_relevant_category")
+
     if not reasons and query:
         # Provider query evidence is weaker than text/query-group agreement but prevents
         # complete blindness for configured non-coverage source files.
@@ -1327,6 +1430,7 @@ def _select_with_diversity(
                 selected_ids.add(id(candidate))
 
 
+
 def _select_article_candidates(
     candidates: list[_ArticleCandidate],
     *,
@@ -1334,17 +1438,52 @@ def _select_article_candidates(
     audit: SelectionAuditCounters | None,
 ) -> list[_ArticleCandidate]:
     relevant = [
-        candidate for candidate in candidates
+        candidate
+        for candidate in candidates
         if candidate.relevance_score >= SELECTION_RELEVANCE_FLOOR
     ]
     relevant.sort(key=_candidate_sort_key, reverse=True)
-    direct_pool = [candidate for candidate in relevant if candidate.direct_priority_eligible]
-    direct_supply_sufficient = len(direct_pool) >= DIRECT_SUPPLY_FOR_AGGREGATOR_CAP
+
+    direct_pool = [
+        candidate
+        for candidate in relevant
+        if candidate.direct_priority_eligible
+    ]
+
+    primary_pool = sorted(
+        (
+            candidate
+            for candidate in relevant
+            if candidate.is_primary_publisher
+        ),
+        key=lambda candidate: (
+            -candidate.publisher_priority[1],
+            candidate.ranking_key,
+        ),
+        reverse=True,
+    )
+
+    institution_pool = sorted(
+        (
+            candidate
+            for candidate in relevant
+            if candidate.is_official_institution
+        ),
+        key=_candidate_sort_key,
+        reverse=True,
+    )
+
+    direct_supply_sufficient = (
+        len(direct_pool) >= DIRECT_SUPPLY_FOR_AGGREGATOR_CAP
+    )
     selected: list[_ArticleCandidate] = []
 
-    if relevant:
+    if primary_pool:
+        selected.append(primary_pool[0])
+    elif relevant:
         best = relevant[0]
         best_direct = direct_pool[0] if direct_pool else None
+
         if (
             best_direct is not None
             and (best.is_aggregator or not best.is_direct)
@@ -1354,6 +1493,33 @@ def _select_article_candidates(
             selected.append(best_direct)
         else:
             selected.append(best)
+
+    if (
+        institution_pool
+        and len(selected) < limit
+        and not any(item.is_official_institution for item in selected)
+    ):
+        _select_with_diversity(
+            institution_pool,
+            selected,
+            limit=min(limit, len(selected) + 1),
+        )
+
+    target = _preferred_publisher_target(limit)
+    selected_primary_count = sum(
+        item.is_primary_publisher
+        for item in selected
+    )
+
+    if selected_primary_count < target:
+        _select_with_diversity(
+            primary_pool,
+            selected,
+            limit=min(
+                limit,
+                len(selected) + target - selected_primary_count,
+            ),
+        )
 
     if direct_supply_sufficient:
         _select_with_diversity(
@@ -1379,31 +1545,42 @@ def _select_article_candidates(
 
     if audit is not None:
         selected_ids = {id(item) for item in selected}
+
         audit.naver_direct_articles_selected = sum(
             1 for item in selected if item.is_naver_direct
         )
         audit.other_direct_articles_selected = sum(
-            1 for item in selected if item.is_direct and not item.is_naver_direct
+            1
+            for item in selected
+            if item.is_direct and not item.is_naver_direct
         )
-        audit.aggregator_articles_selected = sum(1 for item in selected if item.is_aggregator)
+        audit.aggregator_articles_selected = sum(
+            1 for item in selected if item.is_aggregator
+        )
+
         unselected_direct = [
             item for item in direct_pool
             if id(item) not in selected_ids
         ]
+
         audit.direct_candidates_displaced_by_aggregator = min(
-            len(unselected_direct), audit.aggregator_articles_selected
+            len(unselected_direct),
+            audit.aggregator_articles_selected,
         )
+
     return [
         replace(
             candidate,
             article=replace(
                 candidate.article,
-                selection_reason=_selection_reason(candidate, selected),
+                selection_reason=_selection_reason(
+                    candidate,
+                    selected,
+                ),
             ),
         )
         for candidate in selected[:limit]
     ]
-
 
 def _selection_reason(
     candidate: _ArticleCandidate,
@@ -3346,8 +3523,7 @@ def render_daily(
         "주요 기사",
     ]
     text_lines.extend(
-        f"- {item.title} | {item.source} | {item.published_label} | "
-        f"{item.link_label}: {item.selected_url}"
+        f"- {item.title} | {item.source} | {item.published_label}"
         for item in articles[1:6]
     )
     text_lines.extend(("", f"전체 Daily Brief 보기: {dated_url}"))
@@ -3362,7 +3538,7 @@ def render_daily(
                 "기사",
                 "<br>".join(
                     f"{escape(item.title)} · {escape(item.source)} · "
-                    f"{escape(item.published_label)} · {_external_anchor(item)}"
+                    f"{escape(item.published_label)}"
                     for item in articles
                 ),
             ),
@@ -3521,6 +3697,7 @@ def render_edition(
     publisher_counters: PublisherUrlResolutionCounters | None = None,
     publisher_fetcher: Callable[[str], tuple[str, str]] | None = None,
     publisher_opener: object | None = None,
+    selection_mode: str = SELECTION_MODE_LEGACY,
 ) -> RenderedEdition:
     coverage = coverage_for(edition_type, run_at)
     limit = DAILY_MAX_ARTICLES if edition_type == "daily" else WEEKLY_MAX_ARTICLES
@@ -3537,6 +3714,7 @@ def render_edition(
         publisher_counters=publisher_counters,
         publisher_fetcher=publisher_fetcher,
         publisher_opener=publisher_opener,
+        selection_mode=selection_mode,
     )
     if edition_type == "daily":
         return render_daily(articles, run_at=run_at, root_url=root_url)
@@ -3554,6 +3732,24 @@ def validate_rendered(edition: RenderedEdition) -> None:
         raise EditorialError("unresolved template marker")
     if edition.article_count < 1:
         raise EditorialError("empty edition")
+
+    teams_anchors = re.findall(r"<a\b[^>]*>", edition.teams_html)
+    if len(teams_anchors) != 1:
+        raise EditorialError(
+            "Teams message must contain exactly one public brief CTA"
+        )
+
+    expected_href = (
+        f'href="{escape(edition.public_dated_url, quote=True)}"'
+    )
+    if expected_href not in teams_anchors[0]:
+        raise EditorialError(
+            "Teams CTA does not target the dated public brief"
+        )
+
+    if edition.public_dated_url not in edition.teams_text:
+        raise EditorialError("Teams text public brief CTA missing")
+
     for anchor in re.findall(r"<a\b[^>]*>", edition.html):
         if 'target="_blank"' not in anchor or 'rel="noopener noreferrer"' not in anchor:
             raise EditorialError("external link security attributes missing")
