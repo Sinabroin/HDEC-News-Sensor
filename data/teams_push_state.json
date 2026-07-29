@@ -40,6 +40,16 @@
       "sent_at": "2026-07-29T18:11:51+09:00",
       "source": "daily.hankooki.com"
     },
+    "naver_0b8ded839919": {
+      "cluster_key": "title:빌게이츠한총리면담가능성smr분야협력논의전망",
+      "delivery_id": "teams_ai_push:9795e43c0b03",
+      "first_sent_at": "2026-07-29T22:19:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
+      "sent_at": "2026-07-29T22:19:24+09:00",
+      "source": "뉴시스"
+    },
     "naver_151671ced81a": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
       "delivery_id": "teams_ai_push:3c2a4a528552",
@@ -59,6 +69,16 @@
       "material_signature": "7cb7190d67ec1a50d70fa6e5bf46d3a279d01b78360a5e8a0f034e65abda5699",
       "sent_at": "2026-07-29T18:11:48+09:00",
       "source": "srtimes.kr"
+    },
+    "naver_2a71197f044a": {
+      "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
+      "delivery_id": "teams_ai_push:aa57ec6a2dac",
+      "first_sent_at": "2026-07-29T22:19:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "de4fba4ad315f36f30e99fd65fa8a16f996f9a4d8471fb96fb1a59c19b1ab38c",
+      "sent_at": "2026-07-29T22:19:23+09:00",
+      "source": "서울경제"
     },
     "naver_2f048683f51e": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
@@ -402,6 +422,26 @@
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
     },
+    "title:빌게이츠이르면내달방한ai차세대원전논의할듯": {
+      "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
+      "delivery_id": "teams_ai_push:aa57ec6a2dac",
+      "first_sent_at": "2026-07-29T22:19:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "de4fba4ad315f36f30e99fd65fa8a16f996f9a4d8471fb96fb1a59c19b1ab38c",
+      "sent_at": "2026-07-29T22:19:23+09:00",
+      "source": "서울경제"
+    },
+    "title:빌게이츠한총리면담가능성smr분야협력논의전망": {
+      "cluster_key": "title:빌게이츠한총리면담가능성smr분야협력논의전망",
+      "delivery_id": "teams_ai_push:9795e43c0b03",
+      "first_sent_at": "2026-07-29T22:19:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
+      "sent_at": "2026-07-29T22:19:24+09:00",
+      "source": "뉴시스"
+    },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -503,7 +543,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-29T18:11:51+09:00",
+  "last_successful_send_at": "2026-07-29T22:19:24+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -705,6 +745,16 @@
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
     },
+    "https://www.newsis.com/view/NISX20260729_0003728870": {
+      "cluster_key": "title:빌게이츠한총리면담가능성smr분야협력논의전망",
+      "delivery_id": "teams_ai_push:9795e43c0b03",
+      "first_sent_at": "2026-07-29T22:19:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
+      "sent_at": "2026-07-29T22:19:24+09:00",
+      "source": "뉴시스"
+    },
     "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
       "delivery_id": "teams_ai_push:3c2a4a528552",
@@ -723,6 +773,16 @@
       "last_material_update_at": null,
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
+      "source": "서울경제"
+    },
+    "https://www.sedaily.com/article/20073568": {
+      "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
+      "delivery_id": "teams_ai_push:aa57ec6a2dac",
+      "first_sent_at": "2026-07-29T22:19:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "de4fba4ad315f36f30e99fd65fa8a16f996f9a4d8471fb96fb1a59c19b1ab38c",
+      "sent_at": "2026-07-29T22:19:23+09:00",
       "source": "서울경제"
     },
     "https://www.sidae.com/article/2026072814463436475": {
@@ -906,6 +966,26 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "빌게이츠이르면내달방한ai차세대원전논의할듯": {
+      "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
+      "delivery_id": "teams_ai_push:aa57ec6a2dac",
+      "first_sent_at": "2026-07-29T22:19:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "de4fba4ad315f36f30e99fd65fa8a16f996f9a4d8471fb96fb1a59c19b1ab38c",
+      "sent_at": "2026-07-29T22:19:23+09:00",
+      "source": "서울경제"
+    },
+    "빌게이츠한총리면담가능성smr분야협력논의전망": {
+      "cluster_key": "title:빌게이츠한총리면담가능성smr분야협력논의전망",
+      "delivery_id": "teams_ai_push:9795e43c0b03",
+      "first_sent_at": "2026-07-29T22:19:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
+      "sent_at": "2026-07-29T22:19:24+09:00",
+      "source": "뉴시스"
     },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
