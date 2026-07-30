@@ -231,6 +231,21 @@ def workflow_contracts() -> None:
             "git reset" not in workflow and "git checkout --" not in workflow,
         )
         check(f"{name} never stages the repository root", "git add ." not in workflow)
+        required_names = (
+            f"Claim exact {name} edition after public verification",
+            f"Commit and push exact {name} claim state file",
+            f"Send claimed {name} edition",
+            f"Commit and push exact {name} success state file",
+        )
+        check(
+            f"{name} exact claim and success step names are present",
+            all(f"- name: {step}" in workflow for step in required_names),
+        )
+        check(
+            f"{name} force dry run cannot reach claim or send",
+            "steps.publish.outputs.skipped == 'false'" in workflow
+            and "github.event.inputs.force_dry_run != 'true'" in workflow,
+        )
 
     check(
         "Daily exact publication/state git-add allowlist",
@@ -247,6 +262,44 @@ def workflow_contracts() -> None:
         and 'DATED_PATH="docs/editorial/weekly/${EDITION}.html"' in weekly
         and 'LATEST_PATH="docs/editorial/weekly/latest.html"' in weekly
         and 'STATE_PATH="data/editorial_weekly_state.json"' in weekly,
+    )
+    check(
+        "workflow commits claim before send",
+        all(
+            workflow.index(f"- name: Claim exact {name} edition after public verification")
+            < workflow.index(f"- name: Commit and push exact {name} claim state file")
+            < workflow.index(f"- name: Send claimed {name} edition")
+            < workflow.index(f"- name: Commit and push exact {name} success state file")
+            for name, workflow in (("Daily", daily), ("Weekly", weekly))
+        ),
+    )
+    check(
+        "workflow send is gated by claim authorization",
+        all(
+            "if: success() && steps.claim.outputs.send_authorized == 'true'" in workflow
+            for workflow in (daily, weekly)
+        ),
+    )
+    check(
+        "workflow claim step id is exact",
+        all(
+            re.search(
+                rf"- name: Claim exact {name} edition after public verification\n"
+                r"\s+id: claim",
+                workflow,
+            )
+            for name, workflow in (("Daily", daily), ("Weekly", weekly))
+        ),
+    )
+    check(
+        "workflow claim commit messages include exact edition",
+        'git commit -m "chore: claim Daily editorial delivery ${EDITION}"' in daily
+        and 'git commit -m "chore: claim Weekly editorial delivery ${EDITION}"' in weekly,
+    )
+    check(
+        "workflow success commit messages include exact edition",
+        'git commit -m "chore: record Daily editorial delivery ${EDITION}"' in daily
+        and 'git commit -m "chore: record Weekly editorial delivery ${EDITION}"' in weekly,
     )
     platform_token = "tele" + "gram"
     implementation_parts = [
@@ -385,8 +438,119 @@ def state_contracts() -> None:
             "smtp_code": 250,
             "sent_at": "2026-07-27T07:05:00+09:00",
         }
-        updated = state.add_success(state.empty_state("daily"), "daily", record)
-        check("successful edition is skipped on catch-up", state.has_success(updated, "2026-07-27"))
+        legacy = {
+            "version": 1,
+            "edition_type": "daily",
+            "successful_editions": [record],
+            "last_successful_edition": record["edition_key"],
+            "last_successful_send_at": record["sent_at"],
+        }
+        legacy_path = root / "legacy.json"
+        legacy_path.write_text(json.dumps(legacy), encoding="utf-8")
+        migrated = state.load_state("daily", legacy_path)
+        check(
+            "legacy version 1 state migrates to claim schema",
+            migrated["version"] == 2
+            and migrated["successful_editions"] == legacy["successful_editions"]
+            and migrated["last_successful_edition"] == legacy["last_successful_edition"]
+            and migrated["last_successful_send_at"] == legacy["last_successful_send_at"]
+            and migrated["delivery_claims"] == {},
+        )
+        check(
+            "empty state contains no claims",
+            state.empty_state("daily")["version"] == 2
+            and state.empty_state("daily")["delivery_claims"] == {}
+            and not state.has_claim(state.empty_state("daily"), "2026-07-27"),
+        )
+        bad_legacy = dict(legacy)
+        bad_legacy["extra"] = True
+        expect_raises(
+            "legacy state with extra fields fails closed",
+            state.StateError,
+            lambda: state.validate_state(bad_legacy, "daily"),
+        )
+        non_250 = json.loads(json.dumps(legacy))
+        non_250["successful_editions"][0]["smtp_code"] = 251
+        expect_raises(
+            "legacy non-250 state fails closed",
+            state.StateError,
+            lambda: state.validate_state(non_250, "daily"),
+        )
+        duplicate = json.loads(json.dumps(legacy))
+        duplicate["successful_editions"].append(dict(record))
+        expect_raises(
+            "legacy duplicate success state fails closed",
+            state.StateError,
+            lambda: state.validate_state(duplicate, "daily"),
+        )
+        cross_edition = json.loads(json.dumps(legacy))
+        cross_edition["successful_editions"][0]["edition_key"] = "2026-W31"
+        cross_edition["last_successful_edition"] = "2026-W31"
+        expect_raises(
+            "legacy cross-edition success state fails closed",
+            state.StateError,
+            lambda: state.validate_state(cross_edition, "daily"),
+        )
+        claim = {
+            "edition_key": "2026-07-27",
+            "coverage_start": record["coverage_start"],
+            "coverage_end": record["coverage_end"],
+            "html_sha256": record["html_sha256"],
+            "public_url": record["public_url"],
+            "claim_owner": "github-run:100:attempt:1",
+            "claimed_at": "2026-07-27T07:01:00+09:00",
+        }
+        claimed = state.add_claim(state.empty_state("daily"), "daily", claim)
+        check(
+            "claim has exactly the required fields",
+            set(claim)
+            == {
+                "edition_key",
+                "coverage_start",
+                "coverage_end",
+                "html_sha256",
+                "public_url",
+                "claim_owner",
+                "claimed_at",
+            }
+            and state.has_claim(claimed, claim["edition_key"]),
+        )
+        check(
+            "same exact owner claim is idempotent without timestamp refresh",
+            state.add_claim(
+                claimed,
+                "daily",
+                {**claim, "claimed_at": "2026-07-27T07:20:00+09:00"},
+            )
+            == claimed,
+        )
+        expect_raises(
+            "conflicting claim owner is denied",
+            state.StateError,
+            lambda: state.add_claim(
+                claimed,
+                "daily",
+                {**claim, "claim_owner": "github-run:101:attempt:1"},
+            ),
+        )
+        future_claim = {
+            **claim,
+            "edition_key": "2026-07-28",
+            "public_url": record["public_url"].replace("2026-07-27", "2026-07-28"),
+        }
+        with_future = state.add_claim(claimed, "daily", future_claim)
+        check(
+            "orphaned claim does not block a future edition",
+            state.has_claim(with_future, "2026-07-27")
+            and state.has_claim(with_future, "2026-07-28")
+            and len(with_future["delivery_claims"]) == 2,
+        )
+        check(
+            "Daily and Weekly states remain independent",
+            state.empty_state("daily")["edition_type"] == "daily"
+            and state.empty_state("weekly")["edition_type"] == "weekly"
+            and state.state_path("daily") != state.state_path("weekly"),
+        )
 
 
 def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEdition, brief.RenderedEdition]:
@@ -2095,37 +2259,564 @@ def smtp_and_state_contracts(daily: brief.RenderedEdition) -> None:
 
     with tempfile.TemporaryDirectory(prefix="d7ak6e-smtp-state-") as temporary:
         root = Path(temporary)
+        claim_owner = "github-run:9001:attempt:1"
+        claim = {
+            "edition_key": manifest["edition_key"],
+            "coverage_start": manifest["coverage_start"],
+            "coverage_end": manifest["coverage_end"],
+            "html_sha256": manifest["html_sha256"],
+            "public_url": manifest["public_dated_url"],
+            "claim_owner": claim_owner,
+            "claimed_at": "2026-07-27T07:01:00+09:00",
+        }
         accepted_path = root / "accepted.json"
+        state.atomic_write_state(
+            "daily",
+            state.add_claim(state.empty_state("daily"), "daily", claim),
+            accepted_path,
+        )
         runner.persist_exact_250_success(
             "daily",
             manifest,
+            claim_owner=claim_owner,
             smtp_status="accepted",
             smtp_code=250,
             sent_at=dt("2026-07-27T07:05:00+09:00"),
             path=accepted_path,
         )
         check("SMTP DATA 250 changes state", accepted_path.is_file())
-        for code in (251, 252, 300, 399, 400, 500, None):
+        for code in (250.0, True, 251, 252, 300, 399, 400, 500, None):
             candidate = root / f"code-{code}.json"
+            state.atomic_write_state(
+                "daily",
+                state.add_claim(state.empty_state("daily"), "daily", claim),
+                candidate,
+            )
+            before = candidate.read_bytes()
             expect_raises(
                 f"SMTP code {code} changes state zero",
                 runner.OrchestratorError,
                 lambda code=code, candidate=candidate: runner.persist_exact_250_success(
                     "daily",
                     manifest,
+                    claim_owner=claim_owner,
                     smtp_status="accepted" if code and code < 400 else "rejected",
                     smtp_code=code,
                     sent_at=dt("2026-07-27T07:05:00+09:00"),
                     path=candidate,
                 ),
             )
-            check(f"SMTP code {code} left no state file", not candidate.exists())
+            check(f"SMTP code {code} preserves durable claim", candidate.read_bytes() == before)
         exception_path = root / "exception.json"
         try:
             raise TimeoutError("offline fixture")
         except TimeoutError:
             pass
         check("SMTP exception path changes state zero", not exception_path.exists())
+
+
+@contextlib.contextmanager
+def temporary_environment(values: dict[str, str | None]):
+    previous = {key: os.environ.get(key) for key in values}
+    try:
+        for key, value in values.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        yield
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+class _FakePublicResponse:
+    def __init__(self, status: int, body: str):
+        self.status = status
+        self._body = body.encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self, _limit: int):
+        return self._body
+
+
+def _fake_smtp_factory(
+    attempts: list[str],
+    *,
+    data_code: int,
+    events: list[str] | None = None,
+    fail_on_connect: bool = False,
+):
+    class FakeSMTP:
+        def __init__(self, *_args, **_kwargs):
+            attempts.append("smtp")
+            if events is not None:
+                events.append("smtp_attempt")
+            if fail_on_connect:
+                raise TimeoutError("offline SMTP fixture")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def ehlo(self):
+            return 250, b"fixture"
+
+        def starttls(self, **_kwargs):
+            return 220, b"fixture"
+
+        def login(self, *_args):
+            return 235, b"fixture"
+
+        def mail(self, *_args):
+            return 250, b"fixture"
+
+        def rcpt(self, *_args):
+            return 250, b"fixture"
+
+        def data(self, *_args):
+            return data_code, b"fixture"
+
+    return FakeSMTP
+
+
+def claim_delivery_contracts(daily: brief.RenderedEdition) -> None:
+    with tempfile.TemporaryDirectory(prefix="d7ak6e-claims-") as temporary:
+        root = Path(temporary)
+        runtime_dir = root / "runtime"
+        runtime_dir.mkdir()
+        docs_dir = root / "docs" / "editorial" / "daily"
+        docs_dir.mkdir(parents=True)
+        dated_path = docs_dir / f"{daily.edition_key}.html"
+        latest_path = docs_dir / "latest.html"
+        payload = daily.html.encode("utf-8")
+        dated_path.write_bytes(payload)
+        latest_path.write_bytes(payload)
+        manifest = brief.manifest_for_runtime(daily, dated_path, latest_path)
+        runner._write_runtime_manifest(runtime_dir, manifest)
+        claim_path = root / "daily-state.json"
+        output_path = root / "github-output.txt"
+        output_path.touch()
+        report_url = (
+            "https://preview.fixture.test/HDEC-News-Sensor/daily/latest.html"
+        )
+        production_env = {
+            "EDITORIAL_PRODUCTION": "1",
+            "GITHUB_REF": "refs/heads/main",
+            "GITHUB_RUN_ID": "7001",
+            "GITHUB_RUN_ATTEMPT": "1",
+            "REPORT_URL": report_url,
+            "GITHUB_OUTPUT": str(output_path),
+            "GMAIL_SMTP_USER": "sender@fixture.test",
+            "GMAIL_SMTP_APP_PASSWORD": "offline-password",
+            "ALERT_EMAIL_FROM": "sender@fixture.test",
+            "TEAMS_CHANNEL_EMAIL": "channel@fixture.test",
+        }
+        events: list[str] = []
+        original_docs_paths = runner._docs_paths
+        original_atomic_write = state.atomic_write_state
+
+        def fixture_docs_paths(_edition_type: str, _key: str):
+            return dated_path, latest_path
+
+        def tracked_atomic_write(edition_type, value, path=None):
+            validated = state.validate_state(dict(value), edition_type)
+            if validated["delivery_claims"] and not validated["successful_editions"]:
+                events.append("claim_write")
+            else:
+                events.append("success_write")
+            return original_atomic_write(edition_type, value, path=path)
+
+        def matching_public(*_args, **_kwargs):
+            events.append("public_verification")
+            return _FakePublicResponse(200, daily.html)
+
+        runner._docs_paths = fixture_docs_paths
+        state.atomic_write_state = tracked_atomic_write
+        try:
+            with temporary_environment(production_env), hard_block_network():
+                claimed = runner.run_claim(
+                    "daily",
+                    run_at=dt("2026-07-27T07:00:00+09:00"),
+                    runtime_dir=runtime_dir,
+                    opener=matching_public,
+                    state_path=claim_path,
+                    publication_timeout_seconds=0,
+                )
+            durable_claim = state.load_state("daily", claim_path)
+            check(
+                "public verification precedes claim write",
+                events[:2] == ["public_verification", "claim_write"],
+                repr(events),
+            )
+            check(
+                "claim mode performs zero SMTP attempts",
+                claimed is not None
+                and state.has_claim(durable_claim, daily.edition_key)
+                and "smtp_attempt" not in events,
+            )
+            claim_record = durable_claim["delivery_claims"][daily.edition_key]
+            check(
+                "claim owner derives from run ID and attempt",
+                claim_record["claim_owner"] == "github-run:7001:attempt:1",
+            )
+            output_values = {}
+            for line in output_path.read_text(encoding="utf-8").splitlines():
+                name, value = line.split("=", 1)
+                output_values[name] = value
+            check(
+                "claim mode emits all authorization outputs",
+                all(
+                    output_values.get(name) == value
+                    for name, value in {
+                        "state_changed": "true",
+                        "state_path": str(claim_path.resolve()),
+                        "send_authorized": "true",
+                        "edition": daily.edition_key,
+                        "claim_owner": "github-run:7001:attempt:1",
+                    }.items()
+                ),
+            )
+
+            no_page_path = root / "no-page-state.json"
+            with temporary_environment(production_env), hard_block_network():
+                expect_raises(
+                    "claim requires matching public HTTP 200",
+                    runner.OrchestratorError,
+                    lambda: runner.run_claim(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        opener=lambda *_args, **_kwargs: _FakePublicResponse(
+                            404, daily.html
+                        ),
+                        state_path=no_page_path,
+                        publication_timeout_seconds=0,
+                    ),
+                )
+            check(
+                "claim is not created without matching public HTTP 200",
+                not no_page_path.exists(),
+            )
+
+            malformed_components = (
+                (None, "1"),
+                ("", "1"),
+                (" 7001", "1"),
+                ("7001 ", "1"),
+                ("abc", "1"),
+                ("0", "1"),
+                ("-1", "1"),
+                ("7001", None),
+                ("7001", ""),
+                ("7001", " 1"),
+                ("7001", "0"),
+                ("7001", "-1"),
+            )
+            malformed_closed = True
+            for run_id, attempt in malformed_components:
+                try:
+                    with temporary_environment(
+                        {
+                            "GITHUB_RUN_ID": run_id,
+                            "GITHUB_RUN_ATTEMPT": attempt,
+                        }
+                    ):
+                        runner._github_claim_owner()
+                except runner.OrchestratorError:
+                    continue
+                malformed_closed = False
+            malformed_path = root / "malformed-owner-state.json"
+            with temporary_environment(
+                {**production_env, "GITHUB_RUN_ID": " 7001"}
+            ), hard_block_network():
+                try:
+                    runner.run_claim(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        opener=lambda *_args, **_kwargs: _FakePublicResponse(
+                            200, daily.html
+                        ),
+                        state_path=malformed_path,
+                        publication_timeout_seconds=0,
+                    )
+                except runner.OrchestratorError:
+                    pass
+                else:
+                    malformed_closed = False
+            check(
+                "malformed GitHub claim owner fails closed",
+                malformed_closed and not malformed_path.exists(),
+            )
+
+            conflict_before = claim_path.read_bytes()
+            conflict_output = root / "conflict-output.txt"
+            conflict_output.touch()
+            with temporary_environment(
+                {
+                    **production_env,
+                    "GITHUB_RUN_ID": "7002",
+                    "GITHUB_OUTPUT": str(conflict_output),
+                }
+            ), hard_block_network():
+                conflict_result = runner.run_claim(
+                    "daily",
+                    run_at=dt("2026-07-27T07:00:00+09:00"),
+                    runtime_dir=runtime_dir,
+                    opener=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                        AssertionError("existing claim catch-up must not poll")
+                    ),
+                    state_path=claim_path,
+                    publication_timeout_seconds=0,
+                )
+            check(
+                "conflicting claim catch-up is unauthorized without mutation",
+                conflict_result is None
+                and claim_path.read_bytes() == conflict_before
+                and "send_authorized=false"
+                in conflict_output.read_text(encoding="utf-8"),
+            )
+
+            original_load_state = state.load_state
+            publish_collect_calls: list[str] = []
+            docs_before = (dated_path.read_bytes(), latest_path.read_bytes())
+            try:
+                state.load_state = (
+                    lambda edition_type, path=None: state.validate_state(
+                        durable_claim, edition_type
+                    )
+                )
+                with temporary_environment(production_env), hard_block_network():
+                    publish_result = runner.run_publish(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        collect=lambda: publish_collect_calls.append("collect"),
+                    )
+            finally:
+                state.load_state = original_load_state
+            check(
+                "catch-up skips an already claimed edition",
+                publish_result is None
+                and publish_collect_calls == []
+                and docs_before == (dated_path.read_bytes(), latest_path.read_bytes())
+                and claim_path.read_bytes() == conflict_before,
+            )
+
+            wrong_owner_attempts: list[str] = []
+            wrong_owner_before = claim_path.read_bytes()
+            with temporary_environment(
+                {**production_env, "GITHUB_RUN_ATTEMPT": "2"}
+            ), hard_block_network():
+                expect_raises(
+                    "send requires exact claim owner",
+                    state.StateError,
+                    lambda: runner.run_send(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        smtp_factory=_fake_smtp_factory(
+                            wrong_owner_attempts, data_code=250
+                        ),
+                        opener=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                            AssertionError("send must not poll the public page")
+                        ),
+                        state_path=claim_path,
+                    ),
+                )
+            check(
+                "different-owner catch-up performs zero SMTP calls",
+                wrong_owner_attempts == [],
+            )
+            check(
+                "wrong owner cannot mutate claim",
+                claim_path.read_bytes() == wrong_owner_before
+                and state.has_claim(state.load_state("daily", claim_path), daily.edition_key),
+            )
+
+            mismatched_manifest = dict(manifest)
+            mismatched_manifest["coverage_start"] = (
+                "2026-07-26T07:00:01+09:00"
+            )
+            runner._write_runtime_manifest(runtime_dir, mismatched_manifest)
+            mismatch_attempts: list[str] = []
+            mismatch_before = claim_path.read_bytes()
+            with temporary_environment(production_env), hard_block_network():
+                expect_raises(
+                    "send rejects claim identity mismatch",
+                    state.StateError,
+                    lambda: runner.run_send(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        smtp_factory=_fake_smtp_factory(
+                            mismatch_attempts, data_code=250
+                        ),
+                        state_path=claim_path,
+                    ),
+                )
+            check(
+                "identity mismatch cannot mutate claim",
+                mismatch_attempts == [] and claim_path.read_bytes() == mismatch_before,
+            )
+            runner._write_runtime_manifest(runtime_dir, manifest)
+
+            rejected_attempts: list[str] = []
+            rejected_before = claim_path.read_bytes()
+            with temporary_environment(production_env), hard_block_network():
+                expect_raises(
+                    "rejected SMTP send fails closed",
+                    runner.OrchestratorError,
+                    lambda: runner.run_send(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        smtp_factory=_fake_smtp_factory(
+                            rejected_attempts,
+                            data_code=550,
+                            events=events,
+                        ),
+                        state_path=claim_path,
+                    ),
+                )
+            rejected_state = state.load_state("daily", claim_path)
+            check(
+                "SMTP failure preserves claim and records no success",
+                rejected_attempts == ["smtp"]
+                and claim_path.read_bytes() == rejected_before
+                and state.has_claim(rejected_state, daily.edition_key)
+                and not state.has_success(rejected_state, daily.edition_key),
+            )
+
+            exception_attempts: list[str] = []
+            exception_before = claim_path.read_bytes()
+            with temporary_environment(production_env), hard_block_network():
+                expect_raises(
+                    "SMTP exception send fails closed",
+                    runner.OrchestratorError,
+                    lambda: runner.run_send(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        smtp_factory=_fake_smtp_factory(
+                            exception_attempts,
+                            data_code=250,
+                            fail_on_connect=True,
+                        ),
+                        state_path=claim_path,
+                    ),
+                )
+            check(
+                "SMTP exception preserves durable claim",
+                exception_attempts == ["smtp"]
+                and claim_path.read_bytes() == exception_before,
+            )
+
+            remote_claim_path = root / "remote-durable-claim.json"
+            local_success_path = root / "local-uncommitted-success.json"
+            remote_claim_path.write_bytes(claim_path.read_bytes())
+            local_success_path.write_bytes(claim_path.read_bytes())
+            accepted_attempts: list[str] = []
+            with temporary_environment(production_env), hard_block_network():
+                local_success = runner.run_send(
+                    "daily",
+                    run_at=dt("2026-07-27T07:00:00+09:00"),
+                    runtime_dir=runtime_dir,
+                    smtp_factory=_fake_smtp_factory(
+                        accepted_attempts,
+                        data_code=250,
+                        events=events,
+                    ),
+                    opener=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                        AssertionError("send must not perform a second public poll")
+                    ),
+                    state_path=local_success_path,
+                )
+            check(
+                "exact-owner send performs one SMTP call only",
+                accepted_attempts == ["smtp"],
+            )
+            check(
+                "SMTP DATA 250 converts claim to success",
+                local_success is not None
+                and state.has_success(local_success, daily.edition_key)
+                and local_success["successful_editions"][-1]["smtp_status"] == "accepted"
+                and local_success["successful_editions"][-1]["smtp_code"] == 250,
+            )
+            check(
+                "success conversion removes active claim",
+                not state.has_claim(local_success, daily.edition_key)
+                and state.has_claim(
+                    state.load_state("daily", remote_claim_path), daily.edition_key
+                ),
+            )
+            check(
+                "claim is created before SMTP authorization",
+                events.index("claim_write") < events.index("smtp_attempt"),
+                repr(events),
+            )
+            check(
+                "send performs no second public verification",
+                events.count("public_verification") == 1,
+                repr(events),
+            )
+
+            next_catchup_attempts: list[str] = []
+            remote_before = remote_claim_path.read_bytes()
+            with temporary_environment(
+                {
+                    **production_env,
+                    "GITHUB_RUN_ID": "7003",
+                    "GITHUB_RUN_ATTEMPT": "1",
+                }
+            ), hard_block_network():
+                try:
+                    runner.run_send(
+                        "daily",
+                        run_at=dt("2026-07-27T07:00:00+09:00"),
+                        runtime_dir=runtime_dir,
+                        smtp_factory=_fake_smtp_factory(
+                            next_catchup_attempts, data_code=250
+                        ),
+                        state_path=remote_claim_path,
+                    )
+                except state.StateError:
+                    pass
+                else:
+                    check(
+                        "success commit failure catch-up is rejected",
+                        False,
+                        "wrong-owner catch-up unexpectedly reached send",
+                    )
+            remote_after = state.load_state("daily", remote_claim_path)
+            check(
+                "success commit failure leaves durable blocking claim",
+                remote_claim_path.read_bytes() == remote_before
+                and state.has_claim(remote_after, daily.edition_key)
+                and not state.has_success(remote_after, daily.edition_key)
+                and next_catchup_attempts == [],
+            )
+            check(
+                "success commit failure model keeps local success uncommitted",
+                state.has_success(
+                    state.load_state("daily", local_success_path), daily.edition_key
+                )
+                and state.has_claim(remote_after, daily.edition_key),
+            )
+        finally:
+            runner._docs_paths = original_docs_paths
+            state.atomic_write_state = original_atomic_write
 
 
 @contextlib.contextmanager
@@ -3497,6 +4188,7 @@ def main() -> int:
     computed_style_contracts()
     url_and_publication_contracts(daily)
     smtp_and_state_contracts(daily)
+    claim_delivery_contracts(daily)
     preview_contracts()
     image_materialization_contracts()
     live_preview_contracts()
