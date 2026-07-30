@@ -855,6 +855,167 @@ def is_hdec_relevant_for_push(
     )
 
 
+# D7-AK-6E-R2N-1-R4: strong strategic signal override
+#
+# These signals are evaluated only after ``classify_ai_topic`` has confirmed
+# that AI is the article's core subject. They therefore cannot promote a
+# non-AI LNG, nuclear, turbine, grid, order, or construction article.
+_AI_STRONG_BIOLOGICAL_PRIMARY_SIGNALS = (
+    "생물학",
+    "생물학적",
+    "병원체",
+    "바이오안보",
+    "biological",
+    "biosecurity",
+    "pathogen",
+)
+_AI_STRONG_RISK_CONTROL_SIGNALS = (
+    "무기",
+    "제조",
+    "살포",
+    "위험",
+    "안전",
+    "통제",
+    "오남용",
+    "규제",
+    "weapon",
+    "manufacture",
+    "dissemination",
+    "risk",
+    "safety",
+    "control",
+    "misuse",
+)
+_AI_STRONG_NATIONAL_STRATEGY_SIGNALS = (
+    "국가전략",
+    "국가 전략",
+    "동맹",
+    "공급망",
+    "패권",
+    "제재",
+    "수출통제",
+    "수출 통제",
+    "미중",
+    "미·중",
+    "정상회담",
+    "메가프로젝트",
+    "메가 프로젝트",
+    "national strategy",
+    "alliance",
+    "supply chain",
+    "export control",
+)
+_AI_STRONG_INFRASTRUCTURE_SIGNALS = (
+    "데이터센터",
+    "데이터 센터",
+    "data center",
+    "datacenter",
+    "gpu 클러스터",
+    "전력망",
+    "전력 인프라",
+    "전력 수요",
+    "전력수요",
+    "송전",
+    "변전",
+    "용수",
+    "power infrastructure",
+    "power demand",
+    "water demand",
+)
+_AI_STRONG_INVESTMENT_ACTION_SIGNALS = (
+    "투자",
+    "자본지출",
+    "capex",
+    "investment",
+)
+_AI_STRONG_INVESTMENT_SCALE_SIGNALS = (
+    "대규모",
+    "메가",
+    "조원",
+    "억달러",
+    "billion",
+    "trillion",
+)
+_AI_STRONG_PHYSICAL_INDUSTRIAL_SIGNALS = (
+    "피지컬 ai",
+    "physical ai",
+    "제조 ai",
+    "manufacturing ai",
+    "산업 ai",
+    "로봇",
+    "robot",
+    "robotics",
+    "자율주행",
+    "자율 시공",
+    "인텔리전트 팩토리",
+)
+_AI_STRONG_OPEN_WEIGHT_SIGNALS = (
+    "오픈웨이트",
+    "오픈 웨이트",
+    "open-weight",
+    "open weight",
+)
+_AI_STRONG_OPEN_WEIGHT_CONTROL_SIGNALS = (
+    "규제",
+    "수출통제",
+    "수출 통제",
+    "제재",
+    "통제",
+    "안전",
+    "위험",
+    "법안",
+    "regulation",
+    "export control",
+    "sanction",
+    "control",
+    "safety",
+    "risk",
+)
+
+
+def _has_strong_ai_strategic_override(text: str) -> bool:
+    """Return a topic-key-independent strong AI strategic signal decision."""
+    biological_risk = bool(
+        _has(text, _AI_STRONG_BIOLOGICAL_PRIMARY_SIGNALS)
+    ) and bool(
+        _has(text, _AI_STRONG_RISK_CONTROL_SIGNALS)
+    )
+
+    national_strategy = bool(
+        _has(text, _AI_STRONG_NATIONAL_STRATEGY_SIGNALS)
+    )
+
+    infrastructure = bool(
+        _has(text, _AI_STRONG_INFRASTRUCTURE_SIGNALS)
+    )
+
+    large_investment = bool(
+        _has(text, _AI_STRONG_INVESTMENT_ACTION_SIGNALS)
+    ) and bool(
+        _has(text, _AI_STRONG_INVESTMENT_SCALE_SIGNALS)
+    )
+
+    physical_industrial = bool(
+        _has(text, _AI_STRONG_PHYSICAL_INDUSTRIAL_SIGNALS)
+    )
+
+    open_weight_control = bool(
+        _has(text, _AI_STRONG_OPEN_WEIGHT_SIGNALS)
+    ) and bool(
+        _has(text, _AI_STRONG_OPEN_WEIGHT_CONTROL_SIGNALS)
+    )
+
+    return any(
+        (
+            biological_risk,
+            national_strategy,
+            infrastructure,
+            large_investment,
+            physical_industrial,
+            open_weight_control,
+        )
+    )
+
 def is_ai_strategically_significant(
     article: object,
     topic: TopicDecision | None = None,
@@ -873,6 +1034,13 @@ def is_ai_strategically_significant(
 
     if consumer_only_hits and not strategic_hits:
         return False
+
+    # Topic precedence must not suppress a strong strategic article. For
+    # example, a biological-weapons risk story may classify first as
+    # ``generative_ai_work`` while still carrying an independently sufficient
+    # executive strategy signal.
+    if _has_strong_ai_strategic_override(text):
+        return True
 
     if topic.topic_key in _AI_ALWAYS_STRATEGIC_TOPIC_KEYS:
         return True

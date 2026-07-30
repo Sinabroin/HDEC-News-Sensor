@@ -660,6 +660,221 @@ def main() -> int:
     assert all(url not in rendered for url in nonselected)
     assert [a["title"] for a in content["actions"]].count("원문 보기") == 1
 
+    # D7-AK-6E-R2N-1-R4: strong strategic gold set
+    from app import teams_ai_push as _r4_push
+
+    _r4_biological = {
+        "title": "AI가 생물학 무기 제조·살포법도 답변",
+        "summary": (
+            "생성형 AI의 생물학적 위험과 안전 통제 문제가 제기됐다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-biological",
+        "score": 4.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_biological_topic = _r4_push.classify_ai_topic(
+        _r4_biological
+    )
+
+    assert _r4_biological_topic.eligible
+    assert (
+        _r4_biological_topic.topic_key
+        == "generative_ai_work"
+    )
+    assert _r4_push._has_strong_ai_strategic_override(
+        f" {_r4_push._core_article_text(_r4_biological)} "
+    )
+    assert _r4_push.is_ai_strategically_significant(
+        _r4_biological,
+        _r4_biological_topic,
+    )
+
+    _r4_capex = {
+        "title": "구글, AI 데이터센터에 2050억달러 투자 확대",
+        "summary": (
+            "대규모 자본지출과 전력·용수 확보가 "
+            "글로벌 AI 경쟁의 핵심으로 부상했다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-capex",
+        "score": 4.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_capex_topic = _r4_push.classify_ai_topic(
+        _r4_capex
+    )
+
+    assert _r4_capex_topic.eligible
+    assert _r4_push.is_ai_strategically_significant(
+        _r4_capex,
+        _r4_capex_topic,
+    )
+
+    _r4_national_strategy = {
+        "title": "정부, AI 국가전략·동맹·공급망 계획 발표",
+        "summary": (
+            "미중 AI 패권 경쟁과 수출통제 대응 방안을 공개했다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-national",
+        "score": 4.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_national_topic = _r4_push.classify_ai_topic(
+        _r4_national_strategy
+    )
+
+    assert _r4_national_topic.eligible
+    assert _r4_push.is_ai_strategically_significant(
+        _r4_national_strategy,
+        _r4_national_topic,
+    )
+
+    _r4_physical_ai = {
+        "title": "현대차그룹, 피지컬 AI 제조 로봇 전략 공개",
+        "summary": (
+            "제조 AI와 로봇·자율주행을 결합한 "
+            "산업 전환 계획을 발표했다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-physical",
+        "score": 4.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_physical_topic = _r4_push.classify_ai_topic(
+        _r4_physical_ai
+    )
+
+    assert _r4_physical_topic.eligible
+    assert _r4_push.is_ai_strategically_significant(
+        _r4_physical_ai,
+        _r4_physical_topic,
+    )
+
+    _r4_open_weight = {
+        "title": "생성형 AI 오픈웨이트 수출통제 논쟁 확산",
+        "summary": (
+            "오픈웨이트 모델의 규제와 안전 통제를 둘러싼 "
+            "국제 논쟁이 확대됐다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-open-weight",
+        "score": 4.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_open_weight_topic = _r4_push.classify_ai_topic(
+        _r4_open_weight
+    )
+
+    assert _r4_open_weight_topic.eligible
+    assert _r4_push.is_ai_strategically_significant(
+        _r4_open_weight,
+        _r4_open_weight_topic,
+    )
+
+    _r4_generic_productivity = {
+        "title": "생성형 AI로 회의록 자동 작성 기능 공개",
+        "summary": (
+            "일반 사무 생산성을 높이는 업무 자동화 기능을 출시했다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-productivity",
+        "score": 4.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_generic_topic = _r4_push.classify_ai_topic(
+        _r4_generic_productivity
+    )
+
+    assert _r4_generic_topic.eligible
+    assert _r4_generic_topic.topic_key == "generative_ai_work"
+    assert not _r4_push.is_ai_strategically_significant(
+        _r4_generic_productivity,
+        _r4_generic_topic,
+    )
+
+    _r4_smartglass = {
+        "title": "삼성 첫 스마트글래스, 무게는 덜고 AI는 더했다",
+        "summary": (
+            "소비자용 웨어러블 참고 사례다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-smartglass",
+        "score": 2.0,
+        "shadow_urgency_status": "none",
+    }
+
+    _r4_smartglass_topic = _r4_push.classify_ai_topic(
+        _r4_smartglass
+    )
+
+    _r4_smartglass_importance = _r4_push.map_importance(
+        _r4_smartglass,
+        _r4_smartglass_topic,
+    )
+
+    assert _r4_smartglass_topic.eligible
+    assert not _r4_smartglass_importance.sendable
+
+    _r4_non_ai_energy = {
+        "title": "SK이노베이션, 베트남에 LNG·SMR 협력 방안 제시",
+        "summary": (
+            "가스와 소형모듈원자로 사업 협력 방안을 논의했다."
+        ),
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-energy",
+        "score": 5.0,
+        "shadow_urgency_status": "confirmed",
+    }
+
+    _r4_non_ai_energy_topic = _r4_push.classify_ai_topic(
+        _r4_non_ai_energy
+    )
+
+    assert not _r4_non_ai_energy_topic.eligible
+    assert not _r4_push.is_executive_relevant_for_push(
+        _r4_non_ai_energy,
+        _r4_non_ai_energy_topic,
+    )
+
+    _r4_metadata_contamination = {
+        "title": "대미 투자 1호 사업, 원전서 가스복합발전으로 선회",
+        "summary": (
+            "발전소 사업 구조와 투자 조건을 조정했다."
+        ),
+        "whyImportant": (
+            "AI 데이터센터와 전력 수요 측면에서 중요하다."
+        ),
+        "radarReason": "AI 전략 기사",
+        "category": "AI",
+        "provenance": {
+            "ai_topic": "ai_datacenter",
+            "ai_category": "AI infrastructure",
+        },
+        "source": "R4 fixture",
+        "url": "https://example.com/r4-metadata",
+        "score": 5.0,
+        "shadow_urgency_status": "confirmed",
+    }
+
+    _r4_metadata_topic = _r4_push.classify_ai_topic(
+        _r4_metadata_contamination
+    )
+
+    assert not _r4_metadata_topic.eligible
+    assert not _r4_push.is_executive_relevant_for_push(
+        _r4_metadata_contamination,
+        _r4_metadata_topic,
+    )
+
+    print("R4_STRONG_STRATEGIC_GOLD_SET=PASS")
     print("RESULT=D7-AK-6C_TEAMS_AI_PUSH_VERIFIER_PASS")
     print(f"cap={MAX_TEAMS_ARTICLES} selected={len(candidates)} "
           f"top={sum(c.importance.level == IMPORTANCE_TOP for c in candidates)}")
