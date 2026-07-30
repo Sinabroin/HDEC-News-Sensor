@@ -18,7 +18,7 @@ from app.runtime_models import (
     deterministic_id,
 )
 
-POLICY_VERSION = "d7-ak-6f-c1-shadow-v1"
+POLICY_VERSION = "d7-ak-6f-c1-r1-shadow-v1"
 
 _AI_TERMS = (
     "인공지능",
@@ -248,14 +248,23 @@ class RuntimePolicyEngine:
             confidence = 0.95
             reasons.append("ai_not_a_core_or_material_context")
 
-        elif signals.hdec_direct and signals.confirmed_action and signals.adverse:
+        elif (
+            signals.hdec_direct
+            and signals.confirmed_action
+            and signals.explicit_confirmation
+            and signals.adverse
+        ):
             decision_class = DecisionClass.P0
             delivery_class = "immediate"
             should_enqueue = True
             confidence = 0.96
             reasons.extend(("hdec_direct_impact", "confirmed_adverse_event"))
 
-        elif signals.hdec_direct and signals.confirmed_action:
+        elif (
+            signals.hdec_direct
+            and signals.confirmed_action
+            and signals.explicit_confirmation
+        ):
             decision_class = DecisionClass.P0
             delivery_class = "immediate"
             should_enqueue = True

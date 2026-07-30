@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline verifier for the D7-AK-6F-C1 shadow runtime core."""
+"""Offline verifier for the D7-AK-6F-C1-R1 shadow runtime core."""
 
 from __future__ import annotations
 
@@ -164,6 +164,15 @@ def verify_policy(v: Verifier) -> None:
             "confirmed_event_types": ["contract_confirmed"],
             "explicit_evidence": ["official_release"],
         }, DecisionClass.P1),
+        "hdec_unconfirmed": ({
+            "article_id": "hdec-unconfirmed",
+            "event_cluster_key": "event:hdec-unconfirmed",
+            "material_signature": "sig-hdec-unconfirmed",
+            "title": "현대건설 AI 데이터센터 수주 경쟁 본격화",
+            "summary": "시장 점유율 확대를 위한 수주 활동을 다룬 분석 기사",
+            "source": "분석 매체",
+            "published_at": "2026-07-30T00:00:00Z",
+        }, DecisionClass.P2),
     }
     for name, (payload, expected) in cases.items():
         decision = engine.decide(payload)
@@ -171,6 +180,9 @@ def verify_policy(v: Verifier) -> None:
     p0 = engine.decide(cases["hdec_confirmed"][0])
     v.equal("P0 uses immediate delivery", p0.delivery_class, "immediate")
     v.check("P0 enqueues", p0.should_enqueue)
+    unconfirmed = engine.decide(cases["hdec_unconfirmed"][0])
+    v.equal("unconfirmed HDEC action stays below P0", unconfirmed.decision_class, DecisionClass.P2)
+    v.check("unconfirmed HDEC action is not immediate", unconfirmed.delivery_class != "immediate")
     p2 = engine.decide(cases["interview"][0])
     v.equal("P2 uses hourly digest", p2.delivery_class, "hourly_digest")
     p3 = engine.decide(cases["airport"][0])
@@ -188,6 +200,20 @@ def verify_store(v: Verifier, temp: Path) -> None:
         store.upsert_article(first)
         store.upsert_article(first)
         v.equal("article upsert idempotent", store.stats()["canonical_articles"], 1)
+
+        same_url_other_provider = CanonicalArticle(
+            article_id="rss:store-a1",
+            canonical_url=first.canonical_url,
+            title="현대건설 AI 데이터센터 본계약 체결 후속",
+            source="다른 provider",
+            published_at="2026-07-30T09:00:00+09:00",
+            summary="동일 원문을 다른 provider id로 재수집",
+            observed_at="2026-07-30T09:02:00+09:00",
+            raw_payload={"fixture": "same-url"},
+        )
+        canonical_id = store.upsert_article(same_url_other_provider)
+        v.equal("same URL returns existing canonical article id", canonical_id, first.article_id)
+        v.equal("same URL different provider converges to one row", store.stats()["canonical_articles"], 1)
 
         first_event = event_for(first)
         store.upsert_event(first_event)
@@ -255,7 +281,7 @@ def verify_store(v: Verifier, temp: Path) -> None:
             claim_token=claim.claim_token or "",
             provider="smtp",
             provider_code="250",
-            attempted_at="2026-07-30T00:03:00Z",
+            attempted_at="2026-07-30T00:02:59Z",
         )
         delivered = store.get_outbox(claim.outbox_id)
         v.check("delivered outbox can be read", delivered is not None)
@@ -334,6 +360,56 @@ def verify_store(v: Verifier, temp: Path) -> None:
         )
         v.equal("retry eventually delivered", store.get_outbox(retry.outbox_id).status, OutboxStatus.DELIVERED)
 
+        timezone_article = article("store-timezone", "AI 데이터센터 시간대 정규화")
+        store.upsert_article(timezone_article)
+        timezone_event = event_for(timezone_article)
+        store.upsert_event(timezone_event)
+        timezone_message = store.enqueue_outbox(
+            channel="teams_email",
+            event_cluster_key=timezone_event.event_cluster_key,
+            material_signature=timezone_event.material_signature,
+            delivery_class="hourly_digest",
+            payload={"title": timezone_article.title},
+            not_before="2026-07-30T10:10:00+09:00",
+        ).message
+        v.equal("not_before normalized to canonical UTC", timezone_message.not_before, "2026-07-30T01:10:00Z")
+        v.equal(
+            "mixed timezone claim blocked before instant",
+            len(store.claim_outbox(
+                channel="teams_email",
+                worker_id="timezone-too-early",
+                now="2026-07-30T01:09:59Z",
+            )),
+            0,
+        )
+        timezone_claim = store.claim_outbox(
+            channel="teams_email",
+            worker_id="timezone-on-time",
+            now="2026-07-30T10:10:00+09:00",
+        )
+        v.equal("mixed timezone claim allowed at same instant", len(timezone_claim), 1)
+        v.raises(
+            "naive claim timestamp fails closed",
+            Exception,
+            lambda: store.claim_outbox(
+                channel="teams_email",
+                worker_id="timezone-naive",
+                now="2026-07-30T01:10:00",
+            ),
+        )
+        store.mark_delivery_succeeded(
+            outbox_id=timezone_claim[0].outbox_id,
+            claim_token=timezone_claim[0].claim_token or "",
+            provider="shadow",
+            provider_code="200",
+            attempted_at="2026-07-30T01:10:30Z",
+        )
+        v.equal(
+            "mixed timezone fixture closes cleanly",
+            store.get_outbox(timezone_message.outbox_id).status,
+            OutboxStatus.DELIVERED,
+        )
+
         terminal_article = article("store-terminal", "AI 규제 공식 발표")
         store.upsert_article(terminal_article)
         terminal_event = event_for(terminal_article)
@@ -396,6 +472,17 @@ def verify_store(v: Verifier, temp: Path) -> None:
                 now="2026-07-30T04:00:20Z",
             )),
             0,
+        )
+        v.raises(
+            "expired lease token cannot complete before reclaim",
+            ClaimConflict,
+            lambda: store.mark_delivery_succeeded(
+                outbox_id=first_lease.outbox_id,
+                claim_token=first_lease.claim_token or "",
+                provider="smtp",
+                provider_code="250",
+                attempted_at="2026-07-30T04:00:31Z",
+            ),
         )
         reclaimed = store.claim_outbox(
             channel="teams_email",
@@ -552,6 +639,9 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
             "shadow-only",
             "TEAMS_AI_NEWS_WATCH=0",
             "GitHub Actions",
+            "timezone-aware",
+            "canonical article id",
+            "expired lease",
         ):
             v.check(f"architecture contract contains {token}", token in text)
 
@@ -572,9 +662,9 @@ def main() -> int:
     print("telegram_sends=0")
     print("production_state_writes=0")
     if verifier.failures:
-        print("RESULT=D7-AK-6F-C1_RUNTIME_CORE_VERIFIER_FAIL")
+        print("RESULT=D7-AK-6F-C1-R1_RUNTIME_CORE_VERIFIER_FAIL")
         return 1
-    print("RESULT=D7-AK-6F-C1_RUNTIME_CORE_VERIFIER_PASS")
+    print("RESULT=D7-AK-6F-C1-R1_RUNTIME_CORE_VERIFIER_PASS")
     return 0
 
 

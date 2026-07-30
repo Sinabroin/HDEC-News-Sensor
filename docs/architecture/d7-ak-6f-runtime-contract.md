@@ -2,7 +2,7 @@
 
 ## Status
 
-- Gate: `D7-AK-6F-C1`
+- Gate: `D7-AK-6F-C1-R1`
 - Mode: **shadow-only**
 - Production sender variable: `TEAMS_AI_NEWS_WATCH=0`
 - Network delivery: disabled
@@ -46,7 +46,10 @@ They must not independently recollect or use rendered HTML as the primary delta 
 ### `canonical_articles`
 
 One row per canonical article identity. Re-observation updates metadata without creating
-another article row.
+another article row. If different providers supply different article ids for the same
+canonical URL, the URL resolves to the existing row and the store returns its canonical article id
+for downstream event foreign keys. If article id and URL resolve to different existing rows,
+the store fails closed rather than merging unrelated identities.
 
 ### `news_events`
 
@@ -92,9 +95,10 @@ convert these rows into live deliveries and never modifies the source JSON file.
 - `p3_dashboard_only` -> no outbox delivery
 - `reject` -> no output
 
-P0/P1 require explicit event evidence. Keyword co-occurrence cannot promote an article
-above P2. Incidental AI references in competitor or construction articles remain P3
-for dashboard review only.
+P0/P1 require explicit event evidence, including every Hyundai E&C direct-impact promotion.
+An action phrase without independent source evidence or confirmed event metadata remains at
+most P2. Keyword co-occurrence cannot promote an article above P2. Incidental AI references
+in competitor or construction articles remain P3 for dashboard review only.
 
 ## Claim contract
 
@@ -102,8 +106,18 @@ for dashboard review only.
 2. Only the exact claim token may complete the row.
 3. Expired leases may be reclaimed by another worker.
 4. `retryable_failed` may be claimed after `not_before`.
-5. `delivered` and `terminal_failed` are not claimable.
-6. Every completion writes a `delivery_attempts` row in the same transaction.
+5. A completion is accepted only while its exact claim token is still inside the active lease;
+   an expired lease token fails closed even before another worker reclaims the row.
+6. `delivered` and `terminal_failed` are not claimable.
+7. Every completion writes a `delivery_attempts` row in the same transaction.
+
+## Timestamp contract
+
+Every timestamp stored or compared by the reference runtime is timezone-aware. Inputs with
+`Z` or an explicit offset are normalized to a fixed second-precision UTC `Z` representation
+before persistence or SQL comparison. Naive timestamps fail closed. This keeps `not_before`,
+claim time, lease expiry, completion time, retry time, event time, decision time, and heartbeat
+time comparable across KST and UTC inputs.
 
 ## Migration constraints
 
@@ -123,10 +137,10 @@ idempotency, claim recovery, and no-send parallel operation have passed.
 
 `scripts/verify_runtime_core.py` must prove:
 
-- schema creation and idempotent upserts;
-- conservative replay of the actual received article examples;
+- schema creation, idempotent upserts, and canonical-URL convergence across provider ids;
+- conservative replay of the actual received article examples and evidence-gated HDEC P0;
 - transactional outbox uniqueness;
-- exact-token claims and lease recovery;
+- exact-token claims, mixed-timezone normalization, expired-lease completion rejection, and lease recovery;
 - success, retryable failure, and terminal failure transitions;
 - heartbeat upsert behavior;
 - idempotent legacy-state import;

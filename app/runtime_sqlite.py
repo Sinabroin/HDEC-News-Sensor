@@ -154,20 +154,34 @@ CREATE TABLE IF NOT EXISTS legacy_delivery_imports (
 """
 
 
-def _parse_utc(value: str) -> datetime:
+def _parse_utc(value: str, *, field_name: str = "timestamp") -> datetime:
     raw = clean_text(value)
     if not raw:
-        return datetime.now(timezone.utc)
+        raise RuntimeStoreError(f"{field_name} must be a non-empty timezone-aware timestamp")
     if raw.endswith("Z"):
         raw = raw[:-1] + "+00:00"
-    parsed = datetime.fromisoformat(raw)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError as exc:
+        raise RuntimeStoreError(f"{field_name} is not a valid ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise RuntimeStoreError(f"{field_name} must include a timezone offset")
     return parsed.astimezone(timezone.utc)
 
 
+def _utc_iso(value: str, *, field_name: str = "timestamp") -> str:
+    return _parse_utc(value, field_name=field_name).isoformat(
+        timespec="seconds"
+    ).replace("+00:00", "Z")
+
+
+def _optional_utc_iso(value: str | None, *, field_name: str) -> str | None:
+    raw = clean_text(value)
+    return _utc_iso(raw, field_name=field_name) if raw else None
+
+
 def _future_iso(now: str, seconds: int) -> str:
-    return (_parse_utc(now) + timedelta(seconds=seconds)).isoformat(
+    return (_parse_utc(now, field_name="now") + timedelta(seconds=seconds)).isoformat(
         timespec="seconds"
     ).replace("+00:00", "Z")
 
@@ -213,10 +227,35 @@ class SQLiteRuntimeStore:
         else:
             self.connection.execute("COMMIT")
 
-    def upsert_article(self, article: CanonicalArticle) -> None:
+    def upsert_article(self, article: CanonicalArticle) -> str:
+        """Upsert one canonical article and return the authoritative article id.
+
+        Different providers may assign different ids to the same publisher URL. The
+        canonical URL wins in that case, so callers can use the returned id for event
+        foreign keys without creating a duplicate row or hitting the URL unique index.
+        """
         record = article.as_record()
         now = utc_now_iso()
-        with self._transaction():
+        published_at = _utc_iso(record["published_at"], field_name="published_at")
+        observed_at = _utc_iso(record["observed_at"], field_name="observed_at")
+        with self._transaction(immediate=True):
+            by_id = self.connection.execute(
+                "SELECT article_id, canonical_url FROM canonical_articles WHERE article_id = ?",
+                (record["article_id"],),
+            ).fetchone()
+            by_url = self.connection.execute(
+                "SELECT article_id, canonical_url FROM canonical_articles WHERE canonical_url = ?",
+                (record["canonical_url"],),
+            ).fetchone()
+            if by_id is not None and by_url is not None and by_id["article_id"] != by_url["article_id"]:
+                raise RuntimeStoreError(
+                    "article identity conflict: article_id and canonical_url resolve to different rows"
+                )
+            canonical_id = (
+                by_url["article_id"]
+                if by_url is not None
+                else record["article_id"]
+            )
             self.connection.execute(
                 """
                 INSERT INTO canonical_articles (
@@ -237,20 +276,21 @@ class SQLiteRuntimeStore:
                     updated_at = excluded.updated_at
                 """,
                 (
-                    record["article_id"],
+                    canonical_id,
                     record["canonical_url"],
                     record["title"],
                     record["source"],
                     record["source_type"],
-                    record["published_at"],
+                    published_at,
                     record["summary"],
-                    record["observed_at"],
+                    observed_at,
                     record["content_signature"],
                     stable_json(record["raw_payload"]),
                     now,
                     now,
                 ),
             )
+        return str(canonical_id)
 
     def upsert_event(self, event: NewsEvent) -> None:
         record = event.as_record()
@@ -279,8 +319,8 @@ class SQLiteRuntimeStore:
                     record["event_type"],
                     record["headline"],
                     record["material_signature"],
-                    record["first_seen_at"],
-                    record["last_seen_at"],
+                    _utc_iso(record["first_seen_at"], field_name="first_seen_at"),
+                    _utc_iso(record["last_seen_at"], field_name="last_seen_at"),
                     record["status"],
                     stable_json(record["attributes"]),
                     now,
@@ -311,7 +351,7 @@ class SQLiteRuntimeStore:
                     record["delivery_class"],
                     stable_json(record["reasons"]),
                     stable_json(record["evidence"]),
-                    record["decided_at"],
+                    _utc_iso(record["decided_at"], field_name="decided_at"),
                 ),
             )
 
@@ -339,6 +379,7 @@ class SQLiteRuntimeStore:
             delivery_class,
         )
         created_at = utc_now_iso()
+        normalized_not_before = _optional_utc_iso(not_before, field_name="not_before")
         created = False
         with self._transaction(immediate=True):
             cursor = self.connection.execute(
@@ -359,7 +400,7 @@ class SQLiteRuntimeStore:
                     stable_json(dict(payload)),
                     OutboxStatus.PENDING.value,
                     created_at,
-                    clean_text(not_before) or None,
+                    normalized_not_before,
                 ),
             )
             created = cursor.rowcount == 1
@@ -392,7 +433,7 @@ class SQLiteRuntimeStore:
             raise RuntimeStoreError("limit must be between 1 and 100")
         if lease_seconds < 1:
             raise RuntimeStoreError("lease_seconds must be positive")
-        current = clean_text(now) or utc_now_iso()
+        current = _utc_iso(now, field_name="now") if clean_text(now) else utc_now_iso()
         lease_until = _future_iso(current, lease_seconds)
         claimed: list[OutboxMessage] = []
         with self._transaction(immediate=True):
@@ -447,7 +488,13 @@ class SQLiteRuntimeStore:
                 claimed.append(self._row_to_outbox(fresh))
         return tuple(claimed)
 
-    def _require_claim(self, outbox_id: str, claim_token: str) -> sqlite3.Row:
+    def _require_claim(
+        self,
+        outbox_id: str,
+        claim_token: str,
+        *,
+        completed_at: str,
+    ) -> sqlite3.Row:
         row = self.connection.execute(
             "SELECT * FROM delivery_outbox WHERE outbox_id = ?",
             (clean_text(outbox_id),),
@@ -460,6 +507,13 @@ class SQLiteRuntimeStore:
             )
         if row["claim_token"] != clean_text(claim_token):
             raise ClaimConflict("claim token does not own the outbox row")
+        lease_until = clean_text(row["lease_until"])
+        if not lease_until:
+            raise ClaimConflict("claimed outbox row has no active lease")
+        if _parse_utc(completed_at, field_name="completed_at") >= _parse_utc(
+            lease_until, field_name="lease_until"
+        ):
+            raise ClaimConflict("claim lease expired before completion")
         return row
 
     def mark_delivery_succeeded(
@@ -471,12 +525,16 @@ class SQLiteRuntimeStore:
         provider_code: str,
         attempted_at: str | None = None,
     ) -> None:
-        attempted = clean_text(attempted_at) or utc_now_iso()
+        attempted = (
+            _utc_iso(attempted_at, field_name="attempted_at")
+            if clean_text(attempted_at)
+            else utc_now_iso()
+        )
         provider = clean_text(provider)
         if not provider:
             raise RuntimeStoreError("provider must be non-empty")
         with self._transaction(immediate=True):
-            self._require_claim(outbox_id, claim_token)
+            self._require_claim(outbox_id, claim_token, completed_at=attempted)
             attempt_id = f"attempt:{uuid.uuid4().hex}"
             self.connection.execute(
                 """
@@ -518,7 +576,11 @@ class SQLiteRuntimeStore:
         attempted_at: str | None = None,
         retry_not_before: str | None = None,
     ) -> None:
-        attempted = clean_text(attempted_at) or utc_now_iso()
+        attempted = (
+            _utc_iso(attempted_at, field_name="attempted_at")
+            if clean_text(attempted_at)
+            else utc_now_iso()
+        )
         provider = clean_text(provider)
         if not provider:
             raise RuntimeStoreError("provider must be non-empty")
@@ -533,7 +595,7 @@ class SQLiteRuntimeStore:
             else AttemptStatus.TERMINAL_FAILED
         )
         with self._transaction(immediate=True):
-            self._require_claim(outbox_id, claim_token)
+            self._require_claim(outbox_id, claim_token, completed_at=attempted)
             attempt_id = f"attempt:{uuid.uuid4().hex}"
             self.connection.execute(
                 """
@@ -563,7 +625,7 @@ class SQLiteRuntimeStore:
                 """,
                 (
                     status.value,
-                    clean_text(retry_not_before) or None,
+                    _optional_utc_iso(retry_not_before, field_name="retry_not_before"),
                     clean_text(error_class) or None,
                     clean_text(error_message) or None,
                     outbox_id,
@@ -586,7 +648,7 @@ class SQLiteRuntimeStore:
                     heartbeat.component,
                     heartbeat.run_id,
                     heartbeat.status,
-                    heartbeat.observed_at,
+                    _utc_iso(heartbeat.observed_at, field_name="heartbeat.observed_at"),
                     stable_json(dict(heartbeat.details)),
                 ),
             )
