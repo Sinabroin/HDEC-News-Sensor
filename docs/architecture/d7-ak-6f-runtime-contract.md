@@ -1,8 +1,8 @@
-# D7-AK-6F Runtime Contract — Shadow Core C1-R3
+# D7-AK-6F Runtime Contract — Shadow Core C1-R4
 
 ## Status
 
-- Gate: `D7-AK-6F-C1-R3`
+- Gate: `D7-AK-6F-C1-R4`
 - Mode: **shadow-only**
 - Production sender variable: `TEAMS_AI_NEWS_WATCH=0`
 - Network delivery: disabled
@@ -70,7 +70,11 @@ content revision.
 ### `policy_decisions`
 
 Immutable decision evidence produced by a versioned policy. Topic relevance and
-urgency are separate dimensions.
+urgency are separate dimensions. `record_policy_decision()` is an insert-if-absent
+operation that returns the authoritative policy decision stored for the deterministic
+decision id. The first committed decision for one policy-version/event/material identity
+remains authoritative for that material revision. Later provider variants may produce a
+different candidate, but they receive and must obey the existing stored decision.
 
 ### `delivery_outbox`
 
@@ -81,6 +85,10 @@ channel + event_cluster_key + material_signature + delivery_class
 ```
 
 This prevents duplicate delivery creation before any SMTP or Teams call is attempted.
+Outbox creation must use only the authoritative policy decision returned by the store,
+never an uncommitted provider-specific candidate. This guarantees outbox class consistency:
+one canonical material revision cannot create both hourly and immediate requests merely
+because provider evidence or wording arrives in a different order.
 
 ### `delivery_attempts`
 
@@ -115,7 +123,25 @@ policy decision, and one outbox row.
 
 Only a trusted resolver interface may submit a new event cluster key and material
 signature, and it must submit both together. This is the only route for a meaningful
-revision to create a new outbox identity.
+revision to create a new authoritative policy decision and outbox identity.
+
+## Authoritative policy decision and outbox class consistency
+
+For one deterministic policy decision id:
+
+```text
+candidate decision
+    -> atomic insert-if-absent
+    -> read stored row
+    -> authoritative policy decision
+    -> delivery_outbox
+```
+
+The first committed decision is immutable for that material revision. A later provider
+variant cannot create a second delivery class from its candidate decision. P2-first then
+P0-provider remains one hourly outbox; P0-first then P2-provider remains one immediate
+outbox. A trusted resolver may create a new material revision, which receives a new
+decision id and may legitimately create a new outbox request.
 
 ## Delivery classes
 
@@ -150,7 +176,7 @@ expired claim.
 ## Timestamp contract
 
 Every timestamp stored or compared by the reference runtime is timezone-aware. The runtime
-policy version recorded by C1-R2 remains exactly `d7-ak-6f-c1-r1-shadow-v1`; R2 changes identity
+policy version recorded by C1-R4 remains exactly `d7-ak-6f-c1-r1-shadow-v1`; R2 changes identity
 and clock plumbing, not policy classification behavior.
 
 Every timestamp stored or compared by the reference runtime is timezone-aware. Inputs with
@@ -183,6 +209,9 @@ idempotency, claim recovery, and no-send parallel operation have passed.
   one canonical event, material identity, policy decision, and outbox request;
 - provider-supplied event/material identities are ignored, while complete trusted resolver
   overrides are accepted and partial overrides fail closed;
+- provider decision conflicts in both arrival orders return one authoritative policy decision,
+  preserve one outbox class, and block immediate/hourly duplicates;
+- a trusted resolver material revision creates a distinct authoritative decision and outbox;
 - conservative replay of the actual received article examples and evidence-gated HDEC P0;
 - transactional outbox uniqueness;
 - exact-token claims, mixed-timezone normalization, authoritative clock enforcement,

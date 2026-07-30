@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline verifier for the D7-AK-6F-C1-R3 shadow runtime core."""
+"""Offline verifier for the D7-AK-6F-C1-R4 shadow runtime core."""
 
 from __future__ import annotations
 
@@ -176,6 +176,11 @@ def verify_models(v: Verifier) -> None:
         RuntimeStore.upsert_article.__annotations__.get("return"),
         "str",
     )
+    v.equal(
+        "store protocol returns authoritative policy decision",
+        RuntimeStore.record_policy_decision.__annotations__.get("return"),
+        "PolicyDecision",
+    )
     v.raises(
         "empty article title fails closed",
         RuntimeModelError,
@@ -309,8 +314,18 @@ def verify_store(v: Verifier, temp: Path) -> None:
             "confirmed_event_types": ["contract_confirmed"],
             "explicit_evidence": ["official_release"],
         })
-        store.record_policy_decision(decision)
-        store.record_policy_decision(decision)
+        first_authoritative = store.record_policy_decision(decision)
+        duplicate_authoritative = store.record_policy_decision(decision)
+        v.equal(
+            "first policy insert returns candidate decision",
+            first_authoritative,
+            decision,
+        )
+        v.equal(
+            "duplicate policy insert returns same authoritative decision",
+            duplicate_authoritative,
+            first_authoritative,
+        )
         v.equal("policy decision insert idempotent", store.stats()["policy_decisions"], 1)
 
         enqueued = store.enqueue_outbox(
@@ -606,6 +621,132 @@ def verify_store(v: Verifier, temp: Path) -> None:
         v.equal("legacy import table remains four", store.stats()["legacy_delivery_imports"], 4)
 
 
+def verify_policy_decision_authority(v: Verifier, temp: Path) -> None:
+    engine = RuntimePolicyEngine()
+
+    def decision_for(event: NewsEvent, *, confirmed: bool):
+        payload = {
+            "article_id": event.primary_article_id,
+            "event_cluster_key": event.event_cluster_key,
+            "material_signature": event.material_signature,
+            "title": (
+                "현대건설 AI 데이터센터 본계약 체결"
+                if confirmed
+                else "현대건설 AI 데이터센터 수주 경쟁 본격화"
+            ),
+            "summary": (
+                "현대건설이 대규모 AI 데이터센터 본계약 체결을 공식 발표했다."
+                if confirmed
+                else "시장 점유율 확대를 위한 수주 활동을 다룬 분석 기사다."
+            ),
+            "source": "공식 발표" if confirmed else "분석 매체",
+            "published_at": "2026-07-30T00:00:00Z",
+        }
+        if confirmed:
+            payload["confirmed_event_types"] = ["contract_confirmed"]
+            payload["explicit_evidence"] = ["official_release"]
+        return engine.decide(payload)
+
+    with SQLiteRuntimeStore(temp / "policy-authority-p2-first.db") as store:
+        item = article("authority-p2-first", "현대건설 AI 데이터센터 수주 경쟁 본격화")
+        canonical_id = store.upsert_article(item)
+        event = _event_for(item, {}, canonical_article_id=canonical_id)
+        store.upsert_event(event)
+        p2_candidate = decision_for(event, confirmed=False)
+        p0_candidate = decision_for(event, confirmed=True)
+        first = store.record_policy_decision(p2_candidate)
+        second = store.record_policy_decision(p0_candidate)
+        for authoritative in (first, second):
+            if authoritative.should_enqueue:
+                store.enqueue_outbox(
+                    channel="teams_email",
+                    event_cluster_key=event.event_cluster_key,
+                    material_signature=event.material_signature,
+                    delivery_class=authoritative.delivery_class,
+                    payload={"decision_class": authoritative.decision_class.value},
+                )
+        v.equal("P2-first candidate is P2", p2_candidate.decision_class, DecisionClass.P2)
+        v.equal("P2-first conflicting candidate is P0", p0_candidate.decision_class, DecisionClass.P0)
+        v.equal("P2-first authoritative decision remains P2", first.decision_class, DecisionClass.P2)
+        v.equal("P2-first conflict returns existing P2", second.decision_class, DecisionClass.P2)
+        v.equal("P2-first policy decision count one", store.stats()["policy_decisions"], 1)
+        v.equal("P2-first outbox count one", store.stats()["delivery_outbox"], 1)
+        v.equal(
+            "P2-first immediate outbox count zero",
+            store.connection.execute(
+                "SELECT COUNT(*) FROM delivery_outbox WHERE delivery_class = 'immediate'"
+            ).fetchone()[0],
+            0,
+        )
+
+    with SQLiteRuntimeStore(temp / "policy-authority-p0-first.db") as store:
+        item = article("authority-p0-first", "현대건설 AI 데이터센터 본계약 체결")
+        canonical_id = store.upsert_article(item)
+        event = _event_for(item, {}, canonical_article_id=canonical_id)
+        store.upsert_event(event)
+        p0_candidate = decision_for(event, confirmed=True)
+        p2_candidate = decision_for(event, confirmed=False)
+        first = store.record_policy_decision(p0_candidate)
+        second = store.record_policy_decision(p2_candidate)
+        for authoritative in (first, second):
+            if authoritative.should_enqueue:
+                store.enqueue_outbox(
+                    channel="teams_email",
+                    event_cluster_key=event.event_cluster_key,
+                    material_signature=event.material_signature,
+                    delivery_class=authoritative.delivery_class,
+                    payload={"decision_class": authoritative.decision_class.value},
+                )
+        v.equal("P0-first candidate is P0", p0_candidate.decision_class, DecisionClass.P0)
+        v.equal("P0-first conflicting candidate is P2", p2_candidate.decision_class, DecisionClass.P2)
+        v.equal("P0-first authoritative decision remains P0", first.decision_class, DecisionClass.P0)
+        v.equal("P0-first conflict returns existing P0", second.decision_class, DecisionClass.P0)
+        v.equal("P0-first policy decision count one", store.stats()["policy_decisions"], 1)
+        v.equal("P0-first outbox count one", store.stats()["delivery_outbox"], 1)
+        v.equal(
+            "P0-first hourly duplicate count zero",
+            store.connection.execute(
+                "SELECT COUNT(*) FROM delivery_outbox WHERE delivery_class = 'hourly_digest'"
+            ).fetchone()[0],
+            0,
+        )
+
+    with SQLiteRuntimeStore(temp / "policy-authority-trusted-revision.db") as store:
+        item = article("authority-revision", "현대건설 AI 데이터센터 수주 경쟁 본격화")
+        canonical_id = store.upsert_article(item)
+        initial_event = _event_for(item, {}, canonical_article_id=canonical_id)
+        store.upsert_event(initial_event)
+        initial = store.record_policy_decision(decision_for(initial_event, confirmed=False))
+        store.enqueue_outbox(
+            channel="teams_email",
+            event_cluster_key=initial_event.event_cluster_key,
+            material_signature=initial_event.material_signature,
+            delivery_class=initial.delivery_class,
+            payload={"revision": "initial"},
+        )
+        revised_event = _event_for(
+            item,
+            {},
+            canonical_article_id=canonical_id,
+            resolver_event_cluster_key="resolver:event:authority-revision-2",
+            resolver_material_signature="resolver:material:authority-revision-2",
+        )
+        store.upsert_event(revised_event)
+        revised = store.record_policy_decision(decision_for(revised_event, confirmed=True))
+        store.enqueue_outbox(
+            channel="teams_email",
+            event_cluster_key=revised_event.event_cluster_key,
+            material_signature=revised_event.material_signature,
+            delivery_class=revised.delivery_class,
+            payload={"revision": "trusted-2"},
+        )
+        v.check("trusted revision event identity differs", revised_event.event_cluster_key != initial_event.event_cluster_key)
+        v.check("trusted revision material identity differs", revised_event.material_signature != initial_event.material_signature)
+        v.equal("trusted revision may produce new P0 decision", revised.decision_class, DecisionClass.P0)
+        v.equal("trusted revision policy decision count two", store.stats()["policy_decisions"], 2)
+        v.equal("trusted revision outbox count two", store.stats()["delivery_outbox"], 2)
+
+
 def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
     files = (
         ROOT / "app/runtime_models.py",
@@ -688,9 +829,11 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
     v.check("policy replay reports zero channel sends", "channel_sends=0" in replay.stdout)
     replay_payload = json.loads(replay_json.read_text(encoding="utf-8"))
     by_id = {item["article_id"]: item for item in replay_payload["results"]}
-    v.equal("policy replay includes duplicate provider fixture", replay_payload["fixture_count"], 8)
+    v.equal("policy replay includes both provider conflict orders", replay_payload["fixture_count"], 10)
     original = by_id["fixture:hdec-confirmed-contract"]
     duplicate_provider = by_id["provider:rss-hdec-confirmed-contract"]
+    analysis_first = by_id["fixture:hdec-analysis-first"]
+    official_second = by_id["provider:official-hdec-analysis-first"]
     v.equal(
         "duplicate provider resolves to original canonical article id",
         duplicate_provider["canonical_article_id"],
@@ -720,11 +863,45 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
         "normal provider replay is not resolver-authoritative",
         not duplicate_provider["resolver_authoritative"],
     )
+    v.equal(
+        "P0-first duplicate candidate is P2",
+        duplicate_provider["candidate_decision_class"],
+        DecisionClass.P2.value,
+    )
+    v.equal(
+        "P0-first duplicate uses authoritative P0",
+        duplicate_provider["decision_class"],
+        DecisionClass.P0.value,
+    )
+    v.check(
+        "P0-first duplicate reports authoritative reuse",
+        duplicate_provider["authoritative_decision_reused"],
+    )
     v.check("duplicate provider creates no second outbox", not duplicate_provider["outbox_created"])
-    v.equal("full replay canonical article count", replay_payload["store_stats"]["canonical_articles"], 7)
-    v.equal("full replay event cluster count", replay_payload["store_stats"]["news_events"], 7)
-    v.equal("full replay policy decision count", replay_payload["store_stats"]["policy_decisions"], 7)
-    v.equal("full replay outbox count remains unique", replay_payload["store_stats"]["delivery_outbox"], 5)
+    v.equal(
+        "P2-first observation remains P2",
+        analysis_first["decision_class"],
+        DecisionClass.P2.value,
+    )
+    v.equal(
+        "P2-first official candidate is P0",
+        official_second["candidate_decision_class"],
+        DecisionClass.P0.value,
+    )
+    v.equal(
+        "P2-first official observation uses authoritative P2",
+        official_second["decision_class"],
+        DecisionClass.P2.value,
+    )
+    v.check(
+        "P2-first official observation reports authoritative reuse",
+        official_second["authoritative_decision_reused"],
+    )
+    v.check("P2-first official observation creates no immediate duplicate", not official_second["outbox_created"])
+    v.equal("full replay canonical article count", replay_payload["store_stats"]["canonical_articles"], 8)
+    v.equal("full replay event cluster count", replay_payload["store_stats"]["news_events"], 8)
+    v.equal("full replay policy decision count", replay_payload["store_stats"]["policy_decisions"], 8)
+    v.equal("full replay outbox count remains unique", replay_payload["store_stats"]["delivery_outbox"], 6)
     v.equal(
         "received airport article downgraded to dashboard only",
         by_id["received:news1-taiwan-airport"]["decision_class"],
@@ -764,6 +941,9 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
             "provider presentation variance",
             "trusted resolver",
             "canonical material identity",
+            "authoritative policy decision",
+            "first committed decision",
+            "outbox class consistency",
             "d7-ak-6f-c1-r1-shadow-v1",
         ):
             v.check(f"architecture contract contains {token}", token in text)
@@ -776,6 +956,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="d7ak6f-runtime-core-") as tmp:
         temp = Path(tmp)
         verify_store(verifier, temp)
+        verify_policy_decision_authority(verifier, temp)
         verify_cli_and_static_safety(verifier, temp)
 
     print(f"checks={verifier.checks} failures={verifier.failures}")
@@ -785,9 +966,9 @@ def main() -> int:
     print("telegram_sends=0")
     print("production_state_writes=0")
     if verifier.failures:
-        print("RESULT=D7-AK-6F-C1-R3_RUNTIME_CORE_VERIFIER_FAIL")
+        print("RESULT=D7-AK-6F-C1-R4_RUNTIME_CORE_VERIFIER_FAIL")
         return 1
-    print("RESULT=D7-AK-6F-C1-R3_RUNTIME_CORE_VERIFIER_PASS")
+    print("RESULT=D7-AK-6F-C1-R4_RUNTIME_CORE_VERIFIER_PASS")
     return 0
 
 

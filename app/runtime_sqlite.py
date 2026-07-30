@@ -27,6 +27,7 @@ from typing import Any, Callable, Iterator, Mapping
 from app.runtime_models import (
     AttemptStatus,
     CanonicalArticle,
+    DecisionClass,
     NewsEvent,
     OutboxMessage,
     OutboxStatus,
@@ -340,9 +341,15 @@ class SQLiteRuntimeStore:
                 ),
             )
 
-    def record_policy_decision(self, decision: PolicyDecision) -> None:
+    def record_policy_decision(self, decision: PolicyDecision) -> PolicyDecision:
+        """Insert once and return the immutable authoritative policy decision.
+
+        Multiple provider observations may produce conflicting candidates for one
+        policy-version/event/material identity. The first committed row is authoritative;
+        every caller receives that stored decision and must use it for outbox creation.
+        """
         record = decision.as_record()
-        with self._transaction():
+        with self._transaction(immediate=True):
             self.connection.execute(
                 """
                 INSERT INTO policy_decisions (
@@ -366,6 +373,13 @@ class SQLiteRuntimeStore:
                     _utc_iso(record["decided_at"], field_name="decided_at"),
                 ),
             )
+            row = self.connection.execute(
+                "SELECT * FROM policy_decisions WHERE decision_id = ?",
+                (record["decision_id"],),
+            ).fetchone()
+        if row is None:
+            raise RuntimeStoreError("policy decision insert succeeded but row could not be read")
+        return self._row_to_policy_decision(row)
 
     def enqueue_outbox(
         self,
@@ -722,6 +736,28 @@ class SQLiteRuntimeStore:
             )
             for table in tables
         }
+
+    @staticmethod
+    def _row_to_policy_decision(row: sqlite3.Row) -> PolicyDecision:
+        reasons = json.loads(row["reasons_json"])
+        evidence = json.loads(row["evidence_json"])
+        if not isinstance(reasons, list) or not all(isinstance(item, str) for item in reasons):
+            raise RuntimeStoreError("stored policy reasons must be a JSON string array")
+        if not isinstance(evidence, Mapping):
+            raise RuntimeStoreError("stored policy evidence must be a JSON object")
+        return PolicyDecision(
+            decision_id=row["decision_id"],
+            event_cluster_key=row["event_cluster_key"],
+            policy_version=row["policy_version"],
+            decision_class=DecisionClass(row["decision_class"]),
+            topic_key=row["topic_key"],
+            confidence=float(row["confidence"]),
+            should_enqueue=bool(row["should_enqueue"]),
+            delivery_class=row["delivery_class"],
+            reasons=tuple(reasons),
+            decided_at=row["decided_at"],
+            evidence=dict(evidence),
+        )
 
     @staticmethod
     def _row_to_outbox(row: sqlite3.Row) -> OutboxMessage:
