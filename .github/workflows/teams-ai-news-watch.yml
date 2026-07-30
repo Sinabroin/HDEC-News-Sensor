@@ -25,7 +25,7 @@ on:
         default: ""
   schedule:
     # GitHub schedule은 UTC 기준이며 best-effort라 정확히 10분 간격을 보장하지 않는다.
-    - cron: '*/10 * * * *'
+    - cron: '7,17,27,37,47,57 * * * *'
 
 # state 파일(data/teams_push_state.json) 한 개만 commit/push 하려면 write 권한이 필요하다.
 permissions:

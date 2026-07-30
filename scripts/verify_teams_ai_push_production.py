@@ -891,7 +891,7 @@ def check_workflow() -> None:
         check(f"watch never runs any Telegram path: {tele}", tele not in watch)
 
     # 10-minute best-effort schedule, serialized runs, manual dispatch preserved.
-    check("watch runs on a 10-minute schedule", "cron: '*/10 * * * *'" in watch)
+    check("watch runs on a 10-minute schedule", "cron: '7,17,27,37,47,57 * * * *'" in watch)
     check("watch documents GitHub best-effort scheduling", "best-effort" in watch)
     check("watch serializes runs with a concurrency group",
           "group: teams-ai-news-watch" in watch)
