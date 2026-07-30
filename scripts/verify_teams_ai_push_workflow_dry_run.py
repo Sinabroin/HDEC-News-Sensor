@@ -51,7 +51,7 @@ def main() -> int:
     )
 
     # 10-minute best-effort schedule + concurrency + manual dispatch (with force_dry_run).
-    require("cron: '*/10 * * * *'" in watch, 'watch must run on a 10-minute schedule')
+    require("cron: '7,17,27,37,47,57 * * * *'" in watch, 'watch must run on a 10-minute schedule')
     require('best-effort' in watch, 'watch must document GitHub best-effort scheduling')
     require('group: teams-ai-news-watch' in watch, 'watch must serialize runs (concurrency group)')
     require('workflow_dispatch:' in watch and 'force_dry_run:' in watch,
