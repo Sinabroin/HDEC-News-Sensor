@@ -93,12 +93,14 @@ _BUILTIN_FIXTURES: tuple[dict[str, Any], ...] = (
     {
         "article_id": "provider:rss-hdec-confirmed-contract",
         "canonical_url": "https://example.invalid/hdec-confirmed-contract",
-        "title": "현대건설 AI 데이터센터 본계약 체결",
-        "summary": "현대건설이 대규모 AI 데이터센터 본계약 체결을 공식 발표했다.",
+        "title": "현대건설, AI 데이터센터 계약 체결 후 사업 본격화",
+        "summary": "현대건설이 해당 데이터센터 사업에 착수한다고 RSS가 다르게 요약했다.",
         "source": "RSS 재수집",
         "published_at": "2026-07-30T09:00:00+09:00",
         "confirmed_event_types": ["contract_confirmed"],
         "explicit_evidence": ["official_release"],
+        "event_cluster_key": "provider:event:key-must-be-ignored",
+        "material_signature": "provider-material-signature-must-be-ignored",
     },
 )
 
@@ -120,19 +122,34 @@ def _event_for(
     fixture: Mapping[str, Any],
     *,
     canonical_article_id: str,
+    resolver_event_cluster_key: str | None = None,
+    resolver_material_signature: str | None = None,
 ) -> NewsEvent:
-    event_key = str(
-        fixture.get("event_cluster_key")
-        or deterministic_id("event", canonical_article_id, length=24)
-    )
-    signature = str(
-        fixture.get("material_signature")
-        or sha256_text(stable_json({
-            "title": article.title,
-            "summary": article.summary,
-            "canonical_url": article.canonical_url,
+    """Build event identity from canonical authority, not provider presentation text.
+
+    Provider-supplied ``event_cluster_key`` and ``material_signature`` fields are never
+    trusted by the replay path. A future trusted event resolver may supply both explicit
+    override arguments together; partial overrides fail closed.
+    """
+    resolver_event_key = str(resolver_event_cluster_key or "").strip()
+    resolver_signature = str(resolver_material_signature or "").strip()
+    if bool(resolver_event_key) != bool(resolver_signature):
+        raise ValueError(
+            "trusted resolver identity requires both event cluster key and material signature"
+        )
+
+    if resolver_event_key:
+        event_key = resolver_event_key
+        signature = resolver_signature
+        resolver_authoritative = True
+    else:
+        event_key = deterministic_id("event", canonical_article_id, length=24)
+        signature = sha256_text(stable_json({
+            "canonical_article_id": canonical_article_id,
+            "revision": "initial",
         }))
-    )
+        resolver_authoritative = False
+
     return NewsEvent(
         event_cluster_key=event_key,
         primary_article_id=canonical_article_id,
@@ -146,6 +163,7 @@ def _event_for(
             "canonical_url": article.canonical_url,
             "provider_article_id": article.article_id,
             "canonical_article_id": canonical_article_id,
+            "resolver_authoritative": resolver_authoritative,
         },
     )
 
@@ -221,6 +239,10 @@ def main() -> int:
                 "article_id": article.article_id,
                 "canonical_article_id": canonical_article_id,
                 "event_cluster_key": event.event_cluster_key,
+                "material_signature": event.material_signature,
+                "resolver_authoritative": bool(event.attributes.get("resolver_authoritative")),
+                "provider_event_cluster_key": str(fixture.get("event_cluster_key") or ""),
+                "provider_material_signature": str(fixture.get("material_signature") or ""),
                 "decision_class": decision.decision_class.value,
                 "delivery_class": decision.delivery_class,
                 "should_enqueue": decision.should_enqueue,
@@ -232,6 +254,9 @@ def main() -> int:
                 "POLICY_REPLAY="
                 f"{article.article_id}"
                 f"|canonical_article_id={canonical_article_id}"
+                f"|event_cluster_key={event.event_cluster_key}"
+                f"|material_signature={event.material_signature}"
+                f"|resolver_authoritative={str(bool(event.attributes.get('resolver_authoritative'))).lower()}"
                 f"|decision={decision.decision_class.value}"
                 f"|delivery={decision.delivery_class}"
                 f"|enqueue={str(decision.should_enqueue).lower()}"

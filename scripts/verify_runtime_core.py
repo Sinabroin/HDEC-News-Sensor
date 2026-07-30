@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline verifier for the D7-AK-6F-C1-R2 shadow runtime core."""
+"""Offline verifier for the D7-AK-6F-C1-R3 shadow runtime core."""
 
 from __future__ import annotations
 
@@ -34,6 +34,7 @@ from app.runtime_store import (  # noqa: E402
     RuntimeStore,
     RuntimeStoreError,
 )
+from scripts.replay_runtime_policy import _event_for  # noqa: E402
 
 
 
@@ -116,6 +117,59 @@ def verify_models(v: Verifier) -> None:
         "deterministic ids are stable",
         deterministic_id("x", "a", "b"),
         deterministic_id("x", "a", "b"),
+    )
+    canonical_fixture = article(
+        "provider:variant",
+        "현대건설 AI 데이터센터 계약 체결 후속",
+        "provider별로 달라진 요약",
+    )
+    default_event = _event_for(
+        canonical_fixture,
+        {
+            "event_cluster_key": "provider:event:ignored",
+            "material_signature": "provider-material-ignored",
+        },
+        canonical_article_id="canonical:article:1",
+    )
+    v.equal(
+        "provider event key cannot override canonical default",
+        default_event.event_cluster_key,
+        deterministic_id("event", "canonical:article:1", length=24),
+    )
+    v.equal(
+        "provider material signature cannot override canonical default",
+        default_event.material_signature,
+        sha256_text(stable_json({
+            "canonical_article_id": "canonical:article:1",
+            "revision": "initial",
+        })),
+    )
+    resolver_event = _event_for(
+        canonical_fixture,
+        {},
+        canonical_article_id="canonical:article:1",
+        resolver_event_cluster_key="resolver:event:1",
+        resolver_material_signature="resolver:material:2",
+    )
+    v.equal(
+        "trusted resolver event override accepted",
+        resolver_event.event_cluster_key,
+        "resolver:event:1",
+    )
+    v.equal(
+        "trusted resolver material override accepted",
+        resolver_event.material_signature,
+        "resolver:material:2",
+    )
+    v.raises(
+        "partial trusted resolver override fails closed",
+        ValueError,
+        lambda: _event_for(
+            canonical_fixture,
+            {},
+            canonical_article_id="canonical:article:1",
+            resolver_event_cluster_key="resolver:event:partial",
+        ),
     )
     v.equal(
         "store protocol returns canonical article id",
@@ -647,9 +701,29 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
         duplicate_provider["event_cluster_key"],
         original["event_cluster_key"],
     )
+    v.equal(
+        "variant provider presentation resolves to one material signature",
+        duplicate_provider["material_signature"],
+        original["material_signature"],
+    )
+    v.check(
+        "provider event key is ignored without trusted resolver authority",
+        duplicate_provider["event_cluster_key"]
+        != duplicate_provider["provider_event_cluster_key"],
+    )
+    v.check(
+        "provider material signature is ignored without trusted resolver authority",
+        duplicate_provider["material_signature"]
+        != duplicate_provider["provider_material_signature"],
+    )
+    v.check(
+        "normal provider replay is not resolver-authoritative",
+        not duplicate_provider["resolver_authoritative"],
+    )
     v.check("duplicate provider creates no second outbox", not duplicate_provider["outbox_created"])
     v.equal("full replay canonical article count", replay_payload["store_stats"]["canonical_articles"], 7)
     v.equal("full replay event cluster count", replay_payload["store_stats"]["news_events"], 7)
+    v.equal("full replay policy decision count", replay_payload["store_stats"]["policy_decisions"], 7)
     v.equal("full replay outbox count remains unique", replay_payload["store_stats"]["delivery_outbox"], 5)
     v.equal(
         "received airport article downgraded to dashboard only",
@@ -687,6 +761,9 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
             "expired lease",
             "authoritative clock",
             "end-to-end",
+            "provider presentation variance",
+            "trusted resolver",
+            "canonical material identity",
             "d7-ak-6f-c1-r1-shadow-v1",
         ):
             v.check(f"architecture contract contains {token}", token in text)
@@ -708,9 +785,9 @@ def main() -> int:
     print("telegram_sends=0")
     print("production_state_writes=0")
     if verifier.failures:
-        print("RESULT=D7-AK-6F-C1-R2_RUNTIME_CORE_VERIFIER_FAIL")
+        print("RESULT=D7-AK-6F-C1-R3_RUNTIME_CORE_VERIFIER_FAIL")
         return 1
-    print("RESULT=D7-AK-6F-C1-R2_RUNTIME_CORE_VERIFIER_PASS")
+    print("RESULT=D7-AK-6F-C1-R3_RUNTIME_CORE_VERIFIER_PASS")
     return 0
 
 

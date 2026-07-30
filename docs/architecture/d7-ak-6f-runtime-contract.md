@@ -1,8 +1,8 @@
-# D7-AK-6F Runtime Contract — Shadow Core C1-R2
+# D7-AK-6F Runtime Contract — Shadow Core C1-R3
 
 ## Status
 
-- Gate: `D7-AK-6F-C1-R2`
+- Gate: `D7-AK-6F-C1-R3`
 - Mode: **shadow-only**
 - Production sender variable: `TEAMS_AI_NEWS_WATCH=0`
 - Network delivery: disabled
@@ -55,8 +55,17 @@ than merging unrelated identities.
 
 ### `news_events`
 
-One row per cross-source event cluster. `material_signature` identifies a meaningful
-content revision for outbox uniqueness.
+One row per cross-source event cluster. Default event and material identity are derived
+from the authoritative canonical article id, not from provider-specific title or summary
+presentation. This keeps provider presentation variance from creating duplicate events,
+policy decisions, or outbox requests for the same canonical article.
+
+A provider payload is never a trusted resolver. Provider-supplied `event_cluster_key` or
+`material_signature` fields are ignored by the default replay/orchestration path. A future
+trusted resolver may replace both values together through a separate internal interface;
+partial resolver overrides fail closed. `material_signature` therefore identifies the
+canonical initial revision unless a trusted resolver explicitly records a meaningful
+content revision.
 
 ### `policy_decisions`
 
@@ -88,6 +97,25 @@ rejected all,” and “delivery failed.”
 
 Read-only provenance imported from the legacy `teams_push_state.json`. C1 does not
 convert these rows into live deliveries and never modifies the source JSON file.
+
+
+## Canonical event and canonical material identity contract
+
+For a normal provider observation:
+
+```text
+event_cluster_key = deterministic(canonical_article_id)
+material_signature = deterministic(canonical_article_id + initial_revision)
+```
+
+Provider title, summary, source label, provider article id, and untrusted event/material
+fields do not alter those identities. Two providers may describe one publisher URL with
+different wording and still converge to one canonical article, one event cluster, one
+policy decision, and one outbox row.
+
+Only a trusted resolver interface may submit a new event cluster key and material
+signature, and it must submit both together. This is the only route for a meaningful
+revision to create a new outbox identity.
 
 ## Delivery classes
 
@@ -151,6 +179,10 @@ idempotency, claim recovery, and no-send parallel operation have passed.
 
 - schema creation, idempotent upserts, and canonical-URL convergence across provider ids
   with end-to-end canonical identity propagation;
+- provider presentation variance with different titles and summaries still converges to
+  one canonical event, material identity, policy decision, and outbox request;
+- provider-supplied event/material identities are ignored, while complete trusted resolver
+  overrides are accepted and partial overrides fail closed;
 - conservative replay of the actual received article examples and evidence-gated HDEC P0;
 - transactional outbox uniqueness;
 - exact-token claims, mixed-timezone normalization, authoritative clock enforcement,
