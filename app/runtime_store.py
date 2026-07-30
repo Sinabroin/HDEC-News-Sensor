@@ -50,7 +50,7 @@ class RuntimeStore(Protocol):
 
     def close(self) -> None: ...
 
-    def upsert_article(self, article: CanonicalArticle) -> None: ...
+    def upsert_article(self, article: CanonicalArticle) -> str: ...
 
     def upsert_event(self, event: NewsEvent) -> None: ...
 
@@ -74,7 +74,6 @@ class RuntimeStore(Protocol):
         worker_id: str,
         limit: int = 10,
         lease_seconds: int = 300,
-        now: str | None = None,
     ) -> tuple[OutboxMessage, ...]: ...
 
     def mark_delivery_succeeded(

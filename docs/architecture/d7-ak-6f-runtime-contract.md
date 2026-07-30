@@ -1,8 +1,8 @@
-# D7-AK-6F Runtime Contract — Shadow Core C1
+# D7-AK-6F Runtime Contract — Shadow Core C1-R2
 
 ## Status
 
-- Gate: `D7-AK-6F-C1-R1`
+- Gate: `D7-AK-6F-C1-R2`
 - Mode: **shadow-only**
 - Production sender variable: `TEAMS_AI_NEWS_WATCH=0`
 - Network delivery: disabled
@@ -47,9 +47,11 @@ They must not independently recollect or use rendered HTML as the primary delta 
 
 One row per canonical article identity. Re-observation updates metadata without creating
 another article row. If different providers supply different article ids for the same
-canonical URL, the URL resolves to the existing row and the store returns its canonical article id
-for downstream event foreign keys. If article id and URL resolve to different existing rows,
-the store fails closed rather than merging unrelated identities.
+canonical URL, the URL resolves to the existing row and `upsert_article()` returns its
+canonical article id. That returned identity is propagated end-to-end into the event primary
+article foreign key, default event-cluster key, policy evidence, outbox payload, and replay
+result. If article id and URL resolve to different existing rows, the store fails closed rather
+than merging unrelated identities.
 
 ### `news_events`
 
@@ -100,7 +102,13 @@ An action phrase without independent source evidence or confirmed event metadata
 most P2. Keyword co-occurrence cannot promote an article above P2. Incidental AI references
 in competitor or construction articles remain P3 for dashboard review only.
 
-## Claim contract
+## Claim and authoritative clock contract
+
+The store owns an authoritative clock. Production uses the UTC system clock; deterministic
+verification injects a controlled clock at store construction. `claim_outbox()` does not accept
+a caller-supplied current time, and provider `attempted_at` is metadata only. Lease validity is
+checked against the store clock, so a stale worker cannot backdate provider metadata to finish an
+expired claim.
 
 1. A worker claims eligible outbox rows with a random claim token and finite lease.
 2. Only the exact claim token may complete the row.
@@ -112,6 +120,10 @@ in competitor or construction articles remain P3 for dashboard review only.
 7. Every completion writes a `delivery_attempts` row in the same transaction.
 
 ## Timestamp contract
+
+Every timestamp stored or compared by the reference runtime is timezone-aware. The runtime
+policy version recorded by C1-R2 remains exactly `d7-ak-6f-c1-r1-shadow-v1`; R2 changes identity
+and clock plumbing, not policy classification behavior.
 
 Every timestamp stored or compared by the reference runtime is timezone-aware. Inputs with
 `Z` or an explicit offset are normalized to a fixed second-precision UTC `Z` representation
@@ -137,10 +149,12 @@ idempotency, claim recovery, and no-send parallel operation have passed.
 
 `scripts/verify_runtime_core.py` must prove:
 
-- schema creation, idempotent upserts, and canonical-URL convergence across provider ids;
+- schema creation, idempotent upserts, and canonical-URL convergence across provider ids
+  with end-to-end canonical identity propagation;
 - conservative replay of the actual received article examples and evidence-gated HDEC P0;
 - transactional outbox uniqueness;
-- exact-token claims, mixed-timezone normalization, expired-lease completion rejection, and lease recovery;
+- exact-token claims, mixed-timezone normalization, authoritative clock enforcement,
+  backdated-provider-time rejection after lease expiry, and lease recovery;
 - success, retryable failure, and terminal failure transitions;
 - heartbeat upsert behavior;
 - idempotent legacy-state import;

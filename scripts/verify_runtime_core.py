@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline verifier for the D7-AK-6F-C1-R1 shadow runtime core."""
+"""Offline verifier for the D7-AK-6F-C1-R2 shadow runtime core."""
 
 from __future__ import annotations
 
@@ -28,7 +28,25 @@ from app.runtime_models import (  # noqa: E402
 )
 from app.runtime_policy import RuntimePolicyEngine  # noqa: E402
 from app.runtime_sqlite import SQLiteRuntimeStore  # noqa: E402
-from app.runtime_store import ClaimConflict, InvalidStateTransition  # noqa: E402
+from app.runtime_store import (  # noqa: E402
+    ClaimConflict,
+    InvalidStateTransition,
+    RuntimeStore,
+    RuntimeStoreError,
+)
+
+
+
+
+class MutableClock:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def set(self, value: str) -> None:
+        self.value = value
+
+    def __call__(self) -> str:
+        return self.value
 
 
 class Verifier:
@@ -98,6 +116,11 @@ def verify_models(v: Verifier) -> None:
         "deterministic ids are stable",
         deterministic_id("x", "a", "b"),
         deterministic_id("x", "a", "b"),
+    )
+    v.equal(
+        "store protocol returns canonical article id",
+        RuntimeStore.upsert_article.__annotations__.get("return"),
+        "str",
     )
     v.raises(
         "empty article title fails closed",
@@ -191,7 +214,8 @@ def verify_policy(v: Verifier) -> None:
 
 def verify_store(v: Verifier, temp: Path) -> None:
     db = temp / "runtime.db"
-    with SQLiteRuntimeStore(db) as store:
+    clock = MutableClock("2026-07-30T00:00:00Z")
+    with SQLiteRuntimeStore(db, clock=clock) as store:
         initial = store.stats()
         v.check("schema initializes all seven tables", len(initial) == 7)
         v.check("initial tables empty", all(value == 0 for value in initial.values()))
@@ -254,12 +278,12 @@ def verify_store(v: Verifier, temp: Path) -> None:
         v.equal("outbox unique count one", store.stats()["delivery_outbox"], 1)
         v.equal("duplicate returns original id", duplicate.message.outbox_id, enqueued.message.outbox_id)
 
+        clock.set("2026-07-30T00:02:00Z")
         claimed = store.claim_outbox(
             channel="teams_email",
             worker_id="worker-a",
             limit=10,
             lease_seconds=60,
-            now="2026-07-30T00:02:00Z",
         )
         v.equal("one outbox row claimed", len(claimed), 1)
         claim = claimed[0]
@@ -276,12 +300,13 @@ def verify_store(v: Verifier, temp: Path) -> None:
                 provider_code="250",
             ),
         )
+        clock.set("2026-07-30T00:02:59Z")
         store.mark_delivery_succeeded(
             outbox_id=claim.outbox_id,
             claim_token=claim.claim_token or "",
             provider="smtp",
             provider_code="250",
-            attempted_at="2026-07-30T00:02:59Z",
+            attempted_at="2026-07-30T00:02:30Z",
         )
         delivered = store.get_outbox(claim.outbox_id)
         v.check("delivered outbox can be read", delivered is not None)
@@ -289,11 +314,10 @@ def verify_store(v: Verifier, temp: Path) -> None:
         v.equal("successful attempt recorded", store.stats()["delivery_attempts"], 1)
         v.equal(
             "delivered row cannot be claimed again",
-            len(store.claim_outbox(
+            len((clock.set("2026-07-30T00:10:00Z"), store.claim_outbox(
                 channel="teams_email",
                 worker_id="worker-b",
-                now="2026-07-30T00:10:00Z",
-            )),
+            ))[1]),
             0,
         )
         v.raises(
@@ -318,11 +342,12 @@ def verify_store(v: Verifier, temp: Path) -> None:
             delivery_class="hourly_digest",
             payload={"title": retry_article.title},
         ).message
+        clock.set("2026-07-30T01:00:00Z")
         retry_claim = store.claim_outbox(
             channel="teams_email",
             worker_id="worker-retry",
-            now="2026-07-30T01:00:00Z",
         )[0]
+        clock.set("2026-07-30T01:01:00Z")
         store.mark_delivery_failed(
             outbox_id=retry.outbox_id,
             claim_token=retry_claim.claim_token or "",
@@ -338,19 +363,19 @@ def verify_store(v: Verifier, temp: Path) -> None:
         v.equal("retryable failure state", retry_failed.status if retry_failed else None, OutboxStatus.RETRYABLE_FAILED)
         v.equal(
             "retry not claimable before not_before",
-            len(store.claim_outbox(
+            len((clock.set("2026-07-30T01:05:00Z"), store.claim_outbox(
                 channel="teams_email",
                 worker_id="worker-too-early",
-                now="2026-07-30T01:05:00Z",
-            )),
+            ))[1]),
             0,
         )
+        clock.set("2026-07-30T01:10:00Z")
         retry_claimed = store.claim_outbox(
             channel="teams_email",
             worker_id="worker-after-delay",
-            now="2026-07-30T01:10:00Z",
         )[0]
         v.equal("retry claim increments attempt count", retry_claimed.attempt_count, 2)
+        clock.set("2026-07-30T01:11:00Z")
         store.mark_delivery_succeeded(
             outbox_id=retry.outbox_id,
             claim_token=retry_claimed.claim_token or "",
@@ -375,28 +400,30 @@ def verify_store(v: Verifier, temp: Path) -> None:
         v.equal("not_before normalized to canonical UTC", timezone_message.not_before, "2026-07-30T01:10:00Z")
         v.equal(
             "mixed timezone claim blocked before instant",
-            len(store.claim_outbox(
+            len((clock.set("2026-07-30T01:09:59Z"), store.claim_outbox(
                 channel="teams_email",
                 worker_id="timezone-too-early",
-                now="2026-07-30T01:09:59Z",
-            )),
+            ))[1]),
             0,
         )
+        clock.set("2026-07-30T10:10:00+09:00")
         timezone_claim = store.claim_outbox(
             channel="teams_email",
             worker_id="timezone-on-time",
-            now="2026-07-30T10:10:00+09:00",
         )
         v.equal("mixed timezone claim allowed at same instant", len(timezone_claim), 1)
         v.raises(
-            "naive claim timestamp fails closed",
-            Exception,
-            lambda: store.claim_outbox(
-                channel="teams_email",
-                worker_id="timezone-naive",
-                now="2026-07-30T01:10:00",
+            "naive authoritative clock fails closed",
+            RuntimeStoreError,
+            lambda: (
+                clock.set("2026-07-30T01:10:00"),
+                store.claim_outbox(
+                    channel="teams_email",
+                    worker_id="timezone-naive",
+                ),
             ),
         )
+        clock.set("2026-07-30T01:10:30Z")
         store.mark_delivery_succeeded(
             outbox_id=timezone_claim[0].outbox_id,
             claim_token=timezone_claim[0].claim_token or "",
@@ -421,11 +448,12 @@ def verify_store(v: Verifier, temp: Path) -> None:
             delivery_class="priority_digest",
             payload={"title": terminal_article.title},
         ).message
+        clock.set("2026-07-30T02:00:00Z")
         terminal_claim = store.claim_outbox(
             channel="teams_email",
             worker_id="worker-terminal",
-            now="2026-07-30T02:00:00Z",
         )[0]
+        clock.set("2026-07-30T02:01:00Z")
         store.mark_delivery_failed(
             outbox_id=terminal.outbox_id,
             claim_token=terminal_claim.claim_token or "",
@@ -439,11 +467,10 @@ def verify_store(v: Verifier, temp: Path) -> None:
         v.equal("terminal failure state", store.get_outbox(terminal.outbox_id).status, OutboxStatus.TERMINAL_FAILED)
         v.equal(
             "terminal failure cannot be reclaimed",
-            len(store.claim_outbox(
+            len((clock.set("2026-07-30T03:00:00Z"), store.claim_outbox(
                 channel="teams_email",
                 worker_id="worker-terminal-2",
-                now="2026-07-30T03:00:00Z",
-            )),
+            ))[1]),
             0,
         )
 
@@ -458,36 +485,35 @@ def verify_store(v: Verifier, temp: Path) -> None:
             delivery_class="hourly_digest",
             payload={"title": lease_article.title},
         ).message
+        clock.set("2026-07-30T04:00:00Z")
         first_lease = store.claim_outbox(
             channel="teams_email",
             worker_id="lease-worker-1",
             lease_seconds=30,
-            now="2026-07-30T04:00:00Z",
         )[0]
         v.equal(
             "active lease blocks second worker",
-            len(store.claim_outbox(
+            len((clock.set("2026-07-30T04:00:20Z"), store.claim_outbox(
                 channel="teams_email",
                 worker_id="lease-worker-2",
-                now="2026-07-30T04:00:20Z",
-            )),
+            ))[1]),
             0,
         )
+        clock.set("2026-07-30T04:00:31Z")
         v.raises(
-            "expired lease token cannot complete before reclaim",
+            "backdated provider time cannot bypass expired authoritative lease",
             ClaimConflict,
             lambda: store.mark_delivery_succeeded(
                 outbox_id=first_lease.outbox_id,
                 claim_token=first_lease.claim_token or "",
                 provider="smtp",
                 provider_code="250",
-                attempted_at="2026-07-30T04:00:31Z",
+                attempted_at="2026-07-30T04:00:20Z",
             ),
         )
         reclaimed = store.claim_outbox(
             channel="teams_email",
             worker_id="lease-worker-2",
-            now="2026-07-30T04:00:31Z",
         )[0]
         v.equal("expired lease row reclaimed", reclaimed.outbox_id, lease_message.outbox_id)
         v.check("reclaim rotates claim token", reclaimed.claim_token != first_lease.claim_token)
@@ -608,6 +634,23 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
     v.check("policy replay reports zero channel sends", "channel_sends=0" in replay.stdout)
     replay_payload = json.loads(replay_json.read_text(encoding="utf-8"))
     by_id = {item["article_id"]: item for item in replay_payload["results"]}
+    v.equal("policy replay includes duplicate provider fixture", replay_payload["fixture_count"], 8)
+    original = by_id["fixture:hdec-confirmed-contract"]
+    duplicate_provider = by_id["provider:rss-hdec-confirmed-contract"]
+    v.equal(
+        "duplicate provider resolves to original canonical article id",
+        duplicate_provider["canonical_article_id"],
+        original["canonical_article_id"],
+    )
+    v.equal(
+        "duplicate provider resolves to one event cluster",
+        duplicate_provider["event_cluster_key"],
+        original["event_cluster_key"],
+    )
+    v.check("duplicate provider creates no second outbox", not duplicate_provider["outbox_created"])
+    v.equal("full replay canonical article count", replay_payload["store_stats"]["canonical_articles"], 7)
+    v.equal("full replay event cluster count", replay_payload["store_stats"]["news_events"], 7)
+    v.equal("full replay outbox count remains unique", replay_payload["store_stats"]["delivery_outbox"], 5)
     v.equal(
         "received airport article downgraded to dashboard only",
         by_id["received:news1-taiwan-airport"]["decision_class"],
@@ -642,6 +685,9 @@ def verify_cli_and_static_safety(v: Verifier, temp: Path) -> None:
             "timezone-aware",
             "canonical article id",
             "expired lease",
+            "authoritative clock",
+            "end-to-end",
+            "d7-ak-6f-c1-r1-shadow-v1",
         ):
             v.check(f"architecture contract contains {token}", token in text)
 
@@ -662,9 +708,9 @@ def main() -> int:
     print("telegram_sends=0")
     print("production_state_writes=0")
     if verifier.failures:
-        print("RESULT=D7-AK-6F-C1-R1_RUNTIME_CORE_VERIFIER_FAIL")
+        print("RESULT=D7-AK-6F-C1-R2_RUNTIME_CORE_VERIFIER_FAIL")
         return 1
-    print("RESULT=D7-AK-6F-C1-R1_RUNTIME_CORE_VERIFIER_PASS")
+    print("RESULT=D7-AK-6F-C1-R2_RUNTIME_CORE_VERIFIER_PASS")
     return 0
 
 

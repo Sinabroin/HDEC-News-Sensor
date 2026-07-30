@@ -6,9 +6,12 @@ transactional contracts that a production database adapter must preserve:
 * canonical articles and events are idempotently upserted;
 * policy decisions are immutable by deterministic decision id;
 * outbox uniqueness blocks duplicate delivery creation;
-* claims are leased and ownership-checked;
+* claims are leased, ownership-checked, and validated against a store-owned clock;
 * delivery attempts and outbox state change in one transaction;
 * legacy Git JSON state can be imported without mutating the legacy file.
+
+Provider attempted timestamps are audit metadata only; claim validity uses the store
+clock, which defaults to UTC system time and can be injected only at construction for tests.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterator, Mapping
+from typing import Any, Callable, Iterator, Mapping
 
 from app.runtime_models import (
     AttemptStatus,
@@ -189,8 +192,14 @@ def _future_iso(now: str, seconds: int) -> str:
 class SQLiteRuntimeStore:
     """Transactional SQLite implementation of the runtime store contract."""
 
-    def __init__(self, path: str | Path = ":memory:") -> None:
+    def __init__(
+        self,
+        path: str | Path = ":memory:",
+        *,
+        clock: Callable[[], str] | None = None,
+    ) -> None:
         self.path = str(path)
+        self._clock = clock or utc_now_iso
         self.connection = sqlite3.connect(
             self.path,
             isolation_level=None,
@@ -201,6 +210,9 @@ class SQLiteRuntimeStore:
         if self.path != ":memory:":
             self.connection.execute("PRAGMA journal_mode = WAL")
             self.connection.execute("PRAGMA synchronous = NORMAL")
+
+    def _now_iso(self) -> str:
+        return _utc_iso(self._clock(), field_name="clock")
 
     def initialize(self) -> None:
         self.connection.executescript(_SCHEMA)
@@ -235,7 +247,7 @@ class SQLiteRuntimeStore:
         foreign keys without creating a duplicate row or hitting the URL unique index.
         """
         record = article.as_record()
-        now = utc_now_iso()
+        now = self._now_iso()
         published_at = _utc_iso(record["published_at"], field_name="published_at")
         observed_at = _utc_iso(record["observed_at"], field_name="observed_at")
         with self._transaction(immediate=True):
@@ -294,7 +306,7 @@ class SQLiteRuntimeStore:
 
     def upsert_event(self, event: NewsEvent) -> None:
         record = event.as_record()
-        now = utc_now_iso()
+        now = self._now_iso()
         with self._transaction():
             self.connection.execute(
                 """
@@ -378,7 +390,7 @@ class SQLiteRuntimeStore:
             material_signature,
             delivery_class,
         )
-        created_at = utc_now_iso()
+        created_at = self._now_iso()
         normalized_not_before = _optional_utc_iso(not_before, field_name="not_before")
         created = False
         with self._transaction(immediate=True):
@@ -423,7 +435,6 @@ class SQLiteRuntimeStore:
         worker_id: str,
         limit: int = 10,
         lease_seconds: int = 300,
-        now: str | None = None,
     ) -> tuple[OutboxMessage, ...]:
         channel = clean_text(channel)
         worker_id = clean_text(worker_id)
@@ -433,7 +444,7 @@ class SQLiteRuntimeStore:
             raise RuntimeStoreError("limit must be between 1 and 100")
         if lease_seconds < 1:
             raise RuntimeStoreError("lease_seconds must be positive")
-        current = _utc_iso(now, field_name="now") if clean_text(now) else utc_now_iso()
+        current = self._now_iso()
         lease_until = _future_iso(current, lease_seconds)
         claimed: list[OutboxMessage] = []
         with self._transaction(immediate=True):
@@ -525,16 +536,17 @@ class SQLiteRuntimeStore:
         provider_code: str,
         attempted_at: str | None = None,
     ) -> None:
-        attempted = (
+        provider_attempted_at = (
             _utc_iso(attempted_at, field_name="attempted_at")
             if clean_text(attempted_at)
-            else utc_now_iso()
+            else self._now_iso()
         )
+        completed_at = self._now_iso()
         provider = clean_text(provider)
         if not provider:
             raise RuntimeStoreError("provider must be non-empty")
         with self._transaction(immediate=True):
-            self._require_claim(outbox_id, claim_token, completed_at=attempted)
+            self._require_claim(outbox_id, claim_token, completed_at=completed_at)
             attempt_id = f"attempt:{uuid.uuid4().hex}"
             self.connection.execute(
                 """
@@ -546,7 +558,7 @@ class SQLiteRuntimeStore:
                 (
                     attempt_id,
                     outbox_id,
-                    attempted,
+                    provider_attempted_at,
                     AttemptStatus.DELIVERED.value,
                     provider,
                     clean_text(provider_code),
@@ -560,7 +572,7 @@ class SQLiteRuntimeStore:
                     last_error_class = NULL, last_error_message = NULL
                 WHERE outbox_id = ?
                 """,
-                (OutboxStatus.DELIVERED.value, attempted, outbox_id),
+                (OutboxStatus.DELIVERED.value, completed_at, outbox_id),
             )
 
     def mark_delivery_failed(
@@ -576,11 +588,12 @@ class SQLiteRuntimeStore:
         attempted_at: str | None = None,
         retry_not_before: str | None = None,
     ) -> None:
-        attempted = (
+        provider_attempted_at = (
             _utc_iso(attempted_at, field_name="attempted_at")
             if clean_text(attempted_at)
-            else utc_now_iso()
+            else self._now_iso()
         )
+        completed_at = self._now_iso()
         provider = clean_text(provider)
         if not provider:
             raise RuntimeStoreError("provider must be non-empty")
@@ -595,7 +608,7 @@ class SQLiteRuntimeStore:
             else AttemptStatus.TERMINAL_FAILED
         )
         with self._transaction(immediate=True):
-            self._require_claim(outbox_id, claim_token, completed_at=attempted)
+            self._require_claim(outbox_id, claim_token, completed_at=completed_at)
             attempt_id = f"attempt:{uuid.uuid4().hex}"
             self.connection.execute(
                 """
@@ -607,7 +620,7 @@ class SQLiteRuntimeStore:
                 (
                     attempt_id,
                     outbox_id,
-                    attempted,
+                    provider_attempted_at,
                     attempt_status.value,
                     provider,
                     clean_text(provider_code),
@@ -664,7 +677,7 @@ class SQLiteRuntimeStore:
         )
         scanned = 0
         inserted = 0
-        imported_at = utc_now_iso()
+        imported_at = self._now_iso()
         with self._transaction(immediate=True):
             for map_name in maps:
                 value = state.get(map_name)

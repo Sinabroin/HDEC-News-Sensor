@@ -90,6 +90,16 @@ _BUILTIN_FIXTURES: tuple[dict[str, Any], ...] = (
         "confirmed_event_types": ["contract_confirmed"],
         "explicit_evidence": ["official_release"],
     },
+    {
+        "article_id": "provider:rss-hdec-confirmed-contract",
+        "canonical_url": "https://example.invalid/hdec-confirmed-contract",
+        "title": "현대건설 AI 데이터센터 본계약 체결",
+        "summary": "현대건설이 대규모 AI 데이터센터 본계약 체결을 공식 발표했다.",
+        "source": "RSS 재수집",
+        "published_at": "2026-07-30T09:00:00+09:00",
+        "confirmed_event_types": ["contract_confirmed"],
+        "explicit_evidence": ["official_release"],
+    },
 )
 
 
@@ -105,22 +115,27 @@ def _load(path: Path | None) -> list[Mapping[str, Any]]:
     return list(value)
 
 
-def _event_for(article: CanonicalArticle, fixture: Mapping[str, Any]) -> NewsEvent:
+def _event_for(
+    article: CanonicalArticle,
+    fixture: Mapping[str, Any],
+    *,
+    canonical_article_id: str,
+) -> NewsEvent:
     event_key = str(
         fixture.get("event_cluster_key")
-        or deterministic_id("event", article.article_id, article.title, length=24)
+        or deterministic_id("event", canonical_article_id, length=24)
     )
     signature = str(
         fixture.get("material_signature")
         or sha256_text(stable_json({
             "title": article.title,
             "summary": article.summary,
-            "source": article.source,
+            "canonical_url": article.canonical_url,
         }))
     )
     return NewsEvent(
         event_cluster_key=event_key,
-        primary_article_id=article.article_id,
+        primary_article_id=canonical_article_id,
         event_type=str(fixture.get("event_type") or "article_signal"),
         headline=article.title,
         material_signature=signature,
@@ -129,6 +144,8 @@ def _event_for(article: CanonicalArticle, fixture: Mapping[str, Any]) -> NewsEve
         attributes={
             "source": article.source,
             "canonical_url": article.canonical_url,
+            "provider_article_id": article.article_id,
+            "canonical_article_id": canonical_article_id,
         },
     )
 
@@ -160,14 +177,19 @@ def main() -> int:
                 summary=str(fixture.get("summary") or fixture.get("snippet") or ""),
                 raw_payload=dict(fixture),
             )
-            event = _event_for(article, fixture)
-            store.upsert_article(article)
+            canonical_article_id = store.upsert_article(article)
+            event = _event_for(
+                article,
+                fixture,
+                canonical_article_id=canonical_article_id,
+            )
             store.upsert_event(event)
             policy_input = {
                 **dict(fixture),
                 "event_cluster_key": event.event_cluster_key,
                 "material_signature": event.material_signature,
-                "article_id": article.article_id,
+                "article_id": canonical_article_id,
+                "provider_article_id": article.article_id,
                 "published_at": article.published_at,
             }
             decision = engine.decide(policy_input)
@@ -182,7 +204,8 @@ def main() -> int:
                     material_signature=event.material_signature,
                     delivery_class=decision.delivery_class,
                     payload={
-                        "article_id": article.article_id,
+                        "article_id": canonical_article_id,
+                        "provider_article_id": article.article_id,
                         "title": article.title,
                         "summary": article.summary,
                         "source": article.source,
@@ -196,6 +219,7 @@ def main() -> int:
 
             row = {
                 "article_id": article.article_id,
+                "canonical_article_id": canonical_article_id,
                 "event_cluster_key": event.event_cluster_key,
                 "decision_class": decision.decision_class.value,
                 "delivery_class": decision.delivery_class,
@@ -207,6 +231,7 @@ def main() -> int:
             print(
                 "POLICY_REPLAY="
                 f"{article.article_id}"
+                f"|canonical_article_id={canonical_article_id}"
                 f"|decision={decision.decision_class.value}"
                 f"|delivery={decision.delivery_class}"
                 f"|enqueue={str(decision.should_enqueue).lower()}"
