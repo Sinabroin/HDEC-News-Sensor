@@ -60,8 +60,8 @@ def _payload():
             _article(),
             _article(
                 article_key="article-important",
-                title="BIM 기반 설계 자동화 솔루션 정식 출시",
-                summary="건설 BIM 자동화 제품이 정식 출시됐다.",
+                title="AI 기반 BIM 설계 자동화 솔루션 정식 출시",
+                summary="AI가 건설 BIM 설계를 자동화하는 제품이 정식 출시됐다.",
                 source="전자신문",
                 url="https://publisher.example.test/news/bim",
                 score=3.6,

@@ -155,7 +155,7 @@ _CAP_TITLES = (
     "Microsoft, 유럽 AI 데이터센터 전력공급 계약 체결",
     "Google, 아시아 AI 데이터센터 신설 투자 확정",
     "Amazon, 원전 SMR 기반 AI 전력공급 계약 승인",
-    "Meta, BIM 디지털 트윈 플랫폼 정식 출시",
+    "Meta, AI 기반 BIM 디지털 트윈 플랫폼 정식 출시",
     "엔비디아, 차세대 GPU 클러스터 공급 계약 체결",
     "삼성전자, AI 반도체 파운드리 증설 투자 확정",
     "SK하이닉스, HBM 데이터센터 공급 계약 체결",
@@ -656,8 +656,8 @@ def check_delivery(tmp: Path) -> None:
 
     failing = _article(
         article_key="evt-fail",
-        title="Google, 스마트건설 로봇 자율 시공 솔루션 출시",
-        summary="건설 로봇 자율 시공 솔루션을 정식 출시했다.",
+        title="Google, AI 기반 스마트건설 로봇 자율 시공 솔루션 출시",
+        summary="AI가 건설 로봇의 자율 시공을 지원하는 솔루션을 정식 출시했다.",
         url="https://publisher.example.test/news/fail",
         score=3.9,
         shadow_confirmed_event_types=["product_available"],

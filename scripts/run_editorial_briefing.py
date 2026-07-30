@@ -440,6 +440,9 @@ def run_publish(
         run_at=run_at,
         root_url=root_url,
         allow_image_network=edition_type == "daily",
+        selection_mode=(
+            editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+        ),
     )
     editorial_briefings.validate_rendered(edition)
     dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
