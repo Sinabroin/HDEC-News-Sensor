@@ -120,17 +120,18 @@ def _true_env(name: str) -> bool:
 
 
 def _resolve_max_articles(raw: str) -> int:
-    """Resolve the per-run article cap. Empty/invalid → the default ceiling (ten).
+    """Resolve the per-run article cap. Empty → ten; invalid/non-positive → one.
 
     The value is clamped into ``[1, MAX_TEAMS_ARTICLES]``: a bounded canary can lower it
-    (e.g. 3) but nothing can raise it above the hard ceiling the leaf enforces."""
+    (e.g. 3) but nothing can raise it above the hard ceiling the leaf enforces. A
+    configured but malformed rollout value must fail safe to one, never expand to ten."""
     text = str(raw or "").strip()
     if not text:
         return MAX_TEAMS_ARTICLES
     try:
         value = int(text)
     except ValueError:
-        return MAX_TEAMS_ARTICLES
+        return 1
     return max(1, min(value, MAX_TEAMS_ARTICLES))
 
 

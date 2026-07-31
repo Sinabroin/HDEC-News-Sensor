@@ -600,6 +600,7 @@ class _ArticleHTMLParser(HTMLParser):
                 attributes.get("property")
                 or attributes.get("name")
                 or attributes.get("itemprop")
+                or ""
             ).strip().casefold()
             content = attributes.get("content", "").strip()
             if key and content:
@@ -655,6 +656,7 @@ class _ArticleHTMLParser(HTMLParser):
                 attributes.get("src")
                 or attributes.get("data-src")
                 or attributes.get("data-original")
+                or ""
             ).strip()
             if source:
                 self.body_images.append(source)

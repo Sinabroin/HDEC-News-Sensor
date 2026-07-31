@@ -100,8 +100,16 @@ def _strip_html(text: str) -> str:
 
 
 def _to_iso(pubdate: str) -> str | None:
+    text = _WS_RE.sub(" ", str(pubdate or "")).strip()
+    for pattern in ("%Y.%m.%d", "%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(text, pattern).replace(tzinfo=KST).isoformat(
+                timespec="seconds"
+            )
+        except ValueError:
+            pass
     try:
-        dt = parsedate_to_datetime(pubdate)
+        dt = parsedate_to_datetime(text)
     except (TypeError, ValueError, IndexError):
         return None
     if dt is None:
@@ -461,7 +469,12 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
                 })
             continue
 
-        snippet = _strip_html(item.findtext("description") or "")[:SNIPPET_MAX_LEN]
+        rss_content = item.findtext(
+            "{http://purl.org/rss/1.0/modules/content/}encoded"
+        )
+        snippet = _strip_html(
+            item.findtext("description") or rss_content or ""
+        )[:SNIPPET_MAX_LEN]
         published_at = _to_iso(item.findtext("pubDate") or "") or collected_at
         url_hash = hashlib.sha256(link.lower().rstrip("/").encode("utf-8")).hexdigest()
 
@@ -858,12 +871,52 @@ def _strict_publisher_authority(
             resolver=resolver,
             opener=opener,
         )
+    except editorial_article_import.ArticleImportError as exc:
+        return publisher_direct.quarantine_article(
+            row,
+            f"publisher_verification_failed:{exc.code}",
+        )
+    try:
         extracted = editorial_article_import.extract_article(
             resolution.document.text,
             resolution.document.final_url,
             resolver=resolver,
         )
     except editorial_article_import.ArticleImportError as exc:
+        # Some pinned government newsroom pages publish the actual release as an
+        # attachment and expose only its title/date on the verified HTML page.
+        # This bounded fallback is deliberately unavailable to portal/Naver/Google
+        # discoveries: only a registry-produced, official direct row whose exact
+        # RSS title is present on the safely fetched publisher page may use it.
+        metadata = row.get("source_metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        final_url = publisher_direct.normalize_publisher_canonical_url(
+            resolution.document.final_url
+        )
+        page_text = _strip_html(resolution.document.text).casefold()
+        row_title = _WS_RE.sub(" ", str(row.get("title") or "")).strip().casefold()
+        official_metadata_only = (
+            exc.code == "ARTICLE_BODY_NOT_FOUND"
+            and metadata.get("provider") == "publisher_direct_rss"
+            and metadata.get("trust_tier") == "official"
+            and bool(metadata.get("source_kind"))
+            and bool(final_url)
+            and bool(row_title)
+            and row_title in page_text
+            and bool(str(row.get("source") or "").strip())
+            and bool(str(row.get("published_at") or "").strip())
+        )
+        if official_metadata_only:
+            return publisher_direct.apply_publisher_authority(
+                row,
+                publisher_canonical_url=final_url,
+                source=str(row.get("source") or "").strip(),
+                published_at=str(row.get("published_at") or "").strip(),
+                resolution_reason=(
+                    "official_registry_page_verified+"
+                    "publisher_body_attachment_only"
+                ),
+            )
         return publisher_direct.quarantine_article(
             row,
             f"publisher_verification_failed:{exc.code}",

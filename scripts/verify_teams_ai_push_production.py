@@ -291,7 +291,15 @@ def _run_main_approved(argv: list[str], recorder: _SMTPRecorder) -> tuple[int, s
     return rc, out.getvalue() + err.getvalue()
 
 
-def _deliver(tmp: Path, payload, state_path: Path, *, send=True, statuses=(250,)):
+def _deliver(
+    tmp: Path,
+    payload,
+    state_path: Path,
+    *,
+    send=True,
+    statuses=(250,),
+    max_articles=10,
+):
     recorder = _SMTPRecorder(statuses)
     artifact = _write(
         tmp / f"artifact-{abs(hash(json.dumps(payload, sort_keys=True))) % 10**8}.json",
@@ -305,6 +313,7 @@ def _deliver(tmp: Path, payload, state_path: Path, *, send=True, statuses=(250,)
         dashboard_url="https://example.com/dashboard",
         report_url="https://example.com/report",
         smtp_factory=recorder,
+        max_articles=max_articles,
     )
     return summary, recorder
 
@@ -695,6 +704,23 @@ def check_cap_and_partial(tmp: Path) -> None:
     check("ten deliveries, zero failures",
           summary["delivered_count"] == 10 and summary["failed_count"] == 0, str(summary))
 
+    canary_state = tmp / "canary-state.json"
+    canary_summary, canary_rec = _deliver(
+        tmp, _payload(_cap_articles(12)), canary_state, max_articles=1
+    )
+    check("manual canary cap selects and attempts at most one article",
+          canary_summary["candidate_count"] == 1
+          and canary_summary["attempted_count"] == 1
+          and canary_summary["delivered_count"] == 1
+          and len(canary_rec.attempts) == 1, str(canary_summary))
+    check("invalid, zero and negative rollout caps safely resolve to one",
+          sender._resolve_max_articles("invalid") == 1
+          and sender._resolve_max_articles("0") == 1
+          and sender._resolve_max_articles("-7") == 1)
+    check("empty rollout cap preserves the hard default and oversized values clamp to ten",
+          sender._resolve_max_articles("") == 10
+          and sender._resolve_max_articles("99") == 10)
+
     # Fixture 17 — zero eligible candidates → zero SMTP connections and no state file.
     zero_state = tmp / "zero-state.json"
     blocked_only = _article(article_key="blocked-only", url="https://publisher.example.test/blocked",
@@ -832,6 +858,8 @@ def check_workflow() -> None:
         "github.ref": "refs/heads/main",
         "github.event_name": "schedule",
         "github.event.inputs.force_dry_run": "",
+        "github.event.inputs.production_canary": "",
+        "github.event.inputs.canary_cap": "",
     }
     check("scheduled main + watch opt-in + live → step is eligible",
           _eval_gate(teams_if, open_ctx) is True, teams_if)
@@ -842,6 +870,25 @@ def check_workflow() -> None:
     check("workflow_dispatch force_dry_run=true → step is skipped",
           _eval_gate(teams_if, {**open_ctx, "github.event_name": "workflow_dispatch",
                                 "github.event.inputs.force_dry_run": "true"}) is False)
+    manual_ctx = {
+        **open_ctx,
+        "vars.TEAMS_AI_NEWS_WATCH": "0",
+        "github.event_name": "workflow_dispatch",
+        "github.event.inputs.production_canary": "true",
+        "github.event.inputs.canary_cap": "1",
+    }
+    check("explicit manual canary opens while scheduled watch remains disabled",
+          _eval_gate(teams_if, manual_ctx) is True, teams_if)
+    check("manual canary input false blocks the sender",
+          _eval_gate(
+              teams_if,
+              {**manual_ctx, "github.event.inputs.production_canary": "false"},
+          ) is False)
+    check("manual canary cap other than exactly one blocks the sender",
+          _eval_gate(
+              teams_if,
+              {**manual_ctx, "github.event.inputs.canary_cap": "2"},
+          ) is False)
     check("watch opt-in disabled → step is skipped",
           _eval_gate(teams_if, {**open_ctx, "vars.TEAMS_AI_NEWS_WATCH": "0"}) is False)
     check("live collection failure → step is skipped",
@@ -873,6 +920,10 @@ def check_workflow() -> None:
           "DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json" in teams_block)
     check("watch Teams step honours the per-run canary cap",
           "TEAMS_AI_PUSH_MAX_ARTICLES:" in teams_block)
+    check("manual canary injects exactly one independent of repository variables",
+          "github.event_name == 'workflow_dispatch' && '1'" in teams_block)
+    check("scheduled rollout cap safely defaults to one",
+          "vars.TEAMS_AI_NEWS_MAX_ARTICLES || '1'" in teams_block)
     check("no webhook secret is injected anywhere in the watch workflow",
           "secrets.TEAMS_WORKFLOW_WEBHOOK_URL" not in watch)
 
@@ -888,6 +939,8 @@ def check_workflow() -> None:
           "group: teams-ai-news-watch" in watch)
     check("watch preserves manual dispatch and the force-dry-run input",
           "workflow_dispatch:" in watch and "force_dry_run:" in watch)
+    check("watch exposes explicit exactly-one production canary inputs",
+          "production_canary:" in watch and "canary_cap:" in watch)
 
     # Lightweight — live news metadata to a temp file only; no full dashboard/Pages republish,
     # no docs/daily writes. The committed dashboard is read as the delta 'before' baseline.

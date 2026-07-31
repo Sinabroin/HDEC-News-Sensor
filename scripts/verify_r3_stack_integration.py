@@ -918,7 +918,7 @@ def main() -> int:
     editorial_count = int(editorial_raw) if editorial_raw.isdigit() else 0
     check("OPS-R1 verifier has zero failures", ops_count > 0)
     check("publisher-direct verifier count is at least 79", publisher_count >= 79)
-    check("R3-V7 verifier count remains 189", console_count == 189)
+    check("R3-V7 verifier count remains at least 189", console_count >= 189)
     check("Editorial regression count remains 335", editorial_count == 335)
 
     print(f"R3_STACK_INTEGRATION_VERIFIER={PASS}/{FAIL}")

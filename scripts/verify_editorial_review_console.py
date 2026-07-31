@@ -83,11 +83,12 @@ def _jsonld_fixture_html() -> str:
     }
     return (
         "<!doctype html><html><head>"
+        "<meta disabled>"
         f'<script type="application/ld+json">{json.dumps(payload, ensure_ascii=False)}</script>'
         '<link rel="canonical" href="https://publisher.example.test/article/1">'
         "</head><body>"
         '<nav><p>메뉴 투자 시장 기업 기술 구독 로그인</p></nav>'
-        f"<article><p>{escape(body)}</p></article>"
+        f"<article><img loading><p>{escape(body)}</p></article>"
         '<footer><p>저작권자 무단 전재 및 재배포 금지</p></footer>'
         "</body></html>"
     )
@@ -266,6 +267,10 @@ def verify_article_import_domain(v: V) -> dict[str, object]:
         and article["portal_resolution_reason"] == "publisher_canonical",
     )
     v.equal("JSON-LD title extraction", article["title"], "현대건설 데이터센터 투자 확대")
+    v.check(
+        "valueless HTML attributes do not abort article extraction",
+        article["extraction"]["title_source"] == "json_ld",
+    )
     v.equal("JSON-LD publisher extraction", article["source"], "테스트경제")
     v.equal(
         "JSON-LD published date extraction",

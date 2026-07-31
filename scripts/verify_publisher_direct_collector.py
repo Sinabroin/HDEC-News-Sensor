@@ -65,7 +65,7 @@ EXPECTED_PROTECTED_SHA256 = {
         "c3302b964c001038d3bc2143c2a7f39044c02dda1f16974b1f7941e60ed19df0"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
-        "940cb3f90aac730eb4864ee23b98364829f855359d0cdfb93b1159a4ad42129d"
+        "f0a9bd171bd5dc1a29a357c0f8394c4ae7957d1f34ba23a94d2c5c0d30667df0"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"
@@ -390,21 +390,26 @@ def main() -> int:
             )
         },
         official_direct: {
-            "body": article_html(
-                official_direct,
-                "국토부 건설현장 AI 안전관리 정책 발표",
-                "국토교통부",
+            "body": (
+                "<html><head>"
+                "<title>국토부 건설현장 AI 안전관리 정책 발표</title>"
+                f'<link rel="canonical" href="{official_direct}">'
+                "</head><body><main>"
+                "<h1>국토부 건설현장 AI 안전관리 정책 발표</h1>"
+                "<p>자세한 보도자료 내용은 첨부파일을 참고하시기 바랍니다.</p>"
+                "</main></body></html>"
             )
         },
     }
     opener = FixtureOpener(routes)
 
     direct_rss = f"""<?xml version="1.0" encoding="UTF-8"?>
-    <rss version="2.0"><channel><item>
+    <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel><item>
       <title>국토부 건설현장 AI 안전관리 정책 발표</title>
       <link>{official_direct}</link>
-      <pubDate>Thu, 31 Jul 2026 06:00:00 +0900</pubDate>
-      <description>스마트건설과 AI 안전관리 정책을 발표했다.</description>
+      <pubDate>2026.07.31</pubDate>
+      <content:encoded>스마트건설과 AI 안전관리 정책을 발표했다.</content:encoded>
     </item></channel></rss>"""
     feed_fetches: list[str] = []
 
@@ -420,6 +425,13 @@ def main() -> int:
         check("direct RSS stays pending until publisher page verification", (
             direct_rows[0]["source_metadata"]["provider"] == "publisher_direct_rss"
             and direct_rows[0]["publisher_direct"] is False
+        ))
+        check("official dotted RSS date is normalized with explicit KST", (
+            direct_rows[0]["published_at"] == "2026-07-31T00:00:00+09:00"
+        ))
+        check("official content:encoded is retained only as bounded snippet", (
+            direct_rows[0]["snippet"] == "스마트건설과 AI 안전관리 정책을 발표했다."
+            and len(direct_rows[0]["snippet"]) <= live_collector.SNIPPET_MAX_LEN
         ))
         check("all enabled official feeds were fixture-fetched", len(feed_fetches) == 3)
         check("direct source collection made zero external calls", EXTERNAL_NETWORK_CALLS == 0)
@@ -438,6 +450,10 @@ def main() -> int:
             and resolved_direct[0]["publisher_direct"] is True
         ))
         check("publisher page fixes official source name", resolved_direct[0]["source"] == "국토교통부")
+        check("official attachment-only release uses disclosed metadata fallback", (
+            "publisher_body_attachment_only"
+            in resolved_direct[0]["portal_resolution_reason"]
+        ))
 
         daum_row = fixture_row(
             daum_canonical,
