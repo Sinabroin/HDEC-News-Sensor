@@ -29,7 +29,7 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import collector, editorial_briefing_state, editorial_briefings, news_access  # noqa: E402
+from app import (collector, editorial_briefing_state, editorial_briefings, editorial_review, news_access)  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
 RUNTIME_MANIFEST = "runtime-manifest.json"
@@ -434,16 +434,47 @@ def run_publish(
         print(f"publish_skip edition_type={edition_type} edition={key} reason={reason}")
         return None
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
-    edition = editorial_briefings.render_edition(
-        edition_type,
-        collect(),
-        run_at=run_at,
-        root_url=root_url,
-        allow_image_network=edition_type == "daily",
-        selection_mode=(
-            editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
-        ),
-    )
+    review_mode = "not_applicable"
+    if edition_type == "daily":
+        bundle_path = ROOT / "docs" / "editorial" / "review" / key / "candidates.json"
+        review_path = ROOT / "data" / "editorial_reviews" / f"{key}.json"
+        try:
+            bundle = editorial_review.load_bundle(bundle_path, key)
+            review = editorial_review.load_review(review_path, key)
+            selected_articles, review_mode = editorial_review.choose_daily_articles(
+                bundle,
+                review,
+                limit=editorial_briefings.DAILY_MAX_ARTICLES,
+            )
+            edition = editorial_briefings.render_daily(
+                selected_articles,
+                run_at=run_at,
+                root_url=root_url,
+            )
+        except editorial_review.EditorialReviewError:
+            review_mode = "live_collection_fallback"
+            edition = editorial_briefings.render_edition(
+                edition_type,
+                collect(),
+                run_at=run_at,
+                root_url=root_url,
+                allow_image_network=True,
+                selection_mode=(
+                    editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+                ),
+            )
+    else:
+        edition = editorial_briefings.render_edition(
+            edition_type,
+            collect(),
+            run_at=run_at,
+            root_url=root_url,
+            allow_image_network=False,
+            selection_mode=(
+                editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+            ),
+        )
+    print(f"editorial_review_mode={review_mode}")
     editorial_briefings.validate_rendered(edition)
     dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
     payload = edition.html.encode("utf-8")

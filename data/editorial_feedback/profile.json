@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "minimum_samples": 3,
+  "max_abs_adjustment": 0.85,
+  "source_adjustments": {},
+  "category_adjustments": {},
+  "domain_adjustments": {},
+  "keyword_adjustments": {},
+  "manual_domain_seeds": {},
+  "manual_keyword_seeds": {},
+  "sample_counts": {
+    "source": {},
+    "category": {},
+    "domain": {},
+    "keyword": {},
+    "manual_domain": {},
+    "manual_keyword": {}
+  }
+}
