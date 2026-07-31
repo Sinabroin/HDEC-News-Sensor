@@ -14,11 +14,15 @@ import json
 import re
 import unicodedata
 
-from app import config, db
+from app import config, db, publisher_direct
 
 SNIPPET_MAX_LEN = 500
 ALLOWED_METADATA_KEYS = (
     "provider", "query", "source_url", "collected_at", "provider_response_id",
+    "discovery_url", "discovery_urls", "discovery_provider", "discovery_providers",
+    "publisher_url", "publisher_domain",
+    "publisher_direct", "portal_resolution_status", "portal_resolution_reason",
+    "published_at_fallback_reason", "source_kind", "trust_tier",
 )
 
 
@@ -67,22 +71,64 @@ def _to_article_row(raw: dict, queries: list[str], collected_at: str,
     snippet = (raw.get("snippet") or "")[:SNIPPET_MAX_LEN]
     metadata = raw.get("source_metadata") or {}
     safe_metadata = {k: metadata[k] for k in ALLOWED_METADATA_KEYS if k in metadata}
+    if signal_origin == "Mock":
+        mock_url = publisher_direct.normalize_publisher_canonical_url(raw.get("url"))
+        if mock_url:
+            safe_metadata.update(
+                {
+                    "publisher_url": mock_url,
+                    "publisher_domain": (
+                        publisher_direct.publisher_url({"url": mock_url})
+                        .split("/", 3)[2]
+                    ),
+                    "publisher_direct": True,
+                    "portal_resolution_status": "fixture_verified",
+                    "portal_resolution_reason": "deterministic_mock_fixture",
+                }
+            )
+    canonical_url = (
+        publisher_direct.publisher_url(raw)
+        or str(raw.get("url") or "").strip()
+    )
+    verified_direct = publisher_direct.is_publisher_direct_delivery_eligible(
+        raw,
+        relevance_qualified=True,
+    )
+    quarantine_identity = (
+        "quarantine:"
+        + (
+            publisher_direct.discovery_url(raw)
+            or canonical_url
+            or str(raw.get("id") or "")
+        )
+    )
+    if verified_direct:
+        storage_id = make_url_hash(canonical_url)[:16]
+    elif (
+        bool(raw.get("quarantine"))
+        or str(raw.get("status") or "").casefold() == "quarantine"
+    ):
+        storage_id = make_url_hash(quarantine_identity)[:16]
+    else:
+        storage_id = raw.get("id")
     return {
-        "id": raw.get("id"),
+        # A portal discovery ID must not block insertion of its later verified
+        # publisher canonical during migration of an existing live database.
+        "id": storage_id,
         "title": title,
         "normalized_title": normalize_title(title),
         "source": raw.get("source"),
         "published_at": raw.get("published_at"),
         "collected_at": collected_at,
-        "url": raw.get("url"),
-        "url_hash": make_url_hash(raw.get("url")),
+        "url": canonical_url,
+        "url_hash": make_url_hash(canonical_url),
         "snippet": snippet,
         "topic_candidates": json.dumps(
             _match_topic_candidates(title, snippet, queries), ensure_ascii=False
         ),
         "signal_origin": signal_origin,
         "source_metadata_json": json.dumps(safe_metadata, ensure_ascii=False),
-        "status": "collected",
+        "status": raw.get("status") or "collected",
     }
 
 
@@ -162,6 +208,39 @@ def merge_provider_articles(rows: list[dict]) -> list[dict]:
         # 중복 — provider 근거 병합 + 원문(originallink) URL 우선
         providers[idx].add(prov)
         existing = kept[idx]
+        existing_meta = dict(existing.get("source_metadata") or {})
+        incoming_meta = dict(raw.get("source_metadata") or {})
+        discovery_urls = list(
+            dict.fromkeys(
+                str(value).strip()
+                for value in (
+                    existing_meta.get("discovery_url"),
+                    incoming_meta.get("discovery_url"),
+                    existing.get("discovery_url"),
+                    raw.get("discovery_url"),
+                )
+                if str(value or "").strip()
+            )
+        )
+        discovery_providers = list(
+            dict.fromkeys(
+                str(value).strip()
+                for value in (
+                    existing_meta.get("discovery_provider"),
+                    incoming_meta.get("discovery_provider"),
+                    existing.get("discovery_provider"),
+                    raw.get("discovery_provider"),
+                )
+                if str(value or "").strip()
+            )
+        )
+        if discovery_urls:
+            existing_meta["discovery_url"] = discovery_urls[0]
+            existing_meta["discovery_urls"] = discovery_urls
+        if discovery_providers:
+            existing_meta["discovery_provider"] = discovery_providers[0]
+            existing_meta["discovery_providers"] = discovery_providers
+        existing["source_metadata"] = existing_meta
         ex_url = (existing.get("url") or "").lower()
         if _GOOGLE_REDIRECT_MARK in ex_url and _GOOGLE_REDIRECT_MARK not in url.lower():
             displaced = existing.get("url") or ""   # news.google 경유 URL — provenance로 보존
@@ -223,7 +302,16 @@ def _ingest(raw_articles: list[dict], signal_origin: str) -> tuple[int, int, int
             row["normalized_title"],
             (row.get("source") or "").strip().casefold(),
         )
-        if row["normalized_title"] and title_source in existing_title_sources:
+        try:
+            stored_metadata = json.loads(row.get("source_metadata_json") or "{}")
+        except (TypeError, ValueError):
+            stored_metadata = {}
+        verified_direct = stored_metadata.get("publisher_direct") is True
+        if (
+            row["normalized_title"]
+            and title_source in existing_title_sources
+            and not verified_direct
+        ):
             continue
         if db.insert_article(row):
             inserted += 1
@@ -258,6 +346,11 @@ def _run_live() -> dict:
     """
     from app import live_collector, naver_news_provider, thebell_watch
 
+    try:
+        direct_rows = live_collector.fetch_publisher_direct_sources()
+    except Exception:  # noqa: BLE001 - registry source failures remain auditable
+        direct_rows = []
+
     # 출처 품질로 수집 단계에서 제외된 비뉴스성 항목을 감사용으로 함께 받는다 (P0-C1.8).
     source_filtered: list[dict] = []
     google_query_audit: list[dict] = []
@@ -278,35 +371,85 @@ def _run_live() -> dict:
         naver_result = {"provider": naver_news_provider.PROVIDER,
                         "status": naver_news_provider.STATUS_ERROR, "articles": []}
     naver_rows = naver_result.get("articles") or []
-    # D7-AK-6D — 실제 live 진입점에서만 bounded publisher URL 해석을 opt-in한다.
-    # Google News 전용 decode를 먼저 쓰고, 이후 HTTP redirect/canonical metadata를
-    # best-effort로 확인한다. Naver/Daum portal-only 항목도 같은 공통 resolver를 타며,
-    # 실패하면 source_url/url fallback은 그대로 보존되어 labeled 경유 링크가 된다.
-    resolvable_rows = google_rows + naver_rows
+    # D7-AK-6E R3-V8 — 공식 direct RSS를 우선하고, 모든 기사 authority를 publisher
+    # 페이지에서 재검증한다. 미해소 portal/unsafe/본문 없는 행은 삭제하지 않고 quarantine
+    # provenance로 보존하되 아래 delivery pipeline에는 절대 넣지 않는다.
+    resolvable_rows = direct_rows + google_rows + naver_rows
     if resolvable_rows:
         try:
-            live_collector.resolve_publisher_urls(resolvable_rows)
-        except Exception:  # noqa: BLE001 — 실패해도 수집 결과는 그대로 진행
-            pass
+            live_collector.resolve_publisher_urls(
+                resolvable_rows,
+                strict=True,
+            )
+        except Exception:  # noqa: BLE001 - fail closed into quarantine
+            for row in resolvable_rows:
+                if isinstance(row, dict):
+                    quarantined = publisher_direct.quarantine_article(
+                        row,
+                        "publisher_resolution_pass_failed",
+                    )
+                    row.clear()
+                    row.update(quarantined)
+
+    combined_all = merge_provider_articles(resolvable_rows)
+    combined, publisher_quarantine = publisher_direct.partition_delivery_articles(
+        combined_all
+    )
     # TheBell은 Naver 검색 metadata에서만 후보를 파생한다. 별도 기사 페이지 요청이나
     # 제한 우회는 없으며 제목·짧은 snippet·시각·링크만 보존한다.
-    thebell_candidates = thebell_watch.extract_candidates(naver_rows)
+    eligible_naver_rows = [
+        row for row in combined
+        if "naver_news_api" in str(
+            (row.get("source_metadata") or {}).get("provider") or ""
+        ).split("+")
+    ]
+    thebell_candidates = thebell_watch.extract_candidates(eligible_naver_rows)
 
-    # 교차 dedup — Naver-only는 보존하고, 동일 사건은 provider 근거를 합쳐 하나로 만든다.
-    combined = merge_provider_articles(google_rows + naver_rows)
-    if not combined:
-        return _run_mock(fallback=True, attempted="live")
-
-    # 감사용 제외 항목 — 두 provider의 것을 URL 기준 dedup해 합친다.
+    # 감사용 제외 항목 — 두 provider의 것을 URL 기준 dedup해 합친다. 포털 상태로
+    # 수집 단계에서 제외된 행도 버리지 않고 quarantine provenance에 보존한다.
     seen_filtered = {f.get("url") for f in source_filtered}
     for item in naver_filtered:
         u = item.get("url")
         if u and u not in seen_filtered:
             seen_filtered.add(u)
             source_filtered.append(item)
+    publisher_quarantine.extend(
+        publisher_direct.quarantine_article(
+            item,
+            "source_quality_filtered_before_publisher_resolution",
+        )
+        for item in source_filtered
+        if not publisher_direct.normalize_publisher_canonical_url(item.get("url"))
+    )
+    source_filtered = [
+        item
+        for item in source_filtered
+        if publisher_direct.normalize_publisher_canonical_url(item.get("url"))
+    ]
+    quarantine_ingest = _ingest(
+        publisher_quarantine,
+        "Live RSS Quarantine",
+    ) if publisher_quarantine else (0, 0, 0)
+
+    # 교차 dedup은 publisher canonical URL 기준이다. 원문 미해소 행은 quarantine에 남고
+    # Daily/Dashboard/Teams/Telegram 공통 입력에서 제외된다.
+    if not combined:
+        fallback = _run_mock(fallback=True, attempted="live")
+        fallback.update(
+            {
+                "publisher_direct_quarantine": publisher_quarantine,
+                "publisher_direct_quarantine_count": len(publisher_quarantine),
+                "publisher_direct_eligible_count": 0,
+                "publisher_direct_quarantine_inserted": quarantine_ingest[2],
+                "external_delivery_portal_urls": 0,
+            }
+        )
+        return fallback
 
     _, deduped, inserted = _ingest(combined, "Live RSS")
     labels = []
+    if direct_rows:
+        labels.append("Publisher Direct RSS")
     if google_rows:
         labels.append(live_collector.SOURCE_LABEL)
     if naver_rows:
@@ -315,7 +458,7 @@ def _run_live() -> dict:
     g_only, n_only, both = _provider_dedup_counts(combined)
     return {
         # collected = 두 provider 원시 수집 합계, deduplicated = 교차 dedup 후 고유 기사 수.
-        "collected": len(google_rows) + len(naver_rows),
+        "collected": len(direct_rows) + len(google_rows) + len(naver_rows),
         "deduplicated": deduped,
         "inserted": inserted,
         "news_data_mode": "live",
@@ -323,6 +466,11 @@ def _run_live() -> dict:
         "attempted_mode": "live",
         "fallback_used": False,
         "source_filtered": source_filtered,
+        "publisher_direct_quarantine": publisher_quarantine,
+        "publisher_direct_quarantine_count": len(publisher_quarantine),
+        "publisher_direct_quarantine_inserted": quarantine_ingest[2],
+        "publisher_direct_eligible_count": len(combined),
+        "external_delivery_portal_urls": 0,
         "google_query_audit": google_query_audit,
         "thebell_candidates": thebell_candidates,
         "thebell_watch_status": {
@@ -340,6 +488,17 @@ def _run_live() -> dict:
                 "raw_count": len(google_rows),
                 "after_dedup_count": g_only + both,
             },
+            "publisher_direct_rss": {
+                "status": "active" if direct_rows else "empty",
+                "raw_count": len(direct_rows),
+                "after_dedup_count": sum(
+                    1
+                    for row in combined
+                    if "publisher_direct_rss" in str(
+                        (row.get("source_metadata") or {}).get("provider") or ""
+                    ).split("+")
+                ),
+            },
             "naver_news_api": {
                 "status": naver_result.get("status"),
                 "raw_count": len(naver_rows),
@@ -349,6 +508,8 @@ def _run_live() -> dict:
                 "credentials_present": bool(naver_result.get("credentials_present")),
             },
             "both_count": both,
+            "publisher_direct_eligible_count": len(combined),
+            "publisher_direct_quarantine_count": len(publisher_quarantine),
         },
     }
 

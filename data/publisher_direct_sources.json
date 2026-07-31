@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "note": "공식 기관이 자체 RSS 안내 페이지에서 공개한 주소만 등록한다. 추측한 언론사 RSS는 넣지 않으며 포털은 registry authority가 될 수 없다.",
+  "sources": [
+    {
+      "source_id": "molit_press",
+      "display_name": "국토교통부",
+      "homepage": "https://www.molit.go.kr/",
+      "feed_urls": [
+        "https://www.molit.go.kr/dev/board/board_rss.jsp?rss_id=NEWS"
+      ],
+      "source_kind": "government_press_release",
+      "enabled": true,
+      "trust_tier": "official",
+      "topic_tags": [
+        "건설",
+        "인프라",
+        "스마트건설",
+        "안전",
+        "규제"
+      ],
+      "notes": "국토교통부 RSS 서비스 페이지에 공개된 보도자료 feed"
+    },
+    {
+      "source_id": "msit_press",
+      "display_name": "과학기술정보통신부",
+      "homepage": "https://www.msit.go.kr/",
+      "feed_urls": [
+        "https://www.msit.go.kr/user/rss/rss.do?bbsSeqNo=94"
+      ],
+      "source_kind": "government_press_release",
+      "enabled": true,
+      "trust_tier": "official",
+      "topic_tags": [
+        "AI",
+        "반도체",
+        "데이터센터",
+        "클라우드",
+        "정책"
+      ],
+      "notes": "과학기술정보통신부 RSS 이용안내에 공개된 보도자료 feed"
+    },
+    {
+      "source_id": "mois_press",
+      "display_name": "행정안전부",
+      "homepage": "https://www.mois.go.kr/",
+      "feed_urls": [
+        "https://www.mois.go.kr/gpms/view/jsp/rss/rss.jsp?ctxCd=1012"
+      ],
+      "source_kind": "government_press_release",
+      "enabled": true,
+      "trust_tier": "official",
+      "topic_tags": [
+        "안전",
+        "재난",
+        "공공 AI",
+        "정책"
+      ],
+      "notes": "행정안전부 RSS 서비스 페이지에 공개된 보도자료 feed"
+    },
+    {
+      "source_id": "hdec_newsroom",
+      "display_name": "현대건설 뉴스룸",
+      "homepage": "https://www.hdec.kr/kr/newsroom/newsroom_main.aspx",
+      "feed_urls": [],
+      "source_kind": "corporate_newsroom",
+      "enabled": false,
+      "trust_tier": "official",
+      "topic_tags": [
+        "현대건설",
+        "스마트건설",
+        "원전",
+        "데이터센터"
+      ],
+      "notes": "공식 newsroom은 확인했지만 repository에서 검증된 RSS가 없어 feed adapter 전까지 disabled"
+    }
+  ]
+}

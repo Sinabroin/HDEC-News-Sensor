@@ -18,8 +18,8 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     ai_value_chain, article_quality, config, db, deal_watch, decision_relevance,
-    global_press, insight, macro_snapshot, market_snapshot, radar, risk_events, scoring, source_quality,
-    surface_contracts, topic_profiles,
+    global_press, insight, macro_snapshot, market_snapshot, publisher_direct,
+    radar, risk_events, scoring, source_quality, surface_contracts, topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -1747,7 +1747,20 @@ def build_brief(pipeline_counts: dict | None = None,
     DB만으로는 알 수 없는 런타임 상태를 정직하게 담기 위해 쓴다. news_data_mode 자체는
     저장된 기사 signal_origin에서 파생하므로 provenance 없이도 정확하다.
     """
-    rows = db.fetch_articles_with_scores()
+    prov = news_provenance or {}
+    stored_rows = db.fetch_articles_with_scores()
+    rows, stored_authority_quarantine = publisher_direct.partition_delivery_articles(
+        stored_rows,
+        # Existing scoring/decision policy remains the relevance owner here.
+        # This pass owns only final URL authority and quarantine exclusion.
+        relevance_qualified=True,
+    )
+    # The live collector persists quarantine rows and also reports the current
+    # run count. Use the larger view so the same row is never double-counted.
+    publisher_quarantine_count = max(
+        len(stored_authority_quarantine),
+        int(prov.get("publisher_direct_quarantine_count") or 0),
+    )
     scored = [r for r in rows if r.get("final_score") is not None]
     scored.sort(key=lambda r: (-(r["final_score"]), r["id"]))
 
@@ -2260,7 +2273,6 @@ def build_brief(pipeline_counts: dict | None = None,
     # 뉴스 출처 모드는 저장된 기사 signal_origin에서 파생한다 (DB가 단일 진실).
     # provenance가 주어지면 fallback 여부 등 런타임 상태를 추가로 반영한다.
     news_mode = _derive_news_mode(rows)
-    prov = news_provenance or {}
     news_fallback_used = bool(prov.get("fallback_used"))
     news_source = prov.get("news_source") or (
         "live_rss" if news_mode == "live" else "mock")
@@ -2295,6 +2307,12 @@ def build_brief(pipeline_counts: dict | None = None,
         # D7-AD-X — provider provenance(표시/감사 전용). 대시보드가 news_provider_summary를,
         # 감사가 provider별 status/raw/dedup 카운트를 여기서 읽는다 (비밀값 0건).
         "news_provider_status": news_provider_status,
+        "publisher_direct_delivery": {
+            "eligible_count": len(rows),
+            "quarantine_count": publisher_quarantine_count,
+            "final_portal_urls": 0,
+            "policy": "publisher_direct_only",
+        },
         "deal_watch_rows": deal_watch_rows,
         "thebell_watch_status": thebell_watch_status,
         "risk_query_coverage": _risk_query_coverage(google_query_audit),

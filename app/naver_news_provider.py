@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 
-from app import config, news_coverage, source_quality
+from app import config, news_coverage, publisher_direct, source_quality
 
 KST = timezone(timedelta(hours=9))
 
@@ -115,11 +115,22 @@ def _load_sources(path=None) -> dict:
 
 
 def _prefer_url(originallink: str, link: str) -> str | None:
-    """originallink가 유효한 http/https면 그것을, 아니면 link를 쓴다 (원문 우선)."""
-    for candidate in (originallink, link):
-        c = (candidate or "").strip()
-        if c.startswith(("http://", "https://")):
-            return c
+    """Use only a syntactically publisher-direct originallink as authority.
+
+    A Naver ``link`` remains discovery provenance when originallink is absent;
+    it is never promoted to publisher authority by this adapter.
+    """
+    direct = publisher_direct.normalize_publisher_canonical_url(originallink)
+    if direct:
+        return direct
+    if str(originallink or "").strip():
+        # Preserve an explicitly supplied malformed originallink for quarantine
+        # audit. It is never replaced by a portal link or made delivery eligible.
+        raw_origin = str(originallink).strip()
+        return raw_origin if raw_origin.startswith(("http://", "https://")) else None
+    discovery = (link or "").strip()
+    if discovery.startswith(("http://", "https://")):
+        return discovery
     return None
 
 
@@ -136,13 +147,16 @@ def _normalize_item(item: dict, query: str, collected_at: str,
     if not isinstance(item, dict):
         return None
     title = _strip_tags(item.get("title") or "")
-    url = _prefer_url(item.get("originallink") or "", item.get("link") or "")
+    originallink = item.get("originallink") or ""
+    naver_link = item.get("link") or ""
+    url = _prefer_url(originallink, naver_link)
     if not title or not url:
         return None
     if _is_forbidden(url, item.get("originallink") or "", item.get("link") or ""):
         return None  # X(엑스) 등 금지 소스는 수집하지 않는다
 
-    source = _source_from_url(url, host_map)
+    direct_url = publisher_direct.normalize_publisher_canonical_url(originallink)
+    source = _source_from_url(direct_url or url, host_map)
     snippet = _strip_tags(item.get("description") or "")[:SNIPPET_MAX_LEN]
     published_at = _to_iso(item.get("pubDate") or "") or collected_at
     url_hash = hashlib.sha256(url.lower().rstrip("/").encode("utf-8")).hexdigest()
@@ -160,7 +174,33 @@ def _normalize_item(item: dict, query: str, collected_at: str,
             "source_url": url,
             "collected_at": collected_at,
             "provider_response_id": url_hash[:16],
+            "discovery_url": naver_link or url,
+            "discovery_provider": "naver",
+            "publisher_url": direct_url,
+            "publisher_domain": _host_of(direct_url),
+            "publisher_direct": False,
+            "portal_resolution_status": (
+                "pending_verification" if direct_url else "publisher_resolution_pending"
+            ),
+            "portal_resolution_reason": (
+                "naver_originallink_present"
+                if direct_url
+                else "naver_originallink_missing"
+            ),
         },
+        "discovery_url": naver_link or url,
+        "discovery_provider": "naver",
+        "publisher_url": direct_url,
+        "publisher_domain": _host_of(direct_url),
+        "publisher_direct": False,
+        "portal_resolution_status": (
+            "pending_verification" if direct_url else "publisher_resolution_pending"
+        ),
+        "portal_resolution_reason": (
+            "naver_originallink_present"
+            if direct_url
+            else "naver_originallink_missing"
+        ),
     }
 
 

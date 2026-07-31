@@ -18,7 +18,8 @@ docs/daily/latest.html를 생성해 main에 auto-commit하고, NEWS_MODE=live �
 
 사용법:
     python3 scripts/verify_live_publish_path.py
-    NEWS_MODE=live python3 scripts/verify_live_publish_path.py   # 동일 (live 빌드는 항상 시도)
+    RUN_EXTERNAL_NETWORK_TESTS=1 python3 scripts/verify_live_publish_path.py
+        # 명시적으로 요청한 경우에만 실제 live 빌드 시도
 """
 
 import json
@@ -274,6 +275,10 @@ def check_live_build_optional() -> None:
     성공(news_data_mode=live)하면 실제 href·정직 라벨을 검증한다. 네트워크가
     없으면 mock fallback이 되며 SKIP한다 (가짜 live 성공을 주장하지 않는다).
     """
+    if os.getenv("RUN_EXTERNAL_NETWORK_TESTS", "").strip() != "1":
+        skip("실제 live 빌드 비활성 (RUN_EXTERNAL_NETWORK_TESTS=1일 때만 실행)")
+        return
+
     with tempfile.TemporaryDirectory(prefix="hdec_pub_") as tmp:
         out = Path(tmp) / "latest.html"
         try:
