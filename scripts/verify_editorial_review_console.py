@@ -709,9 +709,12 @@ def verify_article_import_domain(v: V) -> dict[str, object]:
 
 def _browser_executable() -> Path | None:
     candidates = [
+        # GitHub-hosted Ubuntu images ship Google Chrome as the supported
+        # browser; distro Chromium wrappers can crash or retain child processes
+        # after --dump-dom. Prefer Chrome while retaining local fallbacks.
+        shutil.which("google-chrome"),
         shutil.which("chromium"),
         shutil.which("chromium-browser"),
-        shutil.which("google-chrome"),
         "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe",
         "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
     ]
