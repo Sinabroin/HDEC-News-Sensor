@@ -374,7 +374,11 @@ def _run_live() -> dict:
     # D7-AK-6E R3-V8 — 공식 direct RSS를 우선하고, 모든 기사 authority를 publisher
     # 페이지에서 재검증한다. 미해소 portal/unsafe/본문 없는 행은 삭제하지 않고 quarantine
     # provenance로 보존하되 아래 delivery pipeline에는 절대 넣지 않는다.
-    resolvable_rows = direct_rows + google_rows + naver_rows
+    # Spend the bounded publisher-page verification budget in authority order:
+    # pinned direct feeds first, then Naver originallink candidates, and only then
+    # portal-only Google discovery. Otherwise a large Google pool can starve every
+    # Naver publisher candidate before strict verification begins.
+    resolvable_rows = direct_rows + naver_rows + google_rows
     if resolvable_rows:
         try:
             live_collector.resolve_publisher_urls(

@@ -288,6 +288,11 @@ def main() -> int:
         "TEAMS_AI_NEWS_WATCH remains zero",
         os.environ.get("TEAMS_AI_NEWS_WATCH", "0") == "0",
     )
+    collector_source = (ROOT / "app/collector.py").read_text(encoding="utf-8")
+    check(
+        "publisher verification budget follows direct then Naver then portal order",
+        "direct_rows + naver_rows + google_rows" in collector_source,
+    )
 
     registry = json.loads(
         (ROOT / "data/publisher_direct_sources.json").read_text(encoding="utf-8")
