@@ -508,6 +508,7 @@ class EditorialArticle:
     link_kind: str
     link_label: str
     category: str
+    summary_html: str = ""
     collection_source_kind: str = ""
     relevance_score: float = 0.0
     freshness_score: float = 0.0
@@ -669,6 +670,69 @@ _IMAGE_URL_WRAPPERS = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"))
 _IMAGE_URL_QUOTE_CHARS = {'"', "'", "“", "”", "‘", "’"}
 _URL_PATH_SAFE = "/:@!$&'()*+,;=-._~%"
 _URL_QUERY_SAFE = "=&?/:@!$'()*+,;%-._~"
+
+
+class _EditorialInlineSanitizer(HTMLParser):
+    """Allow only bold and line-break markup in operator-edited summaries."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.strong_depth = 0
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        lowered = tag.casefold()
+        if lowered in {"strong", "b"}:
+            self.parts.append("<strong>")
+            self.strong_depth += 1
+        elif lowered == "br":
+            self.parts.append("<br>")
+
+    def handle_startendtag(self, tag: str, attrs) -> None:
+        if tag.casefold() == "br":
+            self.parts.append("<br>")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.casefold() in {"strong", "b"} and self.strong_depth:
+            self.parts.append("</strong>")
+            self.strong_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(escape(data))
+
+    def output(self) -> str:
+        return "".join(self.parts) + "</strong>" * self.strong_depth
+
+
+class _EditorialInlineText(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag.casefold() == "br":
+            self.parts.append(" ")
+
+    def handle_startendtag(self, tag: str, attrs) -> None:
+        if tag.casefold() == "br":
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
+def sanitize_editorial_inline_html(value: object) -> str:
+    parser = _EditorialInlineSanitizer()
+    parser.feed(str(value or ""))
+    parser.close()
+    return parser.output().strip()
+
+
+def editorial_inline_plain_text(value: object) -> str:
+    parser = _EditorialInlineText()
+    parser.feed(sanitize_editorial_inline_html(value))
+    parser.close()
+    return " ".join("".join(parser.parts).split())
 
 
 def _has_url_control_character(value: str) -> bool:
@@ -3333,6 +3397,12 @@ def _category_style(category: str) -> str:
     }.get(category, "--cat:var(--c-tech);--tint:#F1F1FD")
 
 
+def _daily_summary_html(article: EditorialArticle) -> str:
+    if article.summary_html:
+        return sanitize_editorial_inline_html(article.summary_html)
+    return escape(article.summary)
+
+
 def _daily_headline(article: EditorialArticle) -> str:
     return (
         '<section class="hero" data-role="headline" style="position:relative;'
@@ -3352,7 +3422,7 @@ def _daily_headline(article: EditorialArticle) -> str:
         '<div class="ednote" style="background:#fff;border:1px solid rgba(16,18,24,.10);'
         'border-radius:0 0 22px 22px;margin-top:-14px;padding:30px 30px 24px;">'
         "<h3 class=\"ed-k\">Editor's Summary</h3>"
-        f"<p>{escape(article.summary)}</p>"
+        f"<p>{_daily_summary_html(article)}</p>"
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div>"
@@ -3368,7 +3438,7 @@ def _daily_card(article: EditorialArticle) -> str:
         f'<div class="thumb">{_reference_image(article)}</div>'
         '<div class="card-body">'
         f'<span class="chip"><span class="d"></span>{escape(article.category)}</span>'
-        f'<h3>{escape(article.title)}</h3><p class="sum">{escape(article.summary)}</p>'
+        f'<h3>{escape(article.title)}</h3><p class="sum">{_daily_summary_html(article)}</p>'
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div></article>"
