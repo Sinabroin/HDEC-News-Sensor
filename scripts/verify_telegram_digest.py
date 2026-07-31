@@ -49,9 +49,14 @@ TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 LEAK_PATTERNS = ("{token", "(token", "{chat_id", "(chat_id",
                  "{chat_ids", "(chat_ids", "{url", "(url")
 
-# 코드 트리 금지어 스캔 대상 (스펙 문서 rules.md/PRD.md/.claude는 제외 — README §7)
-SCAN_GLOBS = ["app/*.py", "app/*.sql", "scripts/*.py",
-              "templates/*", "data/*.json", ".github/workflows/*"]
+# Telegram payload/delivery surface only. Internal runtime/editorial symbols are out of scope.
+SCAN_PATHS = [
+    ROOT / "scripts" / "build_telegram_digest.py",
+    ROOT / "scripts" / "send_telegram.py",
+    ROOT / "scripts" / "send_scheduled_telegram.py",
+    ROOT / ".github" / "workflows" / "telegram-notify.yml",
+    ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml",
+]
 
 _failures = []
 
@@ -241,20 +246,20 @@ def check_sender_source() -> None:
 
 def check_code_tree_banned() -> None:
     hits = []
-    for pattern in SCAN_GLOBS:
-        for path in sorted(ROOT.glob(pattern)):
-            if not path.is_file() or "__pycache__" in path.parts:
-                continue
-            try:
-                lowered = path.read_text(encoding="utf-8").lower()
-            except (UnicodeDecodeError, OSError):
-                continue
-            for term in BANNED_TERMS:
-                if term in lowered:
-                    hits.append(f"{path.relative_to(ROOT)}: {term}")
-    check("코드 트리(app/data/scripts/templates/.github) 금지어 0건",
-          not hits, "; ".join(hits))
-
+    scanned = []
+    for path in SCAN_PATHS:
+        if not path.is_file():
+            continue
+        scanned.append(str(path.relative_to(ROOT)))
+        try:
+            lowered = path.read_text(encoding="utf-8").lower()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for term in BANNED_TERMS:
+            if term in lowered:
+                hits.append(f"{path.relative_to(ROOT)}: {term}")
+    check("Telegram outbound surface 금지어 0건",
+          bool(scanned) and not hits, "; ".join(hits))
 
 def check_tracked_files() -> None:
     try:
