@@ -997,6 +997,12 @@ def run_browser_interaction(
             "--dump-dom",
             _browser_path(interaction_path, browser),
         ]
+        if browser.suffix.casefold() != ".exe":
+            # GitHub-hosted runners can deny Chromium's user-namespace sandbox
+            # and expose a very small /dev/shm. This fixture opens local files
+            # only (window.fetch is replaced above), so these Linux CI flags do
+            # not weaken any production browser or network boundary.
+            command[2:2] = ["--no-sandbox", "--disable-dev-shm-usage"]
         try:
             completed = subprocess.run(
                 command,
