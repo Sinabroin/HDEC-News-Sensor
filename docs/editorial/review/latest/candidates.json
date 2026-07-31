@@ -1,0 +1,108 @@
+{
+  "version": 2,
+  "edition_type": "daily",
+  "edition_key": "2026-07-31",
+  "coverage_start": "2026-07-30T07:00:00+09:00",
+  "coverage_end": "2026-07-31T06:40:00+09:00",
+  "generated_at": "2026-07-31T17:32:11+09:00",
+  "category_order": [
+    "투자·산업",
+    "기업동향",
+    "기술정보"
+  ],
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "candidate_id": "candidate-abe6e8dea25ed613cda1",
+      "origin": "ai_collected",
+      "ai_rank": 1,
+      "adjusted_rank": 1,
+      "feedback_adjustment": 0.0,
+      "adjusted_score": 5.167,
+      "title": "과기정통부, 경제관계장관회의에서 알뜰폰 활성화 방안 발표",
+      "summary": "▲ 단기적으로 가격경쟁력 확보 지원 &nbsp; ∙이통3사 신규 요금제(안심옵션(QoS) 적용 상품) 도매제공 및 기존 도매제공 요금제 개선(QoS 적용, 대가 인하), 전파사용료 감면율 확대 &nbsp; ∙중고폰 등 중저가‧자급제 단말 활성화 및 eSIM 고시 반영 추진 &nbsp; ∙마이데이터 기반 요금제 추천 적용 및 연내 경쟁환경 평가 실시 &nbsp. ▲ 양적 성장(1.0) 넘어 질적 도약(2.0) 위해 제도‧생태계 정비 &nbsp; ∙자체설비 보유 투자 통해 다양한 요금제‧차별화된 서비스 설계가 활발해지도록 제도(시행령‧고시) 개선 및 정책금융 연계 &nbsp; ∙부실(이용자보호 등)‧한계 기업 정비기준 마련 및 점검 병행 &nbsp; ⇨ 알뜰폰 가입규모 지속 확대 및 지속가능‧건전 생태계 조성 &nbsp; ⇨ 설비 보유 알뜰폰사(부분 또는 Full MVNO) 3개 이상 확대 목표.",
+      "summary_html": "▲ 단기적으로 가격경쟁력 확보 지원 &amp;nbsp; ∙이통3사 신규 요금제(안심옵션(QoS) 적용 상품) 도매제공 및 기존 도매제공 요금제 개선(QoS 적용, 대가 인하), 전파사용료 감면율 확대 &amp;nbsp; ∙중고폰 등 중저가‧자급제 단말 활성화 및 eSIM 고시 반영 추진 &amp;nbsp; ∙마이데이터 기반 요금제 추천 적용 및 연내 경쟁환경 평가 실시 &amp;nbsp. ▲ 양적 성장(1.0) 넘어 질적 도약(2.0) 위해 제도‧생태계 정비 &amp;nbsp; ∙자체설비 보유 투자 통해 다양한 요금제‧차별화된 서비스 설계가 활발해지도록 제도(시행령‧고시) 개선 및 정책금융 연계 &amp;nbsp; ∙부실(이용자보호 등)‧한계 기업 정비기준 마련 및 점검 병행 &amp;nbsp; ⇨ 알뜰폰 가입규모 지속 확대 및 지속가능‧건전 생태계 조성 &amp;nbsp; ⇨ 설비 보유 알뜰폰사(부분 또는 Full MVNO) 3개 이상 확대 목표.",
+      "source": "과학기술정보통신부",
+      "published_at": "2026-07-31T00:00:00+09:00",
+      "selected_url": "https://www.msit.go.kr/bbs/view.do?sCode=user&bbsSeqNo=94&nttSeqNo=3187613",
+      "link_kind": "publisher_direct",
+      "link_label": "원문",
+      "category": "투자·산업",
+      "category_analysis": {
+        "category": "투자·산업",
+        "scores": {
+          "투자·산업": 2.0,
+          "기업동향": 1.0,
+          "기술정보": 1.0
+        },
+        "matched_signals": {
+          "투자·산업": {
+            "title": [],
+            "summary": [
+              "투자",
+              "정책"
+            ],
+            "source": []
+          },
+          "기업동향": {
+            "title": [],
+            "summary": [
+              "기업"
+            ],
+            "source": []
+          },
+          "기술정보": {
+            "title": [],
+            "summary": [
+              "데이터"
+            ],
+            "source": []
+          }
+        },
+        "reason": "투자·산업 최고점 2; 동점은 투자·산업 > 기업동향 > 기술정보 순으로 결정; summary:투자/정책"
+      },
+      "category_rank": 0,
+      "collection_source_kind": "publisher_direct_rss",
+      "relevance_score": 1.0,
+      "freshness_score": 2.167,
+      "source_quality_score": 2.0,
+      "total_ranking_score": 5.167,
+      "selection_reason": "selected_publisher_direct_by_relevance_freshness_source_quality;direct_selected=1;aggregator_selected=0",
+      "original_article_url": "https://www.msit.go.kr/bbs/view.do?sCode=user&bbsSeqNo=94&nttSeqNo=3187613",
+      "publisher_article_url": "https://www.msit.go.kr/bbs/view.do?sCode=user&bbsSeqNo=94&nttSeqNo=3187613",
+      "publisher_url_source_kind": "existing_publisher_direct",
+      "publisher_url_reason": "selected_existing_publisher_direct",
+      "image_url": "",
+      "image_source_kind": "fallback",
+      "image_source_page_url": "https://www.msit.go.kr/bbs/view.do?sCode=user&bbsSeqNo=94&nttSeqNo=3187613",
+      "image_width": null,
+      "image_height": null,
+      "image_fallback_used": true,
+      "image_reason": "publisher_page_unavailable",
+      "image_remote_url": "",
+      "image_quality_accepted": false,
+      "image_quality_reason": "",
+      "ai_recommended": true
+    }
+  ],
+  "collection_audit": {
+    "naver_provider_enabled": true,
+    "naver_provider_status": "active",
+    "naver_credentials_present": true,
+    "naver_provider_activation_error": false,
+    "naver_provider_queries_ok": 22,
+    "naver_api_requests": 56,
+    "naver_articles_collected": 180,
+    "naver_originallinks_collected": 180,
+    "google_news_articles_collected": 272,
+    "publisher_direct_rss_articles_collected": 40,
+    "publisher_direct_eligible_count": 12,
+    "publisher_direct_quarantine_count": 479,
+    "final_portal_urls": 0,
+    "feedback_queries_attempted": 0,
+    "feedback_articles_collected": 0
+  },
+  "feedback_profile_version": 2,
+  "article_import_api_url": "",
+  "article_import_enabled": false
+}
