@@ -324,6 +324,7 @@ def main() -> int:
     publisher_canonical = "https://canonical.fixture.test/news/final"
     publisher_duplicate = "https://duplicate.fixture.test/news/canonical"
     official_direct = "https://official.fixture.test/news/direct-rss"
+    official_unavailable = "https://official.fixture.test/news/page-unavailable"
     daum_canonical = "https://v.daum.net/v/2026073101"
     daum_outbound = "https://news.daum.net/outbound/2026073102"
     daum_missing = "https://v.daum.net/v/2026073103"
@@ -405,6 +406,7 @@ def main() -> int:
                 "</main></body></html>"
             )
         },
+        official_unavailable: {"status": 403},
     }
     opener = FixtureOpener(routes)
 
@@ -458,6 +460,43 @@ def main() -> int:
         check("official attachment-only release uses disclosed metadata fallback", (
             "publisher_body_attachment_only"
             in resolved_direct[0]["portal_resolution_reason"]
+        ))
+
+        unavailable_direct = copy.deepcopy(direct_rows)
+        unavailable_direct[0]["url"] = official_unavailable
+        unavailable_direct[0]["publisher_url"] = official_unavailable
+        unavailable_direct[0]["discovery_url"] = official_unavailable
+        unavailable_direct[0]["source_metadata"]["source_url"] = official_unavailable
+        unavailable_direct[0]["source_metadata"]["publisher_url"] = official_unavailable
+        unavailable_direct[0]["source_metadata"]["discovery_url"] = official_unavailable
+        check("official feed remains authority when validated page returns 4xx", (
+            live_collector.resolve_publisher_urls(
+                unavailable_direct,
+                strict=True,
+                resolver=resolver,
+                opener=opener,
+                decoder=lambda _url: None,
+            ) == 1
+            and unavailable_direct[0]["publisher_direct"] is True
+            and "publisher_page_unavailable"
+            in unavailable_direct[0]["portal_resolution_reason"]
+        ))
+        portal_unavailable = [
+            fixture_row(
+                daum_missing,
+                provider="google_news_rss",
+                title="포털 4xx 원문 미확인",
+            )
+        ]
+        check("portal discovery never receives official-feed fallback", (
+            live_collector.resolve_publisher_urls(
+                portal_unavailable,
+                strict=True,
+                resolver=resolver,
+                opener=opener,
+                decoder=lambda _url: None,
+            ) == 0
+            and portal_unavailable[0]["status"] == "quarantine"
         ))
 
         daum_row = fixture_row(

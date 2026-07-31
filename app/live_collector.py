@@ -840,6 +840,41 @@ def _resolve_http_publisher_url(url: str, timeout: float = LINK_RESOLVE_TIMEOUT)
     return None
 
 
+def _official_registry_feed_authority(
+    row: dict,
+    direct_url: str,
+    *,
+    reason: str,
+) -> dict | None:
+    """Promote a pinned official RSS row without pretending its page was parsed.
+
+    The feed and homepage relationship was already validated by
+    ``fetch_publisher_direct_sources``. This fallback is used only after the SSRF
+    validator accepted the article URL but the publisher returned a bounded
+    timeout/4xx response. Portal and Naver discoveries can never enter it.
+    """
+    metadata = row.get("source_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    canonical = publisher_direct.normalize_publisher_canonical_url(direct_url)
+    if not (
+        metadata.get("provider") == "publisher_direct_rss"
+        and metadata.get("trust_tier") == "official"
+        and bool(metadata.get("source_kind"))
+        and bool(canonical)
+        and bool(str(row.get("title") or "").strip())
+        and bool(str(row.get("source") or "").strip())
+        and bool(str(row.get("published_at") or "").strip())
+    ):
+        return None
+    return publisher_direct.apply_publisher_authority(
+        row,
+        publisher_canonical_url=canonical,
+        source=str(row.get("source") or "").strip(),
+        published_at=str(row.get("published_at") or "").strip(),
+        resolution_reason=reason,
+    )
+
+
 def _strict_publisher_authority(
     row: dict,
     *,
@@ -872,6 +907,17 @@ def _strict_publisher_authority(
             opener=opener,
         )
     except editorial_article_import.ArticleImportError as exc:
+        if exc.code in {"ARTICLE_METADATA_NOT_FOUND", "FETCH_TIMEOUT"}:
+            fallback = _official_registry_feed_authority(
+                row,
+                target,
+                reason=(
+                    "official_registry_feed_authority+"
+                    "publisher_page_unavailable"
+                ),
+            )
+            if fallback is not None:
+                return fallback
         return publisher_direct.quarantine_article(
             row,
             f"publisher_verification_failed:{exc.code}",
