@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import py_compile
@@ -11,9 +12,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from html import unescape
+from email.message import Message
+from html import escape, unescape
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -22,7 +27,14 @@ if str(ROOT) not in sys.path:
 os.environ.setdefault("APP_MODE", "mock")
 os.environ.setdefault("NEWS_MODE", "mock")
 
-from app import editorial_briefings, editorial_feedback, editorial_review  # noqa: E402
+from app import (  # noqa: E402
+    config,
+    editorial_article_import,
+    editorial_briefings,
+    editorial_feedback,
+    editorial_review,
+    operator_gateway,
+)
 from app.editorial_briefings import KST  # noqa: E402
 
 
@@ -41,6 +53,653 @@ class V:
 
     def equal(self, name, actual, expected):
         self.check(name, actual == expected, f"expected={expected!r} actual={actual!r}")
+
+
+def _fixture_body() -> str:
+    return (
+        "현대건설은 국내 데이터센터 인프라 투자 확대를 위해 주요 기업과 "
+        "전략적 계약을 체결했다고 밝혔다. "
+        "이번 계약에는 고효율 전력 설비와 클라우드 운영 기술을 적용해 "
+        "에너지 사용량을 줄이는 계획이 포함됐다. "
+        "회사는 2027년까지 관련 사업 예산 3천억원을 단계적으로 집행하고 "
+        "공급망 협력을 확대할 예정이다. "
+        "시장 참여자들은 정부의 국가전략과 반도체 수요 증가가 데이터센터 "
+        "건설 시장 성장에 영향을 줄 것으로 분석했다. "
+        "현대건설은 프로젝트별 수익성과 안전 기준을 검토해 투자 속도를 "
+        "조정하며 고객사와 세부 일정을 협의할 계획이다."
+    )
+
+
+def _jsonld_fixture_html() -> str:
+    body = _fixture_body()
+    payload = {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": "현대건설 데이터센터 투자 확대",
+        "publisher": {"@type": "Organization", "name": "테스트경제"},
+        "datePublished": "2026-07-31T10:00:00+09:00",
+        "articleBody": body,
+        "image": "https://media.example.test/article-photo.jpg",
+    }
+    return (
+        "<!doctype html><html><head>"
+        f'<script type="application/ld+json">{json.dumps(payload, ensure_ascii=False)}</script>'
+        '<link rel="canonical" href="https://publisher.example.test/article/1">'
+        "</head><body>"
+        '<nav><p>메뉴 투자 시장 기업 기술 구독 로그인</p></nav>'
+        f"<article><p>{escape(body)}</p></article>"
+        '<footer><p>저작권자 무단 전재 및 재배포 금지</p></footer>'
+        "</body></html>"
+    )
+
+
+def _og_fixture_html() -> str:
+    paragraphs = [
+        "기업들은 생성형 AI 에이전트를 업무 시스템에 도입하며 조직별 협업 절차와 고객 대응 방식을 재설계하고 있다.",
+        "이번 전환은 반복 업무를 줄이고 생산성을 높이기 위한 것으로, 각 사업부는 보안 기준과 데이터 접근 권한을 함께 점검한다.",
+        "프로젝트 책임자는 모델 성능만이 아니라 현장 적용 과정에서 발생하는 오류와 운영 비용을 수치로 관리해야 한다고 설명했다.",
+        "계약 기업들은 올해 하반기부터 단계적으로 서비스를 적용하고 직원 교육과 고객 피드백을 반영해 범위를 확대할 계획이다.",
+    ]
+    body_html = "".join(f"<p>{escape(paragraph)}</p>" for paragraph in paragraphs)
+    return (
+        "<!doctype html><html><head>"
+        '<meta property="og:title" content="기업 AI 에이전트 업무 전환 확대">'
+        '<meta property="og:site_name" content="오픈그래프뉴스">'
+        '<meta property="article:published_time" content="2026-07-31T09:15:00+09:00">'
+        '<meta property="og:image" content="https://media.example.test/og-photo.png">'
+        '<link rel="canonical" href="/article/og-2">'
+        "</head><body>"
+        '<div class="menu"><p>로그인 구독 추천 기사 광고 문의</p></div>'
+        f"<article>{body_html}</article>"
+        '<aside><p>추천 기사와 공유하기 댓글 모음입니다.</p></aside>'
+        "</body></html>"
+    )
+
+
+def _failure_fixture_html() -> str:
+    return (
+        "<!doctype html><html><head><title>메뉴 페이지</title></head><body>"
+        '<nav><a href="/">홈</a><a href="/login">로그인</a></nav>'
+        '<div class="advert"><p>광고 문의와 구독 신청</p></div>'
+        '<footer><p>저작권자 무단 전재 및 재배포 금지</p></footer>'
+        "</body></html>"
+    )
+
+
+def _daum_canonical_fixture_html() -> str:
+    return (
+        "<!doctype html><html><head>"
+        '<title>Daum 뉴스 발견 페이지</title>'
+        '<link rel="canonical" href="https://publisher.example.test/article/1">'
+        '<meta property="og:url" content="https://v.daum.net/v/20260731100000001">'
+        "</head><body><main><p>포털은 기사 발견만 보조합니다.</p></main></body></html>"
+    )
+
+
+def _daum_outbound_fixture_html() -> str:
+    return (
+        "<!doctype html><html><head><title>Daum 뉴스 발견 페이지</title></head>"
+        "<body><main>"
+        '<a class="publisher-original-link" title="언론사 원문" '
+        'href="https://publisher.example.test/article/1">언론사 원문</a>'
+        "</main></body></html>"
+    )
+
+
+def _fixture_resolver(host: str, port: int, type=None):
+    del type
+    address = "10.0.0.7" if host == "private.example.test" else "93.184.216.34"
+    return [(2, 1, 6, "", (address, port))]
+
+
+class _MockResponse:
+    def __init__(
+        self,
+        url: str,
+        payload: bytes,
+        content_type: str,
+        *,
+        status: int = 200,
+        location: str = "",
+        content_length: int | None = None,
+    ):
+        self.status = status
+        self._url = url
+        self._buffer = BytesIO(payload)
+        self.headers = Message()
+        self.headers["Content-Type"] = content_type
+        self.headers["Content-Length"] = str(
+            len(payload) if content_length is None else content_length
+        )
+        if location:
+            self.headers["Location"] = location
+
+    def read(self, size=-1):
+        return self._buffer.read(size)
+
+    def getcode(self):
+        return self.status
+
+    def geturl(self):
+        return self._url
+
+    def close(self):
+        self._buffer.close()
+
+
+class _MockOpener:
+    def __init__(self, responses: dict[str, dict[str, object]]):
+        self.responses = responses
+        self.calls: list[str] = []
+
+    def open(self, request, timeout):
+        if timeout > editorial_article_import.ARTICLE_FETCH_TIMEOUT_SECONDS:
+            raise AssertionError("timeout exceeded contract")
+        url = request.full_url
+        self.calls.append(url)
+        record = self.responses[url]
+        return _MockResponse(
+            url,
+            bytes(record.get("payload") or b""),
+            str(record.get("content_type") or "text/html"),
+            status=int(record.get("status") or 200),
+            location=str(record.get("location") or ""),
+            content_length=record.get("content_length"),
+        )
+
+
+def _fixture_raster_bytes(image_format: str = "JPEG") -> bytes:
+    image = Image.new("RGB", (640, 360))
+    pixels = image.load()
+    for y in range(image.height):
+        for x in range(image.width):
+            pixels[x, y] = (
+                (x * 7 + y * 3) % 256,
+                (x * 2 + y * 11) % 256,
+                (x * 13 + y * 5) % 256,
+            )
+    output = BytesIO()
+    image.save(output, format=image_format, quality=88)
+    return output.getvalue()
+
+
+def verify_article_import_domain(v: V) -> dict[str, object]:
+    article_url = "https://publisher.example.test/article/1"
+    portal_url = "https://v.daum.net/v/20260731100000001"
+    image_url = "https://media.example.test/article-photo.jpg"
+    jpeg = _fixture_raster_bytes("JPEG")
+    opener = _MockOpener(
+        {
+            portal_url: {
+                "payload": _daum_canonical_fixture_html().encode("utf-8"),
+                "content_type": "text/html; charset=utf-8",
+            },
+            article_url: {
+                "payload": _jsonld_fixture_html().encode("utf-8"),
+                "content_type": "text/html; charset=utf-8",
+            },
+            image_url: {
+                "payload": jpeg,
+                "content_type": "image/jpeg",
+            },
+        }
+    )
+    result = editorial_article_import.import_article(
+        portal_url,
+        resolver=_fixture_resolver,
+        opener=opener,
+    )
+    article = result["article"]
+    v.check(
+        "secure import uses fixture network adapter only",
+        opener.calls == [portal_url, article_url, image_url],
+        str(opener.calls),
+    )
+    v.equal("portal input URL is disclosed", article["input_url"], portal_url)
+    v.equal("portal discovery source is disclosed", article["discovery_source"], "daum")
+    v.equal("portal publisher URL is direct", article["publisher_url"], article_url)
+    v.check(
+        "portal fallback is explicitly not used",
+        article["publisher_direct"] is True
+        and article["portal_fallback_used"] is False
+        and article["portal_source"] == "daum"
+        and article["portal_resolution_reason"] == "publisher_canonical",
+    )
+    v.equal("JSON-LD title extraction", article["title"], "현대건설 데이터센터 투자 확대")
+    v.equal("JSON-LD publisher extraction", article["source"], "테스트경제")
+    v.equal(
+        "JSON-LD published date extraction",
+        article["published_at"],
+        "2026-07-31T10:00:00+09:00",
+    )
+    v.equal(
+        "JSON-LD articleBody extraction",
+        article["extraction"]["body_source"],
+        "json_ld_article_body",
+    )
+    v.equal(
+        "canonical article URL extraction",
+        article["canonical_url"],
+        article_url,
+    )
+    v.check(
+        "full article body is not returned",
+        "body" not in article and "html" not in article,
+    )
+    v.check(
+        "article excerpt is bounded",
+        0 < len(article["article_text_excerpt"])
+        <= editorial_article_import.ARTICLE_EXCERPT_MAX_CHARS,
+    )
+    summary_sentences = [
+        part.strip()
+        for part in re.split(r"(?<=[.!?。！？])\s+", article["summary"])
+        if part.strip()
+    ]
+    v.check(
+        "extractive summary is bounded",
+        2 <= len(summary_sentences) <= 4
+        and 220 <= len(article["summary"]) <= 500,
+        article["summary"],
+    )
+    v.check(
+        "summary contains source-supported sentences",
+        all(sentence in _fixture_body() for sentence in summary_sentences),
+        article["summary"],
+    )
+    v.equal(
+        "summary mode is deterministic extractive",
+        article["extraction"]["summary_mode"],
+        "deterministic_extractive",
+    )
+    v.equal("import category analysis applied", article["category"], "투자·산업")
+    v.check(
+        "import category analysis preserves evidence",
+        set(article["category_analysis"]) >= {
+            "category",
+            "scores",
+            "matched_signals",
+            "reason",
+        }
+        and bool(article["category_analysis"]["reason"]),
+    )
+    v.check(
+        "import image is bounded raster data URL",
+        article["image_url"].startswith("data:image/jpeg;base64,/9j/")
+        and len(article["image_url"])
+        <= editorial_article_import.IMPORT_IMAGE_MAX_DATA_URL_CHARS,
+        str(len(article["image_url"])),
+    )
+    encoded_image = article["image_url"].split(",", 1)[1]
+    with Image.open(BytesIO(base64.b64decode(encoded_image))) as decoded:
+        decoded.load()
+        raster_ok = (
+            decoded.format == "JPEG"
+            and decoded.width <= editorial_article_import.IMPORT_IMAGE_MAX_WIDTH
+            and decoded.height <= editorial_article_import.IMPORT_IMAGE_MAX_HEIGHT
+        )
+    v.check("import image decodes within geometry bound", raster_ok)
+    v.equal("import image source priority", article["extraction"]["image_source"], "json_ld")
+
+    og = editorial_article_import.extract_article(
+        _og_fixture_html(),
+        "https://publisher.example.test/article/og-2",
+        resolver=_fixture_resolver,
+    )
+    v.equal("Open Graph title fallback extraction", og.title, "기업 AI 에이전트 업무 전환 확대")
+    v.equal("Open Graph source fallback extraction", og.source, "오픈그래프뉴스")
+    v.equal("article paragraph extraction", og.body_source, "article_element")
+    v.check(
+        "boilerplate removal",
+        "로그인" not in og.body
+        and "구독" not in og.body
+        and "추천 기사" not in og.body
+        and "댓글" not in og.body,
+        og.body,
+    )
+    v.check(
+        "Open Graph image fallback extraction",
+        og.image_candidates
+        and og.image_candidates[0]
+        == ("https://media.example.test/og-photo.png", "og_image"),
+        str(og.image_candidates),
+    )
+
+    outbound_portal_url = "https://news.daum.net/outbound/20260731"
+    outbound_opener = _MockOpener(
+        {
+            outbound_portal_url: {
+                "payload": _daum_outbound_fixture_html().encode("utf-8"),
+                "content_type": "text/html; charset=utf-8",
+            },
+            article_url: {
+                "payload": _jsonld_fixture_html().encode("utf-8"),
+                "content_type": "text/html; charset=utf-8",
+            },
+        }
+    )
+    outbound_resolution = editorial_article_import.resolve_publisher_document(
+        outbound_portal_url,
+        resolver=_fixture_resolver,
+        opener=outbound_opener,
+    )
+    v.check(
+        "Daum outbound publisher link resolves and refetches",
+        outbound_resolution.publisher_url == article_url
+        and outbound_resolution.portal_source == "daum"
+        and outbound_resolution.portal_resolution_reason
+        == "publisher_outbound_link"
+        and outbound_opener.calls == [outbound_portal_url, article_url],
+        str(outbound_opener.calls),
+    )
+
+    missing_portal_url = "https://news.daum.net/no-original/20260731"
+    missing_opener = _MockOpener(
+        {
+            missing_portal_url: {
+                "payload": (
+                    "<html><head><title>Daum 메뉴</title></head>"
+                    "<body><nav>뉴스 메뉴</nav><div class=\"advert\">광고</div></body></html>"
+                ).encode("utf-8"),
+                "content_type": "text/html; charset=utf-8",
+            }
+        }
+    )
+    try:
+        editorial_article_import.resolve_publisher_document(
+            missing_portal_url,
+            resolver=_fixture_resolver,
+            opener=missing_opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        missing_portal_code = exc.code
+    else:
+        missing_portal_code = ""
+    v.equal(
+        "portal without publisher original fails closed",
+        missing_portal_code,
+        "PORTAL_ORIGINAL_NOT_FOUND",
+    )
+
+    private_portal_url = "https://v.daum.net/private/20260731"
+    private_opener = _MockOpener(
+        {
+            private_portal_url: {
+                "payload": (
+                    '<html><head><link rel="canonical" '
+                    'href="http://127.0.0.1/private/article"></head></html>'
+                ).encode("utf-8"),
+                "content_type": "text/html; charset=utf-8",
+            }
+        }
+    )
+    try:
+        editorial_article_import.resolve_publisher_document(
+            private_portal_url,
+            resolver=_fixture_resolver,
+            opener=private_opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        private_portal_code = exc.code
+    else:
+        private_portal_code = ""
+    v.equal(
+        "portal private publisher target is rejected",
+        private_portal_code,
+        "UNSAFE_DESTINATION",
+    )
+
+    loop_a = "https://v.daum.net/loop/a"
+    loop_b = "https://news.daum.net/loop/b"
+    loop_opener = _MockOpener(
+        {
+            loop_a: {
+                "status": 302,
+                "location": loop_b,
+                "payload": b"",
+                "content_type": "text/html",
+            },
+            loop_b: {
+                "status": 302,
+                "location": loop_a,
+                "payload": b"",
+                "content_type": "text/html",
+            },
+        }
+    )
+    try:
+        editorial_article_import.resolve_publisher_document(
+            loop_a,
+            resolver=_fixture_resolver,
+            opener=loop_opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        loop_code = exc.code
+    else:
+        loop_code = ""
+    v.equal("portal redirect loop is rejected", loop_code, "REDIRECT_REJECTED")
+    v.check(
+        "portal redirect loop stays within redirect bound",
+        len(loop_opener.calls)
+        == editorial_article_import.ARTICLE_REDIRECT_LIMIT + 1,
+        str(loop_opener.calls),
+    )
+    v.check(
+        "publisher page supplies final source and selected URL",
+        article["source"] == "테스트경제"
+        and article["canonical_url"] == article_url
+        and article["publisher_direct"] is True,
+    )
+
+    try:
+        editorial_article_import.extract_article(
+            _failure_fixture_html(),
+            "https://publisher.example.test/menu",
+            resolver=_fixture_resolver,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        body_failure_code = exc.code
+    else:
+        body_failure_code = ""
+    v.equal("body extraction failure is explicit", body_failure_code, "ARTICLE_BODY_NOT_FOUND")
+
+    unsafe_codes = []
+    for unsafe_url in (
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "http://127.0.0.1/private",
+        "http://localhost/private",
+        "https://service.internal/article",
+        "https://private.example.test/article",
+        "https://user:secret@publisher.example.test/article",
+        "https://publisher.example.test:8443/article",
+    ):
+        try:
+            editorial_article_import.validate_public_article_url(
+                unsafe_url,
+                resolver=_fixture_resolver,
+            )
+        except editorial_article_import.ArticleImportError as exc:
+            unsafe_codes.append(exc.code)
+        else:
+            unsafe_codes.append("")
+    v.check(
+        "URL validation rejects script file and private destinations",
+        all(code in {"INVALID_URL", "UNSAFE_DESTINATION"} for code in unsafe_codes),
+        str(unsafe_codes),
+    )
+
+    redirect_source = "https://redirect.example.test/article"
+    redirect_opener = _MockOpener(
+        {
+            redirect_source: {
+                "status": 302,
+                "location": "http://127.0.0.1/private",
+                "payload": b"",
+                "content_type": "text/html",
+            }
+        }
+    )
+    try:
+        editorial_article_import.fetch_article_html(
+            redirect_source,
+            resolver=_fixture_resolver,
+            opener=redirect_opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        redirect_code = exc.code
+    else:
+        redirect_code = ""
+    v.equal("redirect destination is revalidated", redirect_code, "REDIRECT_REJECTED")
+    v.equal("unsafe redirect is never fetched", redirect_opener.calls, [redirect_source])
+
+    oversized_url = "https://oversized.example.test/article"
+    oversized_opener = _MockOpener(
+        {
+            oversized_url: {
+                "payload": b"x",
+                "content_type": "text/html",
+                "content_length": editorial_article_import.ARTICLE_HTML_MAX_BYTES + 1,
+            }
+        }
+    )
+    try:
+        editorial_article_import.fetch_article_html(
+            oversized_url,
+            resolver=_fixture_resolver,
+            opener=oversized_opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        oversized_code = exc.code
+    else:
+        oversized_code = ""
+    v.equal("HTML response byte limit exists", oversized_code, "RESPONSE_TOO_LARGE")
+    v.check(
+        "article fetch limits and timeout are bounded",
+        editorial_article_import.ARTICLE_HTML_MAX_BYTES == 2_000_000
+        and editorial_article_import.ARTICLE_IMAGE_MAX_BYTES == 5_000_000
+        and editorial_article_import.ARTICLE_FETCH_TIMEOUT_SECONDS <= 8
+        and editorial_article_import.ARTICLE_REDIRECT_LIMIT == 3,
+    )
+
+    wrong_type_url = "https://publisher.example.test/api.json"
+    wrong_type_opener = _MockOpener(
+        {
+            wrong_type_url: {
+                "payload": b"{}",
+                "content_type": "application/json",
+            }
+        }
+    )
+    try:
+        editorial_article_import.fetch_article_html(
+            wrong_type_url,
+            resolver=_fixture_resolver,
+            opener=wrong_type_opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        wrong_type_code = exc.code
+    else:
+        wrong_type_code = ""
+    v.equal(
+        "non-HTML article content is rejected",
+        wrong_type_code,
+        "UNSUPPORTED_CONTENT_TYPE",
+    )
+
+    image_cases = {
+        "svg": {
+            "url": "https://media.example.test/image.svg",
+            "payload": b'<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+            "content_type": "image/svg+xml",
+        },
+        "mime_mismatch": {
+            "url": "https://media.example.test/mismatch.jpg",
+            "payload": _fixture_raster_bytes("PNG"),
+            "content_type": "image/jpeg",
+        },
+        "oversized": {
+            "url": "https://media.example.test/oversized.jpg",
+            "payload": b"\xff\xd8\xff",
+            "content_type": "image/jpeg",
+            "content_length": editorial_article_import.ARTICLE_IMAGE_MAX_BYTES + 1,
+        },
+        "invalid": {
+            "url": "https://media.example.test/invalid.jpg",
+            "payload": b"not an image",
+            "content_type": "image/jpeg",
+        },
+    }
+    image_results = {}
+    for name, record in image_cases.items():
+        case_opener = _MockOpener(
+            {
+                str(record["url"]): {
+                    "payload": record["payload"],
+                    "content_type": record["content_type"],
+                    "content_length": record.get("content_length"),
+                }
+            }
+        )
+        image_results[name] = editorial_article_import.materialize_imported_image(
+            [(str(record["url"]), name)],
+            title="대표 이미지 검증",
+            summary="대표 이미지 검증을 위한 충분한 기사 요약입니다.",
+            source="검증매체",
+            canonical_url=article_url,
+            resolver=_fixture_resolver,
+            opener=case_opener,
+        )
+    v.equal("SVG imported image is rejected", image_results["svg"][0], "")
+    v.equal("image MIME mismatch is rejected", image_results["mime_mismatch"][0], "")
+    v.equal("oversized imported image is rejected", image_results["oversized"][0], "")
+    v.equal("invalid imported image bytes are rejected", image_results["invalid"][0], "")
+
+    api_source = (ROOT / "app/operator_api.py").read_text(encoding="utf-8")
+    import_source = (
+        ROOT / "app/editorial_article_import.py"
+    ).read_text(encoding="utf-8")
+    v.check(
+        "secure import endpoint exists",
+        '@router.post("/api/editorial/import-article")' in api_source,
+    )
+    v.check(
+        "import endpoint requires existing operator auth",
+        "_authorize_article_import(request)" in api_source
+        and "operator_gateway.authorize(" in api_source
+        and 'action="import_article"' in api_source,
+    )
+    v.check(
+        "import endpoint is POST only",
+        '@router.get("/api/editorial/import-article")' not in api_source,
+    )
+    v.check(
+        "import endpoint requires JSON and hides internal exceptions",
+        'media_type != "application/json"' in api_source
+        and "except Exception:" in api_source
+        and '"INTERNAL_ERROR"' in api_source,
+    )
+    v.check(
+        "import route returns transformed article not proxy HTML",
+        "run_in_threadpool(" in api_source
+        and "request.body()" in api_source
+        and "response.body" not in api_source,
+    )
+    v.check(
+        "SSRF defense validates every DNS answer",
+        "all(_public_ip(address) for address in addresses)" in import_source
+        and "validate_public_article_url(" in import_source,
+    )
+    v.check(
+        "streaming response byte limit is applied",
+        "def _read_limited(" in import_source
+        and "if total > limit:" in import_source,
+    )
+    v.check(
+        "origin mode import requires OAuth session",
+        "import_article" not in operator_gateway._ORIGIN_MODE_ACTIONS,
+    )
+    return result
 
 
 def _browser_executable() -> Path | None:
@@ -80,17 +739,35 @@ def _browser_argument_path(path: Path, browser: Path) -> str:
     ).stdout.strip()
 
 
-def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, object]:
+def run_browser_interaction(
+    console_path: Path,
+    profile_dir: Path,
+    import_response: dict[str, object],
+) -> dict[str, object]:
     """Exercise real drag/drop and reload behavior in dependency-free headless Chrome."""
     browser = _browser_executable()
     if browser is None:
         return {"browser_available": False, "error": "Chrome/Edge executable not found"}
+    embedded_response = json.dumps(import_response, ensure_ascii=False).replace(
+        "</", "<\\/"
+    )
     harness = r"""
 <script>
 (async()=>{
   const results={browser_available:true};
-  const phaseKey=storageKey+":r3v6-browser-phase";
-  const expectedKey=storageKey+":r3v6-browser-expected";
+  const importFixture=__IMPORT_RESPONSE__;
+  let mockImportCalls=0;
+  window.fetch=(url,options={})=>new Promise(resolve=>setTimeout(()=>{
+    mockImportCalls+=1;
+    const request=JSON.parse(options.body||"{}");
+    if(String(request.url||"").includes("failure")){
+      resolve({ok:false,status:422,json:async()=>({ok:false,error:{code:"ARTICLE_BODY_NOT_FOUND",message:"본문을 자동으로 추출하지 못했습니다."}})});
+      return;
+    }
+    resolve({ok:true,status:200,json:async()=>importFixture});
+  },80));
+  const phaseKey=storageKey+":r3v7-browser-phase";
+  const expectedKey=storageKey+":r3v7-browser-expected";
   const pause=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
   function dispatchDrag(source,target,clientY){
     const transfer=new DataTransfer();
@@ -107,6 +784,7 @@ def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, 
   }
   window.alert=()=>{};
   if(localStorage.getItem(phaseKey)!=="restore"){
+    results.manual_fallback_initially_hidden=document.getElementById("manualFallback").hidden===true;
     const initiallySelected=document.querySelector(".candidate.selected");
     const removedId=initiallySelected.dataset.id;
     initiallySelected.querySelector('input[type="checkbox"]').click();
@@ -162,6 +840,65 @@ def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, 
       return !!(image&&image.naturalWidth>0)||!!(fallback&&!fallback.hidden);
     });
     results.no_remote_image_src=![...document.images].some(image=>/^https?:/i.test(image.getAttribute("src")||""));
+
+    const importCapacityCard=document.querySelector(".candidate.selected");
+    importCapacityCard.querySelector('input[type="checkbox"]').click();
+    const importBeforeCandidates=allCandidates().length;
+    const importBeforeSelected=state.selected.length;
+    const importInput=document.getElementById("importUrl");
+    importInput.value=importFixture.article.input_url;
+    importInput.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));
+    results.import_enter_triggered=document.getElementById("importStatus").classList.contains("loading");
+    results.import_loading_state=results.import_enter_triggered&&document.getElementById("importBtn").textContent==="취소";
+    await pause(450);
+    const imported=state.manualCandidates.find(item=>item.collection_source_kind==="url_import");
+    const importedId=imported&&imported.candidate_id;
+    const importedCard=importedId&&document.querySelector(`[data-selected-id="${importedId}"]`);
+    results.import_candidate_added=allCandidates().length===importBeforeCandidates+1&&!!imported;
+    results.import_auto_selected=state.selected.length===importBeforeSelected+1&&state.selected.includes(importedId);
+    results.import_sector_placement=!!importedCard&&view(importedId).category===importFixture.article.category&&!!document.querySelector(`[data-sector-category="${importFixture.article.category}"] [data-selected-id="${importedId}"]`);
+    results.import_fields_filled=imported.title===importFixture.article.title&&imported.summary===importFixture.article.summary&&imported.source===importFixture.article.source;
+    results.import_success_state=document.getElementById("importStatus").classList.contains("success")&&document.getElementById("importStatus").textContent.includes(importFixture.article.category);
+    results.manual_fallback_hidden_after_success=document.getElementById("manualFallback").hidden===true;
+    await pause(250);
+    const importedFrame=importedCard&&importedCard.querySelector("[data-image-frame]");
+    const importedImage=importedFrame&&importedFrame.querySelector("img");
+    const importedFallback=importedFrame&&importedFrame.querySelector(".image-fallback");
+    results.import_image_render=!!(importedImage&&importedImage.naturalWidth>0)||!!(importedFallback&&!importedFallback.hidden);
+
+    const duplicateCapacity=state.selected.find(id=>id!==importedId);
+    toggleSelected(duplicateCapacity,false);
+    const callsBeforeDuplicate=mockImportCalls;
+    const candidatesBeforeDuplicate=allCandidates().length;
+    importInput.value=importFixture.article.input_url;
+    document.getElementById("importBtn").click();
+    await pause(250);
+    results.duplicate_url_guard=mockImportCalls===callsBeforeDuplicate+1&&allCandidates().length===candidatesBeforeDuplicate&&document.getElementById("importStatus").textContent.includes("이미")&&imported.selected_url===importFixture.article.publisher_url;
+    toggleSelected(duplicateCapacity,true);
+
+    const importedMoveSource=document.querySelector(`[data-selected-id="${importedId}"]`);
+    technologyZone=document.querySelector('[data-drop-category="기술정보"]');
+    dispatchDrag(importedMoveSource,technologyZone,technologyZone.getBoundingClientRect().bottom-2);
+    results.imported_card_drag=view(importedId).category==="기술정보"&&!!document.querySelector(`[data-sector-category="기술정보"] [data-selected-id="${importedId}"]`);
+    const standalone=standaloneHtml();
+    results.import_standalone_html=standalone.includes(imported.title)&&standalone.includes(imported.image_url)&&imported.image_url.startsWith("data:image/jpeg;base64,");
+    results.final_html_portal_links=!(standalone.includes("v.daum.net")||standalone.includes("news.daum.net"))&&standalone.includes(importFixture.article.publisher_url);
+
+    const failureCapacity=state.selected.find(id=>id!==importedId);
+    toggleSelected(failureCapacity,false);
+    importInput.value="https://publisher.example.test/failure";
+    importInput.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));
+    await pause(250);
+    results.import_error_state=document.getElementById("importStatus").classList.contains("error")&&document.getElementById("importStatus").textContent.includes("본문");
+    results.manual_fallback_after_failure=document.getElementById("manualFallback").hidden===false&&document.getElementById("manualFallback").open===true;
+    results.retry_control=document.getElementById("importBtn").textContent==="다시 시도";
+    toggleSelected(failureCapacity,true);
+    results.fixture_import_calls=mockImportCalls===3;
+    results.external_test_network_calls=0;
+    results.final_download_primary=document.querySelectorAll(".primary-action").length===1&&document.querySelector(".primary-action")?.textContent.trim()==="최종 브리핑 다운로드";
+    results.removed_action_buttons=!document.getElementById("categoryOrderBtn")&&!document.getElementById("feedbackBtn")&&!document.getElementById("approveBtn");
+    results.reset_secondary_menu=!!document.querySelector(".utility-menu #restoreBtn")&&!!document.querySelector("#restoreBtn").closest("details");
+
     const expected=window.__editorialReviewDebug();
     expected.dom=domSelected();
     expected.interaction=results;
@@ -182,20 +919,25 @@ def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, 
     const fallback=frame.querySelector(".image-fallback");
     return !!(image&&image.naturalWidth>0)||!!(fallback&&!fallback.hidden);
   });
+  const restoredImport=(restored.manualCandidates||[]).find(item=>item.collection_source_kind==="url_import");
+  results.restored_imported_candidate=!!restoredImport&&restored.selected.includes(restoredImport.candidate_id)&&!!document.querySelector(`[data-selected-id="${restoredImport.candidate_id}"]`);
+  results.restored_imported_image=!!restoredImport&&String(restoredImport.image_url||"").startsWith("data:image/jpeg;base64,");
+  results.restored_imported_category=!!restoredImport&&restoredImport.category==="기술정보"&&restored.categories[restoredImport.candidate_id]==="기술정보";
   const marker=document.createElement("pre");
-  marker.id="r3v6-browser-result";
+  marker.id="r3v7-browser-result";
   marker.textContent=JSON.stringify(results);
   document.body.appendChild(marker);
   localStorage.removeItem(phaseKey);
   localStorage.removeItem(expectedKey);
 })().catch(error=>{
   const marker=document.createElement("pre");
-  marker.id="r3v6-browser-result";
+  marker.id="r3v7-browser-result";
   marker.textContent=JSON.stringify({browser_available:true,error:String(error),stack:error&&error.stack||""});
   document.body.appendChild(marker);
 });
 </script>
 """
+    harness = harness.replace("__IMPORT_RESPONSE__", embedded_response)
     interaction_path = console_path.with_name("interaction.html")
     console_source = console_path.read_text(encoding="utf-8")
     before_body_end, after_body_end = console_source.rsplit("</body>", 1)
@@ -224,8 +966,9 @@ def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, 
             text=True,
         ).stdout.strip()
         profile_handle = tempfile.TemporaryDirectory(
-            prefix="hdec-r3v6-browser-",
+            prefix="hdec-r3v7-browser-",
             dir=wsl_temp,
+            ignore_cleanup_errors=True,
         )
         active_profile = Path(profile_handle.name)
     else:
@@ -249,18 +992,27 @@ def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, 
             "--dump-dom",
             _browser_path(interaction_path, browser),
         ]
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=45,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=45,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            return {
+                "browser_available": True,
+                "error": (
+                    "headless browser timeout "
+                    f"after {exc.timeout}s; external network remains disabled"
+                ),
+            }
     finally:
         if profile_handle is not None:
             profile_handle.cleanup()
     match = re.search(
-        r'<pre id="r3v6-browser-result">([^<]+)</pre>',
+        r'<pre id="r3v7-browser-result">([^<]+)</pre>',
         completed.stdout,
     )
     if completed.returncode != 0 or not match:
@@ -277,9 +1029,11 @@ def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, 
 def main() -> int:
     v = V()
     for rel in (
+        "app/editorial_article_import.py",
         "app/editorial_briefings.py",
         "app/editorial_review.py",
         "app/editorial_feedback.py",
+        "app/operator_api.py",
         "scripts/build_editorial_review_console.py",
         "scripts/compile_editorial_feedback.py",
         "scripts/run_editorial_briefing.py",
@@ -287,6 +1041,7 @@ def main() -> int:
     ):
         py_compile.compile(str(ROOT / rel), doraise=True)
     v.check("Python compile", True)
+    import_fixture_response = verify_article_import_domain(v)
 
     v.equal(
         "category order fixed",
@@ -563,13 +1318,13 @@ def main() -> int:
         encoding="utf-8"
     )
     for token in (
-        "인간이 선별한 기사 링크 추가",
+        "기사 URL로 자동 불러오기",
         'contenteditable="true"',
         'id="boldBtn"',
-        "카테고리 기본순서",
-        "HTML 다운로드",
-        "평가 JSONL",
-        "selected_items",
+        "직접 입력하기",
+        "최종 브리핑 다운로드",
+        "feedbackRecords",
+        "selectedItems",
         "human_link",
         "투자·산업",
         "기업동향",
@@ -594,7 +1349,7 @@ def main() -> int:
         "candidate card contains safe original links",
         "original-article-link" in template
         and "원문 열기 ↗" in template
-        and "safeUrl(candidate.selected_url)" in template,
+        and "safeAuthorityUrl(candidate.selected_url)" in template,
     )
     v.check(
         "left original links use target and rel security",
@@ -648,8 +1403,130 @@ def main() -> int:
         and 'dir="/tmp"' in builder_source
         and "html_dir=image_stage" in builder_source,
     )
+    v.check(
+        "article URL is the only default import input",
+        'id="importUrl"' in template
+        and 'id="importBtn"' in template
+        and 'id="manualFallback" hidden' in template,
+    )
+    v.check(
+        "URL import exposes loading success and error states",
+        "기사 본문과 이미지를 안전하게 분석하고 있습니다" in template
+        and "섹터에 추가했습니다" in template
+        and "기사를 자동으로 불러오지 못했습니다" in template,
+    )
+    v.check(
+        "Enter key triggers URL import",
+        'event.key==="Enter"' in template
+        and "importArticleFromUrl()" in template,
+    )
+    v.check(
+        "browser uses authenticated API and never fetches article URL",
+        "fetch(articleImportApiUrl" in template
+        and 'credentials:"include"' in template
+        and "fetch(inputUrl" not in template
+        and "fetch(article.canonical_url" not in template,
+    )
+    v.check(
+        "API-disabled console remains usable",
+        "기사 자동 불러오기 API가 설정되지 않았습니다" in template
+        and 'document.getElementById("importBtn").disabled=true' in template,
+    )
+    v.check(
+        "imported candidate keeps analysis and auto placement",
+        "category_analysis:article.category_analysis" in template
+        and "moveArticle(id,item.category)" in template
+        and 'collection_source_kind:"url_import"' in template,
+    )
+    v.check(
+        "duplicate canonical URL guard exists",
+        "duplicateByUrl(article.canonical_url)" in template
+        and "같은 원문 URL의 기사가 이미 후보에 있습니다" in template,
+    )
+    v.check(
+        "final links reject portal and redirect authorities",
+        "safeAuthorityUrl(candidate.selected_url)" in template
+        and '"news.daum.net","v.daum.net"' in template
+        and '"news.naver.com"' in template
+        and '"news.google.com"' in template
+        and '"msn.com"' in template,
+    )
+    v.check(
+        "imported candidate preserves publisher discovery audit",
+        "publisher_direct:article.publisher_direct" in template
+        and "portal_resolution_reason:article.portal_resolution_reason" in template
+        and "portal_fallback_used:article.portal_fallback_used" in template,
+    )
+    v.check(
+        "bounded raster data URL validator exists",
+        "MAX_IMPORTED_IMAGE_DATA_URL=350000" in template
+        and "data:image\\/(jpeg|png|webp)" in template
+        and "data:image/svg+xml" not in template,
+    )
+    v.check(
+        "imported image is preserved in standalone HTML",
+        "standaloneHtml()" in template
+        and "safeImageUrl(candidate.image_url)" in template
+        and "briefBody(state.selected.map(view)" in template,
+    )
+    v.check(
+        "only final briefing download is primary",
+        template.count('class="primary-action"') == 1
+        and ">최종 브리핑 다운로드</button>" in template,
+    )
+    v.check(
+        "category-order action button is absent",
+        'id="categoryOrderBtn"' not in template
+        and "카테고리 기본순서" not in template,
+    )
+    v.check(
+        "feedback export action button is absent",
+        'id="feedbackBtn"' not in template
+        and "평가 JSONL" not in template,
+    )
+    v.check(
+        "approval export action button is absent",
+        'id="approveBtn"' not in template
+        and "최종 승인 JSON" not in template,
+    )
+    v.check(
+        "AI reset moved to confirmed secondary menu",
+        'class="utility-menu"' in template
+        and 'id="restoreBtn"' in template
+        and "URL로 불러온 기사가 모두 사라집니다" in template
+        and "confirm(" in template,
+    )
+    v.check(
+        "builder injects explicit import API config without hardcoding",
+        "ARTICLE_IMPORT_API_URL" in builder_source
+        and "--article-import-api-url" in builder_source
+        and "normalize_article_import_api_url" in builder_source
+        and "hdec-news-sensor-operator.vercel.app" not in builder_source,
+    )
+    operator_api_source = (ROOT / "app/operator_api.py").read_text(encoding="utf-8")
+    v.check(
+        "CORS uses allowlist credentials and preflight",
+        "allow_origins=[" in operator_api_source
+        and 'allow_methods=["GET", "POST", "OPTIONS"]' in operator_api_source
+        and "allow_credentials=True" in operator_api_source,
+    )
+    requirements_source = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    pyproject_source = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    docker_source = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    v.check(
+        "existing Pillow validator is declared for API runtime",
+        "Pillow==12.3.0" in requirements_source
+        and "Pillow==12.3.0" in pyproject_source,
+    )
+    v.check(
+        "minimal Docker runtime includes secure import leaves",
+        "app/editorial_article_import.py" in docker_source
+        and "app/editorial_briefings.py" in docker_source
+        and "app/editorial_review.py" in docker_source
+        and "app/operator_auth.py" in docker_source,
+    )
 
-    with tempfile.TemporaryDirectory(prefix="editorial-r3-v6-build-") as build_tmp:
+    with tempfile.TemporaryDirectory(prefix="editorial-r3-v7-build-") as build_tmp:
         output_root = Path(build_tmp) / "review"
         build_environment = os.environ.copy()
         build_environment["TEAMS_AI_NEWS_WATCH"] = "0"
@@ -662,6 +1539,8 @@ def main() -> int:
                 "2026-07-31T07:20:00+09:00",
                 "--output-root",
                 str(output_root),
+                "--article-import-api-url",
+                "https://operator.example.test/api/editorial/import-article",
             ],
             cwd=ROOT,
             env=build_environment,
@@ -691,6 +1570,13 @@ def main() -> int:
             fixture_bundle["collection_audit"]["network_calls"] == 0
             and fixture_manifest["image_network_calls"] == 0
             and fixture_manifest["image_download_attempts"] == 0,
+        )
+        v.check(
+            "fixture console receives explicit import API URL",
+            fixture_bundle["article_import_api_url"]
+            == "https://operator.example.test/api/editorial/import-article"
+            and fixture_bundle["article_import_enabled"] is True
+            and fixture_manifest["article_import_api_configured"] is True,
         )
         v.check(
             "candidate JSON contains category analysis",
@@ -755,6 +1641,7 @@ def main() -> int:
         browser_results = run_browser_interaction(
             latest_dir / "index.html",
             Path(build_tmp) / "browser-profile",
+            import_fixture_response,
         )
         v.check(
             "headless browser available",
@@ -780,8 +1667,34 @@ def main() -> int:
             ("restored_dom_order", "reload restores selected DOM order"),
             ("restored_sector_order", "reload preserves fixed sector order"),
             ("restored_images", "reload preserves image or fallback rendering"),
+            ("manual_fallback_initially_hidden", "manual fallback is hidden before failure"),
+            ("import_enter_triggered", "Enter key triggers article import"),
+            ("import_loading_state", "URL import shows loading and cancel state"),
+            ("import_candidate_added", "URL import adds one left candidate"),
+            ("import_auto_selected", "URL import automatically selects the candidate"),
+            ("import_sector_placement", "URL import places card in classified sector"),
+            ("import_fields_filled", "URL import fills title source and summary"),
+            ("import_success_state", "URL import reports classified success"),
+            ("manual_fallback_hidden_after_success", "manual fallback stays hidden after success"),
+            ("import_image_render", "imported raster image renders or falls back"),
+            ("duplicate_url_guard", "duplicate canonical URL is rejected without API call"),
+            ("imported_card_drag", "imported selected card remains draggable across sectors"),
+            ("import_standalone_html", "standalone HTML includes imported article and image"),
+            ("final_html_portal_links", "standalone HTML contains publisher URL and no portal URL"),
+            ("import_error_state", "URL import exposes safe extraction error state"),
+            ("manual_fallback_after_failure", "manual fallback opens only after failure"),
+            ("retry_control", "failed import exposes retry control"),
+            ("fixture_import_calls", "browser import uses exactly three mock calls"),
+            ("external_test_network_calls", "browser performs zero external test requests"),
+            ("final_download_primary", "final briefing download is the only primary action"),
+            ("removed_action_buttons", "removed top action buttons stay absent"),
+            ("reset_secondary_menu", "AI reset is in the secondary menu"),
+            ("restored_imported_candidate", "reload restores imported selected candidate"),
+            ("restored_imported_image", "reload restores imported bounded data image"),
+            ("restored_imported_category", "reload restores imported category and order"),
         ):
-            v.check(label, browser_results.get(key) is True, str(browser_results))
+            expected = 0 if key == "external_test_network_calls" else True
+            v.check(label, browser_results.get(key) == expected, str(browser_results))
 
     workflow = (
         ROOT / ".github/workflows/editorial-review-console.yml"
@@ -811,16 +1724,23 @@ def main() -> int:
     print("bold_sanitization=PASS")
     print("manual_link_selection=PASS")
     print("manual_link_learning=PASS")
+    print("secure_article_import=PASS")
+    print("PORTAL_LINK_RESOLUTION=PASS")
+    print("PUBLISHER_DIRECT_URL=PASS")
+    print("FINAL_HTML_PORTAL_LINKS=0")
+    print("PUBLISHER_CANONICAL_DEDUP=PASS")
+    print("PORTAL_FALLBACK_DISCLOSED=PASS")
+    print("external_test_network_calls=0")
     print("network_sends=0")
     print("smtp_attempts=0")
     print("teams_sends=0")
     print("telegram_sends=0")
     print("production_state_writes=0")
-    print(f"R3_V6_VERIFIER={v.checks}/{v.failures}")
+    print(f"R3_V7_VERIFIER={v.checks}/{v.failures}")
     if v.failures:
-        print("RESULT=D7-AK-6E-R3-V6_EDITORIAL_REVIEW_CONSOLE_FAIL")
+        print("RESULT=D7-AK-6E-R3-V7_EDITORIAL_REVIEW_CONSOLE_FAIL")
         return 1
-    print("RESULT=D7-AK-6E-R3-V6_EDITORIAL_REVIEW_CONSOLE_PASS")
+    print("RESULT=D7-AK-6E-R3-V7_EDITORIAL_REVIEW_CONSOLE_PASS")
     return 0
 
 

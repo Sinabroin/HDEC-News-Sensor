@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -12,6 +13,7 @@ from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -58,6 +60,37 @@ def render_console(template: str, bundle: dict) -> str:
         .replace("{{COVERAGE_LABEL}}", f"{bundle['coverage_start']} ~ {bundle['coverage_end']}")
         .replace("{{CANDIDATE_JSON}}", embedded)
     )
+
+
+def normalize_article_import_api_url(value: object) -> str:
+    """Allow an explicit HTTPS endpoint (or loopback HTTP for local verification)."""
+    candidate = str(value or "").strip().rstrip("/")
+    if not candidate:
+        return ""
+    try:
+        parsed = urlparse(candidate)
+        port = parsed.port
+    except (TypeError, ValueError):
+        return ""
+    if (
+        parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or not parsed.hostname
+    ):
+        return ""
+    loopback = parsed.hostname.casefold() in {"localhost", "127.0.0.1", "::1"}
+    if parsed.scheme != "https" and not (parsed.scheme == "http" and loopback):
+        return ""
+    if port is not None and not (
+        (parsed.scheme == "https" and port == 443)
+        or (parsed.scheme == "http" and loopback)
+    ):
+        return ""
+    if parsed.path.rstrip("/") != "/api/editorial/import-article":
+        return ""
+    return candidate
 
 
 def fixture_preview_images(
@@ -115,6 +148,14 @@ def main() -> int:
     parser.add_argument("--candidate-limit", type=int, default=24)
     parser.add_argument("--fixture", action="store_true")
     parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE)
+    parser.add_argument(
+        "--article-import-api-url",
+        default=os.environ.get("ARTICLE_IMPORT_API_URL", ""),
+        help=(
+            "Public authenticated endpoint URL; empty keeps URL import disabled. "
+            "No credential or secret is embedded."
+        ),
+    )
     args = parser.parse_args()
 
     run_at = parse_run_at(args.run_at)
@@ -215,6 +256,9 @@ def main() -> int:
     edition_dir = output_root / edition_key
     latest_dir = output_root / "latest"
     generated_at = datetime.now(KST).isoformat(timespec="seconds")
+    article_import_api_url = normalize_article_import_api_url(
+        args.article_import_api_url
+    )
 
     bundle = editorial_review.write_bundle(
         edition_key=edition_key,
@@ -226,6 +270,8 @@ def main() -> int:
     )
     bundle["collection_audit"] = collection_audit
     bundle["feedback_profile_version"] = profile.get("version", 2)
+    bundle["article_import_api_url"] = article_import_api_url
+    bundle["article_import_enabled"] = bool(article_import_api_url)
     (edition_dir / "candidates.json").write_text(
         json.dumps(bundle, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -253,6 +299,7 @@ def main() -> int:
         "teams_sends": 0,
         "telegram_sends": 0,
         "production_state_writes": 0,
+        "article_import_api_configured": bool(article_import_api_url),
         "image_network_calls": image_counters.image_download_attempts,
         **image_counters.manifest_fields(),
     }
@@ -271,6 +318,7 @@ def main() -> int:
     print("teams_sends=0")
     print("telegram_sends=0")
     print("production_state_writes=0")
+    print(f"article_import_api_configured={str(bool(article_import_api_url)).lower()}")
     print(f"image_assets_materialized={image_counters.image_assets_materialized}")
     print("RESULT=D7-AK-6E-R3_REVIEW_CONSOLE_BUILD_PASS")
     return 0
