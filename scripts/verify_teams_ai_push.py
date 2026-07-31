@@ -42,6 +42,7 @@ from app.news_access import (
     choose_article_link,
     choose_direct_article_url,
 )
+from app.publisher_direct import publisher_url
 
 GOOGLE_AGGREGATOR_URL = "https://news.google.com/rss/articles/teams-fixture"
 
@@ -55,6 +56,7 @@ def article(**overrides):
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
         "url": "https://publisher.example.test/news/1?utm_source=test",
+        "publisher_direct": True,
         "score": 4.7,
         "shadow_urgency_status": "confirmed",
         "shadow_would_pass": True,
@@ -565,7 +567,7 @@ def main() -> int:
     google_candidates = select_teams_push_candidates([
         article(article_key="aggregator-only", url=GOOGLE_AGGREGATOR_URL)
     ])
-    assert len(google_candidates) == 1
+    assert google_candidates == ()
 
     naver_portal = "https://n.news.naver.com/article/001/0012345678"
     daum_portal = "https://v.daum.net/v/20260727090000123"
@@ -577,28 +579,13 @@ def main() -> int:
             and portal_link.label == "포털 경유"
             and not portal_link.is_direct
         ), portal_link
-        assert len(select_teams_push_candidates([
+        assert select_teams_push_candidates([
             article(article_key=f"portal-{portal_url}", url=portal_url)
-        ])) == 1
+        ]) == ()
 
     assert select_teams_push_candidates([
         article(article_key="no-url", url="", canonical_url="")
     ]) == ()
-
-    alert = {
-        "generated_at": "2026-07-23T09:31:00+09:00",
-        "dashboard_url": "https://example.com/dashboard",
-        "report_url": "https://example.com/report",
-    }
-    _subject, fallback_text, fallback_html = render_article_email(
-        alert, google_candidates[0]
-    )
-    assert fallback_text.splitlines()[0] == (
-        f"[Google News 경유] {GOOGLE_AGGREGATOR_URL}"
-    )
-    assert f'href="{GOOGLE_AGGREGATOR_URL}"' in fallback_html
-    assert "[Google News 경유]" in fallback_html
-    assert "[원문]" not in fallback_text and "[원문]" not in fallback_html
 
     # 16. shadow_alert_delta=false 여도 중요 후보가 있으면 후보를 만든다(플래그는 더 이상 게이트가 아님).
     live_payload = {
@@ -654,9 +641,9 @@ def main() -> int:
     for required in ("핵심 요약", "현대건설 영향", "출처", "게시시각", "감지시각", "원문 보기", "대시보드 보기"):
         assert required in rendered
     assert "TEAMS_WORKFLOW_WEBHOOK_URL" not in rendered
-    selected_url = candidates[0].article["url"]
+    selected_url = publisher_url(candidates[0].article)
     assert selected_url in rendered
-    nonselected = {c.article["url"] for c in candidates[1:]} - {selected_url}
+    nonselected = {publisher_url(c.article) for c in candidates[1:]} - {selected_url}
     assert all(url not in rendered for url in nonselected)
     assert [a["title"] for a in content["actions"]].count("원문 보기") == 1
 

@@ -1,0 +1,56 @@
+name: Editorial Review Console
+
+on:
+  schedule:
+    - cron: "20 22 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: editorial-review-console
+  cancel-in-progress: false
+
+jobs:
+  build-review-console:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_MODE: mock
+      NEWS_MODE: live
+      NAVER_NEWS_ENABLED: "1"
+      NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+      NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Build Daily Editorial Review Console
+        run: |
+          python3 scripts/build_editorial_review_console.py \
+            --output-root docs/editorial/review \
+            --candidate-limit 24
+      - name: Verify no sender or production state mutation
+        run: |
+          python3 scripts/verify_editorial_review_console.py
+          git diff --exit-code -- data/editorial_daily_state.json data/teams_push_state.json
+      - name: Publish candidate console only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- docs/editorial/review
+          if git diff --cached --quiet; then
+            echo "No review console delta"
+            exit 0
+          fi
+          git commit -m "chore: publish Daily editorial review console $(date -u +%F)"
+          git pull --rebase origin main
+          git push origin HEAD:main

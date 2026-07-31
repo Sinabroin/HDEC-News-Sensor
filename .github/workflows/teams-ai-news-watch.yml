@@ -8,10 +8,11 @@ name: Teams AI News Watch
 #
 # ※ GitHub schedule은 UTC 기준 best-effort라 정확히 10분 간격을 보장하지 않는다(수 분 지연/건너뜀 가능).
 #
-# 실제 발송은 repo Variable TEAMS_AI_NEWS_WATCH='1' + 라이브 수집 성공(live_ok) + main branch +
-# force_dry_run 아님 이 모두 필요하다. shadow_alert_delta는 더 이상 발송 조건이 아니다(중요도는
-# 기사별 재사용 신호로 판정). 이 워크플로는 Teams 기사별 자동발송의 유일한 production owner이며,
-# Telegram은 이 워크플로에서 절대 실행하지 않는다.
+# scheduled 실제 발송은 repo Variable TEAMS_AI_NEWS_WATCH='1' + 라이브 수집 성공(live_ok) +
+# main branch + force_dry_run 아님 이 모두 필요하다. 수동 실제 발송은 watch=0 상태에서 명시적인
+# production_canary=true + canary_cap=1로 정확히 한 건만 허용한다. shadow_alert_delta는 더 이상
+# 발송 조건이 아니다(중요도는 기사별 재사용 신호로 판정). 이 워크플로는 Teams 기사별 자동발송의
+# 유일한 production owner이며, Telegram은 이 워크플로에서 절대 실행하지 않는다.
 on:
   workflow_dispatch:
     inputs:
@@ -19,10 +20,14 @@ on:
         description: "Type 'true' to force dry-run (no send) even when the watch is enabled"
         required: false
         default: ""
-      canary_cap:
-        description: "Optional per-run send cap for a bounded canary (e.g. 3). Empty = default up to 10."
+      production_canary:
+        description: "Type 'true' to allow one real Teams article while the scheduled watch is disabled"
         required: false
-        default: ""
+        default: "false"
+      canary_cap:
+        description: "Production canary safety cap. Real manual send requires exactly '1'."
+        required: false
+        default: "1"
   schedule:
     # GitHub schedule은 UTC 기준이며 best-effort라 정확히 10분 간격을 보장하지 않는다.
     - cron: '7,17,27,37,47,57 * * * *'
@@ -107,10 +112,12 @@ jobs:
       #    공식 production transport = email_channel: 검증된 Gmail SMTP(scripts/send_email_alert.py 계약 재사용)로
       #    각 기사를 Teams 채널 이메일(TEAMS_CHANNEL_EMAIL)로 보낸다(기사당 1통·다이제스트 병합 없음·최대 10건).
       #    SMTP 250 accepted인 기사만 성공으로 판정해 dedup state에 남긴다(부분 실패는 실패 기사만 다음 run 재발송).
-      #    canary_cap 입력이 있으면 그 값으로 이 실행의 발송 상한을 낮춘다(예: 3). 비어 있으면 기본 10.
+      #    수동 production canary는 watch=0에서도 production_canary=true + canary_cap=1일 때만
+      #    정확히 한 건까지 허용한다. schedule은 watch=1일 때만 열리고 repository rollout cap
+      #    TEAMS_AI_NEWS_MAX_ARTICLES를 사용한다(미설정/비정상 값은 안전한 1).
       - name: Teams AI news article cards (watch auto-send)
         id: teams_ai_push
-        if: steps.build.outputs.live_ok == 'true' && vars.TEAMS_AI_NEWS_WATCH == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
+        if: steps.build.outputs.live_ok == 'true' && github.ref == 'refs/heads/main' && github.event.inputs.force_dry_run != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.production_canary == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.canary_cap == '1') && (github.event_name != 'schedule' || vars.TEAMS_AI_NEWS_WATCH == '1')
         env:
           TEAMS_AI_PUSH_MODE: send
           APPROVE_TEAMS_AI_PUSH: "true"
@@ -122,7 +129,7 @@ jobs:
           # 운영 dedup state(영속). 성공(250 accepted)한 기사만 여기에 기록되고 아래 step이 commit한다.
           TEAMS_PUSH_STATE_PATH: data/teams_push_state.json
           DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
-          TEAMS_AI_PUSH_MAX_ARTICLES: ${{ github.event.inputs.canary_cap || '' }}
+          TEAMS_AI_PUSH_MAX_ARTICLES: ${{ github.event_name == 'workflow_dispatch' && '1' || vars.TEAMS_AI_NEWS_MAX_ARTICLES || '1' }}
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
         run: python3 scripts/send_teams_ai_push.py

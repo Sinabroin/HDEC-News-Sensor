@@ -18,8 +18,9 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     ai_value_chain, article_quality, config, db, deal_watch, decision_relevance,
-    global_press, insight, macro_snapshot, market_snapshot, radar, risk_events, scoring, source_quality,
-    surface_contracts, topic_profiles,
+    global_press, insight, macro_snapshot, market_snapshot, publisher_direct,
+    radar, risk_events, scoring, source_priority, source_quality, surface_contracts,
+    topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -382,6 +383,7 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
     # 출처 품질 라벨 (P0-C1.6) — 표시 전용 파생값. 저장된 source/title을 분류만 한다
     # (점수/등급 재계산 아님). 신뢰 출처/일반 출처/낮은 신뢰도를 UI·리포트가 노출한다.
     quality = source_quality.classify(row.get("source"), row.get("title"))
+    priority = source_priority.classify(row.get("source"), row.get("title"))
     entry = {
         "rank": rank,
         "article_id": row["id"],
@@ -400,6 +402,10 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "source_quality_label": quality["source_quality_label"],
         "source_quality_reason": quality["source_quality_reason"],
         "source_type": quality["source_type"],
+        "source_priority_bucket": priority["source_priority_bucket"],
+        "source_priority_rank": priority["source_priority_rank"],
+        "source_priority_label": priority["source_priority_label"],
+        "trusted_slot_eligible": priority["trusted_slot_eligible"],
         "topic": topics[0] if topics else None,
         "category": category_key,
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
@@ -751,6 +757,8 @@ def _filter_surface_exposures(rows: list[dict], limit: int, *,
     - per-list cluster cap(같은 surface 안 max_per_cluster, 현대건설 직접 쌍 예외)은 기존대로.
     순서·랭킹은 바꾸지 않는다 — D3D 정렬을 그대로 두고 중복만 억제한다.
     """
+    rows = source_priority.reserve_trusted_slots(
+        rows, surface=surface, limit=limit)
     picked: list[dict] = []
     local_counts: dict[str, int] = {}
     sources_by_cluster: dict[str, set[str]] = {}
@@ -1130,13 +1138,13 @@ def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
 def _top_exposure_sort_key(row: dict, decision: dict | None = None):
     profile = _top_exposure_profile(row, decision)
     return (
+        source_priority.effective_rank(row),
         profile["top_exposure_penalty"],
         _freshness_rank(row),
         -((decision or {}).get("decision_relevance_score") or 0),
         -(row.get("final_score") or 0),
         row["id"],
     )
-
 
 def _is_top_exposure_excluded(row: dict, decision: dict | None = None) -> bool:
     return _top_exposure_profile(row, decision)["top_exposure_excluded"]
@@ -1154,6 +1162,7 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
     제목/출처/링크/시각/중요도만 담는다 — 본문 전문은 절대 싣지 않는다 (rules.md §3).
     """
     quality = source_quality.classify(row.get("source"), row.get("title"))
+    priority = source_priority.classify(row.get("source"), row.get("title"))
     url = row.get("url")
     entry = {
         "article_id": row["id"],
@@ -1163,6 +1172,10 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
             row.get("source")) or "출처 미상",
         "source_quality": quality["source_quality"],
         "source_quality_label": quality["source_quality_label"],
+        "source_priority_bucket": priority["source_priority_bucket"],
+        "source_priority_rank": priority["source_priority_rank"],
+        "source_priority_label": priority["source_priority_label"],
+        "trusted_slot_eligible": priority["trusted_slot_eligible"],
         "published_at": row.get("published_at"),
         "collected_at": row.get("collected_at"),
         "snippet": row.get("snippet") or "",
@@ -1747,7 +1760,20 @@ def build_brief(pipeline_counts: dict | None = None,
     DB만으로는 알 수 없는 런타임 상태를 정직하게 담기 위해 쓴다. news_data_mode 자체는
     저장된 기사 signal_origin에서 파생하므로 provenance 없이도 정확하다.
     """
-    rows = db.fetch_articles_with_scores()
+    prov = news_provenance or {}
+    stored_rows = db.fetch_articles_with_scores()
+    rows, stored_authority_quarantine = publisher_direct.partition_delivery_articles(
+        stored_rows,
+        # Existing scoring/decision policy remains the relevance owner here.
+        # This pass owns only final URL authority and quarantine exclusion.
+        relevance_qualified=True,
+    )
+    # The live collector persists quarantine rows and also reports the current
+    # run count. Use the larger view so the same row is never double-counted.
+    publisher_quarantine_count = max(
+        len(stored_authority_quarantine),
+        int(prov.get("publisher_direct_quarantine_count") or 0),
+    )
     scored = [r for r in rows if r.get("final_score") is not None]
     scored.sort(key=lambda r: (-(r["final_score"]), r["id"]))
 
@@ -2260,7 +2286,6 @@ def build_brief(pipeline_counts: dict | None = None,
     # 뉴스 출처 모드는 저장된 기사 signal_origin에서 파생한다 (DB가 단일 진실).
     # provenance가 주어지면 fallback 여부 등 런타임 상태를 추가로 반영한다.
     news_mode = _derive_news_mode(rows)
-    prov = news_provenance or {}
     news_fallback_used = bool(prov.get("fallback_used"))
     news_source = prov.get("news_source") or (
         "live_rss" if news_mode == "live" else "mock")
@@ -2295,6 +2320,12 @@ def build_brief(pipeline_counts: dict | None = None,
         # D7-AD-X — provider provenance(표시/감사 전용). 대시보드가 news_provider_summary를,
         # 감사가 provider별 status/raw/dedup 카운트를 여기서 읽는다 (비밀값 0건).
         "news_provider_status": news_provider_status,
+        "publisher_direct_delivery": {
+            "eligible_count": len(rows),
+            "quarantine_count": publisher_quarantine_count,
+            "final_portal_urls": 0,
+            "policy": "publisher_direct_only",
+        },
         "deal_watch_rows": deal_watch_rows,
         "thebell_watch_status": thebell_watch_status,
         "risk_query_coverage": _risk_query_coverage(google_query_audit),

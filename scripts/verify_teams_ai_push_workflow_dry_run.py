@@ -50,13 +50,14 @@ def main() -> int:
         'watch step order must be verify -> build -> delta -> teams -> persist -> skip',
     )
 
-    # 10-minute best-effort schedule + concurrency + manual dispatch (with force_dry_run).
+    # 10-minute best-effort schedule + concurrency + an exactly-one manual canary.
     require("cron: '7,17,27,37,47,57 * * * *'" in watch, 'watch must run on a 10-minute schedule')
     require('best-effort' in watch, 'watch must document GitHub best-effort scheduling')
     require('group: teams-ai-news-watch' in watch, 'watch must serialize runs (concurrency group)')
     require('workflow_dispatch:' in watch and 'force_dry_run:' in watch,
             'watch must preserve manual dispatch and the force-dry-run input')
-    require('canary_cap:' in watch, 'watch must expose the bounded-canary cap input')
+    require('production_canary:' in watch and 'canary_cap:' in watch,
+            'watch must expose the explicit production-canary inputs')
 
     build_block = block_between(watch, build, delta)
     delta_block = block_between(watch, delta, teams)
@@ -89,15 +90,27 @@ def main() -> int:
     require('run: python3 scripts/send_teams_ai_push.py' in teams_block,
             'watch Teams step must invoke the article-level production sender')
     teams_if = next((line for line in teams_block.splitlines() if line.strip().startswith('if:')), '')
-    require("vars.TEAMS_AI_NEWS_WATCH == '1'" in teams_if,
-            'watch Teams step must gate on the TEAMS_AI_NEWS_WATCH opt-in')
+    require(
+        "(github.event_name != 'schedule' || "
+        "vars.TEAMS_AI_NEWS_WATCH == '1')" in teams_if,
+        'scheduled Teams step must gate on the TEAMS_AI_NEWS_WATCH opt-in',
+    )
     require('shadow_alert_delta' not in teams_if,
             'watch Teams step must NOT gate on shadow_alert_delta (D7-AK-6C)')
     require("github.ref == 'refs/heads/main'" in teams_if, 'watch Teams step must be main-only')
     require(
-        "(github.event_name != 'workflow_dispatch' || "
-        "github.event.inputs.force_dry_run != 'true')" in teams_if,
+        "github.event.inputs.force_dry_run != 'true'" in teams_if,
         'watch Teams step must honour the force-dry-run guard',
+    )
+    require(
+        "(github.event_name != 'workflow_dispatch' || "
+        "github.event.inputs.production_canary == 'true')" in teams_if,
+        'manual Teams send must require the explicit production-canary opt-in',
+    )
+    require(
+        "(github.event_name != 'workflow_dispatch' || "
+        "github.event.inputs.canary_cap == '1')" in teams_if,
+        'manual Teams send must require exactly canary_cap=1',
     )
     for token in (
         'TEAMS_AI_PUSH_MODE: send',
@@ -111,6 +124,10 @@ def main() -> int:
         'TEAMS_AI_PUSH_MAX_ARTICLES:',
     ):
         require(token in teams_block, f'watch Teams step missing token: {token}')
+    require("github.event_name == 'workflow_dispatch' && '1'" in teams_block,
+            'manual production canary must inject an immutable cap of one')
+    require("vars.TEAMS_AI_NEWS_MAX_ARTICLES || '1'" in teams_block,
+            'scheduled send must use a safe rollout cap with a one-article fallback')
     for token in ('send_email_alert.py', 'EMAIL_SEND_MODE', 'APPROVE_SEND_EMAIL', 'SEND_TO_TEAMS'):
         require(token not in teams_block,
                 f'email digest entrypoint must not appear in the watch Teams step: {token}')

@@ -29,7 +29,7 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import collector, editorial_briefing_state, editorial_briefings, news_access  # noqa: E402
+from app import (collector, editorial_briefing_state, editorial_briefings, editorial_review, news_access, publisher_direct)  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
 RUNTIME_MANIFEST = "runtime-manifest.json"
@@ -139,6 +139,18 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
     """Collect live metadata plus non-secret provider counters for preview audit."""
     from app import live_collector, naver_news_provider
 
+    strict_production_collection = bool(
+        naver_news_provider.config.NEWS_MODE == "live"
+        or os.environ.get("EDITORIAL_PRODUCTION", "").strip() == "1"
+    )
+    if strict_production_collection:
+        try:
+            direct_rows = live_collector.fetch_publisher_direct_sources()
+        except Exception:  # noqa: BLE001 - keep other verified providers alive
+            direct_rows = []
+    else:
+        # Offline verifier/custom collector calls remain network-free.
+        direct_rows = []
     naver_enabled = bool(naver_news_provider.config.NAVER_NEWS_ENABLED)
     naver_credentials_present = bool(
         naver_news_provider.config.NAVER_CLIENT_ID
@@ -173,8 +185,30 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
             "Naver provider activation error: enabled provider with credentials made zero API requests"
         )
     naver_rows = list(naver_result.get("articles") or [])
-    resolvable = list(google_rows) + naver_rows
-    combined = collector.merge_provider_articles(resolvable)
+    resolvable = direct_rows + list(google_rows) + naver_rows
+    if strict_production_collection and resolvable:
+        try:
+            live_collector.resolve_publisher_urls(resolvable, strict=True)
+        except Exception:  # noqa: BLE001 - fail closed into quarantine
+            for row in resolvable:
+                if isinstance(row, dict):
+                    quarantined = publisher_direct.quarantine_article(
+                        row,
+                        "publisher_resolution_pass_failed",
+                    )
+                    row.clear()
+                    row.update(quarantined)
+    combined_all = collector.merge_provider_articles(resolvable)
+    if strict_production_collection:
+        combined, quarantined = publisher_direct.partition_delivery_articles(
+            combined_all,
+            # Editorial relevance ranking remains the downstream owner.
+            relevance_qualified=True,
+        )
+    else:
+        # Existing injected/offline collector fixtures exercise normalization
+        # without claiming production delivery eligibility.
+        combined, quarantined = combined_all, []
     if not combined:
         raise OrchestratorError("live collection returned no articles; fail closed")
     audit = {
@@ -191,6 +225,10 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
             if news_access.choose_article_link(row).is_direct
         ),
         "google_news_articles_collected": len(google_rows),
+        "publisher_direct_rss_articles_collected": len(direct_rows),
+        "publisher_direct_eligible_count": len(combined),
+        "publisher_direct_quarantine_count": len(quarantined),
+        "final_portal_urls": 0,
     }
     return combined, audit
 
@@ -434,16 +472,47 @@ def run_publish(
         print(f"publish_skip edition_type={edition_type} edition={key} reason={reason}")
         return None
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
-    edition = editorial_briefings.render_edition(
-        edition_type,
-        collect(),
-        run_at=run_at,
-        root_url=root_url,
-        allow_image_network=edition_type == "daily",
-        selection_mode=(
-            editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
-        ),
-    )
+    review_mode = "not_applicable"
+    if edition_type == "daily":
+        bundle_path = ROOT / "docs" / "editorial" / "review" / key / "candidates.json"
+        review_path = ROOT / "data" / "editorial_reviews" / f"{key}.json"
+        try:
+            bundle = editorial_review.load_bundle(bundle_path, key)
+            review = editorial_review.load_review(review_path, key)
+            selected_articles, review_mode = editorial_review.choose_daily_articles(
+                bundle,
+                review,
+                limit=editorial_briefings.DAILY_MAX_ARTICLES,
+            )
+            edition = editorial_briefings.render_daily(
+                selected_articles,
+                run_at=run_at,
+                root_url=root_url,
+            )
+        except editorial_review.EditorialReviewError:
+            review_mode = "live_collection_fallback"
+            edition = editorial_briefings.render_edition(
+                edition_type,
+                collect(),
+                run_at=run_at,
+                root_url=root_url,
+                allow_image_network=True,
+                selection_mode=(
+                    editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+                ),
+            )
+    else:
+        edition = editorial_briefings.render_edition(
+            edition_type,
+            collect(),
+            run_at=run_at,
+            root_url=root_url,
+            allow_image_network=False,
+            selection_mode=(
+                editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+            ),
+        )
+    print(f"editorial_review_mode={review_mode}")
     editorial_briefings.validate_rendered(edition)
     dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
     payload = edition.html.encode("utf-8")

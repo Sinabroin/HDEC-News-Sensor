@@ -26,7 +26,7 @@ from html import unescape
 from html.parser import HTMLParser
 
 from app import (config, global_press, lens_queries, news_access, news_coverage,
-                 site_watchlist, source_quality, topic_profiles)
+                 publisher_direct, site_watchlist, source_quality, topic_profiles)
 
 KST = timezone(timedelta(hours=9))
 
@@ -86,6 +86,7 @@ _FORBIDDEN_HOST_TOKENS = ("".join(("twit", "ter.com")), "x.com", "t.co", "api.x"
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
 _DEFAULT_SOURCES = config.DATA_DIR / "live_news_sources.json"
+_PUBLISHER_DIRECT_SOURCES = config.DATA_DIR / "publisher_direct_sources.json"
 
 
 def _strip_html(text: str) -> str:
@@ -99,8 +100,16 @@ def _strip_html(text: str) -> str:
 
 
 def _to_iso(pubdate: str) -> str | None:
+    text = _WS_RE.sub(" ", str(pubdate or "")).strip()
+    for pattern in ("%Y.%m.%d", "%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(text, pattern).replace(tzinfo=KST).isoformat(
+                timespec="seconds"
+            )
+        except ValueError:
+            pass
     try:
-        dt = parsedate_to_datetime(pubdate)
+        dt = parsedate_to_datetime(text)
     except (TypeError, ValueError, IndexError):
         return None
     if dt is None:
@@ -460,7 +469,12 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
                 })
             continue
 
-        snippet = _strip_html(item.findtext("description") or "")[:SNIPPET_MAX_LEN]
+        rss_content = item.findtext(
+            "{http://purl.org/rss/1.0/modules/content/}encoded"
+        )
+        snippet = _strip_html(
+            item.findtext("description") or rss_content or ""
+        )[:SNIPPET_MAX_LEN]
         published_at = _to_iso(item.findtext("pubDate") or "") or collected_at
         url_hash = hashlib.sha256(link.lower().rstrip("/").encode("utf-8")).hexdigest()
 
@@ -470,6 +484,13 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
             "source_url": link,
             "collected_at": collected_at,
             "provider_response_id": url_hash[:16],
+            "discovery_url": link,
+            "discovery_provider": "google_news",
+            "publisher_url": "",
+            "publisher_domain": "",
+            "publisher_direct": False,
+            "portal_resolution_status": "publisher_resolution_pending",
+            "portal_resolution_reason": "google_news_discovery_requires_resolution",
         }
         source_metadata.update(_rss_publisher_fields(item))
         row = {
@@ -480,12 +501,140 @@ def _parse_items(xml_text: str, query: str, collected_at: str,
             "url": link,
             "snippet": snippet,
             "source_metadata": source_metadata,
+            "discovery_url": link,
+            "discovery_provider": "google_news",
+            "publisher_url": "",
+            "publisher_domain": "",
+            "publisher_direct": False,
+            "portal_resolution_status": "publisher_resolution_pending",
+            "portal_resolution_reason": "google_news_discovery_requires_resolution",
         }
         row.update(_rss_image_fields(item))
         rows.append(row)
         if len(rows) >= max_items:
             break
     return rows
+
+
+def _load_publisher_direct_sources(path=None) -> dict:
+    registry_path = path or _PUBLISHER_DIRECT_SOURCES
+    try:
+        value = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, AttributeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _same_or_subdomain(url: str, homepage: str) -> bool:
+    try:
+        first = (urllib.parse.urlparse(url).hostname or "").casefold().rstrip(".")
+        second = (urllib.parse.urlparse(homepage).hostname or "").casefold().rstrip(".")
+    except ValueError:
+        return False
+    return bool(
+        first
+        and second
+        and (
+            first == second
+            or first.endswith("." + second)
+            or second.endswith("." + first)
+        )
+    )
+
+
+def fetch_publisher_direct_sources(
+    timeout: int = DEFAULT_TIMEOUT,
+    registry_path=None,
+    *,
+    fetcher=None,
+) -> list[dict]:
+    """Collect only registry-pinned official RSS feeds.
+
+    The registry contains no guessed feed URLs. This leaf keeps feed discovery
+    separate from article authority: each article is still fetched and verified
+    by :func:`resolve_publisher_urls` before it can become delivery eligible.
+    """
+    registry = _load_publisher_direct_sources(registry_path)
+    sources = registry.get("sources") if isinstance(registry, dict) else None
+    if not isinstance(sources, list):
+        return []
+    collected_at = datetime.now(KST).isoformat(timespec="seconds")
+    output: list[dict] = []
+    seen_urls: set[str] = set()
+    load = fetcher or _fetch
+    for source in sources:
+        if not isinstance(source, dict) or source.get("enabled") is not True:
+            continue
+        source_id = str(source.get("source_id") or "").strip()
+        display_name = str(source.get("display_name") or "").strip()
+        homepage = str(source.get("homepage") or "").strip()
+        source_kind = str(source.get("source_kind") or "").strip()
+        feed_urls = source.get("feed_urls")
+        if (
+            not source_id
+            or not display_name
+            or not homepage.startswith("https://")
+            or not isinstance(feed_urls, list)
+        ):
+            continue
+        for feed_url in feed_urls:
+            feed = str(feed_url or "").strip()
+            if not feed.startswith("https://") or not _same_or_subdomain(feed, homepage):
+                continue
+            try:
+                xml_text = load(feed, timeout)
+            except Exception:  # noqa: BLE001 - one official feed must not hide others
+                continue
+            rows = _parse_items(
+                xml_text,
+                f"publisher_direct:{source_id}",
+                collected_at,
+                max_items=20,
+            )
+            for row in rows:
+                article_url = publisher_direct.normalize_publisher_canonical_url(
+                    row.get("url")
+                )
+                if not article_url or article_url in seen_urls:
+                    continue
+                seen_urls.add(article_url)
+                metadata = dict(row.get("source_metadata") or {})
+                metadata.update(
+                    {
+                        "provider": "publisher_direct_rss",
+                        "query": source_id,
+                        "source_url": article_url,
+                        "discovery_url": article_url,
+                        "discovery_provider": f"publisher_direct:{source_id}",
+                        "publisher_url": article_url,
+                        "publisher_domain": (
+                            urllib.parse.urlparse(article_url).hostname or ""
+                        ).casefold(),
+                        "publisher_direct": False,
+                        "portal_resolution_status": "pending_verification",
+                        "portal_resolution_reason": "official_registry_direct_rss",
+                        "source_kind": source_kind,
+                        "trust_tier": str(source.get("trust_tier") or ""),
+                    }
+                )
+                row.update(
+                    {
+                        "url": article_url,
+                        "source": display_name,
+                        "source_metadata": metadata,
+                        "discovery_url": article_url,
+                        "discovery_provider": f"publisher_direct:{source_id}",
+                        "publisher_url": article_url,
+                        "publisher_domain": (
+                            urllib.parse.urlparse(article_url).hostname or ""
+                        ).casefold(),
+                        "publisher_direct": False,
+                        "portal_resolution_status": "pending_verification",
+                        "portal_resolution_reason": "official_registry_direct_rss",
+                    }
+                )
+                output.append(row)
+    return output
 
 
 def _emit_audit(query_audit, group, query, status, fetched, added, pass_label) -> None:
@@ -691,9 +840,117 @@ def _resolve_http_publisher_url(url: str, timeout: float = LINK_RESOLVE_TIMEOUT)
     return None
 
 
+def _strict_publisher_authority(
+    row: dict,
+    *,
+    resolver=None,
+    opener=None,
+    decoder=None,
+) -> dict:
+    """Resolve, refetch, and verify one publisher page through the R3-V7 SSRF guard."""
+    from app import editorial_article_import
+
+    discovery = publisher_direct.discovery_url(row)
+    if not discovery:
+        return publisher_direct.quarantine_article(row, "discovery_url_missing")
+    verified_candidate = publisher_direct.publisher_url(row)
+    target = verified_candidate or discovery
+    decode_reason = ""
+    if not verified_candidate and publisher_direct.portal_provider(discovery) == "google_news":
+        decode = decoder or _decode_google_news_url
+        try:
+            decoded = decode(discovery)
+        except Exception:  # noqa: BLE001 - a decoder failure becomes quarantine
+            decoded = None
+        if decoded:
+            target = str(decoded)
+            decode_reason = "google_news_decoder"
+    try:
+        resolution = editorial_article_import.resolve_publisher_document(
+            target,
+            resolver=resolver,
+            opener=opener,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        return publisher_direct.quarantine_article(
+            row,
+            f"publisher_verification_failed:{exc.code}",
+        )
+    try:
+        extracted = editorial_article_import.extract_article(
+            resolution.document.text,
+            resolution.document.final_url,
+            resolver=resolver,
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        # Some pinned government newsroom pages publish the actual release as an
+        # attachment and expose only its title/date on the verified HTML page.
+        # This bounded fallback is deliberately unavailable to portal/Naver/Google
+        # discoveries: only a registry-produced, official direct row whose exact
+        # RSS title is present on the safely fetched publisher page may use it.
+        metadata = row.get("source_metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        final_url = publisher_direct.normalize_publisher_canonical_url(
+            resolution.document.final_url
+        )
+        page_text = _strip_html(resolution.document.text).casefold()
+        row_title = _WS_RE.sub(" ", str(row.get("title") or "")).strip().casefold()
+        official_metadata_only = (
+            exc.code == "ARTICLE_BODY_NOT_FOUND"
+            and metadata.get("provider") == "publisher_direct_rss"
+            and metadata.get("trust_tier") == "official"
+            and bool(metadata.get("source_kind"))
+            and bool(final_url)
+            and bool(row_title)
+            and row_title in page_text
+            and bool(str(row.get("source") or "").strip())
+            and bool(str(row.get("published_at") or "").strip())
+        )
+        if official_metadata_only:
+            return publisher_direct.apply_publisher_authority(
+                row,
+                publisher_canonical_url=final_url,
+                source=str(row.get("source") or "").strip(),
+                published_at=str(row.get("published_at") or "").strip(),
+                resolution_reason=(
+                    "official_registry_page_verified+"
+                    "publisher_body_attachment_only"
+                ),
+            )
+        return publisher_direct.quarantine_article(
+            row,
+            f"publisher_verification_failed:{exc.code}",
+        )
+    if not publisher_direct.normalize_publisher_canonical_url(
+        extracted.canonical_url
+    ):
+        return publisher_direct.quarantine_article(
+            row,
+            "publisher_canonical_not_direct",
+        )
+    reason_parts = [
+        value
+        for value in (
+            decode_reason,
+            resolution.portal_resolution_reason,
+            "publisher_page_extracted",
+        )
+        if value
+    ]
+    return publisher_direct.apply_publisher_authority(
+        row,
+        publisher_canonical_url=extracted.canonical_url,
+        source=extracted.source,
+        published_at=extracted.published_at,
+        resolution_reason="+".join(reason_parts),
+    )
+
+
 def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                            max_items: int = LINK_RESOLVE_MAX_ITEMS,
-                           deadline: float = LINK_RESOLVE_DEADLINE) -> int:
+                           deadline: float = LINK_RESOLVE_DEADLINE, *,
+                           strict: bool = False, resolver=None, opener=None,
+                           decoder=None) -> int:
     """수집된 aggregator URL을 실제 퍼블리셔 URL로 최선노력 치환한다.
 
     성공한 항목은 row["source_metadata"]["source_url"]을 실제 퍼블리셔 URL로 덮어쓴다
@@ -705,6 +962,42 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
     """
     if not rows or max_items <= 0:
         return 0
+    if strict:
+        started = time.monotonic()
+        resolved_count = 0
+        processed: set[int] = set()
+        for index, row in enumerate(rows):
+            if (
+                len(processed) >= max_items
+                or (time.monotonic() - started) >= deadline
+            ):
+                break
+            if not isinstance(row, dict):
+                continue
+            processed.add(index)
+            verified = _strict_publisher_authority(
+                row,
+                resolver=resolver,
+                opener=opener,
+                decoder=decoder,
+            )
+            row.clear()
+            row.update(verified)
+            if publisher_direct.is_publisher_direct_delivery_eligible(
+                row,
+                relevance_qualified=True,
+            ):
+                resolved_count += 1
+        for index, row in enumerate(rows):
+            if index in processed or not isinstance(row, dict):
+                continue
+            quarantined = publisher_direct.quarantine_article(
+                row,
+                "publisher_resolution_budget_exhausted",
+            )
+            row.clear()
+            row.update(quarantined)
+        return resolved_count
     started = time.monotonic()
     resolved_count = 0
     attempted = 0

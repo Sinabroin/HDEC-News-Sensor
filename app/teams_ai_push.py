@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
-from app.news_access import choose_article_link
+from app import publisher_direct
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
 KST = timezone(timedelta(hours=9))
@@ -1201,13 +1201,15 @@ def select_teams_push_candidates(
     for article in articles:
         topic = classify_ai_topic(article)
         importance = map_importance(article, topic)
-        # Publisher resolution is preferred but not mandatory. A truthful labeled
-        # Google News/portal hop is safer than silently dropping an important article.
+        authority = publisher_direct.assess_delivery_eligibility(
+            article,
+            relevance_qualified=True,
+        )
         if (
             not topic.eligible
             or not is_executive_relevant_for_push(article, topic)
             or not importance.sendable
-            or not choose_article_link(article).url
+            or not authority.eligible
         ):
             continue
         candidates.append(
@@ -1300,8 +1302,13 @@ def build_teams_article_card(
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
     detected = _fmt_kst(detected_at or _value(alert, "generated_at") or _value(alert, "generated_kst")) or "시각 미상"
-    article_link = choose_article_link(article)
-    article_url = article_link.url
+    authority = publisher_direct.assess_delivery_eligibility(
+        article,
+        relevance_qualified=True,
+    )
+    if not authority.eligible:
+        raise ValueError("publisher-direct article authority is required")
+    article_url = authority.publisher_url
     dashboard_url = _safe_http(_value(alert, "dashboard_url"))
     report_url = _safe_http(_value(alert, "report_url"))
 
@@ -1330,7 +1337,7 @@ def build_teams_article_card(
     if article_url:
         actions.append({
             "type": "Action.OpenUrl",
-            "title": f"{article_link.label} 보기",
+            "title": "원문 보기",
             "url": article_url,
         })
     if dashboard_url:
@@ -1392,10 +1399,13 @@ def render_article_email(
     )
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
-    article_link = choose_article_link(article)
-    article_url = article_link.url
-    if not article_url:
-        raise ValueError("a valid article URL is required for a Teams push email")
+    authority = publisher_direct.assess_delivery_eligibility(
+        article,
+        relevance_qualified=True,
+    )
+    article_url = authority.publisher_url
+    if not authority.eligible:
+        raise ValueError("publisher-direct article authority is required for a Teams push email")
     image_url = _safe_http(
         _article_field(
             article,
@@ -1415,7 +1425,7 @@ def render_article_email(
     subject = f"[HDEC AI 레이더] {importance_label} · {title_prefix}{title}".strip()
 
     text_lines: list[str] = [
-        f"[{article_link.label}] {article_url}",
+        f"[원문] {article_url}",
         "",
         f"{importance_label}" + (f" · {topic.topic_label}" if topic.topic_label else ""),
         "",
@@ -1468,7 +1478,7 @@ def render_article_email(
         "<div style=\"font-family:Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;"
         "max-width:640px;line-height:1.55;color:#101828;\">"
         + f'<p style="margin:0 0 14px;word-break:break-all;">'
-        + f'<strong>[{_p(article_link.label)}]</strong> '
+        + '<strong>[원문]</strong> '
         + f'<a href="{escaped_article_url}">{escaped_article_url}</a></p>'
         + f'<span style="display:inline-block;font-size:12px;font-weight:600;color:{badge_color};'
         + f'background:{badge_background};border-radius:12px;padding:3px 8px;">'

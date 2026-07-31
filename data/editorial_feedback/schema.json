@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "category_order": [
+    "투자·산업",
+    "기업동향",
+    "기술정보"
+  ],
+  "feedback_record": {
+    "required": [
+      "version",
+      "edition_key",
+      "candidate_id",
+      "origin",
+      "selected_url",
+      "title",
+      "source",
+      "category",
+      "selected",
+      "overall_rating",
+      "dimension_ratings",
+      "exclusion_tags",
+      "rated_at"
+    ],
+    "origins": [
+      "ai_collected",
+      "human_link"
+    ],
+    "overall_rating": {
+      "minimum": 0,
+      "maximum": 5
+    },
+    "dimension_ratings": [
+      "business_relevance",
+      "importance",
+      "source_reliability",
+      "specificity",
+      "executive_value",
+      "novelty"
+    ],
+    "exclusion_tags": [
+      "low_trust_source",
+      "promotional",
+      "clickbait",
+      "shallow",
+      "duplicate",
+      "low_hdec_relevance",
+      "not_ai",
+      "stale",
+      "stock_market_noise",
+      "fact_check_needed"
+    ]
+  },
+  "approved_review": {
+    "required": [
+      "version",
+      "edition_type",
+      "edition_key",
+      "review_status",
+      "selected_items",
+      "approved_at"
+    ],
+    "review_status": [
+      "approved"
+    ],
+    "maximum_articles": 6,
+    "allowed_inline_html": [
+      "strong",
+      "br"
+    ],
+    "allowed_categories": [
+      "투자·산업",
+      "기업동향",
+      "기술정보"
+    ]
+  }
+}

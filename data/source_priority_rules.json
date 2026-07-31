@@ -1,0 +1,33 @@
+{
+  "version": "d7-ak-6f-ops-r1-v1",
+  "major_source_patterns": [
+    "연합뉴스", "연합인포맥스", "한국경제", "매일경제", "서울경제", "조선비즈",
+    "머니투데이", "이데일리", "아시아경제", "파이낸셜뉴스", "전자신문",
+    "뉴시스", "뉴스1", "news1", "ytn", "kbs", "mbc", "jtbc", "sbs",
+    "조선일보", "중앙일보", "동아일보", "한겨레", "경향신문", "국민일보",
+    "세계일보", "문화일보", "서울신문", "헤럴드경제", "디지털타임스", "한국일보"
+  ],
+  "specialist_source_patterns": [
+    "대한경제", "건설경제", "비즈워치", "zdnet", "zdnet korea",
+    "에너지경제", "전기신문", "인베스트조선", "더벨", "thebell"
+  ],
+  "surface_trusted_minimums": {
+    "top_immediate_signals": 2,
+    "top_new_issues": 3,
+    "hdec_direct_signals": 3,
+    "ai_radar_signals": 3,
+    "business_signals": 3,
+    "risk_regulation_signals": 3,
+    "competitor_supply_signals": 3,
+    "macro_economy_signals": 3
+  },
+  "labels": {
+    "official": "공식·기관",
+    "major": "주요 언론",
+    "specialist": "주요 전문지",
+    "trusted_other": "신뢰 출처",
+    "neutral": "일반 출처",
+    "low": "낮은 신뢰도",
+    "excluded": "제외 출처"
+  }
+}

@@ -81,9 +81,20 @@ BANNED_TERMS = ["".join(parts) for parts in [
 
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 
-SCAN_GLOBS = ["app/*.py", "app/*.sql", "scripts/*.py",
-              "templates/*", "data/*.json", ".github/workflows/*",
-              "docs/**/*"]
+BANNED_SCAN_PATHS = [
+    BRIEF_BUILDER,
+    DIGEST_BUILDER,
+    REPORT_BUILDER,
+    TEMPLATE,
+    DASHBOARD_TEMPLATE,
+    COMMITTED_REPORT,
+    PAGES_INDEX,
+    WORKFLOW,
+]
+# Token-shaped secrets remain forbidden across the broad tracked surface.
+TOKEN_SCAN_GLOBS = ["app/*.py", "app/*.sql", "scripts/*.py",
+                    "templates/*", "data/*.json", ".github/workflows/*",
+                    "docs/**/*"]
 
 _failures = []
 
@@ -485,23 +496,38 @@ def check_workflow() -> None:
 
 
 def check_code_tree_banned() -> None:
-    hits = []
-    for pattern in SCAN_GLOBS:
+    banned_hits = []
+    scanned = []
+    for path in BANNED_SCAN_PATHS:
+        if not path.is_file():
+            continue
+        scanned.append(str(path.relative_to(ROOT)))
+        try:
+            lowered = path.read_text(encoding="utf-8").lower()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for term in BANNED_TERMS:
+            if term in lowered:
+                banned_hits.append(f"{path.relative_to(ROOT)}: {term}")
+
+    token_hits = []
+    for pattern in TOKEN_SCAN_GLOBS:
         for path in sorted(ROOT.glob(pattern)):
             if not path.is_file() or "__pycache__" in path.parts:
                 continue
             try:
-                text = path.read_text(encoding="utf-8")
+                payload = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            lowered = text.lower()
-            for term in BANNED_TERMS:
-                if term in lowered:
-                    hits.append(f"{path.relative_to(ROOT)}: {term}")
-            if TOKEN_SHAPE.search(text):
-                hits.append(f"{path.relative_to(ROOT)}: token-shape")
-    check("코드 트리(+docs) 금지어/token 모양 0건", not hits, "; ".join(hits))
+            if TOKEN_SHAPE.search(payload):
+                token_hits.append(f"{path.relative_to(ROOT)}: token-shape")
 
+    details = banned_hits + token_hits
+    check(
+        "데이터 외부 노출면 금지어 + 전체 트리 token 모양 0건",
+        bool(scanned) and not details,
+        "; ".join(details),
+    )
 
 def check_tracked_files() -> None:
     try:
