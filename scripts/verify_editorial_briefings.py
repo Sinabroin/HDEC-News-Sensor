@@ -1652,6 +1652,18 @@ def naver_provider_activation_contracts() -> None:
     rows = brief.fixture_articles("daily", run_at)
     for index, row in enumerate(rows, start=1):
         row["image_url"] = f"https://images.fixture.test/activation-{index}.jpg"
+
+    def activation_image_downloader(
+        url: str,
+        **_kwargs,
+    ) -> brief.ImageDownload:
+        return brief.ImageDownload(
+            404,
+            "image/jpeg",
+            b"",
+            final_url=url,
+        )
+
     naver_row = dict(rows[0])
     naver_row["source_metadata"] = {
         "provider": "naver_news_api",
@@ -1753,6 +1765,10 @@ def naver_provider_activation_contracts() -> None:
                 run_at=run_at,
                 preview_root=Path(temporary) / "bundle",
                 fixture_root="https://preview.fixture.test/HDEC-News-Sensor",
+                image_page_fetcher=lambda url: (url, "<html></html>"),
+                image_probe=lambda _url: False,
+                image_downloader=activation_image_downloader,
+                publisher_fetcher=lambda url: (url, "<html></html>"),
             )
         check(
             "live-preview manifest records Naver provider activation status",
@@ -2130,6 +2146,7 @@ def selection_policy_contracts() -> None:
         coverage,
         limit=1,
         allow_image_network=True,
+        publisher_fetcher=lambda url: (url, "<html></html>"),
         image_page_fetcher=lambda _url: (_ for _ in ()).throw(
             AssertionError("aggregator page must not be fetched for image")
         ),
