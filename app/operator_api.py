@@ -12,13 +12,20 @@ D7-AG-3 — 브라우저 승인 PIN을 제거하고 보호를 **서버 앞단(ed
 운영자 세션 뒤에 둔다. OAuth client secret/session secret은 server-side env에서만 읽는다.
 """
 
+import json
 import urllib.error
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
 
-from app import config, operator_auth, operator_gateway
+from app import (
+    config,
+    editorial_article_import,
+    operator_auth,
+    operator_gateway,
+)
 
 _OPERATOR_HTTP = {
     "dispatched": 200,
@@ -31,11 +38,53 @@ _OPERATOR_HTTP = {
 }
 
 router = APIRouter()
+_IMPORT_REQUEST_MAX_BYTES = 4_096
 
 
 def _operator_response(result: dict) -> JSONResponse:
     status = result.get("status", "error")
     return JSONResponse(status_code=_OPERATOR_HTTP.get(status, 502), content=result)
+
+
+def _article_import_error(
+    code: str,
+    *,
+    status: int | None = None,
+    message: str = "",
+) -> JSONResponse:
+    error = editorial_article_import.ArticleImportError(
+        code,
+        status=status,
+        message=message,
+    )
+    return JSONResponse(status_code=error.status, content=error.response_payload())
+
+
+def _authorize_article_import(request: Request) -> JSONResponse | None:
+    """Require the existing operator identity/session and Origin allowlist."""
+    auth = operator_gateway.authorize(
+        request.headers,
+        request.headers.get("origin", ""),
+        action="import_article",
+    )
+    if auth["ok"]:
+        return None
+    reason = auth["reason"]
+    if reason == "forbidden_origin":
+        return _article_import_error("FORBIDDEN", status=403)
+    if reason == "rate_limited":
+        return _article_import_error(
+            "FORBIDDEN",
+            status=429,
+            message="기사 불러오기 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+        )
+    if reason == "not_configured":
+        return _article_import_error(
+            "AUTH_REQUIRED",
+            status=503,
+            message="운영자 인증이 설정되지 않았습니다.",
+        )
+    return _article_import_error("AUTH_REQUIRED", status=401)
 
 
 @router.get("/api/operator/health")
@@ -118,6 +167,49 @@ def auth_logout():
     operator_auth.clear_session_cookie(response)
     operator_auth.clear_state_cookie(response)
     return response
+
+
+@router.post("/api/editorial/import-article")
+async def editorial_import_article(request: Request):
+    """Import one public article for an authenticated editorial operator.
+
+    The route never returns fetched HTML or a full article body and is not an
+    arbitrary URL proxy. Every redirect and image fetch is revalidated by the
+    domain module before bounded bytes are parsed.
+    """
+    blocked = _authorize_article_import(request)
+    if blocked is not None:
+        return blocked
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        return _article_import_error("UNSUPPORTED_CONTENT_TYPE", status=415)
+    content_length = request.headers.get("content-length", "")
+    try:
+        advertised_length = int(content_length) if content_length else None
+    except ValueError:
+        advertised_length = None
+    if advertised_length is not None and advertised_length > _IMPORT_REQUEST_MAX_BYTES:
+        return _article_import_error("RESPONSE_TOO_LARGE", status=413)
+    body = await request.body()
+    if len(body) > _IMPORT_REQUEST_MAX_BYTES:
+        return _article_import_error("RESPONSE_TOO_LARGE", status=413)
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return _article_import_error("INVALID_URL", status=400)
+    if not isinstance(payload, dict) or set(payload) != {"url"}:
+        return _article_import_error("INVALID_URL", status=400)
+    try:
+        result = await run_in_threadpool(
+            editorial_article_import.import_article,
+            payload.get("url"),
+        )
+    except editorial_article_import.ArticleImportError as exc:
+        return JSONResponse(status_code=exc.status, content=exc.response_payload())
+    except Exception:
+        # Do not expose exception types, messages, fetched content, or stack traces.
+        return _article_import_error("INTERNAL_ERROR", status=500)
+    return JSONResponse(status_code=200, content=result)
 
 
 @router.post("/api/operator/collect")
