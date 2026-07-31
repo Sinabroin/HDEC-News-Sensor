@@ -120,6 +120,7 @@ def _article(**overrides):
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
         "url": DIRECT_ARTICLE_URL,
+        "publisher_direct": True,
         "score": 4.7,
         "shadow_urgency_status": "confirmed",
         "shadow_would_pass": True,
@@ -600,25 +601,15 @@ def check_delivery(tmp: Path) -> None:
     fallback_summary, fallback_rec = _deliver(
         tmp, _payload([fallback_article]), fallback_state
     )
-    check("Google News-only important article remains a send candidate",
-          fallback_summary["attempted_count"] == 1
-          and fallback_summary["delivered_count"] == 1
-          and len(fallback_rec.attempts) == 1,
+    check("Google News-only important article is blocked before SMTP",
+          fallback_summary["candidate_count"] == 0
+          and fallback_summary["attempted_count"] == 0
+          and fallback_summary["delivered_count"] == 0
+          and len(fallback_rec.attempts) == 0
+          and not fallback_state.exists(),
           str(fallback_summary))
-    fallback_parsed = _parse_message(fallback_rec.messages[0]["raw"])
-    fallback_body = fallback_parsed["text"] + "\n" + fallback_parsed["html"]
-    check("Google News fallback is truthfully labeled",
-          fallback_parsed["text"].splitlines()[0]
-          == f"[Google News 경유] {GOOGLE_AGGREGATOR_URL}"
-          and "[Google News 경유]" in fallback_parsed["html"])
-    check("fallback URL is used for the full title link",
-          re.search(
-              rf'<h2[^>]*>\s*<a href="{re.escape(GOOGLE_AGGREGATOR_URL)}"[^>]*>'
-              r"[^<]*공간 AI 기반 스마트건설 계약 체결[^<]*</a></h2>",
-              fallback_parsed["html"],
-          ) is not None)
-    check("aggregator fallback is never labeled as publisher original",
-          "[원문]" not in fallback_body)
+    check("Google News-only article creates no email body",
+          fallback_rec.messages == [])
 
     summary, rec = _deliver(tmp, _payload([first_article]), state)
     check("same article re-run: zero attempts, one dedup block",
@@ -724,12 +715,12 @@ def check_cap_and_partial(tmp: Path) -> None:
         _payload([aggregator_article]),
         aggregator_state,
     )
-    check("aggregator-only important article remains sendable with fallback",
-          aggregator_summary["candidate_count"] == 1
-          and aggregator_summary["attempted_count"] == 1
-          and aggregator_summary["delivered_count"] == 1
-          and len(aggregator_rec.attempts) == 1
-          and aggregator_state.exists(),
+    check("aggregator-only important article is quarantined from delivery",
+          aggregator_summary["candidate_count"] == 0
+          and aggregator_summary["attempted_count"] == 0
+          and aggregator_summary["delivered_count"] == 0
+          and len(aggregator_rec.attempts) == 0
+          and not aggregator_state.exists(),
           str(aggregator_summary))
 
     # Fixtures 14 & 15 — ten articles, eight accepted (250) / two rejected (550): only the

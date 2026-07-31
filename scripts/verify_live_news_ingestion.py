@@ -11,7 +11,8 @@
 
 사용법:
     python3 scripts/verify_live_news_ingestion.py
-    NEWS_MODE=live python3 scripts/verify_live_news_ingestion.py   # 실제 수집까지 시도
+    RUN_EXTERNAL_NETWORK_TESTS=1 python3 scripts/verify_live_news_ingestion.py
+        # 명시적으로 요청한 경우에만 실제 공개 RSS 수집 시도
 """
 
 import json
@@ -41,9 +42,16 @@ BANNED_TERMS = ["".join(parts) for parts in [
 SECRET_TOKENS = ("TELEGRAM", "BOT_TOKEN", "API_KEY", "SECRET", "BEARER", "PASSWORD")
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 ALLOWED_ROW_KEYS = {"id", "title", "source", "published_at", "url",
-                    "snippet", "source_metadata"}
+                    "snippet", "source_metadata", "discovery_url",
+                    "discovery_provider", "publisher_url", "publisher_domain",
+                    "publisher_direct", "portal_resolution_status",
+                    "portal_resolution_reason"}
 ALLOWED_META_KEYS = {"provider", "query", "source_url", "collected_at",
-                     "provider_response_id"}
+                     "provider_response_id", "rss_source_url",
+                     "rss_source_home_url", "discovery_url",
+                     "discovery_provider", "publisher_url",
+                     "publisher_domain", "publisher_direct",
+                     "portal_resolution_status", "portal_resolution_reason"}
 
 SAMPLE_RSS = """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>
 <item><title>현대건설 데이터센터 EPC 수주 - 연합뉴스</title>
@@ -260,7 +268,10 @@ def check_fallback_when_live_empty() -> None:
 
 
 def check_real_fetch_optional() -> None:
-    """네트워크가 있으면 실제 공개 RSS를 수집해 본다. 없으면 SKIP (가짜 성공 금지)."""
+    """명시적으로 opt-in한 경우에만 실제 공개 RSS를 수집한다."""
+    if os.getenv("RUN_EXTERNAL_NETWORK_TESTS", "").strip() != "1":
+        skip("실제 RSS 수집 비활성 (RUN_EXTERNAL_NETWORK_TESTS=1일 때만 실행)")
+        return
     sys.path.insert(0, str(ROOT))
     from app import live_collector as lc
 
@@ -355,7 +366,7 @@ def check_naver_provider() -> None:
               rows[0]["published_at"])
         check("naver 파서: 기사 키가 허용 집합뿐 (본문 필드 없음)",
               all(set(r.keys()) <= ALLOWED_ROW_KEYS for r in rows))
-        check("naver 파서: source_metadata 키가 허용 5종뿐 (rules.md §3)",
+        check("naver 파서: source_metadata 키가 허용 집합뿐 (rules.md §3)",
               all(set(r["source_metadata"].keys()) <= ALLOWED_META_KEYS for r in rows))
         check("naver 파서: snippet에 HTML 태그 잔존 없음",
               all("<" not in (r["snippet"] or "") for r in rows))

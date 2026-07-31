@@ -35,6 +35,7 @@ def article(**overrides):
         "source": "Reuters",
         "published_at": "2026-07-23T00:20:00+00:00",
         "url": "https://publisher.example.test/news/1?utm_source=x&ref=y",
+        "publisher_direct": True,
         "shadow_confirmed_event_types": ["contract_signed"],
         "change_type": "new_article",
     }
