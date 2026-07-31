@@ -18,8 +18,8 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     ai_value_chain, article_quality, config, db, deal_watch, decision_relevance,
-    global_press, insight, macro_snapshot, market_snapshot, radar, risk_events, scoring, source_quality,
-    surface_contracts, topic_profiles,
+    global_press, insight, macro_snapshot, market_snapshot, radar, risk_events, scoring, source_priority,
+    source_quality, surface_contracts, topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -382,6 +382,7 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
     # 출처 품질 라벨 (P0-C1.6) — 표시 전용 파생값. 저장된 source/title을 분류만 한다
     # (점수/등급 재계산 아님). 신뢰 출처/일반 출처/낮은 신뢰도를 UI·리포트가 노출한다.
     quality = source_quality.classify(row.get("source"), row.get("title"))
+    priority = source_priority.classify(row.get("source"), row.get("title"))
     entry = {
         "rank": rank,
         "article_id": row["id"],
@@ -400,6 +401,10 @@ def _signal_entry(rank: int, row: dict, category_key: str, implication: str,
         "source_quality_label": quality["source_quality_label"],
         "source_quality_reason": quality["source_quality_reason"],
         "source_type": quality["source_type"],
+        "source_priority_bucket": priority["source_priority_bucket"],
+        "source_priority_rank": priority["source_priority_rank"],
+        "source_priority_label": priority["source_priority_label"],
+        "trusted_slot_eligible": priority["trusted_slot_eligible"],
         "topic": topics[0] if topics else None,
         "category": category_key,
         "category_label": insight.CATEGORY_PHRASE.get(category_key, "건설산업 일반"),
@@ -751,6 +756,8 @@ def _filter_surface_exposures(rows: list[dict], limit: int, *,
     - per-list cluster cap(같은 surface 안 max_per_cluster, 현대건설 직접 쌍 예외)은 기존대로.
     순서·랭킹은 바꾸지 않는다 — D3D 정렬을 그대로 두고 중복만 억제한다.
     """
+    rows = source_priority.reserve_trusted_slots(
+        rows, surface=surface, limit=limit)
     picked: list[dict] = []
     local_counts: dict[str, int] = {}
     sources_by_cluster: dict[str, set[str]] = {}
@@ -1130,13 +1137,13 @@ def _top_exposure_profile(row: dict, decision: dict | None = None) -> dict:
 def _top_exposure_sort_key(row: dict, decision: dict | None = None):
     profile = _top_exposure_profile(row, decision)
     return (
+        source_priority.effective_rank(row),
         profile["top_exposure_penalty"],
         _freshness_rank(row),
         -((decision or {}).get("decision_relevance_score") or 0),
         -(row.get("final_score") or 0),
         row["id"],
     )
-
 
 def _is_top_exposure_excluded(row: dict, decision: dict | None = None) -> bool:
     return _top_exposure_profile(row, decision)["top_exposure_excluded"]
@@ -1154,6 +1161,7 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
     제목/출처/링크/시각/중요도만 담는다 — 본문 전문은 절대 싣지 않는다 (rules.md §3).
     """
     quality = source_quality.classify(row.get("source"), row.get("title"))
+    priority = source_priority.classify(row.get("source"), row.get("title"))
     url = row.get("url")
     entry = {
         "article_id": row["id"],
@@ -1163,6 +1171,10 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
             row.get("source")) or "출처 미상",
         "source_quality": quality["source_quality"],
         "source_quality_label": quality["source_quality_label"],
+        "source_priority_bucket": priority["source_priority_bucket"],
+        "source_priority_rank": priority["source_priority_rank"],
+        "source_priority_label": priority["source_priority_label"],
+        "trusted_slot_eligible": priority["trusted_slot_eligible"],
         "published_at": row.get("published_at"),
         "collected_at": row.get("collected_at"),
         "snippet": row.get("snippet") or "",

@@ -81,10 +81,25 @@ BANNED_TERMS = ["".join(parts) for parts in [
 # Telegram bot token 모양 (숫자ID:시크릿) — 어디에도 하드코딩 금지
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 
-# 코드 트리 금지어 스캔 대상 — P0-B2 목록 + docs (스펙 문서 rules.md/PRD.md/.claude 제외)
-SCAN_GLOBS = ["app/*.py", "app/*.sql", "scripts/*.py",
-              "templates/*", "data/*.json", ".github/workflows/*",
-              "docs/**/*"]
+# External report/Telegram surfaces for outbound-field terms.
+BANNED_SCAN_PATHS = [
+    REPORT_BUILDER,
+    DASHBOARD_BUILDER,
+    SENDER,
+    ROOT / "scripts" / "build_telegram_digest.py",
+    ROOT / "scripts" / "send_scheduled_telegram.py",
+    WORKFLOW,
+    ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml",
+    ROOT / "templates" / "dashboard_preview.html",
+    COMMITTED_REPORT,
+    ROOT / "docs" / "daily" / "operator-latest.html",
+    DASHBOARD_REPORT,
+    PAGES_INDEX,
+]
+# Token-shaped secrets remain forbidden across the broad tracked surface.
+TOKEN_SCAN_GLOBS = ["app/*.py", "app/*.sql", "scripts/*.py",
+                    "templates/*", "data/*.json", ".github/workflows/*",
+                    "docs/**/*"]
 
 _failures = []
 
@@ -272,23 +287,38 @@ def check_workflow() -> None:
 
 
 def check_code_tree_banned() -> None:
-    hits = []
-    for pattern in SCAN_GLOBS:
+    banned_hits = []
+    scanned = []
+    for path in BANNED_SCAN_PATHS:
+        if not path.is_file():
+            continue
+        scanned.append(str(path.relative_to(ROOT)))
+        try:
+            lowered = path.read_text(encoding="utf-8").lower()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for term in BANNED_TERMS:
+            if term in lowered:
+                banned_hits.append(f"{path.relative_to(ROOT)}: {term}")
+
+    token_hits = []
+    for pattern in TOKEN_SCAN_GLOBS:
         for path in sorted(ROOT.glob(pattern)):
             if not path.is_file() or "__pycache__" in path.parts:
                 continue
             try:
-                text = path.read_text(encoding="utf-8")
+                payload = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            lowered = text.lower()
-            for term in BANNED_TERMS:
-                if term in lowered:
-                    hits.append(f"{path.relative_to(ROOT)}: {term}")
-            if TOKEN_SHAPE.search(text):
-                hits.append(f"{path.relative_to(ROOT)}: token-shape")
-    check("코드 트리(+docs) 금지어/token 모양 0건", not hits, "; ".join(hits))
+            if TOKEN_SHAPE.search(payload):
+                token_hits.append(f"{path.relative_to(ROOT)}: token-shape")
 
+    details = banned_hits + token_hits
+    check(
+        "외부 노출면 금지어 + 전체 트리 token 모양 0건",
+        bool(scanned) and not details,
+        "; ".join(details),
+    )
 
 def check_tracked_files() -> None:
     try:
