@@ -1706,6 +1706,10 @@ def main() -> int:
     ).read_text(encoding="utf-8")
     v.check("console schedule is 07:20 KST", 'cron: "20 22 * * *"' in workflow)
     v.check(
+        "console supports same-day manual publication",
+        "workflow_dispatch:" in workflow,
+    )
+    v.check(
         "console workflow has no sender",
         not any(
             token in workflow

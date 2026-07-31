@@ -98,8 +98,14 @@ def main() -> int:
               len(result["articles"]) == 1
               and set(result["articles"][0]) <= {
                   "id", "title", "source", "published_at", "url", "snippet",
-                  "source_metadata",
-              })
+                  "source_metadata", "discovery_url", "discovery_provider",
+                  "publisher_url", "publisher_domain", "publisher_direct",
+                  "portal_resolution_status", "portal_resolution_reason",
+              }
+              and not any(
+                  key in result["articles"][0]
+                  for key in ("body", "article_body", "html", "content")
+              ))
     finally:
         naver._request_json = original_request
         (config.NAVER_NEWS_ENABLED, config.NAVER_CLIENT_ID,
