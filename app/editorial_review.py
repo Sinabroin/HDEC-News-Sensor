@@ -24,14 +24,29 @@ MAX_REVIEW_ARTICLES = 6
 CATEGORY_ORDER = ("투자·산업", "기업동향", "기술정보")
 CATEGORY_RANK = {name: index for index, name in enumerate(CATEGORY_ORDER)}
 
-_INVESTMENT_HINTS = (
-    "투자", "산업", "시장", "정책", "규제", "인프라", "데이터센터",
-    "반도체", "에너지", "원전", "smr", "펀드", "인수", "매출", "실적",
-)
-_CORPORATE_HINTS = (
-    "기업", "경영", "조직", "인사", "노조", "도입", "전환", "협업",
-    "삼성", "현대", "구글", "마이크로소프트", "openai", "sap", "ibm",
-)
+_CATEGORY_SIGNALS = {
+    "투자·산업": (
+        "투자", "시장", "정책", "규제", "인프라", "데이터센터", "반도체",
+        "에너지", "원전", "smr", "펀드", "인수", "매출", "실적", "공급망",
+        "국가전략", "예산",
+    ),
+    "기업동향": (
+        "기업", "경영", "조직", "인사", "노사", "도입", "전환", "협업",
+        "계약", "제휴", "인수합병", "사내", "업무혁신", "생산성", "고객",
+        "사업부",
+    ),
+    "기술정보": (
+        "모델", "추론", "에이전트", "로봇", "소프트웨어", "오픈소스", "연구",
+        "알고리즘", "컴퓨팅", "gpu", "칩", "벤치마크", "멀티모달", "생성형",
+        "llm", "보안", "데이터", "클라우드",
+    ),
+}
+_CATEGORY_FIELD_WEIGHTS = {
+    "title": 3.0,
+    "summary": 1.0,
+    "source": 0.5,
+}
+_SUGGESTED_CATEGORY_WEIGHT = 0.25
 
 
 class EditorialReviewError(EditorialError):
@@ -42,16 +57,102 @@ def _clean(value: object) -> str:
     return " ".join(str(value or "").split())
 
 
+def analyze_editorial_category(
+    title: object,
+    summary: object,
+    source: object = "",
+    suggested_category: object = "",
+) -> dict[str, Any]:
+    """Explainably classify an article into the fixed editorial taxonomy."""
+    fields = {
+        "title": _clean(title).casefold(),
+        "summary": _clean(summary).casefold(),
+        "source": _clean(source).casefold(),
+    }
+    scores = {category: 0.0 for category in CATEGORY_ORDER}
+    matched_signals: dict[str, dict[str, list[str]]] = {
+        category: {field: [] for field in fields}
+        for category in CATEGORY_ORDER
+    }
+    content_signal_count = 0
+    for field, text in fields.items():
+        raw_matches = {
+            category: [
+                signal
+                for signal in _CATEGORY_SIGNALS[category]
+                if signal.casefold() in text
+            ]
+            for category in CATEGORY_ORDER
+        }
+        all_matches = [
+            signal
+            for category_matches in raw_matches.values()
+            for signal in category_matches
+        ]
+        for category in CATEGORY_ORDER:
+            matches = [
+                signal
+                for signal in raw_matches[category]
+                if not any(
+                    signal.casefold() != other.casefold()
+                    and signal.casefold() in other.casefold()
+                    for other in all_matches
+                )
+            ]
+            matched_signals[category][field] = matches
+            scores[category] += len(matches) * _CATEGORY_FIELD_WEIGHTS[field]
+            content_signal_count += len(matches)
+
+    suggested = _clean(suggested_category)
+    if suggested in CATEGORY_RANK:
+        scores[suggested] += _SUGGESTED_CATEGORY_WEIGHT
+
+    if content_signal_count == 0:
+        category = "기술정보"
+        reason = "콘텐츠 신호가 없어 약한 제안값보다 기술정보 기본값을 우선"
+    else:
+        # CATEGORY_ORDER is the explicit deterministic tie-break.
+        category = max(
+            CATEGORY_ORDER,
+            key=lambda item: (scores[item], -CATEGORY_RANK[item]),
+        )
+        top_matches = matched_signals[category]
+        signal_text = ", ".join(
+            f"{field}:{'/'.join(values)}"
+            for field, values in top_matches.items()
+            if values
+        )
+        prior_text = (
+            f"; 제안값 {suggested}은 {_SUGGESTED_CATEGORY_WEIGHT:g}점의 약한 prior"
+            if suggested in CATEGORY_RANK
+            else ""
+        )
+        reason = (
+            f"{category} 최고점 {scores[category]:g}; "
+            f"동점은 {' > '.join(CATEGORY_ORDER)} 순으로 결정"
+            f"{'; ' + signal_text if signal_text else ''}{prior_text}"
+        )
+    return {
+        "category": category,
+        "scores": {key: round(value, 2) for key, value in scores.items()},
+        "matched_signals": matched_signals,
+        "reason": reason,
+    }
+
+
 def normalize_category(value: object, title: object = "", summary: object = "") -> str:
     candidate = _clean(value)
     if candidate in CATEGORY_RANK:
         return candidate
-    blob = " ".join((_clean(title), _clean(summary), candidate)).casefold()
-    if any(token.casefold() in blob for token in _INVESTMENT_HINTS):
-        return "투자·산업"
-    if any(token.casefold() in blob for token in _CORPORATE_HINTS):
-        return "기업동향"
-    return "기술정보"
+    legacy_summary = " ".join(
+        part for part in (_clean(summary), candidate) if part
+    )
+    return str(
+        analyze_editorial_category(
+            title,
+            legacy_summary,
+        )["category"]
+    )
 
 
 def category_rank(value: object) -> int:
@@ -77,7 +178,13 @@ def article_to_candidate(
     feedback_adjustment: float = 0.0,
 ) -> dict[str, Any]:
     adjusted = round(float(article.total_ranking_score) + float(feedback_adjustment), 4)
-    category = normalize_category(article.category, article.title, article.summary)
+    category_analysis = analyze_editorial_category(
+        article.title,
+        article.summary,
+        source=article.source,
+        suggested_category=article.category,
+    )
+    category = str(category_analysis["category"])
     summary_html = sanitize_editorial_inline_html(
         article.summary_html or escape(article.summary)
     )
@@ -97,6 +204,7 @@ def article_to_candidate(
         "link_kind": article.link_kind,
         "link_label": article.link_label,
         "category": category,
+        "category_analysis": category_analysis,
         "category_rank": category_rank(category),
         "collection_source_kind": article.collection_source_kind,
         "relevance_score": article.relevance_score,
@@ -108,7 +216,7 @@ def article_to_candidate(
         "publisher_article_url": article.publisher_article_url,
         "publisher_url_source_kind": article.publisher_url_source_kind,
         "publisher_url_reason": article.publisher_url_reason,
-        "image_url": article.image_remote_url or article.image_url,
+        "image_url": article.image_url,
         "image_source_kind": article.image_source_kind,
         "image_source_page_url": article.image_source_page_url,
         "image_width": article.image_width,
@@ -235,6 +343,34 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
     )
 
 
+def _candidate_for_daily_render(
+    candidate: Mapping[str, Any],
+    edition_key: object,
+) -> Mapping[str, Any]:
+    """Rebase a console-local image for Daily HTML in docs/editorial/daily."""
+    image_url = _clean(candidate.get("image_url"))
+    edition = _clean(edition_key)
+    prefix = "assets/images/"
+    filename = image_url.removeprefix(prefix)
+    if (
+        len(edition) == 10
+        and edition[4] == "-"
+        and edition[7] == "-"
+        and edition.replace("-", "").isdigit()
+        and image_url.startswith(prefix)
+        and filename
+        and "/" not in filename
+        and "\\" not in filename
+        and filename not in {".", ".."}
+    ):
+        rebased = dict(candidate)
+        rebased["image_url"] = (
+            f"../review/{edition}/{prefix}{filename}"
+        )
+        return rebased
+    return candidate
+
+
 def write_bundle(
     *,
     edition_key: str,
@@ -331,11 +467,24 @@ def choose_daily_articles(
                 base = by_id.get(candidate_id_value)
                 if base is None:
                     raise EditorialReviewError("approved AI candidate is not in the bundle")
-                articles.append(candidate_to_article(base, override=item))
+                articles.append(
+                    candidate_to_article(
+                        _candidate_for_daily_render(
+                            base,
+                            bundle.get("edition_key"),
+                        ),
+                        override=item,
+                    )
+                )
             if articles:
                 return articles, "human_approved"
 
     auto = candidates[:limit]
     if not auto:
         raise EditorialReviewError("candidate bundle has no automatic fallback")
-    return [candidate_to_article(item) for item in auto], "ai_fallback"
+    return [
+        candidate_to_article(
+            _candidate_for_daily_render(item, bundle.get("edition_key"))
+        )
+        for item in auto
+    ], "ai_fallback"

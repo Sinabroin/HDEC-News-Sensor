@@ -8,8 +8,10 @@ import json
 import shutil
 import sys
 import tempfile
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
+from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -23,6 +25,16 @@ from run_editorial_briefing import collect_live_article_bundle  # noqa: E402
 
 TEMPLATE = ROOT / "templates" / "editorial_review_console.html"
 DEFAULT_PROFILE = ROOT / "data" / "editorial_feedback" / "profile.json"
+FIXTURE_IMAGE_NAME = "editorial-review-fixture.svg"
+FIXTURE_IMAGE_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#002c5f"/><stop offset="1" stop-color="#0e63b8"/></linearGradient></defs>
+<rect width="960" height="540" rx="32" fill="url(#g)"/>
+<circle cx="790" cy="112" r="168" fill="#fff" opacity=".08"/>
+<path d="M108 348h744M108 394h520" stroke="#fff" stroke-width="18" stroke-linecap="round" opacity=".22"/>
+<text x="108" y="225" fill="#fff" font-family="Arial,sans-serif" font-size="74" font-weight="700">HDEC AI</text>
+<text x="112" y="286" fill="#fff" font-family="Arial,sans-serif" font-size="30" opacity=".82">EDITORIAL REVIEW</text>
+</svg>
+"""
 
 
 def parse_run_at(value: str) -> datetime:
@@ -48,6 +60,54 @@ def render_console(template: str, bundle: dict) -> str:
     )
 
 
+def fixture_preview_images(
+    articles: Iterable[editorial_briefings.EditorialArticle],
+    preview_root: Path,
+) -> tuple[
+    list[editorial_briefings.EditorialArticle],
+    editorial_briefings.ImageMaterializationCounters,
+]:
+    """Create a deterministic browser-loadable image without network access."""
+    assets_dir = preview_root / "assets" / "images"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    (assets_dir / FIXTURE_IMAGE_NAME).write_text(
+        FIXTURE_IMAGE_SVG,
+        encoding="utf-8",
+    )
+    local_src = f"assets/images/{FIXTURE_IMAGE_NAME}"
+    materialized = [
+        replace(
+            article,
+            image_url=local_src,
+            image_remote_url="",
+            image_source_kind="fixture_local",
+            image_fallback_used=False,
+            image_reason="deterministic_fixture_asset",
+            image_download_status="not_attempted",
+            image_local_asset=FIXTURE_IMAGE_NAME,
+            image_local_src=local_src,
+            image_materialization_reason="fixture_local_asset",
+            image_quality_accepted=True,
+            image_quality_reason="fixture_local_asset",
+        )
+        for article in articles
+    ]
+    counters = editorial_briefings.ImageMaterializationCounters(
+        image_assets_materialized=1,
+    )
+    return materialized, counters
+
+
+def copy_preview_assets(source_root: Path, destination_dir: Path) -> None:
+    source = source_root / "assets" / "images"
+    target = destination_dir / "assets" / "images"
+    target.mkdir(parents=True, exist_ok=True)
+    if source.exists():
+        for asset in source.iterdir():
+            if asset.is_file():
+                shutil.copy2(asset, target / asset.name)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-at", default="")
@@ -64,7 +124,10 @@ def main() -> int:
 
     profile = editorial_feedback.load_profile(args.profile)
     if args.fixture:
-        raw_articles = editorial_briefings.fixture_articles("daily", run_at, profile="dominant")
+        raw_articles = (
+            editorial_briefings.fixture_articles("daily", run_at, profile="dominant")
+            + editorial_briefings.fixture_articles("daily", run_at, profile="multi")
+        )
         collection_audit = {
             "mode": "fixture",
             "network_calls": 0,
@@ -109,6 +172,20 @@ def main() -> int:
     )
     if not articles:
         raise SystemExit("no candidate articles in Daily coverage")
+
+    image_stage_handle = tempfile.TemporaryDirectory(
+        prefix="editorial-review-images-",
+        dir="/tmp",
+    )
+    image_stage = Path(image_stage_handle.name)
+    if args.fixture:
+        articles, image_counters = fixture_preview_images(articles, image_stage)
+    else:
+        articles, image_counters = editorial_briefings.materialize_preview_images(
+            articles,
+            image_stage,
+            html_dir=image_stage,
+        )
 
     candidates = []
     for rank, article in enumerate(articles, 1):
@@ -156,10 +233,12 @@ def main() -> int:
 
     html = render_console(TEMPLATE.read_text(encoding="utf-8"), bundle)
     (edition_dir / "index.html").write_text(html, encoding="utf-8")
+    copy_preview_assets(image_stage, edition_dir)
 
     latest_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(edition_dir / "candidates.json", latest_dir / "candidates.json")
     shutil.copyfile(edition_dir / "index.html", latest_dir / "index.html")
+    copy_preview_assets(image_stage, latest_dir)
 
     manifest = {
         "version": 2,
@@ -174,12 +253,15 @@ def main() -> int:
         "teams_sends": 0,
         "telegram_sends": 0,
         "production_state_writes": 0,
+        "image_network_calls": image_counters.image_download_attempts,
+        **image_counters.manifest_fields(),
     }
     (edition_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     shutil.copyfile(edition_dir / "manifest.json", latest_dir / "manifest.json")
+    image_stage_handle.cleanup()
 
     print(f"edition_key={edition_key}")
     print(f"candidate_count={len(candidates)}")
@@ -189,6 +271,7 @@ def main() -> int:
     print("teams_sends=0")
     print("telegram_sends=0")
     print("production_state_writes=0")
+    print(f"image_assets_materialized={image_counters.image_assets_materialized}")
     print("RESULT=D7-AK-6E-R3_REVIEW_CONSOLE_BUILD_PASS")
     return 0
 
