@@ -6,8 +6,12 @@ from __future__ import annotations
 import json
 import os
 import py_compile
+import re
+import shutil
+import subprocess
 import sys
 import tempfile
+from html import unescape
 from datetime import datetime
 from pathlib import Path
 
@@ -39,6 +43,237 @@ class V:
         self.check(name, actual == expected, f"expected={expected!r} actual={actual!r}")
 
 
+def _browser_executable() -> Path | None:
+    candidates = [
+        shutil.which("chromium"),
+        shutil.which("chromium-browser"),
+        shutil.which("google-chrome"),
+        "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe",
+        "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return Path(candidate)
+    return None
+
+
+def _browser_path(path: Path, browser: Path) -> str:
+    if browser.suffix.casefold() != ".exe":
+        return path.resolve().as_uri()
+    windows_path = subprocess.run(
+        ["wslpath", "-w", str(path.resolve())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return "file:///" + windows_path.replace("\\", "/")
+
+
+def _browser_argument_path(path: Path, browser: Path) -> str:
+    if browser.suffix.casefold() != ".exe":
+        return str(path.resolve())
+    return subprocess.run(
+        ["wslpath", "-w", str(path.resolve())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def run_browser_interaction(console_path: Path, profile_dir: Path) -> dict[str, object]:
+    """Exercise real drag/drop and reload behavior in dependency-free headless Chrome."""
+    browser = _browser_executable()
+    if browser is None:
+        return {"browser_available": False, "error": "Chrome/Edge executable not found"}
+    harness = r"""
+<script>
+(async()=>{
+  const results={browser_available:true};
+  const phaseKey=storageKey+":r3v6-browser-phase";
+  const expectedKey=storageKey+":r3v6-browser-expected";
+  const pause=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
+  function dispatchDrag(source,target,clientY){
+    const transfer=new DataTransfer();
+    source.dispatchEvent(new DragEvent("dragstart",{bubbles:true,cancelable:true,dataTransfer:transfer,clientY:clientY||0}));
+    target.dispatchEvent(new DragEvent("dragover",{bubbles:true,cancelable:true,dataTransfer:transfer,clientY:clientY||0}));
+    target.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:transfer,clientY:clientY||0}));
+    source.dispatchEvent(new DragEvent("dragend",{bubbles:true,cancelable:true,dataTransfer:transfer,clientY:clientY||0}));
+  }
+  function domSelected(){
+    return [...document.querySelectorAll(".selected-article-card")].map(card=>card.dataset.selectedId);
+  }
+  function sectorOrder(){
+    return [...document.querySelectorAll(".editorial-sector")].map(section=>section.dataset.sectorCategory);
+  }
+  window.alert=()=>{};
+  if(localStorage.getItem(phaseKey)!=="restore"){
+    const initiallySelected=document.querySelector(".candidate.selected");
+    const removedId=initiallySelected.dataset.id;
+    initiallySelected.querySelector('input[type="checkbox"]').click();
+    const beforeCount=state.selected.length;
+    const candidate=document.querySelector(".candidate:not(.selected)");
+    const candidateId=candidate.dataset.id;
+    const corporateZone=document.querySelector('[data-drop-category="기업동향"]');
+    dispatchDrag(candidate,corporateZone,corporateZone.getBoundingClientRect().bottom-2);
+    results.left_to_right_drag=state.selected.length===beforeCount+1&&state.selected.includes(candidateId);
+    results.left_drop_category=view(candidateId).category==="기업동향"&&!!document.querySelector(`[data-sector-category="기업동향"] [data-selected-id="${candidateId}"]`);
+
+    let movedCard=document.querySelector(`[data-selected-id="${candidateId}"]`);
+    let technologyZone=document.querySelector('[data-drop-category="기술정보"]');
+    dispatchDrag(movedCard,technologyZone,technologyZone.getBoundingClientRect().bottom-2);
+    results.cross_sector_move=view(candidateId).category==="기술정보"&&!!document.querySelector(`[data-sector-category="기술정보"] [data-selected-id="${candidateId}"]`);
+
+    const secondId=state.selected.find(id=>id!==candidateId&&view(id).category!=="기술정보");
+    movedCard=document.querySelector(`[data-selected-id="${secondId}"]`);
+    technologyZone=document.querySelector('[data-drop-category="기술정보"]');
+    dispatchDrag(movedCard,technologyZone,technologyZone.getBoundingClientRect().bottom-2);
+    const technologyCards=[...document.querySelectorAll('[data-sector-category="기술정보"] .selected-article-card')];
+    const beforeOrder=technologyCards.map(card=>card.dataset.selectedId);
+    const reorderSource=technologyCards[1];
+    const reorderTarget=technologyCards[0];
+    const targetBox=reorderTarget.getBoundingClientRect();
+    dispatchDrag(reorderSource,reorderTarget,targetBox.top+1);
+    const afterOrder=[...document.querySelectorAll('[data-sector-category="기술정보"] .selected-article-card')].map(card=>card.dataset.selectedId);
+    results.same_sector_reorder=beforeOrder.join("|")!==afterOrder.join("|")&&afterOrder[0]===beforeOrder[1];
+    results.dom_state_order=domSelected().join("|")===state.selected.join("|");
+    results.review_status_draft=state.reviewStatus==="draft";
+
+    const extraCandidate=[...document.querySelectorAll(".candidate:not(.selected)")].find(card=>card.dataset.id!==removedId);
+    const countAtLimit=state.selected.length;
+    if(extraCandidate){
+      dispatchDrag(extraCandidate,technologyZone,technologyZone.getBoundingClientRect().bottom-2);
+      results.maximum_six=state.selected.length===countAtLimit&&state.selected.length===6&&!state.selected.includes(extraCandidate.dataset.id);
+    }else{
+      results.maximum_six=state.selected.length===6;
+    }
+    const originalLink=document.querySelector(".candidate .original-article-link");
+    const linkStateBefore=state.selected.join("|");
+    originalLink.addEventListener("click",event=>event.preventDefault(),{once:true});
+    originalLink.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));
+    results.left_original_link=/^https?:/.test(originalLink.href)&&originalLink.target==="_blank"&&originalLink.rel.includes("noopener")&&originalLink.rel.includes("noreferrer");
+    results.link_does_not_select=state.selected.join("|")===linkStateBefore&&!dragging;
+    results.sector_order=sectorOrder().join(">")==="투자·산업>기업동향>기술정보";
+    results.exactly_three_sectors=sectorOrder().length===3;
+    results.drop_zones=document.querySelectorAll("[data-drop-category]").length===3;
+    await pause(300);
+    results.images_render=[...document.querySelectorAll("[data-image-frame]")].every(frame=>{
+      const image=frame.querySelector("img");
+      const fallback=frame.querySelector(".image-fallback");
+      return !!(image&&image.naturalWidth>0)||!!(fallback&&!fallback.hidden);
+    });
+    results.no_remote_image_src=![...document.images].some(image=>/^https?:/i.test(image.getAttribute("src")||""));
+    const expected=window.__editorialReviewDebug();
+    expected.dom=domSelected();
+    expected.interaction=results;
+    localStorage.setItem(expectedKey,JSON.stringify(expected));
+    localStorage.setItem(phaseKey,"restore");
+    location.reload();
+    return;
+  }
+  await pause(300);
+  const expected=JSON.parse(localStorage.getItem(expectedKey)||"{}");
+  Object.assign(results,expected.interaction||{});
+  const restored=window.__editorialReviewDebug();
+  results.local_storage_restore=JSON.stringify(restored.selected)===JSON.stringify(expected.selected)&&JSON.stringify(restored.categories)===JSON.stringify(expected.categories);
+  results.restored_dom_order=domSelected().join("|")===restored.selected.join("|")&&domSelected().join("|")===(expected.dom||[]).join("|");
+  results.restored_sector_order=sectorOrder().join(">")==="투자·산업>기업동향>기술정보";
+  results.restored_images=[...document.querySelectorAll("[data-image-frame]")].every(frame=>{
+    const image=frame.querySelector("img");
+    const fallback=frame.querySelector(".image-fallback");
+    return !!(image&&image.naturalWidth>0)||!!(fallback&&!fallback.hidden);
+  });
+  const marker=document.createElement("pre");
+  marker.id="r3v6-browser-result";
+  marker.textContent=JSON.stringify(results);
+  document.body.appendChild(marker);
+  localStorage.removeItem(phaseKey);
+  localStorage.removeItem(expectedKey);
+})().catch(error=>{
+  const marker=document.createElement("pre");
+  marker.id="r3v6-browser-result";
+  marker.textContent=JSON.stringify({browser_available:true,error:String(error),stack:error&&error.stack||""});
+  document.body.appendChild(marker);
+});
+</script>
+"""
+    interaction_path = console_path.with_name("interaction.html")
+    console_source = console_path.read_text(encoding="utf-8")
+    before_body_end, after_body_end = console_source.rsplit("</body>", 1)
+    interaction_path.write_text(
+        before_body_end + harness + "</body>" + after_body_end,
+        encoding="utf-8",
+    )
+    profile_handle = None
+    if browser.suffix.casefold() == ".exe":
+        windows_temp_output = subprocess.run(
+            ["cmd.exe", "/d", "/c", "echo", "%TEMP%"],
+            cwd="/mnt/c",
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        windows_temp = next(
+            line.strip()
+            for line in reversed(windows_temp_output.splitlines())
+            if re.match(r"^[A-Za-z]:\\", line.strip())
+        )
+        wsl_temp = subprocess.run(
+            ["wslpath", "-u", windows_temp],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        profile_handle = tempfile.TemporaryDirectory(
+            prefix="hdec-r3v6-browser-",
+            dir=wsl_temp,
+        )
+        active_profile = Path(profile_handle.name)
+    else:
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        active_profile = profile_dir
+    try:
+        command = [
+            str(browser),
+            "--headless=new",
+            "--disable-gpu",
+            "--disable-background-networking",
+            "--disable-component-update",
+            "--disable-default-apps",
+            "--disable-sync",
+            "--metrics-recording-only",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--allow-file-access-from-files",
+            "--virtual-time-budget=8000",
+            f"--user-data-dir={_browser_argument_path(active_profile, browser)}",
+            "--dump-dom",
+            _browser_path(interaction_path, browser),
+        ]
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=45,
+            check=False,
+        )
+    finally:
+        if profile_handle is not None:
+            profile_handle.cleanup()
+    match = re.search(
+        r'<pre id="r3v6-browser-result">([^<]+)</pre>',
+        completed.stdout,
+    )
+    if completed.returncode != 0 or not match:
+        return {
+            "browser_available": True,
+            "error": (
+                f"returncode={completed.returncode} "
+                f"stderr={completed.stderr[-800:]!r}"
+            ),
+        }
+    return json.loads(unescape(match.group(1)))
+
+
 def main() -> int:
     v = V()
     for rel in (
@@ -64,6 +299,11 @@ def main() -> int:
         "투자·산업",
     )
     v.equal(
+        "category normalize legacy value signal",
+        editorial_review.normalize_category("정책"),
+        "투자·산업",
+    )
+    v.equal(
         "category normalize corporate",
         editorial_review.normalize_category("", "기업 AI 도입"),
         "기업동향",
@@ -72,6 +312,56 @@ def main() -> int:
         "category fallback technology",
         editorial_review.normalize_category("", "새 추론 모델 공개"),
         "기술정보",
+    )
+    analysis = editorial_review.analyze_editorial_category(
+        "AI 로봇 모델 공개",
+        "투자 확대 계획",
+        source="검증매체",
+        suggested_category="기업동향",
+    )
+    v.check(
+        "AI category analysis returns scores and reason",
+        analysis["category"] == "기술정보"
+        and set(analysis["scores"]) == set(editorial_review.CATEGORY_ORDER)
+        and isinstance(analysis["matched_signals"], dict)
+        and bool(analysis["reason"]),
+    )
+    v.check(
+        "title signal outweighs summary signal",
+        analysis["scores"]["기술정보"] > analysis["scores"]["투자·산업"],
+    )
+    v.equal(
+        "AI no-signal fallback is technology",
+        editorial_review.analyze_editorial_category("", "")["category"],
+        "기술정보",
+    )
+    v.equal(
+        "AI no-signal fallback outweighs weak prior",
+        editorial_review.analyze_editorial_category(
+            "",
+            "",
+            suggested_category="투자·산업",
+        )["category"],
+        "기술정보",
+    )
+    v.equal(
+        "AI deterministic tie break",
+        editorial_review.analyze_editorial_category("투자 기업", "")["category"],
+        "투자·산업",
+    )
+    v.equal(
+        "suggested category is weak prior",
+        editorial_review.analyze_editorial_category(
+            "기업 경영 발표",
+            "",
+            suggested_category="투자·산업",
+        )["category"],
+        "기업동향",
+    )
+    v.equal(
+        "longer corporate signal beats embedded acquisition token",
+        editorial_review.analyze_editorial_category("인수합병 발표", "")["category"],
+        "기업동향",
     )
 
     rich = editorial_briefings.sanitize_editorial_inline_html(
@@ -103,6 +393,14 @@ def main() -> int:
         editorial_review.article_to_candidate(article, ai_rank=index)
         for index, article in enumerate(articles, 1)
     ]
+    v.check(
+        "candidate JSON model includes category analysis",
+        all(
+            item.get("category_analysis", {}).get("category") == item["category"]
+            and bool(item["category_analysis"].get("reason"))
+            for item in candidates
+        ),
+    )
     candidates.sort(
         key=lambda item: (
             editorial_review.category_rank(item["category"]),
@@ -182,6 +480,7 @@ def main() -> int:
             "https://example.org/manual-ai-investment",
         )
         v.equal("manual link kind", selected[1].collection_source_kind, "human_link")
+        v.equal("manual category remains explicit", selected[1].category, "기업동향")
 
         edition = editorial_briefings.render_daily(
             selected,
@@ -286,6 +585,203 @@ def main() -> int:
         "editorial_feedback.collection_queries(profile)" in builder_source
         and "live_collector.fetch_all(sources_path=sources)" in builder_source,
     )
+    v.check(
+        "candidate card is draggable",
+        'class="candidate ${selected?"selected":""}" draggable="true"' in template
+        and 'event.dataTransfer.setData(kind==="candidate"?"candidate_id"' in template,
+    )
+    v.check(
+        "candidate card contains safe original links",
+        "original-article-link" in template
+        and "원문 열기 ↗" in template
+        and "safeUrl(candidate.selected_url)" in template,
+    )
+    v.check(
+        "left original links use target and rel security",
+        'target="_blank" rel="noopener noreferrer"' in template,
+    )
+    v.check(
+        "selected article card is draggable",
+        'class="article-card selected-article-card" draggable="true"' in template,
+    )
+    v.check(
+        "sector card drop controls category and order",
+        "moveArticle(payload.id,card.dataset.selectedCategory,id,after)" in template,
+    )
+    v.check(
+        "sector empty drop appends article",
+        "moveArticle(payload.id,zone.dataset.dropCategory)" in template,
+    )
+    v.check(
+        "maximum six remains enforced",
+        "const MAX_SELECTED=6" in template
+        and "state.selected.length>=MAX_SELECTED" in template,
+    )
+    v.check(
+        "fixed sector empty guidance present",
+        "왼쪽 기사를 이 섹터로 드래그하세요" in template
+        and "data-drop-category" in template,
+    )
+    v.check(
+        "order chips removed in favor of article cards",
+        'id="orderList"' not in template and "order-chip" not in template,
+    )
+    v.check(
+        "image rendering is local and escaped",
+        "safeImageUrl(candidate.image_url)" in template
+        and 'src="${esc(imageUrl)}"' in template,
+    )
+    v.check(
+        "image lazy decode and fallback control exist",
+        'loading="lazy" decoding="async"' in template
+        and "bindImageFallbacks" in template
+        and "image-fallback" in template,
+    )
+    v.check(
+        "localStorage restoration remains present",
+        "localStorage.getItem(storageKey)" in template
+        and "localStorage.setItem(storageKey" in template,
+    )
+    v.check(
+        "live image materialization uses temporary local root",
+        "editorial_briefings.materialize_preview_images(" in builder_source
+        and 'dir="/tmp"' in builder_source
+        and "html_dir=image_stage" in builder_source,
+    )
+
+    with tempfile.TemporaryDirectory(prefix="editorial-r3-v6-build-") as build_tmp:
+        output_root = Path(build_tmp) / "review"
+        build_environment = os.environ.copy()
+        build_environment["TEAMS_AI_NEWS_WATCH"] = "0"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "build_editorial_review_console.py"),
+                "--fixture",
+                "--run-at",
+                "2026-07-31T07:20:00+09:00",
+                "--output-root",
+                str(output_root),
+            ],
+            cwd=ROOT,
+            env=build_environment,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        v.check(
+            "fixture console builds successfully",
+            completed.returncode == 0,
+            completed.stderr[-1000:],
+        )
+        edition_dir = output_root / "2026-07-31"
+        latest_dir = output_root / "latest"
+        fixture_bundle = json.loads(
+            (edition_dir / "candidates.json").read_text(encoding="utf-8")
+        )
+        fixture_manifest = json.loads(
+            (edition_dir / "manifest.json").read_text(encoding="utf-8")
+        )
+        latest_manifest = json.loads(
+            (latest_dir / "manifest.json").read_text(encoding="utf-8")
+        )
+        v.check(
+            "fixture mode performs zero image network calls",
+            fixture_bundle["collection_audit"]["network_calls"] == 0
+            and fixture_manifest["image_network_calls"] == 0
+            and fixture_manifest["image_download_attempts"] == 0,
+        )
+        v.check(
+            "candidate JSON contains category analysis",
+            fixture_bundle["candidates"]
+            and all(
+                set(candidate["category_analysis"]) >= {
+                    "category", "scores", "matched_signals", "reason",
+                }
+                for candidate in fixture_bundle["candidates"]
+            ),
+        )
+        v.check(
+            "candidate image paths are local",
+            all(
+                re.fullmatch(
+                    r"assets/images/[A-Za-z0-9._-]+",
+                    candidate.get("image_url", ""),
+                )
+                for candidate in fixture_bundle["candidates"]
+            ),
+        )
+        fixture_assets = [
+            edition_dir / candidate["image_url"]
+            for candidate in fixture_bundle["candidates"]
+        ]
+        latest_assets = [
+            latest_dir / candidate["image_url"]
+            for candidate in fixture_bundle["candidates"]
+        ]
+        v.check(
+            "fixture image asset exists",
+            bool(fixture_assets)
+            and all(path.is_file() and path.stat().st_size > 0 for path in fixture_assets),
+        )
+        v.check(
+            "latest image assets exist",
+            all(path.is_file() and path.stat().st_size > 0 for path in latest_assets),
+        )
+        daily_articles, _ = editorial_review.choose_daily_articles(
+            fixture_bundle,
+            None,
+        )
+        v.check(
+            "Daily renderer path rebases to review image asset",
+            all(
+                article.image_url.startswith(
+                    "../review/2026-07-31/assets/images/"
+                )
+                and (
+                    output_root.parent
+                    / "daily"
+                    / article.image_url
+                ).resolve().is_file()
+                for article in daily_articles
+            ),
+        )
+        v.check(
+            "image counters copied to latest manifest",
+            fixture_manifest["image_assets_materialized"] == 1
+            and latest_manifest["image_assets_materialized"] == 1,
+        )
+        browser_results = run_browser_interaction(
+            latest_dir / "index.html",
+            Path(build_tmp) / "browser-profile",
+        )
+        v.check(
+            "headless browser available",
+            browser_results.get("browser_available") is True,
+            str(browser_results),
+        )
+        for key, label in (
+            ("left_to_right_drag", "left unselected candidate drag selects article"),
+            ("left_drop_category", "left candidate appears in corporate sector"),
+            ("cross_sector_move", "cross-sector drop changes category"),
+            ("same_sector_reorder", "same-sector card drop changes order"),
+            ("dom_state_order", "DOM order equals state.selected order"),
+            ("maximum_six", "browser drag preserves maximum six"),
+            ("left_original_link", "browser original link is safe"),
+            ("link_does_not_select", "link click does not alter selection or drag"),
+            ("sector_order", "browser sector order is fixed"),
+            ("exactly_three_sectors", "browser renders exactly three sectors"),
+            ("drop_zones", "browser renders three drop zones"),
+            ("images_render", "fixture images load or show fallback"),
+            ("no_remote_image_src", "rendered DOM has no remote image src"),
+            ("review_status_draft", "drag returns review status to draft"),
+            ("local_storage_restore", "reload restores selection and categories"),
+            ("restored_dom_order", "reload restores selected DOM order"),
+            ("restored_sector_order", "reload preserves fixed sector order"),
+            ("restored_images", "reload preserves image or fallback rendering"),
+        ):
+            v.check(label, browser_results.get(key) is True, str(browser_results))
 
     workflow = (
         ROOT / ".github/workflows/editorial-review-console.yml"
@@ -320,10 +816,11 @@ def main() -> int:
     print("teams_sends=0")
     print("telegram_sends=0")
     print("production_state_writes=0")
+    print(f"R3_V6_VERIFIER={v.checks}/{v.failures}")
     if v.failures:
-        print("RESULT=D7-AK-6E-R3_EDITORIAL_REVIEW_CONSOLE_FAIL")
+        print("RESULT=D7-AK-6E-R3-V6_EDITORIAL_REVIEW_CONSOLE_FAIL")
         return 1
-    print("RESULT=D7-AK-6E-R3_EDITORIAL_REVIEW_CONSOLE_PASS")
+    print("RESULT=D7-AK-6E-R3-V6_EDITORIAL_REVIEW_CONSOLE_PASS")
     return 0
 
 

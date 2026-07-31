@@ -11,16 +11,54 @@ The report ticker taxonomy and default top-to-bottom order are fixed to:
 2. 기업동향
 3. 기술정보
 
-The right pane contains a live Daily Brief preview. Titles and summaries are
-editable in place. Summary text supports a safe bold command; approved rich text
-is sanitized to `strong` and `br` only before the production renderer consumes
-it. The reviewer may drag articles into another order, restore the AI selection,
-restore the category order, download standalone HTML, export feedback JSONL,
-and export an approved review JSON.
+The right pane contains a live Daily Brief preview with three permanent sector
+drop zones in the taxonomy order above. Every selected article remains inside
+its sector; there is no category-external hero. A reviewer can drag any left-side
+candidate directly into a sector, drag a selected article to an exact position
+within a sector, or move it across sectors. Each operation immediately persists
+the selected order and human category override to localStorage and returns the
+review status to draft. The maximum remains six, and checkbox selection remains
+the keyboard-accessible equivalent.
+
+Titles and summaries are editable in place. Summary text supports a safe bold
+command; approved rich text is sanitized to `strong` and `br` only before the
+production renderer consumes it. Candidate titles and explicit original-article
+links use only sanitized HTTP(S) destinations with new-tab isolation. The
+reviewer may restore the AI selection, restore the category order, download
+standalone HTML, export feedback JSONL, and export an approved review JSON.
+
+## R3-V6 deterministic category analysis
+
+`analyze_editorial_category` scores title, summary, and source signals for
+투자·산업, 기업동향, and 기술정보. Title matches have the strongest weight,
+summary matches have a smaller weight, source matches are supplemental, and an
+existing suggested category contributes only a weak prior. The fixed taxonomy
+order resolves non-empty ties; a completely signal-free item defaults to
+기술정보. Candidate JSON stores the score map, matched signals, and a readable
+reason. A category explicitly chosen for a human link or changed by a reviewer
+remains authoritative downstream.
+
+## R3-V6 local preview images
+
+Live console builds pass normalized articles through the existing
+`materialize_preview_images` safety boundary in a child of `/tmp`. Only bytes
+that pass its download, MIME, magic-byte, and quality checks are copied into:
+
+- `docs/editorial/review/<edition>/assets/images/`
+- `docs/editorial/review/latest/assets/images/`
+
+Candidate image URLs are relative `assets/images/...` paths, so the console
+never renders a remote image URL. Fixture builds make no image request and use a
+deterministic local SVG. Every image is lazy-decoded and has an explicit
+load-error fallback. Image materialization counters are retained in both
+manifests. When the unchanged Daily publisher consumes the dated candidate
+bundle, the review contract rebases that same local asset to
+`../review/<edition>/assets/images/...`; the production Daily template therefore
+does not need to change or fetch the original remote image.
 
 The visual language follows the supplied AI 경영 T&I Weekly Brief and the existing
-Daily template: navy masthead, 680px executive reading column, headline hero,
-Editor's Summary, category tickers, image cards, and compact source metadata.
+Daily template: navy masthead, a compact executive reading column, fixed category
+headings and tickers, image cards, and compact source metadata.
 
 Human-link learning is explainable and bounded. Exported feedback learns source,
 category, URL domain, and title-keyword adjustments. A manually supplied and
