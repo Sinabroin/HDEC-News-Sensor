@@ -53,7 +53,7 @@ EXPECTED_PROTECTED_SHA256 = {
         "2d2d3d7cbfaae111356e22bb8f4090aaf91db14b1c612623874ef8e9aa0bcff0"
     ),
     ".github/workflows/editorial-review-console.yml": (
-        "f0f6a7e2067f7066d5d2dc7752cb0e4f2a48008ac0dc6ab3e241cb5a485f785c"
+        "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"
     ),
     ".github/workflows/editorial-weekly-ti.yml": (
         "f214f797271ffbfc54ea76da9f3da71ea4aa77a7846f130b90b0eb8546353ea4"

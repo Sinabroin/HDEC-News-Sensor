@@ -1,6 +1,7 @@
 name: Editorial Review Console
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "20 22 * * *"
 
