@@ -126,12 +126,7 @@ jobs:
               --brief-json "$BRIEF_JSON" \
               --output docs/daily/operator-latest.html \
               --audience operator
-            python3 scripts/build_static_dashboard.py \
-              --brief-json "$BRIEF_JSON" \
-              --market-mode live \
-              --output docs/daily/dashboard-latest.html \
-              --operator-api-base "$OPERATOR_API_BASE" \
-              --weather-mode live
+            python3 scripts/build_static_dashboard.py --brief-json "$BRIEF_JSON" --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
             # R4 독립 News Censor — 기존 페이지 내비게이션을 수정하지 않고 dated/latest 두
             # 산출물을 동일 렌더에서 생성한다. live가 아니면 builder가 쓰기 전에 fail-closed.
             TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \

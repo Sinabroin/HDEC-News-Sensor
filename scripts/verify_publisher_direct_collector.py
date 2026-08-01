@@ -62,14 +62,16 @@ EXPECTED_PROTECTED_SHA256 = {
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
-        # R4-R1 intentionally replaces the exact main baseline
-        # 65dc2a9d... with one collected brief artifact reused by every static
-        # consumer; both sender defaults remain closed during deployment.
-        "9fa1930be09568a571fc40335eeadcae83e9cf152b0431847e4e404d17cb42f3"
+        # R4-R1 intentionally replaces exact main baseline
+        # 65dc2a9d6ea31a5d0495d30a27a015f7d74d50a1386ce995ce853a265024b5ec
+        # with one collected brief artifact reused by every static consumer;
+        # both sender defaults remain closed during deployment.
+        "c426e16ec876b3df18d174a06794ec5e261bef2a23b242bcda1c92c2c5a8a1f2"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
-        # R4-R1 intentionally replaces exact main baseline f0a9bd17... so
-        # Teams reuses and validates the same collected artifact before delta.
+        # R4-R1 intentionally replaces exact main baseline
+        # f0a9bd171bd5dc1a29a357c0f8394c4ae7957d1f34ba23a94d2c5c0d30667df0
+        # so Teams reuses and validates the same collected artifact before delta.
         "e275b1b2a57b7f28c97b7ccce98c5890eb62777cace5fc5ff1a0561cbb606406"
     ),
     ".github/workflows/telegram-notify.yml": (
