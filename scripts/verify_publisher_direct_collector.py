@@ -62,7 +62,9 @@ EXPECTED_PROTECTED_SHA256 = {
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
-        "c3302b964c001038d3bc2143c2a7f39044c02dda1f16974b1f7941e60ed19df0"
+        # R4 adds only the standalone News Censor verify/build/publish scope and
+        # keeps both sender defaults closed during deployment verification.
+        "65dc2a9d6ea31a5d0495d30a27a015f7d74d50a1386ce995ce853a265024b5ec"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         "f0a9bd171bd5dc1a29a357c0f8394c4ae7957d1f34ba23a94d2c5c0d30667df0"
@@ -74,7 +76,8 @@ EXPECTED_PROTECTED_SHA256 = {
         "936b497c51200f8d90994de4f607bbc1570bbaefbb3b443ad7844a50758476fe"
     ),
     "data/editorial_daily_state.json": (
-        "3c79cdcfdeaa16040a41a1e008e1bf7ca6f54510eebc5d212dde715fde7df285"
+        # Sealed main state after the 2026-08-01 Daily delivery commits.
+        "4c1588ddde8b177191f9bd1e9ff7b2d52b56cae3b9f233012abb005ca0fb3d90"
     ),
     "data/teams_push_state.json": (
         "3032d829262085164cc159d902701b65526c58bec34b52531abd9ed78bbdca3a"

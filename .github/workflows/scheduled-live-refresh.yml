@@ -27,6 +27,10 @@ concurrency:
 env:
   # 검증/기본은 항상 mock 안전 모드 (네트워크/비밀값 0건). live 수집은 게시/발송 step에서만 명시 활성화.
   APP_MODE: mock
+  # D7-AK-6E R4 배포 검증 중 sender 기본값은 명시적으로 닫는다. Telegram 발송 step은
+  # 아래의 기존 이중 opt-in 조건과 step-local vars 값이 있을 때만 별도로 열린다.
+  TEAMS_AI_NEWS_WATCH: "0"
+  TELEGRAM_AUTO_SEND: "0"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -44,7 +48,8 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 -m py_compile scripts/build_news_censor.py scripts/verify_news_censor.py scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 scripts/verify_news_censor.py
           python3 scripts/verify_teams_ai_push.py
           python3 scripts/verify_teams_push_state.py
           python3 scripts/verify_teams_ai_push_dry_run.py
@@ -105,8 +110,14 @@ jobs:
             # 공개 latest.html은 항상 executive 뷰 (operator 기본값 유출 방지, P0-D3R).
             python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
             python3 scripts/build_static_dashboard.py --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
+            # R4 독립 News Censor — 기존 페이지 내비게이션을 수정하지 않고 dated/latest 두
+            # 산출물을 동일 렌더에서 생성한다. live가 아니면 builder가 쓰기 전에 fail-closed.
+            TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
+              python3 scripts/build_news_censor.py \
+                --output-root docs/news-censor \
+                --require-live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · published executive report + operator snapshot + dashboard"
+            echo "NEWS_MODE=live · published executive report + operator snapshot + dashboard + standalone News Censor"
           else
             echo "live_ok=false" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · live collection failed/empty — NOT publishing as live"
@@ -144,6 +155,7 @@ jobs:
             docs/daily/latest.html
             docs/daily/operator-latest.html
             docs/daily/dashboard-latest.html
+            docs/news-censor
           )
 
           if git diff --quiet -- "${DOCS[@]}"; then
