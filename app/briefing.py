@@ -2285,7 +2285,13 @@ def build_brief(pipeline_counts: dict | None = None,
 
     # 뉴스 출처 모드는 저장된 기사 signal_origin에서 파생한다 (DB가 단일 진실).
     # provenance가 주어지면 fallback 여부 등 런타임 상태를 추가로 반영한다.
+    collection_status = str(prov.get("collection_status") or "")
     news_mode = _derive_news_mode(rows)
+    # A successful live collection may truthfully yield no delivery-eligible
+    # publisher article. With no DB rows there is no signal_origin from which to
+    # derive mode, so the explicit collector-health contract is the authority.
+    if collection_status == "LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES":
+        news_mode = "live"
     news_fallback_used = bool(prov.get("fallback_used"))
     news_source = prov.get("news_source") or (
         "live_rss" if news_mode == "live" else "mock")
@@ -2320,6 +2326,16 @@ def build_brief(pipeline_counts: dict | None = None,
         # D7-AD-X — provider provenance(표시/감사 전용). 대시보드가 news_provider_summary를,
         # 감사가 provider별 status/raw/dedup 카운트를 여기서 읽는다 (비밀값 0건).
         "news_provider_status": news_provider_status,
+        "collection_status": collection_status,
+        "collection_failure_category": str(
+            prov.get("collection_failure_category") or ""
+        ),
+        "collector_health": dict(prov.get("collector_health") or {}),
+        "collector_request_count": int(prov.get("collector_request_count") or 0),
+        "collector_source_count": int(prov.get("collector_source_count") or 0),
+        "collector_successful_source_count": int(
+            prov.get("collector_successful_source_count") or 0
+        ),
         "publisher_direct_delivery": {
             "eligible_count": len(rows),
             "quarantine_count": publisher_quarantine_count,

@@ -39,7 +39,10 @@ for _p in (ROOT, SCRIPTS_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
+from build_executive_brief import (  # noqa: E402
+    build_brief_via_mock_pipeline,
+    load_brief_json,
+)
 # 중앙 렌즈 쿼리 정책(단일 소스) — leaf는 app.config/DB/네트워크를 건드리지 않아 bootstrap
 # 전에 import해도 안전하다(config의 DB_PATH 캐시 트랩 회피). 정책=대시보드+수집기 공유.
 from app import ai_value_chain, deal_watch, lens_queries, news_access, topic_profiles  # noqa: E402
@@ -2524,8 +2527,12 @@ def _inject_model(html: str, parts: dict, news_mode: str, market_mode: str = "mo
     # 명일 정오 시공 리스크(D7-AE) — weather_risk leaf가 모드/네트워크/실패 판정을 소유한다.
     # mock=unavailable(값 0건), live=Open-Meteo 실측 또는 '기상 데이터 미수신'. 빌더는 env를
     # 읽지 않고 CLI(--weather-mode)로만 받는다. now=brief.generated_at으로 D+1 판정 결정화.
-    model.update(weather_risk.snapshot_for_model(
-        mode=weather_mode, now=(brief or {}).get("generated_at")))
+    artifact_weather = (brief or {}).get("weather_snapshot") or {}
+    if artifact_weather:
+        model.update(dict(artifact_weather))
+    else:
+        model.update(weather_risk.snapshot_for_model(
+            mode=weather_mode, now=(brief or {}).get("generated_at")))
     model["news_rows"] = parts["news_rows"]
     model["ai_rows"] = parts["ai_rows"]
     # D7-AG-1 — Deal Watch 독립 섹션 제거. deal_watch_rows(및 generic 시사점 문구)를 공개
@@ -2870,9 +2877,22 @@ def main(argv: list[str] | None = None) -> int:
                         help="운영자 버튼이 호출할 공개 Operator API base URL(비밀값 아님). "
                              "미지정(기본)이면 실행 버튼과 Operator API 미연결 상태를 표시한다. "
                              "빌더는 env를 직접 읽지 않고 이 CLI로만 받는다.")
+    parser.add_argument(
+        "--brief-json",
+        type=Path,
+        help="reuse an already collected HDEC_VALIDATED_EXECUTIVE_BRIEF_V1 artifact",
+    )
     args = parser.parse_args(argv)
 
-    brief = build_brief_via_mock_pipeline()
+    try:
+        brief = (
+            load_brief_json(args.brief_json.resolve())
+            if args.brief_json
+            else build_brief_via_mock_pipeline()
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"ERROR: executive brief input rejected: {exc}", file=sys.stderr)
+        return 2
     # D7-AE-RC2 — market/weather는 --live인데 뉴스는 (NEWS_MODE=live를 안 잊고 켜지 않아)
     # mock으로 수집됐는지 확인한다. RC1의 마지막 수동 rebuild가 정확히 이 조합으로
     # news_data_mode를 조용히 mock으로 되돌렸다(공개 헤더가 실제 상태와 모순되는 결과가

@@ -847,6 +847,7 @@ def check_workflow() -> None:
     teams_if = _step_if(watch, TEAMS_STEP)
     teams_block = _step_block(watch, TEAMS_STEP)
     persist_block = _step_block(watch, PERSIST_STEP)
+    build_block = _step_block(watch, "Build live news metadata (temp only)")
 
     check("watch Teams sender step exists", bool(teams_if) and bool(teams_block))
     check("watch state persistence step exists", bool(persist_block))
@@ -945,7 +946,12 @@ def check_workflow() -> None:
     # Lightweight — live news metadata to a temp file only; no full dashboard/Pages republish,
     # no docs/daily writes. The committed dashboard is read as the delta 'before' baseline.
     check("watch builds live news metadata to a temp file, not docs/daily",
-          'build_static_dashboard.py --output "$RUNNER_TEMP/dashboard-now.html"' in watch)
+          bool(build_block)
+          and "build_static_dashboard.py" in build_block
+          and '--output "$RUNNER_TEMP/dashboard-now.html"' in build_block
+          and 'BRIEF_JSON="$RUNNER_TEMP/validated-live-brief.json"' in build_block
+          and '--output-json "$BRIEF_JSON"' in build_block
+          and "--output docs/daily" not in build_block)
     for heavy in ("docs/daily/latest.html", "docs/daily/operator-latest.html",
                   "python3 scripts/build_static_report.py", "actions/upload-pages",
                   "Publish to Pages"):

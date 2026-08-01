@@ -69,8 +69,8 @@ jobs:
 
       # 2) 라이브 뉴스 메타데이터만 임시 파일로 생성한다(공개 docs/daily·Pages 미변경·미게시).
       #    시장/기상은 기본 mock으로 두어 라이브 실측을 건너뛴다(뉴스 delta에는 불필요) — 경량 유지.
-      #    build_static_dashboard.py는 NEWS_MODE=live일 때 공개 RSS/Naver로 실뉴스를 수집한다
-      #    (build_static_report.py와 동일 collector·classifier 재사용). live 수집 실패면 fail-closed.
+      #    build_executive_brief.py가 공개 RSS/Naver 수집을 정확히 한 번 수행하고, 명시적 health
+      #    gate를 통과한 artifact를 dashboard가 재사용한다. live 수집 실패면 fail-closed.
       - name: Build live news metadata (temp only)
         id: build
         env:
@@ -81,14 +81,22 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
         run: |
-          OUT="$(python3 scripts/build_static_dashboard.py --output "$RUNNER_TEMP/dashboard-now.html")"
-          echo "$OUT"
-          if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
+          BRIEF_JSON="$RUNNER_TEMP/validated-live-brief.json"
+          python3 scripts/build_executive_brief.py --output-json "$BRIEF_JSON"
+          if VALIDATION="$(python3 scripts/build_news_censor.py \
+            --brief-json "$BRIEF_JSON" \
+            --require-live \
+            --json 2>&1)"; then
+            echo "$VALIDATION"
+            python3 scripts/build_static_dashboard.py \
+              --brief-json "$BRIEF_JSON" \
+              --output "$RUNNER_TEMP/dashboard-now.html"
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · built live news metadata (temp, not published)"
+            echo "NEWS_MODE=live · validated shared artifact built live news metadata (temp, not published)"
           else
+            echo "$VALIDATION"
             echo "live_ok=false" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · live collection failed/empty — fail-closed, no send"
+            echo "NEWS_MODE=live · collector failure/fallback/indeterminate — fail-closed, no send"
           fi
 
       # 3) 마지막으로 공개된 대시보드(committed docs/daily) 대비 신규·변경 기사 delta artifact만 만든다.
