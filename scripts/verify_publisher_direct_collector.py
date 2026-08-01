@@ -62,12 +62,17 @@ EXPECTED_PROTECTED_SHA256 = {
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
-        # R4 adds only the standalone News Censor verify/build/publish scope and
-        # keeps both sender defaults closed during deployment verification.
-        "65dc2a9d6ea31a5d0495d30a27a015f7d74d50a1386ce995ce853a265024b5ec"
+        # R4-R1 intentionally replaces exact main baseline
+        # 65dc2a9d6ea31a5d0495d30a27a015f7d74d50a1386ce995ce853a265024b5ec
+        # with one collected brief artifact reused by every static consumer;
+        # both sender defaults remain closed during deployment.
+        "c426e16ec876b3df18d174a06794ec5e261bef2a23b242bcda1c92c2c5a8a1f2"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
-        "f0a9bd171bd5dc1a29a357c0f8394c4ae7957d1f34ba23a94d2c5c0d30667df0"
+        # R4-R1 intentionally replaces exact main baseline
+        # f0a9bd171bd5dc1a29a357c0f8394c4ae7957d1f34ba23a94d2c5c0d30667df0
+        # so Teams reuses and validates the same collected artifact before delta.
+        "e275b1b2a57b7f28c97b7ccce98c5890eb62777cace5fc5ff1a0561cbb606406"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"
@@ -810,16 +815,39 @@ def main() -> int:
             return 1
 
         try:
-            live_collector.fetch_publisher_direct_sources = lambda: copy.deepcopy(
-                direct_rows[:1]
-            )
-            live_collector.fetch_all = lambda **_kwargs: [
-                fixture_row(
-                    daum_missing,
-                    provider="google_news_rss",
-                    title="포털 원문 미해소 AI 기사",
-                )
-            ]
+            def fixture_direct_sources(**kwargs):
+                audit = kwargs.get("source_audit")
+                if audit is not None:
+                    audit.append({
+                        "provider": "publisher_direct_rss",
+                        "source_id": "fixture",
+                        "status": "ok",
+                        "fetched_count": 1,
+                    })
+                return copy.deepcopy(direct_rows[:1])
+
+            def fixture_google_sources(**kwargs):
+                audit = kwargs.get("query_audit")
+                if audit is not None:
+                    audit.append({
+                        "provider": "google_news_rss",
+                        "group": "fixture",
+                        "query": "fixture",
+                        "status": "ok",
+                        "fetched_count": 1,
+                        "added_count": 1,
+                        "pass": "main",
+                    })
+                return [
+                    fixture_row(
+                        daum_missing,
+                        provider="google_news_rss",
+                        title="포털 원문 미해소 AI 기사",
+                    )
+                ]
+
+            live_collector.fetch_publisher_direct_sources = fixture_direct_sources
+            live_collector.fetch_all = fixture_google_sources
             live_collector.resolve_publisher_urls = fixture_strict_resolve
             naver_news_provider.fetch = lambda **_kwargs: {
                 "provider": "naver_news_api",
@@ -869,6 +897,139 @@ def main() -> int:
         ))
         check("production collector final portal URL counter is zero", (
             production_result["external_delivery_portal_urls"] == 0
+        ))
+        check("production collector reports healthy-with-articles explicitly", (
+            production_result["collection_status"]
+            == collector.LIVE_HEALTHY_WITH_ARTICLES
+            and production_result["collector_health"]["status"]
+            == collector.LIVE_HEALTHY_WITH_ARTICLES
+            and production_result["collector_successful_source_count"] == 2
+        ))
+
+        saved_health_leaves = (
+            live_collector.fetch_publisher_direct_sources,
+            live_collector.fetch_all,
+            live_collector.resolve_publisher_urls,
+            naver_news_provider.fetch,
+            thebell_watch.extract_candidates,
+            collector._ingest,  # noqa: SLF001
+        )
+
+        def empty_direct_healthy(**kwargs):
+            audit = kwargs.get("source_audit")
+            if audit is not None:
+                audit.append({
+                    "provider": "publisher_direct_rss",
+                    "source_id": "fixture",
+                    "status": "empty",
+                    "fetched_count": 0,
+                })
+            return []
+
+        def one_google_healthy(**kwargs):
+            audit = kwargs.get("query_audit")
+            if audit is not None:
+                audit.append({
+                    "provider": "google_news_rss",
+                    "group": "fixture",
+                    "query": "fixture",
+                    "status": "ok",
+                    "fetched_count": 1,
+                    "added_count": 1,
+                    "pass": "main",
+                })
+            return [fixture_row(
+                daum_missing,
+                provider="google_news_rss",
+                title="검증 원문 없는 정상 수집 후보",
+            )]
+
+        def quarantine_all(rows, *_args, **_kwargs):
+            for index, row in enumerate(list(rows)):
+                rows[index] = publisher_direct.quarantine_article(
+                    row,
+                    "fixture_original_not_found",
+                )
+            return 0
+
+        try:
+            live_collector.fetch_publisher_direct_sources = empty_direct_healthy
+            live_collector.fetch_all = one_google_healthy
+            live_collector.resolve_publisher_urls = quarantine_all
+            naver_news_provider.fetch = lambda **_kwargs: {
+                "provider": "naver_news_api",
+                "status": "disabled",
+                "articles": [],
+                "queries_attempted": 0,
+                "queries_ok": 0,
+                "credentials_present": False,
+            }
+            thebell_watch.extract_candidates = lambda _rows: []
+            collector._ingest = (  # noqa: SLF001
+                lambda rows, _origin: (len(rows), len(rows), len(rows))
+            )
+            healthy_zero_result = collector._run_live()  # noqa: SLF001
+
+            def failed_direct(**kwargs):
+                audit = kwargs.get("source_audit")
+                if audit is not None:
+                    audit.append({
+                        "provider": "publisher_direct_rss",
+                        "source_id": "fixture",
+                        "status": "error",
+                        "fetched_count": 0,
+                    })
+                return []
+
+            def failed_google(**kwargs):
+                audit = kwargs.get("query_audit")
+                if audit is not None:
+                    audit.append({
+                        "provider": "google_news_rss",
+                        "group": "fixture",
+                        "query": "fixture",
+                        "status": "error",
+                        "fetched_count": 0,
+                        "added_count": 0,
+                        "pass": "main",
+                    })
+                return []
+
+            live_collector.fetch_publisher_direct_sources = failed_direct
+            live_collector.fetch_all = failed_google
+            naver_news_provider.fetch = lambda **_kwargs: {
+                "provider": "naver_news_api",
+                "status": "error",
+                "articles": [],
+                "queries_attempted": 1,
+                "queries_ok": 0,
+                "credentials_present": True,
+            }
+            failed_result = collector._run_live()  # noqa: SLF001
+        finally:
+            (
+                live_collector.fetch_publisher_direct_sources,
+                live_collector.fetch_all,
+                live_collector.resolve_publisher_urls,
+                naver_news_provider.fetch,
+                thebell_watch.extract_candidates,
+                collector._ingest,  # noqa: SLF001
+            ) = saved_health_leaves
+
+        check("healthy zero remains live and never falls back to fixture", (
+            healthy_zero_result["collection_status"]
+            == collector.LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES
+            and healthy_zero_result["news_data_mode"] == "live"
+            and healthy_zero_result["fallback_used"] is False
+            and healthy_zero_result["publisher_direct_eligible_count"] == 0
+        ))
+        check("all-source failure is explicit fallback rejection", (
+            failed_result["collection_status"] == collector.LIVE_FALLBACK_REJECTED
+            and failed_result["news_data_mode"] == "mock"
+            and failed_result["fallback_used"] is True
+            and failed_result["collector_successful_source_count"] == 0
+            and failed_result["collection_failure_category"]
+            == "all_live_sources_failed"
         ))
         failed_same_publisher = publisher_direct.quarantine_article(
             resolved_daum[0],

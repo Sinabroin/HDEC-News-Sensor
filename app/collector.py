@@ -25,6 +25,11 @@ ALLOWED_METADATA_KEYS = (
     "published_at_fallback_reason", "source_kind", "trust_tier",
 )
 
+LIVE_HEALTHY_WITH_ARTICLES = "LIVE_HEALTHY_WITH_ARTICLES"
+LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES = "LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES"
+LIVE_COLLECTION_FAILED = "LIVE_COLLECTION_FAILED"
+LIVE_FALLBACK_REJECTED = "LIVE_FALLBACK_REJECTED"
+
 
 def normalize_title(title: str) -> str:
     """유사 제목 dedup용 정규화: 괄호 머리말 제거, 소문자화, 한글/영숫자만 유지."""
@@ -322,7 +327,7 @@ def _ingest(raw_articles: list[dict], signal_origin: str) -> tuple[int, int, int
 def _run_mock(fallback: bool = False, attempted: str = "mock") -> dict:
     """mock 기사 파이프라인. fallback=True면 live 실패 후 대체된 것임을 표기한다."""
     collected, deduped, inserted = _ingest(_load_mock_articles(), "Mock")
-    return {
+    output = {
         "collected": collected,
         "deduplicated": deduped,
         "inserted": inserted,
@@ -331,10 +336,19 @@ def _run_mock(fallback: bool = False, attempted: str = "mock") -> dict:
         "attempted_mode": attempted,
         "fallback_used": fallback,
     }
+    if fallback:
+        output.update({
+            "collection_status": LIVE_FALLBACK_REJECTED,
+            "collection_failure_category": "live_sources_unhealthy_mock_fallback",
+            "collector_request_count": 0,
+            "collector_source_count": 0,
+            "collector_successful_source_count": 0,
+        })
+    return output
 
 
 def _run_live() -> dict:
-    """공개 provider 수집 파이프라인. 0건이면 live를 주장하지 않고 mock으로 fallback한다.
+    """공개 provider 수집 파이프라인 with explicit source/authority health.
 
     P0-D2: Google News RSS(기본 provider)에 더해 선택적 Naver News Search API(보조 provider)를
     합친다. 두 provider 결과를 교차 dedup(merge_provider_articles)한 뒤 동일한 정규화/저장
@@ -342,14 +356,25 @@ def _run_live() -> dict:
 
     네트워크 import는 이 함수 안에서만 일어난다 (rules.md §10 D3 — collector 모듈 레벨
     네트워크 import 금지). Naver는 기본 off(disabled)이며 자격증명이 없으면 정직하게 skip한다
-    (전체 수집을 실패시키지 않는다). live가 0건이면 가짜 live를 만들지 않고 mock으로 fallback한다.
+    (전체 수집을 실패시키지 않는다). 성공한 source response가 있으나 원문-authority가 0건이면
+    healthy live empty로 남고, 성공 source가 전혀 없을 때만 기존 mock fallback을 명시적으로
+    LIVE_FALLBACK_REJECTED로 격리한다.
     """
     from app import live_collector, naver_news_provider, thebell_watch
 
+    direct_source_audit: list[dict] = []
     try:
-        direct_rows = live_collector.fetch_publisher_direct_sources()
+        direct_rows = live_collector.fetch_publisher_direct_sources(
+            source_audit=direct_source_audit,
+        )
     except Exception:  # noqa: BLE001 - registry source failures remain auditable
         direct_rows = []
+        direct_source_audit = [{
+            "provider": "publisher_direct_rss",
+            "source_id": "registry",
+            "status": "error",
+            "fetched_count": 0,
+        }]
 
     # 출처 품질로 수집 단계에서 제외된 비뉴스성 항목을 감사용으로 함께 받는다 (P0-C1.8).
     source_filtered: list[dict] = []
@@ -361,7 +386,6 @@ def _run_live() -> dict:
         google_rows = []
         source_filtered = []
         google_query_audit = []
-    google_status = "active" if google_rows else "skipped"
 
     # Naver 보조 provider — 기본 off면 네트워크 0건(status=disabled), 자격증명 없으면 정직 skip.
     naver_filtered: list[dict] = []
@@ -371,6 +395,60 @@ def _run_live() -> dict:
         naver_result = {"provider": naver_news_provider.PROVIDER,
                         "status": naver_news_provider.STATUS_ERROR, "articles": []}
     naver_rows = naver_result.get("articles") or []
+
+    google_attempts = [
+        item for item in google_query_audit
+        if item.get("status") in {"ok", "empty", "error"}
+    ]
+    google_successes = [
+        item for item in google_attempts if item.get("status") in {"ok", "empty"}
+    ]
+    google_status = (
+        "active" if google_rows else ("empty" if google_successes else "error")
+    )
+    direct_attempts = [
+        item for item in direct_source_audit
+        if item.get("status") in {"ok", "empty", "error"}
+    ]
+    direct_successes = [
+        item for item in direct_attempts if item.get("status") in {"ok", "empty"}
+    ]
+    naver_attempts = int(naver_result.get("queries_attempted") or 0)
+    naver_successes = int(naver_result.get("queries_ok") or 0)
+    request_count = len(google_attempts) + len(direct_attempts) + naver_attempts
+    successful_source_count = (
+        len(google_successes) + len(direct_successes) + naver_successes
+    )
+    source_count = (
+        int(bool(google_attempts))
+        + int(bool(direct_attempts))
+        + int(naver_attempts > 0)
+    )
+    collector_health = {
+        "request_count": request_count,
+        "source_count": source_count,
+        "successful_source_count": successful_source_count,
+        "raw_candidate_count": len(direct_rows) + len(google_rows) + len(naver_rows),
+        "publisher_direct_eligible_count": 0,
+        "quarantine_count": 0,
+        "final_portal_url_count": 0,
+        "sources": {
+            "publisher_direct_rss": {
+                "request_count": len(direct_attempts),
+                "successful_count": len(direct_successes),
+            },
+            "google_news_rss": {
+                "request_count": len(google_attempts),
+                "successful_count": len(google_successes),
+            },
+            "naver_news_api": {
+                "request_count": naver_attempts,
+                "successful_count": naver_successes,
+                "status": naver_result.get("status"),
+                "credentials_present": bool(naver_result.get("credentials_present")),
+            },
+        },
+    }
     # D7-AK-6E R3-V8 — 공식 direct RSS를 우선하고, 모든 기사 authority를 publisher
     # 페이지에서 재검증한다. 미해소 portal/unsafe/본문 없는 행은 삭제하지 않고 quarantine
     # provenance로 보존하되 아래 delivery pipeline에는 절대 넣지 않는다.
@@ -434,10 +512,22 @@ def _run_live() -> dict:
         publisher_quarantine,
         "Live RSS Quarantine",
     ) if publisher_quarantine else (0, 0, 0)
+    quarantine_reason_counts: dict[str, int] = {}
+    for row in publisher_quarantine:
+        reason = str(
+            row.get("portal_resolution_reason")
+            or "publisher_authority_rejected"
+        )
+        quarantine_reason_counts[reason] = quarantine_reason_counts.get(reason, 0) + 1
+    collector_health.update({
+        "publisher_direct_eligible_count": len(combined),
+        "quarantine_count": len(publisher_quarantine),
+        "quarantine_reason_counts": dict(sorted(quarantine_reason_counts.items())),
+    })
 
     # 교차 dedup은 publisher canonical URL 기준이다. 원문 미해소 행은 quarantine에 남고
     # Daily/Dashboard/Teams/Telegram 공통 입력에서 제외된다.
-    if not combined:
+    if not combined and successful_source_count == 0:
         fallback = _run_mock(fallback=True, attempted="live")
         fallback.update(
             {
@@ -446,9 +536,99 @@ def _run_live() -> dict:
                 "publisher_direct_eligible_count": 0,
                 "publisher_direct_quarantine_inserted": quarantine_ingest[2],
                 "external_delivery_portal_urls": 0,
+                "collector_request_count": request_count,
+                "collector_source_count": source_count,
+                "collector_successful_source_count": successful_source_count,
+                "collector_health": {
+                    **collector_health,
+                    "status": LIVE_FALLBACK_REJECTED,
+                    "failure_category": "all_live_sources_failed",
+                },
+                "collection_status": LIVE_FALLBACK_REJECTED,
+                "collection_failure_category": "all_live_sources_failed",
+                "publisher_direct_source_audit": direct_source_audit,
+                "google_query_audit": google_query_audit,
+                "provider_status": {
+                    "publisher_direct_rss": {
+                        "status": "error",
+                        "raw_count": len(direct_rows),
+                        "after_dedup_count": 0,
+                    },
+                    "google_news_rss": {
+                        "status": "error",
+                        "raw_count": len(google_rows),
+                        "after_dedup_count": 0,
+                    },
+                    "naver_news_api": {
+                        "status": naver_result.get("status"),
+                        "raw_count": len(naver_rows),
+                        "after_dedup_count": 0,
+                        "credentials_present": bool(
+                            naver_result.get("credentials_present")
+                        ),
+                    },
+                    "publisher_direct_eligible_count": 0,
+                    "publisher_direct_quarantine_count": len(publisher_quarantine),
+                },
             }
         )
         return fallback
+
+    if not combined:
+        return {
+            "collected": len(direct_rows) + len(google_rows) + len(naver_rows),
+            "deduplicated": 0,
+            "inserted": 0,
+            "news_data_mode": "live",
+            "news_source": "live_sources_healthy_no_eligible_articles",
+            "attempted_mode": "live",
+            "fallback_used": False,
+            "collection_status": LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES,
+            "collection_failure_category": "",
+            "collector_request_count": request_count,
+            "collector_source_count": source_count,
+            "collector_successful_source_count": successful_source_count,
+            "collector_health": {
+                **collector_health,
+                "status": LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES,
+                "failure_category": "",
+                "empty_reason": "no_publisher_direct_eligible_articles",
+            },
+            "source_filtered": source_filtered,
+            "publisher_direct_source_audit": direct_source_audit,
+            "publisher_direct_quarantine": publisher_quarantine,
+            "publisher_direct_quarantine_count": len(publisher_quarantine),
+            "publisher_direct_quarantine_inserted": quarantine_ingest[2],
+            "publisher_direct_eligible_count": 0,
+            "external_delivery_portal_urls": 0,
+            "google_query_audit": google_query_audit,
+            "thebell_candidates": [],
+            "thebell_watch_status": {
+                "status": "empty",
+                "candidate_count": 0,
+                "collection_method": "naver_search_api",
+            },
+            "provider_status": {
+                "google_news_rss": {
+                    "status": google_status,
+                    "raw_count": len(google_rows),
+                    "after_dedup_count": 0,
+                },
+                "publisher_direct_rss": {
+                    "status": "active" if direct_rows else "empty",
+                    "raw_count": len(direct_rows),
+                    "after_dedup_count": 0,
+                },
+                "naver_news_api": {
+                    "status": naver_result.get("status"),
+                    "raw_count": len(naver_rows),
+                    "after_dedup_count": 0,
+                    "credentials_present": bool(naver_result.get("credentials_present")),
+                },
+                "publisher_direct_eligible_count": 0,
+                "publisher_direct_quarantine_count": len(publisher_quarantine),
+            },
+        }
 
     _, deduped, inserted = _ingest(combined, "Live RSS")
     labels = []
@@ -469,6 +649,17 @@ def _run_live() -> dict:
         "news_source": " + ".join(labels) or live_collector.SOURCE_LABEL,
         "attempted_mode": "live",
         "fallback_used": False,
+        "collection_status": LIVE_HEALTHY_WITH_ARTICLES,
+        "collection_failure_category": "",
+        "collector_request_count": request_count,
+        "collector_source_count": source_count,
+        "collector_successful_source_count": successful_source_count,
+        "collector_health": {
+            **collector_health,
+            "status": LIVE_HEALTHY_WITH_ARTICLES,
+            "failure_category": "",
+        },
+        "publisher_direct_source_audit": direct_source_audit,
         "source_filtered": source_filtered,
         "publisher_direct_quarantine": publisher_quarantine,
         "publisher_direct_quarantine_count": len(publisher_quarantine),
@@ -522,7 +713,8 @@ def run(mode: str = "mock") -> dict:
     """기사 수집 진입점. NEWS_MODE에 따라 mock/live 경로를 고른다.
 
     NEWS_MODE=mock(기본)은 네트워크 0건이며 data/mock_articles.json만 읽는다.
-    NEWS_MODE=live는 공개 RSS를 시도하고, 실패하면 mock으로 fallback한다 (가짜 live 금지).
+    NEWS_MODE=live는 공개 RSS를 시도한다. 성공 source + eligible 0건은 healthy live empty이며,
+    모든 source 실패의 mock fallback은 LIVE_FALLBACK_REJECTED다 (가짜 live 금지).
     `mode` 인자는 API 하위호환을 위해 유지하지만 분기는 config.NEWS_MODE가 결정한다.
     """
     if config.NEWS_MODE == "live":

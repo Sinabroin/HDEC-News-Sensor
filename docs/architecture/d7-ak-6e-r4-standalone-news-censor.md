@@ -36,29 +36,41 @@ or portal-discovery links.
 - `.github/workflows/scheduled-live-refresh.yml` remains the sole static Pages
   publishing owner.
 
-Generated HTML is never hand-edited. The checked-in launch seed is produced by:
+Generated HTML is never hand-edited. A deterministic development preview is
+produced only from an explicit artifact:
 
 ```bash
 TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 NEWS_MODE=mock \
+  python3 scripts/build_executive_brief.py --output-json /tmp/news-censor-demo.json
+TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
   python3 scripts/build_news_censor.py \
+    --brief-json /tmp/news-censor-demo.json \
     --output-root docs/news-censor \
     --edition-date 2026-08-02
 ```
 
-The seed is truthfully labelled `DEMO · deterministic fixture`. The scheduled
-production workflow passes `--require-live`; a mock fallback therefore cannot
-replace the public production edition.
+The preview is truthfully labelled `DEMO · deterministic fixture` and is not a
+production launch result. The scheduled production workflow passes
+`--brief-json` and `--require-live`; a mock fallback, failed collection, or
+indeterminate artifact therefore cannot replace the last valid public edition.
 
 ## Data and authority flow
 
 ```text
 collector → publisher-direct partition → scoring/briefing
+          → HDEC_VALIDATED_EXECUTIVE_BRIEF_V1 JSON
+          → report + dashboard + News Censor consumers
           → News Censor model revalidation → static HTML
           → dated archive + latest alias → GitHub Pages
 ```
 
-The builder reuses `build_executive_brief.build_brief_via_mock_pipeline` and
-then calls `publisher_direct.assess_delivery_eligibility` for every candidate.
+The production builder never imports or invokes
+`build_brief_via_mock_pipeline`. `--brief-json` is mandatory. The scheduled
+workflow performs collection once, writes one atomic
+`HDEC_VALIDATED_EXECUTIVE_BRIEF_V1` artifact, and passes that exact path to the
+Executive report, operator report, summary dashboard, and News Censor. The
+News Censor then calls `publisher_direct.assess_delivery_eligibility` for every
+candidate.
 Upstream executive relevance is treated as already qualified, while the common
 final-authority requirements remain mandatory:
 
@@ -91,21 +103,65 @@ own responsive CSS. At 680 px and below, the news/rail layout returns to normal
 single-column flow, the lead becomes one column, the article grid becomes one
 column, and the rail is non-sticky below the feed.
 
+## Collector health and empty-state contract
+
+The artifact carries one explicit status:
+
+- `LIVE_HEALTHY_WITH_ARTICLES`: at least one source response succeeded and at
+  least one publisher-direct article passed authority;
+- `LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES`: at least one source response succeeded,
+  but no publisher-direct article passed authority;
+- `LIVE_COLLECTION_FAILED`: live collection itself failed;
+- `LIVE_FALLBACK_REJECTED`: a live attempt produced a mock fallback, which is
+  never production input.
+
+Health also carries request count, source count, successful-source count, raw
+candidate count, publisher-direct eligible count, quarantine count, and final
+portal URL count. Mode is never inferred from an environment variable.
+
+A healthy zero publishes a LIVE page with
+`현재 조건을 충족한 신규 기사가 없습니다`. It never restores the fixture,
+never creates a Teams candidate, and never changes delivery state. Failed,
+fallback, inconsistent, or indeterminate input exits nonzero before `latest`
+or the dated edition is written.
+
+## Production rails and image contract
+
+- Market values come only from the artifact's repository market snapshot.
+  Each item exposes provider, as-of, and delayed/proxy/stale/unavailable state;
+  missing values render `N/A`.
+- Weather comes from the artifact's `weather_snapshot`, which is collected once
+  by `weather_risk` during artifact creation. Representative region, forecast
+  timestamp, source, and collection timestamp remain visible; missing data is
+  explicitly unavailable.
+- Safety/incident rows come only from brief risk clusters whose supporting
+  articles retain publisher-direct title/source/date/URL evidence. Otherwise
+  the rail is unavailable.
+- Article images use the existing editorial image resolver, byte validator, and
+  quality gate. Accepted bytes are materialized under
+  `news-censor/assets/images`; remote image hotlinks never enter HTML or the
+  browser model. A deterministic embedded SVG is used only where no valid local
+  image was materialized.
+- The seven primary categories are fixed. Secondary filters are derived from
+  actual topic/category/radar/decision tags and only nonzero filters render.
+
 ## Publishing and fail-closed behavior
 
 The existing scheduled live-refresh job performs the following order:
 
 1. run the News Censor offline verifier with all sender defaults closed;
-2. build the existing live Executive report;
-3. only after that report proves `news_data_mode=live`, build existing public
-   outputs and run `build_news_censor.py --require-live`;
+2. collect once into a validated live brief JSON artifact, including collector
+   health, market data, and weather risk;
+3. run `build_news_censor.py --brief-json ... --require-live --json` as the
+   artifact gate, then pass the same artifact to all static consumers;
 4. stage `docs/news-censor` with the existing static output set;
 5. commit and push only on `main` and only outside forced dry-run mode.
 
-Any collector fallback, empty publisher-direct result, template failure,
-unresolved marker, or write failure exits nonzero before `live_ok=true`. The
-publish and notification steps are then unreachable. The builder does not
-mutate Daily pages, sender state, editorial state, or a repository database.
+Any collector failure/fallback, inconsistent health, template failure,
+unresolved marker, or write failure exits nonzero before `live_ok=true`. A
+healthy zero is the sole zero-article success. The publish and notification
+steps are unreachable for failures. The builder does not mutate sender state,
+editorial state, or a repository database.
 
 ## Verification
 
@@ -118,10 +174,17 @@ TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
 
 It proves:
 
-- deterministic fixture build with zero attempted network or sender calls;
+- explicit deterministic fixture artifact builds DEMO with zero attempted
+  network or sender calls;
+- production input has no implicit mock call;
+- healthy live with articles and healthy live zero both build correctly;
+- failed and fallback artifacts return nonzero without overwriting a valid live
+  output;
 - byte-identical latest and dated outputs from one render;
 - `--require-live` rejection before any output write;
-- complete category/filter and responsive structure;
+- fixed categories, nonzero dynamic tag filters, market/weather/safety rails,
+  local-or-fallback images, responsive structure, keyboard reader open/close,
+  and focus restoration;
 - unique publisher-direct canonical URLs and zero portal URLs;
 - no discovery, credential, browser-fetch, persistence, or mutation surface;
 - no navigation addition to existing pages;

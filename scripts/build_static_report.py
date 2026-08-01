@@ -30,7 +30,10 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
+from build_executive_brief import (  # noqa: E402
+    build_brief_via_mock_pipeline,
+    load_brief_json,
+)
 
 # 이 페이지는 전체 리포트(요약 대시보드 dashboard-latest.html과 짝)다. 화면 제목/탭
 # 제목을 '전체 리포트'로 정렬해 이메일 '전체 리포트 보기' CTA와 의미가 어긋나지 않게 한다.
@@ -1322,10 +1325,23 @@ def main(argv: list[str] | None = None) -> int:
                         default=env_audience,
                         help="리포트 대상 뷰: operator(기본, 운영자 감사 상세 포함) | "
                              "executive(운영자 전용 설명 숨김). env REPORT_AUDIENCE로도 지정 가능.")
+    parser.add_argument(
+        "--brief-json",
+        type=Path,
+        help="reuse an already collected HDEC_VALIDATED_EXECUTIVE_BRIEF_V1 artifact",
+    )
     args = parser.parse_args(argv)
     audience = args.audience
 
-    brief = build_brief_via_mock_pipeline()
+    try:
+        brief = (
+            load_brief_json(args.brief_json.resolve())
+            if args.brief_json
+            else build_brief_via_mock_pipeline()
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"ERROR: executive brief input rejected: {exc}", file=sys.stderr)
+        return 2
     html, sections = render_report_html(brief, audience=audience)
 
     if args.json:

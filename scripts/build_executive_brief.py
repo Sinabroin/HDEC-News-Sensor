@@ -176,8 +176,58 @@ def build_brief_via_mock_pipeline(*, reference_now=None) -> dict:
                 # brief까지 전달해 대시보드/리포트가 provider provenance를 표시할 수 있게 한다.
                 # collector가 넘긴 값을 그대로 전달할 뿐이며 비밀값은 담기지 않는다 (rules.md §4).
                 "provider_status": collect_stats.get("provider_status"),
+                "collection_status": collect_stats.get("collection_status"),
+                "collection_failure_category": collect_stats.get(
+                    "collection_failure_category"
+                ),
+                "collector_health": collect_stats.get("collector_health"),
+                "collector_request_count": collect_stats.get("collector_request_count"),
+                "collector_source_count": collect_stats.get("collector_source_count"),
+                "collector_successful_source_count": collect_stats.get(
+                    "collector_successful_source_count"
+                ),
+                "publisher_direct_quarantine_count": collect_stats.get(
+                    "publisher_direct_quarantine_count"
+                ),
             },
         )
+
+
+def attach_artifact_contract(brief: dict, *, weather_mode: str = "mock") -> dict:
+    """Attach the explicit, sender-free handoff contract used by static consumers."""
+    from app import weather_risk
+
+    output = dict(brief)
+    output["artifact_contract"] = "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1"
+    output["weather_snapshot"] = weather_risk.snapshot_for_model(
+        mode=weather_mode,
+        now=output.get("generated_at"),
+    )
+    return output
+
+
+def load_brief_json(path: Path) -> dict:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("executive brief artifact must be a JSON object")
+    if value.get("artifact_contract") != "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1":
+        raise ValueError("executive brief artifact contract is missing or unsupported")
+    return value
+
+
+def write_brief_json(path: Path, brief: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        delete=False,
+    ) as handle:
+        json.dump(brief, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+        temporary = Path(handle.name)
+    os.replace(temporary, path)
 
 
 def _fmt_score(value) -> str:
@@ -263,12 +313,36 @@ def main(argv: list[str] | None = None) -> int:
                        help="사람용 brief 텍스트를 출력하고 요약을 stderr에 남긴다")
     group.add_argument("--json", action="store_true",
                        help="기계 검증용 JSON을 출력한다")
+    group.add_argument("--output-json", type=Path,
+                       help="validated consumer handoff JSON artifact를 원자적으로 쓴다")
+    parser.add_argument(
+        "--weather-mode",
+        choices=("mock", "live"),
+        default="mock",
+        help="artifact에 포함할 weather-risk snapshot (live만 공개 예보 요청)",
+    )
     args = parser.parse_args(argv)
 
-    brief = build_brief_via_mock_pipeline()
+    brief = attach_artifact_contract(
+        build_brief_via_mock_pipeline(),
+        weather_mode=args.weather_mode,
+    )
 
     if args.json:
         print(json.dumps(brief, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.output_json:
+        write_brief_json(args.output_json.resolve(), brief)
+        health = brief.get("collector_health") or {}
+        print(
+            f"brief artifact written: {args.output_json} "
+            f"collection_status={brief.get('collection_status') or 'FIXTURE_DEMO'} "
+            f"raw_candidates={int(health.get('raw_candidate_count') or 0)} "
+            f"publisher_direct_eligible={int(health.get('publisher_direct_eligible_count') or 0)} "
+            f"quarantine={int(health.get('quarantine_count') or 0)} "
+            f"portal_urls={int(health.get('final_portal_url_count') or 0)}"
+        )
         return 0
 
     print(format_brief_text(brief))

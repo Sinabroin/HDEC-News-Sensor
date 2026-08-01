@@ -28,14 +28,29 @@ for item in (ROOT, SCRIPTS):
         sys.path.insert(0, str(item))
 
 from app import publisher_direct  # noqa: E402
-from build_executive_brief import build_brief_via_mock_pipeline  # noqa: E402
+from build_executive_brief import load_brief_json  # noqa: E402
 
 TEMPLATE = ROOT / "templates" / "news_censor.html"
 LOGO = ROOT / "docs" / "assets" / "brand" / "hdec-logo.svg"
 DEFAULT_OUTPUT_ROOT = ROOT / "docs" / "news-censor"
 REFERENCE_SHA256 = "c4a1d129a9e8b6d824b961e2042f345cfc2eb405dcbc488a542e5bc6cee14804"
 CONTRACT = "D7-AK-6E-R4-STANDALONE-NEWS-CENSOR"
+ARTIFACT_CONTRACT = "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1"
 KST = timezone(timedelta(hours=9))
+
+LIVE_HEALTHY_WITH_ARTICLES = "LIVE_HEALTHY_WITH_ARTICLES"
+LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES = "LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES"
+LIVE_COLLECTION_FAILED = "LIVE_COLLECTION_FAILED"
+LIVE_FALLBACK_REJECTED = "LIVE_FALLBACK_REJECTED"
+HEALTHY_LIVE_STATUSES = {
+    LIVE_HEALTHY_WITH_ARTICLES,
+    LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES,
+}
+FAILED_LIVE_STATUSES = {LIVE_COLLECTION_FAILED, LIVE_FALLBACK_REJECTED}
+
+
+class LiveBriefRejected(RuntimeError):
+    """The explicit input artifact cannot authorize a production write."""
 
 CATEGORY_LABELS = {
     "all": "홈",
@@ -176,6 +191,170 @@ def _published_rank(value: object) -> float:
     return parsed.timestamp() if parsed else 0.0
 
 
+def validate_brief_artifact(brief: Mapping, *, require_live: bool) -> None:
+    """Validate explicit handoff provenance; never infer live from process env."""
+    if brief.get("artifact_contract") != ARTIFACT_CONTRACT:
+        raise LiveBriefRejected("validated executive brief artifact contract missing")
+    if not require_live:
+        return
+
+    status = str(brief.get("collection_status") or "")
+    health = brief.get("collector_health") or {}
+    delivery = brief.get("publisher_direct_delivery") or {}
+    if status in FAILED_LIVE_STATUSES:
+        category = (
+            health.get("failure_category")
+            or brief.get("collection_failure_category")
+            or "live_collection_failed"
+        )
+        raise LiveBriefRejected(f"{status}: {category}")
+    if status not in HEALTHY_LIVE_STATUSES:
+        raise LiveBriefRejected("collector health is absent or indeterminate")
+    if brief.get("news_data_mode") != "live":
+        raise LiveBriefRejected("healthy status conflicts with non-live artifact mode")
+    if brief.get("news_fallback_used") is True:
+        raise LiveBriefRejected("live artifact reports fallback_used=true")
+    if str(health.get("status") or "") != status:
+        raise LiveBriefRejected("collector health status conflicts with artifact status")
+    if int(health.get("successful_source_count") or 0) <= 0:
+        raise LiveBriefRejected("no successful live source response was proven")
+    portal_count = max(
+        int(health.get("final_portal_url_count") or 0),
+        int(delivery.get("final_portal_urls") or 0),
+    )
+    if portal_count:
+        raise LiveBriefRejected("publisher delivery contains portal URLs")
+    eligible = int(
+        health.get("publisher_direct_eligible_count")
+        or delivery.get("eligible_count")
+        or 0
+    )
+    if status == LIVE_HEALTHY_WITH_ARTICLES and eligible <= 0:
+        raise LiveBriefRejected("with-articles health has zero eligible publishers")
+    if status == LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES and eligible != 0:
+        raise LiveBriefRejected("healthy-empty health conflicts with eligible article count")
+
+
+def _subfilter_labels(row: Mapping) -> list[str]:
+    labels: list[str] = []
+    values: list[object] = [
+        row.get("topic"),
+        row.get("category_label"),
+        row.get("radar_label"),
+        row.get("executive_label"),
+        *(row.get("secondary_labels") or []),
+    ]
+    for value in values:
+        label = re.sub(r"\s+", " ", str(value or "")).strip()
+        if label and label not in labels and label not in CATEGORY_LABELS.values():
+            labels.append(label[:40])
+    return labels[:6]
+
+
+def _market_pane(brief: Mapping) -> dict:
+    snapshot = brief.get("market_snapshot") or {}
+    rows = []
+    for item in (snapshot.get("items") or [])[:8]:
+        if not isinstance(item, Mapping):
+            continue
+        rows.append({
+            "id": str(item.get("id") or ""),
+            "label": str(item.get("label_kr") or item.get("id") or "지표"),
+            "value": item.get("value"),
+            "unit": str(item.get("unit") or ""),
+            "data_mode": str(item.get("data_mode") or "unavailable"),
+            "is_stale": bool(item.get("is_stale", True)),
+            "proxy_for": str(item.get("proxy_for") or ""),
+            "source": str(item.get("source_provider") or ""),
+            "as_of": str(item.get("as_of") or ""),
+        })
+    return {
+        "status": str(snapshot.get("mode") or "unavailable"),
+        "source": str(snapshot.get("source_summary") or "시장지표 미연동"),
+        "as_of": str(snapshot.get("as_of") or snapshot.get("updated_at") or ""),
+        "disclaimer": str(snapshot.get("disclaimer") or ""),
+        "items": rows,
+    }
+
+
+def _weather_rail(brief: Mapping) -> dict:
+    snapshot = brief.get("weather_snapshot") or {}
+    rows = []
+    for item in (snapshot.get("weather_rows") or []):
+        if not isinstance(item, Mapping):
+            continue
+        rows.append({
+            "region": str(item.get("region") or ""),
+            "basis": str(item.get("basis") or ""),
+            "forecast_at": str(item.get("target_local") or ""),
+            "grade": str(item.get("risk_grade") or "확인 필요"),
+            "temperature_c": item.get("temp_c"),
+            "precipitation_probability": item.get("precip_prob"),
+            "gust_ms": item.get("gust_ms"),
+            "status": str(item.get("row_status") or "unavailable"),
+            "status_note": str(item.get("status_note") or ""),
+        })
+    return {
+        "status": str(snapshot.get("weather_data_mode") or "unavailable"),
+        "source": str(snapshot.get("weather_source") or ""),
+        "updated_at": str(snapshot.get("weather_updated_at") or ""),
+        "forecast_at": str(snapshot.get("weather_target_time") or ""),
+        "unavailable_reason": str(
+            snapshot.get("weather_unavailable_reason")
+            or "기상 데이터 미수신 — 값을 만들지 않습니다."
+        ),
+        "rows": rows,
+    }
+
+
+def _safety_rail(brief: Mapping) -> dict:
+    items = []
+    for cluster in (brief.get("risk_event_clusters") or [])[:4]:
+        if not isinstance(cluster, Mapping):
+            continue
+        support = [
+            article for article in (cluster.get("supporting_articles") or [])
+            if isinstance(article, Mapping)
+            and bool(str(article.get("title") or "").strip())
+            and bool(str(article.get("source") or "").strip())
+            and bool(str(article.get("published_at") or "").strip())
+            and bool(publisher_direct.normalize_publisher_canonical_url(article.get("url")))
+        ]
+        if not support:
+            continue
+        items.append({
+            "title": str(cluster.get("event_title") or "검증 안전 신호"),
+            "severity": str(cluster.get("severity_label") or "모니터링"),
+            "article_count": len(support),
+            "source_count": len({str(row.get("source") or "") for row in support}),
+            "latest_at": str(cluster.get("latest_published_at") or ""),
+        })
+    timestamps = [item["latest_at"] for item in items if item["latest_at"]]
+    return {
+        "status": "verified" if items else "unavailable",
+        "source": "검증된 publisher-direct 기사 클러스터" if items else "",
+        "as_of": max(timestamps) if timestamps else "",
+        "unavailable_reason": (
+            "검증 가능한 안전·사고 지표가 없습니다."
+            if not items else ""
+        ),
+        "items": items,
+    }
+
+
+def _fallback_image_data(article: Mapping) -> str:
+    label = escape(str(article.get("initials") or "HDEC"))
+    tint = str(article.get("tint") or "#0B6B3A").replace("#", "%23")
+    svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'>"
+        f"<rect width='640' height='360' fill='{tint}'/>"
+        "<path d='M0 260L180 150l130 82 150-140 180 145v123H0z' fill='%23ffffff' fill-opacity='.14'/>"
+        f"<text x='40' y='315' fill='white' font-size='52' font-family='sans-serif' font-weight='700'>{label}</text>"
+        "</svg>"
+    )
+    return "data:image/svg+xml," + svg.replace(" ", "%20").replace("'", "%27")
+
+
 def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> dict:
     """Derive a browser-safe, publisher-only model from the shared brief."""
     merged: dict[str, dict] = {}
@@ -192,12 +371,14 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         key = canonical.casefold().rstrip("/")
         if key in merged:
             merged[key]["categories"].update(_category_tokens(raw, seeds))
+            merged[key]["subfilters"].update(_subfilter_labels(raw))
             continue
         row = dict(raw)
         row["url"] = canonical
         merged[key] = {
             "row": row,
             "categories": _category_tokens(row, seeds),
+            "subfilters": set(_subfilter_labels(row)),
         }
 
     ranked = sorted(
@@ -208,7 +389,7 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
             str(item["row"].get("title") or ""),
         ),
         reverse=True,
-    )[: max(1, min(40, article_limit))]
+    )[: max(0, min(40, article_limit))]
 
     articles = []
     for index, item in enumerate(ranked):
@@ -238,13 +419,21 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
             "publisher_direct": True,
             "authority_label": "Publisher Direct",
             "categories": sorted(item["categories"], key=lambda token: tuple(CATEGORY_LABELS).index(token)),
+            "subfilters": sorted(item["subfilters"]),
             "initials": _initials(source),
             "tint": ("#0B6B3A", "#1E5F8A", "#8F6A2E", "#455B73", "#68716A")[index % 5],
             "score": round(float(row.get("final_score") or 0), 2),
         })
 
-    if not articles:
-        raise RuntimeError("no publisher-direct News Censor articles available")
+    status = str(brief.get("collection_status") or "FIXTURE_DEMO")
+    if status == LIVE_HEALTHY_WITH_ARTICLES and not articles:
+        raise LiveBriefRejected(
+            "validated live artifact has eligible collection but no publishable surface rows"
+        )
+    if status == LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES and articles:
+        raise LiveBriefRejected(
+            "validated healthy-empty artifact unexpectedly produced articles"
+        )
 
     themes = []
     for theme in (brief.get("theme_rankings") or [])[:5]:
@@ -254,7 +443,35 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
                 "count": int(theme.get("count") or 0),
             })
 
+    subfilter_counts: dict[str, int] = {}
+    for article in articles:
+        for label in article["subfilters"]:
+            subfilter_counts[label] = subfilter_counts.get(label, 0) + 1
+    subfilters = [
+        {
+            "id": "sub_" + hashlib.sha256(label.encode("utf-8")).hexdigest()[:10],
+            "label": label,
+            "count": count,
+        }
+        for label, count in sorted(
+            subfilter_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )[:12]
+        if count > 0
+    ]
+    subfilter_id = {item["label"]: item["id"] for item in subfilters}
+    for article in articles:
+        article["subfilter_ids"] = [
+            subfilter_id[label]
+            for label in article.pop("subfilters")
+            if label in subfilter_id
+        ]
+        article["image_src"] = _fallback_image_data(article)
+        article["image_status"] = "deterministic_fallback"
+
     generated = _parse_datetime(brief.get("generated_at"))
+    health = brief.get("collector_health") or {}
+    live_mode = brief.get("news_data_mode") == "live"
     return {
         "contract": CONTRACT,
         "reference_sha256": REFERENCE_SHA256,
@@ -263,11 +480,33 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         "generated_at": generated.isoformat() if generated else "",
         "generated_label": generated.strftime("%Y-%m-%d %H:%M KST") if generated else "생성시각 미상",
         "news_data_mode": str(brief.get("news_data_mode") or "mock"),
-        "source_label": "LIVE · publisher-direct" if brief.get("news_data_mode") == "live" else "DEMO · deterministic fixture",
+        "collection_status": status,
+        "source_label": "LIVE · publisher-direct" if live_mode else "DEMO · deterministic fixture",
         "article_count": len(articles),
         "rejected_count": rejected,
+        "published_quarantine_count": 0,
+        "collector_quarantine_count": int(health.get("quarantine_count") or 0),
+        "collector_request_count": int(health.get("request_count") or 0),
+        "collector_source_count": int(health.get("source_count") or 0),
+        "collector_successful_source_count": int(
+            health.get("successful_source_count") or 0
+        ),
+        "raw_candidate_count": int(health.get("raw_candidate_count") or 0),
+        "publisher_direct_eligible_count": int(
+            health.get("publisher_direct_eligible_count") or len(articles)
+        ),
+        "portal_url_count": 0,
+        "empty_state": (
+            "현재 조건을 충족한 신규 기사가 없습니다"
+            if status == LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES
+            else ""
+        ),
         "articles": articles,
         "themes": themes,
+        "subfilters": subfilters,
+        "market": _market_pane(brief),
+        "weather": _weather_rail(brief),
+        "safety": _safety_rail(brief),
         "categories": [
             {"id": key, "label": label, "count": sum(key in row["categories"] for row in articles)}
             for key, label in CATEGORY_LABELS.items()
@@ -289,16 +528,18 @@ def _json_island(value: object) -> str:
 def _article_card(article: Mapping, *, lead: bool = False) -> str:
     kind = "lead" if lead else "news-card"
     categories = " ".join(escape(token) for token in article["categories"])
+    subfilters = " ".join(escape(token) for token in article.get("subfilter_ids") or [])
     title_tag = "h2" if lead else "h3"
     summary = ""
     if lead and article.get("summary"):
         summary = f'<p class="summary">{escape(str(article["summary"]))}</p>'
     return (
         f'<article class="{kind}" data-article-id="{escape(str(article["id"]))}" '
-        f'data-categories="{categories}" tabindex="0" role="button" '
+        f'data-categories="{categories}" data-subfilters="{subfilters}" '
+        f'tabindex="0" role="button" '
         f'aria-label="기사 읽기: {escape(str(article["title"]))}">'
         f'<span class="thumb" style="--tint:{escape(str(article["tint"]))}" aria-hidden="true">'
-        f'{escape(str(article["initials"]))}</span>'
+        f'<img src="{escape(str(article["image_src"]), quote=True)}" alt="" loading="lazy"></span>'
         '<div class="card-body">'
         f'<span class="verdict" style="--verdict:{escape(str(article["verdict_color"]))}">'
         f'{escape(str(article["verdict"]))}</span>'
@@ -315,8 +556,8 @@ def render_html(model: Mapping) -> str:
     template = TEMPLATE.read_text(encoding="utf-8")
     logo_uri = "data:image/svg+xml;base64," + base64.b64encode(LOGO.read_bytes()).decode("ascii")
     articles = model["articles"]
-    lead = _article_card(articles[0], lead=True)
-    cards = "\n".join(_article_card(row) for row in articles[1:])
+    lead = _article_card(articles[0], lead=True) if articles else ""
+    cards = "\n".join(_article_card(row) for row in articles[1:]) if articles else ""
     filters = "".join(
         f'<button class="filter{(" active" if item["id"] == "all" else "")}" '
         f'type="button" data-filter="{escape(item["id"])}" aria-pressed="'
@@ -328,6 +569,46 @@ def render_html(model: Mapping) -> str:
         f'<li><span>{escape(item["label"])}</span><b>{item["count"]}</b></li>'
         for item in model["themes"]
     ) or '<li><span>관측 테마 없음</span><b>0</b></li>'
+    subfilters = "".join(
+        f'<button class="subfilter" type="button" data-subfilter="{escape(item["id"])}" '
+        f'aria-pressed="false">{escape(item["label"])}<small>{item["count"]}</small></button>'
+        for item in model.get("subfilters") or []
+        if int(item.get("count") or 0) > 0
+    )
+    market_rows = "".join(
+        '<li>'
+        f'<span>{escape(str(item["label"]))}</span>'
+        f'<b>{"N/A" if item.get("value") is None else escape(str(item["value"])) + (" " + escape(str(item.get("unit") or "")) if item.get("unit") else "")}</b>'
+        f'<small>{escape(str(item.get("data_mode") or "unavailable"))}'
+        f'{" · stale" if item.get("is_stale") else ""}'
+        f'{" · proxy" if item.get("proxy_for") else ""}</small>'
+        '</li>'
+        for item in model["market"]["items"]
+    ) or '<li class="unavailable">N/A · 시장지표 미연동</li>'
+    weather_rows = "".join(
+        '<li>'
+        f'<span>{escape(str(item["region"]))}<small>{escape(str(item["basis"]))}</small></span>'
+        f'<b>{escape(str(item["grade"]))}</b>'
+        f'<small>{escape(str(item["forecast_at"] or item["status_note"] or "예보시각 미수신"))}</small>'
+        '</li>'
+        for item in model["weather"]["rows"]
+    ) or (
+        '<li class="unavailable">'
+        + escape(str(model["weather"]["unavailable_reason"]))
+        + '</li>'
+    )
+    safety_rows = "".join(
+        '<li>'
+        f'<span>{escape(str(item["title"]))}</span>'
+        f'<b>{escape(str(item["severity"]))}</b>'
+        f'<small>검증 기사 {int(item["article_count"])}건 · 출처 {int(item["source_count"])}곳</small>'
+        '</li>'
+        for item in model["safety"]["items"]
+    ) or (
+        '<li class="unavailable">'
+        + escape(str(model["safety"]["unavailable_reason"]))
+        + '</li>'
+    )
     mode_class = "live" if model["news_data_mode"] == "live" else "demo"
     warning = (
         "실시간 수집 · 게시자 원문 검증 완료"
@@ -345,9 +626,22 @@ def render_html(model: Mapping) -> str:
         "{{MODE_WARNING}}": escape(warning),
         "{{ARTICLE_COUNT}}": str(model["article_count"]),
         "{{FILTER_BUTTONS}}": filters,
+        "{{SUBFILTER_BUTTONS}}": subfilters,
+        "{{SUBFILTER_HIDDEN}}": "" if subfilters else " hidden",
         "{{LEAD_ARTICLE}}": lead,
         "{{ARTICLE_CARDS}}": cards,
+        "{{PRODUCTION_EMPTY_HIDDEN}}": "" if model.get("empty_state") else " hidden",
+        "{{PRODUCTION_EMPTY_TEXT}}": escape(str(model.get("empty_state") or "")),
         "{{THEME_ROWS}}": themes,
+        "{{MARKET_ROWS}}": market_rows,
+        "{{MARKET_SOURCE}}": escape(str(model["market"]["source"])),
+        "{{MARKET_AS_OF}}": escape(str(model["market"]["as_of"] or "기준시각 미수신")),
+        "{{WEATHER_ROWS}}": weather_rows,
+        "{{WEATHER_SOURCE}}": escape(str(model["weather"]["source"] or "미연동")),
+        "{{WEATHER_UPDATED_AT}}": escape(str(model["weather"]["updated_at"] or "수집시각 미수신")),
+        "{{SAFETY_ROWS}}": safety_rows,
+        "{{SAFETY_SOURCE}}": escape(str(model["safety"]["source"] or "미연동")),
+        "{{SAFETY_AS_OF}}": escape(str(model["safety"]["as_of"] or "기준시각 미수신")),
         "{{MODEL_JSON}}": _json_island(model),
         "{{REFERENCE_SHA256}}": REFERENCE_SHA256,
     }
@@ -373,8 +667,109 @@ def _atomic_write(path: Path, content: str) -> None:
     os.replace(temporary, path)
 
 
-def build(*, edition: date, article_limit: int = 24) -> tuple[dict, str]:
-    brief = build_brief_via_mock_pipeline()
+def _atomic_write_bytes(path: Path, content: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="wb",
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        delete=False,
+    ) as handle:
+        handle.write(content)
+        temporary = Path(handle.name)
+    os.replace(temporary, path)
+
+
+def materialize_article_images(
+    model: dict,
+    *,
+    output_root: Path,
+    image_limit: int = 8,
+) -> dict:
+    """Use the existing bounded image resolver/quality gate, then copy only local bytes."""
+    from app import editorial_briefings
+
+    articles = model.get("articles") or []
+    if not articles or image_limit <= 0:
+        return {"attempted": 0, "materialized": 0, "fallback": len(articles)}
+
+    candidates: list[editorial_briefings.EditorialArticle] = []
+    selected_rows = articles[: min(len(articles), image_limit)]
+    for article in selected_rows:
+        published = _parse_datetime(article.get("published_at")) or datetime.now(KST)
+        image_input = {
+            "selected_url": article["url"],
+            "url": article["url"],
+            "title": article["title"],
+            "source": article["source"],
+            "published_at": article.get("published_at"),
+        }
+        resolution = editorial_briefings.resolve_article_image(
+            image_input,
+            allow_network=True,
+        )
+        candidates.append(editorial_briefings.EditorialArticle(
+            title=str(article["title"]),
+            summary=str(article.get("summary") or ""),
+            source=str(article.get("source") or "발행처"),
+            published_at=published,
+            selected_url=str(article["url"]),
+            link_kind="publisher_direct",
+            link_label="Publisher Direct",
+            category="News Censor",
+            publisher_article_url=str(article["url"]),
+            publisher_url_source_kind="validated_brief_artifact",
+            publisher_url_reason="shared_live_brief_publisher_authority",
+            image_url=resolution.url,
+            image_remote_url=resolution.url,
+            image_source_kind=resolution.source_kind,
+            image_source_page_url=resolution.source_page_url,
+            image_width=resolution.width,
+            image_height=resolution.height,
+            image_fallback_used=resolution.fallback_used,
+            image_reason=resolution.reason,
+            image_candidates=resolution.candidates,
+        ))
+
+    with tempfile.TemporaryDirectory(
+        prefix="hdec-news-censor-images-",
+        dir="/tmp",
+    ) as stage_name:
+        stage = Path(stage_name)
+        materialized, counters = editorial_briefings.materialize_preview_images(
+            candidates,
+            stage,
+            html_dir=stage,
+        )
+        materialized_count = 0
+        for model_article, image_article in zip(selected_rows, materialized):
+            asset = str(image_article.image_local_asset or "")
+            source = stage / "assets" / "images" / asset
+            if (
+                image_article.image_quality_accepted
+                and asset
+                and source.is_file()
+            ):
+                destination = output_root / "assets" / "images" / asset
+                _atomic_write_bytes(destination, source.read_bytes())
+                model_article["image_src"] = f"assets/images/{asset}"
+                model_article["image_status"] = "local_materialized"
+                materialized_count += 1
+        model["image_materialization"] = {
+            "attempted": len(selected_rows),
+            "materialized": materialized_count,
+            "fallback": len(articles) - materialized_count,
+            "quality_rejections": int(counters.image_quality_rejections),
+        }
+        return dict(model["image_materialization"])
+
+
+def build(
+    brief: Mapping,
+    *,
+    edition: date,
+    article_limit: int = 24,
+) -> tuple[dict, str]:
     model = build_model(brief, edition=edition, article_limit=article_limit)
     return model, render_html(model)
 
@@ -385,21 +780,44 @@ def main(argv: list[str] | None = None) -> int:
     output.add_argument("--output-root", type=Path, help="write latest.html and a dated archive")
     output.add_argument("--json", action="store_true", help="print build metadata without writing")
     output.add_argument("--dry-run", action="store_true", help="print a build summary without writing")
+    parser.add_argument(
+        "--brief-json",
+        type=Path,
+        required=True,
+        help="explicit HDEC_VALIDATED_EXECUTIVE_BRIEF_V1 input artifact",
+    )
     parser.add_argument("--edition-date", default="", help="archive date (YYYY-MM-DD; default KST today)")
     parser.add_argument("--article-limit", type=int, default=24)
     parser.add_argument("--require-live", action="store_true", help="fail closed unless collection mode is live")
+    parser.add_argument(
+        "--image-mode",
+        choices=("off", "live"),
+        default="off",
+        help="off=deterministic local-data fallback; live=bounded local image materialization",
+    )
+    parser.add_argument("--image-limit", type=int, default=8)
     args = parser.parse_args(argv)
 
     edition = _edition_date(args.edition_date)
     try:
-        model, html = build(edition=edition, article_limit=args.article_limit)
-    except (OSError, RuntimeError, ValueError) as exc:
+        brief = load_brief_json(args.brief_json.resolve())
+        validate_brief_artifact(brief, require_live=args.require_live)
+        model = build_model(brief, edition=edition, article_limit=args.article_limit)
+        if args.image_mode == "live":
+            if not args.output_root:
+                raise ValueError("--image-mode live requires --output-root")
+            materialize_article_images(
+                model,
+                output_root=args.output_root.resolve(),
+                image_limit=max(0, min(24, args.image_limit)),
+            )
+        html = render_html(model)
+    except LiveBriefRejected as exc:
+        print(f"ERROR: News Censor live artifact rejected: {exc}", file=sys.stderr)
+        return 3
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         print(f"ERROR: News Censor build failed closed: {exc}", file=sys.stderr)
         return 2
-
-    if args.require_live and model["news_data_mode"] != "live":
-        print("ERROR: News Censor require-live gate rejected non-live collection", file=sys.stderr)
-        return 3
 
     metadata = {
         "contract": CONTRACT,
@@ -407,8 +825,24 @@ def main(argv: list[str] | None = None) -> int:
         "edition": model["edition"],
         "article_count": model["article_count"],
         "rejected_count": model["rejected_count"],
+        "collection_status": model["collection_status"],
+        "raw_candidate_count": model["raw_candidate_count"],
+        "collector_request_count": model["collector_request_count"],
+        "collector_source_count": model["collector_source_count"],
+        "collector_successful_source_count": model["collector_successful_source_count"],
+        "collector_quarantine_count": model["collector_quarantine_count"],
+        "published_quarantine_count": model["published_quarantine_count"],
         "publisher_direct_count": sum(row["publisher_direct"] for row in model["articles"]),
         "portal_url_count": publisher_direct.count_portal_urls(model["articles"]),
+        "market_status": model["market"]["status"],
+        "weather_status": model["weather"]["status"],
+        "safety_status": model["safety"]["status"],
+        "image_materialization": model.get("image_materialization") or {
+            "attempted": 0,
+            "materialized": 0,
+            "fallback": model["article_count"],
+        },
+        "subfilter_count": len(model["subfilters"]),
         "html_chars": len(html),
         "reference_sha256": REFERENCE_SHA256,
     }

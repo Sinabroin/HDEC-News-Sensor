@@ -44,6 +44,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install bounded image dependency
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir "Pillow==12.3.0"
+
       # 1) 게이트 (mock-safe · 비밀값/네트워크 0건). 이 예약 경로의 핵심 verifier들.
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
@@ -84,9 +87,9 @@ jobs:
       - name: Snapshot dashboard before live build
         run: cp docs/daily/dashboard-latest.html "$RUNNER_TEMP/dashboard-before.html"
 
-      # 2) live 리포트/대시보드 생성. build_static_report.py가 출력하는 news_data_mode로
-      #    live 수집 성공(live_ok)을 판별한다 (단일 빌드 = 단일 수집). 실패(mock fallback)면
-      #    작업 트리를 복원해 가짜 live 게시를 차단한다.
+      # 2) live brief를 한 번 수집해 artifact로 고정한 뒤 모든 정적 소비자가 재사용한다.
+      #    News Censor의 explicit collector-health gate가 live_ok를 판정한다. 실패(mock fallback,
+      #    source failure, indeterminate health)면 작업 트리를 복원해 가짜 live 게시를 차단한다.
       #    ※ 공개 빌드는 비공개 감시 목록 경로(env)를 설정하지 않는다 — 감시 트리 미주입(사생활).
       - name: Build live report + dashboard
         id: build
@@ -104,23 +107,40 @@ jobs:
           # 미설정이면 3개 실행 버튼을 비활성화하고 Operator API 미연결을 명시한다.
           OPERATOR_API_BASE: ${{ vars.OPERATOR_API_BASE }}
         run: |
-          OUT="$(python3 scripts/build_static_report.py --output docs/daily/latest.html --audience executive)"
-          echo "$OUT"
-          if printf '%s' "$OUT" | grep -q "news_data_mode=live"; then
+          BRIEF_JSON="$RUNNER_TEMP/validated-live-brief.json"
+          python3 scripts/build_executive_brief.py \
+            --output-json "$BRIEF_JSON" \
+            --weather-mode live
+          if VALIDATION="$(TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
+            python3 scripts/build_news_censor.py \
+              --brief-json "$BRIEF_JSON" \
+              --require-live \
+              --json 2>&1)"; then
+            echo "$VALIDATION"
+            python3 scripts/build_static_report.py \
+              --brief-json "$BRIEF_JSON" \
+              --output docs/daily/latest.html \
+              --audience executive
             # 공개 latest.html은 항상 executive 뷰 (operator 기본값 유출 방지, P0-D3R).
-            python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
-            python3 scripts/build_static_dashboard.py --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
+            python3 scripts/build_static_report.py \
+              --brief-json "$BRIEF_JSON" \
+              --output docs/daily/operator-latest.html \
+              --audience operator
+            python3 scripts/build_static_dashboard.py --brief-json "$BRIEF_JSON" --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
             # R4 독립 News Censor — 기존 페이지 내비게이션을 수정하지 않고 dated/latest 두
             # 산출물을 동일 렌더에서 생성한다. live가 아니면 builder가 쓰기 전에 fail-closed.
             TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
               python3 scripts/build_news_censor.py \
+                --brief-json "$BRIEF_JSON" \
                 --output-root docs/news-censor \
-                --require-live
+                --require-live \
+                --image-mode live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · published executive report + operator snapshot + dashboard + standalone News Censor"
+            echo "NEWS_MODE=live · validated shared artifact published to report + operator snapshot + dashboard + standalone News Censor"
           else
+            echo "$VALIDATION"
             echo "live_ok=false" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · live collection failed/empty — NOT publishing as live"
+            echo "NEWS_MODE=live · collector failure/fallback/indeterminate artifact — NOT publishing"
             git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html || true
           fi
 

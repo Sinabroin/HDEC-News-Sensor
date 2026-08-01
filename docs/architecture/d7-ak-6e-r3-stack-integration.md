@@ -109,6 +109,17 @@ No public RSS, Naver, Google, Daum, SMTP, Teams, or Telegram endpoint is used.
 Workflow files, the Daily template, and production state files are hashed before
 and after the audit.
 
+## R4-R1 validated live artifact handoff
+
+The static refresh and Teams watch no longer treat a rendered dashboard mode
+string as collector health. Each workflow first creates one
+`HDEC_VALIDATED_EXECUTIVE_BRIEF_V1` JSON artifact and validates its explicit
+collector status, successful-source count, fallback flag, publisher-direct
+eligible count, quarantine count, and final portal count. Static consumers and
+the Teams delta dashboard reuse that exact artifact instead of independently
+collecting news. `LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES` is a successful live
+no-send; `LIVE_COLLECTION_FAILED` and `LIVE_FALLBACK_REJECTED` remain closed.
+
 ## Canary prerequisites
 
 Keep `TEAMS_AI_NEWS_WATCH=0` until all of the following occur in a separate,

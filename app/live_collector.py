@@ -547,6 +547,7 @@ def fetch_publisher_direct_sources(
     registry_path=None,
     *,
     fetcher=None,
+    source_audit: list | None = None,
 ) -> list[dict]:
     """Collect only registry-pinned official RSS feeds.
 
@@ -584,6 +585,13 @@ def fetch_publisher_direct_sources(
             try:
                 xml_text = load(feed, timeout)
             except Exception:  # noqa: BLE001 - one official feed must not hide others
+                if source_audit is not None:
+                    source_audit.append({
+                        "provider": "publisher_direct_rss",
+                        "source_id": source_id,
+                        "status": "error",
+                        "fetched_count": 0,
+                    })
                 continue
             rows = _parse_items(
                 xml_text,
@@ -591,6 +599,13 @@ def fetch_publisher_direct_sources(
                 collected_at,
                 max_items=20,
             )
+            if source_audit is not None:
+                source_audit.append({
+                    "provider": "publisher_direct_rss",
+                    "source_id": source_id,
+                    "status": "ok" if rows else "empty",
+                    "fetched_count": len(rows),
+                })
             for row in rows:
                 article_url = publisher_direct.normalize_publisher_canonical_url(
                     row.get("url")
