@@ -159,6 +159,9 @@ class SurfaceParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.contract = ""
         self.article_ids: list[str] = []
+        self.dom_ids: list[str] = []
+        self.article_categories: dict[str, set[str]] = {}
+        self.hidden_article_ids: set[str] = set()
         self.filters: list[str] = []
         self.external_assets: list[str] = []
         self.forms = 0
@@ -175,6 +178,13 @@ class SurfaceParser(HTMLParser):
         article_id = values.get("data-article-id")
         if article_id:
             self.article_ids.append(article_id)
+            self.article_categories[article_id] = set(
+                str(values.get("data-categories") or "").split()
+            )
+            if "hidden" in values:
+                self.hidden_article_ids.add(article_id)
+        if values.get("id"):
+            self.dom_ids.append(str(values["id"]))
         filter_id = values.get("data-filter")
         if filter_id:
             self.filters.append(filter_id)
@@ -206,6 +216,47 @@ def extract_model(html: str) -> dict:
     if not match:
         raise ValueError("News Censor JSON island missing")
     return json.loads(match.group(1))
+
+
+def fixture_display_row(
+    index: int,
+    *,
+    title: str,
+    host: str,
+    published_at: str | None,
+    categories: list[str],
+    url: str | None = None,
+    publisher_direct_flag: bool = True,
+    source_quality_passed: bool = True,
+    relevance: bool = True,
+    quarantine: bool = False,
+) -> dict:
+    canonical = url or f"https://{host}/news/{index}"
+    return {
+        "display_article_contract": build_news_censor.DISPLAY_ARTICLE_CONTRACT,
+        "article_id": f"display-{index}",
+        "title": title,
+        "source": host,
+        "display_source": host,
+        "published_at": published_at,
+        "snippet": "현대건설 의사결정 관련 검증 기사 요약입니다.",
+        "url": canonical,
+        "publisher_url": canonical if publisher_direct_flag else "",
+        "canonical_url": canonical if publisher_direct_flag else "",
+        "publisher_direct": publisher_direct_flag,
+        "source_quality_passed": source_quality_passed,
+        "display_relevance_qualified": relevance,
+        "display_relevance_reason": "fixture_relevant" if relevance else "fixture_irrelevant",
+        "category_memberships": categories,
+        "status": "quarantine" if quarantine else "collected",
+        "quarantine": quarantine,
+        "final_score": 3.5,
+        "alert_grade": "참고/제외",
+        "action_label": "모니터링",
+        "category": "general",
+        "category_label": "건설산업 일반",
+        "why_it_matters": "표시 커버리지 관측",
+    }
 
 
 def _browser_executable() -> Path | None:
@@ -388,10 +439,12 @@ def verify_html(
         check(f"{label}: expected article count", len(articles) == expected_articles, len(articles))
     check(f"{label}: DOM/model article counts agree", len(parser.article_ids) == len(articles))
     check(f"{label}: article identities are unique", len(set(parser.article_ids)) == len(parser.article_ids))
+    check(f"{label}: DOM element IDs are unique", len(set(parser.dom_ids)) == len(parser.dom_ids))
+    check(f"{label}: 홈 exposes the complete selected edition", not parser.hidden_article_ids)
     check(f"{label}: all category filters exist", set(build_news_censor.CATEGORY_LABELS) == set(parser.filters))
     coverage = model.get("coverage") or {}
     categories = model.get("categories") or []
-    legacy_committed = label == "committed output" and not coverage
+    legacy_committed = label == "committed output" and not model.get("accounting")
     check(
         f"{label}: coverage rail and category indicators exist",
         legacy_committed or (
@@ -434,9 +487,7 @@ def verify_html(
     check(
         f"{label}: freshness and backfill policy is explicit",
         legacy_committed or (all(
-            row.get("freshness_status") in {
-                "fresh", "recent", "backfill", "archive", "unknown"
-            }
+            row.get("freshness_status") in {"primary", "backfill"}
             and bool(row.get("freshness_label"))
             and isinstance(row.get("is_backfill"), bool)
             for row in articles
@@ -453,10 +504,38 @@ def verify_html(
     check(
         f"{label}: display and Teams policies remain separate",
         legacy_committed or (
-        coverage.get("display_policy") == "publisher_direct_coverage"
+        coverage.get("display_policy")
+        == "publisher_direct_relevance+72h_primary+7d_category_backfill"
         and coverage.get("teams_policy")
         == "ai_topic+executive_relevance+importance+sender_gate"
         and "News Censor 표시 범위와 Teams 중요 AI 발송 정책은 서로 독립" in html),
+    )
+    accounting = model.get("accounting") or {}
+    check(
+        f"{label}: selector renderer and public accounting agree",
+        legacy_committed or (
+        int(accounting.get("selector_output_count") or 0)
+        == int(accounting.get("renderer_input_count") or 0)
+        == int(accounting.get("total_unique_visible_article_count") or 0)
+        == len(parser.article_ids)),
+    )
+    check(
+        f"{label}: lead plus grid preserves unique total",
+        legacy_committed or (
+        int(accounting.get("lead_count") or 0)
+        + int(accounting.get("grid_count") or 0)
+        == len(parser.article_ids)),
+    )
+    check(
+        f"{label}: category filters use rendered memberships",
+        legacy_committed or all(
+            int(item.get("count") or 0)
+            == sum(
+                item["id"] in memberships
+                for memberships in parser.article_categories.values()
+            )
+            for item in categories
+        ),
     )
     check(
         f"{label}: quarantine diagnostics are aggregate-only",
@@ -603,6 +682,7 @@ def main() -> int:
                 build_brief_via_mock_pipeline(),
                 weather_mode="mock",
             )
+            import audit_news_censor_funnel
             live = copy.deepcopy(demo)
             live.update({
                 "news_data_mode": "live",
@@ -611,6 +691,13 @@ def main() -> int:
                 "collection_status": build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
                 "collection_failure_category": "",
             })
+            live[build_news_censor.DISPLAY_FIELD] = [
+                row for row in live[build_news_censor.DISPLAY_FIELD]
+                if row.get("display_relevance_qualified") is True
+            ][:24]
+            live["news_censor_display_contract"]["candidate_count"] = len(
+                live[build_news_censor.DISPLAY_FIELD]
+            )
             live["collector_health"] = {
                 "status": build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
                 "request_count": 6,
@@ -705,8 +792,8 @@ def main() -> int:
                 "eligible_count": 0,
                 "quarantine_count": 7,
             })
-            for key, _categories in build_news_censor.SURFACE_CATEGORIES:
-                empty[key] = []
+            empty[build_news_censor.DISPLAY_FIELD] = []
+            empty["news_censor_display_contract"]["candidate_count"] = 0
             empty["category_sections"] = []
             empty["accordion_sections"] = []
             empty["risk_event_clusters"] = []
@@ -738,12 +825,13 @@ def main() -> int:
             for index, (title, host, published_at) in enumerate((
                 ("현대건설 도시정비 사업 관찰", "alpha.example", "2026-08-02T08:00:00+09:00"),
                 ("GS건설 신규 프로젝트 관찰", "beta.example", "2026-08-02T07:00:00+09:00"),
-                ("건설현장 안전 품질 제도 관찰", "alpha.example", "2026-07-20T07:00:00+09:00"),
+                ("건설현장 안전 품질 제도 관찰", "alpha.example", "2026-07-29T07:00:00+09:00"),
                 ("중동 해외건설 사업환경 관찰", "alpha.example", "2026-08-01T07:00:00+09:00"),
                 ("데이터센터 AI 기술 동향 관찰", "alpha.example", "2026-08-01T06:00:00+09:00"),
             )):
                 url = f"https://{host}/news/{index}"
                 probe_rows.append({
+                    "display_article_contract": build_news_censor.DISPLAY_ARTICLE_CONTRACT,
                     "article_id": f"display-{index}",
                     "title": title,
                     "source": host,
@@ -754,6 +842,13 @@ def main() -> int:
                     "publisher_url": url,
                     "canonical_url": url,
                     "publisher_direct": True,
+                    "source_quality_passed": True,
+                    "display_relevance_qualified": True,
+                    "display_relevance_reason": "fixture_relevant",
+                    "category_memberships": [
+                        ("hdec", "peers", "safety", "global", "ai")[index],
+                        "biz",
+                    ],
                     "status": "collected",
                     "quarantine": False,
                     "final_score": 0.0,
@@ -764,14 +859,15 @@ def main() -> int:
                     "why_it_matters": "표시 커버리지 관측",
                 })
             display_probe["news_censor_display_articles"] = probe_rows
+            display_probe["news_censor_display_contract"]["candidate_count"] = len(probe_rows)
             probe_model = build_news_censor.build_model(
                 display_probe,
                 edition=date(2026, 8, 2),
-                article_limit=4,
+                article_limit=5,
             )
             check(
                 "display coverage includes low-importance publisher rows",
-                probe_model["article_count"] == 4,
+                probe_model["article_count"] == 5,
             )
             check(
                 "display coverage applies publisher diversity and backfill labels",
@@ -783,6 +879,335 @@ def main() -> int:
             check(
                 "display-only rows remain ineligible for Teams send",
                 teams_policy.select_teams_push_candidates(probe_rows) == (),
+            )
+
+            def artifact_for(rows: list[dict]) -> dict:
+                artifact = copy.deepcopy(empty)
+                artifact.update({
+                    "generated_at": "2026-08-02T09:00:00+09:00",
+                    "date_kst": "2026-08-02",
+                    "collection_status": build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
+                })
+                artifact[build_news_censor.DISPLAY_FIELD] = copy.deepcopy(rows)
+                artifact["news_censor_display_contract"]["candidate_count"] = len(rows)
+                artifact["collector_health"].update({
+                    "status": build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
+                    "raw_candidate_count": len(rows),
+                    "publisher_direct_eligible_count": len(rows),
+                    "source_quality_passed_count": len(rows),
+                    "source_quality_rejected_count": 0,
+                    "publisher_resolution_input_count": len(rows),
+                    "pre_resolution_duplicate_count": 0,
+                    "quarantine_count": 0,
+                    "quarantine_reason_counts": {},
+                    "publisher_resolution": {
+                        "attempted_count": len(rows),
+                        "resolved_count": len(rows),
+                        "failed_count": 0,
+                        "budget_exhausted_count": 0,
+                        "policy": "bounded_fair_per_publisher",
+                    },
+                })
+                artifact["publisher_direct_delivery"].update({
+                    "eligible_count": len(rows),
+                    "quarantine_count": 0,
+                })
+                return artifact
+
+            nineteen_rows = [
+                fixture_display_row(
+                    index,
+                    title=f"현대건설 프로젝트 {index} 신규 계약 {100 + index}억원",
+                    host=f"publisher-{index % 7}.example",
+                    published_at=f"2026-08-01T{index % 20:02d}:00:00+09:00",
+                    categories=[
+                        "biz",
+                        build_news_censor.PRIMARY_CATEGORY_IDS[
+                            index % len(build_news_censor.PRIMARY_CATEGORY_IDS)
+                        ],
+                    ],
+                )
+                for index in range(19)
+            ]
+            nineteen_artifact = artifact_for(nineteen_rows)
+            nineteen_audit: dict = {}
+            nineteen_model = build_news_censor.build_model(
+                nineteen_artifact,
+                edition=date(2026, 8, 2),
+                audit_sink=nineteen_audit,
+            )
+            check(
+                "19 publisher-eligible unique articles survive selection without hidden cap",
+                nineteen_model["article_count"] == 19
+                and nineteen_audit["stage_counts"]["diversity_selector_survivors"] == 19
+                and nineteen_audit["stage_counts"]["hard_cap_survivors"] == 19,
+                nineteen_audit["stage_counts"],
+            )
+            check(
+                "diversity ordering is non-destructive across seven publishers",
+                nineteen_audit["diversity"]["distinct_publishers"] == 7
+                and nineteen_audit["stage_loss_reason_counts"]["publisher_share_deprioritized"] == 0,
+            )
+            old_teams_max = os.environ.get("TEAMS_AI_NEWS_MAX_ARTICLES")
+            os.environ["TEAMS_AI_NEWS_MAX_ARTICLES"] = "1"
+            teams_max_model = build_news_censor.build_model(
+                nineteen_artifact,
+                edition=date(2026, 8, 2),
+            )
+            if old_teams_max is None:
+                os.environ.pop("TEAMS_AI_NEWS_MAX_ARTICLES", None)
+            else:
+                os.environ["TEAMS_AI_NEWS_MAX_ARTICLES"] = old_teams_max
+            check(
+                "Teams max 1 never caps News Censor",
+                teams_max_model["article_count"] == 19,
+            )
+            image_probe = copy.deepcopy(nineteen_model)
+            build_news_censor.materialize_article_images(
+                image_probe,
+                output_root=temp_root / "image-limit-probe",
+                image_limit=0,
+            )
+            check(
+                "image limit never becomes article limit",
+                len(image_probe["articles"]) == 19,
+            )
+            nineteen_html = build_news_censor.render_html(nineteen_model)
+            nineteen_funnel = audit_news_censor_funnel.audit_artifact(
+                nineteen_artifact,
+                nineteen_html,
+                article_limit=build_news_censor.PUBLIC_HARD_MAX,
+            )
+            check(
+                "one artifact has exact selector renderer DOM accounting",
+                nineteen_funnel["same_artifact_all_stages"]
+                and nineteen_funnel["accounting_pass"]
+                and nineteen_funnel["stage_counts"]["renderer_input_count"] == 19
+                and nineteen_funnel["stage_counts"]["public_html_card_count"] == 19,
+                nineteen_funnel["stage_counts"],
+            )
+            check(
+                "audit safety counters remain all zero",
+                all(value == 0 for value in nineteen_funnel["safety_counters"].values()),
+            )
+
+            canonical_rows = [
+                fixture_display_row(
+                    200,
+                    title="현대건설 동일 계약 보도",
+                    host="canonical.example",
+                    published_at="2026-08-01T08:00:00+09:00",
+                    categories=["biz", "hdec"],
+                    url="https://canonical.example/news/same?utm_source=a",
+                ),
+                fixture_display_row(
+                    201,
+                    title="현대건설 동일 계약 보도 재전송",
+                    host="canonical.example",
+                    published_at="2026-08-01T08:10:00+09:00",
+                    categories=["biz", "hdec"],
+                    url="https://canonical.example/news/same?utm_source=b",
+                ),
+            ]
+            canonical_audit: dict = {}
+            canonical_model = build_news_censor.build_model(
+                artifact_for(canonical_rows),
+                edition=date(2026, 8, 2),
+                audit_sink=canonical_audit,
+            )
+            check(
+                "legitimate canonical duplicates collapse independently",
+                canonical_model["article_count"] == 1
+                and sum(
+                    row["final_rejection_reason"] == "canonical_duplicate"
+                    for row in canonical_audit["article_decisions"]
+                ) == 1,
+            )
+
+            event_rows = [
+                fixture_display_row(
+                    210 + index,
+                    title="현대건설 사우디 플랜트 5000억원 계약 공식 발표",
+                    host=f"event-{index}.example",
+                    published_at=f"2026-08-01T0{8 + index}:00:00+09:00",
+                    categories=["biz", "hdec", "global"],
+                )
+                for index in range(2)
+            ]
+            event_audit: dict = {}
+            event_model = build_news_censor.build_model(
+                artifact_for(event_rows),
+                edition=date(2026, 8, 2),
+                audit_sink=event_audit,
+            )
+            check(
+                "legitimate event duplicates collapse independently",
+                event_model["article_count"] == 1
+                and sum(
+                    row["final_rejection_reason"] == "event_duplicate"
+                    for row in event_audit["article_decisions"]
+                ) == 1,
+            )
+
+            distinct_rows = [
+                fixture_display_row(
+                    220,
+                    title="현대건설 사우디 플랜트 5000억원 계약 공식 발표",
+                    host="followup.example",
+                    published_at="2026-08-01T08:00:00+09:00",
+                    categories=["biz", "hdec", "global"],
+                ),
+                fixture_display_row(
+                    221,
+                    title="현대건설 사우디 플랜트 6200억원 추가 계약 공식 발표",
+                    host="followup.example",
+                    published_at="2026-08-02T08:00:00+09:00",
+                    categories=["biz", "hdec", "global"],
+                ),
+                fixture_display_row(
+                    222,
+                    title="현대건설 국내 현장 안전사고 후속 대책 발표",
+                    host="followup.example",
+                    published_at="2026-08-02T07:00:00+09:00",
+                    categories=["biz", "hdec", "safety"],
+                ),
+            ]
+            distinct_model = build_news_censor.build_model(
+                artifact_for(distinct_rows),
+                edition=date(2026, 8, 2),
+            )
+            check(
+                "distinct follow-ups and same-publisher different events survive",
+                distinct_model["article_count"] == 3,
+            )
+
+            freshness_rows = [
+                fixture_display_row(
+                    230,
+                    title="현대건설 72시간 이내 사업 기사",
+                    host="freshness.example",
+                    published_at="2026-07-30T10:00:00+09:00",
+                    categories=["biz"],
+                ),
+                fixture_display_row(
+                    231,
+                    title="건설현장 안전 품질 7일 보강 기사",
+                    host="freshness.example",
+                    published_at="2026-07-29T09:00:00+09:00",
+                    categories=["biz", "safety"],
+                ),
+                fixture_display_row(
+                    232,
+                    title="AI 데이터센터 7일 초과 기사",
+                    host="freshness.example",
+                    published_at="2026-07-26T07:00:00+09:00",
+                    categories=["biz", "ai"],
+                ),
+                fixture_display_row(
+                    233,
+                    title="현대그룹 발행시각 누락 기사",
+                    host="freshness.example",
+                    published_at=None,
+                    categories=["biz", "hdec"],
+                ),
+            ]
+            freshness_audit: dict = {}
+            freshness_model = build_news_censor.build_model(
+                artifact_for(freshness_rows),
+                edition=date(2026, 8, 2),
+                audit_sink=freshness_audit,
+            )
+            check(
+                "72-hour primary and seven-day category backfill are exact",
+                freshness_model["article_count"] == 2
+                and freshness_model["coverage"]["primary_window_count"] == 1
+                and freshness_model["coverage"]["backfill_article_count"] == 1
+                and {row["freshness_status"] for row in freshness_model["articles"]}
+                == {"primary", "backfill"},
+            )
+            check(
+                "older-than-seven-day and missing timestamps stay excluded",
+                freshness_audit["stage_loss_reason_counts"]["stale_outside_backfill_window"] == 1
+                and freshness_audit["stage_loss_reason_counts"]["missing_published_at"] == 1,
+            )
+            check(
+                "backfilled articles remain outside Teams alerts",
+                teams_policy.select_teams_push_candidates(freshness_rows) == (),
+            )
+
+            forty_one_rows = [
+                fixture_display_row(
+                    300 + index,
+                    title=f"현대건설 고유 계약 {1000 + index}억원",
+                    host=f"cap-{index % 8}.example",
+                    published_at="2026-08-01T06:00:00+09:00",
+                    categories=["biz", "hdec"],
+                )
+                for index in range(41)
+            ]
+            cap_audit: dict = {}
+            cap_model = build_news_censor.build_model(
+                artifact_for(forty_one_rows),
+                edition=date(2026, 8, 2),
+                audit_sink=cap_audit,
+            )
+            check(
+                "public hard cap is exactly 40 with explicit truncation",
+                cap_model["article_count"] == 40
+                and cap_audit["stage_loss_reason_counts"]["hard_cap_truncated"] == 1,
+            )
+
+            multi_row = fixture_display_row(
+                400,
+                title="GS건설 AI 데이터센터 신규 투자",
+                host="multi.example",
+                published_at="2026-08-01T06:00:00+09:00",
+                categories=["biz", "peers", "ai"],
+            )
+            multi_model = build_news_censor.build_model(
+                artifact_for([multi_row]),
+                edition=date(2026, 8, 2),
+            )
+            check(
+                "multi-category article remains discoverable in every genuine filter",
+                set(multi_model["articles"][0]["categories"])
+                == {"all", "biz", "peers", "ai"}
+                and all(
+                    next(item for item in multi_model["categories"] if item["id"] == key)["count"] == 1
+                    for key in ("biz", "peers", "ai")
+                ),
+            )
+
+            blocked_rows = [
+                fixture_display_row(
+                    410,
+                    title="포털 링크 차단 기사",
+                    host="news.naver.com",
+                    published_at="2026-08-01T06:00:00+09:00",
+                    categories=["biz"],
+                    url="https://news.naver.com/main/read.nhn?oid=1&aid=2",
+                    publisher_direct_flag=False,
+                ),
+                fixture_display_row(
+                    411,
+                    title="격리 기사 차단",
+                    host="quarantine.example",
+                    published_at="2026-08-01T06:00:00+09:00",
+                    categories=["biz"],
+                    quarantine=True,
+                ),
+            ]
+            blocked_audit: dict = {}
+            blocked_model = build_news_censor.build_model(
+                artifact_for(blocked_rows),
+                edition=date(2026, 8, 2),
+                audit_sink=blocked_audit,
+            )
+            check(
+                "portal and quarantine rows never render",
+                blocked_model["article_count"] == 0
+                and blocked_audit["stage_loss_reason_counts"]["portal_or_discovery_url_rejected"] == 1
+                and blocked_audit["stage_loss_reason_counts"]["publisher_authority_rejected"] == 1,
             )
             failed = copy.deepcopy(empty)
             failed["collection_status"] = build_news_censor.LIVE_COLLECTION_FAILED
@@ -869,7 +1294,7 @@ def main() -> int:
                 "healthy LIVE output",
                 expected_mode="live",
                 expected_status=build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
-                expected_articles=24,
+                expected_articles=23,
             )
             desktop_browser = run_browser_interaction(
                 live_latest,

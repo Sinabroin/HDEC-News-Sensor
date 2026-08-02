@@ -16,6 +16,9 @@ import os
 import re
 import sys
 import tempfile
+import unicodedata
+from collections import Counter
+from difflib import SequenceMatcher
 from datetime import date, datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
@@ -37,6 +40,9 @@ DEFAULT_OUTPUT_ROOT = ROOT / "docs" / "news-censor"
 REFERENCE_SHA256 = "c4a1d129a9e8b6d824b961e2042f345cfc2eb405dcbc488a542e5bc6cee14804"
 CONTRACT = "D7-AK-6E-R4-STANDALONE-NEWS-CENSOR"
 ARTIFACT_CONTRACT = "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1"
+DISPLAY_CONTRACT = "HDEC_NEWS_CENSOR_DISPLAY_V1"
+DISPLAY_ARTICLE_CONTRACT = "HDEC_NEWS_CENSOR_DISPLAY_ARTICLE_V1"
+DISPLAY_FIELD = "news_censor_display_articles"
 KST = timezone(timedelta(hours=9))
 
 LIVE_HEALTHY_WITH_ARTICLES = "LIVE_HEALTHY_WITH_ARTICLES"
@@ -64,43 +70,31 @@ CATEGORY_LABELS = {
 }
 PRIMARY_CATEGORY_IDS = tuple(key for key in CATEGORY_LABELS if key != "all")
 FRESH_MAX_HOURS = 72
-RECENT_MAX_HOURS = 7 * 24
-BACKFILL_MAX_HOURS = 30 * 24
-PUBLISHER_DIVERSITY_SOFT_CAP = 3
-
-SURFACE_CATEGORIES = (
-    ("news_censor_display_articles", ("biz",)),
-    ("top_immediate_signals", ("all",)),
-    ("top_new_issues", ("all",)),
-    ("hdec_direct_signals", ("hdec",)),
-    ("business_signals", ("biz",)),
-    ("competitor_contractor_signals", ("peers",)),
-    ("competitor_supply_signals", ("peers",)),
-    ("risk_regulation_signals", ("safety",)),
-    ("ai_radar_signals", ("ai",)),
-    ("ai_value_chain_pool", ("ai",)),
-    ("macro_economy_signals", ("biz",)),
-    ("hyundai_group_signals", ("hdec",)),
-    ("trust_company_signals", ("biz",)),
-    ("developer_signals", ("biz",)),
+BACKFILL_MAX_HOURS = 7 * 24
+CATEGORY_TARGET = 3
+PUBLIC_HARD_MAX = 40
+PUBLIC_TARGET_MIN = 20
+PUBLISHER_SHARE_PREFERENCE = 0.40
+STAGE_LOSS_KEYS = (
+    "source_quality_rejected",
+    "publisher_authority_rejected",
+    "portal_or_discovery_url_rejected",
+    "missing_published_at",
+    "category_unresolved",
+    "relevance_rejected",
+    "stale_outside_primary_window",
+    "stale_outside_backfill_window",
+    "canonical_duplicate",
+    "event_duplicate",
+    "publisher_share_deprioritized",
+    "category_quota_deprioritized",
+    "hard_cap_truncated",
+    "renderer_missing_required_field",
+    "template_filter_excluded",
+    "serialization_loss",
+    "duplicate_dom_key",
+    "other_explicit_reason",
 )
-
-SECTION_CATEGORY = {
-    "hdec_direct": "hdec",
-    "ai": "ai",
-    "risk_regulation": "safety",
-    "order_overseas": "global",
-    "competitor_supply": "peers",
-    "macro_economy": "biz",
-}
-
-KEYWORD_CATEGORIES = {
-    "hdec": ("현대건설", "현대엔지니어링", "현대 그룹", "현대그룹"),
-    "peers": ("gs건설", "대우건설", "dl이앤씨", "롯데건설", "포스코이앤씨", "삼성물산"),
-    "safety": ("안전", "중대재해", "사고", "품질", "하자", "감독", "규제"),
-    "global": ("해외", "글로벌", "중동", "사우디", "네옴", "미국", "유럽", "지정학"),
-    "ai": (" ai ", "인공지능", "데이터센터", "data center", "smr", "bim", "로봇", "디지털 트윈"),
-}
 
 VERDICT_STYLE = {
     "기회": ("기회", "#1E5F8A"),
@@ -141,44 +135,19 @@ def _metadata(row: Mapping) -> dict:
     return dict(value) if isinstance(value, Mapping) else {}
 
 
-def _category_tokens(row: Mapping, seeds: Iterable[str]) -> set[str]:
-    tokens = {"all", *seeds}
-    for section in (
-        row.get("executive_section"),
-        row.get("radar_section"),
-        *(row.get("secondary_sections") or []),
-    ):
-        mapped = SECTION_CATEGORY.get(str(section or ""))
-        if mapped:
-            tokens.add(mapped)
-    text = (
-        f" {row.get('title') or ''} {row.get('snippet') or ''} "
-        f"{row.get('source') or ''} "
-    ).casefold()
-    for category, keywords in KEYWORD_CATEGORIES.items():
-        if any(keyword in text for keyword in keywords):
-            tokens.add(category)
-    return tokens
+def _category_tokens(row: Mapping) -> set[str]:
+    raw = row.get("category_memberships")
+    if not isinstance(raw, (list, tuple, set)):
+        return {"all"}
+    valid = {str(value) for value in raw if str(value) in PRIMARY_CATEGORY_IDS}
+    return {"all", *valid}
 
 
-def _candidate_rows(brief: Mapping) -> Iterable[tuple[dict, tuple[str, ...]]]:
-    for key, categories in SURFACE_CATEGORIES:
-        for item in brief.get(key) or []:
-            if isinstance(item, Mapping):
-                yield dict(item), categories
-    for section in brief.get("category_sections") or []:
-        if not isinstance(section, Mapping):
-            continue
-        for item in section.get("top_articles") or []:
-            if isinstance(item, Mapping):
-                yield dict(item), ("biz",)
-    for section in brief.get("accordion_sections") or []:
-        if not isinstance(section, Mapping):
-            continue
-        category = SECTION_CATEGORY.get(str(section.get("key") or ""), "all")
-        for item in section.get("articles") or []:
-            if isinstance(item, Mapping):
-                yield dict(item), (category,)
+def _candidate_rows(brief: Mapping) -> Iterable[dict]:
+    """Consume the one canonical display field; legacy surfaces are never fallback."""
+    for item in brief.get(DISPLAY_FIELD) or []:
+        if isinstance(item, Mapping):
+            yield dict(item)
 
 
 def _verdict(row: Mapping) -> tuple[str, str]:
@@ -205,6 +174,16 @@ def validate_brief_artifact(brief: Mapping, *, require_live: bool) -> None:
     """Validate explicit handoff provenance; never infer live from process env."""
     if brief.get("artifact_contract") != ARTIFACT_CONTRACT:
         raise LiveBriefRejected("validated executive brief artifact contract missing")
+    display_contract = brief.get("news_censor_display_contract") or {}
+    display_rows = brief.get(DISPLAY_FIELD)
+    if (
+        not isinstance(display_contract, Mapping)
+        or display_contract.get("contract") != DISPLAY_CONTRACT
+        or display_contract.get("field") != DISPLAY_FIELD
+        or not isinstance(display_rows, list)
+        or int(display_contract.get("candidate_count") or 0) != len(display_rows)
+    ):
+        raise LiveBriefRejected("canonical News Censor display contract missing or inconsistent")
     if not require_live:
         return
 
@@ -369,27 +348,34 @@ def _freshness_info(row: Mapping, reference: datetime) -> dict:
     published = _parse_datetime(row.get("published_at"))
     if published is None:
         return {
-            "status": "unknown",
-            "label": "시각 확인 필요",
-            "rank": 3,
+            "status": "missing",
+            "label": "발행시각 없음",
+            "rank": 9,
             "age_hours": None,
-            "is_backfill": True,
+            "is_backfill": False,
         }
-    age_hours = max(0.0, (reference - published).total_seconds() / 3600)
+    age_hours = (reference - published).total_seconds() / 3600
+    if age_hours < -6:
+        return {
+            "status": "future_outlier",
+            "label": "발행시각 검증 필요",
+            "rank": 9,
+            "age_hours": round(age_hours, 1),
+            "is_backfill": False,
+        }
+    age_hours = max(0.0, age_hours)
     if age_hours <= FRESH_MAX_HOURS:
-        status, label, rank = "fresh", "최신 72시간", 0
-    elif age_hours <= RECENT_MAX_HOURS:
-        status, label, rank = "recent", "최근 7일", 1
+        status, label, rank = "primary", "최신 72시간", 0
     elif age_hours <= BACKFILL_MAX_HOURS:
-        status, label, rank = "backfill", "최근 30일 보강", 2
+        status, label, rank = "backfill", "7일 이내 카테고리 보강", 1
     else:
-        status, label, rank = "archive", "30일 초과 보관", 3
+        status, label, rank = "outside_backfill", "7일 초과 제외", 2
     return {
         "status": status,
         "label": label,
         "rank": rank,
         "age_hours": round(age_hours, 1),
-        "is_backfill": status not in {"fresh", "recent"},
+        "is_backfill": status == "backfill",
     }
 
 
@@ -412,56 +398,411 @@ def _coverage_sort_key(item: Mapping) -> tuple:
     )
 
 
-def _select_coverage_rows(
-    candidates: Iterable[dict],
+_EVENT_ENTITY_TERMS = (
+    "현대건설", "현대엔지니어링", "현대자동차그룹", "삼성물산", "gs건설",
+    "대우건설", "dl이앤씨", "포스코이앤씨", "롯데건설", "sk에코플랜트",
+    "국토교통부", "고용노동부", "행정안전부", "과학기술정보통신부",
+)
+_EVENT_TYPES = {
+    "contract": ("수주", "계약", "낙찰", "우선협상"),
+    "incident": ("사고", "붕괴", "사망", "중대재해", "화재"),
+    "regulatory": ("제재", "처분", "과징금", "영업정지", "법안", "규제"),
+    "milestone": ("착공", "준공", "개통", "완공", "상업운전"),
+    "investment": ("투자", "증설", "출자", "인수"),
+    "announcement": ("발표", "공식", "공고", "보도자료"),
+    "partnership": ("협약", "mou", "파트너십", "협력"),
+}
+_EVENT_STOPWORDS = {
+    "관련", "대한", "위한", "통해", "추진", "사업", "건설", "건설사", "산업",
+    "정부", "기업", "기술", "시장", "글로벌", "해외", "프로젝트", "뉴스", "발표",
+    "ai", "인공지능", "안전", "에너지", "전력", "데이터센터",
+}
+_EVENT_TOKEN_RE = re.compile(r"[0-9a-z가-힣]+", re.IGNORECASE)
+_MATERIAL_MARKER_RE = re.compile(
+    r"\d[\d,.]*(?:조|억|만|%|mw|gw|km|명|건|원|달러|개월|년)",
+    re.IGNORECASE,
+)
+
+
+def _normalized_event_title(value: object) -> str:
+    text = unicodedata.normalize("NFKC", str(value or "")).casefold()
+    text = re.sub(r"\[[^]]*]|\([^)]*\)", " ", text)
+    return " ".join(_EVENT_TOKEN_RE.findall(text))
+
+
+def _event_evidence(row: Mapping) -> dict:
+    title = _normalized_event_title(row.get("title"))
+    tokens = {
+        token for token in title.split()
+        if len(token) >= 2 and token not in _EVENT_STOPWORDS
+    }
+    entities = {term for term in _EVENT_ENTITY_TERMS if term.casefold() in title}
+    types = {
+        key for key, markers in _EVENT_TYPES.items()
+        if any(marker in title for marker in markers)
+    }
+    return {
+        "title": title,
+        "tokens": tokens,
+        "entities": entities,
+        "types": types,
+        "material": set(_MATERIAL_MARKER_RE.findall(title)),
+    }
+
+
+def _same_material_event(left: Mapping, right: Mapping) -> bool:
+    a = _event_evidence(left)
+    b = _event_evidence(right)
+    if not a["title"] or not b["title"]:
+        return False
+    if a["title"] == b["title"]:
+        return True
+    left_time = _parse_datetime(left.get("published_at"))
+    right_time = _parse_datetime(right.get("published_at"))
+    if not left_time or not right_time:
+        return False
+    if abs((left_time - right_time).total_seconds()) > 36 * 3600:
+        return False
+    if a["material"] and b["material"] and a["material"] != b["material"]:
+        return False
+    shared_types = a["types"] & b["types"]
+    shared_entities = a["entities"] & b["entities"]
+    shared_tokens = a["tokens"] & b["tokens"]
+    union = a["tokens"] | b["tokens"]
+    jaccard = len(shared_tokens) / max(1, len(union))
+    similarity = SequenceMatcher(None, a["title"], b["title"]).ratio()
+    if shared_types and shared_entities:
+        return len(shared_tokens) >= 3 and (jaccard >= 0.58 or similarity >= 0.82)
+    return len(shared_tokens) >= 4 and jaccard >= 0.75 and similarity >= 0.90
+
+
+def _safe_article_id(row: Mapping, canonical: str, index: int) -> str:
+    identity = str(row.get("article_id") or row.get("id") or canonical or index)
+    return "a_" + hashlib.sha256(
+        f"{identity}|{canonical}|{index}".encode("utf-8")
+    ).hexdigest()[:16]
+
+
+def _rank_with_preferences(rows: list[dict]) -> tuple[list[dict], dict]:
+    """Order all rows for category/publisher balance without discarding any."""
+    remaining = sorted(rows, key=_coverage_sort_key)
+    ordered: list[dict] = []
+    publisher_counts: dict[str, int] = {}
+    category_counts = {key: 0 for key in PRIMARY_CATEGORY_IDS}
+    base_index = {item["record_id"]: index for index, item in enumerate(remaining)}
+    while remaining:
+        def preference(item: Mapping) -> tuple:
+            new_publisher = publisher_counts.get(item["publisher_key"], 0) == 0
+            category_gain = sum(
+                category_counts[key] < CATEGORY_TARGET
+                for key in item["categories"] if key in category_counts
+            )
+            return (
+                int(item["freshness"]["rank"]),
+                -int(new_publisher and len(publisher_counts) < 6),
+                -category_gain,
+                publisher_counts.get(item["publisher_key"], 0),
+                base_index[item["record_id"]],
+            )
+
+        chosen = min(remaining, key=preference)
+        remaining.remove(chosen)
+        ordered.append(chosen)
+        publisher = chosen["publisher_key"]
+        publisher_counts[publisher] = publisher_counts.get(publisher, 0) + 1
+        for category in chosen["categories"]:
+            if category in category_counts:
+                category_counts[category] += 1
+    largest = max(publisher_counts.values(), default=0)
+    share = largest / len(ordered) if ordered else 0.0
+    return ordered, {
+        "distinct_publishers": len(publisher_counts),
+        "largest_publisher_share": round(share, 4),
+        "diversity_relaxed": bool(ordered and share > PUBLISHER_SHARE_PREFERENCE),
+    }
+
+
+def select_display_articles(
+    brief: Mapping,
     *,
     limit: int,
     reference: datetime,
-) -> list[dict]:
-    enriched = []
-    for item in candidates:
-        value = dict(item)
-        value["freshness"] = _freshness_info(item["row"], reference)
-        value["publisher_key"] = _publisher_key(item["row"])
-        enriched.append(value)
-    ranked = sorted(enriched, key=_coverage_sort_key)
-    cap = max(0, min(40, int(limit)))
-    if cap == 0:
-        return []
+) -> tuple[list[dict], dict]:
+    """Select the canonical public edition and return private, ID-safe audit data."""
+    rows = list(_candidate_rows(brief))
+    health = brief.get("collector_health") or {}
+    resolution = health.get("publisher_resolution") or {}
+    loss_details = {
+        key: {"count": 0, "article_ids": []} for key in STAGE_LOSS_KEYS
+    }
+    other_reasons: dict[str, int] = {}
 
-    selected: list[dict] = []
-    selected_urls: set[str] = set()
-    publisher_counts: dict[str, int] = {}
+    def lose(reason: str, article_id: str = "", count: int = 1) -> None:
+        loss_details[reason]["count"] += max(0, int(count))
+        if article_id:
+            loss_details[reason]["article_ids"].append(article_id)
 
-    def add(item: dict) -> None:
-        canonical = publisher_direct.publisher_url(item["row"]).casefold().rstrip("/")
-        if not canonical or canonical in selected_urls or len(selected) >= cap:
-            return
-        selected.append(item)
-        selected_urls.add(canonical)
-        publisher = item["publisher_key"]
-        publisher_counts[publisher] = publisher_counts.get(publisher, 0) + 1
-
-    # Seed one row for every observable category before ordinary ranking.  A row
-    # may satisfy multiple categories; do not add a second merely to tick a box.
-    for category in PRIMARY_CATEGORY_IDS:
-        if any(category in item["categories"] for item in selected):
+    upstream_source_rejected = int(health.get("source_quality_rejected_count") or 0)
+    lose("source_quality_rejected", count=upstream_source_rejected)
+    upstream_duplicate = int(health.get("pre_resolution_duplicate_count") or 0)
+    lose("canonical_duplicate", count=upstream_duplicate)
+    budget_exhausted = int(resolution.get("budget_exhausted_count") or 0)
+    if budget_exhausted:
+        lose("other_explicit_reason", count=budget_exhausted)
+        other_reasons["publisher_resolution_budget_exhausted"] = budget_exhausted
+    quarantine_reasons = health.get("quarantine_reason_counts") or {}
+    resolution_failed = 0
+    for reason, raw_count in quarantine_reasons.items():
+        count = max(0, int(raw_count or 0))
+        if reason in {
+            "publisher_resolution_budget_exhausted",
+            "source_quality_filtered_before_publisher_resolution",
+        }:
             continue
-        for item in ranked:
-            if category in item["categories"]:
-                add(item)
-                break
+        resolution_failed += count
+        if "PORTAL" in str(reason).upper() or "portal" in str(reason).casefold():
+            lose("portal_or_discovery_url_rejected", count=count)
+        else:
+            lose("publisher_authority_rejected", count=count)
 
-    # Soft publisher cap keeps alternative publishers visible.  Relax it only to
-    # fill unused capacity; coverage never fabricates a missing category/source.
-    for item in ranked:
-        if publisher_counts.get(item["publisher_key"], 0) < PUBLISHER_DIVERSITY_SOFT_CAP:
-            add(item)
-    for item in ranked:
-        add(item)
+    decisions: dict[str, dict] = {}
+    eligible: list[dict] = []
+    source_quality_rows = 0
+    display_policy_rows = 0
+    primary_rows = 0
+    backfill_rows = 0
+    for index, raw in enumerate(rows):
+        assessment = publisher_direct.assess_delivery_eligibility(
+            raw, relevance_qualified=True
+        )
+        canonical = assessment.publisher_url
+        safe_id = _safe_article_id(raw, canonical, index)
+        categories = _category_tokens(raw)
+        freshness = _freshness_info(raw, reference)
+        record = {
+            "safe_article_id": safe_id,
+            "canonical_url_host": (urlparse(canonical).hostname or "").casefold().removeprefix("www."),
+            "source": str(raw.get("display_source") or raw.get("source") or ""),
+            "publication_timestamp": str(raw.get("published_at") or ""),
+            "assigned_categories": sorted(categories - {"all"}),
+            "display_eligibility": False,
+            "freshness_status": freshness["status"],
+            "backfill_status": "not_applicable",
+            "canonical_cluster": (
+                "c_" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+                if canonical else ""
+            ),
+            "event_cluster": "",
+            "selected": False,
+            "final_rejection_reason": "",
+        }
+        decisions[safe_id] = record
 
-    selected.sort(key=_coverage_sort_key)
-    return selected
+        def reject(reason: str) -> None:
+            record["final_rejection_reason"] = reason
+            lose(reason, safe_id)
+
+        if raw.get("display_article_contract") != DISPLAY_ARTICLE_CONTRACT:
+            reject("serialization_loss")
+            continue
+        if raw.get("source_quality_passed") is not True:
+            reject("source_quality_rejected")
+            continue
+        source_quality_rows += 1
+        if not assessment.eligible:
+            if assessment.reason == "published_at_and_fallback_missing":
+                reject("missing_published_at")
+            elif not canonical and publisher_direct.portal_provider(raw.get("url")):
+                reject("portal_or_discovery_url_rejected")
+            else:
+                reject("publisher_authority_rejected")
+            continue
+        if raw.get("display_relevance_qualified") is not True:
+            reject("relevance_rejected")
+            continue
+        if len(categories) <= 1:
+            reject("category_unresolved")
+            continue
+        if freshness["status"] == "missing":
+            reject("missing_published_at")
+            continue
+        if freshness["status"] == "future_outlier":
+            record["final_rejection_reason"] = "other_explicit_reason"
+            lose("other_explicit_reason", safe_id)
+            other_reasons["published_at_future_outlier"] = (
+                other_reasons.get("published_at_future_outlier", 0) + 1
+            )
+            continue
+        display_policy_rows += 1
+        record["display_eligibility"] = True
+        if freshness["status"] == "outside_backfill":
+            lose("stale_outside_primary_window", safe_id)
+            reject("stale_outside_backfill_window")
+            continue
+        if freshness["status"] == "backfill":
+            backfill_rows += 1
+            lose("stale_outside_primary_window", safe_id)
+            record["backfill_status"] = "candidate"
+        else:
+            primary_rows += 1
+        eligible.append({
+            "row": dict(raw),
+            "categories": set(categories),
+            "subfilters": set(_subfilter_labels(raw)),
+            "freshness": freshness,
+            "publisher_key": _publisher_key(raw),
+            "record_id": safe_id,
+        })
+
+    canonical_survivors: list[dict] = []
+    by_canonical: dict[str, dict] = {}
+    for item in sorted(eligible, key=_coverage_sort_key):
+        canonical = publisher_direct.publisher_url(item["row"]).casefold().rstrip("/")
+        survivor = by_canonical.get(canonical)
+        if survivor is None:
+            by_canonical[canonical] = item
+            canonical_survivors.append(item)
+            continue
+        survivor["categories"].update(item["categories"])
+        survivor["subfilters"].update(item["subfilters"])
+        decisions[item["record_id"]]["canonical_cluster"] = decisions[
+            survivor["record_id"]
+        ]["canonical_cluster"]
+        decisions[item["record_id"]]["final_rejection_reason"] = "canonical_duplicate"
+        lose("canonical_duplicate", item["record_id"])
+
+    event_survivors: list[dict] = []
+    for item in canonical_survivors:
+        duplicate = next(
+            (
+                survivor for survivor in event_survivors
+                if _same_material_event(item["row"], survivor["row"])
+            ),
+            None,
+        )
+        if duplicate is None:
+            event_survivors.append(item)
+            event_key = "e_" + hashlib.sha256(
+                _normalized_event_title(item["row"].get("title")).encode("utf-8")
+            ).hexdigest()[:16]
+            decisions[item["record_id"]]["event_cluster"] = event_key
+            continue
+        duplicate["categories"].update(item["categories"])
+        duplicate["subfilters"].update(item["subfilters"])
+        event_key = decisions[duplicate["record_id"]]["event_cluster"]
+        decisions[item["record_id"]]["event_cluster"] = event_key
+        decisions[item["record_id"]]["final_rejection_reason"] = "event_duplicate"
+        lose("event_duplicate", item["record_id"])
+
+    primary = [row for row in event_survivors if row["freshness"]["status"] == "primary"]
+    backfill = [row for row in event_survivors if row["freshness"]["status"] == "backfill"]
+    category_counts = {key: 0 for key in PRIMARY_CATEGORY_IDS}
+    for item in primary:
+        for category in item["categories"]:
+            if category in category_counts:
+                category_counts[category] += 1
+    admitted_backfill: list[dict] = []
+    for item in sorted(backfill, key=_coverage_sort_key):
+        deficits = [
+            category for category in item["categories"]
+            if category in category_counts and category_counts[category] < CATEGORY_TARGET
+        ]
+        if not deficits:
+            decisions[item["record_id"]]["backfill_status"] = "not_needed"
+            decisions[item["record_id"]]["final_rejection_reason"] = "category_quota_deprioritized"
+            lose("category_quota_deprioritized", item["record_id"])
+            continue
+        decisions[item["record_id"]]["backfill_status"] = "selected"
+        admitted_backfill.append(item)
+        for category in item["categories"]:
+            if category in category_counts:
+                category_counts[category] += 1
+
+    diversity_input = primary + admitted_backfill
+    ranked, diversity = _rank_with_preferences(diversity_input)
+    cap = max(0, min(PUBLIC_HARD_MAX, int(limit)))
+    selected = ranked[:cap]
+    for item in ranked[cap:]:
+        decisions[item["record_id"]]["final_rejection_reason"] = "hard_cap_truncated"
+        lose("hard_cap_truncated", item["record_id"])
+    for item in selected:
+        decisions[item["record_id"]]["selected"] = True
+        decisions[item["record_id"]]["final_rejection_reason"] = "selected"
+    selected_publishers = Counter(item["publisher_key"] for item in selected)
+    selected_largest = max(selected_publishers.values(), default=0)
+    diversity.update({
+        "distinct_publishers": len(selected_publishers),
+        "largest_publisher_share": round(
+            selected_largest / len(selected) if selected else 0.0,
+            4,
+        ),
+        "diversity_relaxed": bool(
+            selected
+            and selected_largest / len(selected) > PUBLISHER_SHARE_PREFERENCE
+        ),
+    })
+
+    publisher_eligible = int(
+        health.get("publisher_direct_eligible_count")
+        or (brief.get("publisher_direct_delivery") or {}).get("eligible_count")
+        or len(rows)
+    )
+    if publisher_eligible != len(rows):
+        delta = abs(publisher_eligible - len(rows))
+        lose("serialization_loss", count=delta)
+        other_reasons["publisher_eligible_display_contract_mismatch"] = delta
+    final_rejected = sum(not item["selected"] for item in decisions.values())
+    selected_ids = [item["record_id"] for item in selected]
+    stage_counts = {
+        "raw_candidates": int(health.get("raw_candidate_count") or 0),
+        "publisher_resolution_attempted": int(resolution.get("attempted_count") or 0),
+        "publisher_resolution_successful": int(resolution.get("resolved_count") or 0),
+        "publisher_direct_eligible": publisher_eligible,
+        "source_quality_passed": source_quality_rows,
+        "display_policy_eligible": display_policy_rows,
+        "freshness_primary_eligible": primary_rows,
+        "freshness_backfill_eligible": backfill_rows,
+        "category_classified": len(eligible),
+        "canonical_dedup_survivors": len(canonical_survivors),
+        "event_dedup_survivors": len(event_survivors),
+        "diversity_selector_survivors": len(ranked),
+        "hard_cap_survivors": len(selected),
+        "renderer_input_count": len(selected),
+        "rendered_card_count": len(selected),
+        "public_html_card_count": len(selected),
+    }
+    audit = {
+        "artifact_contract": str(brief.get("artifact_contract") or ""),
+        "display_contract": DISPLAY_CONTRACT,
+        "artifact_generated_at": str(brief.get("generated_at") or ""),
+        "artifact_fingerprint": hashlib.sha256(
+            json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+        "same_artifact_all_stages": True,
+        "stage_counts": stage_counts,
+        "stage_losses": loss_details,
+        "stage_loss_reason_counts": {
+            key: value["count"] for key, value in loss_details.items()
+        },
+        "other_explicit_reasons": dict(sorted(other_reasons.items())),
+        "article_decisions": list(decisions.values()),
+        "selector_input_ids": list(decisions),
+        "selector_output_ids": selected_ids,
+        "eligible_to_final_reconciliation": {
+            "publisher_eligible": publisher_eligible,
+            "selector_input_count": len(rows),
+            "selected": len(selected),
+            "final_rejected": final_rejected,
+            "balanced": len(rows) == len(selected) + final_rejected,
+        },
+        "diversity": diversity,
+        "primary_window_hours": FRESH_MAX_HOURS,
+        "backfill_window_hours": BACKFILL_MAX_HOURS,
+        "category_target": CATEGORY_TARGET,
+        "public_hard_cap": PUBLIC_HARD_MAX,
+        "resolution_failed_count": resolution_failed,
+    }
+    return selected, audit
 
 
 def _quarantine_diagnostics(health: Mapping) -> list[dict]:
@@ -500,40 +841,26 @@ def _quarantine_diagnostics(health: Mapping) -> list[dict]:
     ]
 
 
-def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> dict:
+def build_model(
+    brief: Mapping,
+    *,
+    edition: date,
+    article_limit: int = PUBLIC_HARD_MAX,
+    audit_sink: dict | None = None,
+) -> dict:
     """Derive a browser-safe, publisher-only model from the shared brief."""
-    merged: dict[str, dict] = {}
-    rejected = 0
-    for raw, seeds in _candidate_rows(brief):
-        assessment = publisher_direct.assess_delivery_eligibility(
-            raw,
-            relevance_qualified=True,
-        )
-        if not assessment.eligible:
-            rejected += 1
-            continue
-        canonical = assessment.publisher_url
-        key = canonical.casefold().rstrip("/")
-        if key in merged:
-            merged[key]["categories"].update(_category_tokens(raw, seeds))
-            merged[key]["subfilters"].update(_subfilter_labels(raw))
-            continue
-        row = dict(raw)
-        row["url"] = canonical
-        merged[key] = {
-            "row": row,
-            "categories": _category_tokens(row, seeds),
-            "subfilters": set(_subfilter_labels(row)),
-        }
-
     generated = _parse_datetime(brief.get("generated_at")) or datetime.now(KST)
-    ranked = _select_coverage_rows(
-        merged.values(),
+    ranked, selection_audit = select_display_articles(
+        brief,
         limit=article_limit,
         reference=generated,
     )
+    if audit_sink is not None:
+        audit_sink.clear()
+        audit_sink.update(selection_audit)
 
     articles = []
+    article_ids: set[str] = set()
     for index, item in enumerate(ranked):
         row = item["row"]
         published = _parse_datetime(row.get("published_at"))
@@ -546,7 +873,10 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
             or row.get("implication")
             or "현대건설 사업 영향과 대응 필요성을 확인합니다."
         )
-        article_id = "nc_" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
+        article_id = "nc_" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+        if article_id in article_ids:
+            raise RuntimeError("duplicate DOM article identity collision")
+        article_ids.add(article_id)
         articles.append({
             "id": article_id,
             "title": str(row.get("title") or "").strip(),
@@ -573,10 +903,6 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         })
 
     status = str(brief.get("collection_status") or "FIXTURE_DEMO")
-    if status == LIVE_HEALTHY_WITH_ARTICLES and not articles:
-        raise LiveBriefRejected(
-            "validated live artifact has eligible collection but no publishable surface rows"
-        )
     if status == LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES and articles:
         raise LiveBriefRejected(
             "validated healthy-empty artifact unexpectedly produced articles"
@@ -645,15 +971,32 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
     )
     resolution = health.get("publisher_resolution") or {}
     quarantine_diagnostics = _quarantine_diagnostics(health)
+    verified_supply_count = int(
+        selection_audit["stage_counts"]["publisher_direct_eligible"]
+    )
     coverage = {
         "category_target_count": len(PRIMARY_CATEGORY_IDS),
         "category_covered_count": covered_categories,
         "category_gap_count": len(PRIMARY_CATEGORY_IDS) - covered_categories,
         "publisher_count": len({row["publisher_key"] for row in articles}),
+        "displayed_article_count": len(articles),
+        "display_eligible_count": int(
+            selection_audit["stage_counts"]["display_policy_eligible"]
+        ),
+        "primary_window_count": sum(
+            row["freshness_status"] == "primary" for row in articles
+        ),
         "fresh_article_count": sum(
-            row["freshness_status"] in {"fresh", "recent"} for row in articles
+            row["freshness_status"] == "primary" for row in articles
         ),
         "backfill_article_count": sum(row["is_backfill"] for row in articles),
+        "verified_supply_count": verified_supply_count,
+        "verified_supply_shortage": verified_supply_count < PUBLIC_TARGET_MIN,
+        "verified_supply_shortage_count": max(
+            0, PUBLIC_TARGET_MIN - verified_supply_count
+        ),
+        "largest_publisher_share": selection_audit["diversity"]["largest_publisher_share"],
+        "diversity_relaxed": selection_audit["diversity"]["diversity_relaxed"],
         "resolution_attempted_count": int(resolution.get("attempted_count") or 0),
         "resolution_resolved_count": int(resolution.get("resolved_count") or 0),
         "resolution_budget_exhausted_count": int(
@@ -661,8 +1004,25 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         ),
         "quarantine_count": int(health.get("quarantine_count") or 0),
         "quarantine_diagnostics": quarantine_diagnostics,
-        "display_policy": "publisher_direct_coverage",
+        "display_policy": "publisher_direct_relevance+72h_primary+7d_category_backfill",
         "teams_policy": "ai_topic+executive_relevance+importance+sender_gate",
+    }
+    accounting = {
+        "public_count_definition": (
+            "unique selected article IDs visible in the 홈 edition; lead counted once; "
+            "market/weather/safety/non-article cards excluded"
+        ),
+        "selector_input_count": len(list(_candidate_rows(brief))),
+        "selector_output_count": len(articles),
+        "renderer_input_count": len(articles),
+        "lead_count": 1 if articles else 0,
+        "grid_count": max(0, len(articles) - 1),
+        "total_unique_visible_article_count": len(articles),
+        "dom_article_card_count": len(articles),
+        "distinct_dom_article_ids": len(article_ids),
+        "category_filter_counts": {
+            item["id"]: item["count"] for item in categories
+        },
     }
     return {
         "contract": CONTRACT,
@@ -673,9 +1033,10 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         "generated_label": generated.strftime("%Y-%m-%d %H:%M KST"),
         "news_data_mode": str(brief.get("news_data_mode") or "mock"),
         "collection_status": status,
+        "artifact_fingerprint": selection_audit["artifact_fingerprint"],
         "source_label": "LIVE · publisher-direct" if live_mode else "DEMO · deterministic fixture",
         "article_count": len(articles),
-        "rejected_count": rejected,
+        "rejected_count": max(0, accounting["selector_input_count"] - len(articles)),
         "published_quarantine_count": 0,
         "collector_quarantine_count": int(health.get("quarantine_count") or 0),
         "collector_request_count": int(health.get("request_count") or 0),
@@ -688,11 +1049,7 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
             health.get("publisher_direct_eligible_count") or len(articles)
         ),
         "portal_url_count": 0,
-        "empty_state": (
-            "현재 조건을 충족한 신규 기사가 없습니다"
-            if status == LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES
-            else ""
-        ),
+        "empty_state": "" if articles else "현재 조건을 충족한 신규 기사가 없습니다",
         "articles": articles,
         "themes": themes,
         "subfilters": subfilters,
@@ -701,6 +1058,8 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         "safety": _safety_rail(brief),
         "categories": categories,
         "coverage": coverage,
+        "accounting": accounting,
+        "selector_stage_counts": dict(selection_audit["stage_counts"]),
     }
 
 
@@ -724,7 +1083,9 @@ def _article_card(article: Mapping, *, lead: bool = False) -> str:
     if lead and article.get("summary"):
         summary = f'<p class="summary">{escape(str(article["summary"]))}</p>'
     return (
-        f'<article class="{kind}" data-article-id="{escape(str(article["id"]))}" '
+        f'<article id="article-{escape(str(article["id"]))}" class="{kind}" '
+        f'data-news-censor-role="selected-article" '
+        f'data-article-id="{escape(str(article["id"]))}" '
         f'data-categories="{categories}" data-subfilters="{subfilters}" '
         f'tabindex="0" role="button" '
         f'aria-label="기사 읽기: {escape(str(article["title"]))}">'
@@ -840,16 +1201,25 @@ def render_html(model: Mapping) -> str:
         "{{SOURCE_LABEL}}": escape(str(model["source_label"])),
         "{{MODE_WARNING}}": escape(warning),
         "{{COVERAGE_SUMMARY}}": escape(
+            f'검증 표시 {model["article_count"]}건 · '
+            f'기본 {coverage["primary_window_count"]} · '
+            f'보강 {coverage["backfill_article_count"]} · '
             f'카테고리 {coverage["category_covered_count"]}/'
-            f'{coverage["category_target_count"]} · '
-            f'발행사 {coverage["publisher_count"]}곳'
+            f'{coverage["category_target_count"]}'
         ),
         "{{ARTICLE_COUNT}}": str(model["article_count"]),
         "{{COVERED_CATEGORY_COUNT}}": str(coverage["category_covered_count"]),
         "{{CATEGORY_TARGET_COUNT}}": str(coverage["category_target_count"]),
         "{{PUBLISHER_COUNT}}": str(coverage["publisher_count"]),
+        "{{DISPLAY_ELIGIBLE_COUNT}}": str(coverage["display_eligible_count"]),
+        "{{PRIMARY_WINDOW_COUNT}}": str(coverage["primary_window_count"]),
         "{{FRESH_ARTICLE_COUNT}}": str(coverage["fresh_article_count"]),
         "{{BACKFILL_ARTICLE_COUNT}}": str(coverage["backfill_article_count"]),
+        "{{SUPPLY_SHORTAGE}}": (
+            f'검증 공급 {coverage["verified_supply_count"]}건 · '
+            f'최소 기준 대비 부족 {coverage["verified_supply_shortage_count"]}건'
+            if coverage["verified_supply_shortage"] else "충분"
+        ),
         "{{RESOLUTION_ATTEMPTED_COUNT}}": str(coverage["resolution_attempted_count"]),
         "{{RESOLUTION_RESOLVED_COUNT}}": str(coverage["resolution_resolved_count"]),
         "{{RESOLUTION_BUDGET_COUNT}}": str(coverage["resolution_budget_exhausted_count"]),
@@ -999,7 +1369,7 @@ def build(
     brief: Mapping,
     *,
     edition: date,
-    article_limit: int = 24,
+    article_limit: int = PUBLIC_HARD_MAX,
 ) -> tuple[dict, str]:
     model = build_model(brief, edition=edition, article_limit=article_limit)
     return model, render_html(model)
@@ -1018,7 +1388,7 @@ def main(argv: list[str] | None = None) -> int:
         help="explicit HDEC_VALIDATED_EXECUTIVE_BRIEF_V1 input artifact",
     )
     parser.add_argument("--edition-date", default="", help="archive date (YYYY-MM-DD; default KST today)")
-    parser.add_argument("--article-limit", type=int, default=24)
+    parser.add_argument("--article-limit", type=int, default=PUBLIC_HARD_MAX)
     parser.add_argument("--require-live", action="store_true", help="fail closed unless collection mode is live")
     parser.add_argument(
         "--image-mode",
@@ -1055,6 +1425,14 @@ def main(argv: list[str] | None = None) -> int:
         "news_data_mode": model["news_data_mode"],
         "edition": model["edition"],
         "article_count": model["article_count"],
+        "public_displayed_count": model["accounting"]["total_unique_visible_article_count"],
+        "selector_input_count": model["accounting"]["selector_input_count"],
+        "selector_output_count": model["accounting"]["selector_output_count"],
+        "renderer_input_count": model["accounting"]["renderer_input_count"],
+        "primary_window_count": model["coverage"]["primary_window_count"],
+        "backfill_count": model["coverage"]["backfill_article_count"],
+        "category_counts": model["accounting"]["category_filter_counts"],
+        "artifact_fingerprint": model["artifact_fingerprint"],
         "rejected_count": model["rejected_count"],
         "collection_status": model["collection_status"],
         "raw_candidate_count": model["raw_candidate_count"],

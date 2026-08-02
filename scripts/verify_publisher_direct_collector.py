@@ -39,6 +39,7 @@ from app import (  # noqa: E402
     insight,
     live_collector,
     naver_news_provider,
+    news_coverage,
     publisher_direct,
     scoring,
     teams_ai_push,
@@ -62,11 +63,10 @@ EXPECTED_PROTECTED_SHA256 = {
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
-        # R4-R1 intentionally replaces exact main baseline
-        # 65dc2a9d6ea31a5d0495d30a27a015f7d74d50a1386ce995ce853a265024b5ec
-        # with one collected brief artifact reused by every static consumer;
+        # R4-R3 adds the exact-artifact News Censor funnel audit after the
+        # existing single brief build. The audit stays under RUNNER_TEMP and
         # both sender defaults remain closed during deployment.
-        "c426e16ec876b3df18d174a06794ec5e261bef2a23b242bcda1c92c2c5a8a1f2"
+        "a477d7ff312b521f9e5cc0523229f160dd7da394128c85cc6599adeb638933b1"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R1 intentionally replaces exact main baseline
@@ -317,6 +317,26 @@ def main() -> int:
         "fair order seeds direct publishers plus Naver and Google coverage",
         [row["title"] for row in fair_order[:6]]
         == ["d-a-1", "d-b-1", "n-a", "n-b", "g-a", "d-a-2"],
+    )
+    coverage_rows = []
+    for category in ("biz", "peers", "hdec", "safety", "global", "ai"):
+        group = next(
+            item for item in news_coverage.collection_query_groups()
+            if category in item.get("surface_categories", [])
+        )
+        coverage_rows.append({
+            "title": f"coverage-{category}",
+            "source": f"{category}.fixture",
+            "source_metadata": {"query": group["queries"][0]},
+        })
+    seeded_coverage = live_collector._seed_resolution_categories(coverage_rows)
+    check(
+        "publisher resolution ordering seeds all six topical categories",
+        len(seeded_coverage[:6]) == 6
+        and set().union(*(
+            live_collector._coverage_categories_for_resolution(row)
+            for row in seeded_coverage[:6]
+        )) >= {"biz", "peers", "hdec", "safety", "global", "ai"},
     )
     isolated_rows = [
         fixture_row(
