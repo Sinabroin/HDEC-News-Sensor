@@ -298,8 +298,74 @@ def main() -> int:
     )
     collector_source = (ROOT / "app/collector.py").read_text(encoding="utf-8")
     check(
-        "publisher verification budget follows direct then Naver then portal order",
-        "direct_rows + naver_rows + google_rows" in collector_source,
+        "publisher verification budget uses fair provider/publisher ordering",
+        "prioritize_publisher_resolution_rows" in collector_source,
+    )
+    fair_order = live_collector.prioritize_publisher_resolution_rows(
+        [
+            {"title": "d-a-1", "source_metadata": {"discovery_provider": "direct:a"}},
+            {"title": "d-a-2", "source_metadata": {"discovery_provider": "direct:a"}},
+            {"title": "d-b-1", "source_metadata": {"discovery_provider": "direct:b"}},
+        ],
+        [
+            {"title": "n-a", "publisher_domain": "n-a.test"},
+            {"title": "n-b", "publisher_domain": "n-b.test"},
+        ],
+        [{"title": "g-a", "source": "g-a"}],
+    )
+    check(
+        "fair order seeds direct publishers plus Naver and Google coverage",
+        [row["title"] for row in fair_order[:6]]
+        == ["d-a-1", "d-b-1", "n-a", "n-b", "g-a", "d-a-2"],
+    )
+    isolated_rows = [
+        fixture_row(
+            "https://broken.fixture.test/news/1",
+            provider="publisher_direct_rss",
+            title="unexpected parser failure",
+            source="Broken Publisher",
+        ),
+        fixture_row(
+            "https://healthy.fixture.test/news/2",
+            provider="publisher_direct_rss",
+            title="현대건설 AI 데이터센터 계약",
+            source="Healthy Publisher",
+        ),
+    ]
+    original_strict_authority = live_collector._strict_publisher_authority
+    try:
+        def isolated_authority(row, **_kwargs):
+            if row["source"] == "Broken Publisher":
+                raise RuntimeError("fixture unexpected parser error")
+            return publisher_direct.apply_publisher_authority(
+                row,
+                publisher_canonical_url=row["url"],
+                source=row["source"],
+                published_at=row["published_at"],
+                resolution_reason="fixture_verified",
+            )
+
+        live_collector._strict_publisher_authority = isolated_authority
+        isolated_count = live_collector.resolve_publisher_urls(
+            isolated_rows,
+            strict=True,
+            max_items=2,
+            deadline=2,
+        )
+    finally:
+        live_collector._strict_publisher_authority = original_strict_authority
+    check(
+        "unexpected publisher parser failure is quarantined per row",
+        isolated_rows[0]["portal_resolution_reason"]
+        == "publisher_verification_internal_error",
+    )
+    check(
+        "unexpected failure does not erase another publisher success",
+        isolated_count == 1
+        and publisher_direct.is_publisher_direct_delivery_eligible(
+            isolated_rows[1],
+            relevance_qualified=True,
+        ),
     )
 
     registry = json.loads(

@@ -202,8 +202,20 @@ def verify_ai_dashboard_model(model: dict) -> None:
     ai_bank = banks.get("ai") or []
     ai_rows = model.get("ai_rows") or []
     ai_surface = list(ai_bank) + list(ai_rows)
-    check("3a: AI 표면(ai bank ∪ ai_rows) 비어있지 않음", bool(ai_surface),
-          f"bank={len(ai_bank)} ai_rows={len(ai_rows)}")
+    meta = model.get("meta") or {}
+    truthful_live_empty = (
+        meta.get("news_data_mode") == "live"
+        and meta.get("ai_hyper_count") == 0
+        and meta.get("ai_value_chain_pool_count") == 0
+    )
+    check(
+        "3a: AI 표면 노출 또는 live 0건 진단",
+        bool(ai_surface) or truthful_live_empty,
+        (
+            f"bank={len(ai_bank)} ai_rows={len(ai_rows)} "
+            f"live_empty={truthful_live_empty}"
+        ),
+    )
 
     empty = [f"{r.get('title')!r}" for r in ai_surface if not _row_lens(r)]
     check("3b: AI 표면 모든 행에 lens 보유", not empty, "; ".join(empty[:4]))
@@ -242,7 +254,6 @@ def verify_ai_dashboard_model(model: dict) -> None:
               f"ai_hyper_count={model.get('meta', {}).get('ai_hyper_count')} "
               f"pool={model.get('meta', {}).get('ai_value_chain_pool_count')}")
 
-    meta = model.get("meta") or {}
     check("3f: AI 노출 진단 카운트 메타 노출(ai_hyper_count/ai_value_chain_pool_count)",
           "ai_hyper_count" in meta and "ai_value_chain_pool_count" in meta,
           f"hyper={meta.get('ai_hyper_count')} pool={meta.get('ai_value_chain_pool_count')}")

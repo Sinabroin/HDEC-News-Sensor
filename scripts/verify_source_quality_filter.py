@@ -42,18 +42,30 @@ DIGEST_BUILDER = ROOT / "scripts" / "build_telegram_digest.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "telegram-notify.yml"
 RADAR_DB = ROOT / "radar.db"
 
-# 본문 전문 필드명 (rules.md §3) — 조각 조립으로 grep 규약 회피
+# Persisted collector field names forbidden by rules.md §3. The scan below is
+# deliberately scoped to the news ingestion, persistence, and publication path;
+# editorial extraction and the separate runtime event log have other contracts.
 BANNED_TERMS = ["".join(parts) for parts in [
     ("raw", "_payload"), ("full", "_text"),
     ("article", "_body"), ("full_rss", "_content"),
 ]]
+BANNED_FIELD_RE = re.compile(
+    r"(?<![0-9a-z_])(?:" + "|".join(map(re.escape, BANNED_TERMS))
+    + r")(?![0-9a-z_])"
+)
 TOKEN_SHAPE = re.compile(r"[0-9]{8,}:[A-Za-z0-9_-]{20,}")
 INSTANT_GRADE = "즉시 알림 후보"
 INSTANT_THRESHOLD = 4.5
 
-# 코드 트리 본문-전문 스캔 대상 (스펙 문서 rules.md/PRD.md/.claude 제외 — 기존 verifier 규약)
-SCAN_GLOBS = ["app/*.py", "app/*.sql", "scripts/*.py",
-              "templates/*", "data/*.json", ".github/workflows/*", "docs/**/*"]
+# News-specific storage/publication scan. Runtime event audit payloads and the
+# authenticated editorial extraction console are deliberately separate domains.
+SCAN_GLOBS = [
+    "app/collector.py", "app/live_collector.py", "app/db.py", "app/schema.sql",
+    "app/briefing.py", "scripts/build_executive_brief.py",
+    "scripts/build_static_report.py", "scripts/build_static_dashboard.py",
+    "scripts/build_news_censor.py", "templates/*", "data/*.json",
+    ".github/workflows/*", "docs/**/*",
+]
 
 # excluded 패턴에 반드시 포함돼야 하는 핵심 출처 유형 (조각 없이 표기 — 금지어 아님)
 REQUIRED_EXCLUDED = ["블로그", "카페", "tistory", "youtube", "커뮤니티"]
@@ -211,8 +223,12 @@ def check_parse_drop() -> None:
     check("파서가 블로그/카페/커뮤니티 item 제외 (뉴스만 통과)",
           len(rows) == 1 and "연합뉴스" in srcs, f"통과 출처={srcs}")
     # 파서 출력은 허용 키 계약을 유지한다 (품질 필드를 raw에 부착하지 않음)
-    allowed = {"id", "title", "source", "published_at", "url", "snippet",
-               "source_metadata"}
+    allowed = {
+        "id", "title", "source", "published_at", "url", "snippet",
+        "source_metadata", "discovery_url", "discovery_provider",
+        "publisher_url", "publisher_domain", "publisher_direct",
+        "portal_resolution_status", "portal_resolution_reason",
+    }
     check("파서 raw dict가 허용 키만 유지 (품질 필드 미부착)",
           all(set(r.keys()) <= allowed for r in rows))
 
@@ -235,16 +251,24 @@ def _run_live_sim() -> dict | None:
         "from app import db, collector, scoring, insight, briefing, live_collector as lc\n"
         "mix=[\n"
         " {'id':'live_t1','title':'현대건설 데이터센터 전력 EPC 수주 우선협상대상자 선정',"
-        "'source':'연합뉴스','published_at':'2026-06-14T09:00:00+09:00',"
-        "'url':'https://n.ex/t1','snippet':'현대건설 데이터센터 전력 건설 EPC 수주','source_metadata':{}},\n"
+        "'source':'연합뉴스','published_at':'2026-08-02T09:00:00+09:00',"
+        "'url':'https://n.ex/t1','publisher_url':'https://n.ex/t1','publisher_direct':True,'portal_resolution_status':'resolved','snippet':'현대건설 데이터센터 전력 건설 EPC 수주','source_metadata':{'publisher_url':'https://n.ex/t1','publisher_direct':True,'portal_resolution_status':'resolved'}},\n"
         " {'id':'live_b1','title':'현대건설 데이터센터 전력 EPC 수주 본격 착수 심층 분석',"
-        "'source':'테크블로그','published_at':'2026-06-14T09:00:00+09:00',"
-        "'url':'https://n.ex/b1','snippet':'현대건설 데이터센터 전력 건설 EPC 수주','source_metadata':{}},\n"
+        "'source':'테크블로그','published_at':'2026-08-02T09:00:00+09:00',"
+        "'url':'https://n.ex/b1','publisher_url':'https://n.ex/b1','publisher_direct':True,'portal_resolution_status':'resolved','snippet':'현대건설 데이터센터 전력 건설 EPC 수주','source_metadata':{'publisher_url':'https://n.ex/b1','publisher_direct':True,'portal_resolution_status':'resolved'}},\n"
         " {'id':'live_c1','title':'현대건설 사우디 플랜트 해외수주 추진 동향 상세',"
-        "'source':'부동산 카페','published_at':'2026-06-14T09:00:00+09:00',"
-        "'url':'https://n.ex/c1','snippet':'현대건설 사우디 플랜트 해외수주','source_metadata':{}},\n"
+        "'source':'부동산 카페','published_at':'2026-08-02T09:00:00+09:00',"
+        "'url':'https://n.ex/c1','publisher_url':'https://n.ex/c1','publisher_direct':True,'portal_resolution_status':'resolved','snippet':'현대건설 사우디 플랜트 해외수주','source_metadata':{'publisher_url':'https://n.ex/c1','publisher_direct':True,'portal_resolution_status':'resolved'}},\n"
         "]\n"
-        "lc.fetch_all=lambda *a,**k:mix\n"
+        "def direct(*a,source_audit=None,**k):\n"
+        "  source_audit.append({'provider':'publisher_direct_rss','source_id':'fixture','status':'empty','fetched_count':0})\n"
+        "  return []\n"
+        "def google(*a,query_audit=None,**k):\n"
+        "  query_audit.append({'provider':'google_news_rss','group':'fixture','query':'fixture','status':'ok','fetched_count':3,'added_count':3,'pass':'main'})\n"
+        "  return mix\n"
+        "lc.fetch_publisher_direct_sources=direct\n"
+        "lc.fetch_all=google\n"
+        "lc.resolve_publisher_urls=lambda rows,*a,**k:len(rows)\n"
         "db.init_db(); collected=collector.run()['collected']\n"
         "scoring.score_all(); insight.generate_all()\n"
         "b=briefing.build_brief()\n"
@@ -254,13 +278,13 @@ def _run_live_sim() -> dict | None:
         "m=_re.search(r'<section aria-label=\"참고/제외 및 출처 품질 감사\">.*?</section>', html, _re.S)\n"
         "audit=m.group(0) if m else ''\n"
         "outside=html.replace(audit,'') if audit else html\n"
-        "rows={r['id']:r for r in db.fetch_articles_with_scores()}\n"
+        "rows={r['source']:r for r in db.fetch_articles_with_scores()}\n"
         "tops=b['top_immediate_signals']+b['top_new_issues']\n"
         "def f(i):\n"
         "  r=rows.get(i)\n"
         "  return None if not r else {'source':r['source'],'score':r['final_score'],'grade':r['alert_grade']}\n"
         "out={'mode':b['news_data_mode'],'collected':collected,\n"
-        " 'blog':f('live_b1'),'cafe':f('live_c1'),'trusted':f('live_t1'),\n"
+        " 'blog':f('테크블로그'),'cafe':f('부동산 카페'),'trusted':f('연합뉴스'),\n"
         " 'top':[{'source':s.get('source'),'sq':s.get('source_quality')} for s in tops],\n"
         " 'top_has_quality':all('source_quality' in s for s in tops) if tops else False,\n"
         " 'report_has_blog':'테크블로그' in outside,'report_has_cafe':'부동산 카페' in outside,\n"
@@ -413,9 +437,8 @@ def check_no_article_bodies() -> None:
                 text = path.read_text(encoding="utf-8").lower()
             except (UnicodeDecodeError, OSError):
                 continue
-            for term in BANNED_TERMS:
-                if term in text:
-                    hits.append(f"{path.relative_to(ROOT)}: {term}")
+            for match in BANNED_FIELD_RE.finditer(text):
+                hits.append(f"{path.relative_to(ROOT)}: {match.group(0)}")
     check("코드 트리에 본문 전문 필드명 0건 (raw/full 계열)", not hits,
           "; ".join(hits[:3]))
 

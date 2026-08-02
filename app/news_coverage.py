@@ -12,6 +12,7 @@ from pathlib import Path
 
 _POLICY_PATH = Path(__file__).resolve().parent.parent / "data" / "news_coverage_queries.json"
 _TOKEN_RE = re.compile(r"[0-9A-Za-z가-힣.]+")
+SURFACE_CATEGORY_IDS = frozenset({"biz", "peers", "hdec", "safety", "global", "ai"})
 
 
 def _load() -> dict:
@@ -38,6 +39,11 @@ def collection_query_groups() -> list[dict]:
             "queries": queries,
             "max_per_query": max(1, min(5, int(raw.get("max_per_query") or 3))),
             "max_total": max(1, min(30, int(raw.get("max_total") or 18))),
+            "surface_categories": [
+                str(value)
+                for value in raw.get("surface_categories") or []
+                if str(value) in SURFACE_CATEGORY_IDS
+            ],
         })
     return groups
 
@@ -54,6 +60,32 @@ def query_group_for_query(query: str) -> str:
         if any(target == " ".join(q.split()).casefold() for q in group["queries"]):
             return group["name"]
     return ""
+
+
+def surface_categories_for_group(group_name: str) -> list[str]:
+    """Return declared News Censor categories for one bounded query group."""
+    for group in collection_query_groups():
+        if group["name"] == str(group_name or ""):
+            return list(group.get("surface_categories") or [])
+    return []
+
+
+def surface_query_coverage(query_audit: list[dict]) -> dict[str, dict[str, int]]:
+    """Aggregate query attempts/results by public category without query text."""
+    output = {
+        category: {"attempted_count": 0, "successful_count": 0, "added_count": 0}
+        for category in sorted(SURFACE_CATEGORY_IDS)
+    }
+    for row in query_audit or []:
+        if not isinstance(row, dict) or not str(row.get("query") or "").strip():
+            continue
+        categories = surface_categories_for_group(str(row.get("group") or ""))
+        for category in categories:
+            output[category]["attempted_count"] += 1
+            if row.get("status") in {"ok", "empty"}:
+                output[category]["successful_count"] += 1
+            output[category]["added_count"] += max(0, int(row.get("added_count") or 0))
+    return output
 
 
 def _tokens(text: str) -> set[str]:
