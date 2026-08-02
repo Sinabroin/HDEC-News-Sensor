@@ -511,6 +511,7 @@ def _run_live() -> dict:
         if u and u not in seen_filtered:
             seen_filtered.add(u)
             source_filtered.append(item)
+    source_quality_rejected_count = len(source_filtered)
     publisher_quarantine.extend(
         publisher_direct.quarantine_article(
             item,
@@ -536,6 +537,16 @@ def _run_live() -> dict:
         )
         quarantine_reason_counts[reason] = quarantine_reason_counts.get(reason, 0) + 1
     collector_health.update({
+        "source_quality_passed_count": int(
+            collector_health.get("raw_candidate_count") or 0
+        ),
+        "source_quality_rejected_count": source_quality_rejected_count,
+        "publisher_resolution_input_count": len(combined_all),
+        "pre_resolution_duplicate_count": max(
+            0,
+            int(collector_health.get("raw_candidate_count") or 0)
+            - len(combined_all),
+        ),
         "publisher_direct_eligible_count": len(combined),
         "quarantine_count": len(publisher_quarantine),
         "quarantine_reason_counts": dict(sorted(quarantine_reason_counts.items())),

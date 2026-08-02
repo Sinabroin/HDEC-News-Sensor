@@ -51,7 +51,7 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/build_news_censor.py scripts/verify_news_censor.py scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_news_censor.py
           python3 scripts/verify_teams_ai_push.py
           python3 scripts/verify_teams_push_state.py
@@ -135,6 +135,12 @@ jobs:
                 --output-root docs/news-censor \
                 --require-live \
                 --image-mode live
+            TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
+              python3 scripts/audit_news_censor_funnel.py \
+                --brief-json "$BRIEF_JSON" \
+                --html docs/news-censor/latest.html \
+                --output-json "$RUNNER_TEMP/news-censor-funnel-audit.json" \
+                --require-live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · validated shared artifact published to report + operator snapshot + dashboard + standalone News Censor"
           else

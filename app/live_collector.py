@@ -779,6 +779,41 @@ def _round_robin_publishers(rows: list[dict]) -> list[dict]:
     return ordered
 
 
+def _coverage_categories_for_resolution(row: dict) -> set[str]:
+    """Return declared public categories without exposing or persisting query text."""
+    metadata = row.get("source_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    group = news_coverage.query_group_for_query(str(metadata.get("query") or ""))
+    categories = set(news_coverage.surface_categories_for_group(group))
+    if not categories:
+        for matched in news_coverage.query_groups_for_text(
+            str(row.get("title") or ""),
+            str(row.get("snippet") or ""),
+        ):
+            categories.update(news_coverage.surface_categories_for_group(matched))
+    return categories
+
+
+def _seed_resolution_categories(rows: list[dict]) -> list[dict]:
+    """Rank one candidate from each topical family before the remaining pool.
+
+    This changes ordering only. The existing item/deadline budget and publisher
+    authority checks remain the hard gates.
+    """
+    ranked = _round_robin_publishers(rows)
+    selected: list[dict] = []
+    selected_ids: set[int] = set()
+    for category in ("biz", "peers", "hdec", "safety", "global", "ai"):
+        for row in ranked:
+            marker = id(row)
+            if marker not in selected_ids and category in _coverage_categories_for_resolution(row):
+                selected.append(row)
+                selected_ids.add(marker)
+                break
+    selected.extend(row for row in ranked if id(row) not in selected_ids)
+    return selected
+
+
 def prioritize_publisher_resolution_rows(
     direct_rows: list[dict],
     naver_rows: list[dict],
@@ -794,7 +829,7 @@ def prioritize_publisher_resolution_rows(
     streams = (
         (deque(_round_robin_publishers(direct_rows)), 2),
         (deque(_round_robin_publishers(naver_rows)), 2),
-        (deque(_round_robin_publishers(google_rows)), 1),
+        (deque(_seed_resolution_categories(google_rows)), 1),
     )
     ordered: list[dict] = []
     while any(stream for stream, _weight in streams):

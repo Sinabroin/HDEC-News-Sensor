@@ -18,9 +18,9 @@ from datetime import datetime, timedelta, timezone
 
 from app import (
     ai_value_chain, article_quality, config, db, deal_watch, decision_relevance,
-    global_press, insight, macro_snapshot, market_snapshot, publisher_direct,
-    radar, risk_events, scoring, source_priority, source_quality, surface_contracts,
-    topic_profiles,
+    global_press, insight, macro_snapshot, market_snapshot, news_coverage,
+    publisher_direct, radar, risk_events, scoring, source_priority,
+    source_quality, surface_contracts, topic_profiles,
 )
 
 KST = timezone(timedelta(hours=9))
@@ -1210,7 +1210,48 @@ def _news_censor_display_entry(
     bodies, credentials, and delivery state.
     """
     url = publisher_direct.publisher_url(row)
+    categories = {"biz"}
+    category_map = {
+        "hdec": {"hdec"},
+        "dc_power": {"ai"},
+        "competitor": {"peers"},
+        "safety": {"safety"},
+        "mideast_overseas": {"global"},
+        "smart_const": {"ai"},
+    }
+    categories.update(category_map.get(category_key, set()))
+    section_map = {
+        "hdec_direct": "hdec",
+        "ai": "ai",
+        "risk_regulation": "safety",
+        "order_overseas": "global",
+        "competitor_supply": "peers",
+        "macro_economy": "biz",
+    }
+    for section in (
+        decision.get("primary_executive_section"),
+        *(decision.get("secondary_executive_sections") or []),
+    ):
+        mapped = section_map.get(str(section or ""))
+        if mapped:
+            categories.add(mapped)
+    metadata = row.get("source_metadata_json") or row.get("source_metadata") or {}
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except (TypeError, ValueError):
+            metadata = {}
+    query = metadata.get("query") if isinstance(metadata, dict) else ""
+    query_group = news_coverage.query_group_for_query(str(query or ""))
+    categories.update(news_coverage.surface_categories_for_group(query_group))
+    for group in news_coverage.query_groups_for_text(
+        str(row.get("title") or ""),
+        str(row.get("snippet") or ""),
+    ):
+        categories.update(news_coverage.surface_categories_for_group(group))
+    relevance = publisher_direct.executive_relevance(row)
     return {
+        "display_article_contract": "HDEC_NEWS_CENSOR_DISPLAY_ARTICLE_V1",
         "article_id": row["id"],
         "title": row.get("title") or "",
         "source": row.get("source") or "출처 미상",
@@ -1224,6 +1265,10 @@ def _news_censor_display_entry(
         "publisher_url": url,
         "canonical_url": url,
         "publisher_direct": True,
+        "source_quality_passed": True,
+        "display_relevance_qualified": relevance.relevant,
+        "display_relevance_reason": relevance.reason,
+        "category_memberships": sorted(categories),
         "status": "collected",
         "quarantine": False,
         "final_score": row.get("final_score"),
@@ -2328,6 +2373,16 @@ def build_brief(pipeline_counts: dict | None = None,
             relevance_qualified=True,
         )
     ][:120]
+    news_censor_display_contract = {
+        "contract": "HDEC_NEWS_CENSOR_DISPLAY_V1",
+        "field": "news_censor_display_articles",
+        "candidate_count": len(news_censor_display_articles),
+        "authority_policy": "publisher_direct_only",
+        "source_quality_policy": "existing_source_quality_gate",
+        "relevance_policy": "publisher_direct_executive_relevance",
+        "freshness_policy_owner": "news_censor_selector",
+        "teams_policy_owner": "teams_alert_artifact",
+    }
 
     # D7-AD-N: 요약 대시보드 임원 아코디언 8섹션 (표시 전용 파생, additive — surface_state 미사용).
     # 신규/수주/재무/정책/경쟁/브랜드/기상/해외 언론. new_issue_ids는 위에서 선택된 top_issues에서
@@ -2483,6 +2538,7 @@ def build_brief(pipeline_counts: dict | None = None,
         "category_counts": category_counts,
         "category_sections": category_sections,
         "news_censor_display_articles": news_censor_display_articles,
+        "news_censor_display_contract": news_censor_display_contract,
         # D7-AD-N: 요약 대시보드 임원 아코디언 8섹션 (표시 전용 파생 키, 기존 surface/예산 불변).
         "accordion_sections": accordion_sections,
         "risk_event_clusters": risk_event_clusters,
