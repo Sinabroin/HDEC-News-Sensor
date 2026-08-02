@@ -392,6 +392,7 @@ def _coverage_sort_key(item: Mapping) -> tuple:
     row = item["row"]
     return (
         int(item["freshness"]["rank"]),
+        int(bool(row.get("carried_forward"))),
         -float(row.get("final_score") or 0),
         -_published_rank(row.get("published_at")),
         str(row.get("title") or ""),
@@ -499,6 +500,7 @@ def _rank_with_preferences(rows: list[dict]) -> tuple[list[dict], dict]:
             )
             return (
                 int(item["freshness"]["rank"]),
+                int(bool(item["row"].get("carried_forward"))),
                 -int(new_publisher and len(publisher_counts) < 6),
                 -category_gain,
                 publisher_counts.get(item["publisher_key"], 0),
@@ -550,6 +552,16 @@ def select_display_articles(
     if budget_exhausted:
         lose("other_explicit_reason", count=budget_exhausted)
         other_reasons["publisher_resolution_budget_exhausted"] = budget_exhausted
+    explicit_outcomes = resolution.get("outcomes") or {}
+    explicit_skip_reasons = {
+        key
+        for key in explicit_outcomes
+        if str(key).startswith("skipped_")
+    }
+    for reason in sorted(explicit_skip_reasons):
+        count = max(0, int(explicit_outcomes.get(reason) or 0))
+        if count:
+            other_reasons[reason] = count
     quarantine_reasons = health.get("quarantine_reason_counts") or {}
     resolution_failed = 0
     for reason, raw_count in quarantine_reasons.items():
@@ -557,7 +569,7 @@ def select_display_articles(
         if reason in {
             "publisher_resolution_budget_exhausted",
             "source_quality_filtered_before_publisher_resolution",
-        }:
+        } or reason in explicit_skip_reasons:
             continue
         resolution_failed += count
         if "PORTAL" in str(reason).upper() or "portal" in str(reason).casefold():
@@ -588,6 +600,8 @@ def select_display_articles(
             "display_eligibility": False,
             "freshness_status": freshness["status"],
             "backfill_status": "not_applicable",
+            "carried_forward": bool(raw.get("carried_forward")),
+            "current_run_seen": bool(raw.get("current_run_seen", True)),
             "canonical_cluster": (
                 "c_" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
                 if canonical else ""
@@ -707,12 +721,13 @@ def select_display_articles(
             category for category in item["categories"]
             if category in category_counts and category_counts[category] < CATEGORY_TARGET
         ]
-        if not deficits:
-            decisions[item["record_id"]]["backfill_status"] = "not_needed"
-            decisions[item["record_id"]]["final_rejection_reason"] = "category_quota_deprioritized"
-            lose("category_quota_deprioritized", item["record_id"])
-            continue
-        decisions[item["record_id"]]["backfill_status"] = "selected"
+        # R4-R4 edition stability: category deficits determine ordering purpose,
+        # not destructive eligibility.  Every relevant, unique publisher article
+        # inside seven days remains available until the explicit public hard cap.
+        # The real timestamp and the existing 7-day backfill label remain intact.
+        decisions[item["record_id"]]["backfill_status"] = (
+            "category_seed" if deficits else "stability_pool"
+        )
         admitted_backfill.append(item)
         for category in item["categories"]:
             if category in category_counts:
@@ -801,6 +816,77 @@ def select_display_articles(
         "category_target": CATEGORY_TARGET,
         "public_hard_cap": PUBLIC_HARD_MAX,
         "resolution_failed_count": resolution_failed,
+        "state_contract": str(
+            (health.get("verified_state") or {}).get("state_contract") or ""
+        ),
+        "state_entries_loaded": int(
+            (health.get("verified_state") or {}).get("entries_loaded") or 0
+        ),
+        "state_entries_valid": int(
+            (health.get("verified_state") or {}).get("entries_valid") or 0
+        ),
+        "state_entries_invalid": int(
+            (health.get("verified_state") or {}).get("entries_invalid") or 0
+        ),
+        "state_entries_pruned": int(
+            (health.get("verified_state") or {}).get("entries_pruned") or 0
+        ),
+        "cache_hits": int(resolution.get("cache_hits") or 0),
+        "cache_misses": int(resolution.get("cache_misses") or 0),
+        "cache_reverification_required": int(
+            resolution.get("cache_reverification_required") or 0
+        ),
+        "current_verified_new": int(health.get("current_verified_new_count") or 0),
+        "current_verified_reused": int(
+            health.get("current_verified_reused_count") or 0
+        ),
+        "current_verified_failed": int(resolution.get("failed_count") or 0),
+        "carry_forward_candidates": int(
+            health.get("carry_forward_candidate_count") or 0
+        ),
+        "carry_forward_selected": int(
+            health.get("carry_forward_selected_count") or 0
+        ),
+        "carry_forward_expired": int(
+            health.get("carry_forward_expired_count") or 0
+        ),
+        "carry_forward_invalidated": int(
+            health.get("carry_forward_invalidated_count") or 0
+        ),
+        "resolution_queue_size": int(resolution.get("queue_size") or 0),
+        "resolution_attempted": int(resolution.get("attempted_count") or 0),
+        "resolution_successful": int(resolution.get("resolved_count") or 0),
+        "resolution_failed": int(resolution.get("failed_count") or 0),
+        "resolution_timeout": int(resolution.get("timeout_count") or 0),
+        "resolution_global_deadline_skipped": int(
+            (resolution.get("outcomes") or {}).get("skipped_global_deadline") or 0
+        ),
+        "resolution_item_budget_skipped": int(
+            (resolution.get("outcomes") or {}).get("skipped_item_budget") or 0
+        ),
+        "resolution_per_host_skipped": int(
+            (resolution.get("outcomes") or {}).get("skipped_per_host_limit") or 0
+        ),
+        "per_category_resolution_metrics": dict(
+            resolution.get("per_category") or {}
+        ),
+        "per_source_lane_resolution_metrics": dict(
+            resolution.get("per_source_lane") or {}
+        ),
+        "p50_resolution_latency_seconds": float(
+            resolution.get("p50_latency_seconds") or 0
+        ),
+        "p95_resolution_latency_seconds": float(
+            resolution.get("p95_latency_seconds") or 0
+        ),
+        "final_verified_union": publisher_eligible,
+        "public_selected": len(selected),
+        "state_hash_before": str(
+            (health.get("verified_state") or {}).get("state_hash_before") or ""
+        ),
+        "state_hash_after": str(
+            (health.get("verified_state") or {}).get("state_hash_after") or ""
+        ),
     }
     return selected, audit
 
@@ -900,6 +986,15 @@ def build_model(
             "age_hours": item["freshness"]["age_hours"],
             "is_backfill": item["freshness"]["is_backfill"],
             "publisher_key": item["publisher_key"],
+            "current_run_seen": bool(row.get("current_run_seen", True)),
+            "carried_forward": bool(row.get("carried_forward", False)),
+            "carry_forward_reason": str(row.get("carry_forward_reason") or ""),
+            "teams_newness_eligible": bool(
+                row.get("teams_newness_eligible", True)
+            ),
+            "verification_cache_status": str(
+                row.get("verification_cache_status") or "network_verified"
+            ),
         })
 
     status = str(brief.get("collection_status") or "FIXTURE_DEMO")
@@ -970,6 +1065,7 @@ def build_model(
         item["count"] > 0 for item in categories if item["id"] != "all"
     )
     resolution = health.get("publisher_resolution") or {}
+    verified_state = health.get("verified_state") or {}
     quarantine_diagnostics = _quarantine_diagnostics(health)
     verified_supply_count = int(
         selection_audit["stage_counts"]["publisher_direct_eligible"]
@@ -991,6 +1087,19 @@ def build_model(
         ),
         "backfill_article_count": sum(row["is_backfill"] for row in articles),
         "verified_supply_count": verified_supply_count,
+        "current_verified_count": int(health.get("current_verified_count") or 0),
+        "current_verified_new_count": int(
+            health.get("current_verified_new_count") or 0
+        ),
+        "current_verified_reused_count": int(
+            health.get("current_verified_reused_count") or 0
+        ),
+        "carried_verified_count": int(
+            health.get("carry_forward_selected_count") or 0
+        ),
+        "cache_reuse_count": int(resolution.get("cache_hits") or 0),
+        "state_contract": str(verified_state.get("state_contract") or ""),
+        "state_entry_count": int(verified_state.get("entries_after") or 0),
         "verified_supply_shortage": verified_supply_count < PUBLIC_TARGET_MIN,
         "verified_supply_shortage_count": max(
             0, PUBLIC_TARGET_MIN - verified_supply_count
@@ -1001,6 +1110,15 @@ def build_model(
         "resolution_resolved_count": int(resolution.get("resolved_count") or 0),
         "resolution_budget_exhausted_count": int(
             resolution.get("budget_exhausted_count") or 0
+        ),
+        "resolution_global_deadline_skipped": int(
+            (resolution.get("outcomes") or {}).get("skipped_global_deadline") or 0
+        ),
+        "resolution_item_budget_skipped": int(
+            (resolution.get("outcomes") or {}).get("skipped_item_budget") or 0
+        ),
+        "resolution_per_host_skipped": int(
+            (resolution.get("outcomes") or {}).get("skipped_per_host_limit") or 0
         ),
         "quarantine_count": int(health.get("quarantine_count") or 0),
         "quarantine_diagnostics": quarantine_diagnostics,
@@ -1212,6 +1330,9 @@ def render_html(model: Mapping) -> str:
         "{{CATEGORY_TARGET_COUNT}}": str(coverage["category_target_count"]),
         "{{PUBLISHER_COUNT}}": str(coverage["publisher_count"]),
         "{{DISPLAY_ELIGIBLE_COUNT}}": str(coverage["display_eligible_count"]),
+        "{{CURRENT_VERIFIED_COUNT}}": str(coverage["current_verified_count"]),
+        "{{CARRIED_VERIFIED_COUNT}}": str(coverage["carried_verified_count"]),
+        "{{CACHE_REUSE_COUNT}}": str(coverage["cache_reuse_count"]),
         "{{PRIMARY_WINDOW_COUNT}}": str(coverage["primary_window_count"]),
         "{{FRESH_ARTICLE_COUNT}}": str(coverage["fresh_article_count"]),
         "{{BACKFILL_ARTICLE_COUNT}}": str(coverage["backfill_article_count"]),

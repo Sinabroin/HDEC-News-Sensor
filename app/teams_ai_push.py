@@ -1199,6 +1199,14 @@ def select_teams_push_candidates(
 
     candidates: list[TeamsPushCandidate] = []
     for article in articles:
+        # R4-R4 carry-forward belongs only to the public coverage surface.  The
+        # normal live-delta artifact omits these fields and therefore preserves
+        # every existing Teams policy decision unchanged.
+        if (
+            _value(article, "carried_forward") is True
+            or _value(article, "teams_newness_eligible") is False
+        ):
+            continue
         topic = classify_ai_topic(article)
         importance = map_importance(article, topic)
         authority = publisher_direct.assess_delivery_eligibility(

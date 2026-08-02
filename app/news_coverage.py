@@ -107,6 +107,28 @@ def query_groups_for_text(title: str, snippet: str = "") -> list[str]:
             if q_tokens and len(q_tokens & hay_tokens) >= min(2, len(q_tokens)):
                 query_match = True
                 break
+        if name == "hmg_watch":
+            # Hyundai Group coverage requires a strategic HDEC-adjacent anchor.
+            # A company name alone must not turn consumer vehicle coverage into
+            # an infrastructure/group-strategy card.
+            strategic = any(
+                marker in haystack
+                for marker in (
+                    "건설", "epc", "인프라", "에너지", "전력", "데이터센터",
+                    "스마트시티", "스마트 시티", "로봇", "로보틱스", "투자",
+                    "플랜트", "해외", "물류", "철강", "수소", "sdv", "aam",
+                    "방산", "우주", "전략 프로젝트",
+                )
+            )
+            consumer_only = any(
+                marker in haystack
+                for marker in (
+                    "신차 출시", "판매량", "출고", "시승", "가격표", "디자인 공개",
+                    "모터스포츠", "연비", "트림",
+                )
+            ) and not strategic
+            direct = direct and strategic and not consumer_only
+            query_match = query_match and strategic and not consumer_only
         if name and (direct or query_match):
             matched.append(name)
     return matched

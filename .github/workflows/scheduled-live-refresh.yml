@@ -51,8 +51,9 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/verify_news_censor_verified_state.py app/news_censor_verified_state.py scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_news_censor.py
+          python3 scripts/verify_news_censor_verified_state.py
           python3 scripts/verify_teams_ai_push.py
           python3 scripts/verify_teams_push_state.py
           python3 scripts/verify_teams_ai_push_dry_run.py
@@ -103,6 +104,9 @@ jobs:
           MACRO_MODE: live
           # 이 step의 시장지표 snapshot을 휘발 파일로 남겨 아래 다이제스트 step이 동일 값을 쓰게 한다.
           MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
+          # R4-R4 public-display-only verified cache.  The independent Teams watch
+          # workflow does not set this path and therefore never receives carry-forward.
+          NEWS_CENSOR_VERIFIED_STATE_PATH: data/news_censor_verified_state.json
           # 운영자 버튼이 호출할 공개 Operator API base URL (비밀값 아님 · repo variable).
           # 미설정이면 3개 실행 버튼을 비활성화하고 Operator API 미연결을 명시한다.
           OPERATOR_API_BASE: ${{ vars.OPERATOR_API_BASE }}
@@ -182,6 +186,7 @@ jobs:
             docs/daily/operator-latest.html
             docs/daily/dashboard-latest.html
             docs/news-censor
+            data/news_censor_verified_state.json
           )
 
           if git diff --quiet -- "${DOCS[@]}"; then
