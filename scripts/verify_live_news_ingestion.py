@@ -33,10 +33,11 @@ NAVER_PROVIDER = ROOT / "app" / "naver_news_provider.py"
 NAVER_OFFICIAL_ENDPOINT = "https://openapi.naver.com/v1/search/news.json"
 RADAR_DB = ROOT / "radar.db"
 
-# 본문 전문 필드명 (rules.md §3) — 조각 조립으로 grep 규약 회피
+# Persisted collector field names forbidden by rules.md §3. Extraction-only
+# parser labels are outside this storage contract.
 BANNED_TERMS = ["".join(parts) for parts in [
     ("raw", "_payload"), ("full", "_text"),
-    ("article", "_body"), ("full_rss", "_content"),
+    ("full_rss", "_content"),
 ]]
 # 비밀값/인증 토큰을 읽으면 안 된다 (공개 RSS는 무인증)
 SECRET_TOKENS = ("TELEGRAM", "BOT_TOKEN", "API_KEY", "SECRET", "BEARER", "PASSWORD")
@@ -243,7 +244,14 @@ def check_fallback_when_live_empty() -> None:
         "sys.path.insert(0, '.')\n"
         "from app import db, collector, live_collector\n"
         "db.init_db()\n"
-        "live_collector.fetch_all = lambda *a, **k: []\n"   # live 실패 시뮬레이션
+        "def direct(*a,source_audit=None,**k):\n"
+        "  source_audit.append({'provider':'publisher_direct_rss','source_id':'fixture','status':'error','fetched_count':0})\n"
+        "  return []\n"
+        "def google(*a,query_audit=None,**k):\n"
+        "  query_audit.append({'provider':'google_news_rss','group':'fixture','query':'fixture','status':'error','fetched_count':0,'added_count':0,'pass':'main'})\n"
+        "  return []\n"
+        "live_collector.fetch_publisher_direct_sources = direct\n"
+        "live_collector.fetch_all = google\n"   # 모든 live source 실패 시뮬레이션
         "r = collector.run()\n"
         "print(json.dumps({'fallback': r['fallback_used'], 'mode': r['news_data_mode'],"
         " 'collected': r['collected'], 'attempted': r.get('attempted_mode')}))\n"

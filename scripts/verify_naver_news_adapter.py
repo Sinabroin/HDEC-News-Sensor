@@ -50,8 +50,13 @@ def main() -> int:
               "NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}",
               "NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}",
           )))
-    check("coverage query group 연결", len(news_coverage.collection_query_groups()) == 5
-          and len(news_coverage.all_queries()) >= 25)
+    coverage_groups = news_coverage.collection_query_groups()
+    check("coverage query group 연결", len(coverage_groups) == 7
+          and len(news_coverage.all_queries()) >= 33)
+    check("News Censor 6개 실질 카테고리 query 선언",
+          set().union(*(set(group.get("surface_categories") or [])
+                        for group in coverage_groups))
+          == set(news_coverage.SURFACE_CATEGORY_IDS))
 
     saved = (config.NAVER_NEWS_ENABLED, config.NAVER_CLIENT_ID, config.NAVER_CLIENT_SECRET)
     original_request = naver._request_json

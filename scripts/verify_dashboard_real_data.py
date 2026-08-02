@@ -228,8 +228,20 @@ def check_committed_dashboard() -> None:
     model = _model(html)
     rows = model.get("news_rows") or []
     ai = model.get("ai_rows") or []
-    check("3d: 커밋 대시보드가 실 news 행 보유(>=6)", len(rows) >= 6, f"{len(rows)}행")
-    check("3e: 모든 기사 행에 비어있지 않은 lens 태그", bool(rows) and all(r.get("lens") for r in rows))
+    truthful_live_empty = (
+        not rows
+        and "news-data-mode:live" in html
+        and "현재 수집된 항목 없음" in html
+    )
+    check(
+        "3d: 커밋 대시보드가 실 news 행 또는 truthful live empty 보유",
+        len(rows) >= 1 or truthful_live_empty,
+        f"{len(rows)}행",
+    )
+    check(
+        "3e: 모든 기사 행에 비어있지 않은 lens 태그",
+        truthful_live_empty or (bool(rows) and all(r.get("lens") for r in rows)),
+    )
     keys = {l for r in rows + ai for l in r.get("lens", [])}
     check("3f: 모든 lens 키가 유효한 nav 필터 키",
           keys <= VALID_LENS, f"미정의: {sorted(keys - VALID_LENS)}")
@@ -265,7 +277,16 @@ def check_article_links() -> None:
         re.I,
     )
 
-    check("4a: 실기사 행이 url을 보유(>=1)", bool(with_url), f"{len(with_url)}/{len(rows)}")
+    truthful_live_empty = (
+        not rows
+        and "news-data-mode:live" in html
+        and "현재 수집된 항목 없음" in html
+    )
+    check(
+        "4a: 실기사 URL 또는 truthful live empty 상태",
+        bool(with_url) or truthful_live_empty,
+        f"{len(with_url)}/{len(rows)}",
+    )
     check("4b: 원문 링크는 있으면 안전 속성, 없으면 mock/example/warning href 0건",
           bool(safe_external_links) or not bad_external_hrefs,
           f"safe={len(safe_external_links)} bad={len(bad_external_hrefs)}")

@@ -104,12 +104,21 @@ def check_surface(html: str, label: str, *, expect_operator_hidden: bool) -> Non
     rows = list(model.get("news_rows") or [])
     for bank in (model.get("lens_banks") or {}).values():
         rows.extend(bank or [])
+    truthful_live_empty = (
+        label == "committed"
+        and not rows
+        and (model.get("meta") or {}).get("news_data_mode") == "live"
+        and "현재 수집된 항목 없음" in html
+    )
     with_reason_field = [r for r in rows if isinstance(r.get("lens_reasons"), dict)]
     check(f"S2a[{label}]: 행에 lens_reasons(근거) 필드 노출",
-          bool(rows) and len(with_reason_field) == len(rows),
+          truthful_live_empty or (bool(rows) and len(with_reason_field) == len(rows)),
           f"{len(with_reason_field)}/{len(rows)}")
     nonempty = [r for r in rows if r.get("lens_reasons")]
-    check(f"S2b[{label}]: 근거가 실제로 채워짐(≥1행)", bool(nonempty))
+    check(
+        f"S2b[{label}]: 근거가 실제로 채워짐(≥1행) 또는 live 0건",
+        bool(nonempty) or truthful_live_empty,
+    )
     over = [r.get("title") for r in rows
             if len([l for l in (r.get("lens") or []) if l in BIZ_LENSES]) > 3]
     check(f"S2c[{label}]: 기사당 사업영역 렌즈 ≤3(과대분류 상한)", not over,

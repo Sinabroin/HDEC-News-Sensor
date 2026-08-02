@@ -30,7 +30,11 @@ from pathlib import Path
 from typing import Callable, Iterable, Mapping
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urljoin, urlparse, urlunparse
 
-from PIL import Image, UnidentifiedImageError
+try:
+    from PIL import Image, UnidentifiedImageError
+except ImportError:  # Text/editorial policy remains usable without image extras.
+    Image = None
+    UnidentifiedImageError = OSError
 
 from app import config, news_access, news_coverage, source_quality
 
@@ -2418,6 +2422,8 @@ def _flatten_for_quality(image: Image.Image) -> Image.Image:
 
 
 def _decoded_image_quality_signals(payload: bytes) -> tuple[tuple[str, ...], int, int]:
+    if Image is None:
+        raise ImageDownloadError("image_dependency_unavailable")
     try:
         with Image.open(BytesIO(payload)) as decoded:
             decoded.load()

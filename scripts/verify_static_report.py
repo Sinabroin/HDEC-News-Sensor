@@ -454,7 +454,11 @@ def _check_html_content(html: str, label: str, committed: bool = False) -> None:
         for marker in SIGNAL_HTML_MARKERS:
             check(f"{label}: '{marker}' 포함", marker in html)
     else:
-        check(f"{label}: 신호 0건 안내 표시", "감지된 신호가 없습니다" in html)
+        check(
+            f"{label}: 신호 0건 안내 표시",
+            "감지된 신호가 없습니다" in html
+            or "오늘 감지된 신호 없음" in html,
+        )
 
     # 데이터 출처 정직성 — live면 중립 '자동 수집' 표기 + mock 배지/placeholder 금지,
     # mock이면 mock/데모 표기 (mock을 live로, live를 mock으로 오인하지 않게).

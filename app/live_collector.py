@@ -20,6 +20,7 @@ import re
 import time
 import urllib.parse
 import urllib.request
+from collections import deque
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
@@ -742,6 +743,68 @@ _DECODE_RPC_ID = "Fbv4je"
 _DATA_N_A_RE = re.compile(r'data-n-a-([a-z]+)="([^"]*)"')
 
 
+def _publisher_bucket_key(row: dict) -> str:
+    """Stable publisher bucket used only to make the bounded resolver fair."""
+    metadata = row.get("source_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    for value in (
+        metadata.get("publisher_domain"),
+        row.get("publisher_domain"),
+        row.get("source"),
+        metadata.get("discovery_provider"),
+        metadata.get("provider"),
+    ):
+        key = str(value or "").strip().casefold()
+        if key:
+            return key
+    return "unknown"
+
+
+def _round_robin_publishers(rows: list[dict]) -> list[dict]:
+    buckets: dict[str, deque] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        buckets.setdefault(_publisher_bucket_key(row), deque()).append(row)
+    ordered: list[dict] = []
+    active = list(buckets.values())
+    while active:
+        remaining = []
+        for bucket in active:
+            if bucket:
+                ordered.append(bucket.popleft())
+            if bucket:
+                remaining.append(bucket)
+        active = remaining
+    return ordered
+
+
+def prioritize_publisher_resolution_rows(
+    direct_rows: list[dict],
+    naver_rows: list[dict],
+    google_rows: list[dict],
+) -> list[dict]:
+    """Interleave authority tiers without allowing one feed to consume the budget.
+
+    Each stream is publisher-round-robin first.  The weighted outer pass then
+    spends two slots on official direct feeds, two on Naver origin candidates,
+    and one on Google discovery.  Missing streams simply yield their slots.  The
+    resolver's existing item/deadline bounds remain the hard network ceiling.
+    """
+    streams = (
+        (deque(_round_robin_publishers(direct_rows)), 2),
+        (deque(_round_robin_publishers(naver_rows)), 2),
+        (deque(_round_robin_publishers(google_rows)), 1),
+    )
+    ordered: list[dict] = []
+    while any(stream for stream, _weight in streams):
+        for stream, weight in streams:
+            for _ in range(weight):
+                if stream:
+                    ordered.append(stream.popleft())
+    return ordered
+
+
 def _parse_shell_attrs(shell_html: str) -> dict:
     """redirect 셸 페이지 HTML → {id, ts, sg} 디코드 요청용 속성(순수 함수, 오프라인 테스트용)."""
     return dict(_DATA_N_A_RE.findall(shell_html or ""))
@@ -1036,12 +1099,21 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
             if not isinstance(row, dict):
                 continue
             processed.add(index)
-            verified = _strict_publisher_authority(
-                row,
-                resolver=resolver,
-                opener=opener,
-                decoder=decoder,
-            )
+            try:
+                verified = _strict_publisher_authority(
+                    row,
+                    resolver=resolver,
+                    opener=opener,
+                    decoder=decoder,
+                )
+            except Exception:  # noqa: BLE001 - isolate an unexpected leaf failure
+                # A single parser/runtime defect must not erase authority already
+                # proven for other publishers.  Keep the reason stable and free of
+                # exception text, URLs, or response content.
+                verified = publisher_direct.quarantine_article(
+                    row,
+                    "publisher_verification_internal_error",
+                )
             row.clear()
             row.update(verified)
             if publisher_direct.is_publisher_direct_delivery_eligible(

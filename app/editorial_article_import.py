@@ -24,10 +24,6 @@ from io import BytesIO
 from typing import Callable, Iterable, Mapping
 from urllib.parse import urljoin, urlparse, urlunparse
 
-from PIL import Image, UnidentifiedImageError
-
-from app import editorial_briefings, editorial_review
-
 ARTICLE_URL_MAX_LENGTH = 2048
 ARTICLE_HTML_MAX_BYTES = 2_000_000
 ARTICLE_IMAGE_MAX_BYTES = 5_000_000
@@ -1250,6 +1246,8 @@ def _download_image(
     resolver: Callable[..., Iterable[tuple]] | None,
     opener: object | None,
 ) -> tuple[str, bytes, str]:
+    from app import editorial_briefings
+
     _requested, final_url, content_type, payload, _redirects = _request_with_redirects(
         image_url,
         accept="image/jpeg,image/png,image/webp;q=0.9",
@@ -1281,6 +1279,15 @@ def _reencode_image(
     source: str,
     canonical_url: str,
 ) -> str:
+    # Publisher metadata/body extraction does not need Pillow.  Keep the optional
+    # raster dependency behind the only image-transforming path so a missing image
+    # runtime cannot collapse the text-only publisher-authority pass.
+    try:
+        from PIL import Image, UnidentifiedImageError
+    except ImportError:
+        raise ArticleImportError("IMAGE_REJECTED") from None
+    from app import editorial_briefings
+
     quality_article = editorial_briefings.EditorialArticle(
         title=title,
         summary=summary,
@@ -1423,6 +1430,8 @@ def import_article(
     image_opener: object | None = None,
 ) -> dict[str, object]:
     """Fetch and transform one article without retaining or returning full HTML/body."""
+    from app import editorial_briefings, editorial_review
+
     resolution = resolve_publisher_document(
         url,
         resolver=resolver,

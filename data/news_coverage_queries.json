@@ -1,10 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "note": "D7-AF 임원 뉴스 coverage 확장 정책. Google News RSS와 Naver News Search API가 같은 query group을 사용한다. 검색 결과의 제목·짧은 snippet·출처·시각·원문 링크만 저장하며 실패 시 기사를 만들지 않는다.",
   "groups": [
     {
       "name": "ai_infra_watch",
       "label": "AI 인프라 투자",
+      "surface_categories": ["biz", "ai"],
       "max_per_query": 3,
       "max_total": 18,
       "queries": [
@@ -31,6 +32,7 @@
     {
       "name": "deal_watch_project",
       "label": "프로젝트·딜",
+      "surface_categories": ["biz"],
       "max_per_query": 3,
       "max_total": 18,
       "queries": [
@@ -59,6 +61,7 @@
     {
       "name": "hmg_watch",
       "label": "현대차그룹",
+      "surface_categories": ["hdec"],
       "max_per_query": 3,
       "max_total": 15,
       "queries": [
@@ -83,6 +86,7 @@
     {
       "name": "major_group_ai_watch",
       "label": "주요 그룹 AI",
+      "surface_categories": ["peers", "ai"],
       "max_per_query": 3,
       "max_total": 18,
       "queries": [
@@ -114,6 +118,7 @@
     {
       "name": "global_ai_watch",
       "label": "글로벌 AI",
+      "surface_categories": ["global", "ai"],
       "max_per_query": 3,
       "max_total": 18,
       "queries": [
@@ -135,6 +140,48 @@
         "Claude Sonnet 5",
         "클로드 소넷 5",
         "Virtue AI"
+      ]
+    },
+    {
+      "name": "news_censor_peer_watch",
+      "label": "동종 건설사",
+      "surface_categories": ["peers"],
+      "max_per_query": 2,
+      "max_total": 12,
+      "queries": [
+        "GS건설 대우건설 DL이앤씨 수주",
+        "삼성물산 건설부문 해외 수주",
+        "포스코이앤씨 롯데건설 도시정비",
+        "대형 건설사 데이터센터 EPC"
+      ],
+      "match_any": [
+        "GS건설",
+        "대우건설",
+        "DL이앤씨",
+        "삼성물산",
+        "포스코이앤씨",
+        "롯데건설"
+      ]
+    },
+    {
+      "name": "news_censor_safety_global_watch",
+      "label": "안전·해외 사업환경",
+      "surface_categories": ["safety", "global"],
+      "max_per_query": 2,
+      "max_total": 12,
+      "queries": [
+        "건설현장 안전 품질 제도",
+        "건설 중대재해 감독 정책",
+        "해외건설 발주 지정학 리스크",
+        "중동 인프라 플랜트 발주"
+      ],
+      "match_any": [
+        "건설현장 안전",
+        "중대재해",
+        "품질 제도",
+        "해외건설",
+        "지정학",
+        "중동 인프라"
       ]
     }
   ]

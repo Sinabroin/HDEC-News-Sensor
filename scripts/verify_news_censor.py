@@ -21,6 +21,7 @@ import sys
 import tempfile
 import urllib.request
 from contextlib import contextmanager
+from datetime import date
 from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
@@ -388,6 +389,25 @@ def verify_html(
     check(f"{label}: DOM/model article counts agree", len(parser.article_ids) == len(articles))
     check(f"{label}: article identities are unique", len(set(parser.article_ids)) == len(parser.article_ids))
     check(f"{label}: all category filters exist", set(build_news_censor.CATEGORY_LABELS) == set(parser.filters))
+    coverage = model.get("coverage") or {}
+    categories = model.get("categories") or []
+    legacy_committed = label == "committed output" and not coverage
+    check(
+        f"{label}: coverage rail and category indicators exist",
+        legacy_committed or (
+        "coverage" in parser.rails
+        and len(categories) == len(build_news_censor.CATEGORY_LABELS)
+        and all(item.get("coverage_status") in {"covered", "gap"} for item in categories)),
+    )
+    check(
+        f"{label}: category coverage totals are internally consistent",
+        legacy_committed or (
+        int(coverage.get("category_target_count") or 0)
+        == len(build_news_censor.PRIMARY_CATEGORY_IDS)
+        and int(coverage.get("category_covered_count") or 0)
+        + int(coverage.get("category_gap_count") or 0)
+        == len(build_news_censor.PRIMARY_CATEGORY_IDS)),
+    )
     dynamic_subfilters = model.get("subfilters") or []
     check(
         f"{label}: dynamic subfilters are nonzero-only",
@@ -410,6 +430,39 @@ def verify_html(
     check(
         f"{label}: publisher URLs are canonical and unique",
         len({str(row.get("url") or "").casefold().rstrip("/") for row in articles}) == len(articles),
+    )
+    check(
+        f"{label}: freshness and backfill policy is explicit",
+        legacy_committed or (all(
+            row.get("freshness_status") in {
+                "fresh", "recent", "backfill", "archive", "unknown"
+            }
+            and bool(row.get("freshness_label"))
+            and isinstance(row.get("is_backfill"), bool)
+            for row in articles
+        )
+        and int(coverage.get("fresh_article_count") or 0)
+        + int(coverage.get("backfill_article_count") or 0)
+        == len(articles)),
+    )
+    check(
+        f"{label}: publisher diversity total matches visible rows",
+        legacy_committed or int(coverage.get("publisher_count") or 0)
+        == len({row.get("publisher_key") for row in articles}),
+    )
+    check(
+        f"{label}: display and Teams policies remain separate",
+        legacy_committed or (
+        coverage.get("display_policy") == "publisher_direct_coverage"
+        and coverage.get("teams_policy")
+        == "ai_topic+executive_relevance+importance+sender_gate"
+        and "News Censor 표시 범위와 Teams 중요 AI 발송 정책은 서로 독립" in html),
+    )
+    check(
+        f"{label}: quarantine diagnostics are aggregate-only",
+        legacy_committed or (all(set(item) == {"key", "label", "count"}
+            for item in coverage.get("quarantine_diagnostics") or [])
+        and "URL·응답 내용은 공개하지 않습니다" in html),
     )
     check(
         f"{label}: valid local article image or deterministic fallback",
@@ -568,6 +621,14 @@ def main() -> int:
                 "quarantine_count": 0,
                 "final_portal_url_count": 0,
                 "failure_category": "",
+                "quarantine_reason_counts": {},
+                "publisher_resolution": {
+                    "attempted_count": 24,
+                    "resolved_count": 24,
+                    "failed_count": 0,
+                    "budget_exhausted_count": 0,
+                    "policy": "bounded_fair_per_publisher",
+                },
             }
             live["publisher_direct_delivery"] = {
                 "eligible_count": 24,
@@ -629,6 +690,16 @@ def main() -> int:
                 "raw_candidate_count": 7,
                 "quarantine_count": 7,
                 "empty_reason": "no_publisher_direct_eligible_articles",
+                "quarantine_reason_counts": {
+                    "publisher_resolution_budget_exhausted": 7,
+                },
+                "publisher_resolution": {
+                    "attempted_count": 0,
+                    "resolved_count": 0,
+                    "failed_count": 0,
+                    "budget_exhausted_count": 7,
+                    "policy": "bounded_fair_per_publisher",
+                },
             })
             empty["publisher_direct_delivery"].update({
                 "eligible_count": 0,
@@ -640,6 +711,79 @@ def main() -> int:
             empty["accordion_sections"] = []
             empty["risk_event_clusters"] = []
             empty["theme_rankings"] = []
+
+            display_probe = copy.deepcopy(empty)
+            display_probe["generated_at"] = "2026-08-02T09:00:00+09:00"
+            display_probe["collection_status"] = (
+                build_news_censor.LIVE_HEALTHY_WITH_ARTICLES
+            )
+            display_probe["collector_health"].update({
+                "status": build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
+                "publisher_direct_eligible_count": 5,
+                "quarantine_count": 0,
+                "quarantine_reason_counts": {},
+                "publisher_resolution": {
+                    "attempted_count": 5,
+                    "resolved_count": 5,
+                    "failed_count": 0,
+                    "budget_exhausted_count": 0,
+                    "policy": "bounded_fair_per_publisher",
+                },
+            })
+            display_probe["publisher_direct_delivery"].update({
+                "eligible_count": 5,
+                "quarantine_count": 0,
+            })
+            probe_rows = []
+            for index, (title, host, published_at) in enumerate((
+                ("현대건설 도시정비 사업 관찰", "alpha.example", "2026-08-02T08:00:00+09:00"),
+                ("GS건설 신규 프로젝트 관찰", "beta.example", "2026-08-02T07:00:00+09:00"),
+                ("건설현장 안전 품질 제도 관찰", "alpha.example", "2026-07-20T07:00:00+09:00"),
+                ("중동 해외건설 사업환경 관찰", "alpha.example", "2026-08-01T07:00:00+09:00"),
+                ("데이터센터 AI 기술 동향 관찰", "alpha.example", "2026-08-01T06:00:00+09:00"),
+            )):
+                url = f"https://{host}/news/{index}"
+                probe_rows.append({
+                    "article_id": f"display-{index}",
+                    "title": title,
+                    "source": host,
+                    "display_source": host,
+                    "published_at": published_at,
+                    "snippet": "확정 중요 사건이 아닌 일반 관측 기사입니다.",
+                    "url": url,
+                    "publisher_url": url,
+                    "canonical_url": url,
+                    "publisher_direct": True,
+                    "status": "collected",
+                    "quarantine": False,
+                    "final_score": 0.0,
+                    "alert_grade": "참고/제외",
+                    "action_label": "모니터링",
+                    "category": "general",
+                    "category_label": "건설산업 일반",
+                    "why_it_matters": "표시 커버리지 관측",
+                })
+            display_probe["news_censor_display_articles"] = probe_rows
+            probe_model = build_news_censor.build_model(
+                display_probe,
+                edition=date(2026, 8, 2),
+                article_limit=4,
+            )
+            check(
+                "display coverage includes low-importance publisher rows",
+                probe_model["article_count"] == 4,
+            )
+            check(
+                "display coverage applies publisher diversity and backfill labels",
+                probe_model["coverage"]["publisher_count"] == 2
+                and probe_model["coverage"]["backfill_article_count"] >= 1,
+            )
+            from app import teams_ai_push as teams_policy
+
+            check(
+                "display-only rows remain ineligible for Teams send",
+                teams_policy.select_teams_push_candidates(probe_rows) == (),
+            )
             failed = copy.deepcopy(empty)
             failed["collection_status"] = build_news_censor.LIVE_COLLECTION_FAILED
             failed["collection_failure_category"] = "official_feed_collection_failure"

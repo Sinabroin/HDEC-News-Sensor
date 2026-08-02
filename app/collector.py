@@ -360,7 +360,7 @@ def _run_live() -> dict:
     healthy live empty로 남고, 성공 source가 전혀 없을 때만 기존 mock fallback을 명시적으로
     LIVE_FALLBACK_REJECTED로 격리한다.
     """
-    from app import live_collector, naver_news_provider, thebell_watch
+    from app import live_collector, naver_news_provider, news_coverage, thebell_watch
 
     direct_source_audit: list[dict] = []
     try:
@@ -448,6 +448,9 @@ def _run_live() -> dict:
                 "credentials_present": bool(naver_result.get("credentials_present")),
             },
         },
+        "category_query_coverage": news_coverage.surface_query_coverage(
+            google_query_audit
+        ),
     }
     # D7-AK-6E R3-V8 — 공식 direct RSS를 우선하고, 모든 기사 authority를 publisher
     # 페이지에서 재검증한다. 미해소 portal/unsafe/본문 없는 행은 삭제하지 않고 quarantine
@@ -456,16 +459,26 @@ def _run_live() -> dict:
     # pinned direct feeds first, then Naver originallink candidates, and only then
     # portal-only Google discovery. Otherwise a large Google pool can starve every
     # Naver publisher candidate before strict verification begins.
-    resolvable_rows = direct_rows + naver_rows + google_rows
+    resolvable_rows = live_collector.prioritize_publisher_resolution_rows(
+        direct_rows,
+        naver_rows,
+        google_rows,
+    )
     if resolvable_rows:
         try:
             live_collector.resolve_publisher_urls(
                 resolvable_rows,
                 strict=True,
             )
-        except Exception:  # noqa: BLE001 - fail closed into quarantine
+        except Exception:  # noqa: BLE001 - fail closed without erasing prior success
             for row in resolvable_rows:
-                if isinstance(row, dict):
+                if (
+                    isinstance(row, dict)
+                    and not publisher_direct.is_publisher_direct_delivery_eligible(
+                        row,
+                        relevance_qualified=True,
+                    )
+                ):
                     quarantined = publisher_direct.quarantine_article(
                         row,
                         "publisher_resolution_pass_failed",
@@ -475,7 +488,10 @@ def _run_live() -> dict:
 
     combined_all = merge_provider_articles(resolvable_rows)
     combined, publisher_quarantine = publisher_direct.partition_delivery_articles(
-        combined_all
+        combined_all,
+        # Collector eligibility is publisher authority for display/storage.  Teams
+        # owns its separate AI relevance and importance policy downstream.
+        relevance_qualified=True,
     )
     # TheBell은 Naver 검색 metadata에서만 후보를 파생한다. 별도 기사 페이지 요청이나
     # 제한 우회는 없으며 제목·짧은 snippet·시각·링크만 보존한다.
@@ -523,6 +539,28 @@ def _run_live() -> dict:
         "publisher_direct_eligible_count": len(combined),
         "quarantine_count": len(publisher_quarantine),
         "quarantine_reason_counts": dict(sorted(quarantine_reason_counts.items())),
+        "publisher_resolution": {
+            "attempted_count": sum(
+                1
+                for row in combined_all
+                if str(row.get("portal_resolution_reason") or "")
+                != "publisher_resolution_budget_exhausted"
+            ),
+            "resolved_count": len(combined),
+            "failed_count": sum(
+                count
+                for reason, count in quarantine_reason_counts.items()
+                if reason != "publisher_resolution_budget_exhausted"
+                and reason != "source_quality_filtered_before_publisher_resolution"
+            ),
+            "budget_exhausted_count": int(
+                quarantine_reason_counts.get(
+                    "publisher_resolution_budget_exhausted",
+                    0,
+                )
+            ),
+            "policy": "bounded_fair_per_publisher",
+        },
     })
 
     # 교차 dedup은 publisher canonical URL 기준이다. 원문 미해소 행은 quarantine에 남고

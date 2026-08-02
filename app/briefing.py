@@ -1196,6 +1196,59 @@ def _category_article_entry(row: dict, category_key: str, implication: str,
     return entry
 
 
+def _news_censor_display_entry(
+    row: dict,
+    category_key: str,
+    implication: str,
+    radar_section: str,
+    decision: dict,
+) -> dict:
+    """Minimal publisher-verified row for the broader News Censor display pool.
+
+    The Executive/Teams policies still consume their existing ranked surfaces.
+    This additive row intentionally omits discovery URLs, raw source metadata,
+    bodies, credentials, and delivery state.
+    """
+    url = publisher_direct.publisher_url(row)
+    return {
+        "article_id": row["id"],
+        "title": row.get("title") or "",
+        "source": row.get("source") or "출처 미상",
+        "display_source": source_quality.normalize_display_source(
+            row.get("source")
+        ) or "출처 미상",
+        "published_at": row.get("published_at"),
+        "collected_at": row.get("collected_at"),
+        "snippet": row.get("snippet") or "",
+        "url": url,
+        "publisher_url": url,
+        "canonical_url": url,
+        "publisher_direct": True,
+        "status": "collected",
+        "quarantine": False,
+        "final_score": row.get("final_score"),
+        "alert_grade": row.get("alert_grade"),
+        "action_label": ACTION_LABEL_BY_GRADE.get(
+            row.get("alert_grade"),
+            "모니터링",
+        ),
+        "category": category_key,
+        "category_label": insight.CATEGORY_PHRASE.get(
+            category_key,
+            "건설산업 일반",
+        ),
+        "why_it_matters": implication,
+        "radar_section": radar_section,
+        "executive_section": decision.get("primary_executive_section"),
+        "secondary_sections": list(
+            decision.get("secondary_executive_sections") or []
+        ),
+        "secondary_labels": list(decision.get("secondary_labels") or []),
+        "decision_relevance_tier": decision.get("decision_relevance_tier"),
+        "display_policy": "publisher_direct_coverage",
+    }
+
+
 def _build_category_sections(scored_rows: list[dict], categories: dict[str, str],
                              reasons: dict[str, str],
                              decisions: dict[str, dict] | None = None,
@@ -2248,6 +2301,34 @@ def build_brief(pipeline_counts: dict | None = None,
     category_sections = _build_category_sections(
         scored, categories, display_reasons, decisions, surface_state)
 
+    # News Censor is a coverage surface, not an alert queue.  Preserve every
+    # publisher-verified news row that passed source-quality filtering, including
+    # low-importance/excluded-score rows, and let its own freshness/diversity
+    # selector choose visible articles.  Teams continues to read its live-delta
+    # artifact and apply AI relevance + importance independently.
+    news_censor_display_articles = [
+        _news_censor_display_entry(
+            row,
+            categories[row["id"]],
+            display_reasons[row["id"]],
+            radar_sections[row["id"]],
+            decisions[row["id"]],
+        )
+        for row in sorted(
+            scored,
+            key=lambda item: (
+                _freshness_rank(item),
+                -(item.get("final_score") or 0),
+                item["id"],
+            ),
+        )
+        if not _is_excluded_quality(row)
+        and publisher_direct.is_publisher_direct_delivery_eligible(
+            row,
+            relevance_qualified=True,
+        )
+    ][:120]
+
     # D7-AD-N: 요약 대시보드 임원 아코디언 8섹션 (표시 전용 파생, additive — surface_state 미사용).
     # 신규/수주/재무/정책/경쟁/브랜드/기상/해외 언론. new_issue_ids는 위에서 선택된 top_issues에서
     # 파생한다(새 선택 로직 없음). 점수/등급/랭킹/mock 카운트 불변.
@@ -2341,6 +2422,10 @@ def build_brief(pipeline_counts: dict | None = None,
             "quarantine_count": publisher_quarantine_count,
             "final_portal_urls": 0,
             "policy": "publisher_direct_only",
+            "display_policy": "publisher_direct_coverage",
+            "teams_policy": (
+                "publisher_direct+ai_topic+executive_relevance+importance"
+            ),
         },
         "deal_watch_rows": deal_watch_rows,
         "thebell_watch_status": thebell_watch_status,
@@ -2397,6 +2482,7 @@ def build_brief(pipeline_counts: dict | None = None,
         "theme_rankings": theme_rankings,
         "category_counts": category_counts,
         "category_sections": category_sections,
+        "news_censor_display_articles": news_censor_display_articles,
         # D7-AD-N: 요약 대시보드 임원 아코디언 8섹션 (표시 전용 파생 키, 기존 surface/예산 불변).
         "accordion_sections": accordion_sections,
         "risk_event_clusters": risk_event_clusters,

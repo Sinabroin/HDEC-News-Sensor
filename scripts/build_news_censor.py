@@ -20,6 +20,7 @@ from datetime import date, datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 from typing import Iterable, Mapping
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -61,8 +62,14 @@ CATEGORY_LABELS = {
     "global": "해외지정학",
     "ai": "AI",
 }
+PRIMARY_CATEGORY_IDS = tuple(key for key in CATEGORY_LABELS if key != "all")
+FRESH_MAX_HOURS = 72
+RECENT_MAX_HOURS = 7 * 24
+BACKFILL_MAX_HOURS = 30 * 24
+PUBLISHER_DIVERSITY_SOFT_CAP = 3
 
 SURFACE_CATEGORIES = (
+    ("news_censor_display_articles", ("biz",)),
     ("top_immediate_signals", ("all",)),
     ("top_new_issues", ("all",)),
     ("hdec_direct_signals", ("hdec",)),
@@ -144,7 +151,10 @@ def _category_tokens(row: Mapping, seeds: Iterable[str]) -> set[str]:
         mapped = SECTION_CATEGORY.get(str(section or ""))
         if mapped:
             tokens.add(mapped)
-    text = f" {row.get('title') or ''} {row.get('snippet') or ''} ".casefold()
+    text = (
+        f" {row.get('title') or ''} {row.get('snippet') or ''} "
+        f"{row.get('source') or ''} "
+    ).casefold()
     for category, keywords in KEYWORD_CATEGORIES.items():
         if any(keyword in text for keyword in keywords):
             tokens.add(category)
@@ -355,6 +365,141 @@ def _fallback_image_data(article: Mapping) -> str:
     return "data:image/svg+xml," + svg.replace(" ", "%20").replace("'", "%27")
 
 
+def _freshness_info(row: Mapping, reference: datetime) -> dict:
+    published = _parse_datetime(row.get("published_at"))
+    if published is None:
+        return {
+            "status": "unknown",
+            "label": "시각 확인 필요",
+            "rank": 3,
+            "age_hours": None,
+            "is_backfill": True,
+        }
+    age_hours = max(0.0, (reference - published).total_seconds() / 3600)
+    if age_hours <= FRESH_MAX_HOURS:
+        status, label, rank = "fresh", "최신 72시간", 0
+    elif age_hours <= RECENT_MAX_HOURS:
+        status, label, rank = "recent", "최근 7일", 1
+    elif age_hours <= BACKFILL_MAX_HOURS:
+        status, label, rank = "backfill", "최근 30일 보강", 2
+    else:
+        status, label, rank = "archive", "30일 초과 보관", 3
+    return {
+        "status": status,
+        "label": label,
+        "rank": rank,
+        "age_hours": round(age_hours, 1),
+        "is_backfill": status not in {"fresh", "recent"},
+    }
+
+
+def _publisher_key(row: Mapping) -> str:
+    url = publisher_direct.publisher_url(row)
+    try:
+        host = (urlparse(url).hostname or "").casefold().removeprefix("www.")
+    except ValueError:
+        host = ""
+    return host or str(row.get("source") or "unknown").strip().casefold()
+
+
+def _coverage_sort_key(item: Mapping) -> tuple:
+    row = item["row"]
+    return (
+        int(item["freshness"]["rank"]),
+        -float(row.get("final_score") or 0),
+        -_published_rank(row.get("published_at")),
+        str(row.get("title") or ""),
+    )
+
+
+def _select_coverage_rows(
+    candidates: Iterable[dict],
+    *,
+    limit: int,
+    reference: datetime,
+) -> list[dict]:
+    enriched = []
+    for item in candidates:
+        value = dict(item)
+        value["freshness"] = _freshness_info(item["row"], reference)
+        value["publisher_key"] = _publisher_key(item["row"])
+        enriched.append(value)
+    ranked = sorted(enriched, key=_coverage_sort_key)
+    cap = max(0, min(40, int(limit)))
+    if cap == 0:
+        return []
+
+    selected: list[dict] = []
+    selected_urls: set[str] = set()
+    publisher_counts: dict[str, int] = {}
+
+    def add(item: dict) -> None:
+        canonical = publisher_direct.publisher_url(item["row"]).casefold().rstrip("/")
+        if not canonical or canonical in selected_urls or len(selected) >= cap:
+            return
+        selected.append(item)
+        selected_urls.add(canonical)
+        publisher = item["publisher_key"]
+        publisher_counts[publisher] = publisher_counts.get(publisher, 0) + 1
+
+    # Seed one row for every observable category before ordinary ranking.  A row
+    # may satisfy multiple categories; do not add a second merely to tick a box.
+    for category in PRIMARY_CATEGORY_IDS:
+        if any(category in item["categories"] for item in selected):
+            continue
+        for item in ranked:
+            if category in item["categories"]:
+                add(item)
+                break
+
+    # Soft publisher cap keeps alternative publishers visible.  Relax it only to
+    # fill unused capacity; coverage never fabricates a missing category/source.
+    for item in ranked:
+        if publisher_counts.get(item["publisher_key"], 0) < PUBLISHER_DIVERSITY_SOFT_CAP:
+            add(item)
+    for item in ranked:
+        add(item)
+
+    selected.sort(key=_coverage_sort_key)
+    return selected
+
+
+def _quarantine_diagnostics(health: Mapping) -> list[dict]:
+    groups = {
+        "budget": ["검증 예산 대기", 0],
+        "access": ["발행사 응답·본문 검증 실패", 0],
+        "quality": ["출처 품질 제외", 0],
+        "unsafe": ["안전하지 않은 URL 차단", 0],
+        "internal": ["내부 검증 오류", 0],
+        "other": ["기타 원문 검증 실패", 0],
+    }
+    for raw_reason, raw_count in (
+        health.get("quarantine_reason_counts") or {}
+    ).items():
+        reason = str(raw_reason).casefold()
+        count = max(0, int(raw_count or 0))
+        if "budget_exhausted" in reason:
+            key = "budget"
+        elif "source_quality" in reason:
+            key = "quality"
+        elif "unsafe" in reason or "redirect_rejected" in reason:
+            key = "unsafe"
+        elif "internal_error" in reason or "pass_failed" in reason:
+            key = "internal"
+        elif any(token in reason for token in (
+            "metadata", "body", "timeout", "dns", "content_type", "canonical"
+        )):
+            key = "access"
+        else:
+            key = "other"
+        groups[key][1] += count
+    return [
+        {"key": key, "label": label, "count": count}
+        for key, (label, count) in groups.items()
+        if count > 0
+    ]
+
+
 def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> dict:
     """Derive a browser-safe, publisher-only model from the shared brief."""
     merged: dict[str, dict] = {}
@@ -381,15 +526,12 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
             "subfilters": set(_subfilter_labels(row)),
         }
 
-    ranked = sorted(
+    generated = _parse_datetime(brief.get("generated_at")) or datetime.now(KST)
+    ranked = _select_coverage_rows(
         merged.values(),
-        key=lambda item: (
-            float(item["row"].get("final_score") or 0),
-            _published_rank(item["row"].get("published_at")),
-            str(item["row"].get("title") or ""),
-        ),
-        reverse=True,
-    )[: max(0, min(40, article_limit))]
+        limit=article_limit,
+        reference=generated,
+    )
 
     articles = []
     for index, item in enumerate(ranked):
@@ -423,6 +565,11 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
             "initials": _initials(source),
             "tint": ("#0B6B3A", "#1E5F8A", "#8F6A2E", "#455B73", "#68716A")[index % 5],
             "score": round(float(row.get("final_score") or 0), 2),
+            "freshness_status": item["freshness"]["status"],
+            "freshness_label": item["freshness"]["label"],
+            "age_hours": item["freshness"]["age_hours"],
+            "is_backfill": item["freshness"]["is_backfill"],
+            "publisher_key": item["publisher_key"],
         })
 
     status = str(brief.get("collection_status") or "FIXTURE_DEMO")
@@ -469,16 +616,61 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         article["image_src"] = _fallback_image_data(article)
         article["image_status"] = "deterministic_fallback"
 
-    generated = _parse_datetime(brief.get("generated_at"))
     health = brief.get("collector_health") or {}
     live_mode = brief.get("news_data_mode") == "live"
+    query_coverage = health.get("category_query_coverage") or {}
+    categories = [
+        {
+            "id": key,
+            "label": label,
+            "count": sum(key in row["categories"] for row in articles),
+            "query_attempted_count": int(
+                (query_coverage.get(key) or {}).get("attempted_count") or 0
+            ),
+            "query_successful_count": int(
+                (query_coverage.get(key) or {}).get("successful_count") or 0
+            ),
+            "query_added_count": int(
+                (query_coverage.get(key) or {}).get("added_count") or 0
+            ),
+        }
+        for key, label in CATEGORY_LABELS.items()
+    ]
+    for item in categories:
+        item["coverage_status"] = (
+            "covered" if item["id"] == "all" or item["count"] > 0 else "gap"
+        )
+    covered_categories = sum(
+        item["count"] > 0 for item in categories if item["id"] != "all"
+    )
+    resolution = health.get("publisher_resolution") or {}
+    quarantine_diagnostics = _quarantine_diagnostics(health)
+    coverage = {
+        "category_target_count": len(PRIMARY_CATEGORY_IDS),
+        "category_covered_count": covered_categories,
+        "category_gap_count": len(PRIMARY_CATEGORY_IDS) - covered_categories,
+        "publisher_count": len({row["publisher_key"] for row in articles}),
+        "fresh_article_count": sum(
+            row["freshness_status"] in {"fresh", "recent"} for row in articles
+        ),
+        "backfill_article_count": sum(row["is_backfill"] for row in articles),
+        "resolution_attempted_count": int(resolution.get("attempted_count") or 0),
+        "resolution_resolved_count": int(resolution.get("resolved_count") or 0),
+        "resolution_budget_exhausted_count": int(
+            resolution.get("budget_exhausted_count") or 0
+        ),
+        "quarantine_count": int(health.get("quarantine_count") or 0),
+        "quarantine_diagnostics": quarantine_diagnostics,
+        "display_policy": "publisher_direct_coverage",
+        "teams_policy": "ai_topic+executive_relevance+importance+sender_gate",
+    }
     return {
         "contract": CONTRACT,
         "reference_sha256": REFERENCE_SHA256,
         "edition": edition.isoformat(),
         "edition_label": edition.strftime("%Y.%m.%d"),
-        "generated_at": generated.isoformat() if generated else "",
-        "generated_label": generated.strftime("%Y-%m-%d %H:%M KST") if generated else "생성시각 미상",
+        "generated_at": generated.isoformat(),
+        "generated_label": generated.strftime("%Y-%m-%d %H:%M KST"),
         "news_data_mode": str(brief.get("news_data_mode") or "mock"),
         "collection_status": status,
         "source_label": "LIVE · publisher-direct" if live_mode else "DEMO · deterministic fixture",
@@ -507,10 +699,8 @@ def build_model(brief: Mapping, *, edition: date, article_limit: int = 24) -> di
         "market": _market_pane(brief),
         "weather": _weather_rail(brief),
         "safety": _safety_rail(brief),
-        "categories": [
-            {"id": key, "label": label, "count": sum(key in row["categories"] for row in articles)}
-            for key, label in CATEGORY_LABELS.items()
-        ],
+        "categories": categories,
+        "coverage": coverage,
     }
 
 
@@ -547,7 +737,9 @@ def _article_card(article: Mapping, *, lead: bool = False) -> str:
         f'{summary}'
         f'<p class="why"><b>Why</b> {escape(str(article["why"]))}</p>'
         f'<p class="source">{escape(str(article["source"]))} · '
-        f'{escape(str(article["published_label"]))} · Publisher Direct</p>'
+        f'{escape(str(article["published_label"]))} · '
+        f'<span class="freshness {escape(str(article["freshness_status"]))}">'
+        f'{escape(str(article["freshness_label"]))}</span> · Publisher Direct</p>'
         '</div></article>'
     )
 
@@ -559,10 +751,13 @@ def render_html(model: Mapping) -> str:
     lead = _article_card(articles[0], lead=True) if articles else ""
     cards = "\n".join(_article_card(row) for row in articles[1:]) if articles else ""
     filters = "".join(
-        f'<button class="filter{(" active" if item["id"] == "all" else "")}" '
+        f'<button class="filter{(" active" if item["id"] == "all" else "")}'
+        f'{(" coverage-gap" if item.get("coverage_status") == "gap" else "")}" '
         f'type="button" data-filter="{escape(item["id"])}" aria-pressed="'
-        f'{str(item["id"] == "all").lower()}">{escape(item["label"])}'
-        f'<small>{item["count"]}</small></button>'
+        f'{str(item["id"] == "all").lower()}" '
+        f'data-coverage-status="{escape(str(item.get("coverage_status") or "covered"))}">'
+        f'{escape(item["label"])}<small>{item["count"]}'
+        f'{" · 미관측" if item.get("coverage_status") == "gap" else ""}</small></button>'
         for item in model["categories"]
     )
     themes = "".join(
@@ -609,6 +804,26 @@ def render_html(model: Mapping) -> str:
         + escape(str(model["safety"]["unavailable_reason"]))
         + '</li>'
     )
+    coverage = model["coverage"]
+    category_coverage_rows = "".join(
+        '<li>'
+        f'<span>{escape(str(item["label"]))}</span>'
+        f'<b class="coverage-{escape(str(item["coverage_status"]))}">'
+        f'{int(item["count"])}건</b>'
+        f'<small>{"관측" if item["coverage_status"] == "covered" else "이번 판 미관측"}'
+        f' · 검색 성공 {int(item["query_successful_count"])}/'
+        f'{int(item["query_attempted_count"])}</small>'
+        '</li>'
+        for item in model["categories"]
+        if item["id"] != "all"
+    )
+    quarantine_rows = "".join(
+        '<li>'
+        f'<span>{escape(str(item["label"]))}</span>'
+        f'<b>{int(item["count"])}</b>'
+        '</li>'
+        for item in coverage["quarantine_diagnostics"]
+    ) or '<li class="unavailable">격리 진단 0건</li>'
     mode_class = "live" if model["news_data_mode"] == "live" else "demo"
     warning = (
         "실시간 수집 · 게시자 원문 검증 완료"
@@ -624,7 +839,23 @@ def render_html(model: Mapping) -> str:
         "{{MODE_CLASS}}": mode_class,
         "{{SOURCE_LABEL}}": escape(str(model["source_label"])),
         "{{MODE_WARNING}}": escape(warning),
+        "{{COVERAGE_SUMMARY}}": escape(
+            f'카테고리 {coverage["category_covered_count"]}/'
+            f'{coverage["category_target_count"]} · '
+            f'발행사 {coverage["publisher_count"]}곳'
+        ),
         "{{ARTICLE_COUNT}}": str(model["article_count"]),
+        "{{COVERED_CATEGORY_COUNT}}": str(coverage["category_covered_count"]),
+        "{{CATEGORY_TARGET_COUNT}}": str(coverage["category_target_count"]),
+        "{{PUBLISHER_COUNT}}": str(coverage["publisher_count"]),
+        "{{FRESH_ARTICLE_COUNT}}": str(coverage["fresh_article_count"]),
+        "{{BACKFILL_ARTICLE_COUNT}}": str(coverage["backfill_article_count"]),
+        "{{RESOLUTION_ATTEMPTED_COUNT}}": str(coverage["resolution_attempted_count"]),
+        "{{RESOLUTION_RESOLVED_COUNT}}": str(coverage["resolution_resolved_count"]),
+        "{{RESOLUTION_BUDGET_COUNT}}": str(coverage["resolution_budget_exhausted_count"]),
+        "{{QUARANTINE_COUNT}}": str(coverage["quarantine_count"]),
+        "{{CATEGORY_COVERAGE_ROWS}}": category_coverage_rows,
+        "{{QUARANTINE_DIAGNOSTIC_ROWS}}": quarantine_rows,
         "{{FILTER_BUTTONS}}": filters,
         "{{SUBFILTER_BUTTONS}}": subfilters,
         "{{SUBFILTER_HIDDEN}}": "" if subfilters else " hidden",
