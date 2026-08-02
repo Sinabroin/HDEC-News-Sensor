@@ -1244,6 +1244,12 @@ def _news_censor_display_entry(
     query = metadata.get("query") if isinstance(metadata, dict) else ""
     query_group = news_coverage.query_group_for_query(str(query or ""))
     categories.update(news_coverage.surface_categories_for_group(query_group))
+    if isinstance(metadata, dict):
+        categories.update(
+            value
+            for value in metadata.get("category_memberships") or []
+            if value in {"biz", "peers", "hdec", "safety", "global", "ai"}
+        )
     for group in news_coverage.query_groups_for_text(
         str(row.get("title") or ""),
         str(row.get("snippet") or ""),
@@ -1291,6 +1297,20 @@ def _news_censor_display_entry(
         "secondary_labels": list(decision.get("secondary_labels") or []),
         "decision_relevance_tier": decision.get("decision_relevance_tier"),
         "display_policy": "publisher_direct_coverage",
+        "discovery_run_status": str(
+            metadata.get("discovery_run_status") or "current_verified"
+        ),
+        "current_run_seen": bool(metadata.get("current_run_seen", True)),
+        "carried_forward": bool(metadata.get("carried_forward", False)),
+        "carry_forward_reason": str(metadata.get("carry_forward_reason") or ""),
+        "teams_newness_eligible": bool(
+            metadata.get("teams_newness_eligible", True)
+        ),
+        "verification_cache_status": str(
+            metadata.get("verification_cache_status") or "network_verified"
+        ),
+        "first_verified_at": str(metadata.get("first_verified_at") or ""),
+        "last_verified_at": str(metadata.get("last_verified_at") or ""),
     }
 
 

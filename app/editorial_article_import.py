@@ -146,6 +146,8 @@ _ERRORS: dict[str, tuple[int, str]] = {
     "UNSUPPORTED_CONTENT_TYPE": (415, "지원하지 않는 콘텐츠 형식입니다."),
     "RESPONSE_TOO_LARGE": (413, "기사 응답이 허용 크기를 초과했습니다."),
     "FETCH_TIMEOUT": (504, "기사 사이트 응답 시간이 초과되었습니다."),
+    "ARTICLE_NOT_FOUND": (404, "기사 페이지를 찾지 못했습니다."),
+    "ARTICLE_GONE": (410, "기사 페이지가 더 이상 제공되지 않습니다."),
     "ARTICLE_METADATA_NOT_FOUND": (422, "기사 제목이나 메타데이터를 추출하지 못했습니다."),
     "ARTICLE_BODY_NOT_FOUND": (422, "본문을 자동으로 추출하지 못했습니다."),
     "PORTAL_ORIGINAL_NOT_FOUND": (
@@ -464,6 +466,10 @@ def _request_with_redirects(
                 redirects.append(target)
                 current_url = target
                 continue
+            if status == 404:
+                raise ArticleImportError("ARTICLE_NOT_FOUND")
+            if status == 410:
+                raise ArticleImportError("ARTICLE_GONE")
             if status < 200 or status >= 300:
                 raise ArticleImportError("ARTICLE_METADATA_NOT_FOUND")
 

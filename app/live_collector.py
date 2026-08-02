@@ -17,10 +17,12 @@ raw dict 형태는 data/mock_articles.json 항목과 동일해 collector가 그�
 import hashlib
 import json
 import re
+import threading
 import time
 import urllib.parse
 import urllib.request
 from collections import deque
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
@@ -736,11 +738,30 @@ def _collect_group(group, *, max_per_query, group_budget, global_cap, timeout, c
 # 다만 문서화되지 않은 내부 응답 형식에 의존하므로 **최선노력**이다: 형식이 바뀌거나
 # 네트워크가 없으면 조용히 실패하고(예외 삼킴) 기존 aggregator 링크를 그대로 둔다 —
 # 버튼을 절대 죽이지 않는다(사용자 지시).
-LINK_RESOLVE_MAX_ITEMS = 20      # 수집 1회당 해석 시도 상한 — worst-case 지연 상한선
-LINK_RESOLVE_TIMEOUT = 3.5       # 요청 1건 타임아웃(초) — 해석 2단계 = 최대 7초/건
-LINK_RESOLVE_DEADLINE = 25.0     # 전체 해석 패스 누적 시간 상한(초) — 초과 시 즉시 중단
+# D7-AK-6E R4-R4 — publisher authority throughput remains deliberately bounded:
+# four global workers, never more than one request to the same target host, sixty
+# attempts, and a 120-second scheduling deadline.  Each individual network call
+# retains the stricter existing 8-second article fetch / 3.5-second decode bounds.
+LINK_RESOLVE_MAX_ITEMS = 60
+LINK_RESOLVE_TIMEOUT = 3.5
+LINK_RESOLVE_DEADLINE = 120.0
+LINK_RESOLVE_GLOBAL_WORKERS = 4
+LINK_RESOLVE_PER_HOST_WORKERS = 1
+LINK_RESOLVE_PER_HOST_MAX_ITEMS = 12
 _DECODE_RPC_ID = "Fbv4je"
 _DATA_N_A_RE = re.compile(r'data-n-a-([a-z]+)="([^"]*)"')
+_PUBLISHER_HOST_LOCKS_GUARD = threading.Lock()
+_PUBLISHER_HOST_LOCKS: dict[str, threading.Lock] = {}
+
+
+def _publisher_host_lock(url: str) -> threading.Lock:
+    """Process-local one-at-a-time guard for the actual publisher target host."""
+    try:
+        host = (urllib.parse.urlparse(url).hostname or "unknown").casefold().rstrip(".")
+    except ValueError:
+        host = "unknown"
+    with _PUBLISHER_HOST_LOCKS_GUARD:
+        return _PUBLISHER_HOST_LOCKS.setdefault(host, threading.Lock())
 
 
 def _publisher_bucket_key(row: dict) -> str:
@@ -827,8 +848,8 @@ def prioritize_publisher_resolution_rows(
     resolver's existing item/deadline bounds remain the hard network ceiling.
     """
     streams = (
-        (deque(_round_robin_publishers(direct_rows)), 2),
-        (deque(_round_robin_publishers(naver_rows)), 2),
+        (deque(_seed_resolution_categories(direct_rows)), 2),
+        (deque(_seed_resolution_categories(naver_rows)), 2),
         (deque(_seed_resolution_categories(google_rows)), 1),
     )
     ordered: list[dict] = []
@@ -838,6 +859,132 @@ def prioritize_publisher_resolution_rows(
                 if stream:
                     ordered.append(stream.popleft())
     return ordered
+
+
+def _resolution_source_lane(row: dict) -> str:
+    metadata = row.get("source_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    providers = {
+        token
+        for token in str(metadata.get("provider") or "").split("+")
+        if token
+    }
+    if metadata.get("trust_tier") == "official" or "publisher_direct_rss" in providers:
+        return "direct_official"
+    if "naver_news_api" in providers:
+        return "naver_originallink"
+    if "google_news_rss" in providers:
+        return "google_discovery"
+    return "other_high_evidence"
+
+
+def _resolution_target_host(row: dict) -> str:
+    target = publisher_direct.publisher_url(row) or publisher_direct.discovery_url(row)
+    try:
+        return (urllib.parse.urlparse(target).hostname or "unknown").casefold().rstrip(".")
+    except ValueError:
+        return "unknown"
+
+
+def _resolution_duplicate_key(row: dict) -> str:
+    target = publisher_direct.publisher_url(row) or publisher_direct.discovery_url(row)
+    normalized = publisher_direct.normalize_publisher_canonical_url(target)
+    if normalized:
+        return "url:" + normalized.casefold().rstrip("/")
+    title = _WS_RE.sub(" ", str(row.get("title") or "")).strip().casefold()
+    source = _WS_RE.sub(" ", str(row.get("source") or "")).strip().casefold()
+    published = str(row.get("published_at") or "").strip()
+    return "meta:" + hashlib.sha256(
+        "\n".join((title, source, published)).encode("utf-8")
+    ).hexdigest()
+
+
+_RESOLUTION_OUTCOMES = (
+    "verified_cache_hit",
+    "scheduled_for_resolution",
+    "resolved_success",
+    "resolved_authority_rejected",
+    "resolved_non_article",
+    "resolved_timeout",
+    "resolved_network_error",
+    "resolved_unsafe_target",
+    "skipped_global_deadline",
+    "skipped_item_budget",
+    "skipped_per_host_limit",
+    "skipped_duplicate",
+    "skipped_low_priority_after_fair_scheduling",
+    "skipped_other_explicit_reason",
+)
+
+
+def _resolution_outcome(row: dict) -> str:
+    if publisher_direct.is_publisher_direct_delivery_eligible(
+        row,
+        relevance_qualified=True,
+    ):
+        return "resolved_success"
+    reason = str(row.get("portal_resolution_reason") or "")
+    if "FETCH_TIMEOUT" in reason:
+        return "resolved_timeout"
+    if any(value in reason for value in ("DNS_RESOLUTION_FAILED", "network_error")):
+        return "resolved_network_error"
+    if any(value in reason for value in ("UNSAFE_DESTINATION", "REDIRECT_REJECTED")):
+        return "resolved_unsafe_target"
+    if any(value in reason for value in ("ARTICLE_BODY_NOT_FOUND", "ARTICLE_METADATA_NOT_FOUND")):
+        return "resolved_non_article"
+    if any(value in reason for value in ("ARTICLE_NOT_FOUND", "ARTICLE_GONE")):
+        return "resolved_authority_rejected"
+    return "resolved_authority_rejected"
+
+
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, int((len(ordered) - 1) * percentile + 0.999999)))
+    return round(ordered[index], 4)
+
+
+def _new_resolution_metrics(rows: list[dict]) -> dict:
+    metrics = {
+        "queue_size": len(rows),
+        "attempted_count": 0,
+        "resolved_count": 0,
+        "failed_count": 0,
+        "timeout_count": 0,
+        "latencies_seconds": [],
+        "average_latency_seconds": 0.0,
+        "p50_latency_seconds": 0.0,
+        "p95_latency_seconds": 0.0,
+        "outcomes": {key: 0 for key in _RESOLUTION_OUTCOMES},
+        "per_host": {},
+        "per_source_lane": {},
+        "per_category": {},
+        "direct_fast_path_accepted": 0,
+        "direct_fast_path_rejected": 0,
+        "originallink_fast_path_accepted": 0,
+        "originallink_fast_path_rejected": 0,
+        "network_verification_required": 0,
+        "global_workers": LINK_RESOLVE_GLOBAL_WORKERS,
+        "per_host_workers": LINK_RESOLVE_PER_HOST_WORKERS,
+        "per_host_attempt_limit": LINK_RESOLVE_PER_HOST_MAX_ITEMS,
+        "attempt_limit": LINK_RESOLVE_MAX_ITEMS,
+        "deadline_seconds": LINK_RESOLVE_DEADLINE,
+    }
+    for row in rows:
+        lane = _resolution_source_lane(row)
+        lane_metrics = metrics["per_source_lane"].setdefault(
+            lane,
+            {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+        )
+        lane_metrics["queue"] += 1
+        for category in sorted(_coverage_categories_for_resolution(row)):
+            category_metrics = metrics["per_category"].setdefault(
+                category,
+                {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+            )
+            category_metrics["queue"] += 1
+    return metrics
 
 
 def _parse_shell_attrs(shell_html: str) -> dict:
@@ -1014,11 +1161,16 @@ def _strict_publisher_authority(
             target = str(decoded)
             decode_reason = "google_news_decoder"
     try:
-        resolution = editorial_article_import.resolve_publisher_document(
-            target,
-            resolver=resolver,
-            opener=opener,
-        )
+        # The scheduler already limits known candidate hosts.  This second guard
+        # applies after Google decoding too, when the actual publisher host first
+        # becomes known, preventing a direct lane and discovery lane from hitting
+        # that publisher concurrently.
+        with _publisher_host_lock(target):
+            resolution = editorial_article_import.resolve_publisher_document(
+                target,
+                resolver=resolver,
+                opener=opener,
+            )
     except editorial_article_import.ArticleImportError as exc:
         if exc.code in {"ARTICLE_METADATA_NOT_FOUND", "FETCH_TIMEOUT"}:
             fallback = _official_registry_feed_authority(
@@ -1109,7 +1261,10 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                            max_items: int = LINK_RESOLVE_MAX_ITEMS,
                            deadline: float = LINK_RESOLVE_DEADLINE, *,
                            strict: bool = False, resolver=None, opener=None,
-                           decoder=None) -> int:
+                           decoder=None, metrics: dict | None = None,
+                           workers: int = LINK_RESOLVE_GLOBAL_WORKERS,
+                           per_host_workers: int = LINK_RESOLVE_PER_HOST_WORKERS,
+                           per_host_max_items: int = LINK_RESOLVE_PER_HOST_MAX_ITEMS) -> int:
     """수집된 aggregator URL을 실제 퍼블리셔 URL로 최선노력 치환한다.
 
     성공한 항목은 row["source_metadata"]["source_url"]을 실제 퍼블리셔 URL로 덮어쓴다
@@ -1122,18 +1277,54 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
     if not rows or max_items <= 0:
         return 0
     if strict:
+        active_metrics = _new_resolution_metrics(
+            [row for row in rows if isinstance(row, dict)]
+        )
+        active_metrics.update(
+            {
+                "global_workers": max(1, min(8, int(workers))),
+                "per_host_workers": max(1, min(2, int(per_host_workers))),
+                "per_host_attempt_limit": max(1, int(per_host_max_items)),
+                "attempt_limit": max(0, int(max_items)),
+                "deadline_seconds": max(0.0, float(deadline)),
+            }
+        )
+        worker_limit = active_metrics["global_workers"]
+        host_worker_limit = active_metrics["per_host_workers"]
         started = time.monotonic()
-        resolved_count = 0
-        processed: set[int] = set()
+        scheduled: list[tuple[int, dict, str, str]] = []
+        skipped: dict[int, str] = {}
+        seen: set[str] = set()
+        per_host_selected: dict[str, int] = {}
+
         for index, row in enumerate(rows):
-            if (
-                len(processed) >= max_items
-                or (time.monotonic() - started) >= deadline
-            ):
-                break
             if not isinstance(row, dict):
+                skipped[index] = "skipped_other_explicit_reason"
                 continue
-            processed.add(index)
+            duplicate_key = _resolution_duplicate_key(row)
+            if duplicate_key in seen:
+                skipped[index] = "skipped_duplicate"
+                continue
+            seen.add(duplicate_key)
+            host = _resolution_target_host(row)
+            if per_host_selected.get(host, 0) >= max(1, int(per_host_max_items)):
+                skipped[index] = "skipped_per_host_limit"
+                continue
+            if len(scheduled) >= max(0, int(max_items)):
+                skipped[index] = "skipped_item_budget"
+                continue
+            per_host_selected[host] = per_host_selected.get(host, 0) + 1
+            scheduled.append((index, row, host, _resolution_source_lane(row)))
+
+        pending = deque(scheduled)
+        futures = {}
+        active_hosts: dict[str, int] = {}
+        completed: dict[int, tuple[dict, float]] = {}
+        deadline_hit = False
+
+        def verify(item):
+            index, row, _host, _lane = item
+            item_started = time.monotonic()
             try:
                 verified = _strict_publisher_authority(
                     row,
@@ -1141,30 +1332,150 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                     opener=opener,
                     decoder=decoder,
                 )
-            except Exception:  # noqa: BLE001 - isolate an unexpected leaf failure
-                # A single parser/runtime defect must not erase authority already
-                # proven for other publishers.  Keep the reason stable and free of
-                # exception text, URLs, or response content.
+            except Exception:  # noqa: BLE001 - isolate one article only
                 verified = publisher_direct.quarantine_article(
                     row,
                     "publisher_verification_internal_error",
                 )
+            return index, verified, time.monotonic() - item_started
+
+        executor = ThreadPoolExecutor(
+            max_workers=worker_limit,
+            thread_name_prefix="hdec-publisher-verify",
+        )
+        try:
+            while pending or futures:
+                elapsed = time.monotonic() - started
+                if elapsed >= deadline and pending:
+                    deadline_hit = True
+                    while pending:
+                        index, _row, _host, _lane = pending.popleft()
+                        skipped[index] = "skipped_global_deadline"
+
+                submitted = True
+                while (
+                    pending
+                    and len(futures) < worker_limit
+                    and not deadline_hit
+                    and submitted
+                ):
+                    submitted = False
+                    for offset, item in enumerate(pending):
+                        index, _row, host, lane = item
+                        if active_hosts.get(host, 0) >= host_worker_limit:
+                            continue
+                        del pending[offset]
+                        active_hosts[host] = active_hosts.get(host, 0) + 1
+                        future = executor.submit(verify, item)
+                        futures[future] = (index, host, lane)
+                        submitted = True
+                        break
+
+                if not futures:
+                    if pending and not deadline_hit:
+                        continue
+                    break
+                remaining = max(0.0, deadline - (time.monotonic() - started))
+                done, _not_done = wait(
+                    tuple(futures),
+                    timeout=remaining if pending and not deadline_hit else None,
+                    return_when=FIRST_COMPLETED,
+                )
+                if not done:
+                    deadline_hit = True
+                    continue
+                for future in done:
+                    expected_index, host, _lane = futures.pop(future)
+                    active_hosts[host] = max(0, active_hosts.get(host, 1) - 1)
+                    try:
+                        index, verified, latency = future.result()
+                    except Exception:  # defensive; verify already isolates leaves
+                        index = expected_index
+                        verified = publisher_direct.quarantine_article(
+                            rows[index],
+                            "publisher_verification_internal_error",
+                        )
+                        latency = 0.0
+                    completed[index] = (verified, latency)
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
+
+        for index, outcome in skipped.items():
+            row = rows[index] if index < len(rows) else None
+            if isinstance(row, dict):
+                quarantined = publisher_direct.quarantine_article(row, outcome)
+                row.clear()
+                row.update(quarantined)
+            active_metrics["outcomes"][outcome] += 1
+            if isinstance(row, dict):
+                lane = _resolution_source_lane(row)
+                active_metrics["per_source_lane"].setdefault(
+                    lane,
+                    {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+                )["exhausted"] += 1
+                for category in _coverage_categories_for_resolution(row):
+                    active_metrics["per_category"].setdefault(
+                        category,
+                        {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+                    )["exhausted"] += 1
+
+        resolved_count = 0
+        for index in sorted(completed):
+            verified, latency = completed[index]
+            row = rows[index]
             row.clear()
             row.update(verified)
-            if publisher_direct.is_publisher_direct_delivery_eligible(
-                row,
-                relevance_qualified=True,
-            ):
-                resolved_count += 1
-        for index, row in enumerate(rows):
-            if index in processed or not isinstance(row, dict):
-                continue
-            quarantined = publisher_direct.quarantine_article(
-                row,
-                "publisher_resolution_budget_exhausted",
+            outcome = _resolution_outcome(row)
+            active_metrics["outcomes"]["scheduled_for_resolution"] += 1
+            active_metrics["outcomes"][outcome] += 1
+            active_metrics["attempted_count"] += 1
+            active_metrics["network_verification_required"] += 1
+            active_metrics["latencies_seconds"].append(round(latency, 6))
+            succeeded = outcome == "resolved_success"
+            resolved_count += int(succeeded)
+            lane = _resolution_source_lane(row)
+            lane_metrics = active_metrics["per_source_lane"].setdefault(
+                lane,
+                {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
             )
-            row.clear()
-            row.update(quarantined)
+            lane_metrics["attempts"] += 1
+            lane_metrics["successes"] += int(succeeded)
+            host = _resolution_target_host(row)
+            host_metrics = active_metrics["per_host"].setdefault(
+                host,
+                {"attempts": 0, "successes": 0},
+            )
+            host_metrics["attempts"] += 1
+            host_metrics["successes"] += int(succeeded)
+            for category in _coverage_categories_for_resolution(row):
+                category_metrics = active_metrics["per_category"].setdefault(
+                    category,
+                    {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+                )
+                category_metrics["attempts"] += 1
+                category_metrics["successes"] += int(succeeded)
+            if lane == "direct_official":
+                active_metrics[
+                    "direct_fast_path_accepted" if succeeded else "direct_fast_path_rejected"
+                ] += 1
+            elif lane == "naver_originallink":
+                active_metrics[
+                    "originallink_fast_path_accepted" if succeeded else "originallink_fast_path_rejected"
+                ] += 1
+
+        latencies = active_metrics.pop("latencies_seconds")
+        active_metrics["resolved_count"] = resolved_count
+        active_metrics["failed_count"] = active_metrics["attempted_count"] - resolved_count
+        active_metrics["timeout_count"] = active_metrics["outcomes"]["resolved_timeout"]
+        active_metrics["average_latency_seconds"] = round(
+            sum(latencies) / len(latencies), 4
+        ) if latencies else 0.0
+        active_metrics["p50_latency_seconds"] = _percentile(latencies, 0.50)
+        active_metrics["p95_latency_seconds"] = _percentile(latencies, 0.95)
+        active_metrics["duration_seconds"] = round(time.monotonic() - started, 4)
+        if metrics is not None:
+            metrics.clear()
+            metrics.update(active_metrics)
         return resolved_count
     started = time.monotonic()
     resolved_count = 0

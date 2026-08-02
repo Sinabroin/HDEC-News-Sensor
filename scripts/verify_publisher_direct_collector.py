@@ -63,10 +63,10 @@ EXPECTED_PROTECTED_SHA256 = {
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
-        # R4-R3 adds the exact-artifact News Censor funnel audit after the
-        # existing single brief build. The audit stays under RUNNER_TEMP and
-        # both sender defaults remain closed during deployment.
-        "a477d7ff312b521f9e5cc0523229f160dd7da394128c85cc6599adeb638933b1"
+        # R4-R4 keeps the single exact artifact and adds only the validated
+        # News Censor state path, its offline verifier, and that one safe state
+        # file to the atomic scheduled publish set. Sender defaults stay closed.
+        "b8c3b74feb8cdcc59cef5f8275c209795d2aa26a2c14636ee4f03faeb2dca141"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R1 intentionally replaces exact main baseline

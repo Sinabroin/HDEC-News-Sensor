@@ -140,6 +140,11 @@ def audit_artifact(brief: dict, html: str, *, article_limit: int) -> dict:
         for row in teams_candidates
     }
     query_coverage = (brief.get("collector_health") or {}).get("category_query_coverage") or {}
+    health = brief.get("collector_health") or {}
+    resolution = health.get("publisher_resolution") or {}
+    resolution_categories = resolution.get("per_category") or {}
+    current_categories = health.get("current_verified_category_counts") or {}
+    carry_categories = health.get("carry_forward_category_counts") or {}
     publisher_counts = Counter()
     display_counts = Counter()
     for row in canonical_rows:
@@ -159,6 +164,17 @@ def audit_artifact(brief: dict, html: str, *, article_limit: int) -> dict:
     category_counts = {
         category: {
             "raw": int((query_coverage.get(category) or {}).get("added_count") or 0),
+            "resolution_attempts": int(
+                (resolution_categories.get(category) or {}).get("attempts") or 0
+            ),
+            "verified_successes": int(
+                (resolution_categories.get(category) or {}).get("successes") or 0
+            ),
+            "cache_hits": int(
+                (resolution_categories.get(category) or {}).get("cache_hits") or 0
+            ),
+            "current_verified_union": int(current_categories.get(category) or 0),
+            "carry_forward_union": int(carry_categories.get(category) or 0),
             "publisher_eligible": int(publisher_counts[category]),
             "display_eligible": int(display_counts[category]),
             "selected": int(selected_counts.get(category, 0)),
@@ -188,6 +204,10 @@ def audit_artifact(brief: dict, html: str, *, article_limit: int) -> dict:
         "primary_window_count": int((model.get("coverage") or {}).get("primary_window_count") or 0),
         "backfill_count": int((model.get("coverage") or {}).get("backfill_article_count") or 0),
         "teams_candidate_count": len(teams_candidates),
+        "teams_carry_forward_candidate_count": sum(
+            bool(getattr(candidate, "article", {}).get("carried_forward"))
+            for candidate in teams_candidates
+        ),
         "teams_backfill_candidate_count": len(backfill_model_ids & teams_ids),
         "safety_counters": {
             "external_network_calls": 0,

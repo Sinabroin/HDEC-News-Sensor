@@ -962,6 +962,47 @@ def main() -> int:
                 "Teams max 1 never caps News Censor",
                 teams_max_model["article_count"] == 19,
             )
+            carried_twenty = [
+                fixture_display_row(
+                    500 + index,
+                    title=(
+                        "현대건설 AI 데이터센터 이월 검증 "
+                        f"{100 + index}억원 신규 계약"
+                    ),
+                    host=f"carry-{index % 8}.example",
+                    published_at=f"2026-07-{29 + (index % 3):02d}T08:00:00+09:00",
+                    categories=[
+                        "biz",
+                        build_news_censor.PRIMARY_CATEGORY_IDS[
+                            index % len(build_news_censor.PRIMARY_CATEGORY_IDS)
+                        ],
+                    ],
+                )
+                for index in range(20)
+            ]
+            for row in carried_twenty:
+                row.update({
+                    "discovery_run_status": "carry_forward_only",
+                    "current_run_seen": False,
+                    "carried_forward": True,
+                    "carry_forward_reason": "unexpired_verified_state",
+                    "teams_newness_eligible": False,
+                    "verification_cache_status": "carried_forward",
+                })
+            carried_model = build_news_censor.build_model(
+                artifact_for(carried_twenty),
+                edition=date(2026, 8, 2),
+            )
+            check(
+                "20 carry-forward display rows render 20 with honest timestamps",
+                carried_model["article_count"] == 20
+                and all(row["carried_forward"] for row in carried_model["articles"])
+                and carried_model["coverage"]["backfill_article_count"] > 0,
+            )
+            check(
+                "20 carry-forward display rows add zero Teams candidates",
+                teams_policy.select_teams_push_candidates(carried_twenty) == (),
+            )
             image_probe = copy.deepcopy(nineteen_model)
             build_news_censor.materialize_article_images(
                 image_probe,

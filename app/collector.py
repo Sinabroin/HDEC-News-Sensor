@@ -11,8 +11,10 @@ NEWS_MODE=mock(기본)은 data/mock_articles.json 단 하나만 읽는다 (rules
 
 import hashlib
 import json
+import os
 import re
 import unicodedata
+from pathlib import Path
 
 from app import config, db, publisher_direct
 
@@ -23,6 +25,9 @@ ALLOWED_METADATA_KEYS = (
     "publisher_url", "publisher_domain",
     "publisher_direct", "portal_resolution_status", "portal_resolution_reason",
     "published_at_fallback_reason", "source_kind", "trust_tier",
+    "current_run_seen", "carried_forward", "carry_forward_reason",
+    "teams_newness_eligible", "discovery_run_status", "verification_cache_status",
+    "first_verified_at", "last_verified_at", "category_memberships",
 )
 
 LIVE_HEALTHY_WITH_ARTICLES = "LIVE_HEALTHY_WITH_ARTICLES"
@@ -360,7 +365,48 @@ def _run_live() -> dict:
     healthy live empty로 남고, 성공 source가 전혀 없을 때만 기존 mock fallback을 명시적으로
     LIVE_FALLBACK_REJECTED로 격리한다.
     """
-    from app import live_collector, naver_news_provider, news_coverage, thebell_watch
+    from app import live_collector
+    from app import (
+        naver_news_provider,
+        news_censor_verified_state,
+        news_coverage,
+        source_quality,
+        thebell_watch,
+    )
+
+    verified_state_path_text = os.environ.get(
+        "NEWS_CENSOR_VERIFIED_STATE_PATH",
+        "",
+    ).strip()
+    verified_state_path = Path(verified_state_path_text) if verified_state_path_text else None
+    state_load_failed = False
+    state_write_failed = False
+    state_error_reason = ""
+    try:
+        loaded_state = (
+            news_censor_verified_state.load_state(verified_state_path)
+            if verified_state_path is not None
+            else news_censor_verified_state.StateLoad(
+                news_censor_verified_state.empty_state(),
+                0,
+                0,
+                0,
+                "",
+            )
+        )
+    except news_censor_verified_state.VerifiedStateError:
+        # A malformed/partial/unsupported file never supplies carried articles and
+        # is never overwritten by this run.  Current live authority can still be
+        # collected, but state diagnostics remain explicitly fail-closed.
+        state_load_failed = True
+        state_error_reason = "verified_state_validation_failed"
+        loaded_state = news_censor_verified_state.StateLoad(
+            news_censor_verified_state.empty_state(),
+            0,
+            0,
+            0,
+            "",
+        )
 
     direct_source_audit: list[dict] = []
     try:
@@ -459,19 +505,77 @@ def _run_live() -> dict:
     # pinned direct feeds first, then Naver originallink candidates, and only then
     # portal-only Google discovery. Otherwise a large Google pool can starve every
     # Naver publisher candidate before strict verification begins.
-    resolvable_rows = live_collector.prioritize_publisher_resolution_rows(
+    scheduled_rows = live_collector.prioritize_publisher_resolution_rows(
         direct_rows,
         naver_rows,
         google_rows,
     )
+    # Remove exact provider duplicates before any network work.  The fair lane
+    # order above is retained because merge_provider_articles is stable.
+    resolvable_rows = merge_provider_articles(scheduled_rows)
+    pre_resolution_duplicate_count = max(0, len(scheduled_rows) - len(resolvable_rows))
+    cache_hits = 0
+    cache_misses = 0
+    cache_reverification_required = 0
+    cache_reason_counts: dict[str, int] = {}
+    cache_category_counts: dict[str, int] = {}
+    retry_backoff_skipped = 0
+    resolution_metrics: dict = {}
+    state_identities, state_canonicals = news_censor_verified_state.state_indexes(
+        loaded_state.state
+    )
+    network_rows: list[dict] = []
+    for row in resolvable_rows:
+        entry, cache_reason = news_censor_verified_state.reusable_entry(
+            state_identities,
+            state_canonicals,
+            row,
+        )
+        cache_reason_counts[cache_reason] = cache_reason_counts.get(cache_reason, 0) + 1
+        if entry is None:
+            cache_misses += 1
+            cache_reverification_required += int(cache_reason != "cache_miss")
+            if cache_reason == "cache_retry_backoff":
+                retry_backoff_skipped += 1
+                quarantined = publisher_direct.quarantine_article(
+                    row,
+                    "skipped_other_explicit_reason",
+                )
+                row.clear()
+                row.update(quarantined)
+                continue
+            network_rows.append(row)
+            continue
+        cached = news_censor_verified_state.article_from_entry(
+            entry,
+            current_run_seen=True,
+            cache_reused=True,
+        )
+        cached_metadata = dict(cached.get("source_metadata") or {})
+        current_metadata = row.get("source_metadata") or {}
+        if isinstance(current_metadata, dict):
+            # Current provider/query evidence remains in the ephemeral run only;
+            # the verified state writer intentionally persists neither field.
+            for key in ("provider", "query", "source_kind", "trust_tier"):
+                if key in current_metadata:
+                    cached_metadata[key] = current_metadata[key]
+        cached["source_metadata"] = cached_metadata
+        row.clear()
+        row.update(cached)
+        cache_hits += 1
+        for category in entry.get("category_memberships") or []:
+            cache_category_counts[str(category)] = (
+                cache_category_counts.get(str(category), 0) + 1
+            )
     if resolvable_rows:
         try:
             live_collector.resolve_publisher_urls(
-                resolvable_rows,
+                network_rows,
                 strict=True,
+                metrics=resolution_metrics,
             )
         except Exception:  # noqa: BLE001 - fail closed without erasing prior success
-            for row in resolvable_rows:
+            for row in network_rows:
                 if (
                     isinstance(row, dict)
                     and not publisher_direct.is_publisher_direct_delivery_eligible(
@@ -486,13 +590,133 @@ def _run_live() -> dict:
                     row.clear()
                     row.update(quarantined)
 
+    if not resolution_metrics:
+        resolution_metrics = live_collector._new_resolution_metrics(network_rows)
+    resolution_metrics["queue_size"] = len(resolvable_rows)
+    resolution_metrics["network_queue_size"] = len(network_rows)
+    resolution_metrics["outcomes"]["verified_cache_hit"] = cache_hits
+    resolution_metrics["outcomes"]["skipped_other_explicit_reason"] += (
+        retry_backoff_skipped
+    )
+    resolution_metrics["cache_hits"] = cache_hits
+    resolution_metrics["cache_misses"] = cache_misses
+    resolution_metrics["cache_reverification_required"] = cache_reverification_required
+    resolution_metrics["cache_reason_counts"] = dict(sorted(cache_reason_counts.items()))
+    for category, count in sorted(cache_category_counts.items()):
+        resolution_metrics["per_category"].setdefault(
+            category,
+            {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+        )["cache_hits"] = count
+
+    # Mark current-vs-carried provenance before storage.  These safe flags travel
+    # through the brief display contract but are never used by the Teams watch.
+    for row in network_rows:
+        if not publisher_direct.is_publisher_direct_delivery_eligible(
+            row,
+            relevance_qualified=True,
+        ):
+            continue
+        metadata = row.get("source_metadata")
+        metadata = dict(metadata) if isinstance(metadata, dict) else {}
+        metadata.update(
+            {
+                "current_run_seen": True,
+                "carried_forward": False,
+                "carry_forward_reason": "",
+                "teams_newness_eligible": True,
+                "discovery_run_status": "current_verified_new",
+                "verification_cache_status": "network_verified",
+            }
+        )
+        row["source_metadata"] = metadata
+
     combined_all = merge_provider_articles(resolvable_rows)
-    combined, publisher_quarantine = publisher_direct.partition_delivery_articles(
+    current_verified, publisher_quarantine = publisher_direct.partition_delivery_articles(
         combined_all,
         # Collector eligibility is publisher authority for display/storage.  Teams
         # owns its separate AI relevance and importance policy downstream.
         relevance_qualified=True,
     )
+
+    updated_state = loaded_state.state
+    state_entries_new = 0
+    state_entries_reused = 0
+    state_entries_invalidated = 0
+    state_transient_failures = 0
+    state_hash_after = loaded_state.sha256
+    if verified_state_path is not None and not state_load_failed:
+        updated_state, state_entries_new, state_entries_reused = (
+            news_censor_verified_state.merge_verified_entries(
+                loaded_state.state,
+                current_verified,
+                category_resolver=lambda article: (
+                    {"biz"}
+                    | live_collector._coverage_categories_for_resolution(dict(article))
+                ),
+                relevance_resolver=lambda article: publisher_direct.executive_relevance(
+                    article
+                ).relevant,
+                source_quality_resolver=lambda article: source_quality.classify(
+                    str(article.get("source") or ""),
+                    str(article.get("title") or ""),
+                )["source_quality"] != "excluded",
+            )
+        )
+        updated_state, state_entries_invalidated, state_transient_failures = (
+            news_censor_verified_state.record_resolution_failures(
+                updated_state,
+                [
+                    row
+                    for row in network_rows
+                    if not publisher_direct.is_publisher_direct_delivery_eligible(
+                        row,
+                        relevance_qualified=True,
+                    )
+                ],
+            )
+        )
+        try:
+            state_hash_after = news_censor_verified_state.atomic_write_state(
+                verified_state_path,
+                updated_state,
+            )
+        except (OSError, ValueError):
+            state_write_failed = True
+            state_error_reason = "verified_state_atomic_write_failed"
+            updated_state = loaded_state.state
+            state_hash_after = loaded_state.sha256
+
+    carried_rows, carry_diagnostics = news_censor_verified_state.carry_forward_articles(
+        updated_state,
+        current_verified,
+    ) if verified_state_path is not None and not state_load_failed else (
+        [],
+        {"candidates": 0, "expired": 0, "invalidated": 0},
+    )
+    # Current-run authority always wins.  The partitioner provides a second
+    # canonical guard so a carried row can never duplicate its current copy.
+    combined, carry_quarantine = publisher_direct.partition_delivery_articles(
+        current_verified + carried_rows,
+        relevance_qualified=True,
+    )
+    publisher_quarantine.extend(carry_quarantine)
+    current_category_counts: dict[str, int] = {}
+    carry_category_counts: dict[str, int] = {}
+    for target, rows_for_target in (
+        (current_category_counts, current_verified),
+        (carry_category_counts, carried_rows),
+    ):
+        for row in rows_for_target:
+            metadata = row.get("source_metadata") or {}
+            categories = (
+                metadata.get("category_memberships") or []
+                if isinstance(metadata, dict)
+                else []
+            )
+            if not categories:
+                categories = {"biz"} | live_collector._coverage_categories_for_resolution(row)
+            for category in categories:
+                target[str(category)] = target.get(str(category), 0) + 1
     # TheBell은 Naver 검색 metadata에서만 후보를 파생한다. 별도 기사 페이지 요청이나
     # 제한 우회는 없으며 제목·짧은 snippet·시각·링크만 보존한다.
     eligible_naver_rows = [
@@ -541,36 +765,57 @@ def _run_live() -> dict:
             collector_health.get("raw_candidate_count") or 0
         ),
         "source_quality_rejected_count": source_quality_rejected_count,
-        "publisher_resolution_input_count": len(combined_all),
-        "pre_resolution_duplicate_count": max(
-            0,
-            int(collector_health.get("raw_candidate_count") or 0)
-            - len(combined_all),
-        ),
+        "direct_source_row_count": len(direct_rows),
+        "naver_originallink_row_count": len(naver_rows),
+        "google_discovery_row_count": len(google_rows),
+        "publisher_resolution_input_count": len(resolvable_rows),
+        "pre_resolution_duplicate_count": pre_resolution_duplicate_count,
         "publisher_direct_eligible_count": len(combined),
+        "current_verified_count": len(current_verified),
+        "current_verified_new_count": max(0, len(current_verified) - cache_hits),
+        "current_verified_reused_count": cache_hits,
+        "verified_union_count": len(combined),
+        "carry_forward_candidate_count": int(carry_diagnostics["candidates"]),
+        "carry_forward_selected_count": len(carried_rows),
+        "carry_forward_expired_count": int(carry_diagnostics["expired"]),
+        "carry_forward_invalidated_count": int(carry_diagnostics["invalidated"]),
+        "current_verified_category_counts": dict(sorted(current_category_counts.items())),
+        "carry_forward_category_counts": dict(sorted(carry_category_counts.items())),
         "quarantine_count": len(publisher_quarantine),
         "quarantine_reason_counts": dict(sorted(quarantine_reason_counts.items())),
         "publisher_resolution": {
-            "attempted_count": sum(
-                1
-                for row in combined_all
-                if str(row.get("portal_resolution_reason") or "")
-                != "publisher_resolution_budget_exhausted"
-            ),
-            "resolved_count": len(combined),
-            "failed_count": sum(
-                count
-                for reason, count in quarantine_reason_counts.items()
-                if reason != "publisher_resolution_budget_exhausted"
-                and reason != "source_quality_filtered_before_publisher_resolution"
-            ),
-            "budget_exhausted_count": int(
-                quarantine_reason_counts.get(
-                    "publisher_resolution_budget_exhausted",
-                    0,
+            **resolution_metrics,
+            # Compatibility aggregate is derived from explicit causes; new
+            # diagnostics and public Coverage Health use the split counters.
+            "budget_exhausted_count": sum(
+                int(resolution_metrics.get("outcomes", {}).get(reason) or 0)
+                for reason in (
+                    "skipped_global_deadline",
+                    "skipped_item_budget",
+                    "skipped_per_host_limit",
+                    "skipped_low_priority_after_fair_scheduling",
                 )
             ),
-            "policy": "bounded_fair_per_publisher",
+            "policy": "bounded_concurrent_fair_per_host_v1",
+        },
+        "verified_state": {
+            "state_contract": news_censor_verified_state.STATE_CONTRACT,
+            "state_version": news_censor_verified_state.STATE_VERSION,
+            "enabled": verified_state_path is not None,
+            "entries_loaded": loaded_state.entries_loaded,
+            "entries_valid": loaded_state.entries_valid,
+            "entries_invalid": int(state_load_failed),
+            "entries_pruned": loaded_state.entries_pruned,
+            "entries_new": state_entries_new,
+            "entries_reused": state_entries_reused,
+            "entries_invalidated": state_entries_invalidated,
+            "entries_after": len(updated_state.get("entries") or []),
+            "transient_failures": state_transient_failures,
+            "load_failed": state_load_failed,
+            "write_failed": state_write_failed,
+            "error_reason": state_error_reason,
+            "state_hash_before": loaded_state.sha256,
+            "state_hash_after": state_hash_after,
         },
     })
 
