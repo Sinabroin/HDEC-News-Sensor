@@ -1,14 +1,12 @@
 name: Scheduled Live Refresh
 
-# D7-AH-1 — 매시간 라이브 리포트/대시보드 갱신 + 변동 기반 예약 알림 발송.
-# 기본은 게시(공개 Pages 갱신)만 하고 발송은 닫혀 있다. 실제 발송은 repo Variable
-# HOURLY_DELTA_AUTO_SEND='1' + 라이브 수집 성공(live_ok) + 확정 긴급 사건(shadow_alert_delta=true)
-# 통과가 필요하다. Telegram은 기존 TELEGRAM_AUTO_SEND='1' opt-in도 함께 유지한다.
+# 매시간 라이브 리포트와 정확히 하나의 reference-locked News Censor 모델을 게시한다.
+# 이 workflow는 알림 전송 상태를 소유하지 않으며 Teams/Telegram 발송을 실행하지 않는다.
 on:
   workflow_dispatch:
     inputs:
       force_dry_run:
-        description: "Type 'true' to force dry-run even if TELEGRAM_AUTO_SEND is set (default empty)"
+        description: "Type 'true' to build and verify without publishing"
         required: false
         default: ""
   schedule:
@@ -27,9 +25,7 @@ concurrency:
 env:
   # 검증/기본은 항상 mock 안전 모드 (네트워크/비밀값 0건). live 수집은 게시/발송 step에서만 명시 활성화.
   APP_MODE: mock
-  # D7-AK-6E R4 배포 검증 중 sender 기본값은 명시적으로 닫는다. Telegram 발송 step은
-  # 아래의 기존 이중 opt-in 조건과 step-local vars 값이 있을 때만 별도로 열린다.
-  TEAMS_AI_NEWS_WATCH: "0"
+  # 이 Pages 전용 workflow에는 sender step이 없다. Telegram은 계속 명시적으로 비활성화한다.
   TELEGRAM_AUTO_SEND: "0"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -51,7 +47,7 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/verify_news_censor_verified_state.py app/news_censor_verified_state.py scripts/send_scheduled_telegram.py scripts/send_telegram.py scripts/detect_dashboard_alert_delta.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/verify_news_censor_reference_parity.py scripts/verify_news_censor_verified_state.py app/news_censor_verified_state.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_news_censor.py
           python3 scripts/verify_news_censor_verified_state.py
           python3 scripts/verify_teams_ai_push.py
@@ -60,7 +56,6 @@ jobs:
           python3 scripts/verify_teams_ai_push_workflow_dry_run.py
           python3 scripts/verify_teams_ai_push_production.py
           python3 scripts/verify_hourly_delta_auto_send.py --skip-operator-verifier
-          python3 scripts/verify_meaningful_delta_quality.py
           python3 scripts/verify_scheduled_refresh_and_telegram.py
           python3 scripts/verify_human_review_gate.py
           python3 scripts/verify_static_report.py
@@ -69,24 +64,21 @@ jobs:
           python3 scripts/verify_thebell_watch_policy.py
           python3 scripts/verify_deal_watch_collection.py
           python3 scripts/verify_known_missed_news_coverage.py
-          python3 scripts/verify_dashboard_lens_integrity.py
           python3 scripts/verify_dashboard_accordion_sections.py
           python3 scripts/verify_dashboard_existing_rail_navigation.py
           python3 scripts/verify_hormuz_lens_relevance.py
-          python3 scripts/verify_hormuz_ais_traffic.py
           python3 scripts/verify_national_ai_infra_relevance.py
           python3 scripts/verify_operator_controls.py
-          python3 scripts/verify_operator_actual_buttons.py
           python3 scripts/verify_ai_market_exposure_quality.py
           python3 scripts/verify_data_source_honesty.py
           python3 scripts/verify_site_article_sensing.py
           python3 scripts/verify_weather_risk.py
           python3 scripts/verify_market_source_audit.py
-          python3 scripts/verify_dashboard_ui_simplification.py
-          python3 scripts/verify_rc3_public_truth.py
-
-      - name: Snapshot dashboard before live build
-        run: cp docs/daily/dashboard-latest.html "$RUNNER_TEMP/dashboard-before.html"
+          # The exact NEW_CENSOR shell intentionally supersedes the retired
+          # preview-dashboard UI contracts (operator buttons, legacy lens DOM,
+          # Hormuz traffic card, simplification strip, RC3 public shell).  Their
+          # underlying collectors remain covered above; the public UI is sealed
+          # after the live artifact is rendered by the parity verifier below.
 
       # 2) live brief를 한 번 수집해 artifact로 고정한 뒤 모든 정적 소비자가 재사용한다.
       #    News Censor의 explicit collector-health gate가 live_ok를 판정한다. 실패(mock fallback,
@@ -130,15 +122,19 @@ jobs:
               --brief-json "$BRIEF_JSON" \
               --output docs/daily/operator-latest.html \
               --audience operator
-            python3 scripts/build_static_dashboard.py --brief-json "$BRIEF_JSON" --market-mode live --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --weather-mode live
-            # R4 독립 News Censor — 기존 페이지 내비게이션을 수정하지 않고 dated/latest 두
-            # 산출물을 동일 렌더에서 생성한다. live가 아니면 builder가 쓰기 전에 fail-closed.
+            # SHA-pinned exact-reference News Censor를 한 번 렌더해 compatibility/canonical
+            # 두 경로에 동일 byte로 쓴다. 공개 dashboard는 Teams sent ledger가 아니다.
             TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
               python3 scripts/build_news_censor.py \
                 --brief-json "$BRIEF_JSON" \
                 --output-root docs/news-censor \
+                --canonical-output docs/daily/dashboard-latest.html \
                 --require-live \
                 --image-mode live
+            python3 scripts/verify_news_censor_reference_parity.py \
+              --brief-json "$BRIEF_JSON" \
+              --candidate docs/news-censor/latest.html \
+              --candidate docs/daily/dashboard-latest.html
             TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0 \
               python3 scripts/audit_news_censor_funnel.py \
                 --brief-json "$BRIEF_JSON" \
@@ -146,36 +142,15 @@ jobs:
                 --output-json "$RUNNER_TEMP/news-censor-funnel-audit.json" \
                 --require-live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
-            echo "NEWS_MODE=live · validated shared artifact published to report + operator snapshot + dashboard + standalone News Censor"
+            echo "NEWS_MODE=live · one validated artifact published to report + exact shared News Censor paths"
           else
             echo "$VALIDATION"
             echo "live_ok=false" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · collector failure/fallback/indeterminate artifact — NOT publishing"
-            git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html || true
+            git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html docs/news-censor data/news_censor_verified_state.json || true
           fi
 
-      # 3) live 성공 시 이전/신규 대시보드의 핵심 알림 surface만 비교한다. 파싱 실패는
-      #    step 실패로 닫히며, 신규 핵심 후보가 0건인 경우 alert_delta=false다.
-      - name: Detect dashboard alert delta
-        id: delta
-        if: steps.build.outputs.live_ok == 'true'
-        env:
-          # 신규·변경 기사 delta payload를 runner temp에 '한 번' 생성한다 — 아래 Telegram/Teams가
-          # 이 동일 파일을 소비해 각자 재수집하지 않는다(단일 fetch·채널 간 불일치 없음). alert_delta
-          # GITHUB_OUTPUT 계약과 stdout(내용 없음)은 그대로다.
-          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
-        run: |
-          python3 scripts/detect_dashboard_alert_delta.py \
-            "$RUNNER_TEMP/dashboard-before.html" \
-            docs/daily/dashboard-latest.html \
-            --github-output "$GITHUB_OUTPUT" \
-            --delta-artifact "$DELTA_ARTIFACT_FILE"
-
-      # 3A) 기사별 Teams AI 카드 발송은 이 워크플로에서 하지 않는다 — D7-AK-6C에서 별도
-      #      teams-ai-news-watch.yml(10분 주기)이 Teams 기사별 자동발송의 유일한 owner다.
-      #      이 예약 새로고침은 대시보드 build/publish + Telegram 전용으로 남는다.
-
-      # 4) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
+      # 3) live 성공 시에만 갱신분을 main에 commit/push → 공개 Pages 갱신 (변경 없으면 skip).
       - name: Publish to Pages (commit live docs)
         if: steps.build.outputs.live_ok == 'true' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
         run: |
@@ -196,12 +171,12 @@ jobs:
             git commit -m "chore: scheduled live refresh"
 
             for attempt in 1 2 3; do
-              echo "publish attempt ${attempt}/3: fetch + rebase + push"
+              echo "publish attempt ${attempt}/3: fetch + merge-preserving-history + push"
               git fetch origin main
 
-              if ! git rebase -X theirs origin/main; then
-                echo "ERROR: rebase onto origin/main failed during scheduled publish"
-                git rebase --abort || true
+              if ! git merge --no-edit origin/main; then
+                echo "ERROR: merge with origin/main failed during scheduled publish"
+                git merge --abort || true
                 exit 1
               fi
 
@@ -220,42 +195,5 @@ jobs:
             done
           fi
 
-      # 5) 예약 Telegram — hourly opt-in + 기존 Telegram opt-in + live + shadow confirmed urgency가 모두 필요하다.
-      #    sender 내부 freshness/live 게이트도 그대로 통과해야 실제 발송된다.
-      - name: Hourly telegram digest (delta-gated auto-send)
-        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta == 'true' && vars.HOURLY_DELTA_AUTO_SEND == '1' && vars.TELEGRAM_AUTO_SEND == '1' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || github.event.inputs.force_dry_run != 'true')
-        env:
-          # 두 repo Variable이 모두 열린 step에서만 기존 sender opt-in을 주입한다.
-          TELEGRAM_AUTO_SEND: ${{ vars.TELEGRAM_AUTO_SEND || '' }}
-          TELEGRAM_ALLOW_MOCK: ${{ vars.TELEGRAM_ALLOW_MOCK || '' }}
-          TELEGRAM_MAX_AGE_HOURS: ${{ vars.TELEGRAM_MAX_AGE_HOURS || '' }}
-          FORCE_DRY_RUN: ${{ github.event.inputs.force_dry_run || '' }}
-          # 발송 자격증명 — send_telegram.py가 상속받아 쓴다. 값은 출력되지 않는다.
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
-          NEWS_MODE: live
-          NAVER_NEWS_ENABLED: "1"
-          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-          MACRO_MODE: live
-          MACRO_SNAPSHOT_FILE: ${{ runner.temp }}/macro_snapshot.json
-          # inline 버튼 타겟 (vars 우선, 없으면 secrets). 미설정이면 버튼 없는 텍스트 발송.
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || secrets.DASHBOARD_URL || '' }}
-          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
-          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME || secrets.TELEGRAM_BOT_USERNAME || '' }}
-          # 위 delta 스텝이 만든 공유 delta payload — 재수집 없이 이 파일만 읽어 변동 우선(실제 KST)
-          # 발송한다. Teams와 동일 파일 → 제목 시각·기사 목록이 채널 간 완전히 일치한다.
-          DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json
-        run: |
-          DRY_FLAG=""
-          if [ "$FORCE_DRY_RUN" = "true" ]; then DRY_FLAG="--dry-run"; fi
-          python3 scripts/send_scheduled_telegram.py $DRY_FLAG
-
-      # 6) Teams 기사별 AI 카드 발송은 여기서 하지 않는다 — teams-ai-news-watch.yml(10분 주기,
-      #    TEAMS_AI_NEWS_WATCH=1)이 유일한 Teams 발송 owner다. 이 예약 새로고침은 대시보드
-      #    build/publish + Telegram 전용이며, 동일 delta artifact를 두 워크플로가 재수집 없이 각자
-      #    소비한다(중복 sender 없음). state(data/teams_push_state.json) commit도 watch가 소유한다.
-
-      - name: Skip automatic Telegram alert (no confirmed urgency)
-        if: steps.build.outputs.live_ok == 'true' && steps.delta.outputs.shadow_alert_delta != 'true'
-        run: echo "no confirmed urgency — skip telegram"
+      # Teams article sends and data/teams_push_state.json remain exclusively owned by
+      # teams-ai-news-watch.yml. Telegram remains disabled and has no sender step here.

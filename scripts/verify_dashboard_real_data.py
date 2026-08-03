@@ -68,12 +68,38 @@ def _read(path: Path) -> str:
 def _model(html: str) -> dict:
     m = re.search(r'<script type="application/json" id="preview-model">(.*?)</script>',
                   html, re.S)
-    if not m:
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except ValueError:
+            return {}
+    exact = re.search(
+        r'<script type="application/json" id="article-data">\s*(.*?)\s*</script>',
+        html,
+        re.S,
+    )
+    if not exact:
         return {}
     try:
-        return json.loads(m.group(1))
+        article_map = json.loads(exact.group(1))
     except ValueError:
         return {}
+    token_by_id = {
+        article_id: tokens.split()
+        for tokens, article_id in re.findall(
+            r'<article\b[^>]*\bdata-t="([^"]*)"[^>]*\bdata-article="([^"]+)"',
+            html,
+        )
+    }
+    articles = []
+    for article_id, raw in article_map.items():
+        if not isinstance(raw, dict):
+            continue
+        row = dict(raw)
+        row["id"] = article_id
+        row["lens"] = token_by_id.get(article_id, [])
+        articles.append(row)
+    return {"_reference_locked": True, "articles": articles}
 
 
 def _clean_env(**extra: str) -> dict:
@@ -222,10 +248,30 @@ def check_committed_dashboard() -> None:
     if not check("3a: docs/daily/dashboard-latest.html 존재", DASHBOARD.exists()):
         return
     html = _read(DASHBOARD)
+    model = _model(html)
+    if model.get("_reference_locked"):
+        rows = model.get("articles") or []
+        valid_top = {"all", "biz", "peers", "hdec", "safety", "global", "ai", "magazine"}
+        invalid = sorted({
+            token for row in rows for token in (row.get("lens") or [])
+            if token not in valid_top and not token.startswith("sub_")
+        })
+        check("3b: exact-reference 생성 shell 포함",
+              "NEWS CENSOR" in html and 'id="pane-articles" class="pane active"' in html)
+        check("3c: exact-reference article-data 모델 포함", bool(rows), f"{len(rows)}행")
+        check("3d: exact-reference 모든 기사에 필터 토큰", all(r.get("lens") for r in rows))
+        check("3e: exact-reference 카테고리/서브필터 토큰 유효", not invalid, repr(invalid))
+        check("3f: lead + grid 기사 구조",
+              'class="lead"' in html and 'class="grid"' in html and 'class="nitem"' in html)
+        check("3g: public raw '데모 데이터' 0건", "데모 데이터" not in html)
+        check("3h: visible legacy 진단 panel 0건",
+              "Coverage Health" not in html and "verified-supply" not in html)
+        check("3i: 발송 토큰/시크릿 미혼입",
+              not TOKEN_SHAPE.search(html) and "TELEGRAM_BOT_TOKEN" not in html)
+        return
     check("3b: 빌더 export 마커 포함", "dashboard-export:summary" in html)
     check("3c: 보이지 않는 news-data-mode 마커 포함",
           bool(re.search(r"news-data-mode:(live|mock)", html)))
-    model = _model(html)
     rows = model.get("news_rows") or []
     ai = model.get("ai_rows") or []
     truthful_live_empty = (
@@ -263,8 +309,12 @@ def check_committed_dashboard() -> None:
 def check_article_links() -> None:
     html = _read(DASHBOARD)
     model = _model(html)
-    rows = model.get("news_rows") or []
-    with_url = [r for r in rows if str(r.get("url", "")).startswith("http")]
+    exact_news_censor = bool(model.get("_reference_locked"))
+    rows = (model.get("articles") if exact_news_censor else model.get("news_rows")) or []
+    with_url = [
+        r for r in rows
+        if str(r.get("sourceUrl") or r.get("url") or "").startswith("http")
+    ]
 
     safe_external_links = re.findall(
         r'<a[^>]+href=["\']https?://[^"\']+["\'][^>]+target="_blank"[^>]+rel="noopener noreferrer"',
@@ -291,12 +341,26 @@ def check_article_links() -> None:
           bool(safe_external_links) or not bad_external_hrefs,
           f"safe={len(safe_external_links)} bad={len(bad_external_hrefs)}")
 
-    template = _read(ROOT / "templates" / "dashboard_preview.html")
+    template = _read(
+        ROOT / "templates" / (
+            "news_censor.html" if exact_news_censor else "dashboard_preview.html"
+        )
+    )
     check("4c: 기본 CTA는 기사 보기 내부 reader",
-          "function openArticleReader" in template
-          and ">기사 보기</button>" in template)
-    check("4d: 원문 사이트는 접근상태가 붙은 보조 링크",
-          "원문 사이트 ↗" in template and "access-badge" in template)
+          (
+              "function openReader" in template
+              and "showPane('pane-reader')" in template
+          ) if exact_news_censor else (
+              "function openArticleReader" in template
+              and ">기사 보기</button>" in template
+          ))
+    check("4d: publisher-direct 원문 action 유지",
+          (
+              "원문 기사에서 보기" in template
+              and "sourceUrl" in template
+          ) if exact_news_censor else (
+              "원문 사이트 ↗" in template and "access-badge" in template
+          ))
     check("4e: 링크 부재 시 mock/example/warning 외부 href를 만들지 않음",
           not bad_external_hrefs,
           f"bad={len(bad_external_hrefs)}")
@@ -313,8 +377,8 @@ def check_separation() -> None:
     dashboard = _read(DASHBOARD)
     check("5b: latest.html은 전체 Executive Daily Brief", "Executive Daily Brief" in latest)
     check("5c: latest.html != dashboard-latest.html", latest != dashboard)
-    for tok in ('id="preview-model"', "dashboard-export:summary",
-                "function applyLens", 'data-filter="all"'):
+    for tok in ('id="preview-model"', 'id="article-data"', "dashboard-export:summary",
+                "function applyLens", "function openReader", 'data-filter="all"'):
         check(f"5d: 전체 리포트에 대시보드 전용 토큰 '{tok}' 미혼입", tok not in latest)
 
 

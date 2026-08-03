@@ -157,7 +157,7 @@ def check_default_dry_run() -> None:
           "generated_kst:" in out and "latest_article_kst:" in out)
 
 
-# ---------- C. 발송 opt-in 게이트 (소스 + 워크플로) ----------
+# ---------- C. standalone sender safety + refresh ownership boundary ----------
 
 def check_optin_gate() -> None:
     src = SCHED_SENDER.read_text(encoding="utf-8")
@@ -167,13 +167,15 @@ def check_optin_gate() -> None:
           "auto_send = " in src and "if not auto_send" in src)
 
     text = WORKFLOW.read_text(encoding="utf-8")
-    check("C 워크플로가 TELEGRAM_AUTO_SEND를 vars에서 주입 (하드코딩 아님)",
-          "vars.TELEGRAM_AUTO_SEND" in text)
+    check("C Scheduled Refresh는 Telegram sender/opt-in을 소유하지 않음",
+          "vars.TELEGRAM_AUTO_SEND" not in text
+          and "send_scheduled_telegram.py" not in text
+          and "Hourly telegram digest" not in text)
     hardcoded = re.search(r"TELEGRAM_AUTO_SEND\s*:\s*[\"']?1[\"']?\s*$",
                           text, re.MULTILINE)
     check("C 워크플로에 TELEGRAM_AUTO_SEND=1 하드코딩 없음", hardcoded is None)
-    check("C 발송 step이 live_ok에 게이트됨 (mock fallback 자동발송 차단)",
-          "steps.build.outputs.live_ok == 'true'" in text)
+    check("C 워크플로가 Telegram을 명시적으로 비활성화",
+          re.search(r"TELEGRAM_AUTO_SEND\s*:\s*[\"']?0[\"']?", text) is not None)
     check("C 워크플로에 무조건 send(TELEGRAM_SEND_MODE: send) 하드코딩 없음",
           re.search(r"TELEGRAM_SEND_MODE\s*:\s*send", text) is None)
 

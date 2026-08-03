@@ -64,6 +64,7 @@ from app.teams_ai_push import (  # noqa: E402
     render_article_email,
     select_teams_push_from_artifact,
 )
+from app import publisher_direct  # noqa: E402
 from app.teams_push_state import (  # noqa: E402
     InvalidTeamsPushState,
     article_identity,
@@ -120,19 +121,11 @@ def _true_env(name: str) -> bool:
 
 
 def _resolve_max_articles(raw: str) -> int:
-    """Resolve the per-run article cap. Empty → ten; invalid/non-positive → one.
-
-    The value is clamped into ``[1, MAX_TEAMS_ARTICLES]``: a bounded canary can lower it
-    (e.g. 3) but nothing can raise it above the hard ceiling the leaf enforces. A
-    configured but malformed rollout value must fail safe to one, never expand to ten."""
+    """Resolve the immutable production per-run cap of one."""
     text = str(raw or "").strip()
     if not text:
-        return MAX_TEAMS_ARTICLES
-    try:
-        value = int(text)
-    except ValueError:
         return 1
-    return max(1, min(value, MAX_TEAMS_ARTICLES))
+    return 1
 
 
 def resolve_email_channel_credentials() -> EmailChannelCredentials:
@@ -181,7 +174,16 @@ def load_artifact(path: Path) -> Mapping[str, Any]:
         raise FailClosed("artifact_unreadable") from exc
     if not isinstance(payload, Mapping):
         raise FailClosed("artifact_root_not_object")
-    if " ".join(str(payload.get("source") or "").split()) != "live-delta":
+    source = " ".join(str(payload.get("source") or "").split())
+    validated_brief = (
+        payload.get("artifact_contract") == "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1"
+        and payload.get("news_data_mode") == "live"
+        and payload.get("news_fallback_used") is not True
+        and payload.get("collection_status")
+        in {"LIVE_HEALTHY_WITH_ARTICLES", "LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES"}
+        and isinstance(payload.get("news_censor_display_articles"), list)
+    )
+    if source != "live-delta" and not validated_brief:
         raise FailClosed("artifact_not_live_delta")
     return payload
 
@@ -258,7 +260,7 @@ def deliver(
     max_articles: int = MAX_TEAMS_ARTICLES,
     smtp_factory=None,
 ) -> dict[str, Any]:
-    """Select, dedup, and deliver up to ``max_articles`` (default ten) article emails.
+    """Select, dedup, and deliver at most one article email per run.
 
     Each article is handled independently: one SMTP failure never skips the
     remaining articles, and only delivered (250 accepted) articles reach persistent
@@ -269,11 +271,32 @@ def deliver(
     except InvalidTeamsPushState as exc:
         raise FailClosed("state_invalid") from exc
 
-    candidates = select_teams_push_from_artifact(payload, max_articles=max_articles)
-    # Contract reuse: the same helper the dry-run path uses. Its decisions are the
-    # baseline; each article is then re-checked against the state as it evolves within
-    # this run so two near-identical articles cannot both be delivered.
-    _accepted, _baseline = filter_unsent_candidates(state, candidates)
+    raw_articles = (
+        payload.get("articles")
+        if payload.get("source") == "live-delta"
+        else payload.get("news_censor_display_articles")
+    ) or []
+    current_rows = [
+        row for row in raw_articles
+        if isinstance(row, Mapping)
+        and row.get("carried_forward") is not True
+        and row.get("teams_newness_eligible") is not False
+        and row.get("current_run_seen") is not False
+    ]
+    verified_rows = [
+        row for row in current_rows
+        if row.get("source_quality_passed") is not False
+        and publisher_direct.assess_delivery_eligibility(
+            row, relevance_qualified=True
+        ).eligible
+    ]
+    # Eligibility is intentionally uncapped. The dedicated sent ledger filters first;
+    # only then does the one-per-run rollout cap choose work for this run.
+    candidates = select_teams_push_from_artifact(payload, max_articles=None)
+    accepted, baseline = filter_unsent_candidates(state, candidates)
+    run_cap = min(1, max(0, int(max_articles)))
+    selected = accepted[:run_cap]
+    deferred = accepted[run_cap:]
 
     alert_context = dict(payload)
     alert_context["dashboard_url"] = dashboard_url
@@ -283,10 +306,20 @@ def deliver(
     )
 
     records: list[dict[str, Any]] = []
-    blocked = attempted = delivered = failed = 0
+    blocked = sum(not decision.send_allowed for decision in baseline)
+    attempted = delivered = failed = state_committed = 0
     state_changed = False
 
-    for candidate in candidates:
+    for candidate, decision in zip(candidates, baseline):
+        if not decision.send_allowed:
+            records.append({
+                "article_ref": article_ref(candidate.article),
+                "outcome": "dedup_blocked",
+                "dedup_reason": decision.reason,
+                "status": "no_request",
+            })
+
+    for candidate in selected:
         ref = article_ref(candidate.article)
         decision = evaluate_dedup(
             state,
@@ -296,7 +329,6 @@ def deliver(
             is_material_update=bool(candidate.is_update),
         )
         if not decision.send_allowed:
-            blocked += 1
             records.append(
                 {
                     "article_ref": ref,
@@ -342,6 +374,7 @@ def deliver(
                 delivery_id=f"teams_ai_push:{ref}",
             )
             state_changed = True
+            state_committed += 1
         else:
             failed += 1
         records.append(
@@ -356,6 +389,21 @@ def deliver(
 
     return {
         "mode": "send" if should_send else "dry_run_no_send",
+        "current_candidates": len(current_rows),
+        "verified_candidates": len(verified_rows),
+        "alert_policy_eligible": len(candidates),
+        "already_sent": blocked,
+        "currently_claimed": 0,
+        "selected": len(selected),
+        "deferred_due_to_cap": len(deferred),
+        "SMTP_attempted": attempted,
+        "SMTP_accepted": delivered,
+        "state_committed": state_committed,
+        "skip_reasons": {
+            "already_sent": blocked,
+            "deferred_due_to_cap": len(deferred),
+            "policy_ineligible": max(0, len(verified_rows) - len(candidates)),
+        },
         "candidate_count": len(candidates),
         "dedup_blocked_count": blocked,
         "attempted_count": attempted,
@@ -371,6 +419,16 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         return
     lines = (
         f"state_changed={'true' if summary.get('state_changed') else 'false'}",
+        f"current_candidates={int(summary.get('current_candidates') or 0)}",
+        f"verified_candidates={int(summary.get('verified_candidates') or 0)}",
+        f"alert_policy_eligible={int(summary.get('alert_policy_eligible') or 0)}",
+        f"already_sent={int(summary.get('already_sent') or 0)}",
+        f"currently_claimed={int(summary.get('currently_claimed') or 0)}",
+        f"selected={int(summary.get('selected') or 0)}",
+        f"deferred_due_to_cap={int(summary.get('deferred_due_to_cap') or 0)}",
+        f"smtp_attempted={int(summary.get('SMTP_attempted') or 0)}",
+        f"smtp_accepted={int(summary.get('SMTP_accepted') or 0)}",
+        f"state_committed={int(summary.get('state_committed') or 0)}",
         f"teams_candidate_count={int(summary.get('candidate_count') or 0)}",
         f"teams_dedup_blocked_count={int(summary.get('dedup_blocked_count') or 0)}",
         f"teams_attempted_count={int(summary.get('attempted_count') or 0)}",
@@ -394,11 +452,18 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
     print(
         "Teams AI push summary: transport=email_channel "
         f"mode={summary['mode']} "
-        f"candidates={summary['candidate_count']} "
-        f"dedup_blocked={summary['dedup_blocked_count']} "
-        f"attempted={summary['attempted_count']} "
-        f"delivered={summary['delivered_count']} "
+        f"current_candidates={summary['current_candidates']} "
+        f"verified_candidates={summary['verified_candidates']} "
+        f"alert_policy_eligible={summary['alert_policy_eligible']} "
+        f"already_sent={summary['already_sent']} "
+        f"currently_claimed={summary['currently_claimed']} "
+        f"selected={summary['selected']} "
+        f"deferred_due_to_cap={summary['deferred_due_to_cap']} "
+        f"SMTP_attempted={summary['SMTP_attempted']} "
+        f"SMTP_accepted={summary['SMTP_accepted']} "
+        f"state_committed={summary['state_committed']} "
         f"failed={summary['failed_count']} "
+        f"skip_reasons={json.dumps(summary['skip_reasons'], sort_keys=True, separators=(',', ':'))} "
         f"state_changed={'true' if summary['state_changed'] else 'false'}"
     )
 
@@ -407,7 +472,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Article-level Teams AI channel-email sender (default dry-run)"
     )
-    parser.add_argument("--artifact", default=os.environ.get("DELTA_ARTIFACT_FILE", ""))
+    parser.add_argument(
+        "--artifact",
+        default=(
+            os.environ.get("TEAMS_ARTIFACT_FILE", "")
+            or os.environ.get("DELTA_ARTIFACT_FILE", "")
+        ),
+    )
     parser.add_argument("--state", default=os.environ.get("TEAMS_PUSH_STATE_PATH", ""))
     parser.add_argument("--dashboard-url", default=os.environ.get("DASHBOARD_URL", ""))
     parser.add_argument("--report-url", default=os.environ.get("REPORT_URL", ""))
@@ -417,8 +488,8 @@ def main(argv: list[str] | None = None) -> int:
         "--max-articles",
         default=os.environ.get("TEAMS_AI_PUSH_MAX_ARTICLES", ""),
         help=(
-            "per-run article cap (default: MAX_TEAMS_ARTICLES=10; a bounded canary "
-            "may lower it, e.g. 3). Never raises the hard ceiling."
+            "per-run article cap; production and the sender both enforce a hard "
+            "maximum of one."
         ),
     )
     parser.add_argument(
@@ -429,7 +500,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if not args.artifact:
-        print("ERROR: DELTA_ARTIFACT_FILE/--artifact is required", file=sys.stderr)
+        print("ERROR: TEAMS_ARTIFACT_FILE/--artifact is required", file=sys.stderr)
         _write_github_output(args.github_output, {"state_changed": False})
         return 2
 

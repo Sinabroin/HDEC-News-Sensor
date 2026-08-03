@@ -164,12 +164,12 @@ def main() -> int:
         url="https://wire.publisher.example.test/story/99",
     )
     same_cluster = derive_event_cluster_key(syndication, "ai_datacenter")
-    assert same_cluster == cluster
-    cluster_duplicate = evaluate_dedup(
+    assert same_cluster != cluster
+    distinct_article = evaluate_dedup(
         sent, syndication, cluster_key=same_cluster,
         signature=material_signature(syndication), is_material_update=False,
     )
-    assert not cluster_duplicate.send_allowed and cluster_duplicate.matched_key == "cluster_key"
+    assert distinct_article.send_allowed and distinct_article.reason == "new_article_or_event"
 
     update = article(
         change_type="material_content_update",

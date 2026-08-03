@@ -36,7 +36,7 @@ except ImportError:  # Text/editorial policy remains usable without image extras
     Image = None
     UnidentifiedImageError = OSError
 
-from app import config, news_access, news_coverage, source_quality
+from app import config, news_access, news_coverage, public_urls as public_url_contract, source_quality
 
 KST = timezone(timedelta(hours=9))
 DAILY_REPORT_SUFFIX = "/daily/latest.html"
@@ -916,15 +916,14 @@ def _summary_sentences(title: str, snippet: str) -> str:
 def classify_category(title: str, summary: str) -> str:
     text = f"{title} {summary}".casefold()
     rules = (
-        ("AI 인프라", ("데이터센터", "전력", "반도체", "gpu", "인프라")),
-        ("정책·규제", ("규제", "법안", "정부", "정책", "보안", "안전")),
-        ("투자·사업", ("투자", "계약", "수주", "펀드", "인수", "파트너십")),
-        ("기술·제품", ("모델", "서비스", "플랫폼", "로봇", "소프트웨어", "제품")),
+        ("투자·산업", ("투자", "계약", "수주", "펀드", "인수", "파트너십", "데이터센터", "전력", "인프라", "정책", "규제")),
+        ("기업동향", ("기업", "현대건설", "삼성", "구글", "마이크로소프트", "오픈ai", "openai", "엔비디아", "nvidia")),
+        ("기술정보", ("모델", "서비스", "플랫폼", "로봇", "소프트웨어", "제품", "반도체", "gpu", "ai", "인공지능")),
     )
     for label, keywords in rules:
         if any(keyword in text for keyword in keywords):
             return label
-    return "기업·산업"
+    return "기업동향"
 
 
 def _metadata_url_values(value: object) -> list[str]:
@@ -3379,8 +3378,21 @@ def _reference_image(article: EditorialArticle, *, hero: bool = False) -> str:
         "fill='%23004B93'/%3E%3Ccircle cx='80' cy='250' r='150' "
         "fill='%230D9488' fill-opacity='.55'/%3E%3C/svg%3E"
     )
-    if article.image_url:
-        source = escape(article.image_url, quote=True)
+    candidate = str(article.image_local_src or article.image_url or "").strip()
+    # Briefs never hotlink a remote image. A renderer may use a materialized
+    # relative asset or an embedded deterministic fallback only.
+    safe_materialized = (
+        re.fullmatch(r"\.\./assets/images/[A-Za-z0-9][A-Za-z0-9._-]*", candidate)
+        is not None
+        or re.fullmatch(
+            r"\.\./review/\d{4}-\d{2}-\d{2}/assets/images/"
+            r"[A-Za-z0-9][A-Za-z0-9._-]*",
+            candidate,
+        )
+        is not None
+    )
+    if candidate.startswith("data:image/") or safe_materialized:
+        source = escape(candidate, quote=True)
     else:
         source = fallback
     if hero:
@@ -3448,6 +3460,33 @@ def _daily_card(article: EditorialArticle) -> str:
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div></article>"
+    )
+
+
+def _brief_styles() -> str:
+    return _template("editorial_brief.css")
+
+
+def _taxonomy_html() -> str:
+    return (
+        '<div class="taxonomy" data-role="information-taxonomy">'
+        '<div class="tax-row"><span class="tax-name"><span class="tax-invest">●</span> 투자·산업</span>'
+        '<span class="tax-desc">자본과 인프라의 흐름 — 투자, 시장 재편, 정책·글로벌 동향</span></div>'
+        '<div class="tax-row"><span class="tax-name"><span class="tax-corp">●</span> 기업동향</span>'
+        '<span class="tax-desc">선도 기업과 경쟁사의 AI 도입·전환 전략</span></div>'
+        '<div class="tax-row"><span class="tax-name"><span class="tax-tech">●</span> 기술정보</span>'
+        '<span class="tax-desc">신규 AI 모델·제품·기술의 등장과 경영 영향</span></div></div>'
+    )
+
+
+def _brief_footer(edition_type: str, key: str, coverage: CoverageWindow) -> str:
+    label = "DAILY BRIEF" if edition_type == "daily" else "WEEKLY BRIEF"
+    return (
+        '<footer data-role="publication-footer">'
+        '<p class="pub">워크이노베이션센터 | AI디자인랩</p>'
+        '<p class="note">공신력 있는 외부 보도의 제목·게시시각·제공 요약을 바탕으로 편집했으며 세부 내용은 게시자 원문 기준입니다.</p>'
+        f'<div class="meta">AI 경영 T&amp;I · {label} · {escape(key)} · {escape(coverage.label())}</div>'
+        '</footer>'
     )
 
 
@@ -3576,51 +3615,34 @@ def render_daily(
         _template("editorial_daily.html"),
         {
             "EDITION_KEY": escape(key, quote=True),
-            "PAGE_TITLE": escape(f"HDEC AI Daily Brief · {key}"),
+            "PAGE_TITLE": escape(f"AI 경영 T&I Daily Brief · {key}"),
             "EDITION_LABEL": escape(key),
             "COVERAGE_LABEL": escape(coverage.label()),
+            "BRIEF_STYLES": _brief_styles(),
             "HEADLINE_HTML": _daily_headline(headline),
             "ARTICLE_CARDS_HTML": (
                 "".join(_daily_card(item) for item in articles[1:6])
                 or '<p class="empty">추가로 선정된 주요 기사 없음</p>'
             ),
+            "TAXONOMY_HTML": _taxonomy_html(),
+            "FOOTER_HTML": _brief_footer("daily", key, coverage),
         },
     )
-    summary_lines = _daily_key_lines(articles)
     text_lines = [
-        "[HDEC AI Daily Brief]",
-        f"edition: {key}",
-        f"coverage: {coverage.label()}",
+        f"[AI 경영 T&I Daily Brief] {key}",
+        headline.title,
         "",
-        "오늘의 핵심 3줄",
-        *[f"- {line}" for line in summary_lines],
-        "",
-        f"headline: {headline.title}",
-        "주요 기사",
+        f"오늘의 Daily Brief 보기: {public_url_contract.DAILY_LATEST_URL}",
+        f"전체 뉴스 대시보드 보기: {public_url_contract.CANONICAL_DASHBOARD_URL}",
     ]
-    text_lines.extend(
-        f"- {item.title} | {item.source} | {item.published_label}"
-        for item in articles[1:6]
-    )
-    text_lines.extend(("", f"전체 Daily Brief 보기: {dated_url}"))
     teams_text = "\n".join(text_lines)
     teams_html = _teams_html(
-        "HDEC AI Daily Brief",
+        "AI 경영 T&I Daily Brief",
         key,
         coverage,
-        [
-            ("오늘의 핵심", "<br>".join(escape(line) for line in summary_lines)),
-            (
-                "기사",
-                "<br>".join(
-                    f"{escape(item.title)} · {escape(item.source)} · "
-                    f"{escape(item.published_label)}"
-                    for item in articles
-                ),
-            ),
-        ],
-        dated_url,
-        "전체 Daily Brief 보기",
+        [("오늘의 헤드라인", escape(headline.title))],
+        public_url_contract.DAILY_LATEST_URL,
+        "오늘의 Daily Brief 보기",
     )
     return RenderedEdition(
         "daily", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
@@ -3641,98 +3663,39 @@ def render_weekly(
     dated_url, latest_url = public_urls(root_url, "weekly", key)
     dominant, issue_label, issue_count = _dominant_issue(articles)
     mode = "dominant_issue" if dominant else "multi_issue"
-    mode_label = "단일 핵심 이슈" if dominant else "복수 핵심 이슈"
     headline = articles[0]
-    key_title = issue_label if not dominant else f"{issue_label}: 이번 주 핵심 흐름"
-    key_items = "".join(
-        f"<li><b>{escape(item.source)}</b> {escape(item.title)}</li>"
-        for item in articles[:3]
-    )
-    changed = headline
-    why_title = (
-        f"관련 보도 {issue_count}건 확인"
-        if dominant
-        else f"서로 다른 핵심 흐름 {min(3, len(articles))}건 확인"
-    )
-    management_cards = "".join(
-        (
-            '<div class="top-card"><div class="k">'
-            f"{escape(label)}</div><div class=\"v\">{escape(title)}</div>"
-            f'<div class="d">{escape(description)}</div></div>'
-        )
-        for label, title, description in (
-            ("WHAT CHANGED", changed.title, changed.summary),
-            (
-                "WHY IT MATTERS",
-                why_title,
-                "동일 coverage 안에서 확인된 기사 제목·요약·출처를 교차해 판단해야 합니다.",
-            ),
-            (
-                "MANAGEMENT POINT",
-                "원문 근거 확인 후 영향 범위 판단",
-                "기사별 게시시각과 링크 유형을 함께 보고 후속 확인 대상을 정합니다.",
-            ),
-        )
-    )
-    alternative = (
-        "단일 주제가 다수를 차지했지만 공개 기사 메타데이터와 제공 요약만으로 구성되어 "
-        "원문의 후속 정정·추가 발표에 따라 해석이 달라질 수 있습니다."
-        if dominant
-        else
-        "한 주제를 지배적 이슈로 확정할 만큼 보도 집중도가 높지 않았습니다. 공개 기사 "
-        "메타데이터와 제공 요약만 사용했으며 후속 보도에 따라 우선순위가 달라질 수 있습니다."
-    )
     html = _fill(
         _template("editorial_weekly.html"),
         {
             "EDITION_KEY": escape(key, quote=True),
-            "PAGE_TITLE": escape(f"AI 경영 T&I · {key}"),
+            "PAGE_TITLE": escape(f"AI 경영 T&I Weekly Brief · {key}"),
             "EDITION_LABEL": escape(key),
-            "COVERAGE_SHORT": escape(
-                f"{coverage.start:%m.%d}–{coverage.end:%m.%d} KST"
-            ),
-            "DOCUMENT_TITLE": escape(
-                issue_label if dominant else "이번 주 핵심 이슈 묶음"
-            ),
-            "ISSUE_MODE_LABEL": escape(mode_label),
             "COVERAGE_LABEL": escape(coverage.label()),
-            "KEY_MESSAGE_TITLE": escape(key_title),
-            "KEY_MESSAGE_ITEMS": key_items,
-            "MANAGEMENT_CARDS": management_cards,
-            "FACT_ITEMS": "".join(_weekly_fact(item) for item in articles[:3]),
-            "TIMELINE_ITEMS": "".join(
-                _weekly_time(item) for item in sorted(articles[:6], key=lambda x: x.published_at)
+            "BRIEF_STYLES": _brief_styles(),
+            "HEADLINE_HTML": _daily_headline(headline),
+            "ARTICLE_CARDS_HTML": (
+                "".join(_daily_card(item) for item in articles[1:WEEKLY_MAX_ARTICLES])
+                or '<p class="empty">추가로 선정된 주요 기사 없음</p>'
             ),
-            "COMPARISON_ROWS": _weekly_comparison(articles),
-            "INSIGHT_ITEMS": _weekly_insights(articles),
-            "ALTERNATIVE_VIEW": escape(alternative),
-            "SOURCE_LINKS": _weekly_sources(articles),
+            "TAXONOMY_HTML": _taxonomy_html(),
+            "FOOTER_HTML": _brief_footer("weekly", key, coverage),
         },
     )
     text_lines = [
-        "[AI 경영 T&I]",
-        f"ISO week: {key}",
-        f"coverage: {coverage.label()}",
-        f"mode: {mode_label}",
+        f"[AI 경영 T&I Weekly Brief] {key}",
+        headline.title,
         "",
-        f"KEY MESSAGE: {key_title}",
-        f"MANAGEMENT POINT: 원문 근거 확인 후 영향 범위 판단",
-        f"headline: {headline.title}",
-        "",
-        f"전체 Weekly T&I 보기: {dated_url}",
+        f"이번 주 Weekly Brief 보기: {public_url_contract.WEEKLY_LATEST_URL}",
+        f"전체 뉴스 대시보드 보기: {public_url_contract.CANONICAL_DASHBOARD_URL}",
     ]
     teams_text = "\n".join(text_lines)
     teams_html = _teams_html(
-        "AI 경영 T&I",
+        "AI 경영 T&I Weekly Brief",
         key,
         coverage,
-        [
-            ("KEY MESSAGE", escape(key_title)),
-            ("MANAGEMENT POINT", "원문 근거 확인 후 영향 범위 판단"),
-            ("편집 모드", escape(mode_label)),
-        ],
-        dated_url,
-        "전체 Weekly T&I 보기",
+        [("이번 주 헤드라인", escape(headline.title))],
+        public_url_contract.WEEKLY_LATEST_URL,
+        "이번 주 Weekly Brief 보기",
     )
     return RenderedEdition(
         "weekly", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
@@ -3751,11 +3714,17 @@ def _teams_html(
     blocks = "".join(
         f"<p><strong>{escape(label)}</strong><br>{body}</p>" for label, body in sections
     )
+    button_style = (
+        "display:inline-block;margin:4px 8px 4px 0;padding:11px 16px;"
+        "border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:700"
+    )
+    dashboard_url = public_url_contract.CANONICAL_DASHBOARD_URL
     return (
-        '<!DOCTYPE html><html lang="ko"><body style="font-family:Arial,sans-serif">'
-        f"<h2>{escape(heading)}</h2><p>{escape(key)}<br>{escape(coverage.label())}</p>"
-        f"{blocks}<p><a href=\"{escape(public_url, quote=True)}\" target=\"_blank\" "
-        f'rel="noopener noreferrer">{escape(cta)}</a></p></body></html>'
+        '<!doctype html><html lang="ko"><body style="font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;max-width:640px;color:#101218">'
+        f"<h2>{escape(heading)}</h2><p>{escape(key)}<br>{escape(coverage.label())}</p>{blocks}"
+        f'<p><a href="{escape(public_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">{escape(cta)}</a>'
+        f'<a href="{escape(dashboard_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">전체 뉴스 대시보드 보기</a></p>'
+        '</body></html>'
     )
 
 
@@ -3810,21 +3779,23 @@ def validate_rendered(edition: RenderedEdition) -> None:
         raise EditorialError("empty edition")
 
     teams_anchors = re.findall(r"<a\b[^>]*>", edition.teams_html)
-    if len(teams_anchors) != 1:
-        raise EditorialError(
-            "Teams message must contain exactly one public brief CTA"
-        )
+    if len(teams_anchors) != 2:
+        raise EditorialError("Teams message must contain brief and dashboard CTAs")
 
-    expected_href = (
-        f'href="{escape(edition.public_dated_url, quote=True)}"'
-    )
+    expected_brief_url = public_url_contract.latest_brief_url(edition.edition_type)
+    expected_href = f'href="{escape(expected_brief_url, quote=True)}"'
     if expected_href not in teams_anchors[0]:
-        raise EditorialError(
-            "Teams CTA does not target the dated public brief"
-        )
+        raise EditorialError("Teams brief CTA does not target canonical latest")
+    dashboard_href = (
+        f'href="{escape(public_url_contract.CANONICAL_DASHBOARD_URL, quote=True)}"'
+    )
+    if dashboard_href not in teams_anchors[1]:
+        raise EditorialError("Teams dashboard CTA is not canonical")
 
-    if edition.public_dated_url not in edition.teams_text:
+    if expected_brief_url not in edition.teams_text:
         raise EditorialError("Teams text public brief CTA missing")
+    if public_url_contract.CANONICAL_DASHBOARD_URL not in edition.teams_text:
+        raise EditorialError("Teams text dashboard CTA missing")
 
     for anchor in re.findall(r"<a\b[^>]*>", edition.html):
         if 'target="_blank"' not in anchor or 'rel="noopener noreferrer"' not in anchor:
@@ -3832,18 +3803,24 @@ def validate_rendered(edition: RenderedEdition) -> None:
         match = re.search(r'href="([^"]+)"', anchor)
         if not match or not valid_http_url(match.group(1).replace("&amp;", "&")):
             raise EditorialError("invalid external URL")
-    if edition.edition_type == "daily":
-        if edition.html.count('data-role="headline"') != 1:
-            raise EditorialError("daily headline count mismatch")
-        if edition.html.count('data-role="article-card"') > 5:
-            raise EditorialError("daily article card cap exceeded")
-    else:
-        required = (
-            "key-message", "management-cards", "key-facts", "timeline", "comparison",
-            "industry-insight", "alternative-view", "sources",
-        )
-        if any(f'data-section="{name}"' not in edition.html for name in required):
-            raise EditorialError("weekly required section missing")
+    if edition.html.count('data-role="headline"') != 1:
+        raise EditorialError("brief headline count mismatch")
+    expected_card_cap = 5 if edition.edition_type == "daily" else WEEKLY_MAX_ARTICLES - 1
+    if edition.html.count('data-role="article-card"') > expected_card_cap:
+        raise EditorialError("brief article card cap exceeded")
+    if 'data-brief-contract="AI_TNI_EXECUTIVE_V1"' not in edition.html:
+        raise EditorialError("shared brief design contract missing")
+    required_copy = (
+        ("Daily Brief", "매일 전하는", "오늘의 헤드라인", "오늘의 브리핑")
+        if edition.edition_type == "daily"
+        else ("Weekly Brief", "매주 전하는", "이번 주 헤드라인", "이번 주 브리핑")
+    )
+    if any(text not in edition.html for text in required_copy):
+        raise EditorialError("brief edition wording mismatch")
+    if "Editor's Summary" not in edition.html:
+        raise EditorialError("Editor's Summary missing")
+    if re.search(r'<img\b[^>]*src="https?://', edition.html, flags=re.I):
+        raise EditorialError("remote image hotlink forbidden")
 
 
 def atomic_write_bytes(path: Path, payload: bytes) -> None:

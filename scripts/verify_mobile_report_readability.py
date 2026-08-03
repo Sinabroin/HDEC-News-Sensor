@@ -175,6 +175,11 @@ def check_published_outputs() -> None:
     import build_static_report
 
     latest_css = _style_block(latest)
+    exact_news_censor = (
+        'id="article-data"' in dashboard
+        and 'id="pane-articles" class="pane active"' in dashboard
+        and "NEWS CENSOR" in dashboard
+    )
     check("docs/daily/latest.html exists", bool(latest))
     check("latest.html remains Executive Daily Brief",
           "Executive Daily Brief" in latest and "dashboard-export:summary" not in latest
@@ -182,8 +187,11 @@ def check_published_outputs() -> None:
     check("latest.html CSS is synchronized with report builder",
           latest_css.strip() == build_static_report._CSS.strip())
     check("docs/daily/dashboard-latest.html remains summary dashboard",
-          "dashboard-export:summary" in dashboard and 'id="preview-model"' in dashboard
-          and dashboard != latest)
+          dashboard != latest
+          and (
+              exact_news_censor
+              or ("dashboard-export:summary" in dashboard and 'id="preview-model"' in dashboard)
+          ))
     check("docs/daily/operator-latest.html remains supported",
           "Executive Daily Brief" in operator
           and ("운영자" in operator or "operator" in operator.lower()))

@@ -2,9 +2,11 @@
 """Common orchestrator for Daily and Weekly editorial briefings.
 
 Preview is fully offline and writes outside the repository. Production is split
-into ``--publish`` (collect/render/write dated+latest), ``--claim`` (verify the
-public dated page and durably reserve its delivery), and ``--send`` (require the
-exact durable claim, send one link-only message, then convert exact-250 state).
+into ``--publish`` (collect/render/write dated+latest), ``--republish`` (the
+same publication path with delivery permanently disabled), ``--claim`` (verify
+the public dated page and durably reserve its delivery), and ``--send``
+(require the exact durable claim, send one link-only message, then convert
+exact-250 state).
 """
 
 from __future__ import annotations
@@ -258,6 +260,13 @@ def _write_runtime_manifest(runtime_dir: Path, manifest: dict) -> Path:
     return target
 
 
+def _publication_output_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path.resolve())
+
+
 def _load_runtime_manifest(runtime_dir: Path, edition_type: str) -> dict:
     path = runtime_dir / RUNTIME_MANIFEST
     try:
@@ -455,18 +464,32 @@ def run_publish(
     run_at: datetime,
     runtime_dir: Path,
     collect: Callable[[], list[dict]] = collect_live_articles,
+    republish: bool = False,
 ) -> dict | None:
     _require_production_gate()
     key = editorial_briefings.edition_key(edition_type, run_at)
     state = editorial_briefing_state.load_state(edition_type)
-    if editorial_briefing_state.has_success(state, key) or editorial_briefing_state.has_claim(
-        state, key
+    active_state, expired_claims = editorial_briefing_state.expire_stale_claims(
+        state,
+        edition_type,
+        now=_now(),
+    )
+    if expired_claims:
+        print(
+            "publish_stale_claims_ignored="
+            + ",".join(expired_claims)
+            + " state_writes=0"
+        )
+    if not republish and (
+        editorial_briefing_state.has_success(active_state, key)
+        or editorial_briefing_state.has_claim(active_state, key)
     ):
         _github_output("skipped", "true")
         _github_output("edition", key)
+        _github_output("delivery_authorized", "false")
         reason = (
             "already_successful"
-            if editorial_briefing_state.has_success(state, key)
+            if editorial_briefing_state.has_success(active_state, key)
             else "already_claimed"
         )
         print(f"publish_skip edition_type={edition_type} edition={key} reason={reason}")
@@ -524,11 +547,13 @@ def run_publish(
     _write_runtime_manifest(runtime_dir, manifest)
     _github_output("skipped", "false")
     _github_output("edition", edition.edition_key)
-    _github_output("dated_path", dated_path.relative_to(ROOT).as_posix())
-    _github_output("latest_path", latest_path.relative_to(ROOT).as_posix())
+    _github_output("dated_path", _publication_output_path(dated_path))
+    _github_output("latest_path", _publication_output_path(latest_path))
+    _github_output("delivery_authorized", str(not republish).lower())
     print(
         f"publish_ready edition_type={edition_type} edition={edition.edition_key} "
-        f"articles={edition.article_count}"
+        f"articles={edition.article_count} republish={str(republish).lower()} "
+        f"delivery_authorized={str(not republish).lower()}"
     )
     return manifest
 
@@ -678,7 +703,17 @@ def run_claim(
     dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
     if manifest["public_dated_url"] != dated_url or manifest["public_latest_url"] != latest_url:
         raise OrchestratorError("runtime public URL mismatch")
-    current = editorial_briefing_state.load_state(edition_type, path=state_path)
+    loaded = editorial_briefing_state.load_state(edition_type, path=state_path)
+    current, expired_claims = editorial_briefing_state.expire_stale_claims(
+        loaded,
+        edition_type,
+        now=_now(),
+    )
+    if key in expired_claims:
+        print(
+            f"claim_expired edition_type={edition_type} edition={key} "
+            "accepted_delivery=false"
+        )
     existing = current["delivery_claims"].get(key)
     if editorial_briefing_state.has_success(current, key):
         claim_owner = _github_claim_owner()
@@ -872,6 +907,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--preview", action="store_true")
     mode.add_argument("--live-preview", action="store_true")
     mode.add_argument("--publish", action="store_true")
+    mode.add_argument("--republish", action="store_true")
     mode.add_argument("--claim", action="store_true")
     mode.add_argument("--send", action="store_true")
     parser.add_argument("--run-at", default="")
@@ -909,6 +945,13 @@ def main(argv: list[str] | None = None) -> int:
                 args.edition_type,
                 run_at=run_at,
                 runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),
+            )
+        elif args.republish:
+            run_publish(
+                args.edition_type,
+                run_at=run_at,
+                runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),
+                republish=True,
             )
         elif args.claim:
             run_claim(

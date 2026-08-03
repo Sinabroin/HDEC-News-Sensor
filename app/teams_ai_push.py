@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
 from app import publisher_direct
+from app.public_urls import CANONICAL_DASHBOARD_URL
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
 KST = timezone(timedelta(hours=9))
@@ -1165,7 +1166,7 @@ def _published_sort_value(article: object) -> float:
 def select_teams_push_from_artifact(
     payload: object,
     *,
-    max_articles: int = MAX_TEAMS_ARTICLES,
+    max_articles: int | None = MAX_TEAMS_ARTICLES,
 ) -> tuple[TeamsPushCandidate, ...]:
     """Fail-closed entrypoint for a raw delta artifact.
 
@@ -1177,9 +1178,18 @@ def select_teams_push_from_artifact(
     """
     if not isinstance(payload, Mapping):
         return ()
-    if _clean(payload.get("source")) != "live-delta":
+    if _clean(payload.get("source")) == "live-delta":
+        articles = payload.get("articles")
+    elif (
+        _clean(payload.get("artifact_contract")) == "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1"
+        and _clean(payload.get("news_data_mode")) == "live"
+        and payload.get("news_fallback_used") is not True
+        and _clean(payload.get("collection_status"))
+        in {"LIVE_HEALTHY_WITH_ARTICLES", "LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES"}
+    ):
+        articles = payload.get("news_censor_display_articles")
+    else:
         return ()
-    articles = payload.get("articles")
     if not isinstance(articles, list):
         return ()
     return select_teams_push_candidates(articles, max_articles=max_articles)
@@ -1188,7 +1198,7 @@ def select_teams_push_from_artifact(
 def select_teams_push_candidates(
     articles: Iterable[Mapping[str, Any]],
     *,
-    max_articles: int = MAX_TEAMS_ARTICLES,
+    max_articles: int | None = MAX_TEAMS_ARTICLES,
 ) -> tuple[TeamsPushCandidate, ...]:
     """Filter, rank, and cap important Teams AI push candidates (default: up to ten).
 
@@ -1239,6 +1249,8 @@ def select_teams_push_candidates(
             -_published_sort_value(item.article),
         )
     )
+    if max_articles is None:
+        return tuple(candidates)
     return tuple(candidates[: max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))])
 
 
@@ -1317,8 +1329,7 @@ def build_teams_article_card(
     if not authority.eligible:
         raise ValueError("publisher-direct article authority is required")
     article_url = authority.publisher_url
-    dashboard_url = _safe_http(_value(alert, "dashboard_url"))
-    report_url = _safe_http(_value(alert, "report_url"))
+    dashboard_url = CANONICAL_DASHBOARD_URL
 
     title_prefix = "[업데이트] " if is_update else ""
     importance_color = "Attention" if importance.level == IMPORTANCE_TOP else "Warning"
@@ -1345,13 +1356,11 @@ def build_teams_article_card(
     if article_url:
         actions.append({
             "type": "Action.OpenUrl",
-            "title": "원문 보기",
+            "title": "기사 원문 보기",
             "url": article_url,
         })
     if dashboard_url:
-        actions.append({"type": "Action.OpenUrl", "title": "대시보드 보기", "url": dashboard_url})
-    if report_url:
-        actions.append({"type": "Action.OpenUrl", "title": "전체 리포트 보기", "url": report_url})
+        actions.append({"type": "Action.OpenUrl", "title": "전체 뉴스 대시보드 보기", "url": dashboard_url})
 
     return {
         "type": "message",
@@ -1381,7 +1390,7 @@ def build_candidate_card(alert: object, candidate: TeamsPushCandidate, *, detect
     )
 
 
-def render_article_email(
+def _render_article_email_legacy(
     alert: object,
     candidate: TeamsPushCandidate,
     *,
@@ -1514,4 +1523,92 @@ def render_article_email(
         + "</div>"
     )
 
+    return subject, text_body, html_body
+
+
+def render_article_email(
+    alert: object,
+    candidate: TeamsPushCandidate,
+    *,
+    detected_at: str = "",
+) -> tuple[str, str, str]:
+    """Render one concise, email-safe Teams article with two mandatory actions."""
+    del alert, detected_at
+    if not candidate.topic.eligible or not candidate.importance.sendable:
+        raise ValueError("non-sendable article cannot be rendered as a Teams push email")
+
+    article = candidate.article
+    topic = candidate.topic
+    importance = candidate.importance
+    title = _article_field(article, "title") or "제목 없음"
+    summary = _compact_summary(
+        _article_field(article, "summary", "snippet")
+        or "핵심 요약이 제공되지 않았습니다."
+    )
+    why = _compact_summary(
+        _article_field(article, "hdec_relevance", "radarReason", "whyImportant")
+        or importance.reason
+    )
+    source = _article_field(article, "source", "display_source") or "출처 미상"
+    published = _fmt_kst(
+        _value(article, "published_at") or _value(article, "published_kst")
+    ) or "시각 미상"
+    authority = publisher_direct.assess_delivery_eligibility(
+        article,
+        relevance_qualified=True,
+    )
+    if not authority.eligible:
+        raise ValueError("publisher-direct article authority is required for a Teams push email")
+    article_url = authority.publisher_url
+    dashboard_url = CANONICAL_DASHBOARD_URL
+    prefix = "[업데이트] " if candidate.is_update else ""
+    importance_label = importance.label or IMPORTANCE_LABELS.get(importance.level, "중요")
+    published_line = f"{published} KST" if published != "시각 미상" else published
+    subject = f"[HDEC AI 레이더] {importance_label} · {prefix}{title}".strip()
+
+    text_body = "\n".join((
+        f"카테고리: {topic.topic_label}",
+        f"제목: {prefix}{title}",
+        f"요약: {summary}",
+        f"왜 중요한가: {why}",
+        f"발행: {source} · {published_line}",
+        "",
+        f"기사 원문 보기: {article_url}",
+        f"전체 뉴스 대시보드 보기: {dashboard_url}",
+    )) + "\n"
+
+    def escaped(value: str) -> str:
+        return html.escape(value).replace("\n", "<br>")
+
+    origin_href = html.escape(article_url, quote=True)
+    dashboard_href = html.escape(dashboard_url, quote=True)
+    badge_color = "#b42318" if importance.level == IMPORTANCE_TOP else "#b54708"
+    badge_background = "#fef3f2" if importance.level == IMPORTANCE_TOP else "#fffaeb"
+    button_style = (
+        "display:inline-block;padding:10px 14px;border-radius:6px;text-decoration:none;"
+        "font-weight:700;margin:4px 8px 4px 0;"
+    )
+    html_body = (
+        '<div style="font-family:Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;'
+        'max-width:640px;line-height:1.55;color:#101828;">'
+        f'<span style="display:inline-block;font-size:12px;font-weight:700;color:{badge_color};'
+        f'background:{badge_background};border-radius:12px;padding:3px 8px;">'
+        f'{escaped(importance_label)}</span>'
+        f'<p style="font-size:13px;color:#667085;margin:12px 0 6px;">'
+        f'<strong>카테고리</strong> {escaped(topic.topic_label)}</p>'
+        f'<h2 style="font-size:22px;line-height:1.35;margin:8px 0 12px;">'
+        f'{escaped(prefix + title)}</h2>'
+        f'<p style="margin:0 0 14px;"><strong>요약</strong><br>{escaped(summary)}</p>'
+        f'<p style="margin:0 0 14px;"><strong>왜 중요한가</strong><br>{escaped(why)}</p>'
+        f'<p style="font-size:13px;color:#667085;margin:0 0 16px;">'
+        f'{escaped(source)} · {escaped(published_line)}</p>'
+        f'<a href="{origin_href}" style="{button_style}background:#0B2F4F;color:#fff;">'
+        '기사 원문 보기</a>'
+        f'<a href="{dashboard_href}" style="{button_style}background:#F0F4F7;color:#0B2F4F;'
+        'border:1px solid #CCD6DE;">전체 뉴스 대시보드 보기</a>'
+        '<p style="font-size:12px;color:#667085;margin:16px 0 0;word-break:break-all;">'
+        f'기사 원문: <a href="{origin_href}">{origin_href}</a><br>'
+        f'뉴스 대시보드: <a href="{dashboard_href}">{dashboard_href}</a></p>'
+        '</div>'
+    )
     return subject, text_body, html_body

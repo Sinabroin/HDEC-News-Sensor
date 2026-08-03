@@ -36,6 +36,7 @@ from app import collector  # noqa: E402
 from app import live_collector  # noqa: E402
 from app import naver_news_provider  # noqa: E402
 from app import news_access  # noqa: E402
+from app import public_urls as public_url_contract  # noqa: E402
 
 _SPEC = importlib.util.spec_from_file_location(
     "run_editorial_briefing", SCRIPTS / "run_editorial_briefing.py"
@@ -158,28 +159,22 @@ def source_contracts() -> None:
         "scripts/verify_editorial_briefings.py",
         "templates/editorial_daily.html",
         "templates/editorial_weekly.html",
+        "templates/editorial_brief.css",
     }
-    check("all eight source files exist", all((ROOT / item).is_file() for item in expected))
+    check("all nine source files exist", all((ROOT / item).is_file() for item in expected))
     reference = Path(
-        "/mnt/c/Users/HDEC/Downloads/"
-        "260415_AI 경영 T&I_Report_" + "My" + "thos 이슈 브리핑.html"
+        "/tmp/d7ak6e-r4r5-reference/"
+        "AI경영_TnI_Weekly_2026-07월-3주차_최종(1).html"
     )
     if reference.exists():
         digest = hashlib.sha256(reference.read_bytes()).hexdigest()
         check(
-            "exact Weekly source SHA256 remains unchanged",
-            digest == "6af54a441991bb8af8390e39e2de2c1e576c831bd5537b51162c74e841decd84",
+            "approved Brief reference SHA256 is exact",
+            digest == "e71308b7e1a9ee4697a5a597d5b074ce5aa1ec7ba60f83e597ebbdab6873dea2",
             digest,
         )
-        reference_css = normalized_css_signature(reference.read_text(encoding="utf-8"))
-        template_css = normalized_css_signature(read("templates/editorial_weekly.html"))
-        check(
-            "Weekly template CSS equals canonical CSS",
-            template_css == reference_css,
-            f"reference={reference_css} template={template_css}",
-        )
     else:
-        print("INFO exact Weekly source is unavailable in this environment; DOM contract still verified")
+        print("INFO approved Brief reference is unavailable; generated contract still verified")
 
 
 def workflow_contracts() -> None:
@@ -221,9 +216,9 @@ def workflow_contracts() -> None:
             "TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}" in workflow,
         )
         check(
-            f"{name} contains fetch/rebase/push retry",
+            f"{name} contains fetch/merge/push retry",
             "git fetch origin main" in workflow
-            and "git rebase origin/main" in workflow
+            and "git merge --no-edit origin/main" in workflow
             and "for attempt in 1 2 3" in workflow,
         )
         check(
@@ -242,9 +237,16 @@ def workflow_contracts() -> None:
             all(f"- name: {step}" in workflow for step in required_names),
         )
         check(
-            f"{name} force dry run cannot reach claim or send",
-            "steps.publish.outputs.skipped == 'false'" in workflow
-            and "github.event.inputs.force_dry_run != 'true'" in workflow,
+            f"{name} force dry run and publish-only cannot reach claim or send",
+            "steps.publish.outputs.delivery_authorized == 'true'" in workflow
+            and "github.event.inputs.force_dry_run != 'true'" in workflow
+            and 'PUBLISH_FLAG="--republish"' in workflow,
+        )
+        check(
+            f"{name} workflow is rebase-free and publish-only defaults safe",
+            "git rebase" not in workflow
+            and "publish_only:" in workflow
+            and 'default: "false"' in workflow,
         )
 
     check(
@@ -537,6 +539,7 @@ def state_contracts() -> None:
             **claim,
             "edition_key": "2026-07-28",
             "public_url": record["public_url"].replace("2026-07-27", "2026-07-28"),
+            "claimed_at": "2026-07-28T07:01:00+09:00",
         }
         with_future = state.add_claim(claimed, "daily", future_claim)
         check(
@@ -544,6 +547,37 @@ def state_contracts() -> None:
             state.has_claim(with_future, "2026-07-27")
             and state.has_claim(with_future, "2026-07-28")
             and len(with_future["delivery_claims"]) == 2,
+        )
+        active, expired = state.expire_stale_claims(
+            with_future,
+            "daily",
+            now=dt("2026-07-27T07:30:59+09:00"),
+        )
+        check(
+            "claim remains active before the bounded TTL",
+            expired == ()
+            and state.has_claim(active, "2026-07-27")
+            and state.has_claim(active, "2026-07-28"),
+        )
+        recovered, expired = state.expire_stale_claims(
+            with_future,
+            "daily",
+            now=dt("2026-07-27T07:31:00+09:00"),
+        )
+        check(
+            "stale claim expires without consuming later eligible editions",
+            expired == ("2026-07-27",)
+            and not state.has_claim(recovered, "2026-07-27")
+            and state.has_claim(recovered, "2026-07-28"),
+        )
+        expect_raises(
+            "claim expiry requires an aware clock",
+            state.StateError,
+            lambda: state.expire_stale_claims(
+                with_future,
+                "daily",
+                now=dt("2026-07-27T07:31:00"),
+            ),
         )
         check(
             "Daily and Weekly states remain independent",
@@ -628,108 +662,118 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
     brief.validate_rendered(multi)
     check("Weekly dominant mode is selected", dominant.issue_mode == "dominant_issue")
     check("Weekly multi-issue mode is selected", multi.issue_mode == "multi_issue")
-    for section in (
-        "key-message", "management-cards", "key-facts", "timeline", "comparison",
-        "industry-insight", "alternative-view", "sources",
-    ):
-        check(f"Weekly DOM section exists: {section}",
-              f'data-section="{section}"' in dominant.html)
     weekly_template = read("templates/editorial_weekly.html")
     daily_template = read("templates/editorial_daily.html")
-    daily_css_signature = normalized_css_signature(daily_template)
-    weekly_css_signature = normalized_css_signature(weekly_template)
+    shared_css = read("templates/editorial_brief.css")
+    daily_css_signature = normalized_css_signature(daily.html)
+    weekly_css_signature = normalized_css_signature(dominant.html)
     check(
-        "Daily exact-reference CSS signature",
-        daily_css_signature
-        == "9ec388932a1dd2d082f70cf8de8a86d79630291c7ba5e6105c47a53e63d82259",
-        daily_css_signature,
+        "Daily and Weekly use one sealed shared CSS contract",
+        daily_css_signature == weekly_css_signature
+        and hashlib.sha256(re.sub(r"\s+", "", shared_css).encode("utf-8")).hexdigest()
+        == "6d095dfdd42b9403c3802963cdbec3ee366519cf8430588ba0be1e221a20bc8a",
+        f"daily={daily_css_signature} weekly={weekly_css_signature}",
     )
     check(
-        "Weekly canonical CSS signature",
-        weekly_css_signature
-        == "ea4a07d0ae30e1f3607655f4f80ad41dbafb1c12a9661da2b8a4a64e1f30fe86",
-        weekly_css_signature,
+        "both templates inject the same shared stylesheet",
+        daily_template.count("{{BRIEF_STYLES}}") == 1
+        and weekly_template.count("{{BRIEF_STYLES}}") == 1,
     )
-    check("Weekly exact 794px × 1123px page contract",
-          re.search(r"\.page\{[^{}]*width:794px;[^{}]*min-height:1123px;", weekly_template)
-          is not None)
-    check("Weekly exact A4 portrait print contract",
-          "@page{size:A4 portrait;margin:14mm 10mm 18mm 10mm;}" in weekly_template)
-    check("Weekly exact print color and break protection",
-          "print-color-adjust:exact" in weekly_template
-          and "break-inside:avoid;page-break-inside:avoid;" in weekly_template)
-    check("Weekly exact 768px mobile breakpoint",
-          "@media (max-width:768px)" in weekly_template)
-    check("Weekly exact reference scroll hint",
-          '<span class="scroll-hint">→ 우측으로 스크롤</span>' in dominant.html
-          and ".scroll-hint{display:none;}" in weekly_template
-          and re.search(
-              r"@media \(max-width:768px\)\{[\s\S]*?\.scroll-hint"
-              r"\{[^{}]*display:inline;",
-              weekly_template,
-          ) is not None)
-    check("Weekly keeps exact PDF save control",
-          'onclick="window.print()"' in weekly_template and "📄 PDF로 저장" in weekly_template)
-    check("Daily reference selector order is exact",
-          all(
-              daily.html.index(selector) < daily.html.index(next_selector)
-              for selector, next_selector in zip(
-                  (
-                      'class="intro"',
-                      'class="masthead"',
-                      'data-role="headline"',
-                      'data-role="article-card"',
-                      'class="taxo"',
-                      "<footer ",
-                  ),
-                  (
-                      'class="masthead"',
-                      'data-role="headline"',
-                      'data-role="article-card"',
-                      'class="taxo"',
-                      "<footer ",
-                      "</div>\n<script>",
-                  ),
-              )
-          ))
-    check("Weekly canonical section order is exact",
-          all(
-              dominant.html.index(first) < dominant.html.index(second)
-              for first, second in zip(
-                  (
-                      'data-section="key-message"',
-                      'data-section="management-cards"',
-                      'data-section="key-facts"',
-                      'data-section="timeline"',
-                      'data-section="comparison"',
-                      'data-section="industry-insight"',
-                      'data-section="alternative-view"',
-                  ),
-                  (
-                      'data-section="management-cards"',
-                      'data-section="key-facts"',
-                      'data-section="timeline"',
-                      'data-section="comparison"',
-                      'data-section="industry-insight"',
-                      'data-section="alternative-view"',
-                      'data-section="sources"',
-                  ),
-              )
-          ))
+    check(
+        "Brief contract is 680px, mobile responsive, and print safe",
+        ".brief-page{max-width:680px" in shared_css
+        and "@media(max-width:560px)" in shared_css
+        and "@media print" in shared_css
+        and "break-inside:avoid;page-break-inside:avoid" in shared_css,
+    )
+    check(
+        "Brief templates have email-safe critical inline layout",
+        all(
+            'style="max-width:680px;margin:0 auto;padding:64px 20px 56px"'
+            in template
+            and 'style="display:inline-block;background:#002c5f;color:#fff;'
+            in template
+            for template in (daily_template, weekly_template)
+        ),
+    )
+    check(
+        "Brief font delivery has no runtime dependency",
+        "@import" not in shared_css
+        and "fonts.googleapis" not in shared_css
+        and "<script" not in daily_template + weekly_template,
+    )
+    hierarchy = (
+        'class="masthead"',
+        'class="brandmark"',
+        '<h1>',
+        'class="desc"',
+        'class="issue"',
+        'data-role="headline"',
+        "Editor's Summary",
+        'data-role="article-card"',
+        'class="taxonomy"',
+        "<footer",
+    )
+    for label, rendered in (("Daily", daily), ("Weekly", dominant)):
+        check(
+            f"{label} approved visual hierarchy is exact",
+            all(
+                rendered.html.index(first) < rendered.html.index(second)
+                for first, second in zip(hierarchy, hierarchy[1:])
+            ),
+        )
+    check(
+        "Daily and Weekly wording is edition-specific",
+        all(
+            text in daily.html
+            for text in (
+                "Daily Brief",
+                "매일 전하는",
+                "오늘의 헤드라인",
+                "오늘의 브리핑",
+            )
+        )
+        and all(
+            text in dominant.html
+            for text in (
+                "Weekly Brief",
+                "매주 전하는",
+                "이번 주 헤드라인",
+                "이번 주 브리핑",
+            )
+        ),
+    )
+    check(
+        "Briefs retain approved taxonomy and publication footer",
+        all(
+            all(text in rendered.html for text in (
+                "투자·산업", "기업동향", "기술정보",
+                "워크이노베이션센터 | AI디자인랩",
+            ))
+            for rendered in (daily, dominant)
+        ),
+    )
+    check(
+        "Brief hero and every card are image backed without remote hotlinks",
+        all(
+            rendered.html.count("<img ") == 6
+            and re.search(r'<img[^>]+src=["\']https?://', rendered.html) is None
+            for rendered in (daily, dominant)
+        ),
+    )
     daily_structure = structure_signature(daily.html)
     dominant_structure = structure_signature(dominant.html)
     multi_structure = structure_signature(multi.html)
     check(
-        "Daily exact-reference DOM signature",
+        "Daily shared Brief DOM signature",
         daily_structure
-        == (129, "e0403f0d85ec6d08ff1c775d3cea14c8a5521e9d0d1c54e8946af3228a591f08"),
+        == (105, "c0933a4e3192dd56caa46bdc1f6748244b2508a0c21af4296719f47aa63f6410"),
         repr(daily_structure),
     )
     check(
-        "Weekly dominant canonical DOM signature",
-        dominant_structure
-        == (190, "bba51ccf386d26a44634593bcabfc0040cdec3b1c76024eb89fc4c0ff774ec85"),
-        repr(dominant_structure),
+        "Daily and Weekly share the intended DOM contract",
+        dominant_structure == daily_structure,
+        f"daily={daily_structure!r} weekly={dominant_structure!r}",
     )
     check(
         "Weekly multi canonical DOM signature",
@@ -737,17 +781,17 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
         repr(multi_structure),
     )
     check(
-        "direct-aware mode does not affect Weekly rendering",
-        multi_structure
-        == (190, "bba51ccf386d26a44634593bcabfc0040cdec3b1c76024eb89fc4c0ff774ec85"),
+        "selection mode does not alter Weekly shell rendering",
+        multi_structure == daily_structure,
         repr(multi_structure),
     )
-    forbidden_custom = (
-        "--paper:#f5f3ed", "Georgia", "--navy:#102945", "table-scroll-hint",
-        "break-before:page", "page-break-before:always",
+    check(
+        "retired A4 report-table UI is absent",
+        not any(
+            token in daily_template + weekly_template
+            for token in ("PDF로 저장", "table-scroll-hint", "width:794px", "key-facts")
+        ),
     )
-    check("forbidden generated-only design tokens are absent",
-          not any(token in daily_template + weekly_template for token in forbidden_custom))
 
     sample_sentinels = [
         "My" + "thos", "Anth" + "ropic", "Op" + "us", "G" + "PT", "Gem" + "ini",
@@ -961,9 +1005,9 @@ def image_resolution_contracts() -> None:
         and rendered.html.count('<div class="thumb"><img ') == 5,
     )
     check(
-        "resolved image URL is HTML-escaped",
-        "hero.jpg?x=1&amp;y=2" in rendered.html
-        and "hero.jpg?x=1&y=2" not in rendered.html,
+        "unmaterialized remote image URL is replaced by deterministic fallback",
+        "hero.jpg?" not in rendered.html
+        and "data:image/svg+xml" in rendered.html,
     )
 
 
@@ -1304,10 +1348,10 @@ def publisher_url_resolution_contracts() -> None:
     )
     template_hashes = {
         "templates/editorial_daily.html": (
-            "936b497c51200f8d90994de4f607bbc1570bbaefbb3b443ad7844a50758476fe"
+            "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
         ),
         "templates/editorial_weekly.html": (
-            "baadbcdd8fb6ba799e85bfc0ff99e5e5e526e8b2512f49c466be6ea6ec66df26"
+            "1b082a4c2fe6b1565fe50f9692127f484412d9123e61be7fde01372a90539862"
         ),
     }
     check(
@@ -2025,7 +2069,7 @@ def selection_policy_contracts() -> None:
     ]
     category_rows.append(
         row(
-            "AI 안전 규제 정책 검토",
+            "AI 로봇 시공 기술 검증",
             provider="naver_news_api",
             url="https://policy.fixture.test/news/1",
             minutes_before_end=6,
@@ -2034,8 +2078,12 @@ def selection_policy_contracts() -> None:
     )
     selected, _audit = normalize(category_rows, limit=4)
     check(
-        "topic/category diversity soft cap keeps non-infra policy visible",
-        any(article.category == "정책·규제" for article in selected),
+        "topic/category diversity soft cap keeps non-infra technology visible",
+        any(
+            article.title == "AI 로봇 시공 기술 검증"
+            and article.category == "기술정보"
+            for article in selected
+        ),
     )
 
     tie_rows = [
@@ -2265,12 +2313,15 @@ def smtp_and_state_contracts(daily: brief.RenderedEdition) -> None:
         if part.get_content_type() in {"text/plain", "text/html"}
     )
     body_urls = re.findall(r"https?://[^\s\"'<>]+", body_text)
-    check("message contains only public brief/article links",
-          daily.public_dated_url in body_text
+    check("message contains only canonical Brief and dashboard links",
+          public_url_contract.DAILY_LATEST_URL in body_text
+          and public_url_contract.CANONICAL_DASHBOARD_URL in body_text
           and bool(body_urls)
           and all(
-              url.startswith("https://news")
-              or url == daily.public_dated_url
+              url in {
+                  public_url_contract.DAILY_LATEST_URL,
+                  public_url_contract.CANONICAL_DASHBOARD_URL,
+              }
               for url in body_urls
           ))
 
@@ -2834,6 +2885,101 @@ def claim_delivery_contracts(daily: brief.RenderedEdition) -> None:
         finally:
             runner._docs_paths = original_docs_paths
             state.atomic_write_state = original_atomic_write
+
+
+def republish_contracts() -> None:
+    run_at = dt("2026-07-27T07:00:00+09:00")
+    coverage = brief.daily_coverage(run_at)
+    articles = brief.normalize_articles(
+        brief.fixture_articles("daily", run_at),
+        coverage,
+        limit=brief.DAILY_MAX_ARTICLES,
+        resolve_images=False,
+    )
+    key = brief.edition_key("daily", run_at)
+    delivered = state.empty_state("daily")
+    success = {
+        "edition_key": key,
+        "coverage_start": coverage.start.isoformat(),
+        "coverage_end": coverage.end.isoformat(),
+        "html_sha256": "d" * 64,
+        "public_url": f"https://preview.fixture.test/editorial/daily/{key}.html",
+        "smtp_status": "accepted",
+        "smtp_code": 250,
+        "sent_at": "2026-07-27T07:05:00+09:00",
+    }
+    delivered["successful_editions"] = [success]
+    delivered["last_successful_edition"] = key
+    delivered["last_successful_send_at"] = success["sent_at"]
+    delivered = state.validate_state(delivered, "daily")
+
+    with tempfile.TemporaryDirectory(prefix="d7ak6e-republish-") as temporary:
+        root = Path(temporary)
+        dated = root / f"{key}.html"
+        latest = root / "latest.html"
+        runtime = root / "runtime"
+        output = root / "github-output.txt"
+        output.touch()
+        original_docs_paths = runner._docs_paths
+        original_load_state = state.load_state
+        original_load_bundle = runner.editorial_review.load_bundle
+        original_load_review = runner.editorial_review.load_review
+        original_choose = runner.editorial_review.choose_daily_articles
+        original_atomic_state = state.atomic_write_state
+        try:
+            runner._docs_paths = lambda _edition_type, _key: (dated, latest)
+            state.load_state = lambda _edition_type, path=None: delivered
+            runner.editorial_review.load_bundle = lambda *_args, **_kwargs: {}
+            runner.editorial_review.load_review = lambda *_args, **_kwargs: {}
+            runner.editorial_review.choose_daily_articles = (
+                lambda *_args, **_kwargs: (articles, "verified_fixture")
+            )
+            state.atomic_write_state = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("publish-only must never write delivery state")
+            )
+            environment = {
+                "EDITORIAL_PRODUCTION": "1",
+                "GITHUB_REF": "refs/heads/main",
+                "REPORT_URL": "https://preview.fixture.test/HDEC-News-Sensor/daily/latest.html",
+                "GITHUB_OUTPUT": str(output),
+            }
+            with temporary_environment(environment), hard_block_network():
+                manifest = runner.run_publish(
+                    "daily",
+                    run_at=run_at,
+                    runtime_dir=runtime,
+                    collect=lambda: (_ for _ in ()).throw(
+                        AssertionError("approved fixture must avoid collection")
+                    ),
+                    republish=True,
+                )
+        finally:
+            runner._docs_paths = original_docs_paths
+            state.load_state = original_load_state
+            runner.editorial_review.load_bundle = original_load_bundle
+            runner.editorial_review.load_review = original_load_review
+            runner.editorial_review.choose_daily_articles = original_choose
+            state.atomic_write_state = original_atomic_state
+
+        output_text = output.read_text(encoding="utf-8")
+        check(
+            "publish-only regenerates dated and latest from one artifact",
+            manifest is not None
+            and dated.read_bytes() == latest.read_bytes()
+            and manifest["edition_key"] == key,
+        )
+        check(
+            "publish-only cannot authorize an already accepted Daily resend",
+            "delivery_authorized=false" in output_text
+            and state.has_success(delivered, key),
+        )
+        parsed = runner.parse_args(
+            ["--edition-type", "daily", "--republish", "--runtime-dir", str(runtime)]
+        )
+        check(
+            "republish is an explicit mutually exclusive mode",
+            parsed.republish and not parsed.publish and not parsed.claim and not parsed.send,
+        )
 
 
 @contextlib.contextmanager
@@ -4043,9 +4189,9 @@ def image_materialization_contracts() -> None:
     check(
         "image materialization template SHA unchanged",
         hashlib.sha256((ROOT / "templates/editorial_daily.html").read_bytes()).hexdigest()
-        == "936b497c51200f8d90994de4f607bbc1570bbaefbb3b443ad7844a50758476fe"
+        == "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
         and hashlib.sha256((ROOT / "templates/editorial_weekly.html").read_bytes()).hexdigest()
-        == "baadbcdd8fb6ba799e85bfc0ff99e5e5e526e8b2512f49c466be6ea6ec66df26",
+        == "1b082a4c2fe6b1565fe50f9692127f484412d9123e61be7fde01372a90539862",
     )
     check(
         "image materialization side-effect counters are zero by contract",
@@ -4410,21 +4556,29 @@ def source_priority_and_link_integrity_contracts() -> None:
     weekly_urls = {article.selected_url for article in weekly_articles}
 
     check(
-        "Daily Teams text contains only the public brief URL",
-        daily.public_dated_url in daily.teams_text
+        "Daily Teams text contains canonical Brief and dashboard URLs",
+        public_url_contract.DAILY_LATEST_URL in daily.teams_text
+        and public_url_contract.CANONICAL_DASHBOARD_URL in daily.teams_text
         and all(url not in daily.teams_text for url in daily_urls),
     )
     check(
-        "Daily Teams HTML has one CTA and no article links",
-        daily.teams_html.count("<a ") == 1
-        and daily.public_dated_url in daily.teams_html
+        "Daily Teams HTML has Brief and dashboard CTAs and no article links",
+        daily.teams_html.count("<a ") == 2
+        and public_url_contract.DAILY_LATEST_URL in daily.teams_html
+        and public_url_contract.CANONICAL_DASHBOARD_URL in daily.teams_html
+        and "오늘의 Daily Brief 보기" in daily.teams_html
+        and "전체 뉴스 대시보드 보기" in daily.teams_html
         and all(url not in daily.teams_html for url in daily_urls),
     )
     check(
-        "Weekly Teams surfaces contain only the public brief CTA",
-        weekly.teams_html.count("<a ") == 1
-        and weekly.public_dated_url in weekly.teams_html
-        and weekly.public_dated_url in weekly.teams_text
+        "Weekly Teams surfaces contain Brief and dashboard CTAs",
+        weekly.teams_html.count("<a ") == 2
+        and public_url_contract.WEEKLY_LATEST_URL in weekly.teams_html
+        and public_url_contract.WEEKLY_LATEST_URL in weekly.teams_text
+        and public_url_contract.CANONICAL_DASHBOARD_URL in weekly.teams_html
+        and public_url_contract.CANONICAL_DASHBOARD_URL in weekly.teams_text
+        and "이번 주 Weekly Brief 보기" in weekly.teams_html
+        and "전체 뉴스 대시보드 보기" in weekly.teams_html
         and all(url not in weekly.teams_html for url in weekly_urls)
         and all(url not in weekly.teams_text for url in weekly_urls),
     )
@@ -4450,6 +4604,7 @@ def main() -> int:
     url_and_publication_contracts(daily)
     smtp_and_state_contracts(daily)
     claim_delivery_contracts(daily)
+    republish_contracts()
     preview_contracts()
     image_materialization_contracts()
     live_preview_contracts()

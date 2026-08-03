@@ -189,7 +189,16 @@ def derive_event_cluster_key(article: object, topic_key: str = "") -> str:
     # Otherwise fall back to the conservative normalized-title identity.
     anchors = entities + products
     if anchors and event_types:
-        raw = "|".join((published, topic_key, ",".join(event_types), ",".join(anchors)))
+        # A broad topic/entity/date tuple is an observation cluster, not proof that
+        # every later article is the same delivered event. Include the normalized
+        # title identity so distinct follow-ups remain independently alertable.
+        raw = "|".join((
+            published,
+            topic_key,
+            ",".join(event_types),
+            ",".join(anchors),
+            title_fingerprint(title),
+        ))
         digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
         return f"ai_event:{digest}"
 

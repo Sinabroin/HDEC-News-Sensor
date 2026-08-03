@@ -193,6 +193,11 @@ def main() -> int:
     # 6) 실제 게시 대상도 같은 계약이어야 한다. live snapshot을 mock으로 덮어쓰지 않고 읽기만 한다.
     if PUBLIC_DASHBOARD.exists():
         committed = PUBLIC_DASHBOARD.read_text(encoding="utf-8")
+        exact_news_censor = (
+            'id="article-data"' in committed
+            and 'id="pane-articles" class="pane active"' in committed
+            and "NEWS CENSOR" in committed
+        )
         match = re.search(
             r'<script type="application/json" id="preview-model">(.*?)</script>',
             committed, re.S)
@@ -208,9 +213,15 @@ def main() -> int:
               "deal_watch_rows" not in committed_model)
         committed_rows = _display_rows(committed_model)
         committed_tags = {t for row in committed_rows for t in (row.get("deal_tags") or [])}
-        check("committed public 카드에 승인 보조 태그 존재",
-              bool(committed_tags) and committed_tags <= ALLOWED_TAGS,
-              str(sorted(committed_tags)))
+        if exact_news_censor:
+            # The sealed NEW_CENSOR article layout permits only its verdict badge;
+            # Deal Watch stays in the private/shared model and must not add chips.
+            check("exact-reference public에는 추가 Deal Watch 태그 UI 없음",
+                  not committed_tags and 'class="deal-tag"' not in committed)
+        else:
+            check("committed public 카드에 승인 보조 태그 존재",
+                  bool(committed_tags) and committed_tags <= ALLOWED_TAGS,
+                  str(sorted(committed_tags)))
 
     if FAILURES:
         print(f"FAIL: {len(FAILURES)} checks")

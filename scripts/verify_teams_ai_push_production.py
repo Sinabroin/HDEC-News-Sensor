@@ -47,6 +47,7 @@ from app.teams_push_state import (  # noqa: E402
     load_state,
     save_state,
 )
+from app.public_urls import CANONICAL_DASHBOARD_URL  # noqa: E402
 from verify_meaningful_delta_quality import _eval_gate, _step_block, _step_if  # noqa: E402
 
 SCRIPT = ROOT / "scripts" / "send_teams_ai_push.py"
@@ -559,38 +560,35 @@ def check_delivery(tmp: Path) -> None:
     body = parsed["subject"] + "\n" + parsed["text"] + "\n" + parsed["html"]
     for field_name, token in (
         ("중요도", "최우선"),
+        ("카테고리", "AI 데이터센터"),
         ("기사 제목", "AI 데이터센터 투자 계약 체결"),
         ("핵심 요약", "양사가 AI 데이터센터 투자 계약을 공식 체결했다."),
+        ("왜 중요한가", "데이터센터 EPC와 전력 인프라 사업 기회에 직접 영향"),
         ("출처", "Reuters"),
         ("언론사 원문 링크", DIRECT_ARTICLE_URL),
-        ("대시보드 링크", "example.com/dashboard"),
-        ("전체 리포트 링크", "example.com/report"),
+        ("대시보드 링크", CANONICAL_DASHBOARD_URL),
     ):
         check(f"email carries required field: {field_name}", token in body,
               f"missing {token!r}")
-    check("plain-text first line labels the direct publisher URL as original",
-          parsed["text"].splitlines()[0] == f"[원문] {DIRECT_ARTICLE_URL}")
-    check("email title is fully linked to the direct publisher URL",
-          re.search(
-              rf'<h2[^>]*>\s*<a href="{re.escape(DIRECT_ARTICLE_URL)}"[^>]*>'
-              r"\[?[^<]*AI 데이터센터 투자 계약 체결[^<]*</a></h2>",
-              parsed["html"],
-          ) is not None)
-    check("representative image is clickable when the collected field exists",
-          f'<a href="{DIRECT_ARTICLE_URL}" style="display:block;margin:16px 0;">'
-          in parsed["html"]
-          and f'<img src="{REPRESENTATIVE_IMAGE_URL}"' in parsed["html"])
+    check("plain-text fallback contains both named actions",
+          f"기사 원문 보기: {DIRECT_ARTICLE_URL}" in parsed["text"]
+          and f"전체 뉴스 대시보드 보기: {CANONICAL_DASHBOARD_URL}" in parsed["text"])
+    check("HTML contains robust origin and dashboard buttons",
+          '>기사 원문 보기</a>' in parsed["html"]
+          and '>전체 뉴스 대시보드 보기</a>' in parsed["html"])
+    check("email does not hotlink a remote representative image",
+          REPRESENTATIVE_IMAGE_URL not in parsed["html"] and "<img" not in parsed["html"])
     check("Google News aggregator URL appears zero times in the email",
           GOOGLE_AGGREGATOR_URL not in body)
     check("summary is capped and long tail is omitted",
           "이 문장은 3줄 요약 상한 밖이므로" in body
           and body.count("추가 상세") < 80)
-    check("long HDEC-impact section is removed", "현대건설 영향" not in body)
+    check("why-it-matters section is retained", "왜 중요한가" in body)
     check("detected time is removed from the body", "감지시각" not in body)
     check("importance is rendered as a small badge",
           "font-size:12px" in parsed["html"] and "border-radius:12px" in parsed["html"])
-    check("dashboard and report links are separate auxiliary rows",
-          parsed["html"].count('<div style="margin:8px 0;">') == 2)
+    check("canonical dashboard is exact and report link is absent",
+          CANONICAL_DASHBOARD_URL in body and "example.com/report" not in body)
     check("email embeds no external CSS or JavaScript",
           "<script" not in parsed["html"].lower()
           and "<link" not in parsed["html"].lower()
@@ -635,9 +633,9 @@ def check_delivery(tmp: Path) -> None:
     )
     summary, rec = _deliver(tmp, _payload([other_publisher]), state)
     blocked_reason = summary["records"][0]["dedup_reason"] if summary["records"] else ""
-    check("same event from another publisher is cluster-deduped with zero attempts",
-          summary["attempted_count"] == 0 and summary["dedup_blocked_count"] == 1
-          and blocked_reason == "duplicate:cluster_key" and len(rec.attempts) == 0,
+    check("distinct article in the same broad event remains independently eligible",
+          summary["attempted_count"] == 1 and summary["dedup_blocked_count"] == 0
+          and blocked_reason == "new_article_or_event" and len(rec.attempts) == 1,
           f"reason={blocked_reason} summary={summary}")
 
     updated = _article(
@@ -687,7 +685,7 @@ def check_delivery(tmp: Path) -> None:
           and len(rec.attempts) == 1, str(summary))
 
 
-def check_cap_and_partial(tmp: Path) -> None:
+def _legacy_check_cap_and_partial(tmp: Path) -> None:
     # Fixture 12 — twelve qualifying candidates select down to the top ten.
     cap_state = tmp / "cap-state.json"
     summary, rec = _deliver(tmp, _payload(_cap_articles(12)), cap_state)
@@ -789,6 +787,107 @@ def check_cap_and_partial(tmp: Path) -> None:
     check("no temporary state residue remains",
           not [p for p in partial_state.parent.iterdir()
                if p.name.startswith("tmp") and p.suffix not in {".json", ".txt"}])
+
+
+def check_cap_and_partial(tmp: Path) -> None:
+    """Prove cap-after-ledger queue semantics and accepted-only persistence."""
+    articles = _cap_articles(3)
+    payload = _payload(articles)
+    queue_state = tmp / "queue-state.json"
+
+    first, first_transport = _deliver(tmp, payload, queue_state, max_articles=99)
+    check("max-one is immutable even when caller requests more",
+          first["alert_policy_eligible"] == 3
+          and first["selected"] == 1
+          and first["deferred_due_to_cap"] == 2
+          and first["SMTP_attempted"] == 1
+          and first["SMTP_accepted"] == 1
+          and len(first_transport.attempts) == 1, str(first))
+    check("non-selected eligible articles are not marked sent",
+          len(load_state(queue_state)["article_ids"]) == 1, str(load_state(queue_state)))
+
+    second, second_transport = _deliver(tmp, payload, queue_state, max_articles=99)
+    check("next run skips sent item and selects one deferred item",
+          second["already_sent"] == 1
+          and second["selected"] == 1
+          and second["deferred_due_to_cap"] == 1
+          and len(second_transport.attempts) == 1, str(second))
+    third, third_transport = _deliver(tmp, payload, queue_state, max_articles=99)
+    check("third run drains final deferred item without a flood",
+          third["already_sent"] == 2
+          and third["selected"] == 1
+          and third["deferred_due_to_cap"] == 0
+          and len(third_transport.attempts) == 1, str(third))
+    fourth, fourth_transport = _deliver(tmp, payload, queue_state, max_articles=99)
+    check("accepted state is at-most-once on later runs",
+          fourth["already_sent"] == 3
+          and fourth["selected"] == 0
+          and fourth["SMTP_attempted"] == 0
+          and not fourth_transport.attempts, str(fourth))
+
+    failed_state = tmp / "failed-queue-state.json"
+    failed, failed_transport = _deliver(
+        tmp, payload, failed_state, statuses=(550,), max_articles=99
+    )
+    check("failed SMTP does not mark selected article sent",
+          failed["selected"] == 1
+          and failed["SMTP_attempted"] == 1
+          and failed["SMTP_accepted"] == 0
+          and failed["state_committed"] == 0
+          and not failed_state.exists()
+          and len(failed_transport.attempts) == 1, str(failed))
+    retried, retried_transport = _deliver(tmp, payload, failed_state, max_articles=99)
+    check("failed article remains eligible for bounded retry",
+          retried["selected"] == 1
+          and retried["SMTP_accepted"] == 1
+          and retried["state_committed"] == 1
+          and len(retried_transport.attempts) == 1, str(retried))
+
+    carry = _article(
+        article_key="carry-only",
+        url="https://publisher.example.test/carry-only",
+        carried_forward=True,
+        current_run_seen=False,
+        teams_newness_eligible=False,
+    )
+    carry_summary, carry_transport = _deliver(
+        tmp, _payload([carry]), tmp / "carry-state.json", max_articles=99
+    )
+    check("carry-forward-only article cannot alert",
+          carry_summary["current_candidates"] == 0
+          and carry_summary["alert_policy_eligible"] == 0
+          and carry_summary["selected"] == 0
+          and not carry_transport.attempts, str(carry_summary))
+
+    shadow_state = tmp / "dashboard-independent-state.json"
+    before, _ = _deliver(tmp, payload, shadow_state, send=False, max_articles=99)
+    dashboard = tmp / "mutable-dashboard.html"
+    dashboard.write_text("<html>refreshed before Teams watch</html>", encoding="utf-8")
+    after, _ = _deliver(tmp, payload, shadow_state, send=False, max_articles=99)
+    check("dashboard refresh cannot consume the Teams candidate queue",
+          before["selected"] == after["selected"] == 1
+          and before["deferred_due_to_cap"] == after["deferred_due_to_cap"] == 2
+          and not shadow_state.exists())
+
+    check("all rollout-cap values resolve to the immutable maximum one",
+          all(sender._resolve_max_articles(value) == 1
+              for value in ("", "invalid", "0", "-7", "1", "10", "99")))
+
+    zero_state = tmp / "zero-state.json"
+    blocked_only = _article(
+        article_key="blocked-only",
+        url="https://publisher.example.test/blocked",
+        shadow_urgency_status="blocked",
+        shadow_would_pass=False,
+        shadow_confirmed_event_types=[],
+    )
+    zero, zero_transport = _deliver(tmp, _payload([blocked_only]), zero_state)
+    check("zero policy-eligible candidates means zero SMTP attempts",
+          zero["alert_policy_eligible"] == 0
+          and zero["selected"] == 0
+          and zero["SMTP_attempted"] == 0
+          and not zero_transport.attempts
+          and not zero_state.exists(), str(zero))
 
 
 def check_no_leaks(tmp: Path) -> None:
@@ -917,8 +1016,9 @@ def check_workflow() -> None:
               secret_line in teams_block)
     check("watch Teams step uses the production state path",
           "TEAMS_PUSH_STATE_PATH: data/teams_push_state.json" in teams_block)
-    check("watch Teams step consumes the temp delta artifact",
-          "DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json" in teams_block)
+    check("watch Teams step consumes the validated temp brief directly",
+          "TEAMS_ARTIFACT_FILE: ${{ runner.temp }}/validated-live-brief.json" in teams_block
+          and "DELTA_ARTIFACT_FILE" not in teams_block)
     check("watch Teams step honours the per-run canary cap",
           "TEAMS_AI_PUSH_MAX_ARTICLES:" in teams_block)
     check("manual canary injects exactly one independent of repository variables",
@@ -943,15 +1043,17 @@ def check_workflow() -> None:
     check("watch exposes explicit exactly-one production canary inputs",
           "production_canary:" in watch and "canary_cap:" in watch)
 
-    # Lightweight — live news metadata to a temp file only; no full dashboard/Pages republish,
-    # no docs/daily writes. The committed dashboard is read as the delta 'before' baseline.
+    # Lightweight — live news metadata to a temp file only; no dashboard baseline and
+    # no docs/daily writes. Public refresh cannot consume the dedicated Teams queue.
     check("watch builds live news metadata to a temp file, not docs/daily",
           bool(build_block)
-          and "build_static_dashboard.py" in build_block
-          and '--output "$RUNNER_TEMP/dashboard-now.html"' in build_block
+          and "build_static_dashboard.py" not in build_block
           and 'BRIEF_JSON="$RUNNER_TEMP/validated-live-brief.json"' in build_block
           and '--output-json "$BRIEF_JSON"' in build_block
           and "--output docs/daily" not in build_block)
+    check("watch never compares against the mutable public dashboard",
+          "detect_dashboard_alert_delta.py" not in watch
+          and "docs/daily/dashboard-latest.html" not in watch)
     for heavy in ("docs/daily/latest.html", "docs/daily/operator-latest.html",
                   "python3 scripts/build_static_report.py", "actions/upload-pages",
                   "Publish to Pages"):
@@ -971,8 +1073,10 @@ def check_workflow() -> None:
           'git commit -m "chore: persist Teams AI push dedup state"' in persist_block)
     check("persistence detects an untracked first write",
           "git status --porcelain -- data/teams_push_state.json" in persist_block)
-    check("persistence aborts a failed rebase instead of forcing",
-          "git rebase --abort" in persist_block)
+    check("persistence uses a history-preserving merge and no rebase",
+          "git merge --no-edit origin/main" in persist_block
+          and "git merge --abort" in persist_block
+          and "git rebase" not in persist_block)
     check("persistence retries at most three times",
           "for attempt in 1 2 3; do" in persist_block)
     check("persistence prints the state commit SHA",

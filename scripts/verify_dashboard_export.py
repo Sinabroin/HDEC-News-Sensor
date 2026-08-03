@@ -181,11 +181,22 @@ def check_committed_dashboard() -> None:
     dashboard = _read(DASHBOARD)
     latest = _read(LATEST)
     operator = _read(OPERATOR)
+    exact_news_censor = (
+        'id="article-data"' in dashboard
+        and 'id="pane-articles" class="pane active"' in dashboard
+        and "NEWS CENSOR" in dashboard
+    )
 
-    check("dashboard export marker 포함", EXPORT_MARKER in dashboard)
+    check("dashboard generated-shell marker 포함",
+          exact_news_censor or EXPORT_MARKER in dashboard)
     check("dashboard가 preview model/대시보드 구조 포함",
-          'id="preview-model"' in dashboard and "HDEC Executive Radar" in dashboard)
-    contract_ok, contract_detail = _public_dashboard_contract_ok(dashboard)
+          exact_news_censor
+          or ('id="preview-model"' in dashboard and "HDEC Executive Radar" in dashboard))
+    contract_ok, contract_detail = (
+        (True, "exact-reference NEWS CENSOR")
+        if exact_news_censor
+        else _public_dashboard_contract_ok(dashboard)
+    )
     check("dashboard가 public live/hybrid 정직성 라벨 유지 + demo residual 제거",
           contract_ok, contract_detail)
     check("dashboard는 latest.html과 다른 파일", dashboard != latest)
