@@ -36,6 +36,7 @@ from app import collector  # noqa: E402
 from app import live_collector  # noqa: E402
 from app import naver_news_provider  # noqa: E402
 from app import news_access  # noqa: E402
+from app import news_censor_verified_state  # noqa: E402
 from app import public_urls as public_url_contract  # noqa: E402
 
 _SPEC = importlib.util.spec_from_file_location(
@@ -2982,6 +2983,70 @@ def republish_contracts() -> None:
         )
 
 
+def weekly_verified_supply_contracts() -> None:
+    run_at = dt("2026-08-03T07:30:00+09:00")
+    current = [{
+        "id": "current-outside-window",
+        "title": "현대건설 최신 현재 기사",
+        "source": "Reuters",
+        "published_at": "2026-08-03T01:00:00+09:00",
+        "url": "https://www.reuters.com/world/current-weekly-test",
+        "publisher_direct": True,
+        "snippet": "현재 수집 기사",
+        "source_metadata": {"provider": "publisher_direct_registry"},
+    }]
+    verified = {
+        "id": "verified-weekly-row",
+        "title": "현대건설 데이터센터 프로젝트 수주",
+        "source": "Reuters",
+        "published_at": "2026-07-28T12:00:00+09:00",
+        "url": "https://www.reuters.com/world/verified-weekly-test",
+        "snippet": "검증된 주간 수주 기사",
+    }
+    entry = news_censor_verified_state.verified_entry_from_article(
+        verified,
+        now=run_at,
+        categories=("biz",),
+        display_relevant=True,
+        source_quality_passed=True,
+    )
+    state_payload = news_censor_verified_state.empty_state(now=run_at)
+    state_payload["entries"] = [entry]
+    state_payload = news_censor_verified_state.validate_state(state_payload)
+
+    with tempfile.TemporaryDirectory(prefix="d7ak6e-weekly-state-") as temporary:
+        state_path = Path(temporary) / "verified-state.json"
+        news_censor_verified_state.atomic_write_state(state_path, state_payload)
+        before = state_path.read_bytes()
+        combined, added = runner.supplement_weekly_verified_supply(
+            current,
+            run_at=run_at,
+            state_path=state_path,
+        )
+        after = state_path.read_bytes()
+    coverage = brief.weekly_coverage(run_at)
+    normalized = brief.normalize_articles(
+        combined,
+        coverage,
+        limit=brief.WEEKLY_MAX_ARTICLES,
+        resolve_images=False,
+        selection_mode=brief.SELECTION_MODE_EDITORIAL_PRIORITY,
+    )
+    check(
+        "Weekly supplements an empty live coverage window from verified state",
+        added == 1 and len(normalized) == 1
+        and normalized[0].selected_url == verified["url"],
+    )
+    carried = next(row for row in combined if row.get("url") == verified["url"])
+    metadata = carried.get("source_metadata") or {}
+    check(
+        "Weekly verified supply remains carry-forward-only and never Teams-new",
+        metadata.get("carried_forward") is True
+        and metadata.get("teams_newness_eligible") is False,
+    )
+    check("Weekly verified supply reads state without mutation", before == after)
+
+
 @contextlib.contextmanager
 def hard_block_network():
     original_socket = socket.socket
@@ -4605,6 +4670,7 @@ def main() -> int:
     smtp_and_state_contracts(daily)
     claim_delivery_contracts(daily)
     republish_contracts()
+    weekly_verified_supply_contracts()
     preview_contracts()
     image_materialization_contracts()
     live_preview_contracts()
