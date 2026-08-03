@@ -1,5 +1,15 @@
 {
   "article_ids": {
+    "4ad456d6df1c3af3": {
+      "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
+      "delivery_id": "teams_ai_push:cda34e0b7d63",
+      "first_sent_at": "2026-08-03T16:42:28+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
+      "sent_at": "2026-08-03T16:42:28+09:00",
+      "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
     "live_5c148d78cd83": {
       "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
       "delivery_id": "teams_ai_push:cb5d472fd04d",
@@ -502,6 +512,16 @@
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
     },
+    "title:로봇이움직이고팔런티어가판단하며sap": {
+      "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
+      "delivery_id": "teams_ai_push:cda34e0b7d63",
+      "first_sent_at": "2026-08-03T16:42:28+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
+      "sent_at": "2026-08-03T16:42:28+09:00",
+      "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
     "title:멈추지않는공항삼성물산대만하늘길의심장을짓다": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
       "delivery_id": "teams_ai_push:f20639b627fa",
@@ -703,7 +723,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-07-30T08:12:29+09:00",
+  "last_successful_send_at": "2026-08-03T16:42:28+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -944,6 +964,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "https://www.ilemonde.com/news/articleView.html?idxno=30445": {
+      "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
+      "delivery_id": "teams_ai_push:cda34e0b7d63",
+      "first_sent_at": "2026-08-03T16:42:28+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
+      "sent_at": "2026-08-03T16:42:28+09:00",
+      "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
     "https://www.joongang.co.kr/article/25449302": {
       "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
@@ -1206,6 +1236,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "로봇이움직이고팔런티어가판단하며sap": {
+      "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
+      "delivery_id": "teams_ai_push:cda34e0b7d63",
+      "first_sent_at": "2026-08-03T16:42:28+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
+      "sent_at": "2026-08-03T16:42:28+09:00",
+      "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
     "멈추지않는공항삼성물산대만하늘길의심장을짓다": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
