@@ -1,5 +1,35 @@
 {
   "article_ids": {
+    "10339e80685fa8af": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
+    "1ca79f32b813120e": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
+    },
+    "3c0220b68095c251": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
+    },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
       "delivery_id": "teams_ai_push:cda34e0b7d63",
@@ -9,6 +39,46 @@
       "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
+    "4ca212d51b4eb35c": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
+    },
+    "a65de9a3ca0495dd": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
+    },
+    "cf15b9983762072d": {
+      "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
+      "delivery_id": "teams_ai_push:9fc32a0cf6a2",
+      "first_sent_at": "2026-08-03T22:49:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a181b1b91aec8eff95f85fd22a6cec08067b61599c14f492762e440761a4759f",
+      "sent_at": "2026-08-03T22:49:52+09:00",
+      "source": "베타뉴스"
+    },
+    "ff97edecbcdcf132": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
     },
     "live_5c148d78cd83": {
       "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
@@ -382,6 +452,16 @@
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
     },
+    "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
+    },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
       "delivery_id": "teams_ai_push:f96cb62ee902",
@@ -552,6 +632,16 @@
       "sent_at": "2026-07-30T01:45:53+09:00",
       "source": "news.google.com"
     },
+    "title:미국ai데이터센터건설전력이어물부족이새복병": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
       "delivery_id": "teams_ai_push:9d73b7a8f012",
@@ -602,6 +692,16 @@
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
     },
+    "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
+    },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -611,6 +711,26 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "title:영업익8190억포스코웃을때현대제철어닝쇼크": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
+    },
+    "title:원전8기추가승인더이상머뭇거릴때아니다": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
     },
     "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
       "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
@@ -651,6 +771,16 @@
       "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
       "sent_at": "2026-07-28T18:27:41+09:00",
       "source": "energydaily.co.kr"
+    },
+    "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여": {
+      "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
+      "delivery_id": "teams_ai_push:9fc32a0cf6a2",
+      "first_sent_at": "2026-08-03T22:49:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a181b1b91aec8eff95f85fd22a6cec08067b61599c14f492762e440761a4759f",
+      "sent_at": "2026-08-03T22:49:52+09:00",
+      "source": "베타뉴스"
     },
     "title:제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
@@ -702,6 +832,16 @@
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
     },
+    "title:현대제철ai인프라승부수철강업계새성장축될까": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
+    },
     "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
       "delivery_id": "teams_ai_push:3e91ff23dd72",
@@ -723,7 +863,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-03T16:42:28+09:00",
+  "last_successful_send_at": "2026-08-04T07:35:54+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -844,6 +984,16 @@
       "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
       "sent_at": "2026-07-30T01:46:09+09:00",
       "source": "slownews.kr"
+    },
+    "https://www.betanews.net/article/view/beta202608030086": {
+      "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
+      "delivery_id": "teams_ai_push:9fc32a0cf6a2",
+      "first_sent_at": "2026-08-03T22:49:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a181b1b91aec8eff95f85fd22a6cec08067b61599c14f492762e440761a4759f",
+      "sent_at": "2026-08-03T22:49:52+09:00",
+      "source": "베타뉴스"
     },
     "https://www.bloter.net/news/articleView.html?idxno=669160": {
       "cluster_key": "title:5자금고객전력성패가를3대변수",
@@ -975,6 +1125,16 @@
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
+    "https://www.itdaily.kr/news/articleView.html?idxno=240755": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
+    },
     "https://www.joongang.co.kr/article/25449302": {
       "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
       "delivery_id": "teams_ai_push:61eabb648494",
@@ -994,6 +1154,26 @@
       "material_signature": "ffaca4dce56d58e2c8c6c8592caf2aa7243cd332524b579255753a5fc1229283",
       "sent_at": "2026-07-30T07:11:03+09:00",
       "source": "뉴스1"
+    },
+    "https://www.news2day.co.kr/article/20260803500203": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
+    },
+    "https://www.news2day.co.kr/article/20260804500002": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
     },
     "https://www.newsinside.kr/news/articleView.html?idxno=4875153": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
@@ -1055,6 +1235,16 @@
       "sent_at": "2026-07-29T22:19:23+09:00",
       "source": "서울경제"
     },
+    "https://www.sedaily.com/article/20075202": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
+    },
     "https://www.sidae.com/article/2026072814463436475": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
       "delivery_id": "teams_ai_push:755189289545",
@@ -1084,6 +1274,26 @@
       "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
+    },
+    "https://www.theguru.co.kr/news/article.html?no=105152": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
+    "https://www.viva100.com/article/20260803501092": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
     }
   },
   "title_fingerprints": {
@@ -1106,6 +1316,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -1277,6 +1497,16 @@
       "sent_at": "2026-07-30T01:45:53+09:00",
       "source": "news.google.com"
     },
+    "미국ai데이터센터건설전력이어물부족이새복병": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
       "delivery_id": "teams_ai_push:9d73b7a8f012",
@@ -1327,6 +1557,16 @@
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
     },
+    "스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
+    },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -1336,6 +1576,26 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "영업익8190억포스코웃을때현대제철어닝쇼크": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
+    },
+    "원전8기추가승인더이상머뭇거릴때아니다": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
     },
     "원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
       "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
@@ -1376,6 +1636,16 @@
       "material_signature": "89c64fdca427bc6d2f22e16afa84d35c57a7a3c32dfc8a013b2ebc5efd8b0728",
       "sent_at": "2026-07-28T18:27:41+09:00",
       "source": "energydaily.co.kr"
+    },
+    "전남광주장성20mwai데이터센터구축착수ai패브릭참여": {
+      "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
+      "delivery_id": "teams_ai_push:9fc32a0cf6a2",
+      "first_sent_at": "2026-08-03T22:49:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a181b1b91aec8eff95f85fd22a6cec08067b61599c14f492762e440761a4759f",
+      "sent_at": "2026-08-03T22:49:52+09:00",
+      "source": "베타뉴스"
     },
     "제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
@@ -1426,6 +1696,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "현대제철ai인프라승부수철강업계새성장축될까": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
     },
     "현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
