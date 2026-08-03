@@ -31,7 +31,7 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import (collector, editorial_briefing_state, editorial_briefings, editorial_review, news_access, publisher_direct)  # noqa: E402
+from app import (collector, editorial_briefing_state, editorial_briefings, editorial_review, news_access, news_censor_verified_state, publisher_direct)  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
 RUNTIME_MANIFEST = "runtime-manifest.json"
@@ -124,6 +124,41 @@ def collect_live_articles() -> list[dict]:
     """Collect real metadata from the established providers without DB writes."""
     articles, _audit = collect_live_article_bundle()
     return articles
+
+
+def supplement_weekly_verified_supply(
+    current_articles: list[dict],
+    *,
+    run_at: datetime,
+    state_path: Path = ROOT / "data" / "news_censor_verified_state.json",
+) -> tuple[list[dict], int]:
+    """Add only unexpired publisher-direct verified rows for Weekly coverage.
+
+    Weekly covers the prior completed Wednesday-to-Tuesday window, so a live
+    point-in-time collection can truthfully contain no rows from that window.
+    The bounded News Censor state is the approved seven-day public carry-forward
+    source and is read-only here; it never implies Teams newness.
+    """
+    try:
+        loaded = news_censor_verified_state.load_state(state_path, now=run_at)
+        carried, _diagnostics = news_censor_verified_state.carry_forward_articles(
+            loaded.state,
+            current_articles,
+            now=run_at,
+        )
+    except (OSError, news_censor_verified_state.VerifiedStateError) as exc:
+        raise OrchestratorError("weekly verified carry-forward state is unavailable") from exc
+    coverage = editorial_briefings.weekly_coverage(run_at)
+    eligible: list[dict] = []
+    for row in carried:
+        try:
+            published = editorial_briefings.parse_published_at(row.get("published_at"))
+        except EditorialError:
+            continue
+        if coverage.start <= published <= coverage.end:
+            eligible.append(row)
+    merged = collector.merge_provider_articles([*current_articles, *eligible])
+    return merged, len(eligible)
 
 
 def _provider_tokens(row: dict) -> set[str]:
@@ -525,9 +560,20 @@ def run_publish(
                 ),
             )
     else:
+        raw_articles = collect()
+        verified_added = 0
+        if collect is collect_live_articles:
+            raw_articles, verified_added = supplement_weekly_verified_supply(
+                raw_articles,
+                run_at=run_at,
+            )
+        print(
+            f"weekly_verified_carry_forward_added={verified_added} "
+            "teams_newness_eligible=0 state_writes=0"
+        )
         edition = editorial_briefings.render_edition(
             edition_type,
-            collect(),
+            raw_articles,
             run_at=run_at,
             root_url=root_url,
             allow_image_network=False,
