@@ -1,5 +1,15 @@
 {
   "article_ids": {
+    "1ca79f32b813120e": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
+    },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
       "delivery_id": "teams_ai_push:cda34e0b7d63",
@@ -702,6 +712,16 @@
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
     },
+    "title:현대제철ai인프라승부수철강업계새성장축될까": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
+    },
     "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
       "delivery_id": "teams_ai_push:3e91ff23dd72",
@@ -723,7 +743,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-03T16:42:28+09:00",
+  "last_successful_send_at": "2026-08-03T20:02:23+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -994,6 +1014,16 @@
       "material_signature": "ffaca4dce56d58e2c8c6c8592caf2aa7243cd332524b579255753a5fc1229283",
       "sent_at": "2026-07-30T07:11:03+09:00",
       "source": "뉴스1"
+    },
+    "https://www.news2day.co.kr/article/20260803500203": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
     },
     "https://www.newsinside.kr/news/articleView.html?idxno=4875153": {
       "cluster_key": "title:sk이노베트남에lngsmr단계별협력방안제시",
@@ -1426,6 +1456,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "현대제철ai인프라승부수철강업계새성장축될까": {
+      "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
+      "delivery_id": "teams_ai_push:112fa5944011",
+      "first_sent_at": "2026-08-03T20:02:23+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
+      "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
     },
     "현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
