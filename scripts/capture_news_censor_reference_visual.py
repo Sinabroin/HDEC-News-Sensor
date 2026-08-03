@@ -23,15 +23,13 @@ CHROME_CANDIDATES = (
     Path("/home/founder_ys/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome"),
 )
 VIEWPORTS = {"desktop": (1440, 1200), "mobile": (390, 844)}
+DESKTOP_STATES = ("all", "biz", "peers", "hdec", "safety", "global", "ai")
+MOBILE_STATES = ("all", "peers")
 
 FIXTURE_SCRIPT = r"""
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.when').textContent = '2026.08.03 (월) · 발행 07:00 · 생성 2026-08-03 07:00 KST';
-  document.querySelectorAll('.subbar').forEach((bar, i) => {
-    const labels = i === 0 ? ['전체'] : ['전체', '기준 A', '기준 B'];
-    bar.innerHTML = labels.map((label, j) => `<button class="sub${j > 1 ? ' sub2' : ''}${j === 0 ? ' active' : ''}" data-filter="fixture-${i}-${j}">${label}${j ? ' <b>4</b>' : ''}</button>`).join('');
-  });
   const cards = [...document.querySelectorAll('.nitem')];
   cards.slice(6).forEach(card => card.remove());
   document.querySelectorAll('.lead, .nitem').forEach((card, i) => {
@@ -60,9 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.memo-hz .src').textContent = '검증 공개 데이터 · 2026-08-03 관측';
   const safety = document.querySelector('.memo-hz .art');
   if (safety) safety.innerHTML = '<a href="https://publisher.example/fixture">검증된 안전·지정학 기사 제목</a><small>검증 발행사 · 08-03 07:00</small>';
-  document.querySelectorAll('.lead, .nitem').forEach(card => card.classList.remove('hide'));
-  document.querySelectorAll('.cat').forEach((cat, i) => cat.classList.toggle('active', i === 0));
-  document.querySelectorAll('.subbar').forEach((bar, i) => bar.classList.toggle('show', i === 0));
+  const allTokens = 'all biz peers hdec safety global ai magazine lens:plant lens:civil_infrastructure lens:building_housing lens:developers lens:development_business lens:competitor_contractors sub:4e7d40c0 sub:fd3376dd sub:e8a249a3 lens:hyundai_group sub:d914e406 lens:domestic_site lens:safety_quality lens:global_business lens:ai lens:new_energy';
+  document.querySelectorAll('.lead, .nitem').forEach(card => { card.dataset.t = allTokens; card.classList.remove('hide'); });
+  const target = [...document.querySelectorAll('.cat')].find(cat => cat.dataset.cat === '__CATEGORY__');
+  if (target) target.click();
   window.scrollTo(0, 0);
 });
 </script>
@@ -79,7 +78,7 @@ def chrome_path() -> Path:
     raise RuntimeError("deterministic Chromium binary not found")
 
 
-def fixture_html(html: str) -> str:
+def fixture_html(html: str, category: str) -> str:
     html = re.sub(
         r'<link\s+[^>]*href="https://cdn\.jsdelivr\.net[^>]*>\s*',
         "",
@@ -88,7 +87,8 @@ def fixture_html(html: str) -> str:
     )
     if "</body>" not in html:
         raise RuntimeError("dashboard closing body missing")
-    return html.replace("</body>", f"{FIXTURE_SCRIPT}</body>", 1)
+    script = FIXTURE_SCRIPT.replace("__CATEGORY__", category)
+    return html.replace("</body>", f"{script}</body>", 1)
 
 
 def capture(chrome: Path, source: Path, output: Path, width: int, height: int) -> None:
@@ -150,28 +150,42 @@ def main() -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     chrome = chrome_path()
-    report = {"contract": "D7_AK_6E_R4_R5_NEWS_CENSOR_VISUAL_PARITY_V1", "viewports": {}}
+    report = {
+        "contract": "D7_AK_6E_R4_R5_NEWS_CENSOR_VISUAL_PARITY_V2",
+        "states": {},
+    }
     with tempfile.TemporaryDirectory(prefix="hdec-news-censor-visual-") as temporary:
         stage = Path(temporary)
         reference_fixture = stage / "reference.html"
         candidate_fixture = stage / "candidate.html"
-        reference_fixture.write_text(fixture_html(reference.decode("utf-8")), encoding="utf-8")
-        candidate_fixture.write_text(fixture_html(candidate), encoding="utf-8")
-        for name, (width, height) in VIEWPORTS.items():
-            ref_png = args.output_dir / f"reference-{name}.png"
-            candidate_png = args.output_dir / f"candidate-{name}.png"
-            diff_png = args.output_dir / f"difference-{name}.png"
-            capture(chrome, reference_fixture, ref_png, width, height)
-            capture(chrome, candidate_fixture, candidate_png, width, height)
-            metrics = compare(ref_png, candidate_png, diff_png)
-            metrics.update({
-                "reference": str(ref_png),
-                "candidate": str(candidate_png),
-                "difference": str(diff_png),
-            })
-            report["viewports"][name] = metrics
+        state_sets = {"desktop": DESKTOP_STATES, "mobile": MOBILE_STATES}
+        for viewport, categories in state_sets.items():
+            width, height = VIEWPORTS[viewport]
+            for category in categories:
+                reference_fixture.write_text(
+                    fixture_html(reference.decode("utf-8"), category),
+                    encoding="utf-8",
+                )
+                candidate_fixture.write_text(
+                    fixture_html(candidate, category),
+                    encoding="utf-8",
+                )
+                name = f"{viewport}-{category}"
+                ref_png = args.output_dir / f"reference-{name}.png"
+                candidate_png = args.output_dir / f"candidate-{name}.png"
+                diff_png = args.output_dir / f"difference-{name}.png"
+                capture(chrome, reference_fixture, ref_png, width, height)
+                capture(chrome, candidate_fixture, candidate_png, width, height)
+                metrics = compare(ref_png, candidate_png, diff_png)
+                metrics.update({
+                    "reference": str(ref_png),
+                    "candidate": str(candidate_png),
+                    "difference": str(diff_png),
+                })
+                report["states"][name] = metrics
     report["meaningful_structural_difference"] = any(
-        item["different_pixel_ratio"] > 0.001 for item in report["viewports"].values()
+        item["different_pixel_ratio"] > 0.001
+        for item in report["states"].values()
     )
     report["status"] = "PASS" if not report["meaningful_structural_difference"] else "FAIL"
     report_path = args.output_dir / "visual-parity.json"

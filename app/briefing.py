@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from app import (
     ai_value_chain, article_quality, config, db, deal_watch, decision_relevance,
     global_press, insight, macro_snapshot, market_snapshot, news_coverage,
-    publisher_direct, radar, risk_events, scoring, source_priority,
+    publisher_direct, radar, radar_signals, risk_events, scoring, source_priority,
     source_quality, surface_contracts, topic_profiles,
 )
 
@@ -1202,6 +1202,7 @@ def _news_censor_display_entry(
     implication: str,
     radar_section: str,
     decision: dict,
+    shadow_evaluation: dict,
 ) -> dict:
     """Minimal publisher-verified row for the broader News Censor display pool.
 
@@ -1256,6 +1257,15 @@ def _news_censor_display_entry(
     ):
         categories.update(news_coverage.surface_categories_for_group(group))
     relevance = publisher_direct.executive_relevance(row)
+    shadow_status = str(
+        shadow_evaluation.get("shadow_urgency_status") or "unavailable"
+    )
+    shadow_confirmed_event_types = shadow_evaluation.get(
+        "shadow_confirmed_event_types"
+    )
+    if not isinstance(shadow_confirmed_event_types, list):
+        shadow_confirmed_event_types = []
+        shadow_status = "unavailable"
     return {
         "display_article_contract": "HDEC_NEWS_CENSOR_DISPLAY_ARTICLE_V1",
         "article_id": row["id"],
@@ -1289,6 +1299,10 @@ def _news_censor_display_entry(
             "건설산업 일반",
         ),
         "why_it_matters": implication,
+        # Teams consumes the validated Brief directly.  Keep the canonical
+        # editorial names and serialize its legacy aliases from the same
+        # deterministic values so neither consumer has to guess at absence.
+        "whyImportant": implication,
         "radar_section": radar_section,
         "executive_section": decision.get("primary_executive_section"),
         "secondary_sections": list(
@@ -1296,6 +1310,11 @@ def _news_censor_display_entry(
         ),
         "secondary_labels": list(decision.get("secondary_labels") or []),
         "decision_relevance_tier": decision.get("decision_relevance_tier"),
+        "hdec_relevance_tier": decision.get("decision_relevance_tier"),
+        # Pure, previously computed hourly urgency evidence.  The serializer
+        # performs no I/O and never promotes missing evidence to ``none``.
+        "shadow_urgency_status": shadow_status,
+        "shadow_confirmed_event_types": list(shadow_confirmed_event_types),
         "display_policy": "publisher_direct_coverage",
         "discovery_run_status": str(
             metadata.get("discovery_run_status") or "current_verified"
@@ -2371,6 +2390,18 @@ def build_brief(pipeline_counts: dict | None = None,
     # low-importance/excluded-score rows, and let its own freshness/diversity
     # selector choose visible articles.  Teams continues to read its live-delta
     # artifact and apply AI relevance + importance independently.
+    shadow_evaluations = {
+        row["id"]: radar_signals.evaluate_hourly_urgency_shadow(
+            row,
+            change_type=str(row.get("change_type") or ""),
+            change_reasons=(
+                row.get("change_reasons")
+                if isinstance(row.get("change_reasons"), (list, tuple))
+                else ()
+            ),
+        )
+        for row in scored
+    }
     news_censor_display_articles = [
         _news_censor_display_entry(
             row,
@@ -2378,6 +2409,7 @@ def build_brief(pipeline_counts: dict | None = None,
             display_reasons[row["id"]],
             radar_sections[row["id"]],
             decisions[row["id"]],
+            shadow_evaluations[row["id"]],
         )
         for row in sorted(
             scored,

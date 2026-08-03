@@ -116,7 +116,7 @@ def main() -> int:
     assert _sendable(blocked).reason == "shadow_blocked"
     assert not _sendable(blocked).sendable
 
-    # 5. unavailable → fail-closed 미발송. 상태 필드가 아예 없는 malformed 도 unavailable 로 닫힌다.
+    # 5. unavailable → fail-closed 미발송. 누락은 별도 schema 오류로 닫힌다.
     unavailable = article(
         article_key="a-5", shadow_urgency_status="unavailable", shadow_would_pass=False,
         shadow_confirmed_event_types=[],
@@ -124,7 +124,7 @@ def main() -> int:
     assert _sendable(unavailable).reason == "shadow_unavailable"
     malformed = article(article_key="a-5b")
     del malformed["shadow_urgency_status"]
-    assert _sendable(malformed).reason == "shadow_unavailable"
+    assert _sendable(malformed).reason == "malformed_required_field"
 
     # 6. 전망뿐인 기사 → 확정 행위가 없으므로 classify 단계에서 제외.
     forecast = article(

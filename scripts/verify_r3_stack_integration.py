@@ -126,6 +126,11 @@ SUBVERIFIERS = (
         r"RESULT=D7-AK-6A_TEAMS_AI_PUSH_PRODUCTION_VERIFIER_PASS",
     ),
     (
+        "TEAMS_VALIDATED_BRIEF_EQUIVALENCE_VERIFIER",
+        "verify_teams_validated_brief_semantic_equivalence.py",
+        r"RESULT=D7-AK-6E_TEAMS_VALIDATED_BRIEF_SEMANTIC_EQUIVALENCE_PASS",
+    ),
+    (
         "SCHEDULED_REFRESH_VERIFIER",
         "verify_scheduled_refresh_and_telegram.py",
         r"RESULT: PASS",

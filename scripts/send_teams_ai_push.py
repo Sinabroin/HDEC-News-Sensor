@@ -61,6 +61,7 @@ for _path in (REPO_ROOT, SCRIPTS_DIR):
 
 from app.teams_ai_push import (  # noqa: E402
     MAX_TEAMS_ARTICLES,
+    evaluate_teams_push_policy,
     render_article_email,
     select_teams_push_from_artifact,
 )
@@ -90,6 +91,21 @@ TEAMS_CHANNEL_ENV = "TEAMS_CHANNEL_EMAIL"
 DEFAULT_MODE = "dry_run"
 SEND_MODE = "send"
 APPROVAL_TRUE = {"1", "true", "yes", "approved"}
+REJECTION_COUNTER_KEYS = (
+    "not_ai_core",
+    "insufficient_hdec_relevance",
+    "insufficient_importance",
+    "freshness_failed",
+    "carry_forward_excluded",
+    "source_authority_failed",
+    "shadow_unavailable",
+    "no_confirmed_event",
+    "speculation_only",
+    "already_sent",
+    "exact_duplicate",
+    "malformed_required_field",
+    "other_policy_reason",
+)
 
 
 class FailClosed(RuntimeError):
@@ -276,10 +292,11 @@ def deliver(
         if payload.get("source") == "live-delta"
         else payload.get("news_censor_display_articles")
     ) or []
+    article_rows = [row for row in raw_articles if isinstance(row, Mapping)]
+    invalid_row_count = len(raw_articles) - len(article_rows)
     current_rows = [
-        row for row in raw_articles
-        if isinstance(row, Mapping)
-        and row.get("carried_forward") is not True
+        row for row in article_rows
+        if row.get("carried_forward") is not True
         and row.get("teams_newness_eligible") is not False
         and row.get("current_run_seen") is not False
     ]
@@ -290,6 +307,28 @@ def deliver(
             row, relevance_qualified=True
         ).eligible
     ]
+    validated_brief = payload.get("source") != "live-delta"
+    policy_evaluations = [
+        evaluate_teams_push_policy(
+            row,
+            require_validated_fields=validated_brief,
+        )
+        for row in article_rows
+    ]
+    verified_object_ids = {id(row) for row in verified_rows}
+    verified_evaluations = [
+        evaluation
+        for row, evaluation in zip(article_rows, policy_evaluations)
+        if id(row) in verified_object_ids
+    ]
+    ai_core = sum(evaluation.topic.eligible for evaluation in verified_evaluations)
+    hdec_relevant = sum(
+        evaluation.topic.eligible and evaluation.hdec_relevant
+        for evaluation in verified_evaluations
+    )
+    importance_qualified = sum(
+        evaluation.importance.sendable for evaluation in verified_evaluations
+    )
     # Eligibility is intentionally uncapped. The dedicated sent ledger filters first;
     # only then does the one-per-run rollout cap choose work for this run.
     candidates = select_teams_push_from_artifact(payload, max_articles=None)
@@ -307,6 +346,29 @@ def deliver(
 
     records: list[dict[str, Any]] = []
     blocked = sum(not decision.send_allowed for decision in baseline)
+    rejection_breakdown = {key: 0 for key in REJECTION_COUNTER_KEYS}
+    rejection_breakdown["malformed_required_field"] += invalid_row_count
+    for evaluation in policy_evaluations:
+        if not evaluation.eligible:
+            reason = evaluation.rejection_reason
+            if reason not in rejection_breakdown:
+                reason = "other_policy_reason"
+            rejection_breakdown[reason] += 1
+    for decision in baseline:
+        if decision.send_allowed:
+            continue
+        if decision.reason in {
+            "duplicate:article_id",
+            "duplicate:normalized_url",
+            "duplicate:title_fingerprint",
+        }:
+            rejection_breakdown["exact_duplicate"] += 1
+        else:
+            rejection_breakdown["already_sent"] += 1
+    rejected_rows = sum(rejection_breakdown.values())
+    rejection_reconciled = (
+        rejected_rows + len(accepted) == len(raw_articles)
+    )
     attempted = delivered = failed = state_committed = 0
     state_changed = False
 
@@ -391,6 +453,9 @@ def deliver(
         "mode": "send" if should_send else "dry_run_no_send",
         "current_candidates": len(current_rows),
         "verified_candidates": len(verified_rows),
+        "AI_core": ai_core,
+        "HDEC_relevant": hdec_relevant,
+        "importance_qualified": importance_qualified,
         "alert_policy_eligible": len(candidates),
         "already_sent": blocked,
         "currently_claimed": 0,
@@ -404,6 +469,10 @@ def deliver(
             "deferred_due_to_cap": len(deferred),
             "policy_ineligible": max(0, len(verified_rows) - len(candidates)),
         },
+        "rejection_breakdown": rejection_breakdown,
+        "rejected_rows": rejected_rows,
+        "rejection_input_count": len(raw_articles),
+        "rejection_reconciled": rejection_reconciled,
         "candidate_count": len(candidates),
         "dedup_blocked_count": blocked,
         "attempted_count": attempted,
@@ -421,6 +490,9 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         f"state_changed={'true' if summary.get('state_changed') else 'false'}",
         f"current_candidates={int(summary.get('current_candidates') or 0)}",
         f"verified_candidates={int(summary.get('verified_candidates') or 0)}",
+        f"ai_core={int(summary.get('AI_core') or 0)}",
+        f"hdec_relevant={int(summary.get('HDEC_relevant') or 0)}",
+        f"importance_qualified={int(summary.get('importance_qualified') or 0)}",
         f"alert_policy_eligible={int(summary.get('alert_policy_eligible') or 0)}",
         f"already_sent={int(summary.get('already_sent') or 0)}",
         f"currently_claimed={int(summary.get('currently_claimed') or 0)}",
@@ -434,6 +506,15 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         f"teams_attempted_count={int(summary.get('attempted_count') or 0)}",
         f"teams_delivered_count={int(summary.get('delivered_count') or 0)}",
         f"teams_failed_count={int(summary.get('failed_count') or 0)}",
+        f"rejected_rows={int(summary.get('rejected_rows') or 0)}",
+        f"rejection_input_count={int(summary.get('rejection_input_count') or 0)}",
+        f"rejection_reconciled={'true' if summary.get('rejection_reconciled') else 'false'}",
+        "rejection_breakdown="
+        + json.dumps(
+            summary.get("rejection_breakdown") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
     )
     try:
         with Path(path).open("a", encoding="utf-8") as handle:
@@ -454,6 +535,9 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
         f"mode={summary['mode']} "
         f"current_candidates={summary['current_candidates']} "
         f"verified_candidates={summary['verified_candidates']} "
+        f"AI_core={summary['AI_core']} "
+        f"HDEC_relevant={summary['HDEC_relevant']} "
+        f"importance_qualified={summary['importance_qualified']} "
         f"alert_policy_eligible={summary['alert_policy_eligible']} "
         f"already_sent={summary['already_sent']} "
         f"currently_claimed={summary['currently_claimed']} "
@@ -464,6 +548,10 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
         f"state_committed={summary['state_committed']} "
         f"failed={summary['failed_count']} "
         f"skip_reasons={json.dumps(summary['skip_reasons'], sort_keys=True, separators=(',', ':'))} "
+        f"rejection_breakdown={json.dumps(summary['rejection_breakdown'], sort_keys=True, separators=(',', ':'))} "
+        f"rejected_rows={summary['rejected_rows']} "
+        f"rejection_input_count={summary['rejection_input_count']} "
+        f"rejection_reconciled={'true' if summary['rejection_reconciled'] else 'false'} "
         f"state_changed={'true' if summary['state_changed'] else 'false'}"
     )
 
