@@ -22,6 +22,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from app.teams_ai_push import (
+    DEFAULT_TEAMS_BATCH_MAX,
+    HARD_TEAMS_BATCH_MAX,
     IMPORTANCE_IMPORTANT,
     IMPORTANCE_TOP,
     MAX_TEAMS_ARTICLES,
@@ -33,6 +35,7 @@ from app.teams_ai_push import (
     map_importance,
     render_article_email,
     select_teams_push_candidates,
+    select_teams_push_candidates_with_audit,
     select_teams_push_from_artifact,
 )
 from app.news_access import (
@@ -73,6 +76,9 @@ def _sendable(art):
 
 def main() -> int:
     assert MAX_TEAMS_ARTICLES == 10, MAX_TEAMS_ARTICLES
+    # R4-R6 §8: production batch constants are named and equal to five.
+    assert DEFAULT_TEAMS_BATCH_MAX == 5, DEFAULT_TEAMS_BATCH_MAX
+    assert HARD_TEAMS_BATCH_MAX == 5, HARD_TEAMS_BATCH_MAX
 
     # 1. confirmed + INSTANT score → 최우선(TOP), 발송.
     positive = article()
@@ -602,7 +608,7 @@ def main() -> int:
     # 19. mock/fallback 아티팩트 → 0 (라이브 소스 가드는 유지).
     assert select_teams_push_from_artifact({**live_payload, "source": "mock-delta"}) == ()
 
-    # ranking: 최우선 먼저, 동일 등급이면 현대건설 직접 영향 → score → 최신성.
+    # ranking(R4-R6 §7 distinct events): 중요도 → 잠금 10개 핵심 언론사 → 현대건설 직접 영향 → score → 최신성.
     candidates = select_teams_push_candidates([
         none_launch,
         article(article_key="a-hdec", title="현대건설, AI 데이터센터 EPC 계약 체결", score=4.8),
@@ -615,8 +621,95 @@ def main() -> int:
     assert candidates[0].importance.level == IMPORTANCE_TOP
     assert candidates[0].importance.hdec_direct is True  # 현대건설 직접 영향이 최우선 내 최상단
 
+    primary_sources = (
+        ("연합뉴스", "yna.co.kr"),
+        ("MBC", "imbc.com"),
+        ("KBS", "kbs.co.kr"),
+        ("조선일보", "chosun.com"),
+        ("YTN", "ytn.co.kr"),
+        ("JTBC", "jtbc.co.kr"),
+        ("중앙일보", "joongang.co.kr"),
+        ("매일경제", "mk.co.kr"),
+        ("한국경제", "hankyung.com"),
+        ("SBS", "sbs.co.kr"),
+    )
+    publisher_rank_fixture = [
+        article(
+            article_key=f"primary-{index}",
+            source=source,
+            url=f"https://{domain}/news/teams-priority-{index}",
+            title=f"{source}, AI 데이터센터 전력 인프라 투자 계약 확정",
+            score=3.8,
+            shadow_urgency_status="none",
+            shadow_confirmed_event_types=[],
+        )
+        for index, (source, domain) in enumerate(primary_sources, start=1)
+    ]
+    publisher_rank_fixture.append(article(
+        article_key="non-primary-same-importance",
+        source="기타 검증 언론사",
+        url="https://other-verified.example.test/news/teams-priority",
+        title="기타 언론사, AI 데이터센터 전력 인프라 투자 계약 확정",
+        score=3.8,
+        shadow_urgency_status="none",
+        shadow_confirmed_event_types=[],
+        published_at="2026-07-23T02:20:00+00:00",
+    ))
+    publisher_ranked = select_teams_push_candidates(
+        publisher_rank_fixture,
+        max_articles=None,
+    )
+    # 동일 중요도(중요) 안에서는 잠금 10개 언론사가 설정 순서대로 먼저 온다.
+    assert [item.article["source"] for item in publisher_ranked[:10]] == [
+        source for source, _domain in primary_sources
+    ]
+    assert publisher_ranked[-1].article["source"] == "기타 검증 언론사"
+
+    # 서로 다른 이벤트라면 비핵심 언론사의 최우선(TOP) 기사가
+    # 핵심 언론사의 중요(IMPORTANT) 기사보다 먼저 온다 (§7 distinct events).
+    top_vs_important = publisher_rank_fixture + [article(
+        article_key="non-primary-top-event",
+        source="기타 검증 언론사",
+        url="https://other-verified.example.test/news/top-event",
+        title="글로벌 AI 데이터센터 신규 착공, 조단위 전력 인프라 확정",
+        score=5.0,
+    )]
+    top_ranked = select_teams_push_candidates(top_vs_important, max_articles=None)
+    assert top_ranked[0].article["article_key"] == "non-primary-top-event"
+    assert top_ranked[0].importance.level == IMPORTANCE_TOP
+    assert [item.article["source"] for item in top_ranked[1:11]] == [
+        source for source, _domain in primary_sources
+    ]
+
+    # 동일 이벤트(같은 제목 지문)는 핵심 10개 언론사 버전이 대표로 남는다 (§7 same event).
+    same_event = [
+        article(
+            article_key="same-event-other-top",
+            source="기타 검증 언론사",
+            url="https://other-verified.example.test/news/same-event",
+            title="AI 데이터센터 전력 인프라 투자 계약 확정",
+            score=5.0,
+        ),
+        article(
+            article_key="same-event-yonhap",
+            source="연합뉴스",
+            url="https://yna.co.kr/news/same-event",
+            title="AI 데이터센터 전력 인프라 투자 계약 확정",
+            score=3.8,
+            shadow_urgency_status="none",
+            shadow_confirmed_event_types=[],
+        ),
+    ]
+    representatives, event_audit = select_teams_push_candidates_with_audit(
+        same_event, max_articles=None
+    )
+    assert event_audit["policy_eligible"] == 2
+    assert event_audit["event_duplicates"] == 1
+    assert len(representatives) == 1
+    assert representatives[0].article["source"] == "연합뉴스"
+
     # 12. Core policy may expose a bounded ranked batch; the production sender
-    # applies its immutable one-per-run cap only after accepted-ledger filtering.
+    # applies its 0-5 per-run batch cap only after accepted-ledger filtering.
     twelve = [
         article(article_key=f"m-{i}", url=f"https://publisher.example.test/m/{i}",
                 title=f"OpenAI, AI 데이터센터 투자 계약 체결 {i}", score=4.6)

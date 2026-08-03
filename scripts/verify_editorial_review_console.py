@@ -1212,6 +1212,7 @@ def main() -> int:
                     "origin": "ai_collected",
                     "title": "사용자가 고친 제목",
                     "summary_html": "<strong>볼드 핵심</strong> 설명",
+                    "implication_html": "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요",
                     "category": "투자·산업",
                 },
                 {
@@ -1244,6 +1245,30 @@ def main() -> int:
             "<strong>볼드 핵심</strong> 설명",
         )
         v.equal(
+            "editor implication override preserved (R4-R6 §12)",
+            selected[0].implication_html,
+            "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요",
+        )
+        decision_review, decision = editorial_review.load_review_decision(
+            review_path, "2026-07-31"
+        )
+        v.equal("review decision approved (R4-R6 §12)", decision, "approved")
+        v.check("decision returns the review", decision_review is not None)
+        _absent, absent_decision = editorial_review.load_review_decision(
+            tmp_path / "missing-review.json", "2026-07-31"
+        )
+        v.equal("review decision absent (R4-R6 §12)", absent_decision, "absent")
+        malformed_path = tmp_path / "malformed-review.json"
+        malformed_path.write_text("{not json", encoding="utf-8")
+        malformed_review, malformed_decision = editorial_review.load_review_decision(
+            malformed_path, "2026-07-31"
+        )
+        v.equal("review decision malformed (R4-R6 §12)", malformed_decision, "malformed")
+        v.check(
+            "malformed review fails closed with no partial application",
+            malformed_review is None,
+        )
+        v.equal(
             "manual link selected",
             selected[1].selected_url,
             "https://example.org/manual-ai-investment",
@@ -1257,6 +1282,10 @@ def main() -> int:
             root_url="https://preview.fixture.test/HDEC-News-Sensor",
         )
         v.check("rendered HTML contains bold", "<strong>볼드 핵심</strong>" in edition.html)
+        v.check(
+            "rendered HTML carries the editor implication (R4-R6 §12)",
+            "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요" in edition.html,
+        )
         v.check("rendered HTML contains manual link", "manual-ai-investment" in edition.html)
         v.check(
             "rendered HTML contains category ticker",

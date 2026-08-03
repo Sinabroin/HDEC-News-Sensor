@@ -493,6 +493,25 @@ def run_live_preview(
     return manifest
 
 
+def _skip_insufficient_quality(
+    edition_type: str, key: str, review_decision: str
+) -> None:
+    """§12 — zero qualified articles publish nothing, machine-readably.
+
+    Weak-content rejection can honestly empty an edition; that outcome is an
+    explicit publication mode, never silent filler."""
+    _github_output("skipped", "true")
+    _github_output("edition", key)
+    _github_output("delivery_authorized", "false")
+    _github_output("review_mode", "insufficient_quality")
+    _github_output("review_decision", review_decision)
+    print(
+        f"publish_skip edition_type={edition_type} edition={key} "
+        "reason=insufficient_quality"
+    )
+    return None
+
+
 def run_publish(
     edition_type: str,
     *,
@@ -531,12 +550,18 @@ def run_publish(
         return None
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     review_mode = "not_applicable"
+    review_decision = "not_applicable"
     if edition_type == "daily":
         bundle_path = ROOT / "docs" / "editorial" / "review" / key / "candidates.json"
         review_path = ROOT / "data" / "editorial_reviews" / f"{key}.json"
         try:
             bundle = editorial_review.load_bundle(bundle_path, key)
-            review = editorial_review.load_review(review_path, key)
+            # §12 — the review decision (approved/absent/malformed) is traced
+            # machine-readably; a malformed review fails closed to the AI order
+            # with no partial application and never claims human approval.
+            review, review_decision = editorial_review.load_review_decision(
+                review_path, key
+            )
             selected_articles, review_mode = editorial_review.choose_daily_articles(
                 bundle,
                 review,
@@ -549,16 +574,23 @@ def run_publish(
             )
         except editorial_review.EditorialReviewError:
             review_mode = "live_collection_fallback"
-            edition = editorial_briefings.render_edition(
-                edition_type,
-                collect(),
-                run_at=run_at,
-                root_url=root_url,
-                allow_image_network=True,
-                selection_mode=(
-                    editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
-                ),
-            )
+            try:
+                edition = editorial_briefings.render_edition(
+                    edition_type,
+                    collect(),
+                    run_at=run_at,
+                    root_url=root_url,
+                    allow_image_network=True,
+                    selection_mode=(
+                        editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+                    ),
+                )
+            except editorial_briefings.EditorialError as exc:
+                if str(exc) != "empty edition":
+                    raise
+                return _skip_insufficient_quality(
+                    edition_type, key, review_decision
+                )
     else:
         raw_articles = collect()
         verified_added = 0
@@ -571,17 +603,25 @@ def run_publish(
             f"weekly_verified_carry_forward_added={verified_added} "
             "teams_newness_eligible=0 state_writes=0"
         )
-        edition = editorial_briefings.render_edition(
-            edition_type,
-            raw_articles,
-            run_at=run_at,
-            root_url=root_url,
-            allow_image_network=False,
-            selection_mode=(
-                editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
-            ),
-        )
+        try:
+            edition = editorial_briefings.render_edition(
+                edition_type,
+                raw_articles,
+                run_at=run_at,
+                root_url=root_url,
+                allow_image_network=False,
+                selection_mode=(
+                    editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+                ),
+            )
+        except editorial_briefings.EditorialError as exc:
+            if str(exc) != "empty edition":
+                raise
+            return _skip_insufficient_quality(edition_type, key, review_decision)
     print(f"editorial_review_mode={review_mode}")
+    print(f"editorial_review_decision={review_decision}")
+    _github_output("review_mode", review_mode)
+    _github_output("review_decision", review_decision)
     editorial_briefings.validate_rendered(edition)
     dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
     payload = edition.html.encode("utf-8")

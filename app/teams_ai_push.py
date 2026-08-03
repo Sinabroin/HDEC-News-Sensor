@@ -18,13 +18,19 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
-from app import publisher_direct
+from app import publisher_direct, source_priority
 from app.public_urls import CANONICAL_DASHBOARD_URL
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
 KST = timezone(timedelta(hours=9))
 # D7-AK-6C: up to ten important/top-priority AI articles per run (was three).
 MAX_TEAMS_ARTICLES = 10
+# D7-AK-6E R4-R6: the production sender delivers 0-5 articles per natural run.
+# DEFAULT applies when no cap is configured; HARD is the ceiling any
+# configuration clamps to. Never invent filler to reach a minimum — "minimum
+# one" applies only when at least one qualified unsent article exists.
+DEFAULT_TEAMS_BATCH_MAX = 5
+HARD_TEAMS_BATCH_MAX = 5
 
 IMPORTANCE_TOP = "top"
 IMPORTANCE_IMPORTANT = "important"
@@ -1359,12 +1365,12 @@ def _published_sort_value(article: object) -> float:
     return dt.timestamp()
 
 
-def select_teams_push_from_artifact(
+def select_teams_push_from_artifact_with_audit(
     payload: object,
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
-) -> tuple[TeamsPushCandidate, ...]:
-    """Fail-closed entrypoint for a raw delta artifact.
+) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int]]:
+    """Fail-closed entrypoint for a raw delta artifact, with selection audit.
 
     D7-AK-6C — the artifact-level ``shadow_alert_delta`` flag is no longer required: a
     live-delta artifact can produce candidates even when no article is shadow-confirmed,
@@ -1372,8 +1378,9 @@ def select_teams_push_from_artifact(
     article (see :func:`map_importance`). Only the live-source guard remains, so
     mock/fallback artifacts and malformed article collections always return zero.
     """
+    empty_audit = {"policy_eligible": 0, "event_duplicates": 0, "distinct_events": 0}
     if not isinstance(payload, Mapping):
-        return ()
+        return (), empty_audit
     validated_brief = False
     if _clean(payload.get("source")) == "live-delta":
         articles = payload.get("articles")
@@ -1387,27 +1394,105 @@ def select_teams_push_from_artifact(
         articles = payload.get("news_censor_display_articles")
         validated_brief = True
     else:
-        return ()
+        return (), empty_audit
     if not isinstance(articles, list):
-        return ()
-    return select_teams_push_candidates(
+        return (), empty_audit
+    return select_teams_push_candidates_with_audit(
         articles,
         max_articles=max_articles,
         require_validated_fields=validated_brief,
     )
 
 
-def select_teams_push_candidates(
+def select_teams_push_from_artifact(
+    payload: object,
+    *,
+    max_articles: int | None = MAX_TEAMS_ARTICLES,
+) -> tuple[TeamsPushCandidate, ...]:
+    """Compatibility wrapper over :func:`select_teams_push_from_artifact_with_audit`."""
+    selected, _audit = select_teams_push_from_artifact_with_audit(
+        payload,
+        max_articles=max_articles,
+    )
+    return selected
+
+
+def publisher_delivery_priority(article: object) -> tuple[int, int]:
+    """Canonical delivery-priority sort key: (tier rank, locked publisher rank).
+
+    Tier order is the shared contract in :mod:`app.source_priority` —
+    primary_10 → secondary_3 → official_institution → specialist →
+    trusted_other → neutral → low → excluded."""
+    tier = source_priority.publisher_delivery_tier(
+        _clean(_value(article, "source") or _value(article, "display_source")),
+        publisher_direct.publisher_url(article),
+    )
+    return int(tier["tier_rank"]), int(tier["publisher_rank"])
+
+
+def _distinct_event_rank_key(item: "TeamsPushCandidate") -> tuple:
+    """Distinct-event ranking: importance tier first, then publisher priority,
+    then 현대건설 direct impact, score, and recency (§7)."""
+    return (
+        IMPORTANCE_RANK.get(item.importance.level, 9),
+        *publisher_delivery_priority(item.article),
+        -int(item.importance.hdec_direct),
+        -(item.importance.score if item.importance.score is not None else -1.0),
+        -_published_sort_value(item.article),
+    )
+
+
+def _event_representative_key(item: "TeamsPushCandidate") -> tuple:
+    """Same-event representative choice: locked publisher tier first (primary
+    ten, then secondary three, then official/specialist/trusted), then
+    importance, 현대건설 direct impact, score, and recency (§7)."""
+    return (
+        *publisher_delivery_priority(item.article),
+        IMPORTANCE_RANK.get(item.importance.level, 9),
+        -int(item.importance.hdec_direct),
+        -(item.importance.score if item.importance.score is not None else -1.0),
+        -_published_sort_value(item.article),
+    )
+
+
+def collapse_event_duplicates(
+    candidates: Sequence["TeamsPushCandidate"],
+) -> tuple[tuple["TeamsPushCandidate", ...], tuple["TeamsPushCandidate", ...]]:
+    """Keep one representative per event cluster; return (kept, dropped)."""
+    representatives: dict[str, TeamsPushCandidate] = {}
+    order: list[str] = []
+    dropped: list[TeamsPushCandidate] = []
+    for index, candidate in enumerate(candidates):
+        key = candidate.cluster_key or f"__solo__:{index}"
+        existing = representatives.get(key)
+        if existing is None:
+            representatives[key] = candidate
+            order.append(key)
+        elif _event_representative_key(candidate) < _event_representative_key(existing):
+            dropped.append(existing)
+            representatives[key] = candidate
+        else:
+            dropped.append(candidate)
+    return (
+        tuple(representatives[key] for key in order),
+        tuple(dropped),
+    )
+
+
+def select_teams_push_candidates_with_audit(
     articles: Iterable[Mapping[str, Any]],
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
     require_validated_fields: bool = False,
-) -> tuple[TeamsPushCandidate, ...]:
-    """Filter, rank, and cap important Teams AI push candidates (default: up to ten).
+) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int]]:
+    """Filter, collapse same-event duplicates, rank, and cap Teams candidates.
 
-    Ranking is highest-importance first, then 현대건설 직접 영향, then score, then recency —
-    so the cap keeps the most decision-relevant articles when more than ``max_articles``
-    qualify."""
+    Policy eligibility is unchanged. Same-event multi-publisher clusters keep
+    exactly one representative (locked primary ten first, secondary three next,
+    then official/specialist/trusted). Distinct events rank importance-first,
+    then publisher priority, 현대건설 direct impact, score, and recency. The
+    production sender applies its own 0-5 batch cap only after accepted-ledger
+    filtering, so lower-priority rows remain deferred, never lost."""
     from app.teams_push_state import derive_event_cluster_key, material_signature
 
     candidates: list[TeamsPushCandidate] = []
@@ -1433,17 +1518,34 @@ def select_teams_push_candidates(
             )
         )
 
-    candidates.sort(
-        key=lambda item: (
-            IMPORTANCE_RANK.get(item.importance.level, 9),
-            -int(item.importance.hdec_direct),
-            -(item.importance.score if item.importance.score is not None else -1.0),
-            -_published_sort_value(item.article),
-        )
-    )
+    representatives, event_duplicates = collapse_event_duplicates(candidates)
+    ranked = sorted(representatives, key=_distinct_event_rank_key)
+    audit = {
+        "policy_eligible": len(candidates),
+        "event_duplicates": len(event_duplicates),
+        "distinct_events": len(ranked),
+    }
     if max_articles is None:
-        return tuple(candidates)
-    return tuple(candidates[: max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))])
+        return tuple(ranked), audit
+    return (
+        tuple(ranked[: max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))]),
+        audit,
+    )
+
+
+def select_teams_push_candidates(
+    articles: Iterable[Mapping[str, Any]],
+    *,
+    max_articles: int | None = MAX_TEAMS_ARTICLES,
+    require_validated_fields: bool = False,
+) -> tuple[TeamsPushCandidate, ...]:
+    """Compatibility wrapper over :func:`select_teams_push_candidates_with_audit`."""
+    selected, _audit = select_teams_push_candidates_with_audit(
+        articles,
+        max_articles=max_articles,
+        require_validated_fields=require_validated_fields,
+    )
+    return selected
 
 
 def _fmt_kst(value: object) -> str:

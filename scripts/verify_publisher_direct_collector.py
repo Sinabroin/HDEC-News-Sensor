@@ -71,7 +71,9 @@ EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
         # ledger after proving its serializer/selector semantic equivalence.
-        "7d7a995a51abc78b154ad105db6d4fce87e074b793aec95a2281de12d6d0c25b"
+        # R4-R6 documents the 0-5 batch contract (cap Variable 1-5, clamp >5,
+        # conservative '1' env fallback until the operator sets 5).
+        "c056b17a8ceeb9f4a39a2f5f463bfa84dac003211a4f581f185819a01ac3a806"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"

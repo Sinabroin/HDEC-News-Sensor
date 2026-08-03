@@ -29,5 +29,30 @@
     "neutral": "일반 출처",
     "low": "낮은 신뢰도",
     "excluded": "제외 출처"
+  },
+  "publisher_delivery_policies": [
+    {"tier": "primary_10", "rank": 1, "name": "연합뉴스", "aliases": ["연합뉴스", "yonhap"], "domains": ["yna.co.kr"]},
+    {"tier": "primary_10", "rank": 2, "name": "MBC", "aliases": ["mbc"], "domains": ["imbc.com", "mbc.co.kr"]},
+    {"tier": "primary_10", "rank": 3, "name": "KBS", "aliases": ["kbs"], "domains": ["kbs.co.kr"]},
+    {"tier": "primary_10", "rank": 4, "name": "조선일보", "aliases": ["조선일보"], "domains": ["chosun.com"]},
+    {"tier": "primary_10", "rank": 5, "name": "YTN", "aliases": ["ytn"], "domains": ["ytn.co.kr"]},
+    {"tier": "primary_10", "rank": 6, "name": "JTBC", "aliases": ["jtbc"], "domains": ["jtbc.co.kr"]},
+    {"tier": "primary_10", "rank": 7, "name": "중앙일보", "aliases": ["중앙일보"], "domains": ["joongang.co.kr"]},
+    {"tier": "primary_10", "rank": 8, "name": "매일경제", "aliases": ["매일경제", "매경"], "domains": ["mk.co.kr"]},
+    {"tier": "primary_10", "rank": 9, "name": "한국경제", "aliases": ["한국경제", "한경"], "domains": ["hankyung.com"]},
+    {"tier": "primary_10", "rank": 10, "name": "SBS", "aliases": ["sbs"], "domains": ["sbs.co.kr"]},
+    {"tier": "secondary_3", "rank": 1, "name": "동아일보", "aliases": ["동아일보"], "domains": ["donga.com"]},
+    {"tier": "secondary_3", "rank": 2, "name": "한겨레", "aliases": ["한겨레"], "domains": ["hani.co.kr"]},
+    {"tier": "secondary_3", "rank": 3, "name": "경향신문", "aliases": ["경향신문"], "domains": ["khan.co.kr"]}
+  ],
+  "publisher_delivery_tier_labels": {
+    "primary_10": "핵심 10개 언론사",
+    "secondary_3": "보조 3개 언론사",
+    "official_institution": "공식·기관",
+    "specialist": "주요 전문지",
+    "trusted_other": "신뢰 출처",
+    "neutral": "일반 출처",
+    "low": "낮은 신뢰도",
+    "excluded": "제외 출처"
   }
 }

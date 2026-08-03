@@ -728,178 +728,232 @@ def check_delivery(tmp: Path) -> None:
           and len(rec.attempts) == 1, str(summary))
 
 
-def _legacy_check_cap_and_partial(tmp: Path) -> None:
-    # Fixture 12 — twelve qualifying candidates select down to the top ten.
-    cap_state = tmp / "cap-state.json"
-    summary, rec = _deliver(tmp, _payload(_cap_articles(12)), cap_state)
-    check("twelve candidates select at most ten (fixture 12)",
-          summary["candidate_count"] == 10, str(summary))
-    # Fixture 13 — each of the ten selected articles produces exactly one email (ten total).
-    check("ten selected articles produce exactly ten SMTP sends (fixture 13)",
-          summary["attempted_count"] == 10 and len(rec.attempts) == 10, str(summary))
-    check("one email per article, ten distinct messages",
-          len(rec.messages) == 10
-          and len({_parse_message(m["raw"])["subject"] for m in rec.messages}) == 10)
-    check("every send targets the Teams channel address only",
-          set(rec.attempts) == {FIXTURE_TEAMS_CHANNEL})
-    check("ten deliveries, zero failures",
-          summary["delivered_count"] == 10 and summary["failed_count"] == 0, str(summary))
-
-    canary_state = tmp / "canary-state.json"
-    canary_summary, canary_rec = _deliver(
-        tmp, _payload(_cap_articles(12)), canary_state, max_articles=1
-    )
-    check("manual canary cap selects and attempts at most one article",
-          canary_summary["candidate_count"] == 1
-          and canary_summary["attempted_count"] == 1
-          and canary_summary["delivered_count"] == 1
-          and len(canary_rec.attempts) == 1, str(canary_summary))
-    check("invalid, zero and negative rollout caps safely resolve to one",
-          sender._resolve_max_articles("invalid") == 1
-          and sender._resolve_max_articles("0") == 1
-          and sender._resolve_max_articles("-7") == 1)
-    check("empty rollout cap preserves the hard default and oversized values clamp to ten",
-          sender._resolve_max_articles("") == 10
-          and sender._resolve_max_articles("99") == 10)
-
-    # Fixture 17 — zero eligible candidates → zero SMTP connections and no state file.
-    zero_state = tmp / "zero-state.json"
-    blocked_only = _article(article_key="blocked-only", url="https://publisher.example.test/blocked",
-                            shadow_urgency_status="blocked", shadow_would_pass=False,
-                            shadow_confirmed_event_types=[])
-    summary0, rec0 = _deliver(tmp, _payload([blocked_only]), zero_state)
-    check("zero eligible candidates → zero SMTP connections (fixture 17)",
-          summary0["candidate_count"] == 0 and summary0["attempted_count"] == 0
-          and len(rec0.attempts) == 0 and not zero_state.exists(), str(summary0))
-
-    aggregator_state = tmp / "aggregator-only-state.json"
-    aggregator_article = _article(
-        article_key="aggregator-only",
-        url=GOOGLE_AGGREGATOR_URL,
-    )
-    aggregator_summary, aggregator_rec = _deliver(
-        tmp,
-        _payload([aggregator_article]),
-        aggregator_state,
-    )
-    check("aggregator-only important article is quarantined from delivery",
-          aggregator_summary["candidate_count"] == 0
-          and aggregator_summary["attempted_count"] == 0
-          and aggregator_summary["delivered_count"] == 0
-          and len(aggregator_rec.attempts) == 0
-          and not aggregator_state.exists(),
-          str(aggregator_summary))
-
-    # Fixtures 14 & 15 — ten articles, eight accepted (250) / two rejected (550): only the
-    # eight delivered persist; the two failed stay resendable on a later run.
-    ten = _cap_articles(10)
-    partial_state = tmp / "partial-state.json"
-    artifact = _write(tmp / "partial.json", _payload(ten))
-    gh_output = tmp / "partial-output.txt"
-    recorder = _SMTPRecorder((250,) * 8 + (550,) * 2)
-    rc, logs = _run_main_approved(
-        ["--artifact", str(artifact), "--state", str(partial_state),
-         "--github-output", str(gh_output)],
-        recorder,
-    )
-
-    check("partial failure exits non-zero", rc == 1, f"rc={rc}")
-    check("partial failure still attempts every one of ten articles",
-          len(recorder.attempts) == 10, str(len(recorder.attempts)))
-
-    # Which articles land on the two 550s depends on the importance ranking, so the
-    # expectation is derived from the run's own per-email outcomes. The contract under
-    # test is the mapping itself: persisted set == delivered set, exactly.
-    ref_to_key = {sender.article_ref(item): item["article_key"] for item in ten}
-    outcomes: dict[str, set[str]] = {"delivered": set(), "failed": set()}
-    for ref, outcome in re.findall(r"article=([0-9a-f]{12}) outcome=(delivered|failed)", logs):
-        outcomes[outcome].add(ref_to_key[ref])
-    persisted = json.loads(partial_state.read_text(encoding="utf-8"))
-    delivered_ids = set(persisted["article_ids"])
-
-    check("run reports eight delivered and two failed emails (fixture 14)",
-          len(outcomes["delivered"]) == 8 and len(outcomes["failed"]) == 2, str(outcomes))
-    check("only delivered articles are persisted (fixture 14)",
-          delivered_ids == outcomes["delivered"],
-          f"persisted={sorted(delivered_ids)} delivered={sorted(outcomes['delivered'])}")
-    check("failed articles stay resendable (fixture 15)",
-          not (delivered_ids & outcomes["failed"]), str(sorted(outcomes["failed"])))
-    output_text = gh_output.read_text(encoding="utf-8")
-    check("partial success still reports state_changed=true",
-          "state_changed=true" in output_text, output_text.strip())
-    check("no temporary state residue remains",
-          not [p for p in partial_state.parent.iterdir()
-               if p.name.startswith("tmp") and p.suffix not in {".json", ".txt"}])
-
-
 def check_cap_and_partial(tmp: Path) -> None:
-    """Prove validated-Brief queue semantics and accepted-only persistence."""
-    articles = _cap_articles(3)
-    payload = _validated_payload(articles)
-    queue_state = tmp / "queue-state.json"
+    """Prove 0-5 batch selection, event dedup, and accepted-only persistence.
 
-    first, first_transport = _deliver(tmp, payload, queue_state, max_articles=99)
-    check("max-one is immutable even when caller requests more",
-          first["alert_policy_eligible"] == 3
-          and first["selected"] == 1
-          and first["deferred_due_to_cap"] == 2
-          and first["SMTP_attempted"] == 1
-          and first["SMTP_accepted"] == 1
-          and len(first_transport.attempts) == 1, str(first))
-    check("validated-Brief policy-stage counters retain normalized rows",
-          first["verified_candidates"] == 3
-          and first["AI_core"] == 3
-          and first["HDEC_relevant"] == 3
-          and first["importance_qualified"] == 3,
-          str(first))
-    check("validated-Brief rejection counters expose the exact stable vocabulary",
-          tuple(first["rejection_breakdown"]) == sender.REJECTION_COUNTER_KEYS,
-          str(first["rejection_breakdown"]))
-    check("validated-Brief rejection counters reconcile to every input row",
-          first["rejection_reconciled"] is True
-          and first["rejected_rows"] + first["alert_policy_eligible"]
-          == first["rejection_input_count"] == 3,
-          str(first))
-    check("non-selected eligible articles are not marked sent",
-          len(load_state(queue_state)["article_ids"]) == 1, str(load_state(queue_state)))
+    D7-AK-6E R4-R6 §8-§10: zero eligible unsent send zero; one-to-five send all;
+    more than five send exactly five and defer the rest; misconfiguration never
+    widens the batch; only SMTP 250 becomes persistent sent state."""
+    # -- §8 exact selection matrix over eligible supply 0..5, 6, 12.
+    for supply, want_selected, want_deferred in (
+        (0, 0, 0), (1, 1, 0), (2, 2, 0), (3, 3, 0), (4, 4, 0), (5, 5, 0),
+        (6, 5, 1), (12, 5, 7),
+    ):
+        state = tmp / f"count-{supply}-state.json"
+        summary, transport = _deliver(
+            tmp, _validated_payload(_cap_articles(supply)), state, max_articles=5
+        )
+        check(f"{supply} eligible unsent select {want_selected} defer {want_deferred}",
+              summary["eligible_unsent_rows"] == supply
+              and summary["selected_rows"] == want_selected
+              and summary["deferred_rows"] == want_deferred
+              and summary["smtp_attempted_rows"] == want_selected
+              and summary["smtp_accepted_rows"] == want_selected
+              and summary["smtp_failed_rows"] == 0
+              and summary["state_committed_rows"] == want_selected
+              and len(transport.attempts) == want_selected
+              and summary["counters_reconciled"] is True,
+              str({k: summary[k] for k in (
+                  "raw_rows", "eligible_unsent_rows", "selected_rows",
+                  "deferred_rows", "smtp_attempted_rows", "counters_reconciled",
+              )}))
 
-    second, second_transport = _deliver(tmp, payload, queue_state, max_articles=99)
-    check("next run skips sent item and selects one deferred item",
-          second["already_sent"] == 1
-          and second["selected"] == 1
-          and second["deferred_due_to_cap"] == 1
-          and len(second_transport.attempts) == 1, str(second))
-    third, third_transport = _deliver(tmp, payload, queue_state, max_articles=99)
-    check("third run drains final deferred item without a flood",
-          third["already_sent"] == 2
-          and third["selected"] == 1
-          and third["deferred_due_to_cap"] == 0
-          and len(third_transport.attempts) == 1, str(third))
-    fourth, fourth_transport = _deliver(tmp, payload, queue_state, max_articles=99)
-    check("accepted state is at-most-once on later runs",
-          fourth["already_sent"] == 3
-          and fourth["selected"] == 0
-          and fourth["SMTP_attempted"] == 0
-          and not fourth_transport.attempts, str(fourth))
-
-    failed_state = tmp / "failed-queue-state.json"
-    failed, failed_transport = _deliver(
-        tmp, payload, failed_state, statuses=(550,), max_articles=99
+    three, _ = _deliver(
+        tmp, _validated_payload(_cap_articles(3)), tmp / "vocab-state.json",
+        max_articles=5,
     )
-    check("failed SMTP does not mark selected article sent",
-          failed["selected"] == 1
-          and failed["SMTP_attempted"] == 1
-          and failed["SMTP_accepted"] == 0
-          and failed["state_committed"] == 0
-          and not failed_state.exists()
-          and len(failed_transport.attempts) == 1, str(failed))
-    retried, retried_transport = _deliver(tmp, payload, failed_state, max_articles=99)
-    check("failed article remains eligible for bounded retry",
-          retried["selected"] == 1
-          and retried["SMTP_accepted"] == 1
-          and retried["state_committed"] == 1
+    check("validated-Brief policy-stage counters retain normalized rows",
+          three["verified_candidates"] == 3
+          and three["AI_core"] == 3
+          and three["HDEC_relevant"] == 3
+          and three["importance_qualified"] == 3,
+          str(three))
+    check("validated-Brief rejection counters expose the exact stable vocabulary",
+          tuple(three["rejection_breakdown"]) == sender.REJECTION_COUNTER_KEYS,
+          str(three["rejection_breakdown"]))
+    check("aggregate counters reconcile to every input row",
+          three["rejection_reconciled"] is True
+          and three["rejected_rows"] + three["eligible_unsent_rows"]
+          == three["rejection_input_count"] == 3,
+          str(three))
+
+    # -- deferred queue drains at-most-once across natural runs.
+    drain_state = tmp / "drain-state.json"
+    drain_payload = _validated_payload(_cap_articles(6))
+    first, first_transport = _deliver(tmp, drain_payload, drain_state, max_articles=5)
+    check("run one sends the full batch of five and defers one",
+          first["selected_rows"] == 5 and first["deferred_rows"] == 1
+          and len(first_transport.attempts) == 5, str(first))
+    check("non-selected eligible articles are not marked sent",
+          len(load_state(drain_state)["article_ids"]) == 5,
+          str(sorted(load_state(drain_state)["article_ids"])))
+    second, second_transport = _deliver(tmp, drain_payload, drain_state, max_articles=5)
+    check("run two skips the five sent items and drains the deferred one",
+          second["previously_sent_rows"] == 5
+          and second["selected_rows"] == 1
+          and second["deferred_rows"] == 0
+          and len(second_transport.attempts) == 1, str(second))
+    third_run, third_transport = _deliver(tmp, drain_payload, drain_state, max_articles=5)
+    check("accepted state is at-most-once on later runs",
+          third_run["previously_sent_rows"] == 6
+          and third_run["selected_rows"] == 0
+          and third_run["smtp_attempted_rows"] == 0
+          and not third_transport.attempts, str(third_run))
+
+    # -- configured cap 1-5 is respected; the batch never invents filler.
+    capped, capped_transport = _deliver(
+        tmp, _validated_payload(_cap_articles(4)), tmp / "capped-state.json",
+        max_articles=2,
+    )
+    check("configured cap two selects exactly two of four eligible",
+          capped["selected_rows"] == 2 and capped["deferred_rows"] == 2
+          and len(capped_transport.attempts) == 2, str(capped))
+
+    # -- failed SMTP inside a batch: exact partial persistence, retry stays open.
+    failed_state = tmp / "failed-queue-state.json"
+    mixed_payload = _validated_payload(_cap_articles(3))
+    failed, failed_transport = _deliver(
+        tmp, mixed_payload, failed_state, statuses=(250, 550, 250), max_articles=5
+    )
+    check("mixed batch attempts all selected and persists only accepted",
+          failed["selected_rows"] == 3
+          and failed["smtp_attempted_rows"] == 3
+          and failed["smtp_accepted_rows"] == 2
+          and failed["smtp_failed_rows"] == 1
+          and failed["state_committed_rows"] == 2
+          and len(load_state(failed_state)["article_ids"]) == 2
+          and len(failed_transport.attempts) == 3, str(failed))
+    retried, retried_transport = _deliver(tmp, mixed_payload, failed_state, max_articles=5)
+    check("failed article remains eligible and completes on retry",
+          retried["selected_rows"] == 1
+          and retried["smtp_accepted_rows"] == 1
+          and retried["state_committed_rows"] == 1
           and len(retried_transport.attempts) == 1, str(retried))
 
+    # -- §9 duplicate identity contract: URL variant, title variant.
+    base_sent = _article(
+        article_key="dup-base",
+        url="https://publisher.example.test/dup-base",
+        title="현대건설, AI 데이터센터 EPC 본계약 체결",
+    )
+    dup_state = tmp / "dup-state.json"
+    _deliver(tmp, _validated_payload([base_sent]), dup_state, max_articles=5)
+    url_variant = _article(
+        article_key="dup-url-variant",
+        url="https://publisher.example.test/dup-base?utm_source=teams&utm_medium=push",
+        title="현대건설, AI 데이터센터 EPC 본계약 체결",
+    )
+    url_summary, url_transport = _deliver(
+        tmp, _validated_payload([url_variant]), dup_state, max_articles=5
+    )
+    check("tracking-query URL variants collapse against the sent ledger",
+          url_summary["previously_sent_rows"] == 1
+          and url_summary["selected_rows"] == 0
+          and not url_transport.attempts, str(url_summary))
+    title_variant = _article(
+        article_key="dup-title-variant",
+        url="https://publisher.example.test/dup-title-variant",
+        title="[속보] 현대건설 — \"AI 데이터센터\" EPC 본계약 체결!",
+    )
+    title_summary, title_transport = _deliver(
+        tmp, _validated_payload([title_variant]), dup_state, max_articles=5
+    )
+    check("title punctuation/spacing variants collapse against the sent ledger",
+          title_summary["previously_sent_rows"] == 1
+          and title_summary["selected_rows"] == 0
+          and not title_transport.attempts, str(title_summary))
+
+    # -- §9 same-event multi-publisher collapse: the primary-ten version wins.
+    event_title = "AI 데이터센터 전력 인프라 투자 계약 확정"
+    other_top = _article(
+        article_key="event-other-top",
+        source="테크전문지",
+        url="https://tech-press.example.test/event",
+        title=event_title,
+        score=5.0,
+        shadow_confirmed_event_types=["investment_confirmed"],
+    )
+    yonhap_important = _article(
+        article_key="event-yonhap",
+        source="연합뉴스",
+        url="https://yna.co.kr/news/event",
+        title=event_title,
+        score=3.8,
+        shadow_confirmed_event_types=["investment_confirmed"],
+    )
+    event_state = tmp / "event-state.json"
+    event_summary, event_transport = _deliver(
+        tmp, _validated_payload([other_top, yonhap_important]), event_state,
+        max_articles=5,
+    )
+    event_sources = {
+        entry["source"]
+        for entry in load_state(event_state)["article_ids"].values()
+    }
+    check("same event collapses to one representative from the primary ten",
+          event_summary["duplicate_event_rows"] == 1
+          and event_summary["selected_rows"] == 1
+          and len(event_transport.attempts) == 1
+          and event_sources == {"연합뉴스"}, str(event_summary))
+
+    # -- distinct events on the same broad topic stay independent.
+    distinct_state = tmp / "distinct-state.json"
+    distinct_summary, distinct_transport = _deliver(
+        tmp,
+        _validated_payload([
+            _article(
+                article_key="distinct-a",
+                source="연합뉴스",
+                url="https://yna.co.kr/news/distinct-a",
+                title="Microsoft, 유럽 AI 데이터센터 전력공급 계약 체결",
+            ),
+            _article(
+                article_key="distinct-b",
+                source="연합뉴스",
+                url="https://yna.co.kr/news/distinct-b",
+                title="Google, 아시아 AI 데이터센터 신설 투자 확정",
+            ),
+        ]),
+        distinct_state,
+        max_articles=5,
+    )
+    check("distinct events on one broad topic remain independent",
+          distinct_summary["duplicate_event_rows"] == 0
+          and distinct_summary["selected_rows"] == 2
+          and len(distinct_transport.attempts) == 2, str(distinct_summary))
+
+    # -- §9 material update may resend; a superficial rewrite may not.
+    material_state = tmp / "material-state.json"
+    original = _article(
+        article_key="material-base",
+        url="https://publisher.example.test/material",
+        title="OpenAI, 미국 AI 데이터센터에 대규모 투자 계약 체결",
+        summary="1단계 투자 규모는 100억 달러다.",
+    )
+    _deliver(tmp, _validated_payload([original]), material_state, max_articles=5)
+    superficial = dict(original)
+    superficial["article_key"] = "material-superficial"
+    superficial["title"] = "OpenAI, 미국 AI 데이터센터에 '대규모 투자 계약' 체결!"
+    superficial_summary, superficial_transport = _deliver(
+        tmp, _validated_payload([superficial]), material_state, max_articles=5
+    )
+    check("superficial rewrite is not a material update and stays blocked",
+          superficial_summary["selected_rows"] == 0
+          and superficial_summary["previously_sent_rows"] == 1
+          and not superficial_transport.attempts, str(superficial_summary))
+    material = dict(original)
+    material["change_type"] = "material_content_update"
+    material["summary"] = "투자 규모가 300억 달러로 세 배 확대 승인됐다."
+    material["snippet"] = material["summary"]
+    material_summary, material_transport = _deliver(
+        tmp, _validated_payload([material]), material_state, max_articles=5
+    )
+    check("meaningful material update is resent exactly once",
+          material_summary["selected_rows"] == 1
+          and material_summary["smtp_accepted_rows"] == 1
+          and len(material_transport.attempts) == 1, str(material_summary))
+
+    # -- carry-forward-only rows never alert (unchanged contract).
     carry = _article(
         article_key="carry-only",
         url="https://publisher.example.test/carry-only",
@@ -908,48 +962,64 @@ def check_cap_and_partial(tmp: Path) -> None:
         teams_newness_eligible=False,
     )
     carry_summary, carry_transport = _deliver(
-        tmp, _validated_payload([carry]), tmp / "carry-state.json", max_articles=99
+        tmp, _validated_payload([carry]), tmp / "carry-state.json", max_articles=5
     )
     check("carry-forward-only article cannot alert",
-          carry_summary["current_candidates"] == 0
-          and carry_summary["alert_policy_eligible"] == 0
-          and carry_summary["selected"] == 0
+          carry_summary["current_rows"] == 0
+          and carry_summary["eligible_unsent_rows"] == 0
+          and carry_summary["selected_rows"] == 0
           and not carry_transport.attempts, str(carry_summary))
     check("carry-forward exclusion is observable and reconciled",
           carry_summary["rejection_breakdown"]["carry_forward_excluded"] == 1
           and carry_summary["rejection_reconciled"] is True,
           str(carry_summary))
 
-    malformed = dict(articles[0])
+    # -- malformed validated rows fail as schema rejections (unchanged contract).
+    malformed = dict(_cap_articles(1)[0])
     malformed.pop("shadow_urgency_status")
     malformed_summary, malformed_transport = _deliver(
         tmp,
         _validated_payload([malformed]),
         tmp / "malformed-state.json",
         send=False,
-        max_articles=99,
+        max_articles=5,
     )
     check("validated artifact missing urgency status fails as a schema rejection",
-          malformed_summary["alert_policy_eligible"] == 0
+          malformed_summary["eligible_unsent_rows"] == 0
           and malformed_summary["rejection_breakdown"]["malformed_required_field"] == 1
           and malformed_summary["rejection_breakdown"]["shadow_unavailable"] == 0
           and malformed_summary["rejection_reconciled"] is True
           and not malformed_transport.attempts,
           str(malformed_summary))
 
+    # -- dashboard refresh between runs cannot consume the candidate queue.
     shadow_state = tmp / "dashboard-independent-state.json"
-    before, _ = _deliver(tmp, payload, shadow_state, send=False, max_articles=99)
+    queue_payload = _validated_payload(_cap_articles(3))
+    before, _ = _deliver(tmp, queue_payload, shadow_state, send=False, max_articles=2)
     dashboard = tmp / "mutable-dashboard.html"
     dashboard.write_text("<html>refreshed before Teams watch</html>", encoding="utf-8")
-    after, _ = _deliver(tmp, payload, shadow_state, send=False, max_articles=99)
+    after, _ = _deliver(tmp, queue_payload, shadow_state, send=False, max_articles=2)
     check("dashboard refresh cannot consume the Teams candidate queue",
-          before["selected"] == after["selected"] == 1
-          and before["deferred_due_to_cap"] == after["deferred_due_to_cap"] == 2
+          before["selected_rows"] == after["selected_rows"] == 2
+          and before["deferred_rows"] == after["deferred_rows"] == 1
           and not shadow_state.exists())
 
-    check("all rollout-cap values resolve to the immutable maximum one",
-          all(sender._resolve_max_articles(value) == 1
-              for value in ("", "invalid", "0", "-7", "1", "10", "99")))
+    # -- §8 configuration matrix: default 5, 1-5 respected, clamp, fail-closed floor.
+    check("absent cap resolves to the default batch of five",
+          sender._resolve_max_articles("") == (5, "default_5"))
+    check("configured one-to-five caps are respected",
+          sender._resolve_max_articles("1") == (1, "configured")
+          and sender._resolve_max_articles("3") == (3, "configured")
+          and sender._resolve_max_articles("5") == (5, "configured"))
+    check("oversized caps clamp to the hard maximum of five",
+          sender._resolve_max_articles("10") == (5, "clamped_to_hard_max_5")
+          and sender._resolve_max_articles("99") == (5, "clamped_to_hard_max_5"))
+    check("zero, negative, and malformed caps fail closed to one",
+          sender._resolve_max_articles("0") == (1, "fail_closed_floor_1")
+          and sender._resolve_max_articles("-7") == (1, "fail_closed_floor_1")
+          and sender._resolve_max_articles("invalid") == (1, "fail_closed_floor_1"))
+    check("batch constants are five and named",
+          sender.DEFAULT_TEAMS_BATCH_MAX == 5 and sender.HARD_TEAMS_BATCH_MAX == 5)
 
     zero_state = tmp / "zero-state.json"
     blocked_only = _article(
@@ -962,10 +1032,73 @@ def check_cap_and_partial(tmp: Path) -> None:
     zero, zero_transport = _deliver(tmp, _payload([blocked_only]), zero_state)
     check("zero policy-eligible candidates means zero SMTP attempts",
           zero["alert_policy_eligible"] == 0
-          and zero["selected"] == 0
-          and zero["SMTP_attempted"] == 0
+          and zero["selected_rows"] == 0
+          and zero["smtp_attempted_rows"] == 0
           and not zero_transport.attempts
           and not zero_state.exists(), str(zero))
+
+    aggregator_state = tmp / "aggregator-only-state.json"
+    aggregator_article = _article(
+        article_key="aggregator-only",
+        url=GOOGLE_AGGREGATOR_URL,
+    )
+    aggregator_summary, aggregator_transport = _deliver(
+        tmp,
+        _payload([aggregator_article]),
+        aggregator_state,
+    )
+    check("aggregator-only important article is quarantined from delivery",
+          aggregator_summary["candidate_count"] == 0
+          and aggregator_summary["smtp_attempted_rows"] == 0
+          and len(aggregator_transport.attempts) == 0
+          and not aggregator_state.exists(),
+          str(aggregator_summary))
+
+    # -- §10 mixed accepted/rejected batch through the real CLI entrypoint.
+    ten = _cap_articles(10)
+    partial_state = tmp / "partial-state.json"
+    artifact = _write(tmp / "partial.json", _payload(ten))
+    gh_output = tmp / "partial-output.txt"
+    recorder = _SMTPRecorder((250, 550, 250, 250, 550))
+    rc, logs = _run_main_approved(
+        ["--artifact", str(artifact), "--state", str(partial_state),
+         "--github-output", str(gh_output)],
+        recorder,
+    )
+    check("partial failure exits non-zero", rc == 1, f"rc={rc}")
+    check("default batch attempts exactly five of ten eligible",
+          len(recorder.attempts) == 5, str(len(recorder.attempts)))
+    ref_to_key = {sender.article_ref(item): item["article_key"] for item in ten}
+    outcomes: dict[str, set[str]] = {"delivered": set(), "failed": set()}
+    for ref, outcome in re.findall(r"article=([0-9a-f]{12}) outcome=(delivered|failed)", logs):
+        outcomes[outcome].add(ref_to_key[ref])
+    persisted = json.loads(partial_state.read_text(encoding="utf-8"))
+    delivered_ids = set(persisted["article_ids"])
+    check("run reports three delivered and two failed emails",
+          len(outcomes["delivered"]) == 3 and len(outcomes["failed"]) == 2,
+          str(outcomes))
+    check("only delivered articles are persisted, exactly",
+          delivered_ids == outcomes["delivered"],
+          f"persisted={sorted(delivered_ids)} delivered={sorted(outcomes['delivered'])}")
+    check("failed articles stay resendable",
+          not (delivered_ids & outcomes["failed"]), str(sorted(outcomes["failed"])))
+    output_text = gh_output.read_text(encoding="utf-8")
+    check("partial success still reports state_changed=true",
+          "state_changed=true" in output_text, output_text.strip())
+    check("GITHUB_OUTPUT carries the R4-R6 aggregate counter contract",
+          "selected_rows=5" in output_text
+          and "deferred_rows=5" in output_text
+          and "smtp_attempted_rows=5" in output_text
+          and "smtp_accepted_rows=3" in output_text
+          and "smtp_failed_rows=2" in output_text
+          and "state_committed_rows=3" in output_text
+          and "counters_reconciled=true" in output_text
+          and "max_articles_cap=5" in output_text, output_text.strip())
+    check("every send targets the Teams channel address only",
+          set(recorder.attempts) == {FIXTURE_TEAMS_CHANNEL})
+    check("one email per delivered article, distinct messages",
+          len(recorder.messages) == 3
+          and len({_parse_message(m["raw"])["subject"] for m in recorder.messages}) == 3)
 
 
 def check_no_leaks(tmp: Path) -> None:

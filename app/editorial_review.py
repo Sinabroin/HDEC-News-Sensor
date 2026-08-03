@@ -226,6 +226,15 @@ def article_to_candidate(
         "image_remote_url": article.image_remote_url or article.image_url,
         "image_quality_accepted": article.image_quality_accepted,
         "image_quality_reason": article.image_quality_reason,
+        # D7-AK-6E R4-R6 §11/§12 — explainable selection factors + implication
+        # surfaced to the editor console and preserved through approval.
+        "materiality_score": article.materiality_score,
+        "hdec_relevance_score": article.hdec_relevance_score,
+        "publisher_tier": article.publisher_tier,
+        "publisher_priority_label": article.publisher_priority_label,
+        "executive_relevance_reason": article.executive_relevance_reason,
+        "materiality_reason": article.materiality_reason,
+        "executive_implication": article.executive_implication,
     }
 
 
@@ -270,6 +279,12 @@ def candidate_to_article(
     )
     if not all((title, summary, source, selected_url)):
         raise EditorialReviewError("candidate required field is empty")
+    raw_implication_override = _clean(edit.get("implication_html"))
+    implication_html = (
+        sanitize_editorial_inline_html(raw_implication_override)
+        if raw_implication_override
+        else ""
+    )
 
     return EditorialArticle(
         title=title,
@@ -301,6 +316,14 @@ def candidate_to_article(
         image_remote_url=_clean(candidate.get("image_remote_url") or candidate.get("image_url")),
         image_quality_accepted=bool(candidate.get("image_quality_accepted")),
         image_quality_reason=_clean(candidate.get("image_quality_reason")),
+        materiality_score=float(candidate.get("materiality_score") or 0.0),
+        hdec_relevance_score=float(candidate.get("hdec_relevance_score") or 0.0),
+        publisher_tier=_clean(candidate.get("publisher_tier")),
+        publisher_priority_label=_clean(candidate.get("publisher_priority_label")),
+        executive_relevance_reason=_clean(candidate.get("executive_relevance_reason")),
+        materiality_reason=_clean(candidate.get("materiality_reason")),
+        executive_implication=_clean(candidate.get("executive_implication")),
+        implication_html=implication_html,
     )
 
 
@@ -319,6 +342,12 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
     if not all((title, source, summary, selected_url)):
         raise EditorialReviewError("manual article requires URL, source, title, and summary")
     image_url = valid_http_url(item.get("image_url"))
+    raw_manual_implication = _clean(item.get("implication_html"))
+    manual_implication_html = (
+        sanitize_editorial_inline_html(raw_manual_implication)
+        if raw_manual_implication
+        else ""
+    )
     return EditorialArticle(
         title=title,
         summary=summary,
@@ -340,6 +369,7 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         image_source_kind="human_supplied" if image_url else "fallback",
         image_fallback_used=not bool(image_url),
         image_reason="human_supplied" if image_url else "no_manual_image",
+        implication_html=manual_implication_html,
     )
 
 
@@ -418,6 +448,27 @@ def load_bundle(path: Path, edition_key: str) -> dict[str, Any]:
     if any(not item for item in ids) or len(ids) != len(set(ids)):
         raise EditorialReviewError("candidate bundle IDs invalid")
     return payload
+
+
+REVIEW_DECISION_APPROVED = "approved"
+REVIEW_DECISION_ABSENT = "absent"
+REVIEW_DECISION_MALFORMED = "malformed"
+
+
+def load_review_decision(
+    path: Path, edition_key: str
+) -> tuple[dict[str, Any] | None, str]:
+    """§12 decision trace: (review, approved|absent|malformed).
+
+    A malformed review fails closed to None — the caller falls back to the
+    documented AI order with no partial application, and the reason stays
+    machine-readable."""
+    if not path.exists():
+        return None, REVIEW_DECISION_ABSENT
+    review = load_review(path, edition_key)
+    if review is None:
+        return None, REVIEW_DECISION_MALFORMED
+    return review, REVIEW_DECISION_APPROVED
 
 
 def load_review(path: Path, edition_key: str) -> dict[str, Any] | None:

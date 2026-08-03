@@ -141,6 +141,11 @@ SUBVERIFIERS = (
         r"NEWS_CENSOR_SEMANTIC_FILTERS=PASS",
     ),
     (
+        "WEEKLY_TNI_REFERENCE_PARITY_VERIFIER",
+        "verify_weekly_tni_reference_parity.py",
+        r"RESULT=D7-AK-6E_WEEKLY_TNI_REFERENCE_PARITY_PASS",
+    ),
+    (
         "SCHEDULED_REFRESH_VERIFIER",
         "verify_scheduled_refresh_and_telegram.py",
         r"RESULT: PASS",

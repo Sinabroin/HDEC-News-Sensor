@@ -36,7 +36,7 @@ except ImportError:  # Text/editorial policy remains usable without image extras
     Image = None
     UnidentifiedImageError = OSError
 
-from app import config, news_access, news_coverage, public_urls as public_url_contract, source_quality
+from app import config, news_access, news_coverage, public_urls as public_url_contract, source_priority, source_quality
 
 KST = timezone(timedelta(hours=9))
 DAILY_REPORT_SUFFIX = "/daily/latest.html"
@@ -77,43 +77,26 @@ _SELECTION_MODES = {
     SELECTION_MODE_DIRECT_AWARE_DAILY,
 }
 
-PRIMARY_PUBLISHER_PRIORITY = (
-    "연합뉴스",
-    "MBC",
-    "KBS",
-    "조선일보",
-    "YTN",
-    "JTBC",
-    "중앙일보",
-    "매일경제",
-    "한국경제",
-    "SBS",
-)
-
-SECONDARY_PUBLISHER_PRIORITY = (
-    "동아일보",
-    "한겨레",
-    "경향신문",
-)
+# The operator-locked ordered publisher lists live in the canonical
+# source-priority contract (data/source_priority_rules.json). These derived
+# tuples keep the editorial-facing names stable for consumers and tests.
+PRIMARY_PUBLISHER_PRIORITY = source_priority.locked_publisher_names("primary_10")
+SECONDARY_PUBLISHER_PRIORITY = source_priority.locked_publisher_names("secondary_3")
 
 PREFERRED_PUBLISHER_DAILY_TARGET = 4
 PREFERRED_PUBLISHER_WEEKLY_TARGET = 8
+# §11/§13 — honest edition-size targets: publish fewer, never pad with weak
+# content; the gap below the floor is reported machine-readably as
+# selection_shortfall.
+DAILY_TARGET_MIN_ARTICLES = 4
+WEEKLY_TARGET_MIN_ARTICLES = 8
 
-_PUBLISHER_PRIORITY_POLICIES = (
-    ("primary", 1, ("연합뉴스", "yonhap"), ("yna.co.kr",)),
-    ("primary", 2, ("mbc",), ("imbc.com", "mbc.co.kr")),
-    ("primary", 3, ("kbs",), ("kbs.co.kr",)),
-    ("primary", 4, ("조선일보",), ("chosun.com",)),
-    ("primary", 5, ("ytn",), ("ytn.co.kr",)),
-    ("primary", 6, ("jtbc",), ("jtbc.co.kr",)),
-    ("primary", 7, ("중앙일보",), ("joongang.co.kr",)),
-    ("primary", 8, ("매일경제", "매경"), ("mk.co.kr",)),
-    ("primary", 9, ("한국경제", "한경"), ("hankyung.com",)),
-    ("primary", 10, ("sbs",), ("sbs.co.kr",)),
-    ("secondary", 1, ("동아일보",), ("donga.com",)),
-    ("secondary", 2, ("한겨레",), ("hani.co.kr",)),
-    ("secondary", 3, ("경향신문",), ("khan.co.kr",)),
-)
+# Canonical delivery tier -> legacy editorial group vocabulary.
+_LEGACY_GROUP_BY_DELIVERY_TIER = {
+    "primary_10": "primary",
+    "secondary_3": "secondary",
+    "official_institution": "institution",
+}
 
 _SENTENCE_RE = re.compile(r"(?<=[.!?。！？])\s+")
 _WORD_RE = re.compile(r"[0-9A-Za-z가-힣]+")
@@ -468,6 +451,10 @@ class SelectionAuditCounters:
     aggregator_articles_selected: int = 0
     direct_candidates_displaced_by_aggregator: int = 0
     direct_candidates_rejected_below_relevance_floor: int = 0
+    weak_content_rejected: int = 0
+    qualified_candidates: int = 0
+    selected_candidates: int = 0
+    selection_shortfall: int = 0
 
     def manifest_fields(self) -> dict[str, int]:
         return {
@@ -487,6 +474,10 @@ class SelectionAuditCounters:
             "direct_candidates_rejected_below_relevance_floor": (
                 self.direct_candidates_rejected_below_relevance_floor
             ),
+            "weak_content_rejected": self.weak_content_rejected,
+            "qualified_candidates": self.qualified_candidates,
+            "selected_candidates": self.selected_candidates,
+            "selection_shortfall": self.selection_shortfall,
         }
 
 
@@ -544,6 +535,20 @@ class EditorialArticle:
     image_quality_signals: tuple[str, ...] = ()
     image_candidates: tuple[ImageCandidateOption, ...] = ()
     image_candidate_attempts: tuple[ImageCandidateAttempt, ...] = ()
+    # D7-AK-6E R4-R6 §11 — explainable selection factors, safe for surfaces.
+    materiality_score: float = 0.0
+    hdec_relevance_score: float = 0.0
+    publisher_tier: str = ""
+    publisher_tier_rank: int = 99
+    publisher_rank: int = 0
+    publisher_priority_label: str = ""
+    source_authority_rank: int = 9
+    executive_relevance_reason: str = ""
+    materiality_reason: str = ""
+    diversity_contribution: str = ""
+    # §12 — Editor's Summary implication: generated default, human override wins.
+    executive_implication: str = ""
+    implication_html: str = ""
 
     @property
     def published_label(self) -> str:
@@ -845,30 +850,18 @@ def _url_host(value: object) -> str:
 
 
 def _publisher_priority(source: str, selected_url: str) -> tuple[str, int]:
-    quality = source_quality.classify(source)
-    if quality.get("source_type") == "institution":
+    tier = source_priority.publisher_delivery_tier(source, selected_url)
+    group = _LEGACY_GROUP_BY_DELIVERY_TIER.get(str(tier.get("tier")))
+    if group == "institution":
         return "institution", 0
-
-    source_key = re.sub(
-        r"\s+",
-        "",
-        unicodedata.normalize("NFKC", str(source or "")).casefold(),
-    )
-    host = _url_host(selected_url)
-
-    for group, rank, aliases, domains in _PUBLISHER_PRIORITY_POLICIES:
-        alias_match = any(
-            re.sub(r"\s+", "", alias.casefold()) in source_key
-            for alias in aliases
-        )
-        domain_match = any(
-            host == domain or host.endswith("." + domain)
-            for domain in domains
-        )
-        if alias_match or domain_match:
-            return group, rank
-
+    if group:
+        return group, int(tier.get("publisher_rank") or 0)
     return "other", 999
+
+
+def publisher_priority(source: str, selected_url: str) -> tuple[str, int]:
+    """Return the shared locked publisher tier/rank for delivery surfaces."""
+    return _publisher_priority(source, selected_url)
 
 
 def _preferred_publisher_target(limit: int) -> int:
@@ -1145,6 +1138,9 @@ class _ArticleCandidate:
     total_ranking_score: float
     ranking_key: tuple
     relevance_reasons: tuple[str, ...]
+    weak_content_reason: str = ""
+    materiality_score: float = 0.0
+    hdec_relevance_score: float = 0.0
 
     @property
     def is_naver_direct(self) -> bool:
@@ -1193,6 +1189,140 @@ def _publisher_key(source: str, selected_url: str) -> str:
     if host.startswith("www."):
         host = host[4:]
     return host or re.sub(r"\s+", "", source or "").casefold() or "unknown"
+
+
+# D7-AK-6E R4-R6 §11 — weak-content rejection. Title-first matching: a passing
+# mention inside a snippet must not kill a material article, so summary terms
+# only apply when the title carries no strong material signal of its own.
+_WEAK_CONTENT_RULES: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
+    ("stock_theme_article", ("수혜주", "관련주", "테마주", "급등주", "목표주가", "상한가 행진", "매수 추천"), ()),
+    ("recruitment_notice", ("채용", "공채 모집", "인재 모집", "입사 지원", "채용설명회"), ("채용 박람회 개최",)),
+    ("book_or_review", ("신간", "출간", "서평", "북콘서트", "출판기념"), ()),
+    ("promotion_notice", ("사은품", "경품", "특가 프로모션", "할인 이벤트", "구매 이벤트"), ()),
+    ("campaign_publicity", ("캠페인", "공모전", "봉사활동", "걷기대회", "사생대회", "그림대회", "사진 공모"), ()),
+    ("award_publicity", ("시상식", "표창", "감사패", "공로상", "수상했", "수상의 영예", "수상자로"), ("수상태양광", "수상 태양광")),
+    ("lifestyle_content", ("맛집", "여행코스", "레시피", "뷰티", "웰니스 팁"), ()),
+    ("education_publicity", ("교육 수료식", "교육생 모집", "아카데미 수료", "장학금 전달"), ()),
+)
+
+
+def _weak_content_reason(title: str, summary: str) -> str:
+    """Return the §11 weak-content rejection label, or '' when none applies."""
+    title_text = " ".join(str(title or "").split())
+    combined = f"{title_text} {' '.join(str(summary or '').split())}"
+    for label, terms, exceptions in _WEAK_CONTENT_RULES:
+        if any(exception in combined for exception in exceptions):
+            continue
+        if any(term in title_text for term in terms):
+            return label
+    return ""
+
+
+_MATERIAL_ACTION_TERMS = (
+    "체결", "확정", "수주", "선정", "승인", "착공", "준공", "인수", "합병",
+    "발주", "계약", "출자", "증설", "가동", "타결", "발효", "시행",
+)
+_MATERIAL_SCALE_RE = re.compile(
+    r"[0-9][0-9,.]*\s*(?:조|억|천억|백억|만)\s*(?:원|달러)|[0-9][0-9,.]*\s*(?:GW|MW|기가와트|메가와트)"
+)
+_MATERIAL_RISK_TERMS = (
+    "중대재해", "붕괴", "제재", "소송", "규제", "행정처분", "영업정지", "리콜",
+)
+
+
+def _materiality_score(title: str, summary: str) -> tuple[float, tuple[str, ...]]:
+    """§11 factor 2 — confirmed action, concrete scale, or material risk."""
+    text = f"{title} {summary}"
+    score = 0.0
+    reasons: list[str] = []
+    action = next((term for term in _MATERIAL_ACTION_TERMS if term in text), "")
+    if action:
+        score += 1.0
+        reasons.append(f"confirmed_action:{action}")
+    if _MATERIAL_SCALE_RE.search(text):
+        score += 0.5
+        reasons.append("concrete_scale_figure")
+    risk = next((term for term in _MATERIAL_RISK_TERMS if term in text), "")
+    if risk:
+        score += 0.5
+        reasons.append(f"material_risk:{risk}")
+    return round(min(score, 2.0), 3), tuple(reasons)
+
+
+_HDEC_DIRECT_TERMS = ("현대건설", "현대엔지니어링", "힐스테이트", "디에이치")
+_HDEC_STRATEGIC_TERMS = (
+    "AI 데이터센터", "데이터센터", "SMR", "소형모듈원전", "원전", "스마트건설",
+    "BIM", "디지털 트윈", "건설로봇", "해외수주", "전력 인프라", "송전", "변전",
+)
+
+
+def _hdec_relevance_score(title: str, summary: str) -> float:
+    """§11 factor 4 — 현대건설 direct impact first, strategic domain second."""
+    text = f"{title} {summary}"
+    if any(term in text for term in _HDEC_DIRECT_TERMS):
+        return 1.0
+    if any(term in text for term in _HDEC_STRATEGIC_TERMS):
+        return 0.5
+    return 0.0
+
+
+_IMPLICATION_DOMAIN_LABELS = (
+    ("현대건설", "현대건설 직접 관련 사안"),
+    ("현대엔지니어링", "현대건설그룹 직접 관련 사안"),
+    ("데이터센터", "AI 데이터센터·전력 인프라 사업 기회"),
+    ("SMR", "원전·SMR 사업 포트폴리오"),
+    ("원전", "원전·에너지 사업 포트폴리오"),
+    ("스마트건설", "스마트건설 기술 경쟁력"),
+    ("BIM", "설계·시공 디지털 전환 역량"),
+    ("디지털 트윈", "설계·시공 디지털 전환 역량"),
+    ("로봇", "건설 자동화·생산성 역량"),
+    ("중대재해", "안전·품질 리스크 관리"),
+    ("규제", "규제·정책 대응"),
+    ("해외", "해외수주 환경"),
+    ("금리", "자금조달·재무 환경"),
+    ("공급망", "자재·공급망 조건"),
+)
+
+
+def _compose_executive_implication(
+    title: str,
+    summary: str,
+    category: str,
+    materiality_reasons: tuple[str, ...],
+) -> str:
+    """§12 — why-it-matters sentence built only from detected article signals.
+
+    States the affected business/risk/capability area and what to monitor,
+    without asserting any fact beyond what the article text itself carries."""
+    text = f"{title} {summary}"
+    domain = next(
+        (label for term, label in _IMPLICATION_DOMAIN_LABELS if term in text),
+        "",
+    )
+    if not domain:
+        domain = f"{category} 동향" if category else "산업 동향"
+    action = next(
+        (
+            reason.split(":", 1)[1]
+            for reason in materiality_reasons
+            if reason.startswith("confirmed_action:")
+        ),
+        "",
+    )
+    if any(term in text for term in _HDEC_DIRECT_TERMS):
+        subject = "현대건설이 직접 당사자인 사안으로"
+    elif action:
+        subject = f"'{action}' 단계까지 확인된 사안으로"
+    else:
+        subject = "동향 단계의 사안으로"
+    monitor = (
+        "후속 발주·계약 조건과 경쟁 구도"
+        if any(term in text for term in ("수주", "발주", "계약", "입찰"))
+        else "안전·품질 대응 체계"
+        if any(term in text for term in _MATERIAL_RISK_TERMS)
+        else "사업·기술 파급 범위"
+    )
+    return f"{subject} {domain} 관점에서 {monitor}을(를) 점검할 필요가 있습니다."
 
 
 def _candidate_relevance(
@@ -1285,11 +1415,27 @@ def _build_article_candidate(
     total = round(relevance + freshness + source_quality, 3)
     publisher_key = _publisher_key(source, selected_url)
     title_key = _title_fingerprint(title)
+    materiality, materiality_reasons = _materiality_score(title, summary)
+    hdec_relevance = _hdec_relevance_score(title, summary)
+    delivery_tier = source_priority.publisher_delivery_tier(source, selected_url)
+    authority_rank = int(
+        source_priority.classify(source)["source_priority_rank"]
+    )
+    weak_content = _weak_content_reason(title, summary)
+    # D7-AK-6E R4-R6 §11 ranking precedence: executive decision relevance →
+    # materiality → publisher priority → HDEC direct/strategic relevance →
+    # freshness → source authority. Topic/publisher diversity is applied by the
+    # selection pass (soft caps), and link quality by the existing direct-margin
+    # swap on total_ranking_score.
     ranking_key = (
-        total,
         relevance,
-        source_quality,
+        materiality,
+        -int(delivery_tier["tier_rank"]),
+        -int(delivery_tier["publisher_rank"]),
+        hdec_relevance,
         freshness,
+        -authority_rank,
+        source_quality,
         published.isoformat(),
         title_key,
         publisher_key,
@@ -1310,6 +1456,18 @@ def _build_article_candidate(
             source_quality_score=source_quality,
             total_ranking_score=total,
             total_ranking_key=ranking_key,
+            materiality_score=materiality,
+            hdec_relevance_score=hdec_relevance,
+            publisher_tier=str(delivery_tier["tier"]),
+            publisher_tier_rank=int(delivery_tier["tier_rank"]),
+            publisher_rank=int(delivery_tier["publisher_rank"]),
+            publisher_priority_label=str(delivery_tier["label"]),
+            source_authority_rank=authority_rank,
+            executive_relevance_reason=";".join(reasons) or "no_relevance_signal",
+            materiality_reason=";".join(materiality_reasons) or "no_material_signal",
+            executive_implication=_compose_executive_implication(
+                title, summary, category, materiality_reasons
+            ),
         ),
         raw=raw,
         selected_url=selected_url,
@@ -1325,6 +1483,9 @@ def _build_article_candidate(
         total_ranking_score=total,
         ranking_key=ranking_key,
         relevance_reasons=reasons,
+        weak_content_reason=weak_content,
+        materiality_score=materiality,
+        hdec_relevance_score=hdec_relevance,
     )
 
 
@@ -1504,11 +1665,18 @@ def _select_article_candidates(
     limit: int,
     audit: SelectionAuditCounters | None,
 ) -> list[_ArticleCandidate]:
-    relevant = [
+    floor_qualified = [
         candidate
         for candidate in candidates
         if candidate.relevance_score >= SELECTION_RELEVANCE_FLOOR
     ]
+    # §11 — weak content never becomes filler, whatever the supply looks like.
+    relevant = [
+        candidate
+        for candidate in floor_qualified
+        if not candidate.weak_content_reason
+    ]
+    weak_rejected = len(floor_qualified) - len(relevant)
     relevant.sort(key=_candidate_sort_key, reverse=True)
 
     direct_pool = [
@@ -1530,24 +1698,16 @@ def _select_article_candidates(
         reverse=True,
     )
 
-    institution_pool = sorted(
-        (
-            candidate
-            for candidate in relevant
-            if candidate.is_official_institution
-        ),
-        key=_candidate_sort_key,
-        reverse=True,
-    )
-
     direct_supply_sufficient = (
         len(direct_pool) >= DIRECT_SUPPLY_FOR_AGGREGATOR_CAP
     )
     selected: list[_ArticleCandidate] = []
 
-    if primary_pool:
-        selected.append(primary_pool[0])
-    elif relevant:
+    # §11/§13 — the headline is chosen by the ranking itself (decision
+    # relevance → materiality → publisher priority → …), never by an
+    # unconditional publisher or institution preference. The existing
+    # direct-margin swap still protects link quality for the headline slot.
+    if relevant:
         best = relevant[0]
         best_direct = direct_pool[0] if direct_pool else None
 
@@ -1561,16 +1721,8 @@ def _select_article_candidates(
         else:
             selected.append(best)
 
-    if (
-        institution_pool
-        and len(selected) < limit
-        and not any(item.is_official_institution for item in selected)
-    ):
-        _select_with_diversity(
-            institution_pool,
-            selected,
-            limit=min(limit, len(selected) + 1),
-        )
+    # §11 — no unconditional institution quota: official-institution rows
+    # compete purely on the shared ranking like every other candidate.
 
     target = _preferred_publisher_target(limit)
     selected_primary_count = sum(
@@ -1634,6 +1786,19 @@ def _select_article_candidates(
             len(unselected_direct),
             audit.aggregator_articles_selected,
         )
+        # §11 — honest shortfall: never pad with weak content; make the gap
+        # machine-readable instead.
+        audit.weak_content_rejected = weak_rejected
+        audit.qualified_candidates = len(relevant)
+        audit.selected_candidates = min(len(selected), limit)
+        target_floor = (
+            DAILY_TARGET_MIN_ARTICLES
+            if limit <= DAILY_MAX_ARTICLES
+            else WEEKLY_TARGET_MIN_ARTICLES
+        )
+        audit.selection_shortfall = max(
+            0, min(limit, target_floor) - min(len(selected), limit)
+        )
 
     return [
         replace(
@@ -1644,10 +1809,30 @@ def _select_article_candidates(
                     candidate,
                     selected,
                 ),
+                diversity_contribution=_diversity_contribution(
+                    candidate,
+                    selected,
+                ),
             ),
         )
         for candidate in selected[:limit]
     ]
+
+def _diversity_contribution(
+    candidate: _ArticleCandidate,
+    selected: list[_ArticleCandidate],
+) -> str:
+    category_count = sum(
+        1 for item in selected if item.article.category == candidate.article.category
+    )
+    publisher_count = sum(
+        1 for item in selected if item.publisher_key == candidate.publisher_key
+    )
+    return (
+        f"category:{candidate.article.category}#{category_count}"
+        f";publisher:{candidate.publisher_key}#{publisher_count}"
+    )
+
 
 def _selection_reason(
     candidate: _ArticleCandidate,
@@ -1655,19 +1840,28 @@ def _selection_reason(
 ) -> str:
     direct_count = sum(1 for item in selected if item.is_direct)
     aggregator_count = sum(1 for item in selected if item.is_aggregator)
+    factors = (
+        f";decision_relevance={candidate.relevance_score}"
+        f";materiality={candidate.materiality_score}"
+        f";publisher_tier={candidate.article.publisher_tier or 'unknown'}"
+        f";hdec_relevance={candidate.hdec_relevance_score}"
+    )
     if candidate.is_naver_direct:
         return (
             "selected_naver_direct_by_relevance_freshness_source_quality"
             f";direct_selected={direct_count};aggregator_selected={aggregator_count}"
+            f"{factors}"
         )
     if candidate.is_direct:
         return (
             "selected_publisher_direct_by_relevance_freshness_source_quality"
             f";direct_selected={direct_count};aggregator_selected={aggregator_count}"
+            f"{factors}"
         )
     return (
         "selected_aggregator_after_direct_pool_or_importance"
         f";direct_selected={direct_count};aggregator_selected={aggregator_count}"
+        f"{factors}"
     )
 
 
@@ -3335,7 +3529,11 @@ def materialize_preview_images(
 
 
 def _template(name: str) -> str:
-    return (config.TEMPLATES_DIR / name).read_text(encoding="utf-8")
+    # newline="" disables universal-newline translation: the sealed weekly T&I
+    # template is byte-exact CRLF (extracted from the immutable reference), and
+    # LF templates pass through unchanged.
+    with (config.TEMPLATES_DIR / name).open(encoding="utf-8", newline="") as handle:
+        return handle.read()
 
 
 def _fill(template: str, values: Mapping[str, str]) -> str:
@@ -3370,17 +3568,20 @@ def _article_source_anchor(
     )
 
 
-def _reference_image(article: EditorialArticle, *, hero: bool = False) -> str:
-    fallback = (
-        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
-        "viewBox='0 0 640 260'%3E%3Crect width='640' height='260' "
-        "fill='%23002C5F'/%3E%3Ccircle cx='520' cy='30' r='170' "
-        "fill='%23004B93'/%3E%3Ccircle cx='80' cy='250' r='150' "
-        "fill='%230D9488' fill-opacity='.55'/%3E%3C/svg%3E"
-    )
+_BRIEF_FALLBACK_IMAGE = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
+    "viewBox='0 0 640 260'%3E%3Crect width='640' height='260' "
+    "fill='%23002C5F'/%3E%3Ccircle cx='520' cy='30' r='170' "
+    "fill='%23004B93'/%3E%3Ccircle cx='80' cy='250' r='150' "
+    "fill='%230D9488' fill-opacity='.55'/%3E%3C/svg%3E"
+)
+
+
+def _safe_brief_image_src(article: EditorialArticle) -> str:
+    """Local materialized asset or data URI only; '' when nothing safe exists.
+
+    Briefs never hotlink a remote image."""
     candidate = str(article.image_local_src or article.image_url or "").strip()
-    # Briefs never hotlink a remote image. A renderer may use a materialized
-    # relative asset or an embedded deterministic fallback only.
     safe_materialized = (
         re.fullmatch(r"\.\./assets/images/[A-Za-z0-9][A-Za-z0-9._-]*", candidate)
         is not None
@@ -3392,9 +3593,12 @@ def _reference_image(article: EditorialArticle, *, hero: bool = False) -> str:
         is not None
     )
     if candidate.startswith("data:image/") or safe_materialized:
-        source = escape(candidate, quote=True)
-    else:
-        source = fallback
+        return escape(candidate, quote=True)
+    return ""
+
+
+def _reference_image(article: EditorialArticle, *, hero: bool = False) -> str:
+    source = _safe_brief_image_src(article) or _BRIEF_FALLBACK_IMAGE
     if hero:
         return (
             f'<img src="{source}" alt="" aria-hidden="true" '
@@ -3421,6 +3625,45 @@ def _daily_summary_html(article: EditorialArticle) -> str:
     return escape(article.summary)
 
 
+def _implication_inline_html(article: EditorialArticle) -> str:
+    """§12 why-it-matters text: editor override wins over the generated one."""
+    if article.implication_html:
+        return sanitize_editorial_inline_html(article.implication_html)
+    if article.executive_implication:
+        return escape(article.executive_implication)
+    return ""
+
+
+def _editor_summary_block(article: EditorialArticle) -> str:
+    """§12 Editor's Summary body: factual base + HDEC implication paragraphs.
+
+    A human-approved ``summary_html`` controls the exact content; the
+    implication paragraph is appended only from the generated evidence-based
+    implication or an explicit editor ``implication_html`` override — never
+    invented facts."""
+    summary = _daily_summary_html(article)
+    implication = _implication_inline_html(article)
+    if article.summary_html and not article.implication_html:
+        return f"<p>{summary}</p>"
+    if not implication:
+        return f"<p>{summary}</p>"
+    return (
+        f"<p>{summary}</p>"
+        f'<p class="implication">현대건설 시사점 — {implication}</p>'
+    )
+
+
+def _card_summary_html(article: EditorialArticle) -> str:
+    """Card summary in the T&I pattern: factual text, then an em-dash insight."""
+    summary = _daily_summary_html(article)
+    implication = _implication_inline_html(article)
+    if article.summary_html and not article.implication_html:
+        return summary
+    if not implication:
+        return summary
+    return f"{summary} — {implication}"
+
+
 def _daily_headline(article: EditorialArticle) -> str:
     return (
         '<section class="hero" data-role="headline" style="position:relative;'
@@ -3440,7 +3683,7 @@ def _daily_headline(article: EditorialArticle) -> str:
         '<div class="ednote" style="background:#fff;border:1px solid rgba(16,18,24,.10);'
         'border-radius:0 0 22px 22px;margin-top:-14px;padding:30px 30px 24px;">'
         "<h3 class=\"ed-k\">Editor's Summary</h3>"
-        f"<p>{_daily_summary_html(article)}</p>"
+        f"{_editor_summary_block(article)}"
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div>"
@@ -3456,7 +3699,7 @@ def _daily_card(article: EditorialArticle) -> str:
         f'<div class="thumb">{_reference_image(article)}</div>'
         '<div class="card-body">'
         f'<span class="chip"><span class="d"></span>{escape(article.category)}</span>'
-        f'<h3>{escape(article.title)}</h3><p class="sum">{_daily_summary_html(article)}</p>'
+        f'<h3>{escape(article.title)}</h3><p class="sum">{_card_summary_html(article)}</p>'
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div></article>"
@@ -3650,6 +3893,101 @@ def render_daily(
     )
 
 
+# ---------------------------------------------------------------------------
+# D7-AK-6E R4-R6 §14 — Weekly T&I exact-reference rendering.
+# templates/editorial_weekly_tni.html is the immutable reference document with
+# only its dynamic content islands cut out; re-injecting the reference's own
+# island content reproduces the reference byte-for-byte (verified by
+# scripts/verify_weekly_tni_reference_parity.py, incl. pixel diff = 0).
+# ---------------------------------------------------------------------------
+
+_TNI_CATEGORY_STYLE = {
+    "투자·산업": "--cat:var(--c-invest);--tint:#F7F0E2",
+    "기업동향": "--cat:var(--c-corp);--tint:#E6F5F3",
+    "기술정보": "--cat:var(--c-tech);--tint:#F1F1FD",
+}
+
+
+def tni_issue_labels(run_at: datetime) -> tuple[str, str]:
+    """Korean issue label pair for the T&I masthead/meta line.
+
+    The anchor Wednesday names the issue: e.g. anchor 2026-07-15 →
+    ("2026년 7월 3주차", "2026년 7월 3주차 (2026.07.15)")."""
+    anchor = weekly_anchor_date(run_at)
+    week_of_month = (anchor.day + 6) // 7
+    label = f"{anchor.year}년 {anchor.month}월 {week_of_month}주차"
+    return label, f"{label} ({anchor:%Y.%m.%d})"
+
+
+def _tni_source_anchor(article: EditorialArticle) -> str:
+    date_label = f"{article.published_at.astimezone(KST):%m.%d}"
+    return (
+        f'<a href="{escape(article.selected_url, quote=True)}" target="_blank" '
+        f'rel="noopener noreferrer">{escape(article.source)}'
+        f'<span class="dt" style="font-size: 8.6pt;">{date_label}</span></a>'
+    )
+
+
+def _tni_hero_image(article: EditorialArticle) -> str:
+    source = _safe_brief_image_src(article)
+    if not source:
+        return ""
+    return (
+        '<img alt="" aria-hidden="true" style="position:absolute;inset:0;'
+        "width:100%;height:100%;object-fit:cover;object-position:center 40%;"
+        f'z-index:0;" src="{source}">'
+    )
+
+
+def _tni_thumb_image(article: EditorialArticle) -> str:
+    source = _safe_brief_image_src(article) or _BRIEF_FALLBACK_IMAGE
+    return (
+        f'<img alt="{escape(article.title, quote=True)}" '
+        'style="position:absolute;inset:0;width:100%;height:100%;'
+        f'object-fit:cover;object-position:center;display:block;" src="{source}">'
+    )
+
+
+def _tni_ednote_html(article: EditorialArticle) -> str:
+    paragraph_style = (
+        "font-size: 13.1pt; line-height: 1.5; margin-top: 0px; margin-bottom: 0px;"
+    )
+    base = f'<p style="{paragraph_style}">{_daily_summary_html(article)}</p>'
+    implication = _implication_inline_html(article)
+    if article.summary_html and not article.implication_html:
+        return base
+    if not implication:
+        return base
+    return base + (
+        '<p style="font-size: 13.1pt; line-height: 1.5; margin-top: 10px; '
+        f'margin-bottom: 0px;">현대건설 시사점 — {implication}</p>'
+    )
+
+
+def _tni_card(article: EditorialArticle) -> str:
+    style = _TNI_CATEGORY_STYLE.get(article.category, _TNI_CATEGORY_STYLE["기술정보"])
+    # §13 — machine-readable selection rationale rides invisibly on the card
+    # (island content, so the sealed reference shell stays byte-identical).
+    rationale = escape(article.selection_reason, quote=True)
+    return (
+        f'<article class="card" data-selection-rationale="{rationale}" '
+        f'style="{style};display:grid;grid-template-columns:'
+        "128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);"
+        'border-radius:16px;overflow:hidden;margin:0 0 12px;">\r\n'
+        '<div class="thumb" style="position:relative;min-height:128px;'
+        f'background:#1a1a2e;overflow:hidden;">{_tni_thumb_image(article)}</div>\r\n'
+        '<div class="card-body"><span class="chip" style="font-size: 8.3pt;">'
+        f'{escape(article.category)}</span><h3 style="line-height: 1.5;">'
+        f"{escape(article.title)}</h3>\r\n"
+        '<p class="sum" style="font-size: 11.6pt; line-height: 1.5; margin-top: 0px; '
+        f'margin-bottom: 0px;">{_card_summary_html(article)}</p>\r\n'
+        '<div class="src" style="margin-top: 14px; padding-top: 10px; border-top: '
+        "1px solid rgb(238, 240, 244); font-size: 11.5px; color: rgb(156, 163, 176); "
+        'font-weight: 600; line-height: 1.5;">출처 '
+        f"{_tni_source_anchor(article)}</div></div></article>"
+    )
+
+
 def render_weekly(
     articles: list[EditorialArticle],
     *,
@@ -3664,21 +4002,30 @@ def render_weekly(
     dominant, issue_label, issue_count = _dominant_issue(articles)
     mode = "dominant_issue" if dominant else "multi_issue"
     headline = articles[0]
+    issue, issue_dated = tni_issue_labels(run_at)
+    cards = "\r\n".join(
+        _tni_card(item) for item in articles[1:WEEKLY_MAX_ARTICLES]
+    )
+    # Invisible contract markers ride inside the cards island so the sealed
+    # reference shell stays byte-identical for the parity fixture.
+    contract_comment = (
+        f'<!-- data-brief-contract="AI_TNI_EXECUTIVE_V1" '
+        f'data-edition-key="{escape(key, quote=True)}" '
+        f'coverage="{escape(coverage.label(), quote=True)}" -->'
+    )
+    cards = f"{cards}\r\n{contract_comment}" if cards else contract_comment
     html = _fill(
-        _template("editorial_weekly.html"),
+        _template("editorial_weekly_tni.html"),
         {
-            "EDITION_KEY": escape(key, quote=True),
-            "PAGE_TITLE": escape(f"AI 경영 T&I Weekly Brief · {key}"),
-            "EDITION_LABEL": escape(key),
-            "COVERAGE_LABEL": escape(coverage.label()),
-            "BRIEF_STYLES": _brief_styles(),
-            "HEADLINE_HTML": _daily_headline(headline),
-            "ARTICLE_CARDS_HTML": (
-                "".join(_daily_card(item) for item in articles[1:WEEKLY_MAX_ARTICLES])
-                or '<p class="empty">추가로 선정된 주요 기사 없음</p>'
-            ),
-            "TAXONOMY_HTML": _taxonomy_html(),
-            "FOOTER_HTML": _brief_footer("weekly", key, coverage),
+            "TNI_TITLE_ISSUE": escape(issue_dated),
+            "TNI_ISSUE_LABEL": escape(issue),
+            "TNI_HERO_IMAGE": _tni_hero_image(headline),
+            "TNI_HERO_TITLE": escape(headline.title),
+            "TNI_HERO_CATEGORY": escape(headline.category),
+            "TNI_EDNOTE_HTML": _tni_ednote_html(headline),
+            "TNI_EDNOTE_SOURCE": _tni_source_anchor(headline),
+            "TNI_CARDS": cards,
+            "TNI_META_ISSUE": escape(issue_dated),
         },
     )
     text_lines = [
@@ -3803,11 +4150,19 @@ def validate_rendered(edition: RenderedEdition) -> None:
         match = re.search(r'href="([^"]+)"', anchor)
         if not match or not valid_http_url(match.group(1).replace("&amp;", "&")):
             raise EditorialError("invalid external URL")
-    if edition.html.count('data-role="headline"') != 1:
-        raise EditorialError("brief headline count mismatch")
-    expected_card_cap = 5 if edition.edition_type == "daily" else WEEKLY_MAX_ARTICLES - 1
-    if edition.html.count('data-role="article-card"') > expected_card_cap:
-        raise EditorialError("brief article card cap exceeded")
+    if edition.edition_type == "weekly":
+        # §14 — the Weekly shell is the sealed T&I reference: the hero section
+        # and reference card markup are the structural anchors (the reference
+        # carries no data-role attributes, and none may be added to the shell).
+        if edition.html.count('<section class="hero"') != 1:
+            raise EditorialError("brief headline count mismatch")
+        if edition.html.count('<article class="card"') > WEEKLY_MAX_ARTICLES - 1:
+            raise EditorialError("brief article card cap exceeded")
+    else:
+        if edition.html.count('data-role="headline"') != 1:
+            raise EditorialError("brief headline count mismatch")
+        if edition.html.count('data-role="article-card"') > 5:
+            raise EditorialError("brief article card cap exceeded")
     if 'data-brief-contract="AI_TNI_EXECUTIVE_V1"' not in edition.html:
         raise EditorialError("shared brief design contract missing")
     required_copy = (
