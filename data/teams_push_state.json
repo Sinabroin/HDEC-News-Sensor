@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "3c0220b68095c251": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
+    },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
       "delivery_id": "teams_ai_push:cda34e0b7d63",
@@ -682,6 +692,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "title:영업익8190억포스코웃을때현대제철어닝쇼크": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
+    },
     "title:원전8기추가승인더이상머뭇거릴때아니다": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
       "delivery_id": "teams_ai_push:96069100b0f3",
@@ -823,7 +843,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T05:06:36+09:00",
+  "last_successful_send_at": "2026-08-04T06:21:52+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1234,6 +1254,16 @@
       "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
+    },
+    "https://www.viva100.com/article/20260803501092": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
     }
   },
   "title_fingerprints": {
@@ -1506,6 +1536,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "영업익8190억포스코웃을때현대제철어닝쇼크": {
+      "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
+      "delivery_id": "teams_ai_push:830fe42c7d3e",
+      "first_sent_at": "2026-08-04T06:21:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
+      "sent_at": "2026-08-04T06:21:52+09:00",
+      "source": "브릿지경제"
     },
     "원전8기추가승인더이상머뭇거릴때아니다": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
