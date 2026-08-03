@@ -50,6 +50,16 @@
       "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
     },
+    "746826e161f73c48": {
+      "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
+      "delivery_id": "teams_ai_push:8b636aa3ff8e",
+      "first_sent_at": "2026-08-04T08:46:32+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "095d41955f48843987d24a9840970e3af87b5eedc7afcaa06d5fe0a5e37b2fb3",
+      "sent_at": "2026-08-04T08:46:32+09:00",
+      "source": "뉴스핌"
+    },
     "a65de9a3ca0495dd": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
       "delivery_id": "teams_ai_push:96069100b0f3",
@@ -722,6 +732,16 @@
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
     },
+    "title:온세미3분기가이던스기대치상회시간외6반등": {
+      "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
+      "delivery_id": "teams_ai_push:8b636aa3ff8e",
+      "first_sent_at": "2026-08-04T08:46:32+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "095d41955f48843987d24a9840970e3af87b5eedc7afcaa06d5fe0a5e37b2fb3",
+      "sent_at": "2026-08-04T08:46:32+09:00",
+      "source": "뉴스핌"
+    },
     "title:원전8기추가승인더이상머뭇거릴때아니다": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
       "delivery_id": "teams_ai_push:96069100b0f3",
@@ -863,7 +883,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T07:35:54+09:00",
+  "last_successful_send_at": "2026-08-04T08:46:32+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1194,6 +1214,16 @@
       "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
+    },
+    "https://www.newspim.com/news/view/20260804000058": {
+      "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
+      "delivery_id": "teams_ai_push:8b636aa3ff8e",
+      "first_sent_at": "2026-08-04T08:46:32+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "095d41955f48843987d24a9840970e3af87b5eedc7afcaa06d5fe0a5e37b2fb3",
+      "sent_at": "2026-08-04T08:46:32+09:00",
+      "source": "뉴스핌"
     },
     "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
@@ -1586,6 +1616,16 @@
       "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
+    },
+    "온세미3분기가이던스기대치상회시간외6반등": {
+      "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
+      "delivery_id": "teams_ai_push:8b636aa3ff8e",
+      "first_sent_at": "2026-08-04T08:46:32+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "095d41955f48843987d24a9840970e3af87b5eedc7afcaa06d5fe0a5e37b2fb3",
+      "sent_at": "2026-08-04T08:46:32+09:00",
+      "source": "뉴스핌"
     },
     "원전8기추가승인더이상머뭇거릴때아니다": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
