@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
+    "4ca212d51b4eb35c": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
+    },
     "a65de9a3ca0495dd": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
       "delivery_id": "teams_ai_push:96069100b0f3",
@@ -632,6 +642,16 @@
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
     },
+    "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
+    },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -783,7 +803,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T01:25:20+09:00",
+  "last_successful_send_at": "2026-08-04T03:19:18+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1073,6 +1093,16 @@
       "last_material_update_at": null,
       "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
       "sent_at": "2026-08-03T20:02:23+09:00",
+      "source": "뉴스투데이"
+    },
+    "https://www.news2day.co.kr/article/20260804500002": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
     },
     "https://www.newsinside.kr/news/articleView.html?idxno=4875153": {
@@ -1416,6 +1446,16 @@
       "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
+    },
+    "스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
+      "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
+      "delivery_id": "teams_ai_push:8aea2a01d24a",
+      "first_sent_at": "2026-08-04T03:19:18+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
+      "sent_at": "2026-08-04T03:19:18+09:00",
+      "source": "뉴스투데이"
     },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
