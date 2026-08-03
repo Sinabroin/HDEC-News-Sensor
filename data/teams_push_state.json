@@ -70,6 +70,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "ff97edecbcdcf132": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
+    },
     "live_5c148d78cd83": {
       "cluster_key": "title:현대건설ai디지털역량갖춘스마트건설인재찾는다",
       "delivery_id": "teams_ai_push:cb5d472fd04d",
@@ -441,6 +451,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
     },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -843,7 +863,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T06:21:52+09:00",
+  "last_successful_send_at": "2026-08-04T07:35:54+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1105,6 +1125,16 @@
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
+    "https://www.itdaily.kr/news/articleView.html?idxno=240755": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
+    },
     "https://www.joongang.co.kr/article/25449302": {
       "cluster_key": "title:원전멈춰서는데호남반도체수명연장부",
       "delivery_id": "teams_ai_push:61eabb648494",
@@ -1286,6 +1316,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
+      "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
+      "delivery_id": "teams_ai_push:e3644ad81602",
+      "first_sent_at": "2026-08-04T07:35:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
+      "sent_at": "2026-08-04T07:35:54+09:00",
+      "source": "아이티데일리"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
