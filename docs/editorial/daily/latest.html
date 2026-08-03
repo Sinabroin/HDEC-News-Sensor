@@ -1,289 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HDEC AI Daily Brief · 2026-08-03</title>
-<style>
-  :root{
-    --bg:#F2F3F6;
-    --card:#FFFFFF;
-    --ink:#101218;
-    --ink-2:#3A4150;
-    --muted:#777F8D;
-    --faint:#9CA3B0;
-    --line:rgba(16,18,24,.10);
-    --navy:#002C5F;
-    --navy-2:#004B93;
-    --c-invest:#A26B12;
-    --c-corp:#0D9488;
-    --c-tech:#4F46E5;
-    --r-lg:22px;
-    --r-md:16px;
-  }
-  *{box-sizing:border-box;}
-  html{-webkit-text-size-adjust:100%;}
-  body{
-    margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Pretendard Variable",Pretendard,"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,Arial,sans-serif;
-    line-height:1.6;letter-spacing:-.012em;-webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit;}
-  .page{max-width:680px;margin:0 auto;padding:0 20px 56px;}
-  .masthead{text-align:center;padding:8px 0 10px;}
-  .flow-break{
-    margin:46px auto 40px;max-width:120px;height:1px;
-    background:linear-gradient(90deg,transparent,var(--line) 25%,var(--line) 75%,transparent);
-  }
-  .brandmark{
-    display:inline-flex;align-items:center;gap:8px;
-    font-size:18px;font-weight:800;letter-spacing:.1em;color:var(--navy);
-    text-transform:uppercase;
-  }
-  .brandmark .sq{display:inline-block;width:14px;height:14px;background:var(--navy);border-radius:4px;}
-  .brandmark .sq2{width:14px;height:14px;border:3px solid var(--navy);border-radius:4px;background:transparent;}
-  .masthead h1{
-    margin:14px 0 10px;font-size:clamp(40px,9vw,58px);font-weight:800;
-    letter-spacing:-.045em;line-height:1.04;color:var(--ink);
-  }
-  .masthead .desc{margin:0;font-size:13.5px;color:var(--ink-2);font-weight:600;}
-  .issue{
-    margin-top:26px;font-size:15px;font-weight:700;color:var(--ink);
-    display:inline-flex;align-items:center;gap:10px;
-  }
-  .issue .dot{width:4px;height:4px;border-radius:50%;background:var(--faint);}
-  .issue .date{color:var(--muted);font-weight:600;}
-  .sec-label{
-    display:inline-block;
-    font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
-    border:2px solid var(--ink);border-radius:999px;
-    padding:6px 18px;background:var(--card);
-    margin:44px 0 16px;
-  }
-  .intro{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
-    padding:22px 26px 22px;margin-top:34px;
-    box-shadow:0 10px 28px -20px rgba(16,18,24,.16);
-  }
-  .intro .welcome{
-    position:absolute;left:0;top:1px;
-    display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.06em;
-    color:var(--navy);background:#EAF1FA;border-radius:999px;padding:3px 11px;
-  }
-  .intro .lead{
-    position:relative;padding-left:56px;
-    margin:0 0 16px;font-size:17px;font-weight:700;line-height:1.55;color:var(--ink);letter-spacing:-.02em;
-  }
-  .intro .lead b{color:var(--navy);}
-  .intro .ix-group{
-    border:1px solid var(--line);border-radius:11px;
-    overflow:hidden;background:#FAFBFC;
-  }
-  .intro details.ix{margin:0;background:transparent;}
-  .intro details.ix + details.ix{border-top:1px solid var(--line);}
-  .intro details.ix summary{
-    list-style:none;cursor:pointer;user-select:none;
-    display:flex;align-items:center;gap:9px;padding:11px 15px;
-  }
-  .intro details.ix summary::-webkit-details-marker{display:none;}
-  .intro details.ix .ix-tit{
-    font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.02em;flex:none;
-  }
-  .intro details.ix .ix-tag{font-size:12px;font-weight:700;color:var(--muted);}
-  .intro details.ix .ix-plus{margin-left:auto;flex:none;position:relative;width:15px;height:15px;}
-  .intro details.ix .ix-plus::before,
-  .intro details.ix .ix-plus::after{
-    content:"";position:absolute;background:var(--navy);border-radius:2px;
-    top:50%;left:50%;transform:translate(-50%,-50%);
-  }
-  .intro details.ix .ix-plus::before{width:13px;height:2.5px;}
-  .intro details.ix .ix-plus::after{width:2.5px;height:13px;transition:transform .18s ease;}
-  .intro details.ix[open] .ix-plus::after{transform:translate(-50%,-50%) rotate(90deg);opacity:0;}
-  .intro details.ix > p{
-    margin:0;padding:0 15px 13px;font-size:14px;line-height:1.62;color:var(--ink-2);
-  }
-  .hero{
-    position:relative;overflow:hidden;border-radius:var(--r-lg);
-    background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);
-    color:#fff;padding:34px 30px 30px;
-    -webkit-print-color-adjust:exact;print-color-adjust:exact;
-  }
-  .hero svg.motif{position:absolute;right:-30px;top:-20px;height:130%;opacity:.5;pointer-events:none;}
-  .hero .hero-week{
-    position:relative;display:inline-block;font-size:12.5px;font-weight:800;color:var(--navy);
-    background:#fff;border-radius:999px;padding:4px 13px;margin-bottom:18px;
-  }
-  .hero h2{
-    position:relative;margin:0;font-size:clamp(25px,5.6vw,33px);font-weight:800;
-    letter-spacing:-.035em;line-height:1.28;
-  }
-  .hero .hero-rule{position:relative;height:1px;background:rgba(255,255,255,.35);margin:22px 0 12px;max-width:340px;}
-  .hero .hero-foot{
-    position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:12px;
-    flex-wrap:wrap;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);
-  }
-  .ednote{
-    background:var(--card);border:1px solid var(--line);
-    border-radius:0 0 var(--r-lg) var(--r-lg);margin-top:-14px;padding:30px 30px 24px;
-    box-shadow:0 10px 28px -18px rgba(16,18,24,.18);
-  }
-  .ednote .ed-k{margin:0 0 12px;font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
-  .ednote p{margin:0 0 13px;font-size:17.5px;line-height:1.74;color:var(--ink-2);}
-  .ednote p:last-of-type{margin-bottom:0;}
-  .ednote .ed-sign{margin-top:14px;font-size:13px;font-weight:700;color:var(--muted);text-align:right;}
-  .card{
-    display:grid;grid-template-columns:128px 1fr;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
-    overflow:hidden;margin-bottom:12px;
-    box-shadow:0 1px 2px rgba(16,18,24,.03),0 10px 24px -18px rgba(16,18,24,.14);
-  }
-  .thumb{position:relative;min-height:128px;background:#1a1a2e;overflow:hidden;}
-  .thumb svg{position:absolute;inset:0;width:100%;height:100%;}
-  .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-  .card-body{padding:16px 18px 14px;min-width:0;}
-  .chip{
-    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;
-    letter-spacing:.02em;color:var(--cat);background:var(--tint);
-    border-radius:999px;padding:3px 10px;margin-bottom:8px;
-  }
-  .chip .d{width:5px;height:5px;border-radius:50%;background:var(--cat);}
-  .card h3{
-    margin:0 0 8px;font-size:18.5px;font-weight:800;letter-spacing:-.025em;
-    line-height:1.38;color:var(--ink);
-  }
-  .card .sum{margin:0;font-size:15.5px;line-height:1.62;color:var(--ink-2);}
-  .card .sum b{font-weight:700;color:var(--ink);}
-  details.insight{margin-top:10px;border-top:1px dashed var(--line);}
-  details.insight summary{
-    list-style:none;cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;
-    padding:9px 0 2px;font-size:12.5px;font-weight:800;color:var(--cat);
-  }
-  details.insight summary::-webkit-details-marker{display:none;}
-  details.insight summary .chev{
-    width:7px;height:7px;border-right:2px solid var(--cat);border-bottom:2px solid var(--cat);
-    transform:rotate(45deg);transition:transform .16s ease;opacity:.75;margin-top:-2px;
-  }
-  details.insight[open] summary .chev{transform:rotate(-135deg);}
-  details.insight p{
-    margin:6px 0 2px;font-size:13.5px;line-height:1.62;color:var(--ink-2);
-    background:var(--tint);border-radius:10px;padding:10px 13px;
-  }
-  details.insight p b{color:var(--ink);font-weight:700;}
-  .src{
-    margin-top:10px;font-size:11.5px;color:var(--faint);font-weight:600;
-    display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
-  }
-  .src a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);}
-  .src a:hover{color:var(--ink);border-color:var(--ink);}
-  .src .dt{color:var(--faint);font-weight:500;margin-left:3px;}
-  .hero-detail{margin-top:18px;border-top:1px solid var(--line);padding-top:16px;}
-  .hero-detail .sum{margin:0;font-size:15px;line-height:1.7;color:var(--ink-2);}
-  .hero-detail .sum b{font-weight:700;color:var(--ink);}
-  .taxo{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
-    padding:16px 18px;display:grid;gap:8px;
-  }
-  .taxo .t-row{display:flex;gap:10px;align-items:baseline;font-size:13px;}
-  .taxo .t-name{flex:none;width:84px;font-weight:800;color:var(--ink);display:inline-flex;align-items:center;gap:6px;}
-  .taxo .t-dot{width:7px;height:7px;border-radius:50%;flex:none;}
-  .taxo .t-desc{color:var(--muted);font-weight:500;}
-  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:22px;text-align:center;}
-  footer .pub{font-size:13.5px;font-weight:800;color:var(--ink-2);margin:0 0 8px;}
-  footer .note{font-size:12px;color:var(--muted);line-height:1.8;margin:0;}
-  footer .meta-line{margin-top:14px;font-size:11px;color:var(--faint);letter-spacing:.05em;}
-  @media (max-width:560px){
-    .page{padding:0 14px 44px;}
-    .card{grid-template-columns:96px 1fr;}
-    .thumb{min-height:96px;}
-    .hero{padding:26px 20px 24px;}
-    .ednote{padding:24px 20px 20px;}
-  }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
-  @media print{
-    body{background:#fff;}
-    .page{max-width:none;padding:0;}
-    .card,.hero,.ednote{break-inside:avoid;page-break-inside:avoid;box-shadow:none;}
-    details.insight summary .chev{display:none;}
-  }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 경영 T&amp;I Daily Brief · 2026-08-03</title>
+<style>:root{--navy:#002c5f;--navy2:#004b93;--ink:#101218;--muted:#667085;--line:#e4e7ec;--paper:#fff;--canvas:#f4f6f8;--invest:#a26b12;--corp:#0d9488;--tech:#4f46e5}
+*{box-sizing:border-box}
+html{background:var(--canvas)}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",Segoe UI,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+.brief-page{max-width:680px;margin:0 auto;padding:64px 20px 56px}
+.masthead{text-align:center}
+.brandmark{display:inline-block;padding:9px 25px;border-radius:999px;background:var(--navy);color:#fff;font-size:20px;font-weight:800;letter-spacing:.03em}
+.masthead h1{margin:15px 0 8px;font-size:44px;line-height:1.08;letter-spacing:-.045em}
+.desc{margin:0;color:#3a4150;font-size:13.5px;font-weight:600}
+.issue{display:inline-block;margin-top:20px;color:var(--ink);font-size:14px;font-weight:800}
+.section{margin-top:36px}
+.section-label{display:inline-block;margin:0 0 16px;padding:5px 17px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-size:14px;font-weight:800}
+.hero{position:relative;min-height:250px;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,var(--navy),var(--navy2));color:#fff;padding:34px 30px 30px}
+.hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74))}
+.hero h2,.hero-foot,.hero-rule{position:relative;z-index:2}
+.hero h2{margin:0;font-size:30px;line-height:1.32;letter-spacing:-.035em}
+.hero-rule{width:52%;height:1px;margin:22px 0 12px;background:rgba(255,255,255,.38)}
+.hero-foot{font-size:13px;font-weight:700;color:rgba(255,255,255,.88)}
+.ednote{margin-top:-14px;padding:30px 30px 24px;border:1px solid rgba(16,18,24,.1);border-top:0;border-radius:0 0 22px 22px;background:#fff}
+.ednote h3{margin:0 0 8px;color:var(--navy);font-size:13px;letter-spacing:.035em}
+.ednote p{margin:0;color:#303846;font-size:15px}
+.cards{display:grid;gap:12px}
+.card{display:grid;grid-template-columns:128px 1fr;overflow:hidden;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}
+.thumb{min-height:136px;background:var(--navy)}
+.card-body{padding:17px 18px 15px}
+.chip{display:inline-flex;align-items:center;gap:6px;color:var(--cat);font-size:11px;font-weight:800}
+.chip .d{width:6px;height:6px;border-radius:50%;background:var(--cat)}
+.card h3{margin:7px 0 7px;font-size:17px;line-height:1.42;letter-spacing:-.025em}
+.sum{margin:0;color:#4b5563;font-size:13px;line-height:1.62}
+.src{margin-top:13px;padding-top:9px;border-top:1px solid #eef0f4;color:#8b94a3;font-size:11px;font-weight:600}
+.src a{color:inherit;text-decoration:none}
+.src .dt{display:block;margin-top:2px;color:#98a2b3;font-weight:500}
+.taxonomy{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}
+.tax-row{display:flex;gap:10px;align-items:baseline;margin-bottom:8px;font-size:13px}
+.tax-row:last-child{margin-bottom:0}
+.tax-name{width:90px;flex:none;color:var(--ink);font-weight:800}
+.tax-desc{color:#777f8d}
+.tax-invest{color:var(--invest)}.tax-corp{color:var(--corp)}.tax-tech{color:var(--tech)}
+footer{margin-top:36px;padding-top:22px;border-top:1px solid rgba(16,18,24,.1);text-align:center}
+footer .pub{margin:0 0 8px;font-size:13px;font-weight:800}
+footer .note{margin:0 auto;max-width:580px;color:#777f8d;font-size:11px}
+footer .meta{margin-top:13px;color:#98a2b3;font-size:10px;letter-spacing:.06em}
+.empty{padding:20px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--muted)}
+@media(max-width:560px){.brief-page{padding:38px 14px 44px}.masthead h1{font-size:37px}.brandmark{font-size:18px}.hero{min-height:220px;padding:27px 21px 24px}.hero h2{font-size:24px}.ednote{padding:25px 21px 20px}.card{grid-template-columns:96px 1fr}.thumb{min-height:112px}.card-body{padding:14px}.card h3{font-size:15px}.tax-row{display:block}.tax-name{display:block;width:auto;margin-bottom:2px}}
+@media print{@page{margin:14mm}html,body{background:#fff}.brief-page{max-width:none;padding:0}.hero,.ednote,.card,.taxonomy,footer{break-inside:avoid;page-break-inside:avoid}.card{box-shadow:none}a{color:inherit;text-decoration:none}}
 </style>
 </head>
 <body>
-<div class="page" data-edition-type="daily" data-edition-key="2026-08-03" style="max-width:680px;margin:0 auto;padding:0 20px 56px;font-family:'Pretendard Variable',Pretendard,'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',system-ui,Arial,sans-serif;color:#101218;line-height:1.6;">
-  <section class="intro">
-    <p class="lead" style="margin:0 0 16px 0;"><span class="welcome">안내</span>AI 산업의 주요 동향을 선별·분석하여 전해 드리는<br /><b>『HDEC AI Daily Brief』</b>입니다.</p>
-    <div style="height:4px;line-height:1px;font-size:1px;">&nbsp;</div>
-    <div class="ix-group" style="border:1px solid rgba(16,18,24,.10);border-radius:11px;overflow:hidden;background:#FAFBFC;">
-      <details class="ix" style="background:transparent;">
-        <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:11px 15px;">
-          <span style="font-size:15px;font-weight:800;color:#101218;letter-spacing:-.02em;">Daily Brief</span>
-          <span style="font-size:12px;font-weight:700;color:#777F8D;">매일 오전 정기 발행</span>
-          <span aria-hidden="true" style="margin-left:auto;font-size:20px;font-weight:700;color:#002C5F;line-height:1;">+</span>
-        </summary>
-        <p style="margin:0;padding:0 15px 13px;font-size:14px;line-height:1.62;color:#3A4150;">전일 07:00부터 당일 06:40 KST까지 확인된 주요 AI 정책, 기업 동향, 핵심 기술·투자 이슈를 선별해 핵심만 정리합니다.</p>
-      </details>
-      <div style="border-top:1px solid rgba(16,18,24,.10);height:0;line-height:0;font-size:0;">&nbsp;</div>
-      <details class="ix" style="background:transparent;">
-        <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:11px 15px;">
-          <span style="font-size:15px;font-weight:800;color:#101218;letter-spacing:-.02em;">Coverage</span>
-          <span style="font-size:12px;font-weight:700;color:#777F8D;">2026-08-02 07:00:00 ~ 2026-08-03 06:40:00 KST</span>
-          <span aria-hidden="true" style="margin-left:auto;font-size:20px;font-weight:700;color:#002C5F;line-height:1;">+</span>
-        </summary>
-        <p style="margin:0;padding:0 15px 13px;font-size:14px;line-height:1.62;color:#3A4150;">공개 기사 메타데이터와 제공된 요약만 사용하며, 각 기사 원문은 표시된 링크에서 확인할 수 있습니다.</p>
-      </details>
-    </div>
-  </section>
-  <div style="height:46px;line-height:1px;font-size:1px;">&nbsp;</div>
-  <hr style="border:none;border-top:1px solid #DDE1E8;max-width:120px;margin:0 auto;" />
-  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
-  <header class="masthead" style="text-align:center;padding:0;">
-    <div class="brandmark" style="display:inline-block;background:#002C5F;color:#fff;padding:10px 26px;border-radius:999px;font-size:22px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;">HDEC AI</div>
-    <h1 style="margin:14px 0 10px;font-size:45px;font-weight:800;letter-spacing:-.035em;line-height:1.1;color:#101218;">Daily Brief</h1>
-    <p class="desc" style="margin:0;font-size:13.5px;color:#3A4150;font-weight:600;">AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p>
-    <div class="issue" style="margin-top:22px;font-size:15px;font-weight:700;color:#101218;display:inline-flex;align-items:center;gap:10px;">2026-08-03</div>
+<main class="brief-page" data-brief-contract="AI_TNI_EXECUTIVE_V1" data-edition-type="daily" data-edition-key="2026-08-03" style="max-width:680px;margin:0 auto;padding:64px 20px 56px">
+  <header class="masthead">
+    <div class="brandmark" style="display:inline-block;background:#002c5f;color:#fff;padding:9px 25px;border-radius:999px;font-weight:800">AI 경영 T&amp;I</div>
+    <h1>Daily Brief</h1>
+    <p class="desc">AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p>
+    <div class="issue">2026-08-03</div>
   </header>
-  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
-  <div class="sec-label" style="display:inline-block;font-size:15px;font-weight:800;color:#101218;border:2px solid #101218;border-radius:999px;padding:6px 18px;background:#fff;margin:0 0 16px;">오늘의 헤드라인</div>
-  <section class="hero" data-role="headline" style="position:relative;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);color:#fff;padding:34px 30px 30px;"><img src="https://stqnq5ux4599.edge.naverncp.com/data2//content/image/2026/08/02/.cache/512/20260802500006.jpg?v=20260803080025" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:0;"><div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,20,60,.82) 0%,rgba(6,48,40,.75) 100%);z-index:1;"></div><h2 style="position:relative;z-index:2;margin:0;font-size:31px;font-weight:800;letter-spacing:-.035em;line-height:1.3;color:#fff;">[비바100] 로봇이 용접하고 AI 가 공정 짠다… 조선소의 이유 있는 진화</h2><div class="hero-rule" style="position:relative;z-index:2;height:1px;background:rgba(255,255,255,.35);margin:22px 0 12px;max-width:340px;"></div><div class="hero-foot" style="position:relative;z-index:2;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);"><span>AI 인프라</span></div></section><div class="ednote" style="background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:0 0 22px 22px;margin-top:-14px;padding:30px 30px 24px;"><h3 class="ed-k">Editor's Summary</h3><p>양사는 ▲조선업 특화 AI ·클라우드 인프라 구축 ▲ 데이터센터 전력 인프라 개발 ▲소프트웨어 중심 선박(SDV) 기술 협력 ▲피지컬 AI ·로봇 기술 활용 ▲디지털 교육 등 분야에서 공동 프로젝트를 추진할 계획이다. 지난...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.viva100.com/article/20260802500016" target="_blank" rel="noopener noreferrer">브릿지경제<span class="dt">2026-08-03 06:40 KST · 원문</span></a></div></div>
-  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
-  <div class="sec-label" style="display:inline-block;font-size:15px;font-weight:800;color:#101218;border:2px solid #101218;border-radius:999px;padding:6px 18px;background:#fff;margin:0 0 16px;">오늘의 브리핑</div>
-  <article class="card" data-role="article-card" style="--cat:var(--c-tech);--tint:#F1F1FD;display:grid;grid-template-columns:128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;overflow:hidden;margin:0 0 12px;"><div class="thumb"><img src="https://cdn.apnews.kr/news/thumbnail/202608/3050225_82585_4333_v150.jpg" alt="HD현대일렉, 美서 초고압변압기 1000대 생산…현지화 15년 결실" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="card-body"><span class="chip"><span class="d"></span>AI 인프라</span><h3>HD현대일렉, 美서 초고압변압기 1000대 생산…현지화 15년 결실</h3><p class="sum">HD현대일렉트릭(267260)이 국내 전력기기 업계 최초로 미국 현지에서 초고압변압기 누적 생산 1000대를... 미국 전력 망은 노후 설비 교체와 데이터센터 확산, 전력 수요 증가가 맞물리면서 대규모 투자가 이어지고...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.apnews.kr/news/articleView.html?idxno=3050225" target="_blank" rel="noopener noreferrer">AP신문 | 온라인뉴스미디어 에이피신문<span class="dt">2026-08-03 02:44 KST · 원문</span></a></div></div></article><article class="card" data-role="article-card" style="--cat:var(--c-tech);--tint:#F1F1FD;display:grid;grid-template-columns:128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;overflow:hidden;margin:0 0 12px;"><div class="thumb"><img src="https://cdn.junggi.co.kr/news/photo/202607/37271_43616_50.jpg" alt="주식투자를 안해도 메모리 반도체는 일상에 영향을 미친다" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="card-body"><span class="chip"><span class="d"></span>AI 인프라</span><h3>주식투자를 안해도 메모리 반도체는 일상에 영향을 미친다</h3><p class="sum">한정된 공간에 칩을 더 높게 쌓아 용량을 극대화해야 하므로 소형화가 관건이며, 전력 효율도 높아야 한다.... AI용 메모리 반도체 수요가 급증하고, 메모리 반도체 업체들이 AI 데이터센터 에 들어가는 HBM 생산에...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.junggi.co.kr/news/articleView.html?idxno=37271" target="_blank" rel="noopener noreferrer">중기이코노미<span class="dt">2026-08-03 00:00 KST · 원문</span></a></div></div></article><article class="card" data-role="article-card" style="--cat:var(--c-tech);--tint:#F1F1FD;display:grid;grid-template-columns:128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;overflow:hidden;margin:0 0 12px;"><div class="thumb"><img src="https://cdn.webeconomy.co.kr/news/photo/202608/2253582_1062314_4756.jpg" alt="HD현대일렉트릭, 미국서 초고압변압기 1000호 생산" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="card-body"><span class="chip"><span class="d"></span>AI 인프라</span><h3>HD현대일렉트릭, 미국서 초고압변압기 1000호 생산</h3><p class="sum">북미 전력기기 시장 공략을 강화하고 있다. HD현대일렉트릭은 최근 미국 앨라배마주 북미 생산법인에서... 한편 미국은 인공지능(AI) 데이터센터 와 반도체 공장, 전기차 생산시설 확대에 따라 전력 망 투자 규모가...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.webeconomy.co.kr/news/articleView.html?idxno=2253582" target="_blank" rel="noopener noreferrer">웹이코노미<span class="dt">2026-08-02 22:09 KST · 원문</span></a></div></div></article><article class="card" data-role="article-card" style="--cat:var(--c-tech);--tint:#F1F1FD;display:grid;grid-template-columns:128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;overflow:hidden;margin:0 0 12px;"><div class="thumb"><img src="https://cdn.econonews.co.kr/news/thumbnail/202608/442224_373412_2527_v150.jpg" alt="HD현대일렉트릭, 미국서 1000번째 초고압변압기 생산…&quot;북미 시장 경쟁..." style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="card-body"><span class="chip"><span class="d"></span>AI 인프라</span><h3>HD현대일렉트릭, 미국서 1000번째 초고압변압기 생산…&quot;북미 시장 경쟁...</h3><p class="sum">최근 글로벌 전력 인프라 투자 확대와 데이터센터 건설 증가, 재생에너지 설비 확충이 맞물리면서... HD현대일렉트릭은 초고압변압기 외에도 배전 기기 와 회전 기기 등 전력기기 사업을 확대하며 북미 시장 경쟁력을...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="http://www.econonews.co.kr/news/articleView.html?idxno=442224" target="_blank" rel="noopener noreferrer">이코노뉴스<span class="dt">2026-08-02 20:15 KST · 원문</span></a></div></div></article><article class="card" data-role="article-card" style="--cat:var(--c-tech);--tint:#F1F1FD;display:grid;grid-template-columns:128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;overflow:hidden;margin:0 0 12px;"><div class="thumb"><img src="https://cdn.pinpointnews.co.kr/news/thumbnail/202608/473639_460952_2858_v150.jpg" alt="HD현대일렉트릭, 전 사업부 고른 성장…수주잔고 확대에 중장기 기대" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="card-body"><span class="chip"><span class="d"></span>AI 인프라</span><h3>HD현대일렉트릭, 전 사업부 고른 성장…수주잔고 확대에 중장기 기대</h3><p class="sum">전력기기 와 배전 기기 , 회전 기기 등 주요 사업이 모두 안정적인 매출 증가를 기록하며 외형 성장과 수익성 개선을 동시에 이끌었다. 글로벌 전력 인프라 투자 확대와 데이터센터 증설에 따른 전력 설비 수요 증가가...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.pinpointnews.co.kr/news/articleView.html?idxno=473639" target="_blank" rel="noopener noreferrer">핀포인트뉴스<span class="dt">2026-08-02 18:29 KST · 원문</span></a></div></div></article>
-  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
-  <div class="sec-label" style="display:inline-block;font-size:15px;font-weight:800;color:#101218;border:2px solid #101218;border-radius:999px;padding:6px 18px;background:#fff;margin:0 0 16px;">정보 분류 기준</div>
-  <div class="taxo" style="background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;padding:16px 18px;">
-    <div class="t-row" style="display:flex;gap:10px;align-items:baseline;font-size:13px;margin:0 0 8px;">
-      <span class="t-name" style="width:84px;flex:none;font-weight:800;color:#101218;"><span style="color:#A26B12;font-size:12px;margin-right:6px;">●</span>투자·산업</span>
-      <span class="t-desc" style="color:#777F8D;font-weight:500;">자본과 인프라의 흐름 — 대규모 투자, 시장 재편, 정책·글로벌 동향</span>
-    </div>
-    <div class="t-row" style="display:flex;gap:10px;align-items:baseline;font-size:13px;margin:0 0 8px;">
-      <span class="t-name" style="width:84px;flex:none;font-weight:800;color:#101218;"><span style="color:#0D9488;font-size:12px;margin-right:6px;">●</span>기업동향</span>
-      <span class="t-desc" style="color:#777F8D;font-weight:500;">경쟁사 및 선도 기업의 AI 도입·전환 전략과 움직임</span>
-    </div>
-    <div class="t-row" style="display:flex;gap:10px;align-items:baseline;font-size:13px;">
-      <span class="t-name" style="width:84px;flex:none;font-weight:800;color:#101218;"><span style="color:#4F46E5;font-size:12px;margin-right:6px;">●</span>기술정보</span>
-      <span class="t-desc" style="color:#777F8D;font-weight:500;">신규 AI 모델·제품·기술의 등장과 영향</span>
-    </div>
-  </div>
-  <div style="height:36px;line-height:1px;font-size:1px;">&nbsp;</div>
-  <footer style="border-top:1px solid rgba(16,18,24,.10);padding-top:22px;text-align:center;">
-    <p class="pub">발행 — 워크이노베이션센터 | AI디자인랩</p>
-    <p class="note">본 브리핑은 주요 외신 및 국내 언론, 공신력 있는 전문지 등의 외부 보도를 중심으로 요약한 자료로, 세부 내용은 원문 기준입니다.</p>
-    <div class="meta-line">HDEC AI · DAILY BRIEF · 2026-08-03 · 2026-08-02 07:00:00 ~ 2026-08-03 06:40:00 KST</div>
-  </footer>
-</div>
-<script>
-  (function(){
-    var opened = [];
-    window.addEventListener('beforeprint', function(){
-      opened = [];
-      document.querySelectorAll('details.insight:not([open])').forEach(function(d){
-        d.setAttribute('open',''); opened.push(d);
-      });
-    });
-    window.addEventListener('afterprint', function(){
-      opened.forEach(function(d){ d.removeAttribute('open'); });
-      opened = [];
-    });
-  })();
-</script>
+  <section class="section" aria-labelledby="headline-label">
+    <h2 class="section-label" id="headline-label">오늘의 헤드라인</h2>
+    <section class="hero" data-role="headline" style="position:relative;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);color:#fff;padding:34px 30px 30px;"><img src="../review/2026-08-03/assets/images/6969dcfd4315beacb4df20a8.jpg" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:0;"><div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,20,60,.82) 0%,rgba(6,48,40,.75) 100%);z-index:1;"></div><h2 style="position:relative;z-index:2;margin:0;font-size:31px;font-weight:800;letter-spacing:-.035em;line-height:1.3;color:#fff;">HD현대일렉, 美서 초고압변압기 1000대 생산…현지화 15년 결실</h2><div class="hero-rule" style="position:relative;z-index:2;height:1px;background:rgba(255,255,255,.35);margin:22px 0 12px;max-width:340px;"></div><div class="hero-foot" style="position:relative;z-index:2;font-size:13px;font-weight:600;color:rgba(255,255,255,.85);"><span>투자·산업</span></div></section><div class="ednote" style="background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:0 0 22px 22px;margin-top:-14px;padding:30px 30px 24px;"><h3 class="ed-k">Editor's Summary</h3><p>HD현대일렉트릭(267260)이 국내 전력기기 업계 최초로 미국 현지에서 초고압변압기 누적 생산 1000대를... 미국 전력 망은 노후 설비 교체와 데이터센터 확산, 전력 수요 증가가 맞물리면서 대규모 투자가 이어지고...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.apnews.kr/news/articleView.html?idxno=3050225" target="_blank" rel="noopener noreferrer">AP신문 | 온라인뉴스미디어 에이피신문<span class="dt">2026-08-03 02:44 KST · 원문</span></a></div></div>
+  </section>
+  <section class="section" aria-labelledby="briefing-label">
+    <h2 class="section-label" id="briefing-label">오늘의 브리핑</h2>
+    <div class="cards"><article class="card" data-role="article-card" style="--cat:var(--c-invest);--tint:#F7F0E2;display:grid;grid-template-columns:128px 1fr;background:#fff;border:1px solid rgba(16,18,24,.10);border-radius:16px;overflow:hidden;margin:0 0 12px;"><div class="thumb"><img src="../review/2026-08-03/assets/images/ad335981f1588f199031623d.jpg" alt="&#x27;도로 윤석열&#x27; 메가 특구 일촉즉발 &#x27;반노동 기로&#x27;" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="card-body"><span class="chip"><span class="d"></span>투자·산업</span><h3>&#x27;도로 윤석열&#x27; 메가 특구 일촉즉발 &#x27;반노동 기로&#x27;</h3><p class="sum">▲ 지난해 2월 국회에서 열린 &#x27;행복하고 정의로운 대한민국, 반도체 특별법 노동시간 적용제외 어떻게&#x27;라는... &quot; 정부가 수천조 원을 투자 해 추진하는 &#x27;3대 메가 프로젝트&#x27; 입법 규제 특례안이 일부 알려지자 노동계에서...</p><div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid #EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 <a class="link" data-link-kind="publisher_direct" href="https://www.labortoday.co.kr/news/articleView.html?idxno=236020" target="_blank" rel="noopener noreferrer">매일노동뉴스<span class="dt">2026-08-03 06:30 KST · 원문</span></a></div></div></article></div>
+  </section>
+  <section class="section" aria-labelledby="taxonomy-label">
+    <h2 class="section-label" id="taxonomy-label">정보 분류 기준</h2>
+    <div class="taxonomy" data-role="information-taxonomy"><div class="tax-row"><span class="tax-name"><span class="tax-invest">●</span> 투자·산업</span><span class="tax-desc">자본과 인프라의 흐름 — 투자, 시장 재편, 정책·글로벌 동향</span></div><div class="tax-row"><span class="tax-name"><span class="tax-corp">●</span> 기업동향</span><span class="tax-desc">선도 기업과 경쟁사의 AI 도입·전환 전략</span></div><div class="tax-row"><span class="tax-name"><span class="tax-tech">●</span> 기술정보</span><span class="tax-desc">신규 AI 모델·제품·기술의 등장과 경영 영향</span></div></div>
+  </section>
+  <footer data-role="publication-footer"><p class="pub">워크이노베이션센터 | AI디자인랩</p><p class="note">공신력 있는 외부 보도의 제목·게시시각·제공 요약을 바탕으로 편집했으며 세부 내용은 게시자 원문 기준입니다.</p><div class="meta">AI 경영 T&amp;I · DAILY BRIEF · 2026-08-03 · 2026-08-02 07:00:00 ~ 2026-08-03 06:40:00 KST</div></footer>
+</main>
 </body>
 </html>
