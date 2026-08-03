@@ -682,6 +682,7 @@ def verify_html(
     expected_status: str,
     expected_articles: int | None = None,
     expected_model: dict | None = None,
+    require_semantic_filter: bool = True,
 ) -> None:
     """Verify semantic data contracts inside the immutable reference shell."""
     parser = SurfaceParser()
@@ -712,7 +713,10 @@ def verify_html(
         dom_contract, dom_detail = False, str(exc)
     check(f"{label}: immutable DOM order and nesting", dom_contract, dom_detail)
     try:
-        reference_parity.assert_interactions(html)
+        reference_parity.assert_interactions(
+            html,
+            require_semantic_filter=require_semantic_filter,
+        )
         interaction_contract, interaction_detail = True, ""
     except AssertionError as exc:
         interaction_contract, interaction_detail = False, str(exc)
@@ -1197,14 +1201,16 @@ def main() -> int:
                 teams_policy.select_teams_push_candidates(carried_twenty) == (),
             )
             image_probe = copy.deepcopy(nineteen_model)
-            build_news_censor.materialize_article_images(
-                image_probe,
-                output_root=temp_root / "image-limit-probe",
-                image_limit=0,
-            )
             check(
-                "image limit never becomes article limit",
-                len(image_probe["articles"]) == 19,
+                "image coverage has no positional article cap",
+                len(image_probe["articles"]) == 19
+                and "image_limit"
+                not in build_news_censor.materialize_article_images.__code__.co_varnames
+                and all(
+                    row["image_status"] == "deterministic_fallback"
+                    and row["image_reason"] == "no_image_candidate"
+                    for row in image_probe["articles"]
+                ),
             )
             nineteen_html = build_news_censor.render_html(nineteen_model)
             nineteen_funnel = audit_news_censor_funnel.audit_artifact(
@@ -1397,6 +1403,9 @@ def main() -> int:
                 host="multi.example",
                 published_at="2026-08-01T06:00:00+09:00",
                 categories=["biz", "peers", "ai"],
+            )
+            multi_row["snippet"] = (
+                "GS건설이 AI 데이터센터 건설과 전력 인프라 투자를 발표했다."
             )
             multi_model = build_news_censor.build_model(
                 artifact_for([multi_row]),
@@ -1612,6 +1621,18 @@ def main() -> int:
 
     check("workflow runs News Censor verifier", "python3 scripts/verify_news_censor.py" in workflow_text)
     check(
+        "workflow proves full displayed-article image coverage",
+        "python3 scripts/verify_news_censor_image_coverage.py" in workflow_text
+        and "--verified-state data/news_censor_verified_state.json" in workflow_text
+        and "--image-limit" not in workflow_text,
+    )
+    check(
+        "workflow verifies actual semantic category/filter output",
+        "python3 scripts/verify_news_censor_semantic_filters.py" in workflow_text
+        and "--candidate docs/news-censor/latest.html" in workflow_text
+        and "--compatibility docs/daily/dashboard-latest.html" in workflow_text,
+    )
+    check(
         "workflow builds live News Censor fail-closed",
         "python3 scripts/build_news_censor.py" in workflow_text
         and "--output-root docs/news-censor" in workflow_text
@@ -1654,6 +1675,7 @@ def main() -> int:
                 expected_mode="published",
                 expected_status="published",
                 expected_articles=len(committed_model.get("articles") or []),
+                require_semantic_filter=False,
             )
         else:
             check(

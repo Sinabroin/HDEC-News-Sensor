@@ -64,8 +64,9 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
         # R4-R5 publishes both exact-reference dashboard paths from one artifact,
-        # leaves sender state out, and gates on validated-Brief field equivalence.
-        "c4039845e3eaaf7f1c45019d779c4d68ad8cf5039cf7b1510742f4da1b4dfcd2"
+        # leaves sender state out, gates on validated-Brief field equivalence,
+        # and considers every displayed article for cached/bounded local imagery.
+        "e31b1e054481b61f20ed293f48a87a65487b63a194edb073707752d91bf10454"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent

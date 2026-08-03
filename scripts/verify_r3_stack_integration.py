@@ -131,6 +131,16 @@ SUBVERIFIERS = (
         r"RESULT=D7-AK-6E_TEAMS_VALIDATED_BRIEF_SEMANTIC_EQUIVALENCE_PASS",
     ),
     (
+        "NEWS_CENSOR_FULL_IMAGE_COVERAGE_VERIFIER",
+        "verify_news_censor_image_coverage.py",
+        r"RESULT=D7-AK-6E_NEWS_CENSOR_FULL_IMAGE_COVERAGE_PASS",
+    ),
+    (
+        "NEWS_CENSOR_SEMANTIC_FILTER_VERIFIER",
+        "verify_news_censor_semantic_filters.py",
+        r"NEWS_CENSOR_SEMANTIC_FILTERS=PASS",
+    ),
+    (
         "SCHEDULED_REFRESH_VERIFIER",
         "verify_scheduled_refresh_and_telegram.py",
         r"RESULT: PASS",

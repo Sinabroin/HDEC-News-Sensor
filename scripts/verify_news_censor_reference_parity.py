@@ -441,8 +441,8 @@ def remote_image_hotlinks(html: str) -> list[str]:
     return values
 
 
-def assert_interactions(html: str) -> None:
-    required = (
+def assert_interactions(html: str, *, require_semantic_filter: bool = True) -> None:
+    required = [
         "activateCategory(c.dataset.cat)",
         "activateCategory('all')",
         "applyFilter(firstFilter === 'all' ? cat : firstFilter)",
@@ -454,7 +454,14 @@ def assert_interactions(html: str) -> None:
         "showPane(b.dataset.goto)",
         "readerTrigger.focus({preventScroll:true})",
         "prefers-reduced-motion: reduce",
-    )
+    ]
+    if require_semantic_filter:
+        required.extend((
+            "semanticPresentations",
+            "semanticAssign",
+            "semanticEmpty",
+            "referenceApplyFilter(tok)",
+        ))
     missing = [value for value in required if value not in html]
     if missing:
         raise AssertionError(f"interaction parity tokens missing: {missing}")

@@ -284,6 +284,71 @@
   function applyFilter(tok) {
     items.forEach(el => el.classList.toggle('hide', tok !== 'all' && !el.dataset.t.split(' ').includes(tok)));
   }
+  // D7-AK-6E-SEMANTIC-FILTER-START
+  // The reference filter toggles visibility correctly, but it cannot promote a
+  // matching grid row when the Home lead is unrelated. Keep the sealed DOM and
+  // reference filter, and deterministically reassign only article presentation.
+  const referenceApplyFilter = applyFilter;
+  const semanticLead = document.querySelector('.newslist > .lead');
+  const semanticGrid = document.querySelector('.newslist > .grid');
+  const semanticGridCards = [...document.querySelectorAll('.newslist > .grid > .nitem')];
+  const semanticData = JSON.parse(document.getElementById('article-data').textContent || '{}');
+  const semanticPresentations = new Map();
+  [semanticLead, ...semanticGridCards].filter(Boolean).forEach(card => {
+    const id = card.dataset.article;
+    const thumb = card.querySelector('.thumb');
+    if (!id || !thumb) return;
+    semanticPresentations.set(id, {
+      id,
+      tokens:card.dataset.t || '',
+      thumb:thumb.outerHTML,
+      sourceText:(card.querySelector('.src') || {}).textContent || ''
+    });
+  });
+  const semanticHomeLeadId = semanticLead ? semanticLead.dataset.article : '';
+  const semanticGridIds = semanticGridCards.map(card => card.dataset.article);
+  const semanticEmpty = document.createElement('p');
+  semanticEmpty.hidden = true;
+  semanticEmpty.setAttribute('role', 'status');
+  semanticEmpty.style.cssText = 'margin:18px 0 0;padding:28px 12px;text-align:center;color:#8A908C;font-size:13px;border-top:1px solid var(--line)';
+  semanticEmpty.textContent = '현재 조건을 충족한 검증 기사가 없습니다.';
+  if (semanticGrid) semanticGrid.insertAdjacentElement('afterend', semanticEmpty);
+  function semanticEsc(value) {
+    return String(value || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+  function semanticAssign(card, id, lead) {
+    const article = semanticData[id];
+    const view = semanticPresentations.get(id);
+    if (!card || !article || !view) return;
+    card.dataset.article = id;
+    card.dataset.t = view.tokens;
+    if (lead) {
+      card.innerHTML = `<span class="lead-thumb">${view.thumb}</span><div class="lead-body"><span class="verdict" style="color:${semanticEsc(article.verdictColor)};border-color:${semanticEsc(article.verdictColor)}">${semanticEsc(article.verdict)}</span><h2>${semanticEsc(article.title)}</h2><p class="lead-sum">${semanticEsc(article.snippet)}</p><p class="src">${semanticEsc(view.sourceText)}</p></div>`;
+    } else {
+      card.innerHTML = `<span class="nthumb">${view.thumb}</span><div class="nbody"><h3>${semanticEsc(article.title)}</h3><p class="why"><span class="verdict sm" style="color:${semanticEsc(article.verdictColor)};border-color:${semanticEsc(article.verdictColor)}">${semanticEsc(article.verdict)}</span> ${semanticEsc(article.why)}</p><p class="src">${semanticEsc(view.sourceText)}</p></div>`;
+    }
+  }
+  function semanticReset() {
+    semanticAssign(semanticLead, semanticHomeLeadId, true);
+    semanticGridCards.forEach((card, index) => semanticAssign(card, semanticGridIds[index], false));
+  }
+  applyFilter = function(tok) {
+    semanticReset();
+    const matches = [...semanticPresentations.values()].filter(view =>
+      tok === 'all' || view.tokens.split(' ').includes(tok));
+    const homeMatches = matches.some(view => view.id === semanticHomeLeadId);
+    if (!homeMatches && matches.length && semanticLead) {
+      const promoted = matches[0].id;
+      const gridIndex = semanticGridIds.indexOf(promoted);
+      if (gridIndex >= 0) {
+        semanticAssign(semanticLead, promoted, true);
+        semanticAssign(semanticGridCards[gridIndex], semanticHomeLeadId, false);
+      }
+    }
+    referenceApplyFilter(tok);
+    if (semanticEmpty) semanticEmpty.hidden = matches.length !== 0;
+  };
+  // D7-AK-6E-SEMANTIC-FILTER-END
   cats.forEach(c => c.addEventListener('click', () => {
     showPane('pane-articles');               // 카테고리를 누르면 항상 뉴스 화면
     activateCategory(c.dataset.cat);

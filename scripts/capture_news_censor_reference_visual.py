@@ -60,6 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (safety) safety.innerHTML = '<a href="https://publisher.example/fixture">검증된 안전·지정학 기사 제목</a><small>검증 발행사 · 08-03 07:00</small>';
   const allTokens = 'all biz peers hdec safety global ai magazine lens:plant lens:civil_infrastructure lens:building_housing lens:developers lens:development_business lens:competitor_contractors sub:4e7d40c0 sub:fd3376dd sub:e8a249a3 lens:hyundai_group sub:d914e406 lens:domestic_site lens:safety_quality lens:global_business lens:ai lens:new_energy';
   document.querySelectorAll('.lead, .nitem').forEach(card => { card.dataset.t = allTokens; card.classList.remove('hide'); });
+  if (typeof semanticPresentations !== 'undefined') {
+    semanticPresentations.forEach(view => { view.tokens = allTokens; });
+  }
+  if (typeof referenceApplyFilter === 'function') {
+    applyFilter = referenceApplyFilter;
+  }
   const target = [...document.querySelectorAll('.cat')].find(cat => cat.dataset.cat === '__CATEGORY__');
   if (target) target.click();
   window.scrollTo(0, 0);
