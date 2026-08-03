@@ -145,6 +145,49 @@ def _payload(articles, **overrides):
     return payload
 
 
+def _validated_payload(articles, **overrides):
+    """Serialize live facts with the production validated-Brief field contract."""
+    rows = []
+    for article in articles:
+        why = str(
+            article.get("whyImportant")
+            or article.get("why_it_matters")
+            or article.get("hdec_relevance")
+            or ""
+        )
+        tier = str(
+            article.get("hdec_relevance_tier")
+            or article.get("decision_relevance_tier")
+            or "A"
+        )
+        rows.append({
+            **article,
+            "article_id": article.get("article_id") or article.get("article_key"),
+            "snippet": article.get("snippet") or article.get("summary"),
+            "final_score": article.get("final_score", article.get("score")),
+            "whyImportant": why,
+            "why_it_matters": why,
+            "hdec_relevance_tier": tier,
+            "decision_relevance_tier": tier,
+            "source_quality_passed": article.get("source_quality_passed", True),
+            "publisher_direct": article.get("publisher_direct", True),
+            "current_run_seen": article.get("current_run_seen", True),
+            "teams_newness_eligible": article.get("teams_newness_eligible", True),
+            "carried_forward": article.get("carried_forward", False),
+        })
+    payload = {
+        "artifact_contract": "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1",
+        "news_data_mode": "live",
+        "news_fallback_used": False,
+        "collection_status": "LIVE_HEALTHY_WITH_ARTICLES",
+        "generated_at": "2026-07-23T09:31:00+09:00",
+        "generated_kst": "2026-07-23 09:31",
+        "news_censor_display_articles": rows,
+    }
+    payload.update(overrides)
+    return payload
+
+
 def _write(path: Path, payload) -> Path:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return path
@@ -790,9 +833,9 @@ def _legacy_check_cap_and_partial(tmp: Path) -> None:
 
 
 def check_cap_and_partial(tmp: Path) -> None:
-    """Prove cap-after-ledger queue semantics and accepted-only persistence."""
+    """Prove validated-Brief queue semantics and accepted-only persistence."""
     articles = _cap_articles(3)
-    payload = _payload(articles)
+    payload = _validated_payload(articles)
     queue_state = tmp / "queue-state.json"
 
     first, first_transport = _deliver(tmp, payload, queue_state, max_articles=99)
@@ -803,6 +846,20 @@ def check_cap_and_partial(tmp: Path) -> None:
           and first["SMTP_attempted"] == 1
           and first["SMTP_accepted"] == 1
           and len(first_transport.attempts) == 1, str(first))
+    check("validated-Brief policy-stage counters retain normalized rows",
+          first["verified_candidates"] == 3
+          and first["AI_core"] == 3
+          and first["HDEC_relevant"] == 3
+          and first["importance_qualified"] == 3,
+          str(first))
+    check("validated-Brief rejection counters expose the exact stable vocabulary",
+          tuple(first["rejection_breakdown"]) == sender.REJECTION_COUNTER_KEYS,
+          str(first["rejection_breakdown"]))
+    check("validated-Brief rejection counters reconcile to every input row",
+          first["rejection_reconciled"] is True
+          and first["rejected_rows"] + first["alert_policy_eligible"]
+          == first["rejection_input_count"] == 3,
+          str(first))
     check("non-selected eligible articles are not marked sent",
           len(load_state(queue_state)["article_ids"]) == 1, str(load_state(queue_state)))
 
@@ -851,13 +908,34 @@ def check_cap_and_partial(tmp: Path) -> None:
         teams_newness_eligible=False,
     )
     carry_summary, carry_transport = _deliver(
-        tmp, _payload([carry]), tmp / "carry-state.json", max_articles=99
+        tmp, _validated_payload([carry]), tmp / "carry-state.json", max_articles=99
     )
     check("carry-forward-only article cannot alert",
           carry_summary["current_candidates"] == 0
           and carry_summary["alert_policy_eligible"] == 0
           and carry_summary["selected"] == 0
           and not carry_transport.attempts, str(carry_summary))
+    check("carry-forward exclusion is observable and reconciled",
+          carry_summary["rejection_breakdown"]["carry_forward_excluded"] == 1
+          and carry_summary["rejection_reconciled"] is True,
+          str(carry_summary))
+
+    malformed = dict(articles[0])
+    malformed.pop("shadow_urgency_status")
+    malformed_summary, malformed_transport = _deliver(
+        tmp,
+        _validated_payload([malformed]),
+        tmp / "malformed-state.json",
+        send=False,
+        max_articles=99,
+    )
+    check("validated artifact missing urgency status fails as a schema rejection",
+          malformed_summary["alert_policy_eligible"] == 0
+          and malformed_summary["rejection_breakdown"]["malformed_required_field"] == 1
+          and malformed_summary["rejection_breakdown"]["shadow_unavailable"] == 0
+          and malformed_summary["rejection_reconciled"] is True
+          and not malformed_transport.attempts,
+          str(malformed_summary))
 
     shadow_state = tmp / "dashboard-independent-state.json"
     before, _ = _deliver(tmp, payload, shadow_state, send=False, max_articles=99)
@@ -1106,6 +1184,13 @@ def check_workflow() -> None:
           watch.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
     check("scheduled-live-refresh still runs this verifier in its gate",
           scheduled.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
+    semantic_command = (
+        "python3 scripts/verify_teams_validated_brief_semantic_equivalence.py"
+    )
+    check("watch gates on validated-Brief semantic equivalence",
+          watch.count(semantic_command) == 1)
+    check("scheduled refresh gates on validated-Brief semantic equivalence",
+          scheduled.count(semantic_command) == 1)
 
 
 def main() -> int:

@@ -64,13 +64,13 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
         # R4-R5 publishes both exact-reference dashboard paths from one artifact,
-        # replaces retired UI gates with sealed parity, and leaves sender state out.
-        "438bbdf21e6c62470e9e445709ad522a382f80876f7b32eee36690a819b27a20"
+        # leaves sender state out, and gates on validated-Brief field equivalence.
+        "c4039845e3eaaf7f1c45019d779c4d68ad8cf5039cf7b1510742f4da1b4dfcd2"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
-        # ledger before the immutable one-article production cap.
-        "6b0c5c1325171ebd3f670b4e4dc471b187a87b1c9acfa6d2c8ea85cf9b876253"
+        # ledger after proving its serializer/selector semantic equivalence.
+        "7d7a995a51abc78b154ad105db6d4fce87e074b793aec95a2281de12d6d0c25b"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"

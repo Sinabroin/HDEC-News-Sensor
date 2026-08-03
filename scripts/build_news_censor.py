@@ -30,7 +30,7 @@ for item in (ROOT, SCRIPTS):
     if str(item) not in sys.path:
         sys.path.insert(0, str(item))
 
-from app import publisher_direct  # noqa: E402
+from app import publisher_direct, topic_profiles  # noqa: E402
 from build_executive_brief import load_brief_json  # noqa: E402
 
 TEMPLATE = ROOT / "templates" / "news_censor.html"
@@ -69,6 +69,49 @@ CATEGORY_LABELS = {
     "ai": "AI",
 }
 PRIMARY_CATEGORY_IDS = tuple(key for key in CATEGORY_LABELS if key != "all")
+APPROVED_SUBFILTERS = {
+    "all": (("전체", "magazine", False),),
+    "biz": (
+        ("전체", "all", False),
+        ("플랜트", "lens:plant", False),
+        ("토목", "lens:civil_infrastructure", False),
+        ("건축·주택", "lens:building_housing", False),
+        ("시행사", "lens:developers", False),
+        ("개발사업", "lens:development_business", False),
+    ),
+    "peers": (
+        ("전체", "all", False),
+        ("경쟁 시공사", "lens:competitor_contractors", False),
+        ("GS건설", "sub:4e7d40c0", True),
+        ("대우건설", "sub:fd3376dd", True),
+        ("롯데건설", "sub:e8a249a3", True),
+    ),
+    "hdec": (
+        ("전체", "all", False),
+        ("현대 그룹사", "lens:hyundai_group", False),
+        ("현대엔지니어링", "sub:d914e406", True),
+        ("국내현장", "lens:domestic_site", False),
+    ),
+    "safety": (
+        ("전체", "all", False),
+        ("안전·품질", "lens:safety_quality", False),
+    ),
+    "global": (
+        ("전체", "all", False),
+        ("해외수주", "lens:global_business", False),
+    ),
+    "ai": (
+        ("전체", "all", False),
+        ("AI", "lens:ai", False),
+        ("신재생·전력", "lens:new_energy", False),
+    ),
+}
+COMPANY_SUBFILTERS = {
+    "GS건설": "sub:4e7d40c0",
+    "대우건설": "sub:fd3376dd",
+    "롯데건설": "sub:e8a249a3",
+    "현대엔지니어링": "sub:d914e406",
+}
 FRESH_MAX_HOURS = 72
 BACKFILL_MAX_HOURS = 7 * 24
 CATEGORY_TARGET = 3
@@ -238,6 +281,53 @@ def _subfilter_labels(row: Mapping) -> list[str]:
         if label and label not in labels and label not in CATEGORY_LABELS.values():
             labels.append(label[:40])
     return labels[:6]
+
+
+def _approved_subfilter_tokens(row: Mapping, categories: set[str]) -> list[str]:
+    """Map current verified facts into the reference-locked filter vocabulary."""
+    article = {
+        "title": str(row.get("title") or ""),
+        "snippet": str(row.get("snippet") or ""),
+        "source": str(row.get("source") or row.get("display_source") or ""),
+    }
+    tokens = {
+        f"lens:{lens}"
+        for lens in topic_profiles.classify_business_lenses(article)
+    }
+    for profile_id in ("competitor_contractors", "hyundai_group", "developers"):
+        profile = topic_profiles.get_topic_profile(profile_id)
+        if profile and topic_profiles.match_topic_profile(article, profile):
+            tokens.add(f"lens:{profile_id}")
+
+    # The canonical display taxonomy may supply the cross-cutting dashboard
+    # lenses; this affects dashboard filtering only and never Teams AI policy.
+    category_lenses = {
+        "peers": "lens:competitor_contractors",
+        "hdec": "lens:hyundai_group",
+        "safety": "lens:safety_quality",
+        "global": "lens:global_business",
+        "ai": "lens:ai",
+    }
+    tokens.update(
+        lens for category, lens in category_lenses.items() if category in categories
+    )
+
+    text = f'{article["title"]} {article["snippet"]}'
+    for company, token in COMPANY_SUBFILTERS.items():
+        if company in text:
+            tokens.add(token)
+    if "hdec" in categories and any(
+        marker in text for marker in ("국내 현장", "국내현장", "건설현장")
+    ):
+        tokens.add("lens:domestic_site")
+
+    approved_tokens = {
+        token
+        for rows in APPROVED_SUBFILTERS.values()
+        for _label, token, _sub2 in rows
+        if token not in {"all", "magazine"}
+    }
+    return sorted(tokens & approved_tokens)
 
 
 def _market_pane(brief: Mapping) -> dict:
@@ -969,6 +1059,7 @@ def build_model(
         if article_id in article_ids:
             raise RuntimeError("duplicate DOM article identity collision")
         article_ids.add(article_id)
+        categories_for_row = set(item["categories"])
         articles.append({
             "id": article_id,
             "title": str(row.get("title") or "").strip(),
@@ -982,8 +1073,8 @@ def build_model(
             "url": url,
             "publisher_direct": True,
             "authority_label": "Publisher Direct",
-            "categories": sorted(item["categories"], key=lambda token: tuple(CATEGORY_LABELS).index(token)),
-            "subfilters": sorted(item["subfilters"]),
+            "categories": sorted(categories_for_row, key=lambda token: tuple(CATEGORY_LABELS).index(token)),
+            "subfilter_ids": _approved_subfilter_tokens(row, categories_for_row),
             "initials": _initials(source),
             "tint": ("#0B6B3A", "#1E5F8A", "#8F6A2E", "#455B73", "#68716A")[index % 5],
             "score": round(float(row.get("final_score") or 0), 2),
@@ -998,6 +1089,7 @@ def build_model(
             "teams_newness_eligible": bool(
                 row.get("teams_newness_eligible", True)
             ),
+            "magazine": index < 12,
             "verification_cache_status": str(
                 row.get("verification_cache_status") or "network_verified"
             ),
@@ -1017,29 +1109,22 @@ def build_model(
                 "count": int(theme.get("count") or 0),
             })
 
-    subfilter_counts: dict[str, int] = {}
-    for article in articles:
-        for label in article["subfilters"]:
-            subfilter_counts[label] = subfilter_counts.get(label, 0) + 1
+    subfilter_counts = Counter(
+        token
+        for article in articles
+        for token in article.get("subfilter_ids", ())
+    )
     subfilters = [
         {
-            "id": "sub_" + hashlib.sha256(label.encode("utf-8")).hexdigest()[:10],
+            "id": token,
             "label": label,
-            "count": count,
+            "count": subfilter_counts[token],
         }
-        for label, count in sorted(
-            subfilter_counts.items(),
-            key=lambda item: (-item[1], item[0]),
-        )[:12]
-        if count > 0
+        for category in CATEGORY_LABELS
+        for label, token, _sub2 in APPROVED_SUBFILTERS[category]
+        if token not in {"all", "magazine"}
     ]
-    subfilter_id = {item["label"]: item["id"] for item in subfilters}
     for article in articles:
-        article["subfilter_ids"] = [
-            subfilter_id[label]
-            for label in article.pop("subfilters")
-            if label in subfilter_id
-        ]
         article["image_src"] = _fallback_image_data(article)
         article["image_status"] = "deterministic_fallback"
 
@@ -1199,7 +1284,9 @@ def _json_island(value: object) -> str:
 
 
 def _article_tokens(article: Mapping) -> str:
-    values = [*article.get("categories", ()), *article.get("subfilter_ids", ()), "magazine"]
+    values = [*article.get("categories", ()), *article.get("subfilter_ids", ())]
+    if article.get("magazine") is True:
+        values.append("magazine")
     return " ".join(dict.fromkeys(escape(str(value)) for value in values if value))
 
 
@@ -1255,25 +1342,26 @@ def _empty_lead() -> str:
 
 def _subbars(model: Mapping) -> str:
     articles = list(model.get("articles") or [])
-    filters = {str(item["id"]): item for item in model.get("subfilters") or []}
-    limits = {"biz": 5, "peers": 4, "hdec": 3, "safety": 2, "global": 2, "ai": 3}
-    rows = ['<div class="subbar" data-for="all"><button class="sub active" data-filter="magazine">전체</button></div>']
-    for category in PRIMARY_CATEGORY_IDS:
-        counts = Counter(
-            token
-            for article in articles if category in article.get("categories", ())
-            for token in article.get("subfilter_ids", ())
-        )
-        ranked = sorted(counts, key=lambda token: (-counts[token], token))[:limits[category]]
-        buttons = ['<button class="sub active" data-filter="all">전체</button>']
-        for index, token in enumerate(ranked):
-            item = filters.get(token) or {"label": token}
-            extra = " sub2" if index > 0 else ""
+    counts = Counter(
+        token
+        for article in articles
+        for token in article.get("subfilter_ids", ())
+    )
+    rows = []
+    for category in CATEGORY_LABELS:
+        buttons = []
+        for index, (label, token, sub2) in enumerate(APPROVED_SUBFILTERS[category]):
+            classes = "sub active" if index == 0 else "sub"
+            if sub2:
+                classes += " sub2"
+            count = "" if token in {"all", "magazine"} else f" <b>{counts[token]}</b>"
             buttons.append(
-                f'<button class="sub{extra}" data-filter="{escape(token, quote=True)}">'
-                f'{escape(str(item["label"]))} <b>{counts[token]}</b></button>'
+                f'<button class="{classes}" data-filter="{escape(token, quote=True)}">'
+                f'{escape(label)}{count}</button>'
             )
-        rows.append(f'<div class="subbar" data-for="{category}">{"".join(buttons)}</div>')
+        rows.append(
+            f'<div class="subbar" data-for="{category}">{"".join(buttons)}</div>'
+        )
     return "".join(rows)
 
 

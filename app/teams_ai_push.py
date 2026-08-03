@@ -470,6 +470,19 @@ class TeamsPushCandidate:
     is_update: bool = False
 
 
+@dataclass(frozen=True)
+class TeamsPolicyEvaluation:
+    """One deterministic policy decision with a single aggregate-safe outcome."""
+
+    article: Mapping[str, Any]
+    topic: TopicDecision
+    hdec_relevant: bool
+    importance: ImportanceDecision
+    source_authority_passed: bool
+    eligible: bool
+    rejection_reason: str = ""
+
+
 def _value(obj: object, key: str, default: Any = "") -> Any:
     if isinstance(obj, Mapping):
         return obj.get(key, default)
@@ -495,9 +508,11 @@ def _article_text(article: object) -> str:
     values = (
         _value(article, "title"), _value(article, "summary"), _value(article, "snippet"),
         _value(article, "hdec_relevance"), _value(article, "whyImportant"),
+        _value(article, "why_it_matters"),
         _value(article, "radarReason"), _value(article, "category"),
         _value(article, "category_label"), _value(article, "source"),
         after.get("title"), after.get("snippet"), after.get("whyImportant"),
+        after.get("why_it_matters"),
         after.get("radarReason"), after.get("category_label"),
         provenance.get("ai_topic"), provenance.get("ai_category"),
     )
@@ -573,15 +588,19 @@ def _hdec_context_text(article: object) -> str:
     values = (
         _value(article, "hdec_relevance"),
         _value(article, "whyImportant"),
+        _value(article, "why_it_matters"),
         _value(article, "radarReason"),
         _value(article, "executive_section"),
         _value(article, "radar_section"),
         after.get("hdec_relevance"),
         after.get("whyImportant"),
+        after.get("why_it_matters"),
         after.get("radarReason"),
         after.get("executive_section"),
         after.get("radar_section"),
         provenance.get("hdec_relevance"),
+        provenance.get("whyImportant"),
+        provenance.get("why_it_matters"),
         provenance.get("executive_section"),
         provenance.get("radar_section"),
     )
@@ -622,15 +641,96 @@ def _confirmed_event_types(article: object) -> tuple[str, ...]:
 
 
 # The isolated hourly shadow contract (app.radar_signals) emits exactly these five
-# categorical statuses. Anything else (missing field, malformed value) is treated as
-# ``unavailable`` so a malformed article always fails closed rather than sending.
+# categorical statuses. Missing/malformed is a schema error; explicit ``unavailable``
+# remains the distinct fail-closed result of a genuine evaluation failure.
 _SHADOW_KNOWN_STATUSES = ("confirmed", "ambiguous", "blocked", "none", "unavailable")
+_DECISION_RELEVANCE_TIERS = {"A", "A-", "B+", "B", "B-", "C", "exclude"}
+_DECISION_RELEVANT_TIERS = {"A", "A-", "B+"}
 
 
 def _shadow_status(article: object) -> str:
-    """Return the hourly shadow-confirmed status; missing/unknown → ``unavailable``."""
-    status = _lower(_value(article, "shadow_urgency_status"))
-    return status if status in _SHADOW_KNOWN_STATUSES else "unavailable"
+    """Return an explicit status, or ``malformed`` for a missing/unknown value."""
+    raw = _value(article, "shadow_urgency_status", None)
+    status = _lower(raw)
+    return status if status in _SHADOW_KNOWN_STATUSES else "malformed"
+
+
+def _required_shadow_fields_valid(article: object) -> bool:
+    """Validated/live sender rows require explicit categorical urgency evidence."""
+    if _shadow_status(article) == "malformed":
+        return False
+    confirmed = _value(article, "shadow_confirmed_event_types", None)
+    return isinstance(confirmed, list) and all(
+        isinstance(item, str) for item in confirmed
+    )
+
+
+def normalize_teams_article_fields(
+    article: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Normalize validated-Brief/live-delta aliases without inventing evidence."""
+    normalized = dict(article)
+    owners = (
+        article,
+        _mapping(article, "after"),
+        _mapping(article, "provenance"),
+    )
+
+    normalized_tier: int | str | None = None
+    for owner in owners:
+        for key in ("hdec_relevance_tier", "decision_relevance_tier"):
+            raw = _value(owner, key, None)
+            if raw in (None, "", "-"):
+                continue
+            text = _clean(raw)
+            try:
+                normalized_tier = int(text)
+            except (TypeError, ValueError):
+                normalized_tier = (
+                    text if text in _DECISION_RELEVANCE_TIERS else None
+                )
+            if normalized_tier is not None:
+                break
+        if normalized_tier is not None:
+            break
+    if normalized_tier is not None:
+        normalized["hdec_relevance_tier"] = normalized_tier
+        normalized["decision_relevance_tier"] = normalized_tier
+
+    why = ""
+    for owner in owners:
+        for key in ("whyImportant", "why_it_matters"):
+            why = _clean(_value(owner, key))
+            if why:
+                break
+        if why:
+            break
+    if why:
+        normalized["whyImportant"] = why
+        normalized["why_it_matters"] = why
+    return normalized
+
+
+def _validated_alias_fields_valid(article: object) -> bool:
+    """Validated Brief rows must carry one well-formed value from each alias group."""
+    tier_valid = False
+    for key in ("hdec_relevance_tier", "decision_relevance_tier"):
+        raw = _value(article, key, None)
+        if raw in (None, "", "-"):
+            continue
+        text = _clean(raw)
+        try:
+            int(text)
+            tier_valid = True
+        except (TypeError, ValueError):
+            tier_valid = text in _DECISION_RELEVANCE_TIERS
+        if tier_valid:
+            break
+    why_valid = any(
+        _clean(_value(article, key))
+        for key in ("whyImportant", "why_it_matters")
+    )
+    return tier_valid and why_valid
 
 
 def _source_quality(article: object) -> str:
@@ -834,14 +934,16 @@ def is_hdec_relevant_for_push(
             except (TypeError, ValueError):
                 pass
 
-        tier = _value(owner, "hdec_relevance_tier", None)
-
-        if tier not in (None, "", "-"):
+        for tier_key in ("hdec_relevance_tier", "decision_relevance_tier"):
+            tier = _value(owner, tier_key, None)
+            if tier in (None, "", "-"):
+                continue
             try:
                 if int(tier) <= 3:
                     return True
             except (TypeError, ValueError):
-                pass
+                if _clean(tier) in _DECISION_RELEVANT_TIERS:
+                    return True
 
     context = (
         f" {_core_article_text(article)} "
@@ -1091,6 +1193,9 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
     if not topic.eligible:
         return ImportanceDecision(False, reason=topic.exclusion_reason)
 
+    if not _required_shadow_fields_valid(article):
+        return ImportanceDecision(False, reason="malformed_required_field")
+
     if not is_executive_relevant_for_push(article, topic):
         return ImportanceDecision(
             False,
@@ -1150,6 +1255,97 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
     )
 
 
+def evaluate_teams_push_policy(
+    article: Mapping[str, Any],
+    *,
+    require_validated_fields: bool = False,
+) -> TeamsPolicyEvaluation:
+    """Evaluate one row once and assign one mutually exclusive rejection reason.
+
+    The ordering is deliberate: public carry-forward/freshness and publisher
+    authority are independent transport contracts; normalized validated-Brief
+    fields are then required before the unchanged AI/HDEC/importance policy runs.
+    """
+    article = normalize_teams_article_fields(article)
+    empty_topic = TopicDecision(False)
+    empty_importance = ImportanceDecision(False)
+    if (
+        _value(article, "carried_forward") is True
+        or _value(article, "teams_newness_eligible") is False
+    ):
+        return TeamsPolicyEvaluation(
+            article, empty_topic, False, empty_importance, False, False,
+            "carry_forward_excluded",
+        )
+    if _value(article, "current_run_seen") is False:
+        return TeamsPolicyEvaluation(
+            article, empty_topic, False, empty_importance, False, False,
+            "freshness_failed",
+        )
+
+    authority = publisher_direct.assess_delivery_eligibility(
+        article,
+        relevance_qualified=True,
+    )
+    if (
+        _value(article, "source_quality_passed") is False
+        or not authority.eligible
+    ):
+        return TeamsPolicyEvaluation(
+            article, empty_topic, False, empty_importance, False, False,
+            "source_authority_failed",
+        )
+
+    if (
+        not _required_shadow_fields_valid(article)
+        or (
+            require_validated_fields
+            and not _validated_alias_fields_valid(article)
+        )
+    ):
+        return TeamsPolicyEvaluation(
+            article, empty_topic, False,
+            ImportanceDecision(False, reason="malformed_required_field"),
+            True, False, "malformed_required_field",
+        )
+
+    topic = classify_ai_topic(article)
+    if not topic.eligible:
+        reason = (
+            "speculation_only"
+            if topic.exclusion_reason == "speculation_without_confirmed_event"
+            else "not_ai_core"
+        )
+        return TeamsPolicyEvaluation(
+            article, topic, False,
+            ImportanceDecision(False, reason=topic.exclusion_reason),
+            True, False, reason,
+        )
+
+    hdec_relevant = is_executive_relevant_for_push(article, topic)
+    if not hdec_relevant:
+        return TeamsPolicyEvaluation(
+            article, topic, False,
+            ImportanceDecision(False, reason="insufficient_executive_relevance"),
+            True, False, "insufficient_hdec_relevance",
+        )
+
+    importance = map_importance(article, topic)
+    if not importance.sendable:
+        reason_map = {
+            "shadow_unavailable": "shadow_unavailable",
+            "insufficient_importance_basis": "insufficient_importance",
+        }
+        return TeamsPolicyEvaluation(
+            article, topic, True, importance, True, False,
+            reason_map.get(importance.reason, "other_policy_reason"),
+        )
+
+    return TeamsPolicyEvaluation(
+        article, topic, True, importance, True, True, "",
+    )
+
+
 def _published_sort_value(article: object) -> float:
     text = _clean(_value(article, "published_at") or _value(article, "published_kst"))
     if not text:
@@ -1178,6 +1374,7 @@ def select_teams_push_from_artifact(
     """
     if not isinstance(payload, Mapping):
         return ()
+    validated_brief = False
     if _clean(payload.get("source")) == "live-delta":
         articles = payload.get("articles")
     elif (
@@ -1188,17 +1385,23 @@ def select_teams_push_from_artifact(
         in {"LIVE_HEALTHY_WITH_ARTICLES", "LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES"}
     ):
         articles = payload.get("news_censor_display_articles")
+        validated_brief = True
     else:
         return ()
     if not isinstance(articles, list):
         return ()
-    return select_teams_push_candidates(articles, max_articles=max_articles)
+    return select_teams_push_candidates(
+        articles,
+        max_articles=max_articles,
+        require_validated_fields=validated_brief,
+    )
 
 
 def select_teams_push_candidates(
     articles: Iterable[Mapping[str, Any]],
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
+    require_validated_fields: bool = False,
 ) -> tuple[TeamsPushCandidate, ...]:
     """Filter, rank, and cap important Teams AI push candidates (default: up to ten).
 
@@ -1209,33 +1412,22 @@ def select_teams_push_candidates(
 
     candidates: list[TeamsPushCandidate] = []
     for article in articles:
-        # R4-R4 carry-forward belongs only to the public coverage surface.  The
-        # normal live-delta artifact omits these fields and therefore preserves
-        # every existing Teams policy decision unchanged.
-        if (
-            _value(article, "carried_forward") is True
-            or _value(article, "teams_newness_eligible") is False
-        ):
+        if not isinstance(article, Mapping):
             continue
-        topic = classify_ai_topic(article)
-        importance = map_importance(article, topic)
-        authority = publisher_direct.assess_delivery_eligibility(
+        evaluation = evaluate_teams_push_policy(
             article,
-            relevance_qualified=True,
+            require_validated_fields=require_validated_fields,
         )
-        if (
-            not topic.eligible
-            or not is_executive_relevant_for_push(article, topic)
-            or not importance.sendable
-            or not authority.eligible
-        ):
+        if not evaluation.eligible:
             continue
         candidates.append(
             TeamsPushCandidate(
-                article=article,
-                topic=topic,
-                importance=importance,
-                cluster_key=derive_event_cluster_key(article, topic.topic_key),
+                article=evaluation.article,
+                topic=evaluation.topic,
+                importance=evaluation.importance,
+                cluster_key=derive_event_cluster_key(
+                    article, evaluation.topic.topic_key
+                ),
                 material_signature=material_signature(article),
                 is_update=_lower(_value(article, "change_type")) == "material_content_update",
             )
@@ -1317,7 +1509,7 @@ def build_teams_article_card(
     title = _article_field(article, "title") or "제목 없음"
     summary = _article_field(article, "summary", "snippet") or "핵심 요약이 제공되지 않았습니다."
     hdec_impact = _article_field(
-        article, "hdec_relevance", "radarReason", "whyImportant"
+        article, "hdec_relevance", "radarReason", "whyImportant", "why_it_matters"
     ) or "현대건설 영향은 원문과 대시보드에서 추가 확인이 필요합니다."
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
@@ -1546,7 +1738,13 @@ def render_article_email(
         or "핵심 요약이 제공되지 않았습니다."
     )
     why = _compact_summary(
-        _article_field(article, "hdec_relevance", "radarReason", "whyImportant")
+        _article_field(
+            article,
+            "hdec_relevance",
+            "radarReason",
+            "whyImportant",
+            "why_it_matters",
+        )
         or importance.reason
     )
     source = _article_field(article, "source", "display_source") or "출처 미상"

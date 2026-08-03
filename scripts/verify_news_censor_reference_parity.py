@@ -34,7 +34,9 @@ from build_executive_brief import load_brief_json  # noqa: E402
 
 REFERENCE = Path("/tmp/d7ak6e-r4r5-reference/NEW_CENSOR (1)(1).html")
 REFERENCE_SHA256 = "c4a1d129a9e8b6d824b961e2042f345cfc2eb405dcbc488a542e5bc6cee14804"
-REFERENCE_SHELL_SHA256 = "a5928a0d63c8844f203cbcfea04944aba84a1ed69d1ddc5aa0b3a1218ee4a403"
+# R4-R5 navigation correction: subbars are now structural authority and only
+# their hidden <b> count text is normalized as dynamic data.
+REFERENCE_SHELL_SHA256 = "174306fe672cf0fa5b974b3cac40ed1f11ed6c48e72fba6473da0b7f5efae8ec"
 REFERENCE_STYLE_SHA256 = "ca7acab1940fd98c61f69b920909fecb88dda248ded72865ed1f27c4a99a2b31"
 REQUIRED_IDS = (
     "pane-articles",
@@ -43,7 +45,17 @@ REQUIRED_IDS = (
     "pane-market",
     "article-data",
 )
-CATEGORIES = ("홈", "사업영역", "동종사", "현대그룹", "안전품질", "해외지정학", "AI")
+CATEGORY_CONTRACT = (
+    ("홈", "all"),
+    ("사업영역", "biz"),
+    ("동종사", "peers"),
+    ("현대그룹", "hdec"),
+    ("안전품질", "safety"),
+    ("해외지정학", "global"),
+    ("AI", "ai"),
+)
+CATEGORIES = tuple(label for label, _token in CATEGORY_CONTRACT)
+SUBCATEGORY_CONTRACT = build_news_censor.APPROVED_SUBFILTERS
 CORE_CLASSES = {
     "wrap", "mast", "brand", "mark", "brand-text", "when", "catnav", "block",
     "cattop", "cat", "subbar", "sub", "cols", "pane", "active", "panewrap",
@@ -77,7 +89,7 @@ VOID_TAGS = {
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
     "meta", "param", "source", "track", "wbr",
 }
-DYNAMIC_CLASSES = {"subbar", "newslist", "mgroups", "krmap", "wximpact", "wxnotes", "mnote"}
+DYNAMIC_CLASSES = {"newslist", "mgroups", "krmap", "wximpact", "wxnotes", "mnote"}
 
 
 def digest(value: str | bytes) -> str:
@@ -134,6 +146,7 @@ class ShellNormalizer(HTMLParser):
             bool(classes & DYNAMIC_CLASSES)
             or (tag == "ul" and "memo-mk" in context)
             or ("memo-hz" in context and tag != "h4")
+            or (tag == "b" and "sub" in context)
         )
         self.output.append(f"<{tag}{self._attributes(attributes)}>")
         if tag not in VOID_TAGS:
@@ -141,7 +154,11 @@ class ShellNormalizer(HTMLParser):
 
         if dynamic:
             labels = sorted(classes & DYNAMIC_CLASSES)
-            label = labels[0] if labels else "safety"
+            label = (
+                "subcount"
+                if tag == "b" and "sub" in context
+                else (labels[0] if labels else "safety")
+            )
             self.output.append(f"{{DYNAMIC:{label}}}")
             self.skip_depth = 1
         elif tag == "style":
@@ -307,12 +324,65 @@ def assert_dom_contract(html: str, *, reference_classes: set[str]) -> None:
     if len(cattop) != 1 or len(subbars) != 7:
         raise AssertionError("category/subfilter hierarchy changed")
     cats = direct(cattop[0], tag="button", cls="cat")
-    if [node.content for node in cats] != list(CATEGORIES):
-        raise AssertionError("seven category order changed")
-    if [node.attrs.get("data-for") for node in subbars] != list(build_news_censor.CATEGORY_LABELS):
+    actual_categories = [
+        (node.content, node.attrs.get("data-cat"), node.classes)
+        for node in cats
+    ]
+    expected_categories = [
+        (label, token, {"cat", "active"} if index == 0 else {"cat"})
+        for index, (label, token) in enumerate(CATEGORY_CONTRACT)
+    ]
+    if actual_categories != expected_categories:
+        raise AssertionError(
+            f"category label/token/active order changed: {actual_categories}"
+        )
+    if [node.attrs.get("data-for") for node in subbars] != [
+        token for _label, token in CATEGORY_CONTRACT
+    ]:
         raise AssertionError("subbar category order changed")
-    if any(not direct(bar, tag="button", cls="sub") for bar in subbars):
-        raise AssertionError("a category subbar has no subfilter button")
+    for bar in subbars:
+        category = bar.attrs.get("data-for", "")
+        if bar.classes != {"subbar"}:
+            raise AssertionError(f"{category}: static subbar class changed")
+        buttons = direct(bar, tag="button", cls="sub")
+        expected = SUBCATEGORY_CONTRACT.get(category)
+        actual = [
+            (
+                button.content,
+                button.attrs.get("data-filter"),
+                "sub2" in button.classes,
+                "active" in button.classes,
+            )
+            for button in buttons
+        ]
+        expected_values = [
+            (label, token, sub2, index == 0)
+            for index, (label, token, sub2) in enumerate(expected or ())
+        ]
+        if actual != expected_values:
+            raise AssertionError(
+                f"{category}: subcategory label/token/class order changed: {actual}"
+            )
+        for index, button in enumerate(buttons):
+            expected_classes = {"sub", "active"} if index == 0 else {"sub"}
+            if expected_values[index][2]:
+                expected_classes.add("sub2")
+            if button.classes != expected_classes:
+                raise AssertionError(
+                    f"{category}: subcategory class assignment changed"
+                )
+            count_nodes = direct(button, tag="b")
+            should_have_count = button.attrs.get("data-filter") not in {
+                "all", "magazine"
+            }
+            if len(count_nodes) != int(should_have_count):
+                raise AssertionError(
+                    f"{category}: count node structure changed for "
+                    f"{button.attrs.get('data-filter')}"
+                )
+    style = extract_style(html)
+    if ".sub b { display:none; }" not in style:
+        raise AssertionError("subcategory counts are no longer layout-hidden")
 
     cols = one(root, tag="div", cls="cols")
     if len(cols.children) != 2 or cols.children[0].tag != "main" or "rail" not in cols.children[1].classes:
@@ -374,6 +444,7 @@ def remote_image_hotlinks(html: str) -> list[str]:
 def assert_interactions(html: str) -> None:
     required = (
         "activateCategory(c.dataset.cat)",
+        "activateCategory('all')",
         "applyFilter(firstFilter === 'all' ? cat : firstFilter)",
         "s.closest('.subbar')",
         "openReader(el.dataset.article, el)",

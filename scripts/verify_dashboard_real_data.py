@@ -243,6 +243,19 @@ VALID_LENS = {
     "overseas_subsidiary",
 }
 
+# Immutable NEW_CENSOR navigation/filter vocabulary.  This is intentionally
+# independent from the renderer so an unexpected production token cannot make
+# the verifier teach itself a new visible navigation contract.
+EXACT_NEWS_CENSOR_FILTERS = {
+    "all", "biz", "peers", "hdec", "safety", "global", "ai", "magazine",
+    "lens:plant", "lens:civil_infrastructure", "lens:building_housing",
+    "lens:developers", "lens:development_business",
+    "lens:competitor_contractors", "sub:4e7d40c0", "sub:fd3376dd",
+    "sub:e8a249a3", "lens:hyundai_group", "sub:d914e406",
+    "lens:domestic_site", "lens:safety_quality", "lens:global_business",
+    "lens:ai", "lens:new_energy",
+}
+
 
 def check_committed_dashboard() -> None:
     if not check("3a: docs/daily/dashboard-latest.html 존재", DASHBOARD.exists()):
@@ -251,10 +264,9 @@ def check_committed_dashboard() -> None:
     model = _model(html)
     if model.get("_reference_locked"):
         rows = model.get("articles") or []
-        valid_top = {"all", "biz", "peers", "hdec", "safety", "global", "ai", "magazine"}
         invalid = sorted({
             token for row in rows for token in (row.get("lens") or [])
-            if token not in valid_top and not token.startswith("sub_")
+            if token not in EXACT_NEWS_CENSOR_FILTERS
         })
         check("3b: exact-reference 생성 shell 포함",
               "NEWS CENSOR" in html and 'id="pane-articles" class="pane active"' in html)

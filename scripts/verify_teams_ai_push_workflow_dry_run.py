@@ -154,6 +154,12 @@ def main() -> int:
             'no webhook secret may be injected in the watch workflow')
     require(watch.count('python3 scripts/verify_teams_ai_push_production.py') == 1,
             'watch must run the Teams production verifier in its gate')
+    require(
+        watch.count(
+            'python3 scripts/verify_teams_validated_brief_semantic_equivalence.py'
+        ) == 1,
+        'watch must verify validated-Brief semantic equivalence before collection',
+    )
 
     # Mutual exclusion — the hourly scheduled-live-refresh no longer sends Teams (single owner).
     require('python3 scripts/send_teams_ai_push.py' not in scheduled,
@@ -162,6 +168,12 @@ def main() -> int:
             'scheduled-live-refresh must inject no Teams send mode')
     require('git add -- data/teams_push_state.json' not in scheduled,
             'scheduled-live-refresh must persist no Teams dedup state')
+    require(
+        scheduled.count(
+            'python3 scripts/verify_teams_validated_brief_semantic_equivalence.py'
+        ) == 1,
+        'scheduled refresh must verify validated-Brief semantic equivalence',
+    )
 
     print('RESULT=D7-AK-6C_TEAMS_AI_NEWS_WATCH_WORKFLOW_VERIFIER_PASS')
     print('watch_owner=teams-ai-news-watch.yml teams_transport=email_channel '
