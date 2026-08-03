@@ -1,5 +1,15 @@
 {
   "article_ids": {
+    "10339e80685fa8af": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
     "1ca79f32b813120e": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -592,6 +602,16 @@
       "sent_at": "2026-07-30T01:45:53+09:00",
       "source": "news.google.com"
     },
+    "title:미국ai데이터센터건설전력이어물부족이새복병": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
       "delivery_id": "teams_ai_push:9d73b7a8f012",
@@ -803,7 +823,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T03:19:18+09:00",
+  "last_successful_send_at": "2026-08-04T05:06:36+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1204,6 +1224,16 @@
       "material_signature": "d4c0e676bb264de8dbe564290cf859039515008e172e96bf10b2621912ecc821",
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
+    },
+    "https://www.theguru.co.kr/news/article.html?no=105152": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
     }
   },
   "title_fingerprints": {
@@ -1396,6 +1426,16 @@
       "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
       "sent_at": "2026-07-30T01:45:53+09:00",
       "source": "news.google.com"
+    },
+    "미국ai데이터센터건설전력이어물부족이새복병": {
+      "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
+      "delivery_id": "teams_ai_push:d5adcfcc4fb0",
+      "first_sent_at": "2026-08-04T05:06:36+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
+      "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
     },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
