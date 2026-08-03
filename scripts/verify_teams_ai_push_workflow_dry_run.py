@@ -37,17 +37,16 @@ def main() -> int:
 
     verify = '- name: Verify pipeline (mock-safe, no secrets)'
     build = '- name: Build live news metadata (temp only)'
-    delta = '- name: Detect new-article delta (temp artifact)'
     teams = '- name: Teams AI news article cards (watch auto-send)'
     persist = '- name: Persist Teams AI push dedup state'
     skip = '- name: Skip Teams send (watch closed or not main)'
 
-    for marker in (verify, build, delta, teams, persist, skip):
+    for marker in (verify, build, teams, persist, skip):
         require(watch.count(marker) == 1, f'watch marker count invalid: {marker}')
     require(
-        watch.index(verify) < watch.index(build) < watch.index(delta)
-        < watch.index(teams) < watch.index(persist) < watch.index(skip),
-        'watch step order must be verify -> build -> delta -> teams -> persist -> skip',
+        watch.index(verify) < watch.index(build) < watch.index(teams)
+        < watch.index(persist) < watch.index(skip),
+        'watch step order must be verify -> build -> teams -> persist -> skip',
     )
 
     # 10-minute best-effort schedule + concurrency + an exactly-one manual canary.
@@ -59,16 +58,15 @@ def main() -> int:
     require('production_canary:' in watch and 'canary_cap:' in watch,
             'watch must expose the explicit production-canary inputs')
 
-    build_block = block_between(watch, build, delta)
-    delta_block = block_between(watch, delta, teams)
+    build_block = block_between(watch, build, teams)
     teams_block = block_between(watch, teams, persist)
     persist_block = block_between(watch, persist, skip)
 
     # Build: live news metadata to a temp file only. No full dashboard/Pages republish and no
     # docs/daily writes — the committed dashboard is read only as the delta 'before' baseline.
     require('NEWS_MODE: live' in build_block, 'build step must collect live news')
-    require('--output "$RUNNER_TEMP/dashboard-now.html"' in build_block,
-            'build step must write the dashboard to a temp file, not docs/daily')
+    require('BRIEF_JSON="$RUNNER_TEMP/validated-live-brief.json"' in build_block,
+            'build step must write the validated live brief to runner temp')
     require('live_ok=true' in build_block and 'live_ok=false' in build_block,
             'build step must fail closed when live collection fails')
     for forbidden in ('build_static_report.py', 'Publish to Pages', 'git push',
@@ -76,14 +74,10 @@ def main() -> int:
         require(forbidden not in build_block,
                 f'build step must not run the heavy publish path: {forbidden}')
 
-    # Delta: read the committed dashboard as baseline; give Teams headroom for up to ten.
-    require('detect_dashboard_alert_delta.py' in delta_block, 'delta step must run the detector')
-    require('docs/daily/dashboard-latest.html' in delta_block,
-            'delta step must read the committed dashboard as the before-baseline')
-    require('DELTA_ARTIFACT_MAX_ARTICLES:' in delta_block,
-            'delta step must widen the artifact cap for the Teams path')
-    require('--delta-artifact "$DELTA_ARTIFACT_FILE"' in delta_block,
-            'delta step must emit the shared delta artifact')
+    require('detect_dashboard_alert_delta.py' not in watch,
+            'watch must not compare against the mutable public dashboard')
+    require('docs/daily/dashboard-latest.html' not in watch,
+            'public dashboard must not be the Teams delivery-state authority')
 
     # Teams send: the article-level production sender, email_channel secrets, watch opt-in gate,
     # per-run canary cap — and never the SMTP digest entrypoint.
@@ -120,7 +114,7 @@ def main() -> int:
         'ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}',
         'TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}',
         'TEAMS_PUSH_STATE_PATH: data/teams_push_state.json',
-        'DELTA_ARTIFACT_FILE: ${{ runner.temp }}/dashboard_delta.json',
+        'TEAMS_ARTIFACT_FILE: ${{ runner.temp }}/validated-live-brief.json',
         'TEAMS_AI_PUSH_MAX_ARTICLES:',
     ):
         require(token in teams_block, f'watch Teams step missing token: {token}')
@@ -139,11 +133,12 @@ def main() -> int:
         "steps.teams_ai_push.outputs.state_changed == 'true'",
         'git add -- data/teams_push_state.json',
         'git commit -m "chore: persist Teams AI push dedup state"',
-        'git rebase --abort',
+        'git merge --abort',
         'git push origin HEAD:main',
     ):
         require(token in persist_block, f'state persist step missing token: {token}')
     require(persist_block.count('git add') == 1, 'state persist step must stage exactly one path')
+    require('git rebase' not in persist_block, 'state persistence must not rebase')
     for token in ('docs/daily', 'scripts/', 'app/', '.github/', '--force', '-f origin',
                   'git add .', 'git add -A', 'git commit -am'):
         require(token not in persist_block,

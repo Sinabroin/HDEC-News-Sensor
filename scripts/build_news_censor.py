@@ -9,7 +9,6 @@ add itself to an existing page's navigation.
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -35,8 +34,9 @@ from app import publisher_direct  # noqa: E402
 from build_executive_brief import load_brief_json  # noqa: E402
 
 TEMPLATE = ROOT / "templates" / "news_censor.html"
-LOGO = ROOT / "docs" / "assets" / "brand" / "hdec-logo.svg"
+WEATHER_MAP_TEMPLATE = ROOT / "templates" / "news_censor_kr_map.svg"
 DEFAULT_OUTPUT_ROOT = ROOT / "docs" / "news-censor"
+DEFAULT_CANONICAL_OUTPUT = ROOT / "docs" / "daily" / "dashboard-latest.html"
 REFERENCE_SHA256 = "c4a1d129a9e8b6d824b961e2042f345cfc2eb405dcbc488a542e5bc6cee14804"
 CONTRACT = "D7-AK-6E-R4-STANDALONE-NEWS-CENSOR"
 ARTIFACT_CONTRACT = "HDEC_VALIDATED_EXECUTIVE_BRIEF_V1"
@@ -243,19 +243,23 @@ def _subfilter_labels(row: Mapping) -> list[str]:
 def _market_pane(brief: Mapping) -> dict:
     snapshot = brief.get("market_snapshot") or {}
     rows = []
-    for item in (snapshot.get("items") or [])[:8]:
+    for item in (snapshot.get("items") or []):
         if not isinstance(item, Mapping):
             continue
         rows.append({
             "id": str(item.get("id") or ""),
             "label": str(item.get("label_kr") or item.get("id") or "지표"),
+            "category": str(item.get("category") or "other"),
             "value": item.get("value"),
             "unit": str(item.get("unit") or ""),
+            "change_1d_pct": item.get("change_1d_pct"),
+            "change_5d_pct": item.get("change_5d_pct"),
             "data_mode": str(item.get("data_mode") or "unavailable"),
             "is_stale": bool(item.get("is_stale", True)),
             "proxy_for": str(item.get("proxy_for") or ""),
             "source": str(item.get("source_provider") or ""),
             "as_of": str(item.get("as_of") or ""),
+            "note": str(item.get("note_kr") or ""),
         })
     return {
         "status": str(snapshot.get("mode") or "unavailable"),
@@ -317,6 +321,8 @@ def _safety_rail(brief: Mapping) -> dict:
             "article_count": len(support),
             "source_count": len({str(row.get("source") or "") for row in support}),
             "latest_at": str(cluster.get("latest_published_at") or ""),
+            "source": str(support[0].get("source") or ""),
+            "url": publisher_direct.publisher_url(support[0]),
         })
     timestamps = [item["latest_at"] for item in items if item["latest_at"]]
     return {
@@ -1192,180 +1198,269 @@ def _json_island(value: object) -> str:
     )
 
 
+def _article_tokens(article: Mapping) -> str:
+    values = [*article.get("categories", ()), *article.get("subfilter_ids", ()), "magazine"]
+    return " ".join(dict.fromkeys(escape(str(value)) for value in values if value))
+
+
+def _article_thumbnail(article: Mapping, wrapper: str) -> str:
+    source = str(article.get("image_src") or "")
+    is_local = bool(source) and not source.lower().startswith(("http://", "https://", "//"))
+    if article.get("image_status") == "local_materialized" and is_local:
+        safe = escape(source, quote=True).replace("'", "&#x27;")
+        thumb = f'<span class="thumb" style="background-image:url(\'{safe}\')"></span>'
+    else:
+        thumb = (
+            f'<span class="thumb ph" style="--tint:{escape(str(article["tint"]))}">'
+            f'<b>{escape(str(article["initials"]))}</b></span>'
+        )
+    return f'<span class="{wrapper}">{thumb}</span>'
+
+
 def _article_card(article: Mapping, *, lead: bool = False) -> str:
-    kind = "lead" if lead else "news-card"
-    categories = " ".join(escape(token) for token in article["categories"])
-    subfilters = " ".join(escape(token) for token in article.get("subfilter_ids") or [])
-    title_tag = "h2" if lead else "h3"
-    summary = ""
-    if lead and article.get("summary"):
-        summary = f'<p class="summary">{escape(str(article["summary"]))}</p>'
+    tokens = _article_tokens(article)
+    article_id = escape(str(article["id"]), quote=True)
+    carried = " · 검증 이월" if article.get("carried_forward") else ""
+    if lead:
+        return (
+            f'<article class="lead" data-t="{tokens}" data-article="{article_id}" tabindex="0" role="button">'
+            f'{_article_thumbnail(article, "lead-thumb")}<div class="lead-body">'
+            f'<span class="verdict" style="color:{escape(str(article["verdict_color"]))};border-color:{escape(str(article["verdict_color"]))}">{escape(str(article["verdict"]))}</span>'
+            f'<h2>{escape(str(article["title"]))}</h2>'
+            f'<p class="lead-sum">{escape(str(article.get("summary") or ""))}</p>'
+            f'<p class="src">{escape(str(article["source"]))} · {escape(str(article["published_label"]))}{carried}</p>'
+            '</div></article>'
+        )
     return (
-        f'<article id="article-{escape(str(article["id"]))}" class="{kind}" '
-        f'data-news-censor-role="selected-article" '
-        f'data-article-id="{escape(str(article["id"]))}" '
-        f'data-categories="{categories}" data-subfilters="{subfilters}" '
-        f'tabindex="0" role="button" '
-        f'aria-label="기사 읽기: {escape(str(article["title"]))}">'
-        f'<span class="thumb" style="--tint:{escape(str(article["tint"]))}" aria-hidden="true">'
-        f'<img src="{escape(str(article["image_src"]), quote=True)}" alt="" loading="lazy"></span>'
-        '<div class="card-body">'
-        f'<span class="verdict" style="--verdict:{escape(str(article["verdict_color"]))}">'
-        f'{escape(str(article["verdict"]))}</span>'
-        f'<{title_tag}>{escape(str(article["title"]))}</{title_tag}>'
-        f'{summary}'
-        f'<p class="why"><b>Why</b> {escape(str(article["why"]))}</p>'
-        f'<p class="source">{escape(str(article["source"]))} · '
-        f'{escape(str(article["published_label"]))} · '
-        f'<span class="freshness {escape(str(article["freshness_status"]))}">'
-        f'{escape(str(article["freshness_label"]))}</span> · Publisher Direct</p>'
+        f'<article class="nitem" data-t="{tokens}" data-article="{article_id}" tabindex="0" role="button">'
+        f'{_article_thumbnail(article, "nthumb")}<div class="nbody">'
+        f'<h3>{escape(str(article["title"]))}</h3>'
+        f'<p class="why"><span class="verdict sm" style="color:{escape(str(article["verdict_color"]))};border-color:{escape(str(article["verdict_color"]))}">{escape(str(article["verdict"]))}</span> {escape(str(article["why"]))}</p>'
+        f'<p class="src">{escape(str(article["source"]))} · {escape(str(article["published_label"]))}{carried}</p>'
         '</div></article>'
     )
 
 
+def _empty_lead() -> str:
+    """Keep the immutable lead shell while reporting an honestly empty edition."""
+    return (
+        '<article class="lead" aria-disabled="true">'
+        '<span class="lead-thumb"><span class="thumb ph" style="--tint:#68716A"><b>AI</b></span></span>'
+        '<div class="lead-body"><span class="verdict" style="color:#68716A;border-color:#68716A">관찰</span>'
+        '<h2>현재 조건을 충족한 신규 기사가 없습니다</h2>'
+        '<p class="lead-sum">검증된 발행사 원문이 확보되면 이 위치에 표시됩니다.</p>'
+        '<p class="src">현재 판 · 검증 대기</p></div></article>'
+    )
+
+
+def _subbars(model: Mapping) -> str:
+    articles = list(model.get("articles") or [])
+    filters = {str(item["id"]): item for item in model.get("subfilters") or []}
+    limits = {"biz": 5, "peers": 4, "hdec": 3, "safety": 2, "global": 2, "ai": 3}
+    rows = ['<div class="subbar" data-for="all"><button class="sub active" data-filter="magazine">전체</button></div>']
+    for category in PRIMARY_CATEGORY_IDS:
+        counts = Counter(
+            token
+            for article in articles if category in article.get("categories", ())
+            for token in article.get("subfilter_ids", ())
+        )
+        ranked = sorted(counts, key=lambda token: (-counts[token], token))[:limits[category]]
+        buttons = ['<button class="sub active" data-filter="all">전체</button>']
+        for index, token in enumerate(ranked):
+            item = filters.get(token) or {"label": token}
+            extra = " sub2" if index > 0 else ""
+            buttons.append(
+                f'<button class="sub{extra}" data-filter="{escape(token, quote=True)}">'
+                f'{escape(str(item["label"]))} <b>{counts[token]}</b></button>'
+            )
+        rows.append(f'<div class="subbar" data-for="{category}">{"".join(buttons)}</div>')
+    return "".join(rows)
+
+
+def _market_value(item: Mapping) -> tuple[str, str]:
+    value = item.get("value")
+    if value is None:
+        return "N/A", escape(str(item.get("unit") or ""))
+    if isinstance(value, float):
+        label = f"{value:,.2f}".rstrip("0").rstrip(".")
+    elif isinstance(value, int):
+        label = f"{value:,}"
+    else:
+        label = str(value)
+    return escape(label), escape(str(item.get("unit") or ""))
+
+
+def _market_delta(item: Mapping) -> tuple[str, str]:
+    raw = item.get("change_1d_pct")
+    if raw is None:
+        return "", "—"
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return "", "—"
+    return ("up", f"▲ +{value:.1f}%") if value >= 0 else ("down", f"▼ {abs(value):.1f}%")
+
+
+def _market_groups(model: Mapping) -> str:
+    groups = (("원자재·철강", "construction_commodities", False), ("에너지", "construction_commodities", True), ("금리", "sovereign_yields", False), ("환율", "fx", False))
+    energy_tokens = ("crude", "gas", "coal", "oil", "wti", "brent", "lng", "diesel")
+    group_limits = {"원자재·철강": 7, "에너지": 6, "금리": 4, "환율": 16}
+    rate_priority = ("us_10y", "us_5y", "us_3y", "us_2y", "kr_10y")
+    output = []
+    for label, category, energy_only in groups:
+        items = []
+        for item in model["market"]["items"]:
+            if item.get("category") != category:
+                continue
+            is_energy = any(token in str(item.get("id") or "").casefold() for token in energy_tokens)
+            if category == "construction_commodities" and is_energy != energy_only:
+                continue
+            items.append(item)
+        if category == "sovereign_yields":
+            priorities = {value: index for index, value in enumerate(rate_priority)}
+            items.sort(key=lambda item: priorities.get(str(item.get("id") or ""), len(priorities)))
+        items = items[:group_limits[label]]
+        if not items:
+            items = [{"label": "데이터 미수신", "value": None, "unit": "", "change_1d_pct": None}]
+        rows = []
+        for item in items:
+            value, unit = _market_value(item)
+            delta_class, delta = _market_delta(item)
+            rows.append(
+                '<div class="mrow">'
+                f'<span class="mlabel">{escape(str(item["label"]))}</span>'
+                '<svg class="spark" width="64" height="20" viewBox="0 0 64 20" aria-hidden="true"></svg>'
+                f'<span class="mval">{value}<small>{unit}</small></span>'
+                f'<em class="delta{(" " + delta_class) if delta_class else ""}">{escape(delta)}</em></div>'
+            )
+        visible = rows
+        overflow: list[str] = []
+        if label == "환율" and len(rows) > 4:
+            visible, overflow = rows[:4], rows[4:]
+        more = (
+            '<details class="fx-more"><summary>기타 주요 환율 보기</summary>'
+            + "".join(overflow) + "</details>"
+            if overflow else ""
+        )
+        output.append(
+            f'<div class="mgroup"><h3 class="mgroup-h">{label}</h3>'
+            f'{"".join(visible)}{more}</div>'
+        )
+    return "".join(output)
+
+
+def _rail_market_rows(model: Mapping) -> str:
+    items = sorted(model["market"]["items"], key=lambda item: (item.get("value") is None, str(item.get("id"))))[:5]
+    rows = []
+    for item in items:
+        value, unit = _market_value(item)
+        delta_class, delta = _market_delta(item)
+        rows.append(
+            f'<li><span class="ml">{escape(str(item["label"]))}</span>'
+            f'<span class="mv">{value}<small>{unit}</small></span>'
+            f'<em class="delta{(" " + delta_class) if delta_class else ""}">{escape(delta)}</em></li>'
+        )
+    return "".join(rows) or '<li><span class="ml">시장지표 미연동</span><span class="mv">N/A</span><em class="delta">—</em></li>'
+
+
+def _weather_map(model: Mapping) -> str:
+    template = WEATHER_MAP_TEMPLATE.read_text(encoding="utf-8")
+    region_keys = ["capital"] * 3 + ["central"] * 5 + ["honam"] * 3 + ["yeongnam"] * 5 + ["jeju"]
+    aliases = {"capital": ("수도", "서울", "경기", "인천"), "central": ("중부", "충청", "강원"), "honam": ("호남", "전라", "광주"), "yeongnam": ("영남", "경상", "부산", "울산", "대구"), "jeju": ("제주",)}
+    rows = list(model["weather"].get("rows") or [])
+    for index, key in enumerate(region_keys):
+        row = next((item for item in rows if any(alias in str(item.get("region") or "") for alias in aliases[key])), None)
+        if row is None:
+            fill, title = "#9AA0A0", "기상 데이터 미수신"
+        else:
+            grade = str(row.get("grade") or "확인 필요")
+            fill = "#C24A3D" if "위험" in grade else "#D9A62E" if "주의" in grade else "#9DB8A0"
+            details = [str(row.get("region") or "권역"), grade]
+            if row.get("precipitation_probability") is not None:
+                details.append(f'강수 {row["precipitation_probability"]}%')
+            if row.get("gust_ms") is not None:
+                details.append(f'돌풍 {row["gust_ms"]}㎧')
+            if row.get("temperature_c") is not None:
+                details.append(f'{row["temperature_c"]}℃')
+            title = " · ".join(details)
+        template = template.replace(f"{{{{FILL_{index}}}}}", fill).replace(f"{{{{TITLE_{index}}}}}", escape(title))
+    return template
+
+
+def _weather_notes(model: Mapping) -> tuple[str, str, str]:
+    weather = model["weather"]
+    rows = list(weather.get("rows") or [])
+    basis = str(weather.get("forecast_at") or weather.get("updated_at") or "기준시각 미수신")
+    if not rows:
+        reason = str(weather.get("unavailable_reason") or "기상 데이터 미수신")
+        return basis, reason, '<li class="warn"><b>전 권역</b> <span>확인 필요</span></li>'
+    notable = [row for row in rows if any(token in str(row.get("grade") or "") for token in ("주의", "위험"))]
+    impact = " · ".join(f'{row["region"]} {row["grade"]}' for row in notable[:2]) or "공개 예보 기준 특이 위험 신호 없음"
+    notes = "".join(
+        f'<li class="{"risk" if "위험" in str(row["grade"]) else "warn"}"><b>{escape(str(row["region"]))}</b> '
+        f'<span>{escape(str(row["grade"]))}</span><small>{escape(str(row.get("basis") or row.get("status_note") or ""))}</small></li>'
+        for row in (notable or rows)[:3]
+    )
+    return basis, impact, notes
+
+
+def _safety_content(model: Mapping) -> str:
+    safety = model["safety"]
+    items = list(safety.get("items") or [])
+    if not items:
+        return (
+            '<p class="num">검증 신호 <b>0건</b> <em class="delta">—</em><small>현재 판</small></p>'
+            f'<small class="src">{escape(str(safety.get("unavailable_reason") or "검증 정보 미수신"))}</small>'
+            '<p class="art">현재 검증된 안전·지정학 신호가 없습니다.<small>publisher-direct 검증 대기</small></p>'
+        )
+    first = items[0]
+    link = escape(str(first.get("url") or ""), quote=True)
+    title = escape(str(first.get("title") or "검증 안전 신호"))
+    article = f'<a href="{link}" target="_blank" rel="noopener">{title}</a>' if link else title
+    return (
+        f'<p class="num">검증 신호 <b>{len(items)}건</b> <em class="delta">{escape(str(first.get("severity") or "모니터링"))}</em><small>현재 판</small></p>'
+        f'<small class="src">{escape(str(safety.get("source") or "검증 기사"))} · {escape(str(safety.get("as_of") or "기준시각 미수신"))}</small>'
+        f'<p class="art">{article}<small>{escape(str(first.get("source") or ""))} · 검증 기사 {int(first.get("article_count") or 0)}건</small></p>'
+    )
+
+
+def _article_data(model: Mapping) -> dict:
+    return {
+        str(article["id"]): {
+            "title": article["title"], "source": article["source"],
+            "time": article["published_label"], "published": article["published_at"],
+            "byline": "", "verdict": article["verdict"],
+            "verdictColor": article["verdict_color"], "why": article["why"],
+            "snippet": article["summary"], "body": "", "bodyImages": [],
+            "url": article["url"], "sourceUrl": article["url"], "tint": article["tint"],
+        }
+        for article in model.get("articles") or []
+    }
+
+
 def render_html(model: Mapping) -> str:
     template = TEMPLATE.read_text(encoding="utf-8")
-    logo_uri = "data:image/svg+xml;base64," + base64.b64encode(LOGO.read_bytes()).decode("ascii")
-    articles = model["articles"]
-    lead = _article_card(articles[0], lead=True) if articles else ""
-    cards = "\n".join(_article_card(row) for row in articles[1:]) if articles else ""
-    filters = "".join(
-        f'<button class="filter{(" active" if item["id"] == "all" else "")}'
-        f'{(" coverage-gap" if item.get("coverage_status") == "gap" else "")}" '
-        f'type="button" data-filter="{escape(item["id"])}" aria-pressed="'
-        f'{str(item["id"] == "all").lower()}" '
-        f'data-coverage-status="{escape(str(item.get("coverage_status") or "covered"))}">'
-        f'{escape(item["label"])}<small>{item["count"]}'
-        f'{" · 미관측" if item.get("coverage_status") == "gap" else ""}</small></button>'
-        for item in model["categories"]
-    )
-    themes = "".join(
-        f'<li><span>{escape(item["label"])}</span><b>{item["count"]}</b></li>'
-        for item in model["themes"]
-    ) or '<li><span>관측 테마 없음</span><b>0</b></li>'
-    subfilters = "".join(
-        f'<button class="subfilter" type="button" data-subfilter="{escape(item["id"])}" '
-        f'aria-pressed="false">{escape(item["label"])}<small>{item["count"]}</small></button>'
-        for item in model.get("subfilters") or []
-        if int(item.get("count") or 0) > 0
-    )
-    market_rows = "".join(
-        '<li>'
-        f'<span>{escape(str(item["label"]))}</span>'
-        f'<b>{"N/A" if item.get("value") is None else escape(str(item["value"])) + (" " + escape(str(item.get("unit") or "")) if item.get("unit") else "")}</b>'
-        f'<small>{escape(str(item.get("data_mode") or "unavailable"))}'
-        f'{" · stale" if item.get("is_stale") else ""}'
-        f'{" · proxy" if item.get("proxy_for") else ""}</small>'
-        '</li>'
-        for item in model["market"]["items"]
-    ) or '<li class="unavailable">N/A · 시장지표 미연동</li>'
-    weather_rows = "".join(
-        '<li>'
-        f'<span>{escape(str(item["region"]))}<small>{escape(str(item["basis"]))}</small></span>'
-        f'<b>{escape(str(item["grade"]))}</b>'
-        f'<small>{escape(str(item["forecast_at"] or item["status_note"] or "예보시각 미수신"))}</small>'
-        '</li>'
-        for item in model["weather"]["rows"]
-    ) or (
-        '<li class="unavailable">'
-        + escape(str(model["weather"]["unavailable_reason"]))
-        + '</li>'
-    )
-    safety_rows = "".join(
-        '<li>'
-        f'<span>{escape(str(item["title"]))}</span>'
-        f'<b>{escape(str(item["severity"]))}</b>'
-        f'<small>검증 기사 {int(item["article_count"])}건 · 출처 {int(item["source_count"])}곳</small>'
-        '</li>'
-        for item in model["safety"]["items"]
-    ) or (
-        '<li class="unavailable">'
-        + escape(str(model["safety"]["unavailable_reason"]))
-        + '</li>'
-    )
-    coverage = model["coverage"]
-    category_coverage_rows = "".join(
-        '<li>'
-        f'<span>{escape(str(item["label"]))}</span>'
-        f'<b class="coverage-{escape(str(item["coverage_status"]))}">'
-        f'{int(item["count"])}건</b>'
-        f'<small>{"관측" if item["coverage_status"] == "covered" else "이번 판 미관측"}'
-        f' · 검색 성공 {int(item["query_successful_count"])}/'
-        f'{int(item["query_attempted_count"])}</small>'
-        '</li>'
-        for item in model["categories"]
-        if item["id"] != "all"
-    )
-    quarantine_rows = "".join(
-        '<li>'
-        f'<span>{escape(str(item["label"]))}</span>'
-        f'<b>{int(item["count"])}</b>'
-        '</li>'
-        for item in coverage["quarantine_diagnostics"]
-    ) or '<li class="unavailable">격리 진단 0건</li>'
-    mode_class = "live" if model["news_data_mode"] == "live" else "demo"
-    warning = (
-        "실시간 수집 · 게시자 원문 검증 완료"
-        if mode_class == "live"
-        else "검증용 데모 기사 · 현재 뉴스가 아님"
-    )
+    articles = list(model.get("articles") or [])
+    generated = _parse_datetime(model.get("generated_at")) or datetime.now(KST)
+    weekdays = "월화수목금토일"
+    basis, weather_impact, weather_notes = _weather_notes(model)
+    market_note = str(model["market"].get("disclaimer") or "지연·대용(proxy) 시세 기준 — 현재 체결값이 아닙니다.")
     replacements = {
-        "{{CONTRACT}}": CONTRACT,
-        "{{PAGE_TITLE}}": escape(f'HDEC News Censor · {model["edition_label"]}'),
-        "{{LOGO_DATA_URI}}": logo_uri,
-        "{{EDITION_LABEL}}": escape(str(model["edition_label"])),
-        "{{GENERATED_LABEL}}": escape(str(model["generated_label"])),
-        "{{MODE_CLASS}}": mode_class,
-        "{{SOURCE_LABEL}}": escape(str(model["source_label"])),
-        "{{MODE_WARNING}}": escape(warning),
-        "{{COVERAGE_SUMMARY}}": escape(
-            f'검증 표시 {model["article_count"]}건 · '
-            f'기본 {coverage["primary_window_count"]} · '
-            f'보강 {coverage["backfill_article_count"]} · '
-            f'카테고리 {coverage["category_covered_count"]}/'
-            f'{coverage["category_target_count"]}'
-        ),
-        "{{ARTICLE_COUNT}}": str(model["article_count"]),
-        "{{COVERED_CATEGORY_COUNT}}": str(coverage["category_covered_count"]),
-        "{{CATEGORY_TARGET_COUNT}}": str(coverage["category_target_count"]),
-        "{{PUBLISHER_COUNT}}": str(coverage["publisher_count"]),
-        "{{DISPLAY_ELIGIBLE_COUNT}}": str(coverage["display_eligible_count"]),
-        "{{CURRENT_VERIFIED_COUNT}}": str(coverage["current_verified_count"]),
-        "{{CARRIED_VERIFIED_COUNT}}": str(coverage["carried_verified_count"]),
-        "{{CACHE_REUSE_COUNT}}": str(coverage["cache_reuse_count"]),
-        "{{PRIMARY_WINDOW_COUNT}}": str(coverage["primary_window_count"]),
-        "{{FRESH_ARTICLE_COUNT}}": str(coverage["fresh_article_count"]),
-        "{{BACKFILL_ARTICLE_COUNT}}": str(coverage["backfill_article_count"]),
-        "{{SUPPLY_SHORTAGE}}": (
-            f'검증 공급 {coverage["verified_supply_count"]}건 · '
-            f'최소 기준 대비 부족 {coverage["verified_supply_shortage_count"]}건'
-            if coverage["verified_supply_shortage"] else "충분"
-        ),
-        "{{RESOLUTION_ATTEMPTED_COUNT}}": str(coverage["resolution_attempted_count"]),
-        "{{RESOLUTION_RESOLVED_COUNT}}": str(coverage["resolution_resolved_count"]),
-        "{{RESOLUTION_BUDGET_COUNT}}": str(coverage["resolution_budget_exhausted_count"]),
-        "{{QUARANTINE_COUNT}}": str(coverage["quarantine_count"]),
-        "{{CATEGORY_COVERAGE_ROWS}}": category_coverage_rows,
-        "{{QUARANTINE_DIAGNOSTIC_ROWS}}": quarantine_rows,
-        "{{FILTER_BUTTONS}}": filters,
-        "{{SUBFILTER_BUTTONS}}": subfilters,
-        "{{SUBFILTER_HIDDEN}}": "" if subfilters else " hidden",
-        "{{LEAD_ARTICLE}}": lead,
-        "{{ARTICLE_CARDS}}": cards,
-        "{{PRODUCTION_EMPTY_HIDDEN}}": "" if model.get("empty_state") else " hidden",
-        "{{PRODUCTION_EMPTY_TEXT}}": escape(str(model.get("empty_state") or "")),
-        "{{THEME_ROWS}}": themes,
-        "{{MARKET_ROWS}}": market_rows,
-        "{{MARKET_SOURCE}}": escape(str(model["market"]["source"])),
-        "{{MARKET_AS_OF}}": escape(str(model["market"]["as_of"] or "기준시각 미수신")),
-        "{{WEATHER_ROWS}}": weather_rows,
-        "{{WEATHER_SOURCE}}": escape(str(model["weather"]["source"] or "미연동")),
-        "{{WEATHER_UPDATED_AT}}": escape(str(model["weather"]["updated_at"] or "수집시각 미수신")),
-        "{{SAFETY_ROWS}}": safety_rows,
-        "{{SAFETY_SOURCE}}": escape(str(model["safety"]["source"] or "미연동")),
-        "{{SAFETY_AS_OF}}": escape(str(model["safety"]["as_of"] or "기준시각 미수신")),
-        "{{MODEL_JSON}}": _json_island(model),
-        "{{REFERENCE_SHA256}}": REFERENCE_SHA256,
+        "{{PAGE_TITLE}}": escape(f'HDEC News Sensor · {model["edition_label"]}'),
+        "{{WHEN_LABEL}}": escape(f'{generated:%Y.%m.%d} ({weekdays[generated.weekday()]}) · 발행 {generated:%H:%M} · 생성 {model["generated_label"]}'),
+        "{{SUBBARS}}": _subbars(model),
+        "{{LEAD_ARTICLE}}": _article_card(articles[0], lead=True) if articles else _empty_lead(),
+        "{{ARTICLE_CARDS}}": "\n".join(_article_card(row) for row in articles[1:]),
+        "{{MARKET_COUNT}}": str(len(model["market"]["items"])),
+        "{{MARKET_GROUPS}}": _market_groups(model),
+        "{{MARKET_NOTE}}": escape(market_note),
+        "{{WEATHER_BASIS}}": escape(basis),
+        "{{WEATHER_MAP}}": _weather_map(model),
+        "{{WEATHER_IMPACT}}": escape(weather_impact),
+        "{{WEATHER_NOTES}}": weather_notes,
+        "{{RAIL_MARKET_ROWS}}": _rail_market_rows(model),
+        "{{SAFETY_CONTENT}}": _safety_content(model),
+        "{{ARTICLE_DATA}}": _json_island(_article_data(model)),
     }
     for marker, value in replacements.items():
         template = template.replace(marker, value)
@@ -1474,7 +1569,10 @@ def materialize_article_images(
             ):
                 destination = output_root / "assets" / "images" / asset
                 _atomic_write_bytes(destination, source.read_bytes())
-                model_article["image_src"] = f"assets/images/{asset}"
+                # Both public dashboard paths receive byte-identical HTML. Use
+                # one same-origin asset authority so the relative directory of
+                # either HTML file cannot create a second image product.
+                model_article["image_src"] = f"/HDEC-News-Sensor/news-censor/assets/images/{asset}"
                 model_article["image_status"] = "local_materialized"
                 materialized_count += 1
         model["image_materialization"] = {
@@ -1518,6 +1616,11 @@ def main(argv: list[str] | None = None) -> int:
         help="off=deterministic local-data fallback; live=bounded local image materialization",
     )
     parser.add_argument("--image-limit", type=int, default=8)
+    parser.add_argument(
+        "--canonical-output",
+        type=Path,
+        help="write the same latest HTML bytes to the canonical compatibility path",
+    )
     args = parser.parse_args(argv)
 
     edition = _edition_date(args.edition_date)
@@ -1585,9 +1688,15 @@ def main(argv: list[str] | None = None) -> int:
         archive = root / f"{model['edition']}.html"
         _atomic_write(archive, html)
         _atomic_write(latest, html)
+        if args.canonical_output:
+            canonical = args.canonical_output.resolve()
+            _atomic_write(canonical, html)
+            if canonical.read_bytes() != latest.read_bytes():
+                raise RuntimeError("canonical and compatibility dashboard bytes differ")
         print(
             f"news censor written: {latest} + {archive} ({len(html)} chars) "
-            f"news_data_mode={model['news_data_mode']} articles={model['article_count']}"
+            f"news_data_mode={model['news_data_mode']} articles={model['article_count']} "
+            f"canonical_mirror={'yes' if args.canonical_output else 'no'}"
         )
         return 0
 

@@ -27,6 +27,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Callable
 
+from PIL import Image
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 for item in (ROOT, SCRIPTS):
@@ -52,6 +54,7 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 from app import publisher_direct  # noqa: E402
 import build_news_censor  # noqa: E402
+import verify_news_censor_reference_parity as reference_parity  # noqa: E402
 from build_executive_brief import (  # noqa: E402
     attach_artifact_contract,
     build_brief_via_mock_pipeline,
@@ -173,28 +176,34 @@ class SurfaceParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
-        if tag == "html":
-            self.contract = values.get("data-news-censor-contract") or ""
-        article_id = values.get("data-article-id")
+        classes = set(str(values.get("class") or "").split())
+        if tag == "header" and "mast" in classes:
+            self.contract = CONTRACT
+        article_id = values.get("data-article")
         if article_id:
             self.article_ids.append(article_id)
             self.article_categories[article_id] = set(
-                str(values.get("data-categories") or "").split()
+                token for token in str(values.get("data-t") or "").split()
+                if token in build_news_censor.CATEGORY_LABELS
             )
-            if "hidden" in values:
+            if "hide" in classes:
                 self.hidden_article_ids.add(article_id)
         if values.get("id"):
             self.dom_ids.append(str(values["id"]))
-        filter_id = values.get("data-filter")
+        filter_id = values.get("data-cat")
         if filter_id:
             self.filters.append(filter_id)
-        subfilter_id = values.get("data-subfilter")
+        subfilter_id = values.get("data-filter")
         if subfilter_id:
             self.subfilters.append(subfilter_id)
-        if values.get("data-pane"):
-            self.panes.add(values["data-pane"] or "")
-        if values.get("data-rail"):
-            self.rails.add(values["data-rail"] or "")
+        if values.get("id", "").startswith("pane-"):
+            self.panes.add(str(values["id"]).removeprefix("pane-"))
+        if "memo-wx" in classes:
+            self.rails.add("weather")
+        if "memo-mk" in classes:
+            self.rails.add("market")
+        if "memo-hz" in classes:
+            self.rails.add("safety")
         if tag == "img":
             self.image_sources.append(values.get("src") or "")
         if tag == "form":
@@ -209,13 +218,16 @@ class SurfaceParser(HTMLParser):
 
 def extract_model(html: str) -> dict:
     match = re.search(
-        r'<script type="application/json" id="news-censor-model">(.*?)</script>',
+        r'<script type="application/json" id="article-data">(.*?)</script>',
         html,
         re.S,
     )
     if not match:
-        raise ValueError("News Censor JSON island missing")
-    return json.loads(match.group(1))
+        raise ValueError("News Censor article JSON island missing")
+    articles = json.loads(match.group(1))
+    if not isinstance(articles, dict):
+        raise ValueError("News Censor article JSON island must be an object")
+    return {"articles": [{"id": key, **value} for key, value in articles.items()]}
 
 
 def fixture_display_row(
@@ -264,6 +276,9 @@ def _browser_executable() -> Path | None:
         shutil.which("google-chrome"),
         shutil.which("chromium"),
         shutil.which("chromium-browser"),
+        "/home/founder_ys/.cache-codex-work/ms-playwright/chromium-1228/chrome-linux64/chrome",
+        "/home/founder_ys/.cache-codex-work/ms-playwright/chromium-1223/chrome-linux64/chrome",
+        "/home/founder_ys/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome",
         "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe",
         "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
     ]
@@ -307,34 +322,40 @@ def run_browser_interaction(document: Path, profile_dir: Path, *, mobile: bool) 
 (async()=>{
   const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const results={browser_available:true,width:window.innerWidth};
-  const card=document.querySelector('[data-article-id]');
+  const card=document.querySelector('[data-article]');
   card.focus();
   card.dispatchEvent(new MouseEvent('click',{bubbles:true}));
   await pause(50);
-  results.click_open=!document.getElementById('reader').hidden;
-  results.close_focus=document.activeElement===document.getElementById('reader-close');
-  document.getElementById('reader-close').click();
+  results.click_open=document.getElementById('pane-reader').classList.contains('active');
+  document.querySelector('#reader-content .mkclose').click();
   await pause(30);
   results.focus_restored=document.activeElement===card;
   card.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true,cancelable:true}));
   await pause(30);
-  results.space_open=!document.getElementById('reader').hidden;
-  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  results.space_open=document.getElementById('pane-reader').classList.contains('active');
+  document.querySelector('#reader-content .mkclose').click();
   await pause(30);
-  results.escape_close=document.getElementById('reader').hidden;
-  const category=[...document.querySelectorAll('.filter')].find(button=>button.dataset.filter!=='all'&&Number(button.querySelector('small').textContent)>0);
+  results.keyboard_close=document.getElementById('pane-articles').classList.contains('active');
+  const category=[...document.querySelectorAll('.cat')].find(button=>button.dataset.cat!=='all');
   category.click();
-  const subfilter=document.querySelector('.subfilter[data-subfilter]:not([data-subfilter="all"])');
+  const subfilter=document.querySelector('.subbar.show .sub:not(.active)');
   if(subfilter)subfilter.click();
   results.filter_interaction=category.classList.contains('active')&&(!subfilter||subfilter.classList.contains('active'));
-  const layout=getComputedStyle(document.querySelector('.layout'));
+  const layout=getComputedStyle(document.querySelector('.cols'));
   const grid=getComputedStyle(document.querySelector('.grid'));
+  const rail=getComputedStyle(document.querySelector('.rail'));
   results.layout_display=layout.display;
+  results.layout_columns=layout.gridTemplateColumns;
   results.grid_columns=grid.gridTemplateColumns;
-  const pre=document.createElement('pre');
-  pre.id='news-censor-browser-result';
-  pre.textContent=JSON.stringify(results);
-  document.body.append(pre);
+  results.rail_position=rail.position;
+  results.desktop_layout=window.innerWidth>960&&results.layout_display==='grid'&&results.layout_columns.split(' ').length===2&&results.rail_position==='sticky';
+  results.mobile_layout=window.innerWidth<=960&&results.layout_display==='grid'&&results.layout_columns.split(' ').length===1&&results.grid_columns.split(' ').length===1&&results.rail_position==='static';
+  const keys=['click_open','focus_restored','space_open','keyboard_close','filter_interaction','desktop_layout','mobile_layout'];
+  const probe=document.createElement('div');
+  probe.id='news-censor-browser-result';
+  probe.style='position:fixed;left:0;top:0;z-index:2147483647;display:flex;gap:4px;background:#fff;padding:2px';
+  keys.forEach(key=>{const pixel=document.createElement('i');pixel.dataset.key=key;pixel.style=`display:block;width:20px;height:20px;background:${results[key]?'#00ff00':'#ff0000'}`;probe.append(pixel);});
+  document.body.append(probe);
 })();
 </script>
 '''
@@ -384,12 +405,15 @@ def run_browser_interaction(document: Path, profile_dir: Path, *, mobile: bool) 
         "--allow-file-access-from-files",
         "--virtual-time-budget=2500",
         f"--window-size={'390,844' if mobile else '1280,900'}",
-        f"--user-data-dir={_browser_argument_path(active_profile, browser)}",
-        "--dump-dom",
+        "--run-all-compositor-stages-before-draw",
+        "--disable-features=Translate,MediaRouter",
+        f"--screenshot={_browser_argument_path(document.parent / ('mobile-browser.png' if mobile else 'desktop-browser.png'), browser)}",
         _browser_path(interaction_path, browser),
     ]
     if browser.suffix.casefold() != ".exe":
         command[2:2] = ["--no-sandbox", "--disable-dev-shm-usage"]
+    else:
+        command.insert(-2, f"--user-data-dir={_browser_argument_path(active_profile, browser)}")
     try:
         completed = subprocess.run(
             command,
@@ -403,20 +427,26 @@ def run_browser_interaction(document: Path, profile_dir: Path, *, mobile: bool) 
     finally:
         if profile_handle is not None:
             profile_handle.cleanup()
-    match = re.search(
-        r'<pre id="news-censor-browser-result">([^<]+)</pre>',
-        completed.stdout,
-    )
-    if not match:
+    screenshot = document.parent / ("mobile-browser.png" if mobile else "desktop-browser.png")
+    if completed.returncode or not screenshot.is_file():
         return {
             "browser_available": True,
-            "error": "browser result missing",
+            "error": "browser screenshot probe missing",
             "returncode": completed.returncode,
         }
-    return json.loads(unescape(match.group(1)))
+    image = Image.open(screenshot).convert("RGB")
+    keys = (
+        "click_open", "focus_restored", "space_open", "keyboard_close",
+        "filter_interaction", "desktop_layout", "mobile_layout",
+    )
+    result = {"browser_available": True, "width": image.width}
+    for index, key in enumerate(keys):
+        red, green, blue = image.getpixel((12 + index * 24, 12))
+        result[key] = green > 200 and red < 80 and blue < 80
+    return result
 
 
-def verify_html(
+def _legacy_verify_html_contract(
     html: str,
     label: str,
     *,
@@ -644,8 +674,171 @@ def verify_html(
         )
 
 
+def verify_html(
+    html: str,
+    label: str,
+    *,
+    expected_mode: str,
+    expected_status: str,
+    expected_articles: int | None = None,
+    expected_model: dict | None = None,
+) -> None:
+    """Verify semantic data contracts inside the immutable reference shell."""
+    parser = SurfaceParser()
+    parser.feed(html)
+    island = extract_model(html)
+    serialized_articles = island.get("articles") or []
+    model = expected_model or island
+    articles = model.get("articles") or []
+    model_ids = [str(row.get("id") or "") for row in articles]
+    serialized_ids = [str(row.get("id") or "") for row in serialized_articles]
+
+    check(f"{label}: contract marker", parser.contract == CONTRACT, parser.contract)
+    check(
+        f"{label}: exact reference shell signature",
+        reference_parity.digest(reference_parity.normalized_shell(html))
+        == reference_parity.REFERENCE_SHELL_SHA256,
+    )
+    check(
+        f"{label}: exact reference CSS signature",
+        reference_parity.digest(reference_parity.extract_style(html))
+        == reference_parity.REFERENCE_STYLE_SHA256,
+    )
+    reference_classes = set(reference_parity.REFERENCE_CLASS_VOCABULARY)
+    try:
+        reference_parity.assert_dom_contract(html, reference_classes=reference_classes)
+        dom_contract, dom_detail = True, ""
+    except AssertionError as exc:
+        dom_contract, dom_detail = False, str(exc)
+    check(f"{label}: immutable DOM order and nesting", dom_contract, dom_detail)
+    try:
+        reference_parity.assert_interactions(html)
+        interaction_contract, interaction_detail = True, ""
+    except AssertionError as exc:
+        interaction_contract, interaction_detail = False, str(exc)
+    check(f"{label}: exact interaction and focus contract", interaction_contract, interaction_detail)
+
+    if expected_model is not None:
+        check(f"{label}: model contract", model.get("contract") == CONTRACT)
+        check(f"{label}: reference fingerprint", model.get("reference_sha256") == REFERENCE_SHA256)
+        check(f"{label}: expected data mode", model.get("news_data_mode") == expected_mode)
+        check(f"{label}: expected collection status", model.get("collection_status") == expected_status)
+    check(f"{label}: article count is bounded", 0 <= len(articles) <= 40, len(articles))
+    if expected_articles is not None:
+        check(f"{label}: expected article count", len(articles) == expected_articles, len(articles))
+    check(
+        f"{label}: selector renderer JSON and DOM identities agree",
+        model_ids == serialized_ids == parser.article_ids,
+        {"model": model_ids, "serialized": serialized_ids, "dom": parser.article_ids},
+    )
+    check(f"{label}: article identities are unique", len(set(parser.article_ids)) == len(parser.article_ids))
+    check(f"{label}: DOM element IDs are unique", len(set(parser.dom_ids)) == len(parser.dom_ids))
+    check(f"{label}: required DOM IDs are exact", parser.dom_ids == list(reference_parity.REQUIRED_IDS), parser.dom_ids)
+    check(f"{label}: all category filters exist", set(build_news_censor.CATEGORY_LABELS) == set(parser.filters))
+    check(f"{label}: seven category-specific subfilter rows exist", html.count('class="subbar') == 7)
+    check(f"{label}: no external runtime assets", not parser.external_assets, parser.external_assets)
+    check(f"{label}: no forms or mutation controls", parser.forms == 0)
+    check(f"{label}: portal href count 0", not parser.portal_hrefs, parser.portal_hrefs)
+    check(f"{label}: remote image hotlink count 0", not reference_parity.remote_image_hotlinks(html))
+    check(f"{label}: article images are never remote hotlinks", not any(
+        source.startswith(("http://", "https://")) for source in parser.image_sources
+    ))
+    check(f"{label}: market pane exists", "market" in parser.panes and 'class="mgroups"' in html)
+    check(f"{label}: weather rail exists", "weather" in parser.rails and 'class="krmap"' in html)
+    check(f"{label}: safety rail exists", "safety" in parser.rails and 'class="memo memo-hz"' in html)
+    check(
+        f"{label}: no unauthorized visible diagnostic panel",
+        not any(value.casefold() in html.casefold() for value in reference_parity.FORBIDDEN_VISIBLE),
+    )
+    check(f"{label}: no remote browser fetch primitive", "fetch(" not in html and "XMLHttpRequest" not in html)
+    check(f"{label}: no browser persistence", "localStorage" not in html and "sessionStorage" not in html)
+    check(f"{label}: safe origin-link contract", 'target="_blank" rel="noopener"' in html and "sourceUrl" in html)
+    check(
+        f"{label}: responsive standalone structure",
+        "@media (max-width:960px)" in html
+        and ".cols { grid-template-columns:1fr; }" in html
+        and ".rail { position:static;" in html,
+    )
+    check(f"{label}: Korean language and viewport", '<html lang="ko"' in html and 'name="viewport"' in html)
+    check(f"{label}: search indexing disabled", 'content="noindex"' in html)
+    check(f"{label}: no navigation to existing products", "daily/latest" not in html and "editorial/review" not in html)
+    check(
+        f"{label}: reader escapes article data before reference innerHTML rendering",
+        "function esc(s)" in html and ".textContent || '{}'" in html,
+    )
+    check(
+        f"{label}: keyboard reader and focus restoration",
+        "e.key === 'Enter' || e.key === ' '" in html
+        and "readerTrigger.focus({preventScroll:true})" in html,
+    )
+    check(
+        f"{label}: category and subfilter interaction",
+        "applyFilter(firstFilter === 'all' ? cat : firstFilter)" in html,
+    )
+    check(
+        f"{label}: mobile single-column and stacked rail contract",
+        ".grid { grid-template-columns:1fr; }" in html
+        and ".lead { grid-template-columns:1fr; }" in html
+        and ".rail { position:static;" in html,
+    )
+
+    if expected_model is not None:
+        coverage = model.get("coverage") or {}
+        categories = model.get("categories") or []
+        accounting = model.get("accounting") or {}
+        check(f"{label}: published quarantine count 0", int(model.get("published_quarantine_count") or 0) == 0)
+        check(f"{label}: no portal URL in production model", publisher_direct.count_portal_urls(model) == 0)
+        check(
+            f"{label}: publisher URLs are canonical and unique",
+            len({str(row.get("url") or "").casefold().rstrip("/") for row in articles}) == len(articles),
+        )
+        check(
+            f"{label}: freshness and seven-day backfill policy is explicit",
+            all(row.get("freshness_status") in {"primary", "backfill"} for row in articles)
+            and int(coverage.get("fresh_article_count") or 0)
+            + int(coverage.get("backfill_article_count") or 0) == len(articles),
+        )
+        check(
+            f"{label}: publisher diversity total matches visible rows",
+            int(coverage.get("publisher_count") or 0)
+            == len({row.get("publisher_key") for row in articles}),
+        )
+        check(
+            f"{label}: display and Teams policies remain separate",
+            coverage.get("display_policy") == "publisher_direct_relevance+72h_primary+7d_category_backfill"
+            and coverage.get("teams_policy") == "ai_topic+executive_relevance+importance+sender_gate",
+        )
+        check(
+            f"{label}: selector renderer and public accounting agree",
+            int(accounting.get("selector_output_count") or 0)
+            == int(accounting.get("renderer_input_count") or 0)
+            == int(accounting.get("total_unique_visible_article_count") or 0)
+            == len(parser.article_ids),
+        )
+        check(
+            f"{label}: lead plus grid preserves unique total",
+            int(accounting.get("lead_count") or 0) + int(accounting.get("grid_count") or 0)
+            == len(parser.article_ids),
+        )
+        check(
+            f"{label}: category filter memberships match model",
+            all(
+                int(item.get("count") or 0)
+                == sum(item["id"] in memberships for memberships in parser.article_categories.values())
+                for item in categories
+            ),
+        )
+        check(
+            f"{label}: local materialized image or deterministic fallback",
+            all(not str(row.get("image_src") or "").startswith(("http://", "https://")) for row in articles),
+        )
+    if expected_status == build_news_censor.LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES:
+        check(f"{label}: truthful live production empty state", not parser.article_ids and not serialized_articles)
+
+
 def main() -> int:
     before = snapshot(PROTECTED_PATHS)
+    radar_database_existed_before = (ROOT / "radar.db").exists()
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
     teams_workflow_text = TEAMS_WORKFLOW.read_text(encoding="utf-8")
     template_text = TEMPLATE.read_text(encoding="utf-8")
@@ -1321,6 +1514,9 @@ def main() -> int:
                 expected_mode="mock",
                 expected_status="FIXTURE_DEMO",
                 expected_articles=24,
+                expected_model=build_news_censor.build_model(
+                    demo, edition=date(2026, 8, 2), article_limit=24
+                ),
             )
         check("require-live rejects explicit fixture before writing", mock_rejected_rc == 3 and not (temp_root / "mock-rejected").exists(), mock_rejected_rc)
 
@@ -1336,6 +1532,9 @@ def main() -> int:
                 expected_mode="live",
                 expected_status=build_news_censor.LIVE_HEALTHY_WITH_ARTICLES,
                 expected_articles=23,
+                expected_model=build_news_censor.build_model(
+                    live, edition=date(2026, 8, 2)
+                ),
             )
             desktop_browser = run_browser_interaction(
                 live_latest,
@@ -1351,21 +1550,20 @@ def main() -> int:
                 "real desktop browser interaction passes",
                 desktop_browser.get("browser_available") is True
                 and all(desktop_browser.get(key) is True for key in (
-                    "click_open", "close_focus", "focus_restored", "space_open",
-                    "escape_close", "filter_interaction",
+                    "click_open", "focus_restored", "space_open",
+                    "keyboard_close", "filter_interaction",
                 ))
-                and desktop_browser.get("layout_display") == "grid",
+                and desktop_browser.get("desktop_layout") is True,
                 desktop_browser,
             )
             check(
                 "real mobile browser interaction and single-column layout pass",
                 mobile_browser.get("browser_available") is True
                 and all(mobile_browser.get(key) is True for key in (
-                    "click_open", "close_focus", "focus_restored", "space_open",
-                    "escape_close", "filter_interaction",
+                    "click_open", "focus_restored", "space_open",
+                    "keyboard_close", "filter_interaction",
                 ))
-                and mobile_browser.get("layout_display") == "block"
-                and len(str(mobile_browser.get("grid_columns") or "").split()) == 1,
+                and mobile_browser.get("mobile_layout") is True,
                 mobile_browser,
             )
 
@@ -1380,6 +1578,9 @@ def main() -> int:
                 expected_mode="live",
                 expected_status=build_news_censor.LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES,
                 expected_articles=0,
+                expected_model=build_news_censor.build_model(
+                    empty, edition=date(2026, 8, 3)
+                ),
             )
 
         live_hash_before_rejection = sha256(live_latest)
@@ -1426,13 +1627,17 @@ def main() -> int:
     check(
         "Teams workflow validates and reuses the same live artifact",
         '--output-json "$BRIEF_JSON"' in teams_workflow_text
-        and teams_workflow_text.count('--brief-json "$BRIEF_JSON"') >= 2
+        and '--brief-json "$BRIEF_JSON"' in teams_workflow_text
+        and 'TEAMS_ARTIFACT_FILE: ${{ runner.temp }}/validated-live-brief.json' in teams_workflow_text
         and "grep -q \"news_data_mode=live\"" not in teams_workflow_text,
     )
     check("workflow publishes the standalone output root", "docs/news-censor" in workflow_text)
     check(
         "workflow deployment defaults keep senders closed",
-        'TEAMS_AI_NEWS_WATCH: "0"' in workflow_text and 'TELEGRAM_AUTO_SEND: "0"' in workflow_text,
+        'TELEGRAM_AUTO_SEND: "0"' in workflow_text
+        and "python3 scripts/send_teams_ai_push.py" not in workflow_text
+        and "python3 scripts/send_scheduled_telegram.py" not in workflow_text
+        and "TEAMS_AI_NEWS_WATCH=0 TELEGRAM_AUTO_SEND=0" in workflow_text,
     )
 
     committed_latest = COMMITTED_ROOT / "latest.html"
@@ -1441,25 +1646,29 @@ def main() -> int:
     check("committed dated archive exists", bool(archives))
     if committed_latest.exists():
         committed_html = committed_latest.read_text(encoding="utf-8")
-        committed_model = extract_model(committed_html)
-        if committed_model.get("collection_status"):
+        if 'id="article-data"' in committed_html:
+            committed_model = extract_model(committed_html)
             verify_html(
                 committed_html,
                 "committed output",
-                expected_mode=str(committed_model.get("news_data_mode")),
-                expected_status=str(committed_model.get("collection_status")),
+                expected_mode="published",
+                expected_status="published",
                 expected_articles=len(committed_model.get("articles") or []),
             )
         else:
             check(
-                "legacy committed seed remains explicitly DEMO pending live deployment",
-                "DEMO · deterministic fixture" in committed_html,
+                "legacy committed output remains auditable pending exact-shell deployment",
+                'id="news-censor-model"' in committed_html
+                and "Coverage Health" in committed_html,
             )
 
     after = snapshot(PROTECTED_PATHS)
     check("existing pages, workflow, and production state unchanged by verifier", before == after)
     check("production state writes 0", before == after and PRODUCTION_STATE_WRITES == 0)
-    check("no repository database created", not (ROOT / "radar.db").exists())
+    check(
+        "verifier does not create or remove repository database",
+        (ROOT / "radar.db").exists() == radar_database_existed_before,
+    )
 
     print(
         f"COUNTERS network={NETWORK_ATTEMPTS} smtp={SMTP_ATTEMPTS} "

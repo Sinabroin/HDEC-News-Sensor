@@ -609,13 +609,14 @@ def main() -> int:
         positive,
         policy,
         amb_top,
-    ])
+    ], max_articles=None)
     assert len(candidates) == 5
     assert all(c.importance.sendable for c in candidates)
     assert candidates[0].importance.level == IMPORTANCE_TOP
     assert candidates[0].importance.hdec_direct is True  # 현대건설 직접 영향이 최우선 내 최상단
 
-    # 12. 12건 후보 → 상위 10건만 선택.
+    # 12. Core policy may expose a bounded ranked batch; the production sender
+    # applies its immutable one-per-run cap only after accepted-ledger filtering.
     twelve = [
         article(article_key=f"m-{i}", url=f"https://publisher.example.test/m/{i}",
                 title=f"OpenAI, AI 데이터센터 투자 계약 체결 {i}", score=4.6)
@@ -623,7 +624,6 @@ def main() -> int:
     ]
     capped = select_teams_push_candidates(twelve, max_articles=10)
     assert len(capped) == 10, len(capped)
-    # 하드 상한을 넘기려 해도 10으로 고정된다.
     assert len(select_teams_push_candidates(twelve, max_articles=99)) == 10
 
     # card render (unchanged contract): 7 fields, single 원문 보기 action, no webhook secret,
@@ -638,14 +638,16 @@ def main() -> int:
     content = card["attachments"][0]["content"]
     assert content["type"] == "AdaptiveCard" and content["version"] == "1.4"
     rendered = json.dumps(card, ensure_ascii=False)
-    for required in ("핵심 요약", "현대건설 영향", "출처", "게시시각", "감지시각", "원문 보기", "대시보드 보기"):
+    for required in ("핵심 요약", "현대건설 영향", "출처", "게시시각", "감지시각", "기사 원문 보기", "전체 뉴스 대시보드 보기"):
         assert required in rendered
     assert "TEAMS_WORKFLOW_WEBHOOK_URL" not in rendered
     selected_url = publisher_url(candidates[0].article)
     assert selected_url in rendered
     nonselected = {publisher_url(c.article) for c in candidates[1:]} - {selected_url}
     assert all(url not in rendered for url in nonselected)
-    assert [a["title"] for a in content["actions"]].count("원문 보기") == 1
+    assert [a["title"] for a in content["actions"]] == [
+        "기사 원문 보기", "전체 뉴스 대시보드 보기"
+    ]
 
     # D7-AK-6E-R2N-1-R4: strong strategic gold set
     from app import teams_ai_push as _r4_push
@@ -863,7 +865,7 @@ def main() -> int:
 
     print("R4_STRONG_STRATEGIC_GOLD_SET=PASS")
     print("RESULT=D7-AK-6C_TEAMS_AI_PUSH_VERIFIER_PASS")
-    print(f"cap={MAX_TEAMS_ARTICLES} selected={len(candidates)} "
+    print(f"policy_batch_ceiling={MAX_TEAMS_ARTICLES} ranked_candidates={len(candidates)} "
           f"top={sum(c.importance.level == IMPORTANCE_TOP for c in candidates)}")
     return 0
 

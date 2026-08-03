@@ -223,8 +223,18 @@ def check_boundaries() -> None:
 def check_workflows() -> None:
     for wf in WORKFLOWS:
         src = wf.read_text(encoding="utf-8")
-        line_ok = any("build_static_dashboard.py" in ln and "--weather-mode live" in ln
-                      for ln in src.splitlines())
+        if wf.name == "scheduled-live-refresh.yml":
+            line_ok = (
+                "build_executive_brief.py" in src
+                and "--weather-mode live" in src
+                and '--brief-json "$BRIEF_JSON"' in src
+                and "build_news_censor.py" in src
+            )
+        else:
+            line_ok = any(
+                "build_static_dashboard.py" in ln and "--weather-mode live" in ln
+                for ln in src.splitlines()
+            )
         check(f"7: {wf.name} 대시보드 빌드가 --weather-mode live", line_ok)
 
 
@@ -267,7 +277,23 @@ def check_committed() -> None:
     if not DASHBOARD.exists():
         info("커밋 대시보드 없음 — SKIP")
         return
-    model = _model(DASHBOARD.read_text(encoding="utf-8"))
+    html = DASHBOARD.read_text(encoding="utf-8")
+    if 'id="article-data"' in html and "NEWS CENSOR" in html:
+        check("9a: exact-reference 기상 rail 유지",
+              'class="memo memo-wx"' in html and 'class="wxmap-wrap"' in html)
+        weather_block = re.search(
+            r'<aside class="memo memo-wx">(.*?)</aside>', html, re.S
+        )
+        check("9b: exact-reference local weather map 유지",
+              bool(weather_block)
+              and "<svg" in weather_block.group(1)
+              and "https://" not in weather_block.group(1))
+        check("9c: stale reference 기상 기준일 미복사", "2026-07-29" not in html)
+        check("9d: 실측 또는 정직 미수신 카피",
+              "기상 데이터 미수신" in html
+              or bool(re.search(r"(?:강수\s*\d+%|돌풍\s*[0-9.]+㎧|[0-9.-]+℃)", html)))
+        return
+    model = _model(html)
     mode = model.get("weather_data_mode")
     if not check("9a: 커밋 모델에 weather_data_mode ∈ {live, unavailable}",
                  mode in ("live", "unavailable"), f"mode={mode!r}"):

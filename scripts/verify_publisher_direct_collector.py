@@ -51,38 +51,36 @@ import build_telegram_digest  # noqa: E402
 
 EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/editorial-daily-brief.yml": (
-        "2d2d3d7cbfaae111356e22bb8f4090aaf91db14b1c612623874ef8e9aa0bcff0"
+        "e0f23ba1c31ffe51d201f05cdb67d12ccdefa2aa44c7c9a59689c6c0a26daabd"
     ),
     ".github/workflows/editorial-review-console.yml": (
         "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"
     ),
     ".github/workflows/editorial-weekly-ti.yml": (
-        "f214f797271ffbfc54ea76da9f3da71ea4aa77a7846f130b90b0eb8546353ea4"
+        "0fcdd70c8d2a0fee45fd44cec92c7ef837d8bbda408a3e7551f1713feb953851"
     ),
     ".github/workflows/email-alert.yml": (
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
-        # R4-R4 keeps the single exact artifact and adds only the validated
-        # News Censor state path, its offline verifier, and that one safe state
-        # file to the atomic scheduled publish set. Sender defaults stay closed.
-        "b8c3b74feb8cdcc59cef5f8275c209795d2aa26a2c14636ee4f03faeb2dca141"
+        # R4-R5 publishes both exact-reference dashboard paths from one artifact,
+        # replaces retired UI gates with sealed parity, and leaves sender state out.
+        "438bbdf21e6c62470e9e445709ad522a382f80876f7b32eee36690a819b27a20"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
-        # R4-R1 intentionally replaces exact main baseline
-        # f0a9bd171bd5dc1a29a357c0f8394c4ae7957d1f34ba23a94d2c5c0d30667df0
-        # so Teams reuses and validates the same collected artifact before delta.
-        "e275b1b2a57b7f28c97b7ccce98c5890eb62777cace5fc5ff1a0561cbb606406"
+        # R4-R5 validates one temp live artifact and applies the dedicated sent
+        # ledger before the immutable one-article production cap.
+        "6b0c5c1325171ebd3f670b4e4dc471b187a87b1c9acfa6d2c8ea85cf9b876253"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"
     ),
     "templates/editorial_daily.html": (
-        "936b497c51200f8d90994de4f607bbc1570bbaefbb3b443ad7844a50758476fe"
+        "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
     ),
     "data/editorial_daily_state.json": (
-        # Sealed main state after the 2026-08-01 Daily delivery commits.
-        "4c1588ddde8b177191f9bd1e9ff7b2d52b56cae3b9f233012abb005ca0fb3d90"
+        # Verified successor after the accepted 2026-08-03 Daily delivery.
+        "7760bb68f289e09effe4be93ae7ac8da98b3c90ad27a4e27d65944f2c451f988"
     ),
     "data/teams_push_state.json": (
         "3032d829262085164cc159d902701b65526c58bec34b52531abd9ed78bbdca3a"
@@ -1299,7 +1297,7 @@ def main() -> int:
             and publisher_direct.count_portal_urls(text_body) == 0
             and publisher_direct.count_portal_urls(html_body) == 0
         ))
-        check("Teams maximum send cap remains ten", teams_ai_push.MAX_TEAMS_ARTICLES == 10)
+        check("Teams core batch ceiling remains bounded", teams_ai_push.MAX_TEAMS_ARTICLES == 10)
         check("fixture HTTP activity stayed inside mock opener", (
             len(opener.calls) > 0 and EXTERNAL_NETWORK_CALLS == 0
         ))

@@ -129,21 +129,23 @@ def check_delta_wiring(text: str) -> None:
     delta = _step(text, "Detect dashboard alert delta")
     check("delta detector script exists", DETECTOR.is_file())
     check(
-        "old dashboard is copied to runner temp",
-        'cp docs/daily/dashboard-latest.html "$RUNNER_TEMP/dashboard-before.html"' in snapshot,
+        "mutable public dashboard is not copied as an alert baseline",
+        not snapshot and 'dashboard-before.html' not in text,
     )
     check(
-        "snapshot precedes live dashboard build",
-        bool(snapshot and build) and text.index("Snapshot dashboard") < text.index("Build live report"),
+        "one exact News Censor renderer produces both public paths",
+        bool(build)
+        and "scripts/build_news_censor.py" in build
+        and "--output-root docs/news-censor" in build
+        and "--canonical-output docs/daily/dashboard-latest.html" in build,
     )
-    check("delta step has id delta", "id: delta" in delta)
-    check("delta step runs only after live success", "steps.build.outputs.live_ok == 'true'" in delta)
+    check("scheduled refresh has no alert-delta step", not delta and "id: delta" not in text)
+    check("exact reference parity gates the live build",
+          "verify_news_censor_reference_parity.py" in build)
     check(
-        "delta step compares temp old dashboard with new dashboard",
-        "detect_dashboard_alert_delta.py" in delta
-        and '"$RUNNER_TEMP/dashboard-before.html"' in delta
-        and "docs/daily/dashboard-latest.html" in delta
-        and '"$GITHUB_OUTPUT"' in delta,
+        "dashboard refresh cannot consume Teams delivery state",
+        "git add -- data/teams_push_state.json" not in text
+        and "python3 scripts/send_teams_ai_push.py" not in text,
     )
 
 
@@ -285,15 +287,11 @@ def check_send_gates(text: str) -> None:
     telegram = _step(text, "Hourly telegram digest (delta-gated auto-send)")
     skip = _step(text, "Skip automatic Telegram alert (no confirmed urgency)")
     email_sender = EMAIL_SENDER.read_text(encoding="utf-8")
-    required_delta = (
-        "steps.build.outputs.live_ok == 'true'",
-        "steps.delta.outputs.shadow_alert_delta == 'true'",
-        "vars.HOURLY_DELTA_AUTO_SEND == '1'",
-    )
-    check("Telegram auto-send step exists", bool(telegram))
-    check("Telegram opens only for live + confirmed urgency + hourly opt-in",
-          all(x in telegram for x in required_delta))
-    check("Telegram keeps existing explicit opt-in", "vars.TELEGRAM_AUTO_SEND == '1'" in telegram)
+    check("Scheduled Refresh has no Telegram auto-send step", not telegram)
+    check("Scheduled Refresh has no Telegram skip/send branch", not skip)
+    check("Telegram remains explicitly disabled",
+          re.search(r"TELEGRAM_AUTO_SEND\s*:\s*[\"']?0[\"']?", text) is not None
+          and "vars.TELEGRAM_AUTO_SEND" not in text)
     # D7-AK-6C — the article-level Teams sender moved out to teams-ai-news-watch.yml (the single
     # Teams production owner). This hourly refresh must NOT run it, so the Teams policy change can
     # never widen Telegram's send scope and the two workflows can never double-send an article.
@@ -310,11 +308,8 @@ def check_send_gates(text: str) -> None:
         and "does not prove inbox delivery or a Teams channel post" in email_sender
         and "unverified" in email_sender,
     )
-    check(
-        "no-confirmed-urgency path skips the Telegram send",
-        "steps.delta.outputs.shadow_alert_delta != 'true'" in skip
-        and "no confirmed urgency — skip telegram" in skip,
-    )
+    check("no alert workflow state is advanced by refresh",
+          "steps.delta.outputs" not in text and "HOURLY_DELTA_AUTO_SEND" not in text)
 
 
 def check_public_artifacts() -> None:
@@ -333,7 +328,31 @@ def check_public_artifacts() -> None:
 
 def check_operator_verifier(skip: bool) -> None:
     if skip:
-        check("operator button verifier is separately wired in Verify pipeline", "verify_operator_actual_buttons.py" in WORKFLOW.read_text(encoding="utf-8"))
+        check(
+            "exact-reference parity verifier is wired after the live build",
+            "verify_news_censor_reference_parity.py"
+            in WORKFLOW.read_text(encoding="utf-8"),
+        )
+        return
+    dashboard = ROOT / "docs" / "daily" / "dashboard-latest.html"
+    html = dashboard.read_text(encoding="utf-8") if dashboard.exists() else ""
+    if 'id="article-data"' in html and "NEWS CENSOR" in html:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "verify_news_censor_reference_parity.py"),
+                "--candidate",
+                str(ROOT / "docs" / "news-censor" / "latest.html"),
+                "--candidate",
+                str(dashboard),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            timeout=600,
+        )
+        output = (proc.stdout or "") + (proc.stderr or "")
+        check("exact-reference parity verifier passes", proc.returncode == 0, output[-500:])
         return
     proc = subprocess.run(
         [sys.executable, str(OPERATOR_VERIFIER)],
@@ -351,7 +370,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--skip-operator-verifier",
         action="store_true",
-        help="avoid duplicate work when the same pipeline runs the operator verifier next",
+        help="avoid duplicate work when the workflow runs exact-reference parity after build",
     )
     args = parser.parse_args(argv)
 
@@ -370,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
     if _failures:
         print(f"RESULT: FAIL ({len(_failures)} failed)")
         return 1
-    print("RESULT: PASS - hourly live refresh with delta-gated Telegram/Teams alerts")
+    print("RESULT: PASS - hourly live refresh owns Pages only; Teams/Telegram state untouched")
     return 0
 
 

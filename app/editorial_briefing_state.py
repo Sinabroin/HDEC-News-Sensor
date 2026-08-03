@@ -7,7 +7,7 @@ import os
 import re
 import tempfile
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Mapping
 
@@ -57,6 +57,7 @@ _CLAIM_OWNER_RE = re.compile(r"github-run:[1-9][0-9]*:attempt:[1-9][0-9]*")
 _DAILY_KEY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _WEEKLY_KEY_RE = re.compile(r"(\d{4})-W(\d{2})")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
+CLAIM_TTL = timedelta(minutes=30)
 
 
 class StateError(RuntimeError):
@@ -84,6 +85,16 @@ def empty_state(edition_type: str) -> dict:
 
 def _valid_nonempty(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip()) and value == value.strip()
+
+
+def _valid_timestamp(value: object) -> bool:
+    if not _valid_nonempty(value):
+        return False
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
 
 
 def _valid_edition_key(edition_type: str, value: object) -> bool:
@@ -132,7 +143,7 @@ def _validate_success_records(value: object, edition_type: str) -> tuple[list, s
         if not isinstance(record, dict) or set(record) != _SUCCESS_FIELDS:
             raise StateError("successful edition record is malformed")
         _validate_identity(record, edition_type, "successful edition record")
-        if not _valid_nonempty(record.get("smtp_status")) or not _valid_nonempty(
+        if not _valid_nonempty(record.get("smtp_status")) or not _valid_timestamp(
             record.get("sent_at")
         ):
             raise StateError("successful edition record contains empty fields")
@@ -203,7 +214,7 @@ def validate_state(value: object, edition_type: str) -> dict:
             raise StateError("successful edition cannot retain a delivery claim")
         if not _valid_claim_owner(claim.get("claim_owner")):
             raise StateError("delivery claim owner is malformed")
-        if not _valid_nonempty(claim.get("claimed_at")):
+        if not _valid_timestamp(claim.get("claimed_at")):
             raise StateError("delivery claim timestamp is malformed")
     _validate_last_success(value, records, successful_keys)
     return deepcopy(value)
@@ -246,6 +257,34 @@ def has_claim(state: Mapping, edition_key: str) -> bool:
     return isinstance(claims, Mapping) and edition_key in claims
 
 
+def expire_stale_claims(
+    state: Mapping,
+    edition_type: str,
+    *,
+    now: datetime,
+    ttl: timedelta = CLAIM_TTL,
+) -> tuple[dict, tuple[str, ...]]:
+    """Remove only expired, unaccepted claims; successful delivery is untouched."""
+    current = validate_state(dict(state), edition_type)
+    if now.tzinfo is None or ttl.total_seconds() <= 0:
+        raise StateError("claim expiry requires aware now and positive TTL")
+    reference = now.astimezone(timezone.utc)
+    expired: list[str] = []
+    for edition_key, claim in list(current["delivery_claims"].items()):
+        try:
+            claimed_at = datetime.fromisoformat(
+                str(claim["claimed_at"]).replace("Z", "+00:00")
+            )
+        except ValueError as exc:
+            raise StateError("delivery claim timestamp is malformed") from exc
+        if claimed_at.tzinfo is None:
+            raise StateError("delivery claim timestamp must include timezone")
+        if reference - claimed_at.astimezone(timezone.utc) >= ttl:
+            del current["delivery_claims"][edition_key]
+            expired.append(edition_key)
+    return validate_state(current, edition_type), tuple(sorted(expired))
+
+
 def _same_identity(left: Mapping, right: Mapping) -> bool:
     return all(left.get(field) == right.get(field) for field in _IDENTITY_FIELDS)
 
@@ -258,7 +297,7 @@ def add_claim(state: Mapping, edition_type: str, claim: Mapping) -> dict:
     _validate_identity(candidate, edition_type, "delivery claim")
     if not _valid_claim_owner(candidate.get("claim_owner")):
         raise StateError("delivery claim owner is malformed")
-    if not _valid_nonempty(candidate.get("claimed_at")):
+    if not _valid_timestamp(candidate.get("claimed_at")):
         raise StateError("delivery claim timestamp is malformed")
     edition_key = candidate["edition_key"]
     if has_success(current, edition_key):

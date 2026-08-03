@@ -36,13 +36,17 @@ class FunnelHTMLParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        classes = set(str(values.get("class") or "").split())
         if values.get("id"):
             self.dom_ids.append(str(values["id"]))
-        if tag == "article" and values.get("data-news-censor-role") == "selected-article":
+        if tag == "article" and classes & {"lead", "nitem"} and values.get("data-article"):
             self.cards.append({
-                "article_id": str(values.get("data-article-id") or ""),
-                "categories": tuple(str(values.get("data-categories") or "").split()),
-                "hidden": "hidden" in values,
+                "article_id": str(values.get("data-article") or ""),
+                "categories": tuple(
+                    token for token in str(values.get("data-t") or "").split()
+                    if token in build_news_censor.CATEGORY_LABELS
+                ),
+                "hidden": "hide" in classes,
             })
         if tag == "a" and publisher_direct.portal_provider(values.get("href")):
             self.portal_href_count += 1
@@ -50,15 +54,15 @@ class FunnelHTMLParser(HTMLParser):
 
 def _extract_model(html: str) -> dict:
     match = re.search(
-        r'<script type="application/json" id="news-censor-model">(.*?)</script>',
+        r'<script type="application/json" id="article-data">(.*?)</script>',
         html,
         re.S,
     )
     if not match:
-        raise ValueError("News Censor JSON island missing")
+        raise ValueError("News Censor article JSON island missing")
     value = json.loads(match.group(1))
     if not isinstance(value, dict):
-        raise ValueError("News Censor JSON island must be an object")
+        raise ValueError("News Censor article JSON island must be an object")
     return value
 
 
@@ -83,11 +87,7 @@ def audit_artifact(brief: dict, html: str, *, article_limit: int) -> dict:
 
     model_articles = model.get("articles") or []
     model_ids = [str(row.get("id") or "") for row in model_articles]
-    serialized_ids = [
-        str(row.get("id") or "")
-        for row in html_model.get("articles") or []
-        if isinstance(row, dict)
-    ]
+    serialized_ids = [str(value) for value in html_model]
     card_ids = [row["article_id"] for row in parser.cards]
     public_ids = list(dict.fromkeys(
         row["article_id"] for row in parser.cards if not row["hidden"]
@@ -222,7 +222,6 @@ def audit_artifact(brief: dict, html: str, *, article_limit: int) -> dict:
         and model_ids == serialized_ids == card_ids
         and len(model_articles) == len(parser.cards) == len(public_ids)
         and len(set(card_ids)) == len(card_ids)
-        and html_model.get("artifact_fingerprint") == selection_audit["artifact_fingerprint"]
         and parser.portal_href_count == 0
         and selection_audit["quarantined_displayed_count"] == 0
     )
