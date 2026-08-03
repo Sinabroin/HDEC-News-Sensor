@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
+    "a65de9a3ca0495dd": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
+    },
     "cf15b9983762072d": {
       "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
       "delivery_id": "teams_ai_push:9fc32a0cf6a2",
@@ -632,6 +642,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "title:원전8기추가승인더이상머뭇거릴때아니다": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
+    },
     "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
       "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
       "delivery_id": "teams_ai_push:3d5292cb1db5",
@@ -763,7 +783,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-03T22:49:52+09:00",
+  "last_successful_send_at": "2026-08-04T01:25:20+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1115,6 +1135,16 @@
       "sent_at": "2026-07-29T22:19:23+09:00",
       "source": "서울경제"
     },
+    "https://www.sedaily.com/article/20075202": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
+    },
     "https://www.sidae.com/article/2026072814463436475": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
       "delivery_id": "teams_ai_push:755189289545",
@@ -1396,6 +1426,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "원전8기추가승인더이상머뭇거릴때아니다": {
+      "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
+      "delivery_id": "teams_ai_push:96069100b0f3",
+      "first_sent_at": "2026-08-04T01:25:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
+      "sent_at": "2026-08-04T01:25:20+09:00",
+      "source": "서울경제"
     },
     "원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여": {
       "cluster_key": "title:원전가스터빈앞세운두산에너빌리티수주잔고26조쌓여",
