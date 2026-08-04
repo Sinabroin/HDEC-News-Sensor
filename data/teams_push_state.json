@@ -1,5 +1,15 @@
 {
   "article_ids": {
+    "00a37a50025dc69f": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
+    },
     "10339e80685fa8af": {
       "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
       "delivery_id": "teams_ai_push:d5adcfcc4fb0",
@@ -19,6 +29,46 @@
       "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
+    },
+    "20b231647e65eac4": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
+    },
+    "2dea91c174766c96": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
+    },
+    "32ac15c8cb6ede93": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
+    },
+    "3400540a608c7015": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
     },
     "3c0220b68095c251": {
       "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
@@ -90,6 +140,16 @@
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
     },
+    "be78a660fee97ba4": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
+    },
     "ce4967d2f47ff405": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
       "delivery_id": "teams_ai_push:6f167df94e8c",
@@ -109,6 +169,26 @@
       "material_signature": "a181b1b91aec8eff95f85fd22a6cec08067b61599c14f492762e440761a4759f",
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
+    },
+    "dcf282f21cb86661": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
+    },
+    "e8ea49fb7b92aa9a": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
     },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
@@ -482,6 +562,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
+    },
     "title:5자금고객전력성패가를3대변수": {
       "cluster_key": "title:5자금고객전력성패가를3대변수",
       "delivery_id": "teams_ai_push:41fff1777551",
@@ -492,6 +582,16 @@
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
     },
+    "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
+    },
     "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -501,6 +601,16 @@
       "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
       "sent_at": "2026-08-04T07:35:54+09:00",
       "source": "아이티데일리"
+    },
+    "title:ai투자칩넘어전력건설장비로마이크론78soxl20": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
     },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -561,6 +671,26 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "title:경기도의회국민의힘ai국업무보고받아": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
+    },
+    "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
     },
     "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
@@ -842,6 +972,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "title:정부smr국가전략기술지정경남원전업계세제혜택기대": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
+    },
     "title:제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -851,6 +991,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
     },
     "title:청사진에서실행으로네이버sktai인프라베팅본격화": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
@@ -871,6 +1021,16 @@
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
+    },
+    "title:통신3사si기업들국내ai데이터센터전방위구축본격화": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
     },
     "title:프리즈미안전기자재업체애트코어인수추진북미전력": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
@@ -943,7 +1103,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T16:23:02+09:00",
+  "last_successful_send_at": "2026-08-05T08:03:53+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -954,6 +1114,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "http://www.biztribune.co.kr/news/articleView.html?idxno=356951": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
     },
     "http://www.newsworker.co.kr/news/articleView.html?idxno=439527": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
@@ -1025,6 +1195,16 @@
       "sent_at": "2026-07-30T08:12:26+09:00",
       "source": "dealsite.co.kr"
     },
+    "https://hbnpress.com/news/view/1065599489272731": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
+    },
     "https://news.bizwatch.co.kr/article/mobile/2026/07/28/0025": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
       "delivery_id": "teams_ai_push:e3cce31ce214",
@@ -1074,6 +1254,16 @@
       "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
       "sent_at": "2026-07-30T01:46:09+09:00",
       "source": "slownews.kr"
+    },
+    "https://www.autodaily.co.kr/news/articleView.html?idxno=546410": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
     },
     "https://www.betanews.net/article/view/beta202608030086": {
       "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
@@ -1195,6 +1385,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "https://www.greened.kr/news/articleView.html?idxno=346822": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
+    },
     "https://www.hankookilbo.com/news/article/A2026072814260005038?did=NA": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
       "delivery_id": "teams_ai_push:96dd8c741197",
@@ -1244,6 +1444,16 @@
       "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
       "sent_at": "2026-07-30T03:58:35+09:00",
       "source": "중앙일보"
+    },
+    "https://www.knnews.co.kr/news/articleView.php?idxno=1547991": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
     },
     "https://www.news1.kr/realestate/general/6242752": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
@@ -1304,6 +1514,26 @@
       "material_signature": "095d41955f48843987d24a9840970e3af87b5eedc7afcaa06d5fe0a5e37b2fb3",
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
+    },
+    "https://www.newspim.com/news/view/20260805000052": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
+    },
+    "https://www.newsquest.co.kr/news/articleView.html?idxno=271082": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
     },
     "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
@@ -1414,6 +1644,16 @@
       "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
+    },
+    "https://www.womentimes.co.kr/news/articleView.html?idxno=104970": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
     }
   },
   "title_fingerprints": {
@@ -1427,6 +1667,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
+    },
     "5자금고객전력성패가를3대변수": {
       "cluster_key": "title:5자금고객전력성패가를3대변수",
       "delivery_id": "teams_ai_push:41fff1777551",
@@ -1437,6 +1687,16 @@
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
     },
+    "ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
+    },
     "ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -1446,6 +1706,16 @@
       "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
       "sent_at": "2026-08-04T07:35:54+09:00",
       "source": "아이티데일리"
+    },
+    "ai투자칩넘어전력건설장비로마이크론78soxl20": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -1506,6 +1776,26 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "경기도의회국민의힘ai국업무보고받아": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
+    },
+    "구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
     },
     "김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
@@ -1787,6 +2077,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "정부smr국가전략기술지정경남원전업계세제혜택기대": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
+    },
     "제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -1796,6 +2096,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
     },
     "청사진에서실행으로네이버sktai인프라베팅본격화": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
@@ -1816,6 +2126,16 @@
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
+    },
+    "통신3사si기업들국내ai데이터센터전방위구축본격화": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
     },
     "프리즈미안전기자재업체애트코어인수추진북미전력": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
