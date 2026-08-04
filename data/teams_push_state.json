@@ -1,5 +1,15 @@
 {
   "article_ids": {
+    "00a37a50025dc69f": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
+    },
     "10339e80685fa8af": {
       "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
       "delivery_id": "teams_ai_push:d5adcfcc4fb0",
@@ -642,6 +652,16 @@
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
     },
+    "title:경기도의회국민의힘ai국업무보고받아": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
+    },
     "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
       "delivery_id": "teams_ai_push:bec31cab7b44",
@@ -1063,7 +1083,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T05:25:09+09:00",
+  "last_successful_send_at": "2026-08-05T06:50:39+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1154,6 +1174,16 @@
       "material_signature": "4ad327472003fb494108cd43d1795a9f359738dbfcb56529285aaeb4aa825318",
       "sent_at": "2026-07-30T08:12:26+09:00",
       "source": "dealsite.co.kr"
+    },
+    "https://hbnpress.com/news/view/1065599489272731": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
     },
     "https://news.bizwatch.co.kr/article/mobile/2026/07/28/0025": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
@@ -1706,6 +1736,16 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "경기도의회국민의힘ai국업무보고받아": {
+      "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
+      "delivery_id": "teams_ai_push:3236814ef281",
+      "first_sent_at": "2026-08-05T06:50:39+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
+      "sent_at": "2026-08-05T06:50:39+09:00",
+      "source": "HBN뉴스"
     },
     "구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
