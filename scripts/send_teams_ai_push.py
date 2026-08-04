@@ -69,20 +69,26 @@ for _path in (REPO_ROOT, SCRIPTS_DIR):
 from app.teams_ai_push import (  # noqa: E402
     DEFAULT_TEAMS_BATCH_MAX,
     HARD_TEAMS_BATCH_MAX,
+    SELECTION_MODE_FALLBACK,
+    apply_major_media_first_gate,
     evaluate_teams_push_policy,
     publisher_delivery_priority,
     render_article_email,
     select_teams_push_from_artifact_with_audit,
 )
-from app import publisher_direct  # noqa: E402
+from app import publisher_direct, source_priority  # noqa: E402
 from app.teams_push_state import (  # noqa: E402
     InvalidTeamsPushState,
     article_identity,
+    clear_held_record,
     evaluate_dedup,
     filter_unsent_candidates,
     load_state,
+    mark_held_replaced_by_major,
+    observe_held_specialist,
     persist_after_success,
     resolve_state_path,
+    save_state,
 )
 
 # Reuse the single proven Gmail SMTP contract — never a second copy of the handshake.
@@ -124,6 +130,31 @@ class FailClosed(RuntimeError):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+def _row_source_tier_counts(rows) -> dict[str, int]:
+    """R4-R9A §11 — per-tier row counts for the Teams source-gate audit.
+
+    ``specialist`` counts every specialist-holdback-lane publisher (tier
+    specialist / trusted_other plus explicitly configured Teams specialists),
+    matching the gate's own lane partition."""
+    counts = {"primary_10": 0, "secondary_3": 0, "specialist": 0}
+    for row in rows:
+        policy = source_priority.teams_delivery_source_policy(
+            str(row.get("source") or row.get("display_source") or ""),
+            publisher_direct.publisher_url(row),
+        )
+        tier = str(policy["tier"])
+        if tier == "primary_10":
+            counts["primary_10"] += 1
+        elif tier == "secondary_3":
+            counts["secondary_3"] += 1
+        elif (
+            str(policy["teams_lane"])
+            == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK
+        ):
+            counts["specialist"] += 1
+    return counts
 
 
 @dataclass(frozen=True)
@@ -299,17 +330,26 @@ def deliver(
     report_url: str = "",
     detected_at: str = "",
     max_articles: int = DEFAULT_TEAMS_BATCH_MAX,
+    now_iso_value: str = "",
     smtp_factory=None,
     preference_runtime=None,
 ) -> dict[str, Any]:
-    """Select, dedup, and deliver 0-5 article emails per natural run.
+    """Select, dedup, gate by source priority, and deliver 0-5 emails per run.
 
     Zero eligible unsent articles send zero; up to five eligible send all of
     them; more than five send exactly five and defer the remainder for later
     runs. Filler is never invented. Each article is handled independently: one
     SMTP failure never skips the remaining articles, and only delivered
     (250 accepted) articles reach persistent state — failed ones stay
-    resendable."""
+    resendable.
+
+    D7-AK-6E R4-R9A — after the accepted-ledger filter, the major-media-first
+    source gate selects only locked primary-ten / secondary-three publishers
+    and promoted official institutions immediately. Specialist/trusted-other
+    publishers are held (120-minute holdback, at most one exceptional
+    fallback per run); neutral/low publishers are never selected. Held
+    observations persist through the existing state path in send mode only —
+    a dry run writes nothing."""
     payload = load_artifact(artifact_path)
     try:
         state = load_state(state_path)
@@ -376,8 +416,19 @@ def deliver(
     duplicate_event_rows = int(selection_audit.get("event_duplicates") or 0)
     policy_eligible_rows = int(selection_audit.get("policy_eligible") or 0)
     accepted, baseline = filter_unsent_candidates(state, candidates)
-    selected = accepted[:run_cap]
-    deferred = accepted[run_cap:]
+    # R4-R9A — major-media-first source gate over the ledger-filtered batch.
+    # Runs after every existing hard gate; it can only withhold, never rescue.
+    gate_batch = apply_major_media_first_gate(
+        accepted,
+        state=state,
+        run_cap=run_cap,
+        now_iso_value=now_iso_value,
+    )
+    selected_gated = list(gate_batch.selected)
+    selected = [item.candidate for item in selected_gated]
+    deferred = [item.candidate for item in gate_batch.deferred_major]
+    raw_tier_counts = _row_source_tier_counts(article_rows)
+    verified_tier_counts = _row_source_tier_counts(verified_rows)
 
     alert_context = dict(payload)
     alert_context["dashboard_url"] = dashboard_url
@@ -425,7 +476,10 @@ def deliver(
                 "status": "no_request",
             })
 
-    for candidate in selected:
+    delivered_fallback_articles: list[Mapping[str, Any]] = []
+    delivered_major_events: list[tuple[str, str, str]] = []
+    for gated in selected_gated:
+        candidate = gated.candidate
         ref = article_ref(candidate.article)
         decision = evaluate_dedup(
             state,
@@ -455,6 +509,9 @@ def deliver(
                     "dedup_reason": decision.reason,
                     "status": "no_request",
                     "is_update": decision.is_update,
+                    "publisher_tier": gated.gate.tier,
+                    "source_gate_class": gated.gate.gate_class,
+                    "selection_mode": gated.selection_mode,
                 }
             )
             continue
@@ -483,6 +540,14 @@ def deliver(
             )
             state_changed = True
             state_committed += 1
+            if gated.selection_mode == SELECTION_MODE_FALLBACK:
+                delivered_fallback_articles.append(candidate.article)
+            else:
+                delivered_major_events.append((
+                    str(candidate.cluster_key or ""),
+                    f"teams_ai_push:{ref}",
+                    str(candidate.article.get("source") or ""),
+                ))
         else:
             failed += 1
         records.append(
@@ -492,11 +557,59 @@ def deliver(
                 "dedup_reason": decision.reason,
                 "status": status,
                 "is_update": decision.is_update,
+                "publisher_tier": gated.gate.tier,
+                "source_gate_class": gated.gate.gate_class,
+                "selection_mode": gated.selection_mode,
             }
         )
 
+    # R4-R9A — held-specialist observations persist through the existing
+    # production state path, in send mode only. A held article is observed,
+    # never sent/accepted/consumed; a delivered fallback clears its hold; a
+    # delivered major marks same-event held specialists as supporting
+    # evidence. Dry runs never reach this block, so they write nothing.
+    replaced_by_major_marks = 0
+    if should_send:
+        gated_state = state
+        for observation in gate_batch.holdback_observations:
+            gated_state = observe_held_specialist(
+                gated_state,
+                observation["article"],
+                cluster_key=str(observation["cluster_key"] or ""),
+                source=str(observation["source"] or ""),
+                source_tier=str(observation["source_tier"] or ""),
+                holdback_reason=str(observation["holdback_reason"] or ""),
+                fallback_eligible=bool(observation["fallback_eligible"]),
+                now=gate_batch.now_iso_value,
+            )
+        for fallback_article in delivered_fallback_articles:
+            gated_state = clear_held_record(gated_state, fallback_article)
+        for cluster_key, major_identity, major_source in delivered_major_events:
+            gated_state, marks = mark_held_replaced_by_major(
+                gated_state,
+                cluster_key,
+                major_identity=major_identity,
+                major_source=major_source,
+            )
+            replaced_by_major_marks += marks
+        if gated_state != state:
+            save_state(gated_state, state_path)
+            state = gated_state
+            state_changed = True
+
     counters_reconciled = (
-        len(accepted) == len(selected) + len(deferred)
+        len(accepted)
+        == len(gate_batch.immediate)
+        + len(gate_batch.held)
+        + len(gate_batch.fallback_selected)
+        + len(gate_batch.rejected)
+        and len(selected)
+        == len(gate_batch.immediate_selected) + len(gate_batch.fallback_selected)
+        and len(accepted)
+        == len(selected)
+        + len(deferred)
+        + len(gate_batch.held)
+        + len(gate_batch.rejected)
         and len(candidates) == policy_eligible_rows - duplicate_event_rows
         and len(accepted) == len(candidates) - blocked
         and attempted == delivered + failed
@@ -504,6 +617,25 @@ def deliver(
         and len(selected) == attempted + loop_dedup_blocked + dry_run_skipped
         and rejection_reconciled
     )
+    selected_source_audit = [
+        {
+            "article_ref": article_ref(gated.candidate.article),
+            "publisher_tier": gated.gate.tier,
+            "source_gate_class": gated.gate.gate_class,
+            "publisher_rank": gated.gate.publisher_rank,
+            "selection_mode": gated.selection_mode,
+            "holdback_age_minutes": (
+                gated.holdback.age_minutes if gated.holdback else 0.0
+            ),
+            "fallback_reason": (
+                gated.holdback.holdback_reason if gated.holdback else ""
+            ),
+            "same_event_major_available": bool(
+                gated.holdback and gated.holdback.same_event_major_available
+            ),
+        }
+        for gated in selected_gated
+    ]
     return {
         "mode": "send" if should_send else "dry_run_no_send",
         "current_candidates": len(current_rows),
@@ -543,11 +675,46 @@ def deliver(
         "state_committed_rows": state_committed,
         "counters_reconciled": counters_reconciled,
         "max_articles_cap": run_cap,
+        # R4-R9A §11 — Teams source-gate audit counters (exact names).
+        "raw_primary_10_rows": raw_tier_counts["primary_10"],
+        "raw_secondary_3_rows": raw_tier_counts["secondary_3"],
+        "raw_specialist_rows": raw_tier_counts["specialist"],
+        "verified_primary_10_rows": verified_tier_counts["primary_10"],
+        "verified_secondary_3_rows": verified_tier_counts["secondary_3"],
+        "verified_specialist_rows": verified_tier_counts["specialist"],
+        "teams_immediate_major_rows": gate_batch.audit[
+            "teams_immediate_major_rows"
+        ],
+        "teams_specialist_held_rows": gate_batch.audit[
+            "teams_specialist_held_rows"
+        ],
+        "teams_specialist_holdback_expired_rows": gate_batch.audit[
+            "teams_specialist_holdback_expired_rows"
+        ],
+        "teams_specialist_fallback_eligible_rows": gate_batch.audit[
+            "teams_specialist_fallback_eligible_rows"
+        ],
+        "teams_specialist_selected_rows": gate_batch.audit[
+            "teams_specialist_selected_rows"
+        ],
+        "teams_specialist_replaced_by_major_rows": replaced_by_major_marks,
+        "selected_primary_10_rows": gate_batch.audit["selected_primary_10_rows"],
+        "selected_secondary_3_rows": gate_batch.audit[
+            "selected_secondary_3_rows"
+        ],
+        "selected_promoted_official_rows": gate_batch.audit[
+            "selected_promoted_official_rows"
+        ],
+        "selected_specialist_rows": gate_batch.audit["selected_specialist_rows"],
+        "source_gate_rejected_rows": gate_batch.audit["source_gate_rejected_rows"],
+        "selected_source_audit": selected_source_audit,
         "skip_reasons": {
             "already_sent": blocked,
             "deferred_due_to_cap": len(deferred),
             "policy_ineligible": max(0, len(verified_rows) - policy_eligible_rows),
             "duplicate_event": duplicate_event_rows,
+            "source_gate_rejected": len(gate_batch.rejected),
+            "specialist_held": len(gate_batch.held),
         },
         "rejection_breakdown": rejection_breakdown,
         "rejected_rows": rejected_rows,
@@ -651,6 +818,27 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         f"state_committed_rows={int(summary.get('state_committed_rows') or 0)}",
         f"counters_reconciled={'true' if summary.get('counters_reconciled') else 'false'}",
         f"max_articles_cap={int(summary.get('max_articles_cap') or 0)}",
+        # R4-R9A §11 — Teams source-gate audit counters.
+        f"raw_primary_10_rows={int(summary.get('raw_primary_10_rows') or 0)}",
+        f"raw_secondary_3_rows={int(summary.get('raw_secondary_3_rows') or 0)}",
+        f"raw_specialist_rows={int(summary.get('raw_specialist_rows') or 0)}",
+        f"verified_primary_10_rows={int(summary.get('verified_primary_10_rows') or 0)}",
+        f"verified_secondary_3_rows={int(summary.get('verified_secondary_3_rows') or 0)}",
+        f"verified_specialist_rows={int(summary.get('verified_specialist_rows') or 0)}",
+        f"teams_immediate_major_rows={int(summary.get('teams_immediate_major_rows') or 0)}",
+        f"teams_specialist_held_rows={int(summary.get('teams_specialist_held_rows') or 0)}",
+        "teams_specialist_holdback_expired_rows="
+        + str(int(summary.get('teams_specialist_holdback_expired_rows') or 0)),
+        "teams_specialist_fallback_eligible_rows="
+        + str(int(summary.get('teams_specialist_fallback_eligible_rows') or 0)),
+        f"teams_specialist_selected_rows={int(summary.get('teams_specialist_selected_rows') or 0)}",
+        "teams_specialist_replaced_by_major_rows="
+        + str(int(summary.get('teams_specialist_replaced_by_major_rows') or 0)),
+        f"selected_primary_10_rows={int(summary.get('selected_primary_10_rows') or 0)}",
+        f"selected_secondary_3_rows={int(summary.get('selected_secondary_3_rows') or 0)}",
+        f"selected_promoted_official_rows={int(summary.get('selected_promoted_official_rows') or 0)}",
+        f"selected_specialist_rows={int(summary.get('selected_specialist_rows') or 0)}",
+        f"source_gate_rejected_rows={int(summary.get('source_gate_rejected_rows') or 0)}",
     )
     try:
         with Path(path).open("a", encoding="utf-8") as handle:
@@ -666,6 +854,42 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
             f"article={record['article_ref']} outcome={record['outcome']} "
             f"dedup={record['dedup_reason']} status={record['status']}"
         )
+    for entry in summary.get("selected_source_audit", ()):
+        print(
+            "Teams source gate selected: "
+            f"article={entry['article_ref']} "
+            f"tier={entry['publisher_tier']} "
+            f"gate_class={entry['source_gate_class']} "
+            f"publisher_rank={entry['publisher_rank']} "
+            f"mode={entry['selection_mode']} "
+            f"holdback_age_minutes={entry['holdback_age_minutes']} "
+            f"fallback_reason={entry['fallback_reason'] or '-'} "
+            "same_event_major_available="
+            + ("true" if entry["same_event_major_available"] else "false")
+        )
+    print(
+        "Teams source gate summary: "
+        f"raw_primary_10_rows={summary['raw_primary_10_rows']} "
+        f"raw_secondary_3_rows={summary['raw_secondary_3_rows']} "
+        f"raw_specialist_rows={summary['raw_specialist_rows']} "
+        f"verified_primary_10_rows={summary['verified_primary_10_rows']} "
+        f"verified_secondary_3_rows={summary['verified_secondary_3_rows']} "
+        f"verified_specialist_rows={summary['verified_specialist_rows']} "
+        f"teams_immediate_major_rows={summary['teams_immediate_major_rows']} "
+        f"teams_specialist_held_rows={summary['teams_specialist_held_rows']} "
+        "teams_specialist_holdback_expired_rows="
+        f"{summary['teams_specialist_holdback_expired_rows']} "
+        "teams_specialist_fallback_eligible_rows="
+        f"{summary['teams_specialist_fallback_eligible_rows']} "
+        f"teams_specialist_selected_rows={summary['teams_specialist_selected_rows']} "
+        "teams_specialist_replaced_by_major_rows="
+        f"{summary['teams_specialist_replaced_by_major_rows']} "
+        f"selected_primary_10_rows={summary['selected_primary_10_rows']} "
+        f"selected_secondary_3_rows={summary['selected_secondary_3_rows']} "
+        f"selected_promoted_official_rows={summary['selected_promoted_official_rows']} "
+        f"selected_specialist_rows={summary['selected_specialist_rows']} "
+        f"source_gate_rejected_rows={summary['source_gate_rejected_rows']}"
+    )
     print(
         "Teams AI push summary: transport=email_channel "
         f"mode={summary['mode']} "
@@ -732,6 +956,14 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--now",
+        default=os.environ.get("TEAMS_AI_PUSH_NOW", ""),
+        help=(
+            "ISO timestamp used as the holdback reference clock "
+            "(deterministic fixtures only; production uses the wall clock)"
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="force preview only; no email request and no state write",
@@ -768,6 +1000,7 @@ def main(argv: list[str] | None = None) -> int:
             report_url=args.report_url,
             detected_at=args.detected_at,
             max_articles=max_articles,
+            now_iso_value=args.now,
         )
     except FailClosed as exc:
         print(

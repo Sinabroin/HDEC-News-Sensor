@@ -54,5 +54,15 @@
     "neutral": "일반 출처",
     "low": "낮은 신뢰도",
     "excluded": "제외 출처"
+  },
+  "teams_delivery_source_policy": {
+    "note": "D7-AK-6E R4-R9A Teams 발송 전용 소스 게이트. 핵심 10·보조 3·승격 공식기관만 즉시 발송 자격이며, specialist/trusted_other는 120분 홀드백 후 예외 폴백(최대 1건) 대상이다. 이 정책은 Teams 발송에만 적용되고 Daily/Weekly/News Censor 자격에는 영향을 주지 않는다.",
+    "specialist_publishers": [
+      {"name": "테크M", "aliases": ["테크m", "techm"], "domains": ["techm.kr"]},
+      {"name": "테크월드", "aliases": ["테크월드", "epnc"], "domains": ["epnc.co.kr"]}
+    ],
+    "fallback_blocked_publishers": [
+      {"name": "뉴스워커", "aliases": ["뉴스워커", "newsworker"], "domains": ["newsworker.co.kr"]}
+    ]
   }
 }

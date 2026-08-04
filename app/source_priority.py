@@ -162,9 +162,20 @@ def publisher_delivery_tier(source: str, selected_url: str = "") -> dict[str, An
         source_key = _delivery_source_key(source)
         host = _delivery_url_host(selected_url)
         for policy_tier, rank, _name, aliases, domains in _publisher_delivery_policies():
+            # R4-R9A: equality-or-prefix, never substring containment — the
+            # short alias "한경" must not classify the specialist daily
+            # "대한경제" as 한국경제 (a cross-publisher false positive), while
+            # family names (연합뉴스TV, SBS Biz, 한국경제TV) keep matching by
+            # prefix.
             alias_match = any(
-                re.sub(r"\s+", "", alias.casefold()) in source_key
-                for alias in aliases
+                normalized_alias
+                and (
+                    source_key == normalized_alias
+                    or source_key.startswith(normalized_alias)
+                )
+                for normalized_alias in (
+                    re.sub(r"\s+", "", alias.casefold()) for alias in aliases
+                )
             )
             domain_match = any(
                 host == domain or host.endswith("." + domain)
@@ -216,6 +227,106 @@ def surface_minimum(surface: str, limit: int) -> int:
         ((_rules().get("surface_trusted_minimums") or {}).get(surface) or 0)
     )
     return max(0, min(int(limit), configured))
+
+
+# ---------------------------------------------------------------------------
+# D7-AK-6E R4-R9A — Teams-only delivery source-gate lanes.
+#
+# For the Teams push surface, source priority is an ELIGIBILITY input, not only
+# a sort order: the locked primary ten / secondary three are immediately
+# sendable, a verified official institution stays subject to the caller-owned
+# material-promotion decision, specialist/trusted-other publishers enter a
+# holdback lane, and neutral/low/excluded publishers are never automatically
+# sendable. Explicit per-publisher Teams policy (specialist membership and
+# fallback blocking) lives in ``data/source_priority_rules.json`` under
+# ``teams_delivery_source_policy``. These lanes apply to Teams delivery only —
+# Daily / Weekly / News-Censor / operator-review eligibility never reads them.
+
+TEAMS_LANE_IMMEDIATE_MAJOR = "immediate_major"
+TEAMS_LANE_OFFICIAL_INSTITUTION = "official_institution_review"
+TEAMS_LANE_SPECIALIST_HOLDBACK = "specialist_holdback"
+TEAMS_LANE_NEVER_AUTOMATIC = "never_automatic"
+
+TEAMS_IMMEDIATE_TIERS = frozenset({"primary_10", "secondary_3"})
+TEAMS_SPECIALIST_LANE_TIERS = frozenset({"specialist", "trusted_other"})
+
+
+@lru_cache(maxsize=1)
+def _teams_source_policy_entries() -> tuple[
+    tuple[str, str, tuple[str, ...], tuple[str, ...]], ...
+]:
+    policy = _rules().get("teams_delivery_source_policy")
+    if not isinstance(policy, Mapping):
+        return ()
+    entries: list[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = []
+    for kind, key in (
+        ("specialist", "specialist_publishers"),
+        ("fallback_blocked", "fallback_blocked_publishers"),
+    ):
+        for entry in policy.get(key) or []:
+            if not isinstance(entry, Mapping):
+                continue
+            entries.append((
+                kind,
+                _clean(entry.get("name")),
+                tuple(
+                    re.sub(r"\s+", "", _clean(alias).casefold())
+                    for alias in entry.get("aliases") or []
+                    if _clean(alias)
+                ),
+                tuple(
+                    _clean(domain).casefold()
+                    for domain in entry.get("domains") or []
+                    if _clean(domain)
+                ),
+            ))
+    return tuple(entries)
+
+
+def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[str, Any]:
+    """Teams-only source-gate lane for one publisher.
+
+    Returns the canonical delivery tier plus the Teams lane, whether the
+    publisher is an explicitly configured specialist, and whether automatic
+    specialist fallback is blocked for it. A fallback-blocked publisher can
+    never resolve to the immediate lane regardless of tier.
+    """
+    tier_info = publisher_delivery_tier(source, selected_url)
+    source_key = _delivery_source_key(source)
+    host = _delivery_url_host(selected_url)
+    explicit_specialist = ""
+    fallback_blocked = False
+    for kind, name, aliases, domains in _teams_source_policy_entries():
+        alias_match = any(
+            source_key == alias or source_key.startswith(alias)
+            for alias in aliases
+        )
+        domain_match = any(
+            host == domain or host.endswith("." + domain)
+            for domain in domains
+        )
+        if not (alias_match or domain_match):
+            continue
+        explicit_specialist = explicit_specialist or name
+        if kind == "fallback_blocked":
+            fallback_blocked = True
+    tier = str(tier_info["tier"])
+    if fallback_blocked:
+        lane = TEAMS_LANE_SPECIALIST_HOLDBACK
+    elif tier in TEAMS_IMMEDIATE_TIERS:
+        lane = TEAMS_LANE_IMMEDIATE_MAJOR
+    elif tier == "official_institution":
+        lane = TEAMS_LANE_OFFICIAL_INSTITUTION
+    elif explicit_specialist or tier in TEAMS_SPECIALIST_LANE_TIERS:
+        lane = TEAMS_LANE_SPECIALIST_HOLDBACK
+    else:
+        lane = TEAMS_LANE_NEVER_AUTOMATIC
+    return {
+        **tier_info,
+        "teams_lane": lane,
+        "explicit_specialist": explicit_specialist,
+        "fallback_blocked": fallback_blocked,
+    }
 
 
 def reserve_trusted_slots(

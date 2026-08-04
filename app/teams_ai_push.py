@@ -38,6 +38,22 @@ MAX_TEAMS_ARTICLES = 10
 DEFAULT_TEAMS_BATCH_MAX = 5
 HARD_TEAMS_BATCH_MAX = 5
 
+# D7-AK-6E R4-R9A — Teams major-media-first source gate (canonical constants).
+# A specialist/trusted-other article becomes fallback-eligible only after a
+# 120-minute holdback, and at most one specialist article is selected per
+# natural run. Unused major-media capacity is never filled with specialists.
+TEAMS_SPECIALIST_HOLDBACK_MINUTES = 120
+TEAMS_SPECIALIST_MAX_PER_BATCH = 1
+
+SOURCE_GATE_PRIMARY_10 = "primary_10"
+SOURCE_GATE_SECONDARY_3 = "secondary_3"
+SOURCE_GATE_PROMOTED_OFFICIAL = "promoted_official"
+SOURCE_GATE_SPECIALIST_HOLDBACK = "specialist_holdback"
+SOURCE_GATE_NEVER_AUTOMATIC = "never_automatic"
+
+SELECTION_MODE_IMMEDIATE = "immediate"
+SELECTION_MODE_FALLBACK = "fallback"
+
 IMPORTANCE_TOP = "top"
 IMPORTANCE_IMPORTANT = "important"
 IMPORTANCE_LABELS = {
@@ -1589,6 +1605,363 @@ def collapse_event_duplicates(
     return (
         tuple(representatives[key] for key in order),
         tuple(dropped),
+    )
+
+
+# ---------------------------------------------------------------------------
+# D7-AK-6E R4-R9A — Teams major-media-first source gate.
+#
+# The gate runs strictly AFTER every existing hard gate (required fields,
+# publisher-direct safety, AI centrality, hard exclusions, executive
+# relevance, importance, event dedup, the accepted ledger): it partitions
+# already-eligible unsent candidates and can therefore never rescue a
+# rejected article. It applies to the Teams push surface only — Daily,
+# Weekly, News Censor, operator review, Report evidence, and editorial
+# memory never consume it.
+
+# Title-only filler screen for the exceptional specialist fallback lane
+# (rules §6 condition 7). Stock/theme, promo/review, and recruit/book
+# content is already excluded upstream by :func:`classify_ai_topic`; this
+# adds ordinary-earnings, award, event-publicity, and press-release-filler
+# markers. Judged on the title only, so aggregate-snippet noise cannot flip
+# the decision. "수상태양광" (floating solar) is exempt from the award rule.
+_SPECIALIST_FALLBACK_FILLER_TERMS = (
+    "실적 발표", "영업이익", "순이익", "분기 실적", "어닝", "earnings",
+    "수상", "시상", "어워드", "award", "기념식", "축하",
+    "개최", "참가", "참석", "부스", "전시회", "박람회", "세미나", "웨비나",
+    "포럼", "컨퍼런스",
+    "보도자료", "press release", "후원", "협찬",
+)
+
+
+def _specialist_fallback_filler_reason(article: object) -> str:
+    title = f" {_lower(_value(article, 'title'))} "
+    if "수상태양광" in title:
+        title = title.replace("수상태양광", " ")
+    hits = _has(title, _SPECIALIST_FALLBACK_FILLER_TERMS)
+    return f"specialist_filler:{hits[0]}" if hits else ""
+
+
+@dataclass(frozen=True)
+class SourceGateDecision:
+    """Teams-only source-gate class for one already-eligible candidate."""
+
+    gate_class: str
+    tier: str
+    tier_rank: int
+    publisher_rank: int
+    immediate: bool
+    fallback_blocked: bool = False
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class HoldbackEvaluation:
+    """Deterministic §6 fallback evaluation for one held specialist."""
+
+    first_seen_at: str
+    age_minutes: float
+    holdback_expired: bool
+    importance_top: bool
+    material_relevance: bool
+    filler_reason: str
+    same_event_major_available: bool
+    replaced_by_major_media: str
+    fallback_eligible: bool
+    holdback_reason: str
+
+
+@dataclass(frozen=True)
+class GatedCandidate:
+    candidate: TeamsPushCandidate
+    gate: SourceGateDecision
+    holdback: HoldbackEvaluation | None = None
+    selection_mode: str = ""
+
+
+@dataclass(frozen=True)
+class SourceGateBatchResult:
+    """One deterministic gate application over the ledger-filtered batch."""
+
+    selected: tuple[GatedCandidate, ...]
+    immediate: tuple[GatedCandidate, ...]
+    immediate_selected: tuple[GatedCandidate, ...]
+    deferred_major: tuple[GatedCandidate, ...]
+    held: tuple[GatedCandidate, ...]
+    rejected: tuple[GatedCandidate, ...]
+    fallback_selected: tuple[GatedCandidate, ...]
+    holdback_observations: tuple[Mapping[str, Any], ...]
+    now_iso_value: str
+    audit: dict[str, int]
+
+
+def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
+    """Classify one candidate into its Teams source-gate class.
+
+    Publisher-direct safety and Teams editorial eligibility stay separate: a
+    safe direct link is not automatically Teams-send eligible. Promotion for
+    an official institution is decided by the existing independently proven
+    material-event policy (:mod:`app.public_institution_routing`) — this gate
+    only consumes that verdict and never re-derives it.
+    """
+    article = candidate.article
+    source = _clean(
+        _value(article, "source") or _value(article, "display_source")
+    )
+    policy = source_priority.teams_delivery_source_policy(
+        source, publisher_direct.publisher_url(article)
+    )
+    tier = str(policy["tier"])
+    tier_rank = int(policy["tier_rank"])
+    publisher_rank = int(policy["publisher_rank"])
+    if (
+        candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
+        and candidate.teams_alert_eligible
+    ):
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_PROMOTED_OFFICIAL,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=True,
+            reason="promoted_official_institution",
+        )
+    lane = str(policy["teams_lane"])
+    if lane == source_priority.TEAMS_LANE_IMMEDIATE_MAJOR:
+        gate_class = (
+            SOURCE_GATE_PRIMARY_10
+            if tier == "primary_10"
+            else SOURCE_GATE_SECONDARY_3
+        )
+        return SourceGateDecision(
+            gate_class=gate_class,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=True,
+            reason=f"immediate_{tier}",
+        )
+    if lane == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK:
+        fallback_blocked = bool(policy["fallback_blocked"])
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_SPECIALIST_HOLDBACK,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=False,
+            fallback_blocked=fallback_blocked,
+            reason=(
+                "fallback_blocked_publisher"
+                if fallback_blocked
+                else "specialist_holdback"
+            ),
+        )
+    return SourceGateDecision(
+        gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+        tier=tier,
+        tier_rank=tier_rank,
+        publisher_rank=publisher_rank,
+        immediate=False,
+        reason=(
+            "official_institution_not_promoted"
+            if lane == source_priority.TEAMS_LANE_OFFICIAL_INSTITUTION
+            else "source_tier_not_eligible"
+        ),
+    )
+
+
+def apply_major_media_first_gate(
+    accepted: Sequence[TeamsPushCandidate],
+    *,
+    state: Mapping[str, Any] | None,
+    run_cap: int,
+    now_iso_value: str = "",
+    holdback_minutes: int = TEAMS_SPECIALIST_HOLDBACK_MINUTES,
+    max_specialist_per_batch: int = TEAMS_SPECIALIST_MAX_PER_BATCH,
+) -> SourceGateBatchResult:
+    """Partition the ledger-filtered ranked batch by the Teams source gate.
+
+    Pure transform: reads held-record state, never writes it. The caller
+    (production sender) applies ``holdback_observations`` through
+    ``app.teams_push_state`` in send mode only, so a dry run changes nothing.
+
+    Selection: immediate-class candidates (locked primary ten, secondary
+    three, promoted official institutions) fill the batch in existing rank
+    order; a specialist/trusted-other candidate is selected only through the
+    §6 exceptional fallback (holdback expired · unique TOP event · direct
+    HDEC or independently proven material strategic relevance · no filler ·
+    publisher not fallback-blocked), capped at
+    :data:`TEAMS_SPECIALIST_MAX_PER_BATCH` and never displacing an available
+    major candidate. Ordinary specialist supply never fills unused capacity.
+    """
+    from app import teams_push_state as push_state
+
+    now_value = _clean(now_iso_value) or push_state.now_iso()
+    state_map: Mapping[str, Any] = state if isinstance(state, Mapping) else {}
+    ledger_clusters = {
+        _clean(key)
+        for key in (state_map.get("cluster_keys") or {})
+        if _clean(key)
+    }
+
+    immediate: list[GatedCandidate] = []
+    holdback_lane: list[GatedCandidate] = []
+    rejected: list[GatedCandidate] = []
+    for candidate in accepted:
+        gate = evaluate_source_gate(candidate)
+        item = GatedCandidate(candidate=candidate, gate=gate)
+        if gate.immediate:
+            immediate.append(item)
+        elif gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK:
+            holdback_lane.append(item)
+        else:
+            rejected.append(item)
+
+    cap = max(0, int(run_cap))
+    immediate_selected = tuple(
+        replace(item, selection_mode=SELECTION_MODE_IMMEDIATE)
+        for item in immediate[:cap]
+    )
+    deferred_major = tuple(immediate[cap:])
+    selected_clusters = {
+        _clean(item.candidate.cluster_key)
+        for item in immediate_selected
+        if _clean(item.candidate.cluster_key)
+    }
+
+    evaluated: list[GatedCandidate] = []
+    for item in holdback_lane:
+        candidate = item.candidate
+        prior = push_state.get_held_record(state_map, candidate.article) or {}
+        first_seen = _clean(prior.get("first_seen_at")) or now_value
+        age_minutes = max(
+            0.0, push_state.minutes_between(first_seen, now_value)
+        )
+        holdback_expired = age_minutes >= float(holdback_minutes)
+        importance_top = candidate.importance.level == IMPORTANCE_TOP
+        material_relevance = bool(
+            candidate.importance.hdec_direct
+        ) or _has_strong_ai_strategic_override(
+            f" {_core_article_text(candidate.article)} "
+        )
+        filler_reason = _specialist_fallback_filler_reason(candidate.article)
+        replaced_by = _clean(prior.get("replaced_by_major_media"))
+        cluster = _clean(candidate.cluster_key)
+        same_event_major_available = bool(
+            cluster
+            and (cluster in selected_clusters or cluster in ledger_clusters)
+        ) or bool(replaced_by)
+        if item.gate.fallback_blocked:
+            block_reason = "fallback_blocked_publisher"
+        elif same_event_major_available:
+            block_reason = "same_event_major_available"
+        elif not holdback_expired:
+            block_reason = "holdback_active"
+        elif not importance_top:
+            block_reason = "importance_not_top"
+        elif not material_relevance:
+            block_reason = "no_material_relevance"
+        elif filler_reason:
+            block_reason = filler_reason
+        else:
+            block_reason = ""
+        evaluated.append(
+            replace(
+                item,
+                holdback=HoldbackEvaluation(
+                    first_seen_at=first_seen,
+                    age_minutes=round(age_minutes, 1),
+                    holdback_expired=holdback_expired,
+                    importance_top=importance_top,
+                    material_relevance=material_relevance,
+                    filler_reason=filler_reason,
+                    same_event_major_available=same_event_major_available,
+                    replaced_by_major_media=replaced_by,
+                    fallback_eligible=not block_reason,
+                    holdback_reason=block_reason or "fallback_eligible",
+                ),
+            )
+        )
+
+    fallback_room = min(
+        max(0, cap - len(immediate_selected)),
+        max(0, int(max_specialist_per_batch)),
+    )
+    fallback_selected: list[GatedCandidate] = []
+    held: list[GatedCandidate] = []
+    for item in evaluated:
+        if (
+            len(fallback_selected) < fallback_room
+            and item.holdback is not None
+            and item.holdback.fallback_eligible
+        ):
+            fallback_selected.append(
+                replace(item, selection_mode=SELECTION_MODE_FALLBACK)
+            )
+        else:
+            held.append(item)
+
+    holdback_observations = tuple(
+        {
+            "article": item.candidate.article,
+            "cluster_key": item.candidate.cluster_key,
+            "source": _clean(
+                _value(item.candidate.article, "source")
+                or _value(item.candidate.article, "display_source")
+            ),
+            "source_tier": item.gate.tier,
+            "holdback_reason": (
+                item.holdback.holdback_reason if item.holdback else ""
+            ),
+            "fallback_eligible": bool(
+                item.holdback and item.holdback.fallback_eligible
+            ),
+        }
+        for item in evaluated
+    )
+
+    selected = tuple(immediate_selected) + tuple(fallback_selected)
+    audit = {
+        "teams_immediate_major_rows": len(immediate),
+        "teams_specialist_held_rows": len(held),
+        "teams_specialist_holdback_expired_rows": sum(
+            bool(item.holdback and item.holdback.holdback_expired)
+            for item in evaluated
+        ),
+        "teams_specialist_fallback_eligible_rows": sum(
+            bool(item.holdback and item.holdback.fallback_eligible)
+            for item in evaluated
+        ),
+        "teams_specialist_selected_rows": len(fallback_selected),
+        "source_gate_rejected_rows": len(rejected),
+        "selected_primary_10_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_PRIMARY_10
+            for item in selected
+        ),
+        "selected_secondary_3_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_SECONDARY_3
+            for item in selected
+        ),
+        "selected_promoted_official_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_PROMOTED_OFFICIAL
+            for item in selected
+        ),
+        "selected_specialist_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
+            for item in selected
+        ),
+    }
+    return SourceGateBatchResult(
+        selected=selected,
+        immediate=tuple(immediate),
+        immediate_selected=immediate_selected,
+        deferred_major=deferred_major,
+        held=tuple(held),
+        rejected=tuple(rejected),
+        fallback_selected=tuple(fallback_selected),
+        holdback_observations=holdback_observations,
+        now_iso_value=now_value,
+        audit=audit,
     )
 
 
