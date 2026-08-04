@@ -1,0 +1,145 @@
+{
+  "record_version": 1,
+  "parser_version": "human-first-stage-seed-v1",
+  "product": "daily",
+  "kind": "candidate_pool",
+  "edition_key": "daily-2026-08-03",
+  "issue_date": "2026-08-03",
+  "candidate_origin": "human_first_stage",
+  "note": "R4-R7 §4 — human first-stage relevance screen for edition 2026-08-03. silver_candidate only: an initial human screen is not final approval. A later approved final Brief for this edition reconciles these into gold_plus / gold_selected / near_miss. Links are provenance only and are never fetched during offline tests.",
+  "article_count": 12,
+  "articles": [
+    {
+      "order": 1,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "AI 안경 커닝 진화에 대학가 ‘비상’…시험장 대응책은 미흡",
+      "human_summary": "",
+      "topic_labels": ["ai_devices", "education_integrity", "institutional_response_lag"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260802093409058",
+      "published_date": "2026-08-02"
+    },
+    {
+      "order": 2,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "재난 전파 ‘10분 → 10초’…AI로 만든 공무원",
+      "human_summary": "",
+      "topic_labels": ["public_sector_ai_automation", "emergency_response", "operational_productivity"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260802202307489",
+      "published_date": "2026-08-02"
+    },
+    {
+      "order": 3,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "캐릭터와 한달 40시간 대화…AI 채팅 과몰입 규제 움직임",
+      "human_summary": "",
+      "topic_labels": ["ai_social_risk", "consumer_protection", "regulation"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260802190849371",
+      "published_date": "2026-08-02"
+    },
+    {
+      "order": 4,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "낡은 공장 부지를 2900억에 샀다…AI 시대 '뜻밖의 상황'",
+      "human_summary": "",
+      "topic_labels": ["industrial_site_conversion", "datacenter_infrastructure_scarcity", "power_location_effects"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260802173338740",
+      "published_date": "2026-08-02"
+    },
+    {
+      "order": 5,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "AI가 만든 '유령 판례'에 법조계 골머리",
+      "human_summary": "",
+      "topic_labels": ["ai_hallucination", "professional_liability", "governance_verification"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260802172737621",
+      "published_date": "2026-08-02"
+    },
+    {
+      "order": 6,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "伊프리스미안, AI전력인프라 겨냥 美 전기자재 업체 인수 추진",
+      "human_summary": "",
+      "topic_labels": ["ai_power_infrastructure", "mna", "electrical_supply_chain"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260803070814475",
+      "published_date": "2026-08-03"
+    },
+    {
+      "order": 7,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "전국민 AI 첫걸음부터 창업까지…3만명에 AI 토큰 '무료 지원'(종합)",
+      "human_summary": "",
+      "topic_labels": ["national_ai_adoption", "compute_token_access", "startup_policy"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260803120852285",
+      "published_date": "2026-08-03"
+    },
+    {
+      "order": 8,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "‘국가대표 AI’ 독파모 2차 평가 ‘결전의 달’",
+      "human_summary": "",
+      "topic_labels": ["sovereign_ai", "national_foundation_model_competition", "public_policy"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260803113853196",
+      "published_date": "2026-08-03"
+    },
+    {
+      "order": 9,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "EU, AI법 본격 시행···AI 생성물 표시·챗봇 고지 의무화",
+      "human_summary": "",
+      "topic_labels": ["ai_regulation", "disclosure_duty", "enterprise_compliance"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260803102927286",
+      "published_date": "2026-08-03"
+    },
+    {
+      "order": 10,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "챗봇 넘어 'AI 연구원'으로… 오픈AI, 수학 난제 10개 정복",
+      "human_summary": "",
+      "topic_labels": ["frontier_model_capability", "ai_research_automation", "verification_uncertainty"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260803165840067",
+      "published_date": "2026-08-03"
+    },
+    {
+      "order": 11,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "국가AI컴퓨팅센터 ‘첫 삽’...배경훈 “아시아 AI 인프라 허브로 도약”",
+      "human_summary": "",
+      "topic_labels": ["national_ai_computing_center", "construction", "chips_infrastructure"],
+      "source": "",
+      "canonical_url": "https://v.daum.net/v/20260803154801071",
+      "published_date": "2026-08-03"
+    },
+    {
+      "order": 12,
+      "evidence_level": "silver_candidate",
+      "category": "",
+      "title": "알리바바, AI 신모델 공개…매개변수 2.4조개로 키미 근접",
+      "human_summary": "",
+      "topic_labels": ["frontier_model_competition", "chinese_ai_ecosystem", "model_scale"],
+      "source": "",
+      "canonical_url": "",
+      "published_date": "2026-08-03"
+    }
+  ]
+}

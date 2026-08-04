@@ -1,0 +1,76 @@
+{
+  "record_version": 1,
+  "parser_version": "human-editorial-extract-v1",
+  "product": "weekly_tni",
+  "kind": "final_brief",
+  "edition_key": "tni-weekly-2026-06-26",
+  "issue_label": "2026년 6월 4주차",
+  "issue_date": "2026-06-26",
+  "headline_title": "정부·삼성·SK, 호남에 300조원대 반도체·AI 클러스터 …향후 투자계획 발표 예정",
+  "human_editor_summary": "정부가 6월 29일 청와대 '국토공간 대전환' 민관합동회의에서 삼성전자·SK하이닉스의 대규모 지방 투자 계획을 공개합니다. 30일엔 최태원 SK 회장이 광주에서 반도체와 AI 데이터센터를 묶은 '호남권 AI 밸리' 를, 7월 2일엔 이재용 삼성 회장이 충남 아산 투자 계획을 발표합니다. 호남 클러스터는 전공정·후공정·AI 데이터센터를 망라해 투자 규모 300조~500조원·기간 10년 안팎 으로 거론됩니다. 수도권 첨단산업을 호남·충청으로 다극화하는 '단군 이래 최대' 프로젝트로, 송전망·용수·전문인력 확보가 최대 과제 입니다. 반도체·AI·전력·건설 전반에 대규모 발주가 예고되는 만큼, 공급망 기회와 입지·전력 리스크를 함께 살펴둘 필요가 있습니다. 출처",
+  "article_count": 5,
+  "articles": [
+    {
+      "order": 0,
+      "headline": true,
+      "evidence_level": "gold_plus",
+      "category": "투자·산업",
+      "title": "정부·삼성·SK, 호남에 300조원대 반도체·AI 클러스터 …향후 투자계획 발표 예정",
+      "human_summary": "정부가 6월 29일 청와대 '국토공간 대전환' 민관합동회의에서 삼성전자·SK하이닉스의 대규모 지방 투자 계획을 공개합니다. 30일엔 최태원 SK 회장이 광주에서 반도체와 AI 데이터센터를 묶은 '호남권 AI 밸리' 를, 7월 2일엔 이재용 삼성 회장이 충남 아산 투자 계획을 발표합니다. 호남 클러스터는 전공정·후공정·AI 데이터센터를 망라해 투자 규모 300조~500조원·기간 10년 안팎 으로 거론됩니다. 수도권 첨단산업을 호남·충청으로 다극화하는 '단군 이래 최대' 프로젝트로, 송전망·용수·전문인력 확보가 최대 과제 입니다. 반도체·AI·전력·건설 전반에 대규모 발주가 예고되는 만큼, 공급망 기회와 입지·전력 리스크를 함께 살펴둘 필요가 있습니다. 출처",
+      "source": "한국일보 국민일보 이데일리",
+      "canonical_url": "https://www.edaily.co.kr/News/Read?mediaCodeNo=257&newsId=05205366645485000",
+      "published_date": ""
+    },
+    {
+      "order": 1,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "삼성, 공장서 찍어내는 'AI 모듈러 홈' 공개…3년 내 1만 호 목표",
+      "human_summary": "삼성전자가 6/24 'AI 모듈러 홈'을 공개했습니다. 공장에서 80% 이상 제작해 공기를 절반으로 줄이고, 입주 즉시 AI 가전이 작동합니다(3년 내 1만 호 목표). 진짜 노림수는 주택이 아니라 스마트싱스 기반 'AI 홈 플랫폼' 확장입니다.",
+      "source": "전자신문 아주경제",
+      "canonical_url": "https://www.ajunews.com/view/20260624160607333",
+      "published_date": ""
+    },
+    {
+      "order": 2,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "구글, AI 두뇌 줄줄이 이탈…알파벳 시총 하루 만에 휘청",
+      "human_summary": "트랜스포머 창시자 노암 샤지어가 오픈AI로, 노벨화학상 수상자 존 점퍼 등 딥마인드 핵심 연구원이 앤트로픽으로 옮깁니다. 이탈 소식에 알파벳 주가가 장중 7% 급락(시총 수백조원 증발)했습니다 — 'AI 인재 쟁탈전'에서 구글이 밀리고 있다는 경고음입니다.",
+      "source": "한국경제 헤럴드경제",
+      "canonical_url": "https://biz.heraldcorp.com/article/10784205",
+      "published_date": ""
+    },
+    {
+      "order": 3,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "美, 앤트로픽 이어 GPT-5.6도 수출 통제…한국 'AI 주권' 비상",
+      "human_summary": "미국이 앤트로픽 최신 모델의 외국인 접근을 전면 차단한 데 이어, 오픈AI엔 GPT-5.6 '단계적 출시'(고객별 승인)를 요청했습니다. 최신 AI 배포가 미국 정부 판단에 좌우되기 시작한 것 — 외산 AI에 의존하면 언제든 공급이 끊길 수 있다는 'AI 주권' 경고음입니다.",
+      "source": "전자신문 파이낸셜뉴스",
+      "canonical_url": "https://www.fnnews.com/news/202606200701246703",
+      "published_date": ""
+    },
+    {
+      "order": 4,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "오픈AI, 첫 자체 AI칩 '할라피뇨' 공개…엔비디아 의존 낮춘다",
+      "human_summary": "오픈AI가 브로드컴과 만든 첫 자체 칩 '할라피뇨'를 6/24 공개했습니다. 엔비디아 GPU와 달리 추론(서비스 구동)에 특화해 설계했고, 양산직전까지 역대 최단급 9개월이 걸렸습니다. 연말 첫 가동 예정 — 엔비디아 독주에 균열, 'AI 반도체 자립' 경쟁이 본격화됩니다.",
+      "source": "디지털데일리 아주경제",
+      "canonical_url": "https://www.ajunews.com/view/20260625071123853",
+      "published_date": ""
+    }
+  ],
+  "provenance": {
+    "source_filename": "AI경영_TnI_Weekly_2026-06월-4주차_최종.html",
+    "source_sha256": "e61ab1663643360ba0d05e2058888d5f086f828c5562dc21296a0073bca4c611",
+    "parser_version": "human-editorial-extract-v1",
+    "extracted_article_count": 5,
+    "extracted_at": "2026-08-04T01:22:19+00:00"
+  }
+}

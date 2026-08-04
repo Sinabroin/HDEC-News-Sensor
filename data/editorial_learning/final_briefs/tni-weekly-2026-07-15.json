@@ -1,0 +1,109 @@
+{
+  "record_version": 1,
+  "parser_version": "human-editorial-extract-v1",
+  "product": "weekly_tni",
+  "kind": "final_brief",
+  "edition_key": "tni-weekly-2026-07-15",
+  "issue_label": "2026년 7월 3주차",
+  "issue_date": "2026-07-15",
+  "headline_title": "구글, 국내 기업 겨냥'풀스택 AI' 선보인다",
+  "human_editor_summary": "구글이 7월 14일 '구글 AI 포 비즈니스 2026'에서 TPU 등 컴퓨팅 인프라부터 제미나이 모델, 오케스트레이션 플랫폼, 사용자 인터페이스까지 하나로 묶어 제공하는 '풀스택 AI' 전략을 공개했습니다. 국내 소비자 76% 가 신규 제품·서비스의 초기 아이디어를 얻을 때 AI 검색을 포함한 검색 도구를 가장 먼저 쓴다는 조사를 근거로, 이미 제미나이 엔터프라이즈를 도입한 삼성전자·CJ올리브영 사례를 함께 제시했습니다. 출처",
+  "article_count": 8,
+  "articles": [
+    {
+      "order": 0,
+      "headline": true,
+      "evidence_level": "gold_plus",
+      "category": "기업동향",
+      "title": "구글, 국내 기업 겨냥'풀스택 AI' 선보인다",
+      "human_summary": "구글이 7월 14일 '구글 AI 포 비즈니스 2026'에서 TPU 등 컴퓨팅 인프라부터 제미나이 모델, 오케스트레이션 플랫폼, 사용자 인터페이스까지 하나로 묶어 제공하는 '풀스택 AI' 전략을 공개했습니다. 국내 소비자 76% 가 신규 제품·서비스의 초기 아이디어를 얻을 때 AI 검색을 포함한 검색 도구를 가장 먼저 쓴다는 조사를 근거로, 이미 제미나이 엔터프라이즈를 도입한 삼성전자·CJ올리브영 사례를 함께 제시했습니다. 출처",
+      "source": "연합뉴스",
+      "canonical_url": "https://v.daum.net/v/20260714133647583",
+      "published_date": "2026-07-14"
+    },
+    {
+      "order": 1,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "투자·산업",
+      "title": "IBM 하루 만에 104조 증발…\"AI가 소프트웨어 예산 잠식\"",
+      "human_summary": "IBM이 2분기 실적 전망을 시장 기대 이하로 내놓자 주가가 하루 만에 25% 급락해 시가총액 2728억 달러 가운데 700억 달러(약 104조원)가 사라졌습니다. 1987년 블랙먼데이를 넘어선 사상 최대 낙폭으로, 고객사가 설비투자를 AI 데이터센터용 서버·메모리로 돌리면서 기존 소프트웨어·컨설팅 수요가 줄어든 것이 원인입니다 — AI 인프라 투자가 기존 IT 예산을 잠식하는 국면에 들어섰습니다.",
+      "source": "한국경제",
+      "canonical_url": "https://www.hankyung.com/article/2026071555587",
+      "published_date": "2026-07-15"
+    },
+    {
+      "order": 2,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "몸값 높여 이직하던 IT 개발자들, AI 전환에 노조 만든다",
+      "human_summary": "삼성SDS가 7월 6일 창사 41년 만에 첫 노조를 세우고 하루 만에 조합원 5650명으로 과반 노조가 됐으며, 이틀 뒤 신세계I&C와 현대오토에버도 첫 노조를 출범시켰습니다. 이직으로 처우를 개선해 온 IT 인력이 개인 협상 대신 집단교섭을 택한 배경에는 AI 전환에 따른 직무 변화와 고용 불안이 있습니다 — AX의 비용이 인사·노무 리스크로 나타나기 시작했습니다.",
+      "source": "동아일보",
+      "canonical_url": "https://v.daum.net/v/20260714192837259",
+      "published_date": "2026-07-14"
+    },
+    {
+      "order": 3,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "정원주 대우건설 회장, 인니에 'AI 도시' 제안…SMR·LNG·데이터센터 묶는다",
+      "human_summary": "정원주 대우건설 회장이 인도네시아 정부에 소형모듈원전(SMR)과 LNG 발전 인프라, 기가와트급 AI 데이터센터를 한 번에 구축하는 '올인원 융복합 개발' 모델을 제안했습니다. 투자·다운스트림부 차관과 하원 에너지위원장을 잇달아 만났고, 국부펀드 다난타라와는 신도시 개발 협력을 논의했습니다 — 시공을 넘어 에너지와 AI 인프라를 묶어 파는 쪽으로 건설사의 해외 사업 범위가 넓어지고 있습니다.",
+      "source": "서울경제",
+      "canonical_url": "https://v.daum.net/v/20260713132843975",
+      "published_date": "2026-07-13"
+    },
+    {
+      "order": 4,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "\"매출 늘었는데 왜 이익 줄었지?\" 회사 장부 뒤져 답 찾는 AI",
+      "human_summary": "7월 14일 'SAP 나우 AI 투어 코리아 2026'에서 기업용 AI '쥴(Joule)'이 원가율 상승을 감지해 재료비와 해상 물류비 상승이라는 원인까지 짚어내는 시연이 공개됐습니다. 여러 부서가 며칠씩 걸리던 작업을 수 분 만에 끝냈고, 삼성전기는 ERP 전환 때 가동 중단 시간을 76% 줄여 34시간으로 단축했습니다 — AI가 보고서 작성을 넘어 원인 규명과 업무 실행 단계로 넘어왔습니다.",
+      "source": "조선일보",
+      "canonical_url": "https://v.daum.net/v/20260714145837071",
+      "published_date": "2026-07-14"
+    },
+    {
+      "order": 5,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "美 수출통제 푼 오픈AI 'GPT-5.6'…MS 코파일럿 대표 AI 됐다",
+      "human_summary": "마이크로소프트가 미국 정부의 수출 제한이 풀린 오픈AI의 최신 플래그십 모델 'GPT-5.6'을 MS 365 코파일럿의 권장 모델로 채택했습니다. 단순 반복 업무는 자체 모델 MAI가, 복잡한 분석과 고난도 추론은 GPT-5.6이 맡는 멀티모델 구조입니다 — 경쟁의 축이 단일 모델 성능에서 작업별 최적 배분으로 옮겨가고 있습니다.",
+      "source": "이데일리",
+      "canonical_url": "https://v.daum.net/v/20260713151951359",
+      "published_date": "2026-07-13"
+    },
+    {
+      "order": 6,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "씨에스아이비젼, '제조 암묵지 기반 AI 모델' 주관기관 선정",
+      "human_summary": "AI 자동용접 기업 씨에스아이비젼이 산업통상부의 '2026년도 제조 암묵지 기반 AI 모델 개발 사업' 주관기관으로 선정됐습니다. 용접 전류·전압·속도와 토치 움직임처럼 숙련자만 알던 조건을 센서·영상으로 기록해 AI가 최적 용접 조건을 자동 판단하도록 만들고, 금형에서 검증한 뒤 조선·중공업·자동차 부품으로 넓힙니다 — 현장 숙련 인력의 노하우가 국책 과제 단위로 데이터화되고 있습니다.",
+      "source": "한국경제",
+      "canonical_url": "https://v.daum.net/v/20260713162840812",
+      "published_date": "2026-07-13"
+    },
+    {
+      "order": 7,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "손글씨 시험에 '송곳 면접'…AI 시대 적응하는 美 대학가",
+      "human_summary": "챗GPT·제미나이가 에세이와 발표문까지 순식간에 만들어내자 미국 대학이 필기시험과 구술 평가로 되돌아가고 있습니다. 손글씨 답안지 '블루북' 판매량이 2022~2024년 두 배 이상 늘고 교사 66%가 과제 방식을 바꿨으며, 코넬대·펜실베이니아대는 제출물을 직접 설명하게 하는 '구술 방어'를 도입했습니다 — 평가 기준이 산출물이 아니라 사고 과정을 검증하는 쪽으로 옮겨가고 있습니다.",
+      "source": "중앙일보",
+      "canonical_url": "https://v.daum.net/v/20260713145907229",
+      "published_date": "2026-07-13"
+    }
+  ],
+  "provenance": {
+    "source_filename": "AI경영_TnI_Weekly_2026-07월-3주차_최종 (1).html",
+    "source_sha256": "e71308b7e1a9ee4697a5a597d5b074ce5aa1ec7ba60f83e597ebbdab6873dea2",
+    "parser_version": "human-editorial-extract-v1",
+    "extracted_article_count": 8,
+    "extracted_at": "2026-08-04T01:22:19+00:00"
+  }
+}

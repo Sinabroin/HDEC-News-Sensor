@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "schema_contract": "HDEC_EDITORIAL_LEARNING_CORPUS_V1",
+  "description": "Sanitized, versioned human editorial preference corpus (R4-R7 §5). Raw HTML is never stored; only whitelisted editorial fields, user-supplied summaries, and structured features.",
+  "evidence_levels": [
+    "gold_plus",
+    "gold_selected",
+    "silver_candidate",
+    "near_miss",
+    "hard_negative"
+  ],
+  "products": ["teams", "daily", "weekly_tni"],
+  "article_record_fields": {
+    "required": [
+      "record_version",
+      "evidence_level",
+      "product",
+      "edition_key",
+      "article_id",
+      "title",
+      "source",
+      "category"
+    ],
+    "optional": [
+      "canonical_url",
+      "human_title",
+      "published_at",
+      "published_date",
+      "human_category",
+      "factual_summary",
+      "human_summary",
+      "human_editor_summary",
+      "selected",
+      "headline",
+      "human_order",
+      "candidate_origin",
+      "topic_labels",
+      "central_event",
+      "why_selected",
+      "why_excluded",
+      "structural_ai_causal_event",
+      "surface_market_article",
+      "source_priority_tier",
+      "duplicate_event_cluster",
+      "human_rating",
+      "dimension_ratings",
+      "exclusion_tags",
+      "provenance_reference",
+      "parser_version"
+    ]
+  },
+  "decision_record_fields": {
+    "required": [
+      "decision_id",
+      "record_version",
+      "recorded_at",
+      "record_type",
+      "edition_key"
+    ],
+    "record_types": [
+      "final_brief_ingest",
+      "candidate_pool_ingest",
+      "candidate_final_reconciliation",
+      "hard_negative_ingest",
+      "editor_approval_feedback",
+      "supersede"
+    ],
+    "append_only": true,
+    "correction_policy": "Corrections never modify an existing line; they append a superseding record whose supersedes field names the original decision_id."
+  },
+  "privacy": {
+    "forbidden_content": [
+      "raw internal HTML",
+      "employee identifiers",
+      "Autoway account identifiers",
+      "cookies or session values",
+      "SSO URLs",
+      "internal host metadata"
+    ],
+    "allowed_urls": "public publisher/portal article URLs only"
+  }
+}
