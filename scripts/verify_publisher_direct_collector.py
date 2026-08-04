@@ -88,8 +88,8 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main 530c77d, merged without modification).
-        "1012f56fc25ea85ef29e440a43b4e92d18e897d785325077fda66df45d9ac9fe"
+        # (through origin/main 07604a8, merged without modification).
+        "457887a566d6eedc13a31b2b6f97821b19200a2c54ff27643b6f9f207d56931a"
     ),
 }
 
