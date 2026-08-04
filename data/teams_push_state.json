@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "3400540a608c7015": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
+    },
     "3c0220b68095c251": {
       "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
       "delivery_id": "teams_ai_push:830fe42c7d3e",
@@ -892,6 +902,16 @@
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
     },
+    "title:통신3사si기업들국내ai데이터센터전방위구축본격화": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
+    },
     "title:프리즈미안전기자재업체애트코어인수추진북미전력": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
       "delivery_id": "teams_ai_push:6f167df94e8c",
@@ -963,7 +983,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T19:11:00+09:00",
+  "last_successful_send_at": "2026-08-04T21:23:33+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1444,6 +1464,16 @@
       "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
+    },
+    "https://www.womentimes.co.kr/news/articleView.html?idxno=104970": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
     }
   },
   "title_fingerprints": {
@@ -1856,6 +1886,16 @@
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
+    },
+    "통신3사si기업들국내ai데이터센터전방위구축본격화": {
+      "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
+      "delivery_id": "teams_ai_push:eaac50fef721",
+      "first_sent_at": "2026-08-04T21:23:33+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
+      "sent_at": "2026-08-04T21:23:33+09:00",
+      "source": "우먼타임스"
     },
     "프리즈미안전기자재업체애트코어인수추진북미전력": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
