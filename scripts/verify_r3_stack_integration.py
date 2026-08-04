@@ -170,6 +170,16 @@ SUBVERIFIERS = (
         "verify_human_review_gate.py",
         r"RESULT: PASS",
     ),
+    (
+        "OBSERVED_FALSE_POSITIVE_REGRESSION",
+        "verify_observed_false_positive_regression.py",
+        r"OBSERVED_FALSE_POSITIVE_REGRESSION=PASS checks=(?P<passed>\d+) failures=0",
+    ),
+    (
+        "EDITORIAL_MEMORY_VERIFIER",
+        "verify_editorial_memory.py",
+        r"EDITORIAL_MEMORY_VERIFIER=PASS checks=(?P<passed>\d+) failures=0",
+    ),
 )
 
 
