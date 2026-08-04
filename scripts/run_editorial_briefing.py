@@ -12,6 +12,7 @@ exact-250 state).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -314,7 +315,18 @@ def _load_runtime_manifest(runtime_dir: Path, edition_type: str) -> dict:
         "latest_path", "teams_text", "teams_html", "headline", "issue_mode",
         "article_count",
     }
-    if not isinstance(value, dict) or set(value) != required:
+    optional = set(
+        editorial_briefings.SelectionAuditCounters().manifest_fields()
+    ) | {
+        "feedback_proposal_path",
+        "feedback_proposal_sha256",
+        "feedback_proposal_created",
+    }
+    if (
+        not isinstance(value, dict)
+        or not required <= set(value)
+        or not set(value) <= required | optional
+    ):
         raise OrchestratorError("runtime manifest fields mismatch")
     if value["version"] != 1 or value["edition_type"] != edition_type:
         raise OrchestratorError("runtime manifest identity mismatch")
@@ -413,6 +425,7 @@ def run_live_preview(
         publisher_opener=publisher_opener,
         selection_audit=selection_counters,
         selection_mode=editorial_briefings.SELECTION_MODE_DIRECT_AWARE_DAILY,
+        edition_type="daily",
     )
     if not articles:
         raise OrchestratorError("live preview found no Daily articles in exact coverage")
@@ -551,6 +564,9 @@ def run_publish(
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     review_mode = "not_applicable"
     review_decision = "not_applicable"
+    selection_counters = editorial_briefings.SelectionAuditCounters()
+    selection_manifest: dict = {}
+    feedback_proposal: dict | None = None
     if edition_type == "daily":
         bundle_path = ROOT / "docs" / "editorial" / "review" / key / "candidates.json"
         review_path = ROOT / "data" / "editorial_reviews" / f"{key}.json"
@@ -572,6 +588,25 @@ def run_publish(
                 run_at=run_at,
                 root_url=root_url,
             )
+            raw_selection_manifest = bundle.get("selection_audit")
+            if isinstance(raw_selection_manifest, dict):
+                allowed_memory_fields = set(
+                    selection_counters.manifest_fields()
+                )
+                selection_manifest = {
+                    key: value
+                    for key, value in raw_selection_manifest.items()
+                    if key in allowed_memory_fields
+                }
+            if review is not None:
+                generated_at = _now().isoformat(timespec="seconds")
+                feedback_proposal = editorial_review.build_feedback_proposal(
+                    bundle,
+                    review,
+                    selected_articles,
+                    review_mode=review_mode,
+                    generated_at=generated_at,
+                )
         except editorial_review.EditorialReviewError:
             review_mode = "live_collection_fallback"
             try:
@@ -584,6 +619,7 @@ def run_publish(
                     selection_mode=(
                         editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
                     ),
+                    selection_audit=selection_counters,
                 )
             except editorial_briefings.EditorialError as exc:
                 if str(exc) != "empty edition":
@@ -613,6 +649,7 @@ def run_publish(
                 selection_mode=(
                     editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
                 ),
+                selection_audit=selection_counters,
             )
         except editorial_briefings.EditorialError as exc:
             if str(exc) != "empty edition":
@@ -630,6 +667,26 @@ def run_publish(
     if dated_path.read_bytes() != latest_path.read_bytes():
         raise OrchestratorError("dated/latest bytes differ after publication write")
     manifest = editorial_briefings.manifest_for_runtime(edition, dated_path, latest_path)
+    if not selection_manifest:
+        selection_manifest = selection_counters.manifest_fields()
+    manifest.update(selection_manifest)
+    if feedback_proposal is not None:
+        proposal_path = runtime_dir / "editorial-feedback-proposal.json"
+        proposal_bytes = (
+            json.dumps(feedback_proposal, ensure_ascii=False, indent=2) + "\n"
+        ).encode("utf-8")
+        editorial_briefings.atomic_write_bytes(proposal_path, proposal_bytes)
+        manifest.update(
+            {
+                "feedback_proposal_created": True,
+                "feedback_proposal_path": str(proposal_path),
+                "feedback_proposal_sha256": hashlib.sha256(
+                    proposal_bytes
+                ).hexdigest(),
+            }
+        )
+    else:
+        manifest["feedback_proposal_created"] = False
     _write_runtime_manifest(runtime_dir, manifest)
     _github_output("skipped", "false")
     _github_output("edition", edition.edition_key)

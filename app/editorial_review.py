@@ -571,3 +571,220 @@ def choose_daily_articles(
         )
         for item in auto
     ], "ai_fallback"
+
+
+FEEDBACK_PROPOSAL_VERSION = 1
+
+
+def candidate_pool_digest(candidates: Sequence[Mapping[str, Any]]) -> str:
+    """Digest the sanitized candidate identities carried by a proposal."""
+    identities = sorted(
+        (
+            {
+                "candidate_id": _clean(item.get("candidate_id")),
+                "title": _clean(item.get("title")),
+            }
+            for item in candidates
+        ),
+        key=lambda item: (item["candidate_id"], item["title"]),
+    )
+    return hashlib.sha256(
+        json.dumps(
+            identities,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def build_feedback_proposal(
+    bundle: Mapping[str, Any],
+    review: Mapping[str, Any] | None,
+    final_articles: Sequence[EditorialArticle],
+    *,
+    review_mode: str,
+    generated_at: str,
+) -> dict[str, Any]:
+    """R4-R7 §8 — append-only post-editor feedback PROPOSAL.
+
+    Captures the human editorial delta of one approved Daily review —
+    candidate-pool digest, final selected/excluded IDs and order, headline,
+    per-field edits, exclusion tags, ratings, and the operator approval
+    timestamp — as a proposed corpus decision. Writing this artifact never
+    mutates the committed corpus; a separately reviewed ingestion command
+    (``scripts/ingest_editorial_feedback.py``) imports it after human review.
+    Corrections append superseding proposals — earlier records never change."""
+    candidates = list(bundle.get("candidates") or [])
+    by_id = {str(item.get("candidate_id") or ""): item for item in candidates}
+    selected_items = list((review or {}).get("selected_items") or [])
+    selected_ids = [str(item.get("candidate_id") or "") for item in selected_items]
+    if any(not candidate_id for candidate_id in selected_ids):
+        raise EditorialReviewError("feedback proposal selected ID is empty")
+    selected_by_id = {
+        str(item.get("candidate_id") or ""): item for item in selected_items
+    }
+    unknown_selected = sorted(
+        candidate_id
+        for candidate_id in set(selected_ids) - set(by_id)
+        if selected_by_id[candidate_id].get("origin") != "human_link"
+    )
+    if unknown_selected:
+        raise EditorialReviewError("feedback proposal selected ID is unknown")
+    excluded_ids = [cid for cid in by_id if cid not in set(selected_ids)]
+
+    edits: list[dict[str, Any]] = []
+    for order, item in enumerate(selected_items, start=1):
+        cid = str(item.get("candidate_id") or "")
+        base = by_id.get(cid, item if item.get("origin") == "human_link" else {})
+        base_summary = editorial_inline_plain_text(
+            sanitize_editorial_inline_html(
+                str(base.get("summary_html") or escape(_clean(base.get("summary"))))
+            )
+        )
+        edited_title = _clean(item.get("title"))
+        edited_summary = (
+            editorial_inline_plain_text(
+                sanitize_editorial_inline_html(str(item.get("summary_html")))
+            )
+            if item.get("summary_html")
+            else ""
+        )
+        edited_category = _clean(item.get("category"))
+        edited_implication = editorial_inline_plain_text(
+            sanitize_editorial_inline_html(str(item.get("implication_html") or ""))
+        )
+        base_implication = _clean(base.get("executive_implication"))
+        final_title = edited_title or _clean(base.get("title"))
+        final_summary = edited_summary or base_summary
+        final_category = edited_category or _clean(base.get("category"))
+        final_implication = edited_implication or base_implication
+        edits.append(
+            {
+                "candidate_id": cid,
+                "origin": _clean(item.get("origin")),
+                "order": order,
+                "title_edited": bool(
+                    edited_title and edited_title != _clean(base.get("title"))
+                ),
+                "summary_edited": bool(
+                    edited_summary and edited_summary != base_summary
+                ),
+                "category_edited": bool(
+                    edited_category
+                    and edited_category != _clean(base.get("category"))
+                ),
+                "executive_implication_edited": bool(
+                    edited_implication and edited_implication != base_implication
+                ),
+                "original_title": _clean(base.get("title")),
+                "final_title": final_title,
+                "original_summary": base_summary,
+                "final_summary": final_summary,
+                "original_category": _clean(base.get("category")),
+                "final_category": final_category,
+                "original_executive_implication": base_implication,
+                "final_executive_implication": final_implication,
+                "operator_override_reason": _clean(
+                    item.get("operator_override_reason")
+                ),
+            }
+        )
+
+    exclusion_tags: dict[str, list[str]] = {}
+    raw_exclusions = (review or {}).get("excluded_items")
+    if isinstance(raw_exclusions, list):
+        for item in raw_exclusions:
+            if isinstance(item, Mapping) and item.get("candidate_id"):
+                tags = item.get("tags")
+                exclusion_tags[str(item["candidate_id"])] = [
+                    _clean(tag) for tag in tags if _clean(tag)
+                ] if isinstance(tags, list) else []
+    ratings = (review or {}).get("ratings")
+    pool_digest = candidate_pool_digest(candidates)
+    edition_key = _clean(bundle.get("edition_key"))
+    candidate_pool = [
+        {
+            "candidate_id": _clean(item.get("candidate_id")),
+            "title": _clean(item.get("title")),
+        }
+        for item in candidates
+    ]
+    title_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_title"],
+            "after": item["final_title"],
+        }
+        for item in edits
+        if item["title_edited"]
+    ]
+    summary_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_summary"],
+            "after": item["final_summary"],
+        }
+        for item in edits
+        if item["summary_edited"]
+    ]
+    category_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_category"],
+            "after": item["final_category"],
+        }
+        for item in edits
+        if item["category_edited"]
+    ]
+    implication_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_executive_implication"],
+            "after": item["final_executive_implication"],
+        }
+        for item in edits
+        if item["executive_implication_edited"]
+    ]
+    return {
+        "proposal_version": FEEDBACK_PROPOSAL_VERSION,
+        "record_type": "post_editor_feedback_proposal",
+        "proposed_decision_id": f"feedback-{edition_key}-{pool_digest[:12]}",
+        "edition_type": "daily",
+        "edition_key": edition_key,
+        "edition": edition_key,
+        "review_mode": review_mode,
+        "candidate_pool_digest": pool_digest,
+        "candidate_count": len(candidates),
+        "candidate_ids": [item["candidate_id"] for item in candidate_pool],
+        "candidate_pool": candidate_pool,
+        "final_selected_ids": selected_ids,
+        "selection_order": selected_ids,
+        "selected_order": selected_ids,
+        "excluded_ids": sorted(excluded_ids),
+        "headline": final_articles[0].title if final_articles else "",
+        "title_edits": title_edits,
+        "summary_edits": summary_edits,
+        "category_edits": category_edits,
+        "executive_implication_edits": implication_edits,
+        "edits": edits,
+        "exclusion_tags": exclusion_tags,
+        "ratings": dict(ratings) if isinstance(ratings, Mapping) else {},
+        "operator_approval_time": _clean(
+            (review or {}).get("approved_at")
+            or (review or {}).get("generated_at")
+            or generated_at
+        ),
+        "operator_approved_at": _clean(
+            (review or {}).get("approved_at")
+            or (review or {}).get("generated_at")
+            or generated_at
+        ),
+        "prior_proposal_id": _clean((review or {}).get("prior_proposal_id")),
+        "supersedes": _clean((review or {}).get("supersedes")),
+        "generated_at": generated_at,
+        "corpus_mutation": (
+            "none — proposal only; import via scripts/ingest_editorial_feedback.py "
+            "after human review"
+        ),
+    }
