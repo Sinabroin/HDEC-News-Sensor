@@ -9,7 +9,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from app import ai_centrality
+from app import ai_centrality, public_institution_routing
 from app.editorial_briefings import (
     EditorialArticle,
     EditorialError,
@@ -265,6 +265,27 @@ def article_to_candidate(
         "materiality_reason": article.materiality_reason,
         "executive_implication": article.executive_implication,
         "ai_centrality_level": article.ai_centrality_level,
+        "source_class": article.source_class,
+        "editorial_lane": article.editorial_lane,
+        "public_institution_type": article.public_institution_type,
+        "official_source_name": article.official_source_name,
+        "source_registry_id": article.source_registry_id,
+        "source_domain": article.source_domain,
+        "default_surface": article.default_surface,
+        "main_surface_eligible": article.main_surface_eligible,
+        "teams_alert_eligible": article.teams_alert_eligible,
+        "tni_brief_eligible": article.tni_brief_eligible,
+        "tni_report_topic_eligible": article.tni_report_topic_eligible,
+        "promotion_reason": article.promotion_reason,
+        "promotion_condition": article.promotion_condition,
+        "final_surface": article.final_surface,
+        "final_category": article.final_category,
+        "human_placement_override": article.human_placement_override,
+        "human_placement_reason": article.human_placement_reason,
+        "headline_eligible": article.headline_eligible,
+        "authority_verified": article.authority_verified,
+        "duplicate_event_cluster": article.duplicate_event_cluster,
+        "supporting_evidence_only": article.supporting_evidence_only,
     }
 
 
@@ -309,6 +330,46 @@ def candidate_to_article(
     )
     if not all((title, summary, source, selected_url)):
         raise EditorialReviewError("candidate required field is empty")
+    routing_input = dict(candidate)
+    routing_input.update(
+        {
+            "title": title,
+            "source": source,
+            "publisher_url": selected_url,
+            "snippet": _clean(candidate.get("summary")),
+        }
+    )
+    public_route = public_institution_routing.classify(routing_input)
+    placement_edit = dict(edit)
+    if public_route.is_public_lane and category != public_route.final_category:
+        placement_edit["final_category"] = category
+    try:
+        human_placement_override, final_surface, final_category = (
+            public_institution_routing.validate_placement_override(
+                {
+                    **public_route.metadata(),
+                    "final_surface": public_route.default_surface,
+                },
+                placement_edit,
+            )
+        )
+    except ValueError as exc:
+        raise EditorialReviewError(str(exc)) from exc
+    placement_reason = _clean(edit.get("human_placement_reason"))
+    headline_eligible = public_route.headline_eligible or (
+        human_placement_override
+        and final_surface == public_institution_routing.SURFACE_MAIN
+    )
+    route_fields = public_route.metadata()
+    route_fields.update(
+        {
+            "final_surface": final_surface,
+            "final_category": final_category or category,
+            "human_placement_override": human_placement_override,
+            "human_placement_reason": placement_reason,
+            "headline_eligible": headline_eligible,
+        }
+    )
     raw_implication_override = _clean(edit.get("implication_html"))
     implication_html = (
         sanitize_editorial_inline_html(raw_implication_override)
@@ -355,6 +416,9 @@ def candidate_to_article(
         executive_implication=_clean(candidate.get("executive_implication")),
         implication_html=implication_html,
         ai_centrality_level=_resolve_review_ai_centrality(title, summary, edit),
+        **route_fields,
+        duplicate_event_cluster=_clean(candidate.get("duplicate_event_cluster")),
+        supporting_evidence_only=bool(candidate.get("supporting_evidence_only")),
     )
 
 
@@ -372,6 +436,46 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
     published_at = _published_at(item.get("published_at"))
     if not all((title, source, summary, selected_url)):
         raise EditorialReviewError("manual article requires URL, source, title, and summary")
+    public_route = public_institution_routing.classify(
+        {
+            **dict(item),
+            "title": title,
+            "source": source,
+            "publisher_url": selected_url,
+            "snippet": summary,
+        }
+    )
+    placement_item = dict(item)
+    if public_route.is_public_lane and category != public_route.final_category:
+        placement_item["final_category"] = category
+    try:
+        human_placement_override, final_surface, final_category = (
+            public_institution_routing.validate_placement_override(
+                {
+                    **public_route.metadata(),
+                    "final_surface": public_route.default_surface,
+                },
+                placement_item,
+            )
+        )
+    except ValueError as exc:
+        raise EditorialReviewError(str(exc)) from exc
+    route_fields = public_route.metadata()
+    route_fields.update(
+        {
+            "final_surface": final_surface,
+            "final_category": final_category or category,
+            "human_placement_override": human_placement_override,
+            "human_placement_reason": _clean(item.get("human_placement_reason")),
+            "headline_eligible": (
+                public_route.headline_eligible
+                or (
+                    human_placement_override
+                    and final_surface == public_institution_routing.SURFACE_MAIN
+                )
+            ),
+        }
+    )
     image_url = valid_http_url(item.get("image_url"))
     raw_manual_implication = _clean(item.get("implication_html"))
     manual_implication_html = (
@@ -402,6 +506,7 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         image_reason="human_supplied" if image_url else "no_manual_image",
         implication_html=manual_implication_html,
         ai_centrality_level=_resolve_review_ai_centrality(title, summary, item),
+        **route_fields,
     )
 
 
@@ -688,6 +793,40 @@ def build_feedback_proposal(
                 "operator_override_reason": _clean(
                     item.get("operator_override_reason")
                 ),
+                "source_class": _clean(
+                    base.get("source_class")
+                ) or public_institution_routing.SOURCE_CLASS_OTHER,
+                "editorial_lane": _clean(
+                    base.get("editorial_lane")
+                ) or public_institution_routing.LANE_MAIN,
+                "public_institution_type": _clean(
+                    base.get("public_institution_type")
+                ),
+                "main_surface_eligible": bool(
+                    base.get("main_surface_eligible", True)
+                ),
+                "teams_alert_eligible": bool(
+                    base.get("teams_alert_eligible", True)
+                ),
+                "tni_brief_eligible": bool(
+                    base.get("tni_brief_eligible", True)
+                ),
+                "tni_report_topic_eligible": bool(
+                    base.get("tni_report_topic_eligible", False)
+                ),
+                "default_surface": _clean(
+                    base.get("default_surface")
+                ) or public_institution_routing.SURFACE_MAIN,
+                "final_surface": _clean(
+                    item.get("final_surface") or base.get("final_surface")
+                ) or public_institution_routing.SURFACE_MAIN,
+                "promotion_reason": _clean(base.get("promotion_reason")),
+                "human_placement_override": bool(
+                    item.get("human_placement_override")
+                ),
+                "human_placement_reason": _clean(
+                    item.get("human_placement_reason")
+                ),
             }
         )
 
@@ -707,9 +846,63 @@ def build_feedback_proposal(
         {
             "candidate_id": _clean(item.get("candidate_id")),
             "title": _clean(item.get("title")),
+            "source_class": _clean(item.get("source_class")),
+            "editorial_lane": _clean(item.get("editorial_lane")),
+            "public_institution_type": _clean(
+                item.get("public_institution_type")
+            ),
+            "main_surface_eligible": bool(
+                item.get("main_surface_eligible", True)
+            ),
+            "teams_alert_eligible": bool(
+                item.get("teams_alert_eligible", True)
+            ),
+            "tni_brief_eligible": bool(
+                item.get("tni_brief_eligible", True)
+            ),
+            "tni_report_topic_eligible": bool(
+                item.get("tni_report_topic_eligible", False)
+            ),
+            "default_surface": _clean(item.get("default_surface")),
+            "final_category": (
+                _clean(item.get("final_category"))
+                if _clean(item.get("editorial_lane"))
+                == public_institution_routing.LANE_PUBLIC
+                else _clean(item.get("final_category") or item.get("category"))
+            ),
+            "promotion_reason": _clean(item.get("promotion_reason")),
         }
         for item in candidates
     ]
+    edit_by_id = {item["candidate_id"]: item for item in edits}
+    placement_decisions = []
+    selected_set = set(selected_ids)
+    for item in candidate_pool:
+        cid = item["candidate_id"]
+        selected_edit = edit_by_id.get(cid, {})
+        placement_decisions.append(
+            {
+                **item,
+                "selected": cid in selected_set,
+                "recommended_final_category": _clean(
+                    item.get("final_category")
+                ),
+                "final_surface": _clean(
+                    selected_edit.get("final_surface")
+                    or item.get("default_surface")
+                ),
+                "final_category": _clean(
+                    selected_edit.get("final_category")
+                    or item.get("final_category")
+                ),
+                "human_placement_override": bool(
+                    selected_edit.get("human_placement_override")
+                ),
+                "human_placement_reason": _clean(
+                    selected_edit.get("human_placement_reason")
+                ),
+            }
+        )
     title_edits = [
         {
             "candidate_id": item["candidate_id"],
@@ -767,6 +960,7 @@ def build_feedback_proposal(
         "summary_edits": summary_edits,
         "category_edits": category_edits,
         "executive_implication_edits": implication_edits,
+        "placement_decisions": placement_decisions,
         "edits": edits,
         "exclusion_tags": exclusion_tags,
         "ratings": dict(ratings) if isinstance(ratings, Mapping) else {},

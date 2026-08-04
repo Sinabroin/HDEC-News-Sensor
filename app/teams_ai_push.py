@@ -21,6 +21,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from app import (
     ai_centrality,
     editorial_preference_runtime,
+    public_institution_routing,
     publisher_direct,
     source_priority,
 )
@@ -497,6 +498,17 @@ class TeamsPushCandidate:
     memory_rank_before: int = 0
     memory_rank_after: int = 0
     memory_changed_selection: bool = False
+    source_class: str = public_institution_routing.SOURCE_CLASS_OTHER
+    editorial_lane: str = public_institution_routing.LANE_MAIN
+    public_institution_type: str = ""
+    official_source_name: str = ""
+    default_surface: str = public_institution_routing.SURFACE_MAIN
+    main_surface_eligible: bool = True
+    teams_alert_eligible: bool = True
+    tni_brief_eligible: bool = True
+    tni_report_topic_eligible: bool = False
+    promotion_reason: str = "not_public_institution"
+    final_category: str = ""
 
 
 @dataclass(frozen=True)
@@ -511,6 +523,9 @@ class TeamsPolicyEvaluation:
     eligible: bool
     rejection_reason: str = ""
     delivery_category: str = ""
+    public_routing: (
+        public_institution_routing.PublicInstitutionRoutingDecision
+    ) = public_institution_routing.PublicInstitutionRoutingDecision()
 
 
 def _value(obj: object, key: str, default: Any = "") -> Any:
@@ -1322,6 +1337,7 @@ def evaluate_teams_push_policy(
     fields are then required before the unchanged AI/HDEC/importance policy runs.
     """
     article = normalize_teams_article_fields(article)
+    public_route = public_institution_routing.classify(article)
     empty_topic = TopicDecision(False)
     empty_importance = ImportanceDecision(False)
     if (
@@ -1413,9 +1429,27 @@ def evaluate_teams_push_policy(
             "no_evidenced_delivery_category",
         )
 
+    # R4-R8: authority is not priority. A verified official article is a
+    # default no-send candidate unless a material promotion condition was
+    # independently proven from its title/lead. This runs after every existing
+    # deterministic hard gate and cannot rescue any rejected article.
+    if public_route.is_public_lane and not public_route.teams_alert_eligible:
+        return TeamsPolicyEvaluation(
+            article,
+            topic,
+            True,
+            importance,
+            True,
+            False,
+            "public_institution_not_promoted",
+            delivery_category=category,
+            public_routing=public_route,
+        )
+
     return TeamsPolicyEvaluation(
         article, topic, True, importance, True, True, "",
         delivery_category=category,
+        public_routing=public_route,
     )
 
 
@@ -1642,9 +1676,13 @@ def select_teams_push_candidates_with_audit(
     from app.teams_push_state import derive_event_cluster_key, material_signature
 
     candidates: list[TeamsPushCandidate] = []
+    public_routes: list[
+        public_institution_routing.PublicInstitutionRoutingDecision
+    ] = []
     for article in articles:
         if not isinstance(article, Mapping):
             continue
+        public_routes.append(public_institution_routing.classify(article))
         evaluation = evaluate_teams_push_policy(
             article,
             require_validated_fields=require_validated_fields,
@@ -1662,6 +1700,25 @@ def select_teams_push_candidates_with_audit(
                 material_signature=material_signature(article),
                 is_update=_lower(_value(article, "change_type")) == "material_content_update",
                 delivery_category=evaluation.delivery_category,
+                source_class=evaluation.public_routing.source_class,
+                editorial_lane=evaluation.public_routing.editorial_lane,
+                public_institution_type=(
+                    evaluation.public_routing.public_institution_type
+                ),
+                official_source_name=evaluation.public_routing.official_source_name,
+                default_surface=evaluation.public_routing.default_surface,
+                main_surface_eligible=(
+                    evaluation.public_routing.main_surface_eligible
+                ),
+                teams_alert_eligible=(
+                    evaluation.public_routing.teams_alert_eligible
+                ),
+                tni_brief_eligible=evaluation.public_routing.tni_brief_eligible,
+                tni_report_topic_eligible=(
+                    evaluation.public_routing.tni_report_topic_eligible
+                ),
+                promotion_reason=evaluation.public_routing.promotion_reason,
+                final_category=evaluation.public_routing.final_category,
             )
         )
 
@@ -1693,6 +1750,21 @@ def select_teams_push_candidates_with_audit(
         ),
         "editorial_memory_active": (
             ranked[0].editorial_memory_active if ranked else False
+        ),
+        "public_institution_lane_count": sum(
+            route.is_public_lane for route in public_routes
+        ),
+        "promoted_public_candidate_count": sum(
+            route.is_public_lane and route.main_surface_eligible
+            for route in public_routes
+        ),
+        "non_promoted_public_candidate_count": sum(
+            route.is_public_lane and not route.main_surface_eligible
+            for route in public_routes
+        ),
+        "teams_public_candidate_count": sum(
+            candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
+            for candidate in ranked
         ),
     }
     if effective_cap is None:

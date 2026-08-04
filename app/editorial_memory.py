@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from app import ai_centrality
+from app import ai_centrality, public_institution_routing
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CORPUS_ROOT = ROOT / "data" / "editorial_learning"
@@ -85,6 +85,19 @@ class CorpusRecord:
     human_order: int
     topic_labels: tuple[str, ...] = ()
     tokens: frozenset[str] = frozenset()
+    source_class: str = public_institution_routing.SOURCE_CLASS_OTHER
+    editorial_lane: str = public_institution_routing.LANE_MAIN
+    public_institution_type: str = ""
+    main_surface_eligible: bool = True
+    teams_alert_eligible: bool = True
+    tni_brief_eligible: bool = True
+    tni_report_topic_eligible: bool = False
+    default_surface: str = public_institution_routing.SURFACE_MAIN
+    final_surface: str = ""
+    final_category: str = ""
+    promotion_reason: str = ""
+    human_placement_override: bool = False
+    human_placement_reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -165,6 +178,26 @@ def _record_from_article(
         human_order=int(article.get("order") or 0),
         topic_labels=tuple(article.get("topic_labels") or ()),
         tokens=tokenize(article.get("title"), article.get("human_summary")),
+        source_class=_clean(article.get("source_class"))
+        or public_institution_routing.SOURCE_CLASS_OTHER,
+        editorial_lane=_clean(article.get("editorial_lane"))
+        or public_institution_routing.LANE_MAIN,
+        public_institution_type=_clean(article.get("public_institution_type")),
+        main_surface_eligible=bool(article.get("main_surface_eligible", True)),
+        teams_alert_eligible=bool(article.get("teams_alert_eligible", True)),
+        tni_brief_eligible=bool(article.get("tni_brief_eligible", True)),
+        tni_report_topic_eligible=bool(
+            article.get("tni_report_topic_eligible", False)
+        ),
+        default_surface=_clean(article.get("default_surface"))
+        or public_institution_routing.SURFACE_MAIN,
+        final_surface=_clean(article.get("final_surface")),
+        final_category=_clean(
+            article.get("final_category") or article.get("category")
+        ),
+        promotion_reason=_clean(article.get("promotion_reason")),
+        human_placement_override=bool(article.get("human_placement_override")),
+        human_placement_reason=_clean(article.get("human_placement_reason")),
     )
 
 
@@ -238,6 +271,7 @@ def deterministic_features(article: Mapping[str, Any]) -> dict[str, Any]:
     title = _clean(article.get("title"))
     summary = _clean(article.get("summary") or article.get("snippet"))
     text = f"{title} {summary}"
+    public_route = public_institution_routing.classify(article)
     return {
         "ai_centrality": decision.level,
         "ai_centrality_excluded": decision.exclusion,
@@ -254,6 +288,19 @@ def deterministic_features(article: Mapping[str, Any]) -> dict[str, Any]:
             1.0, sum(1 for m in _SOCIETAL_WEEKLY_MARKERS if m in text) / 3.0
         ),
         "tokens": tokenize(title, summary),
+        # Placement evidence is preserved for product heads and audit, but
+        # official/public status itself contributes no positive or negative
+        # score. Authority and editorial preference remain separate.
+        "source_class": public_route.source_class,
+        "editorial_lane": public_route.editorial_lane,
+        "public_institution_type": public_route.public_institution_type,
+        "main_surface_eligible": public_route.main_surface_eligible,
+        "teams_alert_eligible": public_route.teams_alert_eligible,
+        "tni_brief_eligible": public_route.tni_brief_eligible,
+        "tni_report_topic_eligible": public_route.tni_report_topic_eligible,
+        "default_surface": public_route.default_surface,
+        "final_category": public_route.final_category,
+        "promotion_reason": public_route.promotion_reason,
     }
 
 

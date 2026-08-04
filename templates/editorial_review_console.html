@@ -18,6 +18,7 @@ button,input,select,textarea{font:inherit}
 .toolbar input,.toolbar select,.manual-grid input,.manual-grid select,.manual-grid textarea,.import-row input{border:1px solid var(--line);border-radius:10px;padding:9px;background:#fff;width:100%}
 .status{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:12px;color:var(--muted)}
+.lane-tabs{display:flex;gap:6px;margin:8px 0 10px;flex-wrap:wrap}.lane-tab{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:900;cursor:pointer}.lane-tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
 .import-panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}
 .import-label{display:block;font-size:13px;font-weight:900;color:var(--navy);margin-bottom:8px}
 .import-row{display:grid;grid-template-columns:1fr 112px;gap:7px}.import-row button{border:0;border-radius:10px;background:var(--navy);color:#fff;font-weight:900;cursor:pointer}
@@ -43,6 +44,7 @@ button,input,select,textarea{font:inherit}
 .rating-row{margin-top:9px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .stars button{border:0;background:transparent;font-size:20px;color:#c9ced6;padding:0 2px;cursor:pointer}.stars button.on{color:#f1a208}
 .details{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}.details summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--navy)}
+.public-routing{margin-top:8px;padding:9px;border:1px solid #d8c998;border-radius:10px;background:#fffaf0;font-size:11px;line-height:1.55;color:#5b5040}.public-routing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px}.public-routing b{color:#3d3020}.placement-controls{margin-top:8px;padding-top:7px;border-top:1px dashed #d8c998;display:grid;gap:6px}.placement-controls label{display:grid;gap:3px;font-weight:800}.placement-controls label:first-child{display:flex;align-items:center;gap:6px}.placement-controls select,.placement-controls textarea{width:100%;border:1px solid var(--line);border-radius:7px;background:#fff;padding:6px}.placement-controls textarea{min-height:50px;resize:vertical}
 .dimensions{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}.dimensions label{font-size:11px;color:var(--muted)}
 .dimensions select{width:100%;padding:5px;border:1px solid var(--line);border-radius:7px;background:#fff}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.tag{font-size:11px;padding:4px 7px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
@@ -106,6 +108,11 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
         <button class="manual-add" id="manualAddBtn" type="button">기사 추가하고 선택</button>
       </div>
     </details>
+    <nav class="lane-tabs" aria-label="후보 소스 레인">
+      <button class="lane-tab active" type="button" data-lane="all">전체</button>
+      <button class="lane-tab" type="button" data-lane="main">주요 후보</button>
+      <button class="lane-tab" type="button" data-lane="public">공공기관·정책</button>
+    </nav>
     <div class="toolbar">
       <input id="search" placeholder="기사 제목·언론사·URL 검색">
       <select id="filter">
@@ -122,6 +129,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
         <summary aria-label="보조 메뉴">⋯</summary>
         <button class="secondary" id="restoreBtn" type="button">초기화 · AI 추천 복원</button>
       </details>
+      <button class="secondary" id="reviewJsonBtn" type="button">검토 JSON 내보내기</button>
     </div>
     <div class="editor-tools"><b>본문 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><span class="editor-hint">오른쪽 제목·요약을 직접 수정하고, 요약에서 텍스트를 선택한 뒤 B를 누르세요. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
     <div class="preview-shell"><div class="preview" id="preview"></div></div>
@@ -139,7 +147,7 @@ const storageKey=`hdec-editorial-review-v2:${bundle.edition_key}`;
 const dimensionLabels={business_relevance:"업무 관련성",importance:"기사 중요도",source_reliability:"출처 신뢰도",specificity:"정보 구체성",executive_value:"임원 보고 가치",novelty:"새로움"};
 const exclusionLabels={low_trust_source:"듣보잡·신뢰도 낮음",promotional:"홍보성",clickbait:"제목 낚시",shallow:"내용이 얕음",duplicate:"중복 기사",low_hdec_relevance:"현대건설 관련성 낮음",not_ai:"AI 직접 관련 없음",stale:"오래된 기사",stock_market_noise:"증권·주가성",fact_check_needed:"사실 확인 부족"};
 const defaultSelected=bundle.candidates.filter(x=>x.ai_recommended).slice(0,MAX_SELECTED).map(x=>x.candidate_id);
-let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},reviewStatus:"draft"};
+let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft"};
 try{
   const saved=JSON.parse(localStorage.getItem(storageKey));
   if(saved&&Array.isArray(saved.selected))state={...state,...saved};
@@ -147,6 +155,8 @@ try{
 state.manualCandidates=Array.isArray(state.manualCandidates)?state.manualCandidates:[];
 state.ratings=state.ratings&&typeof state.ratings==="object"?state.ratings:{};
 state.edits=state.edits&&typeof state.edits==="object"?state.edits:{};
+state.placementOverrides=state.placementOverrides&&typeof state.placementOverrides==="object"?state.placementOverrides:{};
+state.laneFilter=["all","main","public"].includes(state.laneFilter)?state.laneFilter:"all";
 state.selected=[...new Set(state.selected)].slice(0,MAX_SELECTED);
 state.manualCandidates=state.manualCandidates.slice(0,MAX_MANUAL_CANDIDATES).map(candidate=>({
   ...candidate,
@@ -266,6 +276,15 @@ function view(id){
 function rating(id){
   return state.ratings[id]||(state.ratings[id]={overall_rating:0,dimension_ratings:{},exclusion_tags:[],note:""});
 }
+function placement(id){
+  const candidate=byId(id)||{};
+  return state.placementOverrides[id]||(state.placementOverrides[id]={
+    human_placement_override:false,
+    human_placement_reason:"",
+    final_surface:candidate.default_surface||"main_candidate_lane",
+    final_category:candidate.final_category||candidate.category||""
+  });
+}
 function categoryClass(category){
   return category==="투자·산업"?"ticker-invest":category==="기업동향"?"ticker-corp":"ticker-tech";
 }
@@ -300,7 +319,8 @@ function markDraftAndRender(){
   render();
 }
 function moveArticle(id,targetCategory,targetId=null,placeAfter=false){
-  if(!CATEGORY_ORDER.includes(targetCategory)||!byId(id))return false;
+  const candidate=byId(id);
+  if(!CATEGORY_ORDER.includes(targetCategory)||!candidate)return false;
   const alreadySelected=state.selected.includes(id);
   if(!alreadySelected&&state.selected.length>=MAX_SELECTED){
     alert("최대 6건까지 선택할 수 있습니다.");
@@ -309,6 +329,11 @@ function moveArticle(id,targetCategory,targetId=null,placeAfter=false){
   }
   state.selected=state.selected.filter(selectedId=>selectedId!==id);
   edit(id).category=targetCategory;
+  if(candidate.editorial_lane==="public_institution"){
+    const record=placement(id);
+    record.final_category=targetCategory;
+    if(targetCategory!==(candidate.final_category||""))record.human_placement_override=true;
+  }
   const groups=Object.fromEntries(CATEGORY_ORDER.map(category=>[
     category,
     state.selected.filter(selectedId=>view(selectedId)?.category===category)
@@ -359,6 +384,17 @@ function dragPayload(event){
   if(candidateId)return {kind:"candidate",id:candidateId};
   return dragging;
 }
+function yesNo(value){return value?"예":"아니오";}
+function publicRoutingMarkup(candidate){
+  if(candidate.editorial_lane!=="public_institution")return "";
+  const record=placement(candidate.candidate_id);
+  const defaultLabel=candidate.default_surface==="secondary_public_lane"?"기본 하위 우선순위":"주요 후보 승격";
+  const surfaceOptions=[
+    ["secondary_public_lane","공공기관·정책 보조 레인"],
+    ["main_candidate_lane","주요 후보 레인"]
+  ].map(([value,label])=>`<option value="${value}" ${record.final_surface===value?"selected":""}>${label}</option>`).join("");
+  return `<section class="public-routing" aria-label="공공기관 편집 라우팅"><div class="public-routing-grid"><span><b>공식 소스</b> ${esc(candidate.official_source_name||candidate.source)}</span><span><b>소스 유형</b> ${esc(candidate.public_institution_type||candidate.source_class)}</span><span><b>기본 상태</b> ${defaultLabel}</span><span><b>주요 후보 승격</b> ${yesNo(candidate.main_surface_eligible)}</span><span><b>승격 사유</b> ${esc(candidate.promotion_reason||"없음")}</span><span><b>권장 최종 분류</b> ${esc(candidate.final_category||"선정 시 검토 필요")}</span><span><b>Teams</b> ${yesNo(candidate.teams_alert_eligible)}</span><span><b>Brief</b> ${yesNo(candidate.tni_brief_eligible)}</span><span><b>Report 주제</b> ${yesNo(candidate.tni_report_topic_eligible)}</span><span><b>중복 공식 근거</b> ${yesNo(candidate.supporting_evidence_only)}</span></div><div class="placement-controls"><label><input type="checkbox" data-placement-override ${record.human_placement_override?"checked":""}> 사람 배치 오버라이드</label><label>최종 후보 레인<select data-placement-surface>${surfaceOptions}</select></label><label>배치 사유(필수)<textarea data-placement-reason placeholder="기본 배치나 권장 분류를 바꾸는 근거를 작성하세요.">${esc(record.human_placement_reason)}</textarea></label></div></section>`;
+}
 function candidateCard(candidate){
   const current=view(candidate.candidate_id);
   const record=rating(candidate.candidate_id);
@@ -379,7 +415,7 @@ function candidateCard(candidate){
   const excerpt=imported&&candidate.article_text_excerpt?`<details class="excerpt"><summary>추출 본문 확인</summary><p>${esc(candidate.article_text_excerpt)}</p></details>`:"";
   const originLabel=imported?"URL 불러오기":human?"사용자 링크":`AI ${esc(candidate.ai_rank)}위`;
   const originClass=imported?"imported":human?"human":"";
-  return `<article class="candidate ${selected?"selected":""}" draggable="true" data-id="${esc(candidate.candidate_id)}"><div class="candidate-head"><input type="checkbox" aria-label="기사 선택" ${selected?"checked":""}>${title}${human?`<button type="button" class="remove-manual" title="삭제">삭제</button>`:""}</div>${imageMarkup(current,"candidate-image")}<div class="meta"><span class="badge ${originClass}">${originLabel}</span><span class="badge">${esc(candidate.source)}</span><span>${esc(current.category)}</span>${candidate.published_at?`<span>${esc(candidate.published_at)}</span>`:""}</div><div class="summary">${esc(current.summary)}</div>${reason?`<div class="analysis-reason">${esc(reason)}</div>`:""}${excerpt}${originalLink}<div class="rating-row"><b>품질</b><span class="stars">${stars}</span><span>${record.overall_rating||"미평가"}</span></div><details class="details"><summary>세부 평가·제외 사유</summary><div class="dimensions">${dimensions}</div><div class="tags">${tags}</div><textarea class="note" placeholder="평가 메모">${esc(record.note)}</textarea></details></article>`;
+  return `<article class="candidate ${selected?"selected":""}" draggable="true" data-id="${esc(candidate.candidate_id)}"><div class="candidate-head"><input type="checkbox" aria-label="기사 선택" ${selected?"checked":""}>${title}${human?`<button type="button" class="remove-manual" title="삭제">삭제</button>`:""}</div>${imageMarkup(current,"candidate-image")}<div class="meta"><span class="badge ${originClass}">${originLabel}</span><span class="badge">${esc(candidate.source)}</span><span>${esc(current.category)}</span>${candidate.published_at?`<span>${esc(candidate.published_at)}</span>`:""}</div>${originalLink}${publicRoutingMarkup(candidate)}<div class="summary">${esc(current.summary)}</div>${reason?`<div class="analysis-reason">${esc(reason)}</div>`:""}${excerpt}<div class="rating-row"><b>품질</b><span class="stars">${stars}</span><span>${record.overall_rating||"미평가"}</span></div><details class="details"><summary>세부 평가·제외 사유</summary><div class="dimensions">${dimensions}</div><div class="tags">${tags}</div><textarea class="note" placeholder="평가 메모">${esc(record.note)}</textarea></details></article>`;
 }
 function renderCandidates(){
   const query=document.getElementById("search").value.trim().toLowerCase();
@@ -389,6 +425,8 @@ function renderCandidates(){
     const current=view(candidate.candidate_id);
     const text=(current.title+" "+candidate.source+" "+current.summary+" "+candidate.selected_url).toLowerCase();
     if(query&&!text.includes(query))return false;
+    if(state.laneFilter==="public"&&candidate.editorial_lane!=="public_institution")return false;
+    if(state.laneFilter==="main"&&candidate.editorial_lane==="public_institution"&&!candidate.main_surface_eligible)return false;
     if(filter==="selected"&&!state.selected.includes(candidate.candidate_id))return false;
     if(filter==="recommended"&&!candidate.ai_recommended)return false;
     if(filter==="human"&&candidate.origin!=="human_link")return false;
@@ -412,6 +450,12 @@ function renderCandidates(){
     card.querySelectorAll("[data-tag]").forEach(button=>button.addEventListener("click",()=>toggleTag(id,button.dataset.tag)));
     card.querySelectorAll("[data-dim]").forEach(select=>select.addEventListener("change",()=>{rating(id).dimension_ratings[select.dataset.dim]=Number(select.value)||null;save();}));
     card.querySelector(".note").addEventListener("input",event=>{rating(id).note=event.target.value;save();});
+    const placementOverride=card.querySelector("[data-placement-override]");
+    if(placementOverride)placementOverride.addEventListener("change",event=>{placement(id).human_placement_override=event.target.checked;save();});
+    const placementSurface=card.querySelector("[data-placement-surface]");
+    if(placementSurface)placementSurface.addEventListener("change",event=>{const record=placement(id);record.final_surface=event.target.value;if(event.target.value!==(byId(id)?.default_surface||"main_candidate_lane"))record.human_placement_override=true;save();renderCandidates();});
+    const placementReason=card.querySelector("[data-placement-reason]");
+    if(placementReason)placementReason.addEventListener("input",event=>{placement(id).human_placement_reason=event.target.value;save();});
     const remove=card.querySelector(".remove-manual");
     if(remove)remove.addEventListener("click",()=>removeManual(id));
   });
@@ -699,7 +743,10 @@ function renderStats(){
   document.getElementById("selectedCount").textContent=state.selected.length;
   document.getElementById("ratedCount").textContent=Object.values(state.ratings).filter(record=>record.overall_rating>0).length;
 }
-function render(){renderCandidates();renderPreview();renderStats();}
+function renderLaneTabs(){
+  document.querySelectorAll("[data-lane]").forEach(button=>button.classList.toggle("active",button.dataset.lane===state.laneFilter));
+}
+function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();}
 function briefArticleCard(candidate){
   const articleUrl=safeAuthorityUrl(candidate.selected_url);
   const source=articleUrl?`<a href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${esc(candidate.source)}</a>`:esc(candidate.source);
@@ -723,19 +770,52 @@ function download(name,text,type){
 function selectedItems(){
   return state.selected.map(id=>{
     const candidate=view(id);
-    return {candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",title:candidate.title,summary:candidate.summary,summary_html:sanitizeInline(candidate.summary_html),source:candidate.source,published_at:candidate.published_at,selected_url:safeAuthorityUrl(candidate.selected_url),link_kind:candidate.link_kind||"publisher_direct",link_label:candidate.link_label||"원문 보기",category:candidate.category,category_analysis:candidate.category_analysis||{},image_url:safeImageUrl(candidate.image_url),collection_source_kind:candidate.collection_source_kind||"",selection_reason:candidate.selection_reason||""};
+    const placementRecord=placement(id);
+    return {candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",title:candidate.title,summary:candidate.summary,summary_html:sanitizeInline(candidate.summary_html),source:candidate.source,published_at:candidate.published_at,selected_url:safeAuthorityUrl(candidate.selected_url),link_kind:candidate.link_kind||"publisher_direct",link_label:candidate.link_label||"원문 보기",category:candidate.category,category_analysis:candidate.category_analysis||{},image_url:safeImageUrl(candidate.image_url),collection_source_kind:candidate.collection_source_kind||"",selection_reason:candidate.selection_reason||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",main_surface_eligible:!!candidate.main_surface_eligible,teams_alert_eligible:!!candidate.teams_alert_eligible,tni_brief_eligible:!!candidate.tni_brief_eligible,tni_report_topic_eligible:!!candidate.tni_report_topic_eligible,default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:candidate.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||""};
   });
 }
 function feedbackRecords(){
   return allCandidates().map(candidate=>{
     const record=rating(candidate.candidate_id);
     const current=view(candidate.candidate_id);
-    return {version:2,edition_key:bundle.edition_key,candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",selected_url:safeAuthorityUrl(candidate.selected_url),title:current.title,source:candidate.source,category:current.category,selected:state.selected.includes(candidate.candidate_id),selected_position:state.selected.indexOf(candidate.candidate_id)+1||null,overall_rating:record.overall_rating||0,dimension_ratings:record.dimension_ratings||{},exclusion_tags:record.exclusion_tags||[],note:record.note||"",rated_at:new Date().toISOString()};
+    const placementRecord=placement(candidate.candidate_id);
+    return {version:2,edition_key:bundle.edition_key,candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",selected_url:safeAuthorityUrl(candidate.selected_url),title:current.title,source:candidate.source,category:current.category,selected:state.selected.includes(candidate.candidate_id),selected_position:state.selected.indexOf(candidate.candidate_id)+1||null,overall_rating:record.overall_rating||0,dimension_ratings:record.dimension_ratings||{},exclusion_tags:record.exclusion_tags||[],note:record.note||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:current.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||"",rated_at:new Date().toISOString()};
   });
+}
+function validatePlacementOverrides(){
+  for(const candidate of allCandidates().filter(item=>item.editorial_lane==="public_institution")){
+    const current=view(candidate.candidate_id);
+    const record=placement(candidate.candidate_id);
+    record.final_category=current?.category||record.final_category||"";
+    const categoryChanged=record.final_category!==(candidate.final_category||"");
+    const surfaceChanged=record.final_surface!==(candidate.default_surface||"secondary_public_lane");
+    const duplicateSelected=!!candidate.supporting_evidence_only&&state.selected.includes(candidate.candidate_id);
+    if((categoryChanged||surfaceChanged||duplicateSelected)&&(!record.human_placement_override||!record.human_placement_reason.trim())){
+      alert(`공공기관 후보 배치 변경에는 사유가 필요합니다: ${candidate.title}`);
+      return false;
+    }
+    if(record.human_placement_override&&!record.human_placement_reason.trim()){
+      alert(`사람 배치 오버라이드 사유를 작성하세요: ${candidate.title}`);
+      return false;
+    }
+  }
+  const first=byId(state.selected[0]);
+  if(first?.editorial_lane==="public_institution"&&!first.headline_eligible){
+    const record=placement(first.candidate_id);
+    if(record.final_surface!=="main_candidate_lane"||!record.human_placement_override||!record.human_placement_reason.trim()){
+      alert("공공기관 기사를 헤드라인 위치에 두려면 주요 후보 오버라이드와 사유가 필요합니다.");
+      return false;
+    }
+  }
+  return true;
+}
+function operatorReviewPayload(){
+  return {version:3,edition_type:"daily",edition_key:bundle.edition_key,review_status:"draft",selected_items:selectedItems(),feedback_records:feedbackRecords(),generated_at:new Date().toISOString()};
 }
 
 document.getElementById("search").addEventListener("input",renderCandidates);
 document.getElementById("filter").addEventListener("change",renderCandidates);
+document.querySelectorAll("[data-lane]").forEach(button=>button.addEventListener("click",()=>{state.laneFilter=button.dataset.lane;save();renderCandidates();renderLaneTabs();}));
 document.getElementById("manualAddBtn").addEventListener("click",addManual);
 document.getElementById("importBtn").addEventListener("click",importArticleFromUrl);
 document.getElementById("importUrl").addEventListener("keydown",event=>{
@@ -743,7 +823,7 @@ document.getElementById("importUrl").addEventListener("keydown",event=>{
 });
 document.getElementById("restoreBtn").addEventListener("click",()=>{
   if(!confirm("초기화하면 현재 선택·편집·평가와 URL로 불러온 기사가 모두 사라집니다. AI 추천 상태로 되돌릴까요?"))return;
-  state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},reviewStatus:"draft"};
+  state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft"};
   normalizeSelectedOrder();
   markDraftAndRender();
   document.querySelector(".utility-menu").open=false;
@@ -758,13 +838,16 @@ document.getElementById("boldBtn").addEventListener("mousedown",event=>{
   state.reviewStatus="draft";
   save();
 });
-document.getElementById("htmlBtn").addEventListener("click",()=>download(`HDEC_AI_Daily_Brief_${bundle.edition_key}.html`,standaloneHtml(),"text/html;charset=utf-8"));
+document.getElementById("htmlBtn").addEventListener("click",()=>{if(validatePlacementOverrides())download(`HDEC_AI_Daily_Brief_${bundle.edition_key}.html`,standaloneHtml(),"text/html;charset=utf-8");});
+document.getElementById("reviewJsonBtn").addEventListener("click",()=>{if(validatePlacementOverrides())download(`HDEC_AI_Editorial_Review_${bundle.edition_key}.json`,JSON.stringify(operatorReviewPayload(),null,2),"application/json;charset=utf-8");});
 
 normalizeSelectedOrder();
 window.__editorialReviewDebug=()=>({
   selected:[...state.selected],
   reviewStatus:state.reviewStatus,
   categories:Object.fromEntries(state.selected.map(id=>[id,view(id)?.category||""])),
+  laneFilter:state.laneFilter,
+  placementOverrides:structuredClone(state.placementOverrides),
   manualCandidates:state.manualCandidates.map(candidate=>({
     candidate_id:candidate.candidate_id,
     selected_url:candidate.selected_url,

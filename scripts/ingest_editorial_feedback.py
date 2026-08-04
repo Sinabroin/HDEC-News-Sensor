@@ -70,6 +70,7 @@ def validate_proposal(proposal: Mapping[str, Any]) -> None:
         "summary_edits",
         "category_edits",
         "executive_implication_edits",
+        "placement_decisions",
         "exclusion_tags",
         "ratings",
         "operator_approval_time",
@@ -119,6 +120,43 @@ def validate_proposal(proposal: Mapping[str, Any]) -> None:
         raise FeedbackIngestionError("proposal selected/excluded pool does not reconcile")
     if set(selected) & set(excluded):
         raise FeedbackIngestionError("proposal selected/excluded IDs overlap")
+    placements = proposal.get("placement_decisions")
+    if (
+        not isinstance(placements, list)
+        or len(placements) != len(pool_ids)
+        or [str(item.get("candidate_id") or "") for item in placements]
+        != pool_ids
+        or any(not isinstance(item, Mapping) for item in placements)
+    ):
+        raise FeedbackIngestionError("proposal placement decisions mismatch")
+    for item in placements:
+        default_surface = str(item.get("default_surface") or "")
+        recommended_category = str(
+            item.get("recommended_final_category") or ""
+        )
+        final_category = str(item.get("final_category") or "")
+        final_surface = str(item.get("final_surface") or "")
+        override = item.get("human_placement_override") is True
+        reason = str(item.get("human_placement_reason") or "").strip()
+        if final_category and final_category not in editorial_review.CATEGORY_ORDER:
+            raise FeedbackIngestionError("proposal final category is invalid")
+        if final_surface not in {
+            "main_candidate_lane",
+            "secondary_public_lane",
+        }:
+            raise FeedbackIngestionError("proposal final surface is invalid")
+        changed = (
+            final_surface != default_surface
+            or final_category != recommended_category
+        )
+        if changed and (not override or not reason):
+            raise FeedbackIngestionError(
+                "placement change requires explicit override and written reason"
+            )
+        if override and not reason:
+            raise FeedbackIngestionError(
+                "human placement override requires written reason"
+            )
 
 
 def _validate_corpus(corpus_root: Path) -> tuple[dict[str, Any], list[dict[str, Any]], bytes]:
@@ -183,6 +221,7 @@ def proposed_record(proposal: Mapping[str, Any]) -> dict[str, Any]:
         "executive_implication_edits": list(
             proposal["executive_implication_edits"]
         ),
+        "placement_decisions": list(proposal["placement_decisions"]),
         "exclusion_tags": dict(proposal["exclusion_tags"]),
         "ratings": dict(proposal["ratings"]),
         **({"supersedes": supersedes} if supersedes else {}),

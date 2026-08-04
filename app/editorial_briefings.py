@@ -42,6 +42,7 @@ from app import (
     editorial_preference_runtime,
     news_access,
     news_coverage,
+    public_institution_routing,
     public_urls as public_url_contract,
     source_priority,
     source_quality,
@@ -500,6 +501,20 @@ class SelectionAuditCounters:
     retrieved_precedent_count: int = 0
     deterministic_selected_ids: tuple[str, ...] = ()
     memory_shadow_selected_ids: tuple[str, ...] = ()
+    # R4-R8 — public-institution routing is operator/audit metadata only.  It
+    # never creates a fourth visible Brief category or Report section.
+    main_candidate_lane_count: int = 0
+    public_institution_lane_count: int = 0
+    promoted_public_candidate_count: int = 0
+    non_promoted_public_candidate_count: int = 0
+    selected_public_candidate_count: int = 0
+    tni_brief_public_candidate_count: int = 0
+    tni_report_topic_candidate_count: int = 0
+    duplicate_official_media_event_clusters: int = 0
+    public_candidate_ids: tuple[str, ...] = ()
+    promoted_public_candidate_ids: tuple[str, ...] = ()
+    public_supporting_evidence_ids: tuple[str, ...] = ()
+    public_candidate_category_map: tuple[str, ...] = ()
 
     def manifest_fields(
         self,
@@ -550,6 +565,34 @@ class SelectionAuditCounters:
             "retrieved_precedent_count": self.retrieved_precedent_count,
             "deterministic_selected_ids": self.deterministic_selected_ids,
             "memory_shadow_selected_ids": self.memory_shadow_selected_ids,
+            "main_candidate_lane_count": self.main_candidate_lane_count,
+            "public_institution_lane_count": self.public_institution_lane_count,
+            "promoted_public_candidate_count": (
+                self.promoted_public_candidate_count
+            ),
+            "non_promoted_public_candidate_count": (
+                self.non_promoted_public_candidate_count
+            ),
+            "selected_public_candidate_count": (
+                self.selected_public_candidate_count
+            ),
+            "tni_brief_public_candidate_count": (
+                self.tni_brief_public_candidate_count
+            ),
+            "tni_report_topic_candidate_count": (
+                self.tni_report_topic_candidate_count
+            ),
+            "duplicate_official_media_event_clusters": (
+                self.duplicate_official_media_event_clusters
+            ),
+            "public_candidate_ids": self.public_candidate_ids,
+            "promoted_public_candidate_ids": self.promoted_public_candidate_ids,
+            "public_supporting_evidence_ids": (
+                self.public_supporting_evidence_ids
+            ),
+            "public_candidate_category_map": (
+                self.public_candidate_category_map
+            ),
         }
 
 
@@ -625,6 +668,29 @@ class EditorialArticle:
     # contract; "operator_override" marks an explicit human override with a
     # written reason (never silent).
     ai_centrality_level: str = ""
+    # R4-R8 machine-readable routing. These fields are intentionally never
+    # rendered as new Brief/Report nodes.
+    source_class: str = public_institution_routing.SOURCE_CLASS_OTHER
+    editorial_lane: str = public_institution_routing.LANE_MAIN
+    public_institution_type: str = ""
+    official_source_name: str = ""
+    source_registry_id: str = ""
+    source_domain: str = ""
+    default_surface: str = public_institution_routing.SURFACE_MAIN
+    main_surface_eligible: bool = True
+    teams_alert_eligible: bool = True
+    tni_brief_eligible: bool = True
+    tni_report_topic_eligible: bool = False
+    promotion_reason: str = "not_public_institution"
+    promotion_condition: str = ""
+    final_category: str = ""
+    final_surface: str = public_institution_routing.SURFACE_MAIN
+    human_placement_override: bool = False
+    human_placement_reason: str = ""
+    headline_eligible: bool = True
+    authority_verified: bool = False
+    duplicate_event_cluster: str = ""
+    supporting_evidence_only: bool = False
 
     @property
     def published_label(self) -> str:
@@ -1271,7 +1337,19 @@ class _ArticleCandidate:
 
     @property
     def is_official_institution(self) -> bool:
-        return self.publisher_priority[0] == "institution"
+        return self.article.source_class == public_institution_routing.SOURCE_CLASS_OFFICIAL
+
+    @property
+    def is_public_lane(self) -> bool:
+        return self.article.editorial_lane == public_institution_routing.LANE_PUBLIC
+
+    @property
+    def is_main_surface_eligible(self) -> bool:
+        return not self.is_public_lane or self.article.main_surface_eligible
+
+    @property
+    def is_headline_eligible(self) -> bool:
+        return self.is_main_surface_eligible and self.article.headline_eligible
 
 
 def _provider_tokens(raw: Mapping) -> frozenset[str]:
@@ -1536,6 +1614,24 @@ def _build_article_candidate(
         source_priority.classify(source)["source_priority_rank"]
     )
     weak_content = _weak_content_reason(title, summary)
+    routing_input = dict(raw)
+    routing_input.update(
+        {
+            "title": title,
+            "source": source,
+            "publisher_url": selected_url,
+            # Promotion is derived from the raw factual lead, not the generated
+            # summary or executive implication.
+            "snippet": str(raw.get("snippet") or raw.get("summary") or ""),
+        }
+    )
+    public_route = public_institution_routing.classify(routing_input)
+    if public_route.tni_brief_eligible and public_route.final_category:
+        category = public_route.final_category
+    routing_input.update(public_route.metadata())
+    explicit_cluster = " ".join(
+        str(raw.get("event_cluster_id") or raw.get("duplicate_event_cluster") or "").split()
+    )
     # D7-AK-6E R4-R6 §11 ranking precedence: executive decision relevance →
     # materiality → publisher priority → HDEC direct/strategic relevance →
     # freshness → source authority. Topic/publisher diversity is applied by the
@@ -1544,6 +1640,10 @@ def _build_article_candidate(
     ranking_key = (
         relevance,
         materiality,
+        int(
+            not public_route.is_public_lane
+            or public_route.main_surface_eligible
+        ),
         -int(delivery_tier["tier_rank"]),
         -int(delivery_tier["publisher_rank"]),
         hdec_relevance,
@@ -1583,15 +1683,22 @@ def _build_article_candidate(
                 title, summary, category, materiality_reasons
             ),
             ai_centrality_level=centrality.level,
+            **public_route.metadata(),
+            final_surface=public_route.default_surface,
+            duplicate_event_cluster=explicit_cluster,
         ),
-        raw=raw,
+        raw=routing_input,
         selected_url=selected_url,
         selected_kind=selected.kind,
         provider_tokens=_provider_tokens(raw),
         is_direct=selected.is_direct,
         publisher_key=publisher_key,
         title_key=title_key,
-        cluster_key=title_key if len(title_key) >= 12 else "",
+        cluster_key=(
+            "explicit:" + explicit_cluster.casefold()
+            if explicit_cluster
+            else title_key if len(title_key) >= 12 else ""
+        ),
         relevance_score=relevance,
         freshness_score=freshness,
         source_quality_score=source_quality,
@@ -1641,6 +1748,20 @@ def _legacy_article_from_raw(
         )
     except EditorialError:
         return None
+    routing_input = dict(raw)
+    routing_input.update(
+        {
+            "title": title,
+            "source": source,
+            "publisher_url": selected_url,
+            "snippet": str(raw.get("snippet") or raw.get("summary") or ""),
+        }
+    )
+    public_route = public_institution_routing.classify(routing_input)
+    category = classify_category(title, summary)
+    if public_route.tni_brief_eligible and public_route.final_category:
+        category = public_route.final_category
+    routing_input.update(public_route.metadata())
     return (
         EditorialArticle(
             title=title,
@@ -1650,7 +1771,7 @@ def _legacy_article_from_raw(
             selected_url=selected_url,
             link_kind=selected.kind,
             link_label=selected.label,
-            category=classify_category(title, summary),
+            category=category,
             collection_source_kind=_collection_source_kind(raw),
             # Legacy preview/fixture rows still carry their true canonical
             # level so the Daily headline contract (§6) applies everywhere.
@@ -1660,8 +1781,10 @@ def _legacy_article_from_raw(
                     "snippet": str(raw.get("snippet") or raw.get("summary") or ""),
                 }
             ).level,
+            **public_route.metadata(),
+            final_surface=public_route.default_surface,
         ),
-        raw,
+        routing_input,
     )
 
 
@@ -1701,12 +1824,16 @@ def _is_better_duplicate(
     existing: _ArticleCandidate,
 ) -> bool:
     candidate_key = (
+        -candidate.article.publisher_tier_rank,
+        -(candidate.article.publisher_rank or 999),
         candidate.is_naver_direct,
         candidate.is_direct,
         candidate.total_ranking_score,
         candidate.article.published_at.isoformat(),
     )
     existing_key = (
+        -existing.article.publisher_tier_rank,
+        -(existing.article.publisher_rank or 999),
         existing.is_naver_direct,
         existing.is_direct,
         existing.total_ranking_score,
@@ -1715,9 +1842,62 @@ def _is_better_duplicate(
     return candidate_key > existing_key
 
 
+def _routing_candidate_id(candidate: _ArticleCandidate) -> str:
+    for key in ("candidate_id", "article_id", "id"):
+        value = str(candidate.raw.get(key) or "").strip()
+        if value:
+            return value
+    stable = "\x1f".join(
+        (
+            candidate.article.title,
+            candidate.article.source,
+            candidate.article.selected_url,
+        )
+    )
+    return "candidate-" + hashlib.sha256(stable.encode("utf-8")).hexdigest()[:16]
+
+
+def _public_media_duplicate_groups(
+    candidates: list[_ArticleCandidate],
+) -> tuple[int, tuple[str, ...]]:
+    groups: dict[str, list[_ArticleCandidate]] = {}
+    for candidate in candidates:
+        # Cross-publisher official/media reconciliation must be backed by an
+        # explicit collector or editorial event identity. A normalized title
+        # alone is not sufficient evidence that two direct articles describe
+        # the same event.
+        if candidate.cluster_key.startswith("explicit:"):
+            groups.setdefault(candidate.cluster_key, []).append(candidate)
+    supporting: list[str] = []
+    cluster_count = 0
+    for members in groups.values():
+        public = [item for item in members if item.is_public_lane]
+        media = [item for item in members if not item.is_public_lane]
+        if public and media:
+            cluster_count += 1
+            supporting.extend(_routing_candidate_id(item) for item in public)
+    return cluster_count, tuple(dict.fromkeys(supporting))
+
+
 def _deduplicate_article_candidates(
     candidates: list[_ArticleCandidate],
+    *,
+    preserve_public_supporting_duplicates: bool = False,
 ) -> list[_ArticleCandidate]:
+    supporting: list[_ArticleCandidate] = []
+
+    def retain_support(candidate: _ArticleCandidate) -> None:
+        if preserve_public_supporting_duplicates and candidate.is_public_lane:
+            supporting.append(
+                replace(
+                    candidate,
+                    article=replace(
+                        candidate.article,
+                        supporting_evidence_only=True,
+                    ),
+                )
+            )
+
     by_exact: dict[tuple[str, str], _ArticleCandidate] = {}
     for candidate in candidates:
         exact_key = (
@@ -1725,8 +1905,13 @@ def _deduplicate_article_candidates(
             candidate.selected_url.rstrip("/").casefold(),
         )
         existing = by_exact.get(exact_key)
-        if existing is None or _is_better_duplicate(candidate, existing):
+        if existing is None:
             by_exact[exact_key] = candidate
+        elif _is_better_duplicate(candidate, existing):
+            retain_support(existing)
+            by_exact[exact_key] = candidate
+        else:
+            retain_support(candidate)
 
     clustered: list[_ArticleCandidate] = []
     by_cluster: dict[str, int] = {}
@@ -1742,14 +1927,23 @@ def _deduplicate_article_candidates(
             abs(candidate.article.published_at - existing.article.published_at)
             <= TITLE_CLUSTER_TIME_WINDOW
         )
-        same_event_hint = candidate.is_aggregator != existing.is_aggregator
+        explicit_cluster = key.startswith("explicit:")
+        same_event_hint = (
+            explicit_cluster
+            or candidate.is_aggregator != existing.is_aggregator
+        )
         if key and close_time and same_event_hint and _is_better_duplicate(
             candidate, existing
         ):
+            retain_support(existing)
             clustered[idx] = candidate
-        elif not (key and close_time and same_event_hint):
+        elif key and close_time and same_event_hint:
+            retain_support(candidate)
+        else:
             clustered.append(candidate)
-    return sorted(clustered, key=_candidate_sort_key, reverse=True)
+    selected_ids = {id(item) for item in clustered}
+    extras = [item for item in supporting if id(item) not in selected_ids]
+    return sorted(clustered, key=_candidate_sort_key, reverse=True) + extras
 
 
 def _select_with_diversity(
@@ -1800,6 +1994,12 @@ def _run_deterministic_selection(
         for candidate in relevant
         if candidate.direct_priority_eligible
     ]
+    headline_pool = [
+        candidate for candidate in relevant if candidate.is_headline_eligible
+    ]
+    headline_direct_pool = [
+        candidate for candidate in direct_pool if candidate.is_headline_eligible
+    ]
 
     primary_pool = sorted(
         (
@@ -1823,9 +2023,9 @@ def _run_deterministic_selection(
     # relevance → materiality → publisher priority → …), never by an
     # unconditional publisher or institution preference. The existing
     # direct-margin swap still protects link quality for the headline slot.
-    if relevant:
-        best = relevant[0]
-        best_direct = direct_pool[0] if direct_pool else None
+    if headline_pool:
+        best = headline_pool[0]
+        best_direct = headline_direct_pool[0] if headline_direct_pool else None
 
         if (
             best_direct is not None
@@ -1836,6 +2036,11 @@ def _run_deterministic_selection(
             selected.append(best_direct)
         else:
             selected.append(best)
+    else:
+        # The immutable Brief/Daily renderers require article zero to be the
+        # headline. A secondary-only public lane cannot be smuggled into that
+        # slot merely because stronger supply is absent.
+        return [], direct_pool, direct_supply_sufficient
 
     # §11 — no unconditional institution quota: official-institution rows
     # compete purely on the shared ranking like every other candidate.
@@ -1922,6 +2127,7 @@ def _select_article_candidates(
         "editorial_preference_runtime.EditorialPreferenceRuntime | None"
     ) = None,
     edition_type: str | None = None,
+    operator_review: bool = False,
 ) -> list[_ArticleCandidate]:
     # R4-R6 §5 — AI-only scope is the first gate: an AI-branded edition never
     # fills with non-AI-central articles, whatever the supply looks like.
@@ -1949,13 +2155,65 @@ def _select_article_candidates(
         if candidate.relevance_score >= SELECTION_RELEVANCE_FLOOR
     ]
     # §11 — weak content never becomes filler, whatever the supply looks like.
-    relevant = [
+    quality_relevant = [
         candidate
         for candidate in floor_qualified
         if not candidate.weak_content_reason
     ]
-    weak_rejected = len(floor_qualified) - len(relevant)
+    weak_rejected = len(floor_qualified) - len(quality_relevant)
+    # R4-R8: an official item can be operator-visible without being eligible
+    # for automated publication. Supporting duplicate releases also remain
+    # available to the operator but never become a second final card.
+    public_review_candidates = [
+        candidate for candidate in floor_qualified if candidate.is_public_lane
+    ]
+    relevant = [
+        candidate
+        for candidate in quality_relevant
+        if not candidate.article.supporting_evidence_only
+        and (
+            not candidate.is_public_lane
+            or candidate.article.tni_brief_eligible
+        )
+    ]
     relevant.sort(key=_candidate_sort_key, reverse=True)
+    public_review_candidates.sort(key=_candidate_sort_key, reverse=True)
+
+    if audit is not None:
+        public_ids = tuple(
+            _routing_candidate_id(candidate)
+            for candidate in public_review_candidates
+        )
+        promoted_ids = tuple(
+            _routing_candidate_id(candidate)
+            for candidate in public_review_candidates
+            if candidate.article.main_surface_eligible
+        )
+        audit.public_institution_lane_count = len(public_review_candidates)
+        audit.promoted_public_candidate_count = len(promoted_ids)
+        audit.non_promoted_public_candidate_count = (
+            len(public_review_candidates) - len(promoted_ids)
+        )
+        audit.main_candidate_lane_count = sum(
+            1
+            for candidate in floor_qualified
+            if not candidate.is_public_lane
+            or candidate.article.main_surface_eligible
+        )
+        audit.tni_brief_public_candidate_count = sum(
+            candidate.article.tni_brief_eligible
+            for candidate in public_review_candidates
+        )
+        audit.tni_report_topic_candidate_count = sum(
+            candidate.article.tni_report_topic_eligible
+            for candidate in public_review_candidates
+        )
+        audit.public_candidate_ids = public_ids
+        audit.promoted_public_candidate_ids = promoted_ids
+        audit.public_candidate_category_map = tuple(
+            f"{_routing_candidate_id(candidate)}:{candidate.article.final_category}"
+            for candidate in public_review_candidates
+        )
 
     # First establish the complete deterministic outcome (ranking, diversity,
     # selection, headline). This is the production baseline and is returned
@@ -1986,10 +2244,17 @@ def _select_article_candidates(
         order = editorial_preference_runtime.memory_adjusted_order(
             len(deterministic_order),
             [decision.preference_adjustment for decision in memory_decisions],
+            group_of=lambda index: int(
+                deterministic_order[index].is_public_lane
+                and not deterministic_order[index].article.main_surface_eligible
+            ),
         )
         adjusted_order = [deterministic_order[index] for index in order]
 
-    shadow_selected = adjusted_order[:limit]
+    shadow_selected, _shadow_direct, _shadow_supply = _run_deterministic_selection(
+        adjusted_order,
+        limit=limit,
+    )
     selection_changed_by_memory = (
         [_memory_candidate_id(item) for item in deterministic_selected[:limit]]
         != [_memory_candidate_id(item) for item in shadow_selected]
@@ -2026,6 +2291,9 @@ def _select_article_candidates(
         audit.weak_content_rejected = weak_rejected
         audit.qualified_candidates = len(relevant)
         audit.selected_candidates = min(len(selected), limit)
+        audit.selected_public_candidate_count = sum(
+            item.is_public_lane for item in selected[:limit]
+        )
         target_floor = (
             DAILY_TARGET_MIN_ARTICLES
             if limit <= DAILY_MAX_ARTICLES
@@ -2091,14 +2359,25 @@ def _select_article_candidates(
                     for ref in head_decision.approved_precedents
                 )
 
+    return_candidates = selected[:limit]
+    if operator_review:
+        seen_ids = {id(candidate) for candidate in deterministic_order}
+        review_extras = [
+            candidate
+            for candidate in public_review_candidates
+            if id(candidate) not in seen_ids
+        ]
+        return_candidates = (deterministic_order + review_extras)[:limit]
+    selected_identity = {id(candidate) for candidate in selected}
     return [
         replace(
             candidate,
             article=replace(
                 candidate.article,
-                selection_reason=_selection_reason(
-                    candidate,
-                    selected,
+                selection_reason=(
+                    _selection_reason(candidate, selected)
+                    if id(candidate) in selected_identity
+                    else "operator_public_lane_candidate"
                 ),
                 diversity_contribution=_diversity_contribution(
                     candidate,
@@ -2106,7 +2385,7 @@ def _select_article_candidates(
                 ),
             ),
         )
-        for candidate in selected[:limit]
+        for candidate in return_candidates
     ]
 
 def _diversity_contribution(
@@ -3364,6 +3643,7 @@ def normalize_articles(
         "editorial_preference_runtime.EditorialPreferenceRuntime | None"
     ) = None,
     edition_type: str | None = None,
+    operator_review: bool = False,
 ) -> list[EditorialArticle]:
     if selection_mode not in _SELECTION_MODES:
         raise EditorialError(f"unsupported selection mode: {selection_mode}")
@@ -3395,8 +3675,16 @@ def normalize_articles(
             if candidate is not None:
                 candidates.append(candidate)
 
-        deduped = _deduplicate_article_candidates(candidates)
+        duplicate_clusters, supporting_ids = _public_media_duplicate_groups(
+            candidates
+        )
+        deduped = _deduplicate_article_candidates(
+            candidates,
+            preserve_public_supporting_duplicates=operator_review,
+        )
         if audit is not None:
+            audit.duplicate_official_media_event_clusters = duplicate_clusters
+            audit.public_supporting_evidence_ids = supporting_ids
             audit.naver_articles_after_dedup = sum(
                 1 for candidate in deduped
                 if "naver_news_api" in candidate.provider_tokens
@@ -3420,6 +3708,7 @@ def normalize_articles(
             audit=audit,
             preference_runtime=preference_runtime,
             edition_type=edition_type,
+            operator_review=operator_review,
         )
         selected_rows = [
             (candidate.article, candidate.raw) for candidate in selected_candidates
