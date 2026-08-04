@@ -180,6 +180,11 @@ SUBVERIFIERS = (
         "verify_editorial_memory.py",
         r"EDITORIAL_MEMORY_VERIFIER=PASS checks=(?P<passed>\d+) failures=0",
     ),
+    (
+        "EDITORIAL_MEMORY_RUNTIME_INTEGRATION_VERIFIER",
+        "verify_editorial_memory_runtime_integration.py",
+        r"EDITORIAL_MEMORY_RUNTIME_INTEGRATION=PASS checks=(?P<passed>\d+) failures=0",
+    ),
 )
 
 

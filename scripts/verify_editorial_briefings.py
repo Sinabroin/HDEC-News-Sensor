@@ -2204,7 +2204,7 @@ def selection_policy_contracts() -> None:
     )
     check(
         "selection audit counters only populate in direct-aware mode",
-        all(value == 0 for value in legacy_audit.manifest_fields().values()),
+        all(not value for value in legacy_audit.manifest_fields().values()),
     )
 
     image_row = row(
