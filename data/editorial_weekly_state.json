@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "edition_type": "weekly",
+  "successful_editions": [],
+  "delivery_claims": {
+    "2026-W32": {
+      "edition_key": "2026-W32",
+      "coverage_start": "2026-07-29T00:00:00+09:00",
+      "coverage_end": "2026-08-04T23:59:59+09:00",
+      "html_sha256": "ffbf8e8c6600dfa66c01a4ab4d9e994d807e210161a288590855aedf59f78c89",
+      "public_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/weekly/2026-W32.html",
+      "claim_owner": "github-run:30960392798:attempt:1",
+      "claimed_at": "2026-08-05T08:36:20+09:00"
+    }
+  },
+  "last_successful_edition": null,
+  "last_successful_send_at": null
+}
