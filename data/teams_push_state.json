@@ -160,6 +160,16 @@
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
     },
+    "e8ea49fb7b92aa9a": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
+    },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -561,6 +571,16 @@
       "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
       "sent_at": "2026-08-04T07:35:54+09:00",
       "source": "아이티데일리"
+    },
+    "title:ai투자칩넘어전력건설장비로마이크론78soxl20": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
     },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -1043,7 +1063,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T03:49:29+09:00",
+  "last_successful_send_at": "2026-08-05T05:25:09+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1314,6 +1334,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "https://www.greened.kr/news/articleView.html?idxno=346822": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
     },
     "https://www.hankookilbo.com/news/article/A2026072814260005038?did=NA": {
       "cluster_key": "title:건설을넘어에너지인프라선도대우건설k원전주역으로뛴다",
@@ -1606,6 +1636,16 @@
       "material_signature": "fc92ae5bbde8e3a8a43d3a3bda7e2b2ff53509762e5b62e14b2b19302374be7d",
       "sent_at": "2026-08-04T07:35:54+09:00",
       "source": "아이티데일리"
+    },
+    "ai투자칩넘어전력건설장비로마이크론78soxl20": {
+      "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
+      "delivery_id": "teams_ai_push:215d0cbefc57",
+      "first_sent_at": "2026-08-05T05:25:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
+      "sent_at": "2026-08-05T05:25:09+09:00",
+      "source": "녹색경제신문"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
