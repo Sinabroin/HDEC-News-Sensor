@@ -9,6 +9,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from app import ai_centrality
 from app.editorial_briefings import (
     EditorialArticle,
     EditorialError,
@@ -55,6 +56,34 @@ class EditorialReviewError(EditorialError):
 
 def _clean(value: object) -> str:
     return " ".join(str(value or "").split())
+
+
+#: R4-R6 §6 — an operator may keep a non-AI-central article only through an
+#: explicit override with a written reason; silent override is forbidden.
+AI_CENTRALITY_OPERATOR_OVERRIDE = "operator_override"
+
+
+def _resolve_review_ai_centrality(
+    title: str,
+    summary: str,
+    item: Mapping[str, Any] | None,
+) -> str:
+    """AI-centrality of the FINAL edited fields (§6).
+
+    The editor may not override a non-AI article into the AI Brief merely by
+    editing its title or category: the decision reruns on the final title and
+    summary. The only escape is a non-empty ``operator_override_reason`` on
+    the review item, which is preserved as an explicit, auditable override."""
+    decision = ai_centrality.classify({"title": title, "snippet": summary})
+    if decision.is_central:
+        return decision.level
+    reason = _clean((item or {}).get("operator_override_reason"))
+    if reason:
+        return AI_CENTRALITY_OPERATOR_OVERRIDE
+    raise EditorialReviewError(
+        "review article is not AI-central and carries no operator_override_reason"
+        f" (level={decision.level}, exclusion={decision.exclusion or '-'})"
+    )
 
 
 def analyze_editorial_category(
@@ -235,6 +264,7 @@ def article_to_candidate(
         "executive_relevance_reason": article.executive_relevance_reason,
         "materiality_reason": article.materiality_reason,
         "executive_implication": article.executive_implication,
+        "ai_centrality_level": article.ai_centrality_level,
     }
 
 
@@ -324,6 +354,7 @@ def candidate_to_article(
         materiality_reason=_clean(candidate.get("materiality_reason")),
         executive_implication=_clean(candidate.get("executive_implication")),
         implication_html=implication_html,
+        ai_centrality_level=_resolve_review_ai_centrality(title, summary, edit),
     )
 
 
@@ -370,6 +401,7 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         image_fallback_used=not bool(image_url),
         image_reason="human_supplied" if image_url else "no_manual_image",
         implication_html=manual_implication_html,
+        ai_centrality_level=_resolve_review_ai_centrality(title, summary, item),
     )
 
 

@@ -218,7 +218,15 @@ def main() -> int:
         decision = classify_ai_topic(contaminated)
 
         assert not decision.eligible, (title, decision)
-        assert decision.exclusion_reason == "ai_not_core_topic", (
+        # R4-R6 — the canonical AI-centrality gate now rejects most of these
+        # earlier with a granular reason (non-AI subject / stock-market
+        # title); the legacy full-text reason remains valid for the rest.
+        assert decision.exclusion_reason in {
+            "ai_not_core_topic",
+            "ai_not_central_non_ai",
+            "ai_not_central_incidental_ai_mention",
+            "excluded_stock_market_title",
+        }, (
             title,
             decision,
         )
@@ -239,7 +247,10 @@ def main() -> int:
     minor_decision = classify_ai_topic(minor_ai_mention)
 
     assert not minor_decision.eligible, minor_decision
-    assert minor_decision.exclusion_reason == "ai_not_core_topic"
+    assert minor_decision.exclusion_reason in {
+        "ai_not_core_topic",
+        "ai_not_central_non_ai",
+    }, minor_decision
 
     # LNG는 전면 차단하지 않는다. AI가 핵심이고 HDEC 적용성이 있으면 발송 가능.
     ai_lng = article(
@@ -510,10 +521,10 @@ def main() -> int:
     )
 
     assert not non_ai_decision.eligible
-    assert (
-        non_ai_decision.exclusion_reason
-        == "ai_not_core_topic"
-    )
+    assert non_ai_decision.exclusion_reason in {
+        "ai_not_core_topic",
+        "ai_not_central_non_ai",
+    }, non_ai_decision
     assert (
         select_teams_push_candidates(
             [dashboard_only_non_ai]

@@ -36,6 +36,7 @@ for item in (ROOT, SCRIPTS):
         sys.path.insert(0, str(item))
 
 from app import (  # noqa: E402
+    ai_centrality,
     ai_value_chain,
     news_censor_verified_state,
     publisher_direct,
@@ -426,12 +427,17 @@ def _semantic_filter_contract(row: Mapping) -> dict:
     )
     radar = radar_signals.classify_ai_radar(article, section=True)
     ai_material = _material_ai_reason(article)
-    if ai_material and (
+    # R4-R6 §2 — the dashboard AI subcategory reuses the canonical
+    # AI-centrality decision as a conjunctive gate: a stock/political/
+    # incidental-AI article never earns the AI filter even when a legacy
+    # radar/value-chain signal fires.
+    centrality = ai_centrality.classify(article)
+    if ai_material and centrality.is_central and (
         radar.get("eligible") or ai_value_chain.is_executive_ai_candidate(value_chain)
     ):
         categories.add("ai")
         lens_tokens.add("lens:ai")
-        ai_reasons = [ai_material]
+        ai_reasons = [ai_material, f"AI centrality: {centrality.level}"]
         if radar.get("eligible"):
             ai_reasons.append(
                 "AI radar: "

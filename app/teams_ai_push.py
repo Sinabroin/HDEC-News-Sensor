@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
-from app import publisher_direct, source_priority
+from app import ai_centrality, publisher_direct, source_priority
 from app.public_urls import CANONICAL_DASHBOARD_URL
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
@@ -474,6 +474,9 @@ class TeamsPushCandidate:
     cluster_key: str
     material_signature: str
     is_update: bool = False
+    # R4-R6 §7 — evidence-based delivery category from the canonical
+    # title/lead map; a sendable candidate always carries one.
+    delivery_category: str = ""
 
 
 @dataclass(frozen=True)
@@ -487,6 +490,7 @@ class TeamsPolicyEvaluation:
     source_authority_passed: bool
     eligible: bool
     rejection_reason: str = ""
+    delivery_category: str = ""
 
 
 def _value(obj: object, key: str, default: Any = "") -> Any:
@@ -791,6 +795,31 @@ def classify_ai_topic(article: object) -> TopicDecision:
         return TopicDecision(
             False,
             exclusion_reason="low_or_excluded_source",
+        )
+
+    # R4-R6/R4-R7 — canonical AI-centrality hard gate. Title-level stock /
+    # political / real-estate / civic exclusions and the
+    # explicit-or-enabling-core requirement come from app.ai_centrality;
+    # a summary AI keyword can never rescue an excluded or incidental
+    # article, while a structural AI causal event (budget reallocation,
+    # talent loss, infrastructure investment) keeps the human-precedent
+    # market articles eligible.
+    centrality = ai_centrality.classify(article)
+    if centrality.exclusion:
+        return TopicDecision(
+            False,
+            matched_terms=centrality.exclusion_terms,
+            exclusion_reason=f"excluded_{centrality.exclusion}",
+        )
+    if centrality.level not in ai_centrality.CENTRAL_LEVELS:
+        return TopicDecision(
+            False,
+            matched_terms=tuple(
+                dict.fromkeys(
+                    centrality.title_ai_terms + centrality.lead_ai_terms
+                )
+            ),
+            exclusion_reason=f"ai_not_central_{centrality.level}",
         )
 
     speculative_hits = _has(text, _SPECULATION_TERMS)
@@ -1317,11 +1346,17 @@ def evaluate_teams_push_policy(
 
     topic = classify_ai_topic(article)
     if not topic.eligible:
-        reason = (
-            "speculation_only"
-            if topic.exclusion_reason == "speculation_without_confirmed_event"
-            else "not_ai_core"
-        )
+        if topic.exclusion_reason == "speculation_without_confirmed_event":
+            reason = "speculation_only"
+        elif topic.exclusion_reason.startswith(
+            ("excluded_", "ai_not_central_")
+        ):
+            # Canonical AI-centrality rejections stay granular so the audit
+            # can distinguish stock/political/real-estate/civic exclusions
+            # from incidental-AI and non-AI subjects.
+            reason = topic.exclusion_reason
+        else:
+            reason = "not_ai_core"
         return TeamsPolicyEvaluation(
             article, topic, False,
             ImportanceDecision(False, reason=topic.exclusion_reason),
@@ -1347,8 +1382,20 @@ def evaluate_teams_push_policy(
             reason_map.get(importance.reason, "other_policy_reason"),
         )
 
+    # R4-R6 §7 — an article cannot be sent with a category whose evidence is
+    # absent from the title/lead evidence map.
+    category, _category_terms, _category_zone = ai_centrality.delivery_category(
+        article
+    )
+    if not category:
+        return TeamsPolicyEvaluation(
+            article, topic, True, importance, True, False,
+            "no_evidenced_delivery_category",
+        )
+
     return TeamsPolicyEvaluation(
         article, topic, True, importance, True, True, "",
+        delivery_category=category,
     )
 
 
@@ -1515,6 +1562,7 @@ def select_teams_push_candidates_with_audit(
                 ),
                 material_signature=material_signature(article),
                 is_update=_lower(_value(article, "change_type")) == "material_content_update",
+                delivery_category=evaluation.delivery_category,
             )
         )
 
@@ -1603,10 +1651,16 @@ def build_teams_article_card(
     importance: ImportanceDecision,
     detected_at: str = "",
     is_update: bool = False,
+    delivery_category: str = "",
 ) -> dict[str, Any]:
     """Build exactly one Teams Workflows Adaptive Card message for one article."""
     if not topic.eligible or not importance.sendable:
         raise ValueError("non-sendable article cannot be rendered as a Teams push card")
+    category = _clean(delivery_category) or ai_centrality.delivery_category(article)[0]
+    if not category:
+        raise ValueError(
+            "article has no evidenced delivery category in its title/lead map"
+        )
 
     title = _article_field(article, "title") or "제목 없음"
     summary = _article_field(article, "summary", "snippet") or "핵심 요약이 제공되지 않았습니다."
@@ -1629,7 +1683,7 @@ def build_teams_article_card(
     importance_color = "Attention" if importance.level == IMPORTANCE_TOP else "Warning"
     body: list[dict[str, Any]] = [
         _text_block(importance.label, weight="Bolder", color=importance_color, size="Medium"),
-        _text_block(topic.topic_label, isSubtle=True, spacing="None"),
+        _text_block(category, isSubtle=True, spacing="None"),
         _text_block(f"{title_prefix}{title}", weight="Bolder", size="Large", spacing="Medium"),
         _text_block("핵심 요약", weight="Bolder", spacing="Medium"),
         _text_block(summary, spacing="Small"),
@@ -1681,6 +1735,7 @@ def build_candidate_card(alert: object, candidate: TeamsPushCandidate, *, detect
         importance=candidate.importance,
         detected_at=detected_at,
         is_update=candidate.is_update,
+        delivery_category=candidate.delivery_category,
     )
 
 
@@ -1834,6 +1889,14 @@ def render_article_email(
     article = candidate.article
     topic = candidate.topic
     importance = candidate.importance
+    category = (
+        _clean(candidate.delivery_category)
+        or ai_centrality.delivery_category(article)[0]
+    )
+    if not category:
+        raise ValueError(
+            "article has no evidenced delivery category in its title/lead map"
+        )
     title = _article_field(article, "title") or "제목 없음"
     summary = _compact_summary(
         _article_field(article, "summary", "snippet")
@@ -1867,7 +1930,7 @@ def render_article_email(
     subject = f"[HDEC AI 레이더] {importance_label} · {prefix}{title}".strip()
 
     text_body = "\n".join((
-        f"카테고리: {topic.topic_label}",
+        f"카테고리: {category}",
         f"제목: {prefix}{title}",
         f"요약: {summary}",
         f"왜 중요한가: {why}",
@@ -1895,7 +1958,7 @@ def render_article_email(
         f'background:{badge_background};border-radius:12px;padding:3px 8px;">'
         f'{escaped(importance_label)}</span>'
         f'<p style="font-size:13px;color:#667085;margin:12px 0 6px;">'
-        f'<strong>카테고리</strong> {escaped(topic.topic_label)}</p>'
+        f'<strong>카테고리</strong> {escaped(category)}</p>'
         f'<h2 style="font-size:22px;line-height:1.35;margin:8px 0 12px;">'
         f'{escaped(prefix + title)}</h2>'
         f'<p style="margin:0 0 14px;"><strong>요약</strong><br>{escaped(summary)}</p>'

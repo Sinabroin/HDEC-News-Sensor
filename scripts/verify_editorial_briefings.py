@@ -621,7 +621,9 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
     )
 
     daily_rows = brief.fixture_articles("daily", run_daily)
-    daily_rows[0]["title"] = '경영진 <script>alert("x")</script> 확인 기사'
+    # R4-R6 — the injected title stays AI-central so the headline contract
+    # holds while the escaping assertion still exercises the script tag.
+    daily_rows[0]["title"] = 'AI 경영진 <script>alert("x")</script> 확인 기사'
     daily_rows[0]["image_url"] = ""
     daily = brief.render_edition("daily", daily_rows, run_at=run_daily, root_url=root)
     brief.validate_rendered(daily)
@@ -1971,14 +1973,14 @@ def selection_policy_contracts() -> None:
     )
 
     unrelated_a = row(
-        "같은 제목의 별도 원문",
+        "같은 제목의 AI 데이터센터 별도 원문",
         provider="naver_news_api",
         url="https://publisher-a.fixture.test/news/same-title",
         minutes_before_end=1,
         source="publisher-a.fixture.test",
     )
     unrelated_b = row(
-        "같은 제목의 별도 원문",
+        "같은 제목의 AI 데이터센터 별도 원문",
         provider="naver_news_api",
         url="https://publisher-b.fixture.test/news/same-title",
         minutes_before_end=2,
@@ -3039,11 +3041,11 @@ def weekly_verified_supply_contracts() -> None:
     }]
     verified = {
         "id": "verified-weekly-row",
-        "title": "현대건설 데이터센터 프로젝트 수주",
+        "title": "현대건설 AI 데이터센터 프로젝트 수주",
         "source": "Reuters",
         "published_at": "2026-07-28T12:00:00+09:00",
         "url": "https://www.reuters.com/world/verified-weekly-test",
-        "snippet": "검증된 주간 수주 기사",
+        "snippet": "검증된 주간 AI 데이터센터 수주 기사",
     }
     entry = news_censor_verified_state.verified_entry_from_article(
         verified,
@@ -3336,6 +3338,7 @@ def image_materialization_contracts() -> None:
             image_source_kind="og_image",
             image_fallback_used=False,
             image_reason="selected_og_image",
+            ai_centrality_level="explicit_ai_core",
         )
 
     valid_payloads = {
@@ -3763,6 +3766,7 @@ def image_materialization_contracts() -> None:
             image_fallback_used=False,
             image_reason=first.reason,
             image_candidates=tuple(candidates),
+            ai_centrality_level="explicit_ai_core",
         )
 
     quality_payloads = {
@@ -4735,11 +4739,15 @@ def r4r6_editorial_quality_contracts() -> None:
         )
         return articles, audit
 
+    # R4-R6 §5 runs before §11: stock/civic titles now die at the canonical
+    # AI-centrality gate with their own counters, while weak-content rules
+    # keep rejecting AI-qualified non-news (recruitment, book PR).
     weak_rows = [
         row("AI 데이터센터 수혜주·관련주 급등 정리", url="https://yna.co.kr/news/weak-1"),
         row("건설사 신입 채용 공고, AI 직무 확대", url="https://yna.co.kr/news/weak-2"),
         row("AI 시대 걷기대회 캠페인 개최", url="https://yna.co.kr/news/weak-3"),
         row("스마트건설 우수사례 시상식 표창", url="https://yna.co.kr/news/weak-4"),
+        row("AI 신간 출간, 데이터센터 산업 해설", url="https://yna.co.kr/news/weak-5"),
     ]
     strong_rows = [
         row(
@@ -4751,7 +4759,10 @@ def r4r6_editorial_quality_contracts() -> None:
             "국내 SMR 실증 사업 승인, 전력 공급 계획 확정",
             url="https://yna.co.kr/news/strong-2",
             source="한국경제",
-            snippet="SMR 실증 사업이 승인되며 2GW 전력 공급 계획이 확정됐다.",
+            snippet=(
+                "AI 데이터센터 전력 수요 대응을 위한 SMR 실증 사업이 승인되며 "
+                "2GW 전력 공급 계획이 확정됐다."
+            ),
         ),
     ]
 
@@ -4762,12 +4773,16 @@ def r4r6_editorial_quality_contracts() -> None:
         and all("수혜주" not in article.title for article in thin_articles)
         and all("채용" not in article.title for article in thin_articles)
         and all("캠페인" not in article.title for article in thin_articles)
-        and all("시상식" not in article.title for article in thin_articles),
+        and all("시상식" not in article.title for article in thin_articles)
+        and all("신간" not in article.title for article in thin_articles),
         repr([article.title for article in thin_articles]),
     )
     check(
         "weak rejection and shortfall are machine-readable (§11)",
-        thin_audit.weak_content_rejected == 4
+        thin_audit.weak_content_rejected == 2
+        and thin_audit.stock_market_rejected_count == 1
+        and thin_audit.unrelated_domain_rejected_count == 2
+        and thin_audit.ai_central_qualified_count == 4
         and thin_audit.qualified_candidates == 2
         and thin_audit.selected_candidates == 2
         and thin_audit.selection_shortfall == 2,

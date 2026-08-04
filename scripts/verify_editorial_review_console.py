@@ -1210,7 +1210,7 @@ def main() -> int:
                 {
                     "candidate_id": ids[0],
                     "origin": "ai_collected",
-                    "title": "사용자가 고친 제목",
+                    "title": "사용자가 고친 AI 데이터센터 제목",
                     "summary_html": "<strong>볼드 핵심</strong> 설명",
                     "implication_html": "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요",
                     "category": "투자·산업",
@@ -1238,7 +1238,7 @@ def main() -> int:
         review = editorial_review.load_review(review_path, "2026-07-31")
         selected, mode = editorial_review.choose_daily_articles(bundle, review)
         v.equal("approved review mode", mode, "human_approved")
-        v.equal("edited title preserved", selected[0].title, "사용자가 고친 제목")
+        v.equal("edited title preserved", selected[0].title, "사용자가 고친 AI 데이터센터 제목")
         v.equal(
             "bold summary preserved",
             selected[0].summary_html,

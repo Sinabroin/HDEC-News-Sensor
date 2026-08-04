@@ -36,7 +36,7 @@ except ImportError:  # Text/editorial policy remains usable without image extras
     Image = None
     UnidentifiedImageError = OSError
 
-from app import config, news_access, news_coverage, public_urls as public_url_contract, source_priority, source_quality
+from app import ai_centrality, config, news_access, news_coverage, public_urls as public_url_contract, source_priority, source_quality
 
 KST = timezone(timedelta(hours=9))
 DAILY_REPORT_SUFFIX = "/daily/latest.html"
@@ -90,6 +90,18 @@ PREFERRED_PUBLISHER_WEEKLY_TARGET = 8
 # selection_shortfall.
 DAILY_TARGET_MIN_ARTICLES = 4
 WEEKLY_TARGET_MIN_ARTICLES = 8
+
+# R4-R6 §6 — the Daily headline must itself be a qualified AI-central article
+# (explicit AI core or enabling infrastructure core); "operator_override" is
+# the explicit, written-reason human escape from app.editorial_review. A
+# non-AI headline is a hard validation failure, never a warning.
+DAILY_HEADLINE_ALLOWED_CENTRALITY = frozenset(
+    {
+        ai_centrality.LEVEL_EXPLICIT_AI_CORE,
+        ai_centrality.LEVEL_ENABLING_INFRASTRUCTURE_CORE,
+        "operator_override",
+    }
+)
 
 # Canonical delivery tier -> legacy editorial group vocabulary.
 _LEGACY_GROUP_BY_DELIVERY_TIER = {
@@ -455,6 +467,14 @@ class SelectionAuditCounters:
     qualified_candidates: int = 0
     selected_candidates: int = 0
     selection_shortfall: int = 0
+    # R4-R6 §5 — AI-only scope accounting: every rejection class is
+    # machine-readable so a short edition is provably honest.
+    ai_central_qualified_count: int = 0
+    incidental_ai_rejected_count: int = 0
+    stock_market_rejected_count: int = 0
+    unrelated_domain_rejected_count: int = 0
+    selected_ai_core_count: int = 0
+    selected_enabling_infrastructure_count: int = 0
 
     def manifest_fields(self) -> dict[str, int]:
         return {
@@ -478,6 +498,16 @@ class SelectionAuditCounters:
             "qualified_candidates": self.qualified_candidates,
             "selected_candidates": self.selected_candidates,
             "selection_shortfall": self.selection_shortfall,
+            "ai_central_qualified_count": self.ai_central_qualified_count,
+            "incidental_ai_rejected_count": self.incidental_ai_rejected_count,
+            "stock_market_rejected_count": self.stock_market_rejected_count,
+            "unrelated_domain_rejected_count": (
+                self.unrelated_domain_rejected_count
+            ),
+            "selected_ai_core_count": self.selected_ai_core_count,
+            "selected_enabling_infrastructure_count": (
+                self.selected_enabling_infrastructure_count
+            ),
         }
 
 
@@ -549,6 +579,10 @@ class EditorialArticle:
     # §12 — Editor's Summary implication: generated default, human override wins.
     executive_implication: str = ""
     implication_html: str = ""
+    # R4-R6 §5/§6 — canonical AI-centrality level carried to the headline
+    # contract; "operator_override" marks an explicit human override with a
+    # written reason (never silent).
+    ai_centrality_level: str = ""
 
     @property
     def published_label(self) -> str:
@@ -1141,6 +1175,34 @@ class _ArticleCandidate:
     weak_content_reason: str = ""
     materiality_score: float = 0.0
     hdec_relevance_score: float = 0.0
+    # R4-R6 §2/§5 — canonical AI-centrality decision (title/lead evidence only).
+    ai_centrality_level: str = ""
+    ai_centrality_exclusion: str = ""
+    ai_centrality_reason: str = ""
+
+    @property
+    def is_ai_central(self) -> bool:
+        from app import ai_centrality as _ai_centrality
+
+        return (
+            not self.ai_centrality_exclusion
+            and self.ai_centrality_level in _ai_centrality.CENTRAL_LEVELS
+        )
+
+    @property
+    def ai_rejection_class(self) -> str:
+        """stock_market | unrelated_domain | incidental_ai | '' (qualified)."""
+        from app import ai_centrality as _ai_centrality
+
+        if self.is_ai_central:
+            return ""
+        if self.ai_centrality_exclusion == _ai_centrality.EXCLUSION_STOCK_MARKET:
+            return "stock_market"
+        if self.ai_centrality_exclusion:
+            return "unrelated_domain"
+        if self.ai_centrality_level == _ai_centrality.LEVEL_INCIDENTAL_AI_MENTION:
+            return "incidental_ai"
+        return "unrelated_domain"
 
     @property
     def is_naver_direct(self) -> bool:
@@ -1410,6 +1472,16 @@ def _build_article_candidate(
         return None
     category = classify_category(title, summary)
     relevance, reasons = _candidate_relevance(title, summary, category, raw)
+    # R4-R6 §2 — canonical AI-centrality from the article's own title and raw
+    # lead only (never the derived summary, never generated metadata).
+    centrality = ai_centrality.classify(
+        {
+            "title": title,
+            "snippet": str(raw.get("snippet") or raw.get("summary") or ""),
+            "subtitle": str(raw.get("subtitle") or ""),
+            "publisher_section": str(raw.get("publisher_section") or ""),
+        }
+    )
     freshness = _candidate_freshness(published, coverage)
     source_quality = 2.0 if selected.is_direct else 0.0
     total = round(relevance + freshness + source_quality, 3)
@@ -1468,6 +1540,7 @@ def _build_article_candidate(
             executive_implication=_compose_executive_implication(
                 title, summary, category, materiality_reasons
             ),
+            ai_centrality_level=centrality.level,
         ),
         raw=raw,
         selected_url=selected_url,
@@ -1486,6 +1559,9 @@ def _build_article_candidate(
         weak_content_reason=weak_content,
         materiality_score=materiality,
         hdec_relevance_score=hdec_relevance,
+        ai_centrality_level=centrality.level,
+        ai_centrality_exclusion=centrality.exclusion,
+        ai_centrality_reason=centrality.reason,
     )
 
 
@@ -1534,6 +1610,14 @@ def _legacy_article_from_raw(
             link_label=selected.label,
             category=classify_category(title, summary),
             collection_source_kind=_collection_source_kind(raw),
+            # Legacy preview/fixture rows still carry their true canonical
+            # level so the Daily headline contract (§6) applies everywhere.
+            ai_centrality_level=ai_centrality.classify(
+                {
+                    "title": title,
+                    "snippet": str(raw.get("snippet") or raw.get("summary") or ""),
+                }
+            ).level,
         ),
         raw,
     )
@@ -1665,6 +1749,26 @@ def _select_article_candidates(
     limit: int,
     audit: SelectionAuditCounters | None,
 ) -> list[_ArticleCandidate]:
+    # R4-R6 §5 — AI-only scope is the first gate: an AI-branded edition never
+    # fills with non-AI-central articles, whatever the supply looks like.
+    # Every rejection class is counted machine-readably.
+    ai_qualified: list[_ArticleCandidate] = []
+    for candidate in candidates:
+        rejection = candidate.ai_rejection_class
+        if not rejection:
+            ai_qualified.append(candidate)
+            continue
+        if audit is not None:
+            if rejection == "stock_market":
+                audit.stock_market_rejected_count += 1
+            elif rejection == "incidental_ai":
+                audit.incidental_ai_rejected_count += 1
+            else:
+                audit.unrelated_domain_rejected_count += 1
+    if audit is not None:
+        audit.ai_central_qualified_count = len(ai_qualified)
+    candidates = ai_qualified
+
     floor_qualified = [
         candidate
         for candidate in candidates
@@ -1798,6 +1902,17 @@ def _select_article_candidates(
         )
         audit.selection_shortfall = max(
             0, min(limit, target_floor) - min(len(selected), limit)
+        )
+        audit.selected_ai_core_count = sum(
+            1
+            for item in selected[:limit]
+            if item.ai_centrality_level == ai_centrality.LEVEL_EXPLICIT_AI_CORE
+        )
+        audit.selected_enabling_infrastructure_count = sum(
+            1
+            for item in selected[:limit]
+            if item.ai_centrality_level
+            == ai_centrality.LEVEL_ENABLING_INFRASTRUCTURE_CORE
         )
 
     return [
@@ -3854,6 +3969,11 @@ def render_daily(
     coverage = daily_coverage(run_at)
     dated_url, latest_url = public_urls(root_url, "daily", key)
     headline = articles[0]
+    if headline.ai_centrality_level not in DAILY_HEADLINE_ALLOWED_CENTRALITY:
+        raise EditorialError(
+            "daily headline is not AI-central: level="
+            f"{headline.ai_centrality_level or 'unknown'}"
+        )
     html = _fill(
         _template("editorial_daily.html"),
         {
