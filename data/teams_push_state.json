@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "2dea91c174766c96": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
+    },
     "32ac15c8cb6ede93": {
       "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
       "delivery_id": "teams_ai_push:c84ea5925f92",
@@ -602,6 +612,16 @@
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
     },
+    "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
+    },
     "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
       "delivery_id": "teams_ai_push:3d7f0fda4114",
@@ -1003,7 +1023,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T00:01:52+09:00",
+  "last_successful_send_at": "2026-08-05T02:03:09+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1144,6 +1164,16 @@
       "material_signature": "ff876a207e86f4eeb061ff8ec1d141bd141c8100b1512cdef02c6ed9a322edf9",
       "sent_at": "2026-07-30T01:46:09+09:00",
       "source": "slownews.kr"
+    },
+    "https://www.autodaily.co.kr/news/articleView.html?idxno=546410": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
     },
     "https://www.betanews.net/article/view/beta202608030086": {
       "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
@@ -1606,6 +1636,16 @@
       "material_signature": "53373681c9a2354b9f552a7959833574b8641ae97ef35c9b530148ddaea2b26d",
       "sent_at": "2026-07-29T04:59:02+09:00",
       "source": "한국일보"
+    },
+    "구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
+      "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
+      "delivery_id": "teams_ai_push:bec31cab7b44",
+      "first_sent_at": "2026-08-05T02:03:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
+      "sent_at": "2026-08-05T02:03:09+09:00",
+      "source": "엠투데이"
     },
     "김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
