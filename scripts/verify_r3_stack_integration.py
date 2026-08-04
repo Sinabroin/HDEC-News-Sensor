@@ -146,6 +146,11 @@ SUBVERIFIERS = (
         r"RESULT=D7-AK-6E_WEEKLY_TNI_REFERENCE_PARITY_PASS",
     ),
     (
+        "PUBLIC_INSTITUTION_EDITORIAL_LANE_VERIFIER",
+        "verify_public_institution_editorial_lane.py",
+        r"RESULT=D7-AK-6E_R4_R8_PUBLIC_INSTITUTION_LANE_PASS",
+    ),
+    (
         "SCHEDULED_REFRESH_VERIFIER",
         "verify_scheduled_refresh_and_telegram.py",
         r"RESULT: PASS",

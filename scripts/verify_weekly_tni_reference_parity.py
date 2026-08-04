@@ -35,6 +35,7 @@ SHA-checking the reference alone is never treated as parity proof.
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
 import subprocess
 import sys
@@ -55,6 +56,7 @@ REFERENCE_PATH = Path(
 )
 REFERENCE_SHA256 = "e71308b7e1a9ee4697a5a597d5b074ce5aa1ec7ba60f83e597ebbdab6873dea2"
 TEMPLATE_PATH = ROOT / "templates" / "editorial_weekly_tni.html"
+TEMPLATE_SHA256 = "3cdcbf4891ad24c52a9465fa6cacd8757246fc6b33959c60a190405c321e6206"
 PLACEHOLDERS = (
     "{{TNI_TITLE_ISSUE}}",
     "{{TNI_ISSUE_LABEL}}",
@@ -201,6 +203,11 @@ def main() -> int:
     template = template_bytes.decode("utf-8")
 
     # 1. Template structure (always).
+    check(
+        "committed Brief template SHA256 is immutable",
+        hashlib.sha256(template_bytes).hexdigest() == TEMPLATE_SHA256,
+        hashlib.sha256(template_bytes).hexdigest(),
+    )
     for placeholder in PLACEHOLDERS:
         check(
             f"template carries {placeholder} exactly once",
@@ -223,6 +230,33 @@ def main() -> int:
         len(shell_segments) == len(PLACEHOLDERS) + 1
         and sum(len(segment) for segment in shell_segments) > 10_000,
         str(len(shell_segments)),
+    )
+    category_rows = re.findall(
+        r'<span class="t-name"[^>]*>.*?</span><span class="t-desc"',
+        template,
+        flags=re.S,
+    )
+    check("Brief category count remains exactly three", len(category_rows) == 3)
+    check(
+        "Brief category order remains immutable",
+        all(
+            template.index(first) < template.index(second)
+            for first, second in zip(
+                ("투자·산업", "기업동향", "기술정보"),
+                ("기업동향", "기술정보"),
+            )
+        ),
+    )
+    check(
+        "operator public lane never appears in final Brief shell",
+        not any(
+            value in template
+            for value in ("공공기관·정책", "정책·공공", "정부자료", "Official Sources")
+        ),
+    )
+    check(
+        "email-safe Brief shell contains no script, form, iframe, or object",
+        not re.search(r"<(?:script|form|iframe|object)\b", template, flags=re.I),
     )
 
     # 2. Product shell parity (always): normalized structural comparison — the

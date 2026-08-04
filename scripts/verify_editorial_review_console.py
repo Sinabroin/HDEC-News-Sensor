@@ -793,6 +793,11 @@ def run_browser_interaction(
   window.alert=()=>{};
   if(localStorage.getItem(phaseKey)!=="restore"){
     results.manual_fallback_initially_hidden=document.getElementById("manualFallback").hidden===true;
+    const laneButtons=[...document.querySelectorAll("[data-lane]")];
+    results.operator_lane_controls=laneButtons.map(button=>button.textContent.trim()).join(">")==="전체>주요 후보>공공기관·정책";
+    document.querySelector('[data-lane="public"]').click();
+    results.operator_public_lane_filter=[...document.querySelectorAll(".candidate")].every(card=>byId(card.dataset.id)?.editorial_lane==="public_institution");
+    document.querySelector('[data-lane="all"]').click();
     const initiallySelected=document.querySelector(".candidate.selected");
     const removedId=initiallySelected.dataset.id;
     initiallySelected.querySelector('input[type="checkbox"]').click();
@@ -1711,6 +1716,8 @@ def main() -> int:
             ("restored_sector_order", "reload preserves fixed sector order"),
             ("restored_images", "reload preserves image or fallback rendering"),
             ("manual_fallback_initially_hidden", "manual fallback is hidden before failure"),
+            ("operator_lane_controls", "operator lane controls remain exact"),
+            ("operator_public_lane_filter", "operator public lane hides non-public candidates"),
             ("import_enter_triggered", "Enter key triggers article import"),
             ("import_loading_state", "URL import shows loading and cancel state"),
             ("import_candidate_added", "URL import adds one left candidate"),
