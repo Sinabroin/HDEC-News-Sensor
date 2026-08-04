@@ -82,15 +82,15 @@ EXPECTED_PROTECTED_SHA256 = {
         "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
     ),
     "data/editorial_daily_state.json": (
-        # Verified successor after the accepted 2026-08-04 Daily delivery
-        # (origin/main 526d5dc, merged without modification).
-        "c26108b4788f0e39e5beaca9e55dbea0bc66b8c27fe12b8158f260dfd018141e"
+        # Verified successor after the accepted 2026-08-05 Daily delivery
+        # (origin/main 87f7ed3, merged without modification).
+        "65f2221aa15f672d8ba96df714583f24969f36a3c455c964140f27a6f00ad7d0"
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main ef069d6, merged without modification in the
-        # 54ed402 merge — routine successor-pin refresh).
-        "ba7c74233375446057735958e845c1165790e476dacc1c7b98aad31c37a9c39f"
+        # (through origin/main 87f7ed3, merged without modification —
+        # routine successor-pin refresh).
+        "5babb01b8c73fd717eec1aef1878ec78273db320652a2061235ddcd2c862f91d"
     ),
 }
 
