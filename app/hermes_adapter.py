@@ -64,6 +64,7 @@ class HermesEditorialMemoryAdapter:
         corpus: editorial_memory.Corpus,
         *,
         k: int = 3,
+        query_label: str = "",
     ) -> AdapterRetrieval:
         local = editorial_memory.retrieve(article, corpus, k=k)
         if not self.enabled:
@@ -73,49 +74,73 @@ class HermesEditorialMemoryAdapter:
                 "local_fallback", local, "no transport configured"
             )
         try:
+            features = editorial_memory.deterministic_features(article)
+            sanitized_features = {
+                key: (sorted(value) if isinstance(value, frozenset) else value)
+                for key, value in features.items()
+            }
             response = self.transport(
                 {
                     "action": "retrieve",
                     "read_only": True,
                     "corpus_digest": corpus.digest,
-                    "title": str(article.get("title") or ""),
-                    "summary": str(
-                        article.get("summary") or article.get("snippet") or ""
-                    ),
+                    "query_labels": [query_label] if query_label else [],
+                    "query_features": sanitized_features,
                     "k": k,
                 }
             )
+            if not isinstance(response, Mapping):
+                raise TypeError("Hermes response must be a mapping")
             ids = response["matched_article_ids"]
-            if not isinstance(ids, list):
-                raise TypeError("matched_article_ids must be a list")
+            if (
+                not isinstance(ids, list)
+                or not ids
+                or len(ids) > k * len(editorial_memory.EVIDENCE_LEVELS)
+                or any(not isinstance(item, str) or not item for item in ids)
+            ):
+                raise TypeError("matched_article_ids must be a bounded string list")
         except Exception as exc:  # noqa: BLE001 — any failure → local fallback
             return AdapterRetrieval(
                 "local_fallback", local, f"hermes error: {type(exc).__name__}"
             )
         by_id = {record.article_id: record for record in corpus.records}
-        matched = [by_id[i] for i in ids if i in by_id]
-        if not matched:
+        unknown = sorted(set(ids) - set(by_id))
+        if unknown:
             return AdapterRetrieval(
-                "local_fallback", local, "hermes returned no known ids"
+                "local_fallback", local, "hermes returned unknown precedent ids"
             )
+        matched = [by_id[item] for item in ids]
 
         def bucket(level: str) -> tuple[editorial_memory.RetrievalMatch, ...]:
+            local_bucket = {
+                editorial_memory.EVIDENCE_GOLD_PLUS: local.gold_plus,
+                editorial_memory.EVIDENCE_GOLD_SELECTED: local.gold_selected,
+                editorial_memory.EVIDENCE_NEAR_MISS: local.near_miss,
+                editorial_memory.EVIDENCE_HARD_NEGATIVE: local.hard_negative,
+                editorial_memory.EVIDENCE_SILVER: local.silver,
+            }[level]
+            merged: dict[str, editorial_memory.RetrievalMatch] = {
+                item.record.article_id: item for item in local_bucket
+            }
+            for record in matched:
+                if record.evidence_level == level:
+                    merged[record.article_id] = editorial_memory.RetrievalMatch(
+                        record, 1.0
+                    )
             return tuple(
-                editorial_memory.RetrievalMatch(record, 1.0)
-                for record in matched
-                if record.evidence_level == level
-            )[:k]
+                sorted(
+                    merged.values(),
+                    key=lambda item: (-item.similarity, item.record.article_id),
+                )[:k]
+            )
 
         merged = editorial_memory.RetrievalResult(
-            gold_plus=bucket(editorial_memory.EVIDENCE_GOLD_PLUS)
-            or local.gold_plus,
-            gold_selected=bucket(editorial_memory.EVIDENCE_GOLD_SELECTED)
-            or local.gold_selected,
-            near_miss=bucket(editorial_memory.EVIDENCE_NEAR_MISS)
-            or local.near_miss,
-            hard_negative=bucket(editorial_memory.EVIDENCE_HARD_NEGATIVE)
-            or local.hard_negative,
+            gold_plus=bucket(editorial_memory.EVIDENCE_GOLD_PLUS),
+            gold_selected=bucket(editorial_memory.EVIDENCE_GOLD_SELECTED),
+            near_miss=bucket(editorial_memory.EVIDENCE_NEAR_MISS),
+            hard_negative=bucket(editorial_memory.EVIDENCE_HARD_NEGATIVE),
             mode="hermes",
+            silver=bucket(editorial_memory.EVIDENCE_SILVER),
         )
         return AdapterRetrieval("hermes", merged, "hermes retrieval merged")
 

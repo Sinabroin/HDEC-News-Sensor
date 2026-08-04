@@ -36,7 +36,16 @@ except ImportError:  # Text/editorial policy remains usable without image extras
     Image = None
     UnidentifiedImageError = OSError
 
-from app import ai_centrality, config, news_access, news_coverage, public_urls as public_url_contract, source_priority, source_quality
+from app import (
+    ai_centrality,
+    config,
+    editorial_preference_runtime,
+    news_access,
+    news_coverage,
+    public_urls as public_url_contract,
+    source_priority,
+    source_quality,
+)
 
 KST = timezone(timedelta(hours=9))
 DAILY_REPORT_SUFFIX = "/daily/latest.html"
@@ -475,8 +484,26 @@ class SelectionAuditCounters:
     unrelated_domain_rejected_count: int = 0
     selected_ai_core_count: int = 0
     selected_enabling_infrastructure_count: int = 0
+    # R4-R7 §5 — human-memory decision audit. Shadow-only while the committed
+    # profile is inactive: the deterministic selection stays authoritative and
+    # these fields expose what memory observed / would have changed.
+    memory_profile: str = ""
+    memory_active: bool = False
+    # True only when the memory stage actually evaluated in shadow mode
+    # (inactive profile); stays False when memory never ran (legacy mode).
+    memory_shadow_only: bool = False
+    memory_runtime_invoked: bool = False
+    selected_with_memory_support: int = 0
+    rejected_with_negative_precedent: int = 0
+    selection_changed_by_memory: bool = False
+    headline_supported_by_gold_plus: bool = False
+    retrieved_precedent_count: int = 0
+    deterministic_selected_ids: tuple[str, ...] = ()
+    memory_shadow_selected_ids: tuple[str, ...] = ()
 
-    def manifest_fields(self) -> dict[str, int]:
+    def manifest_fields(
+        self,
+    ) -> dict[str, int | str | bool | tuple[str, ...]]:
         return {
             "naver_articles_in_coverage": self.naver_articles_in_coverage,
             "naver_articles_relevance_qualified": self.naver_articles_relevance_qualified,
@@ -508,6 +535,21 @@ class SelectionAuditCounters:
             "selected_enabling_infrastructure_count": (
                 self.selected_enabling_infrastructure_count
             ),
+            "memory_profile": self.memory_profile,
+            "memory_active": self.memory_active,
+            "memory_shadow_only": self.memory_shadow_only,
+            "memory_runtime_invoked": self.memory_runtime_invoked,
+            "selected_with_memory_support": self.selected_with_memory_support,
+            "rejected_with_negative_precedent": (
+                self.rejected_with_negative_precedent
+            ),
+            "selection_changed_by_memory": self.selection_changed_by_memory,
+            "headline_supported_by_gold_plus": (
+                self.headline_supported_by_gold_plus
+            ),
+            "retrieved_precedent_count": self.retrieved_precedent_count,
+            "deterministic_selected_ids": self.deterministic_selected_ids,
+            "memory_shadow_selected_ids": self.memory_shadow_selected_ids,
         }
 
 
@@ -1743,46 +1785,16 @@ def _select_with_diversity(
 
 
 
-def _select_article_candidates(
-    candidates: list[_ArticleCandidate],
+def _run_deterministic_selection(
+    relevant: list[_ArticleCandidate],
     *,
     limit: int,
-    audit: SelectionAuditCounters | None,
-) -> list[_ArticleCandidate]:
-    # R4-R6 §5 — AI-only scope is the first gate: an AI-branded edition never
-    # fills with non-AI-central articles, whatever the supply looks like.
-    # Every rejection class is counted machine-readably.
-    ai_qualified: list[_ArticleCandidate] = []
-    for candidate in candidates:
-        rejection = candidate.ai_rejection_class
-        if not rejection:
-            ai_qualified.append(candidate)
-            continue
-        if audit is not None:
-            if rejection == "stock_market":
-                audit.stock_market_rejected_count += 1
-            elif rejection == "incidental_ai":
-                audit.incidental_ai_rejected_count += 1
-            else:
-                audit.unrelated_domain_rejected_count += 1
-    if audit is not None:
-        audit.ai_central_qualified_count = len(ai_qualified)
-    candidates = ai_qualified
+) -> tuple[list[_ArticleCandidate], list[_ArticleCandidate], bool]:
+    """§11/§13 deterministic diversity selection over the ranked eligible pool.
 
-    floor_qualified = [
-        candidate
-        for candidate in candidates
-        if candidate.relevance_score >= SELECTION_RELEVANCE_FLOOR
-    ]
-    # §11 — weak content never becomes filler, whatever the supply looks like.
-    relevant = [
-        candidate
-        for candidate in floor_qualified
-        if not candidate.weak_content_reason
-    ]
-    weak_rejected = len(floor_qualified) - len(relevant)
-    relevant.sort(key=_candidate_sort_key, reverse=True)
-
+    Pure helper (no counter side effects) so the memory-shadow hypothetical
+    selection can reuse the identical pipeline. Returns
+    ``(selected, direct_pool, direct_supply_sufficient)``."""
     direct_pool = [
         candidate
         for candidate in relevant
@@ -1865,6 +1877,125 @@ def _select_article_candidates(
         limit=limit,
         predicate=aggregator_allowed,
     )
+    return selected, direct_pool, direct_supply_sufficient
+
+
+def _memory_product(edition_type: str | None, limit: int) -> str:
+    """Resolve an explicit product head, retaining limit fallback for callers.
+
+    Production Daily/Weekly paths always pass ``edition_type``.  The fallback
+    preserves compatibility for older fixture callers without making the real
+    runtime depend on a fragile numeric limit heuristic.
+    """
+    if edition_type == "daily":
+        return editorial_preference_runtime.PRODUCT_DAILY
+    if edition_type == "weekly":
+        return editorial_preference_runtime.PRODUCT_WEEKLY
+    return (
+        editorial_preference_runtime.PRODUCT_DAILY
+        if limit <= DAILY_MAX_ARTICLES
+        else editorial_preference_runtime.PRODUCT_WEEKLY
+    )
+
+
+def _memory_candidate_id(candidate: _ArticleCandidate) -> str:
+    for key in ("candidate_id", "article_id", "id"):
+        value = str(candidate.raw.get(key) or "").strip()
+        if value:
+            return value
+    stable = "\x1f".join(
+        (
+            candidate.article.title,
+            candidate.article.source,
+            candidate.article.selected_url,
+        )
+    )
+    return "selection-" + hashlib.sha256(stable.encode("utf-8")).hexdigest()[:16]
+
+
+def _select_article_candidates(
+    candidates: list[_ArticleCandidate],
+    *,
+    limit: int,
+    audit: SelectionAuditCounters | None,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    edition_type: str | None = None,
+) -> list[_ArticleCandidate]:
+    # R4-R6 §5 — AI-only scope is the first gate: an AI-branded edition never
+    # fills with non-AI-central articles, whatever the supply looks like.
+    # Every rejection class is counted machine-readably.
+    ai_qualified: list[_ArticleCandidate] = []
+    for candidate in candidates:
+        rejection = candidate.ai_rejection_class
+        if not rejection:
+            ai_qualified.append(candidate)
+            continue
+        if audit is not None:
+            if rejection == "stock_market":
+                audit.stock_market_rejected_count += 1
+            elif rejection == "incidental_ai":
+                audit.incidental_ai_rejected_count += 1
+            else:
+                audit.unrelated_domain_rejected_count += 1
+    if audit is not None:
+        audit.ai_central_qualified_count = len(ai_qualified)
+    candidates = ai_qualified
+
+    floor_qualified = [
+        candidate
+        for candidate in candidates
+        if candidate.relevance_score >= SELECTION_RELEVANCE_FLOOR
+    ]
+    # §11 — weak content never becomes filler, whatever the supply looks like.
+    relevant = [
+        candidate
+        for candidate in floor_qualified
+        if not candidate.weak_content_reason
+    ]
+    weak_rejected = len(floor_qualified) - len(relevant)
+    relevant.sort(key=_candidate_sort_key, reverse=True)
+
+    # First establish the complete deterministic outcome (ranking, diversity,
+    # selection, headline). This is the production baseline and is returned
+    # byte-identically while the committed profile remains inactive.
+    deterministic_selected, direct_pool, _direct_supply = (
+        _run_deterministic_selection(relevant, limit=limit)
+    )
+    deterministic_ids = {id(item) for item in deterministic_selected}
+    deterministic_order = deterministic_selected + [
+        item for item in relevant if id(item) not in deterministic_ids
+    ]
+
+    # R4-R7 §5/§6 — memory sees only the already-qualified deterministic
+    # ordering. Its bounded reorder can alter an injected active preview, or
+    # produce an inactive hypothetical selection, but can never see (and thus
+    # never resurrect) a candidate rejected by any deterministic gate.
+    memory_runtime = preference_runtime
+    if memory_runtime is None:
+        memory_runtime = editorial_preference_runtime.default_runtime()
+    memory_decisions: list = []
+    adjusted_order = deterministic_order
+    if deterministic_order:
+        product = _memory_product(edition_type, limit)
+        memory_decisions = [
+            memory_runtime.decide(product, dict(candidate.raw))
+            for candidate in deterministic_order
+        ]
+        order = editorial_preference_runtime.memory_adjusted_order(
+            len(deterministic_order),
+            [decision.preference_adjustment for decision in memory_decisions],
+        )
+        adjusted_order = [deterministic_order[index] for index in order]
+
+    shadow_selected = adjusted_order[:limit]
+    selection_changed_by_memory = (
+        [_memory_candidate_id(item) for item in deterministic_selected[:limit]]
+        != [_memory_candidate_id(item) for item in shadow_selected]
+    )
+    memory_applied = bool(memory_decisions) and memory_runtime.memory_active
+    selected = shadow_selected if memory_applied else deterministic_selected
 
     if audit is not None:
         selected_ids = {id(item) for item in selected}
@@ -1914,6 +2045,51 @@ def _select_article_candidates(
             if item.ai_centrality_level
             == ai_centrality.LEVEL_ENABLING_INFRASTRUCTURE_CORE
         )
+        if memory_decisions:
+            decision_by_candidate = {
+                id(candidate): decision
+                for candidate, decision in zip(
+                    deterministic_order, memory_decisions
+                )
+            }
+            final_ids = {id(item) for item in selected[:limit]}
+            audit.memory_profile = memory_runtime.profile_version
+            audit.memory_active = memory_runtime.memory_active
+            audit.memory_shadow_only = not memory_runtime.memory_active
+            audit.memory_runtime_invoked = True
+            audit.selected_with_memory_support = sum(
+                1
+                for item in selected[:limit]
+                if decision_by_candidate[id(item)].approved_precedents
+            )
+            audit.rejected_with_negative_precedent = sum(
+                1
+                for candidate in deterministic_order
+                if id(candidate) not in final_ids
+                and decision_by_candidate[id(candidate)].recommendation
+                == editorial_preference_runtime.RECOMMEND_AVOID
+            )
+            audit.selection_changed_by_memory = selection_changed_by_memory
+            audit.retrieved_precedent_count = sum(
+                len(decision.approved_precedents)
+                + len(decision.rejected_precedents)
+                + len(decision.near_miss_precedents)
+                + len(decision.silver_precedents)
+                for decision in memory_decisions
+            )
+            audit.deterministic_selected_ids = tuple(
+                _memory_candidate_id(item)
+                for item in deterministic_selected[:limit]
+            )
+            audit.memory_shadow_selected_ids = tuple(
+                _memory_candidate_id(item) for item in shadow_selected
+            )
+            if selected:
+                head_decision = decision_by_candidate[id(selected[0])]
+                audit.headline_supported_by_gold_plus = any(
+                    ref.evidence_level == "gold_plus"
+                    for ref in head_decision.approved_precedents
+                )
 
     return [
         replace(
@@ -3184,6 +3360,10 @@ def normalize_articles(
     publisher_opener: object | None = None,
     selection_audit: SelectionAuditCounters | None = None,
     selection_mode: str = SELECTION_MODE_LEGACY,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    edition_type: str | None = None,
 ) -> list[EditorialArticle]:
     if selection_mode not in _SELECTION_MODES:
         raise EditorialError(f"unsupported selection mode: {selection_mode}")
@@ -3238,6 +3418,8 @@ def normalize_articles(
             deduped,
             limit=limit,
             audit=audit,
+            preference_runtime=preference_runtime,
+            edition_type=edition_type,
         )
         selected_rows = [
             (candidate.article, candidate.raw) for candidate in selected_candidates
@@ -4210,6 +4392,10 @@ def render_edition(
     publisher_fetcher: Callable[[str], tuple[str, str]] | None = None,
     publisher_opener: object | None = None,
     selection_mode: str = SELECTION_MODE_LEGACY,
+    selection_audit: SelectionAuditCounters | None = None,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
 ) -> RenderedEdition:
     coverage = coverage_for(edition_type, run_at)
     limit = DAILY_MAX_ARTICLES if edition_type == "daily" else WEEKLY_MAX_ARTICLES
@@ -4227,6 +4413,9 @@ def render_edition(
         publisher_fetcher=publisher_fetcher,
         publisher_opener=publisher_opener,
         selection_mode=selection_mode,
+        selection_audit=selection_audit,
+        preference_runtime=preference_runtime,
+        edition_type=edition_type,
     )
     if edition_type == "daily":
         return render_daily(articles, run_at=run_at, root_url=root_url)

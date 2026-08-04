@@ -300,6 +300,7 @@ def deliver(
     detected_at: str = "",
     max_articles: int = DEFAULT_TEAMS_BATCH_MAX,
     smtp_factory=None,
+    preference_runtime=None,
 ) -> dict[str, Any]:
     """Select, dedup, and deliver 0-5 article emails per natural run.
 
@@ -360,8 +361,12 @@ def deliver(
     # Eligibility is intentionally uncapped. Same-event duplicates collapse to
     # one representative first, the dedicated sent ledger filters next, and only
     # then does the 0-5 batch cap choose work for this run.
+    run_cap = max(0, min(int(max_articles), HARD_TEAMS_BATCH_MAX))
     candidates, selection_audit = select_teams_push_from_artifact_with_audit(
-        payload, max_articles=None
+        payload,
+        max_articles=None,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=run_cap,
     )
     primary_publisher_eligible = sum(
         publisher_delivery_priority(candidate.article)[0] == 0
@@ -371,7 +376,6 @@ def deliver(
     duplicate_event_rows = int(selection_audit.get("event_duplicates") or 0)
     policy_eligible_rows = int(selection_audit.get("policy_eligible") or 0)
     accepted, baseline = filter_unsent_candidates(state, candidates)
-    run_cap = max(0, min(int(max_articles), HARD_TEAMS_BATCH_MAX))
     selected = accepted[:run_cap]
     deferred = accepted[run_cap:]
 
@@ -555,6 +559,42 @@ def deliver(
         "delivered_count": delivered,
         "failed_count": failed,
         "state_changed": state_changed,
+        "editorial_memory_invoked": bool(
+            selection_audit.get("editorial_memory_invoked")
+        ),
+        "editorial_memory_profile": str(
+            selection_audit.get("editorial_memory_profile") or ""
+        ),
+        "editorial_memory_active": bool(
+            selection_audit.get("editorial_memory_active")
+        ),
+        "editorial_memory_candidates": [
+            {
+                "article_ref": article_ref(candidate.article),
+                "editorial_memory_profile": candidate.editorial_memory_profile,
+                "editorial_memory_active": candidate.editorial_memory_active,
+                "approved_precedent_ids": list(
+                    candidate.approved_precedent_ids
+                ),
+                "rejected_precedent_ids": list(
+                    candidate.rejected_precedent_ids
+                ),
+                "near_miss_precedent_ids": list(
+                    candidate.near_miss_precedent_ids
+                ),
+                "silver_precedent_ids": list(candidate.silver_precedent_ids),
+                "memory_preference_score": candidate.memory_preference_score,
+                "memory_preference_adjustment": (
+                    candidate.memory_preference_adjustment
+                ),
+                "memory_rank_before": candidate.memory_rank_before,
+                "memory_rank_after": candidate.memory_rank_after,
+                "memory_changed_selection": (
+                    candidate.memory_changed_selection
+                ),
+            }
+            for candidate in candidates
+        ],
         "records": records,
     }
 

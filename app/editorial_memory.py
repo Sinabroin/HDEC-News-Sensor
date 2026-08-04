@@ -110,6 +110,9 @@ class RetrievalResult:
     near_miss: tuple[RetrievalMatch, ...]
     hard_negative: tuple[RetrievalMatch, ...]
     mode: str = "local"
+    # R4-R7 runtime integration — silver first-stage candidates are weak
+    # advisory evidence (weaker than gold, never terminal).
+    silver: tuple[RetrievalMatch, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -288,6 +291,7 @@ def retrieve(
         near_miss=top(EVIDENCE_NEAR_MISS),
         hard_negative=top(EVIDENCE_HARD_NEGATIVE),
         mode="local",
+        silver=top(EVIDENCE_SILVER),
     )
 
 

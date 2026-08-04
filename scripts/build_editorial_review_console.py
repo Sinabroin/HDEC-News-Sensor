@@ -203,6 +203,7 @@ def main() -> int:
         collection_audit["feedback_queries_attempted"] = len(feedback_queries)
         collection_audit["feedback_articles_collected"] = len(feedback_rows)
 
+    selection_counters = editorial_briefings.SelectionAuditCounters()
     articles = editorial_briefings.normalize_articles(
         raw_articles,
         coverage,
@@ -210,6 +211,8 @@ def main() -> int:
         resolve_images=not args.fixture,
         allow_image_network=not args.fixture,
         selection_mode=editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY,
+        selection_audit=selection_counters,
+        edition_type="daily",
     )
     if not articles:
         raise SystemExit("no candidate articles in Daily coverage")
@@ -272,6 +275,7 @@ def main() -> int:
     bundle["feedback_profile_version"] = profile.get("version", 2)
     bundle["article_import_api_url"] = article_import_api_url
     bundle["article_import_enabled"] = bool(article_import_api_url)
+    bundle["selection_audit"] = selection_counters.manifest_fields()
     (edition_dir / "candidates.json").write_text(
         json.dumps(bundle, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -299,6 +303,7 @@ def main() -> int:
         "teams_sends": 0,
         "telegram_sends": 0,
         "production_state_writes": 0,
+        **selection_counters.manifest_fields(),
         "article_import_api_configured": bool(article_import_api_url),
         "image_network_calls": image_counters.image_download_attempts,
         **image_counters.manifest_fields(),

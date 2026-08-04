@@ -14,11 +14,16 @@ from __future__ import annotations
 
 import html
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
-from app import ai_centrality, publisher_direct, source_priority
+from app import (
+    ai_centrality,
+    editorial_preference_runtime,
+    publisher_direct,
+    source_priority,
+)
 from app.public_urls import CANONICAL_DASHBOARD_URL
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
@@ -477,6 +482,21 @@ class TeamsPushCandidate:
     # R4-R6 §7 — evidence-based delivery category from the canonical
     # title/lead map; a sendable candidate always carries one.
     delivery_category: str = ""
+    # R4-R7 §4 stage 8 — human-memory preference decision. Audit-only shadow
+    # while the committed profile is inactive: ranks expose the would-change
+    # ordering; the bounded adjustment reorders equal-importance peers only
+    # when an explicitly activated (or preview-fixture) profile is verified.
+    editorial_memory_profile: str = ""
+    editorial_memory_active: bool = False
+    approved_precedent_ids: tuple[str, ...] = ()
+    rejected_precedent_ids: tuple[str, ...] = ()
+    near_miss_precedent_ids: tuple[str, ...] = ()
+    silver_precedent_ids: tuple[str, ...] = ()
+    memory_preference_score: float = 0.0
+    memory_preference_adjustment: float = 0.0
+    memory_rank_before: int = 0
+    memory_rank_after: int = 0
+    memory_changed_selection: bool = False
 
 
 @dataclass(frozen=True)
@@ -1416,7 +1436,11 @@ def select_teams_push_from_artifact_with_audit(
     payload: object,
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
-) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int]]:
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
+) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int | bool | str]]:
     """Fail-closed entrypoint for a raw delta artifact, with selection audit.
 
     D7-AK-6C — the artifact-level ``shadow_alert_delta`` flag is no longer required: a
@@ -1448,6 +1472,8 @@ def select_teams_push_from_artifact_with_audit(
         articles,
         max_articles=max_articles,
         require_validated_fields=validated_brief,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=memory_batch_cap,
     )
 
 
@@ -1455,11 +1481,17 @@ def select_teams_push_from_artifact(
     payload: object,
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
 ) -> tuple[TeamsPushCandidate, ...]:
     """Compatibility wrapper over :func:`select_teams_push_from_artifact_with_audit`."""
     selected, _audit = select_teams_push_from_artifact_with_audit(
         payload,
         max_articles=max_articles,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=memory_batch_cap,
     )
     return selected
 
@@ -1526,12 +1558,79 @@ def collapse_event_duplicates(
     )
 
 
+def _apply_editorial_memory_stage(
+    ranked: Sequence["TeamsPushCandidate"],
+    *,
+    batch_cap: int | None,
+    runtime: "editorial_preference_runtime.EditorialPreferenceRuntime | None" = None,
+) -> list["TeamsPushCandidate"]:
+    """R4-R7 §4 stage 8 — human-memory preference adjustment.
+
+    Runs strictly after publisher-direct/safety, AI-centrality, hard
+    exclusion, executive relevance, importance, event deduplication, and
+    publisher-priority ranking, over already-eligible candidates only — so
+    memory can never resurrect a rejected article, bypass the importance
+    minimum, or unhide previously sent state. While the committed profile is
+    inactive (production today) the deterministic order is returned
+    unchanged and each candidate carries its audit-only shadow decision:
+    would-be rank and whether the capped batch membership would change. An
+    explicitly activated profile (test fixture / preview) applies the
+    bounded reorder to equal-importance peers only."""
+    if not ranked:
+        return list(ranked)
+    if runtime is None:
+        runtime = editorial_preference_runtime.default_runtime()
+    decisions = [
+        runtime.decide(editorial_preference_runtime.PRODUCT_TEAMS, item.article)
+        for item in ranked
+    ]
+    order = editorial_preference_runtime.memory_adjusted_order(
+        len(ranked),
+        [decision.preference_adjustment for decision in decisions],
+        group_of=lambda index: IMPORTANCE_RANK.get(
+            ranked[index].importance.level, 9
+        ),
+    )
+    member_count = len(ranked) if batch_cap is None else min(batch_cap, len(ranked))
+    baseline_members = set(range(member_count))
+    adjusted_members = set(order[:member_count])
+    rank_after = {index: position + 1 for position, index in enumerate(order)}
+    final_indices = order if runtime.memory_active else list(range(len(ranked)))
+    return [
+        replace(
+            ranked[index],
+            editorial_memory_profile=decisions[index].profile_version,
+            editorial_memory_active=decisions[index].memory_active,
+            approved_precedent_ids=decisions[index].approved_precedent_ids,
+            rejected_precedent_ids=decisions[index].rejected_precedent_ids,
+            near_miss_precedent_ids=(
+                decisions[index].near_miss_precedent_ids
+            ),
+            silver_precedent_ids=decisions[index].silver_precedent_ids,
+            memory_preference_score=decisions[index].preference_score,
+            memory_preference_adjustment=(
+                decisions[index].preference_adjustment
+            ),
+            memory_rank_before=index + 1,
+            memory_rank_after=rank_after[index],
+            memory_changed_selection=(
+                (index in baseline_members) != (index in adjusted_members)
+            ),
+        )
+        for index in final_indices
+    ]
+
+
 def select_teams_push_candidates_with_audit(
     articles: Iterable[Mapping[str, Any]],
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
     require_validated_fields: bool = False,
-) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int]]:
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
+) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int | bool | str]]:
     """Filter, collapse same-event duplicates, rank, and cap Teams candidates.
 
     Policy eligibility is unchanged. Same-event multi-publisher clusters keep
@@ -1568,17 +1667,37 @@ def select_teams_push_candidates_with_audit(
 
     representatives, event_duplicates = collapse_event_duplicates(candidates)
     ranked = sorted(representatives, key=_distinct_event_rank_key)
+    effective_cap = (
+        None
+        if max_articles is None
+        else max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))
+    )
+    audit_cap = memory_batch_cap
+    if audit_cap is None:
+        audit_cap = effective_cap
+    if audit_cap is None:
+        audit_cap = MAX_TEAMS_ARTICLES
+    audit_cap = max(0, min(int(audit_cap), MAX_TEAMS_ARTICLES))
+    ranked = _apply_editorial_memory_stage(
+        ranked,
+        batch_cap=audit_cap,
+        runtime=preference_runtime,
+    )
     audit = {
         "policy_eligible": len(candidates),
         "event_duplicates": len(event_duplicates),
         "distinct_events": len(ranked),
+        "editorial_memory_invoked": bool(ranked),
+        "editorial_memory_profile": (
+            ranked[0].editorial_memory_profile if ranked else ""
+        ),
+        "editorial_memory_active": (
+            ranked[0].editorial_memory_active if ranked else False
+        ),
     }
-    if max_articles is None:
+    if effective_cap is None:
         return tuple(ranked), audit
-    return (
-        tuple(ranked[: max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))]),
-        audit,
-    )
+    return tuple(ranked[:effective_cap]), audit
 
 
 def select_teams_push_candidates(
@@ -1586,12 +1705,18 @@ def select_teams_push_candidates(
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
     require_validated_fields: bool = False,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
 ) -> tuple[TeamsPushCandidate, ...]:
     """Compatibility wrapper over :func:`select_teams_push_candidates_with_audit`."""
     selected, _audit = select_teams_push_candidates_with_audit(
         articles,
         max_articles=max_articles,
         require_validated_fields=require_validated_fields,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=memory_batch_cap,
     )
     return selected
 
