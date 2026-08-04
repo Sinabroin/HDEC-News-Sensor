@@ -1,0 +1,67 @@
+{
+  "profile_version": "profile-v001",
+  "builder_version": "editorial-profile-builder-v1",
+  "corpus_digest": "3017cbe0df277e91ccd8b22068dde7d4adc293d9874fc6cd733753acb57a5be2",
+  "source_record_count": 75,
+  "gold_plus_count": 5,
+  "gold_selected_count": 28,
+  "silver_count": 33,
+  "near_miss_count": 0,
+  "hard_negative_count": 9,
+  "decision_record_count": 10,
+  "category_distribution": {
+    "기술정보": 21,
+    "기업동향": 15,
+    "투자·산업": 18
+  },
+  "product_heads": {
+    "teams": {
+      "weights": {
+        "central": 2.0,
+        "confirmed": 2.0,
+        "structural": 1.5,
+        "gold_sim": 1.5,
+        "negative_sim": -2.5,
+        "sensational": -1.0,
+        "societal": 0.0,
+        "specificity": 1.0
+      }
+    },
+    "daily": {
+      "weights": {
+        "central": 2.0,
+        "confirmed": 1.0,
+        "structural": 1.0,
+        "gold_sim": 1.5,
+        "negative_sim": -2.0,
+        "sensational": -0.5,
+        "societal": 0.5,
+        "specificity": 1.0
+      }
+    },
+    "weekly_tni": {
+      "weights": {
+        "central": 1.5,
+        "confirmed": 0.5,
+        "structural": 1.0,
+        "gold_sim": 2.0,
+        "negative_sim": -2.0,
+        "sensational": -0.5,
+        "societal": 1.5,
+        "specificity": 0.5
+      }
+    }
+  },
+  "prior_profile": null,
+  "rollback_target": null,
+  "active": false,
+  "activation_requirements": [
+    "historical backtest",
+    "regression pass",
+    "explicit human approval",
+    "committed profile pointer change",
+    "normal PR review"
+  ],
+  "build_timestamp": "2026-08-04T01:27:10+00:00",
+  "profile_digest": "96cedd1d4cb7dd09afacc591ce185cd5fdf6538da828193caa201b569c969fdb"
+}
