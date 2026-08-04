@@ -80,6 +80,16 @@
       "sent_at": "2026-08-04T01:25:20+09:00",
       "source": "서울경제"
     },
+    "ce4967d2f47ff405": {
+      "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
+      "delivery_id": "teams_ai_push:6f167df94e8c",
+      "first_sent_at": "2026-08-04T13:34:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "95f725770fb8ba73e5b8e5db2ff66818ffe4e4ddc20b1fe1e525bc621fea83a8",
+      "sent_at": "2026-08-04T13:34:57+09:00",
+      "source": "테크M"
+    },
     "cf15b9983762072d": {
       "cluster_key": "title:전남광주장성20mwai데이터센터구축착수ai패브릭참여",
       "delivery_id": "teams_ai_push:9fc32a0cf6a2",
@@ -842,6 +852,16 @@
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
     },
+    "title:프리즈미안전기자재업체애트코어인수추진북미전력": {
+      "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
+      "delivery_id": "teams_ai_push:6f167df94e8c",
+      "first_sent_at": "2026-08-04T13:34:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "95f725770fb8ba73e5b8e5db2ff66818ffe4e4ddc20b1fe1e525bc621fea83a8",
+      "sent_at": "2026-08-04T13:34:57+09:00",
+      "source": "테크M"
+    },
     "title:한국대체투자자산운용가평데이터센터개발사업추진": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
       "delivery_id": "teams_ai_push:2ecee238f08c",
@@ -903,7 +923,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T10:12:23+09:00",
+  "last_successful_send_at": "2026-08-04T13:34:57+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1314,6 +1334,16 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "https://www.techm.kr/news/articleView.html?idxno=153960": {
+      "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
+      "delivery_id": "teams_ai_push:6f167df94e8c",
+      "first_sent_at": "2026-08-04T13:34:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "95f725770fb8ba73e5b8e5db2ff66818ffe4e4ddc20b1fe1e525bc621fea83a8",
+      "sent_at": "2026-08-04T13:34:57+09:00",
+      "source": "테크M"
     },
     "https://www.thebell.co.kr/free/content/ArticleView.asp?key=202607231554104200106421": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
@@ -1746,6 +1776,16 @@
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
+    },
+    "프리즈미안전기자재업체애트코어인수추진북미전력": {
+      "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
+      "delivery_id": "teams_ai_push:6f167df94e8c",
+      "first_sent_at": "2026-08-04T13:34:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "95f725770fb8ba73e5b8e5db2ff66818ffe4e4ddc20b1fe1e525bc621fea83a8",
+      "sent_at": "2026-08-04T13:34:57+09:00",
+      "source": "테크M"
     },
     "한국대체투자자산운용가평데이터센터개발사업추진": {
       "cluster_key": "title:한국대체투자자산운용가평데이터센터개발사업추진",
