@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "20b231647e65eac4": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
+    },
     "2dea91c174766c96": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
       "delivery_id": "teams_ai_push:bec31cab7b44",
@@ -922,6 +932,16 @@
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
     },
+    "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
+    },
     "title:청사진에서실행으로네이버sktai인프라베팅본격화": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
       "delivery_id": "teams_ai_push:e3cce31ce214",
@@ -1023,7 +1043,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T02:03:09+09:00",
+  "last_successful_send_at": "2026-08-05T03:49:29+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1414,6 +1434,16 @@
       "material_signature": "095d41955f48843987d24a9840970e3af87b5eedc7afcaa06d5fe0a5e37b2fb3",
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
+    },
+    "https://www.newsquest.co.kr/news/articleView.html?idxno=271082": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
     },
     "https://www.newsworks.co.kr/news/articleView.html?idxno=848665": {
       "cluster_key": "title:대미투자1호로가스복합발전소건설사업유력",
@@ -1946,6 +1976,16 @@
       "material_signature": "3606fd404e5bdcd453fc326a3b1e5728b3bb9c92b6626bcd7c2528749b827496",
       "sent_at": "2026-07-27T21:32:00+09:00",
       "source": "한국경제"
+    },
+    "주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다": {
+      "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
+      "delivery_id": "teams_ai_push:4698e856f96a",
+      "first_sent_at": "2026-08-05T03:49:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
+      "sent_at": "2026-08-05T03:49:29+09:00",
+      "source": "뉴스퀘스트"
     },
     "청사진에서실행으로네이버sktai인프라베팅본격화": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
