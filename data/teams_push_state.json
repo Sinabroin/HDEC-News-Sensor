@@ -140,6 +140,16 @@
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
     },
+    "be78a660fee97ba4": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
+    },
     "ce4967d2f47ff405": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
       "delivery_id": "teams_ai_push:6f167df94e8c",
@@ -551,6 +561,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
     },
     "title:5자금고객전력성패가를3대변수": {
       "cluster_key": "title:5자금고객전력성패가를3대변수",
@@ -1083,7 +1103,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T06:50:39+09:00",
+  "last_successful_send_at": "2026-08-05T08:03:53+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1495,6 +1515,16 @@
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
     },
+    "https://www.newspim.com/news/view/20260805000052": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
+    },
     "https://www.newsquest.co.kr/news/articleView.html?idxno=271082": {
       "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
       "delivery_id": "teams_ai_push:4698e856f96a",
@@ -1636,6 +1666,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
+      "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
+      "delivery_id": "teams_ai_push:860f1b41957d",
+      "first_sent_at": "2026-08-05T08:03:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "7172692cc6a0581879e38a7cfd2bc1448b7a6df66b387504c357945ec33a6540",
+      "sent_at": "2026-08-05T08:03:53+09:00",
+      "source": "뉴스핌"
     },
     "5자금고객전력성패가를3대변수": {
       "cluster_key": "title:5자금고객전력성패가를3대변수",
