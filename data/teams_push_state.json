@@ -20,6 +20,16 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "32ac15c8cb6ede93": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
+    },
     "3400540a608c7015": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
       "delivery_id": "teams_ai_push:eaac50fef721",
@@ -872,6 +882,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "title:정부smr국가전략기술지정경남원전업계세제혜택기대": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
+    },
     "title:제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
       "delivery_id": "teams_ai_push:6ea7bd54a35e",
@@ -983,7 +1003,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T21:23:33+09:00",
+  "last_successful_send_at": "2026-08-05T00:01:52+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1294,6 +1314,16 @@
       "material_signature": "1cdd102eccafd36c119d7309e6a05be11887756699b938378052894e315c2527",
       "sent_at": "2026-07-30T03:58:35+09:00",
       "source": "중앙일보"
+    },
+    "https://www.knnews.co.kr/news/articleView.php?idxno=1547991": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
     },
     "https://www.news1.kr/realestate/general/6242752": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
@@ -1856,6 +1886,16 @@
       "material_signature": "a181b1b91aec8eff95f85fd22a6cec08067b61599c14f492762e440761a4759f",
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
+    },
+    "정부smr국가전략기술지정경남원전업계세제혜택기대": {
+      "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
+      "delivery_id": "teams_ai_push:c84ea5925f92",
+      "first_sent_at": "2026-08-05T00:01:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
+      "sent_at": "2026-08-05T00:01:52+09:00",
+      "source": "경남신문"
     },
     "제12차전기본에원전4기smr2기추가해야": {
       "cluster_key": "title:제12차전기본에원전4기smr2기추가해야",
