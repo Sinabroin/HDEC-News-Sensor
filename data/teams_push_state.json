@@ -110,6 +110,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "dcf282f21cb86661": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
+    },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -491,6 +501,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
     },
     "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
@@ -943,7 +963,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-04T16:23:02+09:00",
+  "last_successful_send_at": "2026-08-04T19:11:00+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -954,6 +974,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "http://www.biztribune.co.kr/news/articleView.html?idxno=356951": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
     },
     "http://www.newsworker.co.kr/news/articleView.html?idxno=439527": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
@@ -1436,6 +1466,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
+      "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
+      "delivery_id": "teams_ai_push:491a7d818ca9",
+      "first_sent_at": "2026-08-04T19:11:00+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
+      "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
     },
     "ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
