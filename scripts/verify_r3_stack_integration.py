@@ -131,6 +131,11 @@ SUBVERIFIERS = (
         r"RESULT=D7-AK-6E_TEAMS_VALIDATED_BRIEF_SEMANTIC_EQUIVALENCE_PASS",
     ),
     (
+        "TEAMS_MAJOR_MEDIA_GATE_VERIFIER",
+        "verify_teams_major_media_gate.py",
+        r"RESULT=D7-AK-6E_R4R9A_TEAMS_MAJOR_MEDIA_GATE_PASS",
+    ),
+    (
         "NEWS_CENSOR_FULL_IMAGE_COVERAGE_VERIFIER",
         "verify_news_censor_image_coverage.py",
         r"RESULT=D7-AK-6E_NEWS_CENSOR_FULL_IMAGE_COVERAGE_PASS",

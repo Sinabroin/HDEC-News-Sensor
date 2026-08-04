@@ -42,9 +42,11 @@ for _p in (str(ROOT), str(ROOT / "scripts")):
 import send_email_alert  # noqa: E402
 import send_teams_ai_push as sender  # noqa: E402
 from app.teams_push_state import (  # noqa: E402
+    HELD_SPECIALISTS_KEY,
     InvalidTeamsPushState,
     empty_state,
     load_state,
+    observe_held_specialist,
     save_state,
 )
 from app.public_urls import CANONICAL_DASHBOARD_URL  # noqa: E402
@@ -118,7 +120,10 @@ def _article(**overrides):
         "title": "OpenAI와 Microsoft, AI 데이터센터 투자 계약 체결",
         "summary": "양사가 AI 데이터센터 투자 계약을 공식 체결했다.",
         "hdec_relevance": "데이터센터 EPC와 전력 인프라 사업 기회에 직접 영향",
-        "source": "Reuters",
+        # R4-R9A: the default fixture publisher is a locked primary-ten name —
+        # the major-media-first source gate makes non-major publishers
+        # non-selectable, and these fixtures prove the delivery path.
+        "source": "연합뉴스",
         "published_at": "2026-07-23T00:20:00+00:00",
         "url": DIRECT_ARTICLE_URL,
         "publisher_direct": True,
@@ -212,7 +217,10 @@ _CAP_TITLES = (
 
 
 def _cap_articles(n: int) -> list:
-    sources = ("Reuters", "연합뉴스", "전자신문", "블룸버그")
+    # R4-R9A: all four rotating publishers are locked primary-ten names so the
+    # batch/cap/drain matrix keeps proving capacity behavior; source-gate
+    # rejection and holdback are proven by their own dedicated fixtures.
+    sources = ("연합뉴스", "KBS", "조선일보", "매일경제")
     return [
         _article(
             article_key=f"cap-{i}",
@@ -343,6 +351,7 @@ def _deliver(
     send=True,
     statuses=(250,),
     max_articles=10,
+    now="",
 ):
     recorder = _SMTPRecorder(statuses)
     artifact = _write(
@@ -358,6 +367,7 @@ def _deliver(
         report_url="https://example.com/report",
         smtp_factory=recorder,
         max_articles=max_articles,
+        now_iso_value=now,
     )
     return summary, recorder
 
@@ -607,7 +617,7 @@ def check_delivery(tmp: Path) -> None:
         ("기사 제목", "AI 데이터센터 투자 계약 체결"),
         ("핵심 요약", "양사가 AI 데이터센터 투자 계약을 공식 체결했다."),
         ("왜 중요한가", "데이터센터 EPC와 전력 인프라 사업 기회에 직접 영향"),
-        ("출처", "Reuters"),
+        ("출처", "연합뉴스"),
         ("언론사 원문 링크", DIRECT_ARTICLE_URL),
         ("대시보드 링크", CANONICAL_DASHBOARD_URL),
     ):
@@ -1326,6 +1336,168 @@ def check_workflow() -> None:
           scheduled.count(semantic_command) == 1)
 
 
+def check_source_gate(tmp: Path) -> None:
+    """R4-R9A — major-media-first source gate on the production delivery path.
+
+    Deep scenario coverage (the three observed URLs, the full §10 fixture
+    matrix) lives in scripts/verify_teams_major_media_gate.py; this block
+    keeps the workflow-gating verifier proving the production contract."""
+    # 1) Mixed supply: primary/secondary deliver immediately, specialist and
+    #    trusted-other publishers are held, a neutral publisher never sends.
+    mixed = [
+        _article(article_key="gate-p1", title=_CAP_TITLES[0],
+                 source="연합뉴스", url="https://publisher.example.test/gate/1"),
+        _article(article_key="gate-p2", title=_CAP_TITLES[1],
+                 source="KBS", url="https://publisher.example.test/gate/2"),
+        _article(article_key="gate-s1", title=_CAP_TITLES[2],
+                 source="동아일보", url="https://publisher.example.test/gate/3"),
+        _article(article_key="gate-h1", title=_CAP_TITLES[7],
+                 source="테크M",
+                 url="https://www.techm.kr/news/articleView.html?idxno=990001"),
+        _article(article_key="gate-h2", title=_CAP_TITLES[8],
+                 source="전자신문", url="https://publisher.example.test/gate/5"),
+        _article(article_key="gate-n1", title=_CAP_TITLES[9],
+                 source="Reuters", url="https://publisher.example.test/gate/6"),
+    ]
+    state = tmp / "state-source-gate.json"
+    mixed_summary, rec = _deliver(
+        tmp, _payload(mixed), state,
+        statuses=(250, 250, 250),
+        now="2026-08-04T09:00:00+09:00",
+    )
+    check("source gate: only major-media articles deliver",
+          mixed_summary["delivered_count"] == 3
+          and rec.attempts == [FIXTURE_TEAMS_CHANNEL] * 3, str(mixed_summary))
+    check("source gate: specialist/trusted articles are held, not deferred",
+          mixed_summary["teams_specialist_held_rows"] == 2
+          and mixed_summary["deferred_rows"] == 0, str(mixed_summary))
+    check("source gate: neutral publisher is never selected",
+          mixed_summary["source_gate_rejected_rows"] == 1, str(mixed_summary))
+    check("source gate: selected tier counters are exact",
+          mixed_summary["selected_primary_10_rows"] == 2
+          and mixed_summary["selected_secondary_3_rows"] == 1
+          and mixed_summary["selected_specialist_rows"] == 0, str(mixed_summary))
+    check("source gate: counters reconcile with the gate partition",
+          mixed_summary["counters_reconciled"] is True)
+    saved = load_state(state)
+    held_records = saved.get(HELD_SPECIALISTS_KEY) or {}
+    check("source gate: held specialists persist without entering the sent ledger",
+          len(held_records) == 2 and len(saved["article_ids"]) == 3,
+          str(sorted(held_records)))
+    check("source gate: held record carries identity and holdback fields",
+          all(
+              entry.get("first_seen_at") and entry.get("cluster_key")
+              and entry.get("holdback_reason") and entry.get("source_tier")
+              for entry in held_records.values()
+          ), str(held_records))
+    gh_output = tmp / "source-gate-output.txt"
+    sender._write_github_output(str(gh_output), mixed_summary)
+    gh_text = gh_output.read_text(encoding="utf-8")
+    check("source gate: GITHUB_OUTPUT exposes the §11 counters",
+          all(token in gh_text for token in (
+              "raw_primary_10_rows=2",
+              "raw_secondary_3_rows=1",
+              "raw_specialist_rows=2",
+              "teams_immediate_major_rows=3",
+              "teams_specialist_held_rows=2",
+              "teams_specialist_selected_rows=0",
+              "selected_primary_10_rows=2",
+              "selected_secondary_3_rows=1",
+              "selected_promoted_official_rows=0",
+              "selected_specialist_rows=0",
+              "source_gate_rejected_rows=1",
+          )), gh_text)
+
+    # 2) Specialist-only supply: zero selected, zero attempted; a dry run
+    #    evaluates holdback without writing any state.
+    specialists = [
+        _article(article_key="gate-only-1", title=_CAP_TITLES[7],
+                 source="테크M",
+                 url="https://www.techm.kr/news/articleView.html?idxno=990002"),
+        _article(article_key="gate-only-2", title=_CAP_TITLES[8],
+                 source="테크월드",
+                 url="https://www.epnc.co.kr/news/articleView.html?idxno=990003"),
+    ]
+    spec_state = tmp / "state-source-gate-specialist.json"
+    summary, rec = _deliver(
+        tmp, _payload(specialists), spec_state,
+        now="2026-08-04T09:00:00+09:00",
+    )
+    check("specialist-only supply selects and attempts zero",
+          summary["selected"] == 0 and summary["SMTP_attempted"] == 0
+          and rec.attempts == [], str(summary))
+    check("specialist-only supply is fully held",
+          summary["teams_specialist_held_rows"] == 2
+          and summary["teams_specialist_selected_rows"] == 0)
+    dry_state = tmp / "state-source-gate-dry.json"
+    summary, _rec = _deliver(
+        tmp, _payload(specialists), dry_state,
+        send=False, now="2026-08-04T09:00:00+09:00",
+    )
+    check("dry run evaluates holdback but writes no state",
+          summary["selected"] == 0 and not dry_state.exists())
+
+    # 3) Aged unique TOP specialist with direct HDEC relevance: the §6
+    #    exceptional fallback delivers exactly one and clears its hold.
+    fallback_article = _article(
+        article_key="gate-f1",
+        title=_CAP_TITLES[10],
+        summary="현대건설이 AI 데이터센터 EPC 계약을 체결했다.",
+        source="테크M",
+        url="https://www.techm.kr/news/articleView.html?idxno=990004",
+    )
+    aged_state_path = tmp / "state-source-gate-fallback.json"
+    save_state(
+        observe_held_specialist(
+            empty_state(), fallback_article,
+            cluster_key="", source="테크M", source_tier="neutral",
+            holdback_reason="holdback_active", fallback_eligible=False,
+            now="2026-08-04T07:00:00+09:00",
+        ),
+        aged_state_path,
+    )
+    summary, rec = _deliver(
+        tmp, _payload([fallback_article]), aged_state_path,
+        now="2026-08-04T09:05:00+09:00",
+    )
+    check("aged unique TOP specialist falls back to exactly one delivery",
+          summary["delivered_count"] == 1
+          and summary["teams_specialist_selected_rows"] == 1, str(summary))
+    fallback_saved = load_state(aged_state_path)
+    check("delivered fallback clears its hold and enters the sent ledger",
+          not (fallback_saved.get(HELD_SPECIALISTS_KEY) or {})
+          and len(fallback_saved["article_ids"]) == 1, str(fallback_saved))
+
+    # 4) A fallback-blocked publisher never sends even under the same aged
+    #    TOP conditions.
+    blocked_article = _article(
+        article_key="gate-b1",
+        title="현대건설, 국가 AI 컴퓨팅센터 시공 계약 체결",
+        summary="현대건설이 국가 AI 컴퓨팅센터 시공 계약을 체결했다.",
+        source="뉴스워커",
+        url="http://www.newsworker.co.kr/news/articleView.html?idxno=990005",
+    )
+    blocked_state_path = tmp / "state-source-gate-blocked.json"
+    save_state(
+        observe_held_specialist(
+            empty_state(), blocked_article,
+            cluster_key="", source="뉴스워커", source_tier="neutral",
+            holdback_reason="fallback_blocked_publisher",
+            fallback_eligible=False,
+            now="2026-08-04T07:00:00+09:00",
+        ),
+        blocked_state_path,
+    )
+    summary, rec = _deliver(
+        tmp, _payload([blocked_article]), blocked_state_path,
+        now="2026-08-04T09:05:00+09:00",
+    )
+    check("fallback-blocked publisher never sends even when aged TOP",
+          summary["delivered_count"] == 0
+          and summary["teams_specialist_selected_rows"] == 0
+          and rec.attempts == [], str(summary))
+
+
 def main() -> int:
     production_sha_before = _sha(PRODUCTION_STATE)
     production_status_before = _state_status(PRODUCTION_STATE)
@@ -1342,6 +1514,7 @@ def main() -> int:
         check_fail_closed(tmp)
         check_delivery(tmp)
         check_cap_and_partial(tmp)
+        check_source_gate(tmp)
         check_no_leaks(tmp)
     check_workflow()
     production_sha_after = _sha(PRODUCTION_STATE)
