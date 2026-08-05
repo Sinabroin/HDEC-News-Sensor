@@ -50,6 +50,16 @@
       "sent_at": "2026-08-05T03:49:29+09:00",
       "source": "뉴스퀘스트"
     },
+    "2a9a29b7cae18c3d": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
+    },
     "2cd26ada793ca48f": {
       "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
       "delivery_id": "teams_ai_push:50fdcc4e29b1",
@@ -862,6 +872,16 @@
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
     },
+    "title:동해안데이터센터이제는제도가길을열어야한다": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
+    },
     "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
       "delivery_id": "teams_ai_push:2d85b2b3d756",
@@ -1263,7 +1283,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-06T02:15:06+09:00",
+  "last_successful_send_at": "2026-08-06T03:58:57+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1654,6 +1674,16 @@
       "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
       "sent_at": "2026-08-05T00:01:52+09:00",
       "source": "경남신문"
+    },
+    "https://www.kwnews.co.kr/article/20260805500203": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
     },
     "https://www.kyongbuk.co.kr/news/articleView.html?idxno=4080401": {
       "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
@@ -2116,6 +2146,16 @@
       "material_signature": "dc1cc50135605ccf4d26192983227eb778f72d4f70b1c82211fda28ea2532948",
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
+    },
+    "동해안데이터센터이제는제도가길을열어야한다": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
     },
     "두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
