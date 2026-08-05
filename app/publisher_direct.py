@@ -216,6 +216,38 @@ def normalize_publisher_canonical_url(value: object) -> str:
     )
 
 
+def unwrap_security_intermediary_url(value: object) -> str:
+    """R4-R9B §3 — extract the destination from a security-intermediary wrapper.
+
+    Audit/feedback-input helper only: a Microsoft Teams/Outlook SafeLinks
+    wrapper is never a publisher and never canonical article identity.
+    Returns the normalized publisher destination carried in the wrapper's
+    ``url`` query parameter, or ``""`` when the input is not a known
+    security-intermediary URL or carries no safe http(s) destination.
+    Nested wrappers unwrap at most twice; anything deeper is rejected.
+    """
+    current = str(value or "").strip()
+    for _ in range(2):
+        if portal_provider(current) != "security_intermediary":
+            return ""
+        try:
+            parsed = urlparse(current)
+        except ValueError:
+            return ""
+        destinations = [
+            item
+            for key, item in parse_qsl(parsed.query, keep_blank_values=False)
+            if key.casefold() == "url"
+        ]
+        if len(destinations) != 1:
+            return ""
+        current = destinations[0].strip()
+        if portal_provider(current) == "security_intermediary":
+            continue
+        return normalize_publisher_canonical_url(current)
+    return ""
+
+
 def _metadata(article: Mapping) -> dict:
     value = article.get("source_metadata") or article.get("source_metadata_json") or {}
     if isinstance(value, str):

@@ -707,6 +707,22 @@ def deliver(
         ],
         "selected_specialist_rows": gate_batch.audit["selected_specialist_rows"],
         "source_gate_rejected_rows": gate_batch.audit["source_gate_rejected_rows"],
+        # R4-R9B §6 — stock-market hard-exclusion counters (exact names).
+        "stock_market_dominant_rows": int(
+            selection_audit.get("stock_market_dominant_rows") or 0
+        ),
+        "stock_market_hard_rejected_rows": int(
+            selection_audit.get("stock_market_hard_rejected_rows") or 0
+        ),
+        "stock_market_hdec_exception_rows": int(
+            selection_audit.get("stock_market_hdec_exception_rows") or 0
+        ),
+        "stock_market_fallback_blocked_rows": int(
+            selection_audit.get("stock_market_fallback_blocked_rows") or 0
+        ),
+        "stock_market_gate_rejected_rows": int(
+            gate_batch.audit.get("stock_market_gate_rejected_rows") or 0
+        ),
         "selected_source_audit": selected_source_audit,
         "skip_reasons": {
             "already_sent": blocked,

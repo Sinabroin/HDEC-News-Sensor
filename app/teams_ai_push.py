@@ -468,6 +468,70 @@ _MAJOR_CONFIRMED_EVENT_TOKENS = (
     "정책", "법", "승인", "착공", "선정",
 )
 
+# ---------------------------------------------------------------------------
+# R4-R9B §4 — Teams stock-market dominant-subject hard exclusion.
+#
+# Market-commentary title forms the canonical ai_centrality vocabulary does
+# not carry: rally / index / sector-rotation / profit-taking / sentiment /
+# strategy / valuation-debate framing.  Observed-production evidence: the
+# NewsPim "[5일 중국증시] AI 랠리 훈풍…순환매 장세" delivery would still pass
+# every layer once "증시" were absent — "랠리/순환매/코스피" alone had no rule.
+# Deliberately absent: bare "투자" (strategic action signal), bare
+# "강세/약세" (industry demand phrasing), bare "수혜" (policy-benefit
+# phrasing) — those would reject legitimate industry events.
+# ---------------------------------------------------------------------------
+_STOCK_DOMINANT_EXTENDED_TERMS = (
+    "랠리", "순환매", "차익실현", "차익 실현", "투자심리", "투자 심리",
+    "투자전략", "투자 전략", "매수 추천", "매도 추천", "비중 확대", "비중확대",
+    "저가 매수", "매수세", "매도세", "순매수", "순매도", "공매도",
+    "코스피", "코스닥", "나스닥", "다우지수", "다우존스", "s&p500", "s&p 500",
+    "주식시장", "주식 시장", "장세", "시황", "폭등", "폭락", "신고가", "신저가",
+    "수혜 종목", "고평가 논란", "저평가 논란", "거품 논란", "버블 논란",
+)
+
+#: Named Hyundai E&C entities — the §5 exception is entity-strict; broad
+#: industry context ("건설", "EPC") can never create it.
+_HDEC_ENTITY_TITLE_TERMS = (
+    "현대건설",
+    "현대엔지니어링",
+    "hyundai e&c",
+    "hyundai engineering & construction",
+)
+
+#: Confirmed material HDEC event forms (title/lead zone).  Definite forms
+#: only — bare "수주"/"계약" would let "수주 기대감" speculation qualify.
+_HDEC_MATERIAL_EVENT_TERMS = (
+    "계약 체결", "계약을 체결", "계약 공시", "공급계약", "공급 계약",
+    "수주했", "수주 확정", "수주 계약", "수주 성공", "낙찰", "우선협상대상자",
+    "착공", "준공", "공시", "제재", "과징금", "행정처분", "영업정지",
+    "중대재해", "사고", "인수 완료", "인수 확정", "투자 확정", "투자한다",
+    "승인", "발효", "시행", "협약 체결", "mou 체결",
+)
+
+STOCK_MARKET_EXCLUSION_REASON = "stock_market_dominant_no_hdec_material_event"
+
+
+@dataclass(frozen=True)
+class StockMarketGateDecision:
+    """R4-R9B §4/§5 — one evidence-based stock-market gate decision.
+
+    ``dominant`` is the §4 dominant-subject verdict; ``eligible`` is False
+    only for the hard rejection (dominant without the §5 HDEC material-event
+    exception).  ``blunt_stock_evidence`` records legacy full-text stock-term
+    hits so the §5 exception can also lift the pre-existing blunt text
+    rejection for a materially HDEC article (fixture: EPC contract with a
+    secondary share-price mention).  Generated why-it-matters text is never
+    an evidence zone here.
+    """
+
+    dominant: bool
+    hdec_material_event: bool
+    eligible: bool
+    exclusion_reason: str = ""
+    exception_reason: str = ""
+    evidence_terms: tuple[str, ...] = ()
+    blunt_stock_evidence: bool = False
+
 
 @dataclass(frozen=True)
 class TopicDecision:
@@ -542,6 +606,10 @@ class TeamsPolicyEvaluation:
     public_routing: (
         public_institution_routing.PublicInstitutionRoutingDecision
     ) = public_institution_routing.PublicInstitutionRoutingDecision()
+    # R4-R9B — stock-market gate decision; None only on the transport-level
+    # early rejections (carry-forward / freshness / authority / malformed)
+    # that never reach any delivery lane.
+    stock_market: StockMarketGateDecision | None = None
 
 
 def _value(obj: object, key: str, default: Any = "") -> Any:
@@ -1341,6 +1409,140 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
     )
 
 
+_ALL_STOCK_MARKET_TERMS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        _STOCK_TERMS
+        + ai_centrality.STOCK_MARKET_TITLE_TERMS
+        + _STOCK_DOMINANT_EXTENDED_TERMS
+    )
+)
+
+
+def _hdec_direct_material_event(article: object) -> str:
+    """R4-R9B §5 — matched confirmed-HDEC-event term, or "".
+
+    Entity evidence must be a named Hyundai E&C entity in the *title*; the
+    confirmed material action may come from title, publisher subtitle, or the
+    first lead sentence.  Generated why-it-matters/relevance fields are never
+    consulted, so they can never create the exception.
+    """
+    title = f" {_lower(ai_centrality.article_title(article))} "
+    if not _has(title, _HDEC_ENTITY_TITLE_TERMS):
+        return ""
+    zone = " ".join(
+        part
+        for part in (
+            title,
+            _lower(ai_centrality.article_subtitle(article)),
+            ai_centrality.article_lead_sentence(article),
+        )
+        if part.strip()
+    )
+    hits = _has(f" {zone} ", _HDEC_MATERIAL_EVENT_TERMS)
+    return hits[0] if hits else ""
+
+
+def evaluate_stock_market_gate(article: object) -> StockMarketGateDecision:
+    """R4-R9B §4 — semantic, evidence-based stock-market hard gate.
+
+    Dominance lanes (title first, per the P0-C1.11 precedent):
+
+    1. canonical — :func:`app.ai_centrality.classify` surface-market form
+       (title tokens or finance-desk section) without a structural AI causal
+       event;
+    2. extended — a :data:`_STOCK_DOMINANT_EXTENDED_TERMS` commentary form in
+       the title, again without a structural AI causal event;
+    3. summary — two or more distinct market signals in the publisher factual
+       summary while the title carries no confirmed action.
+
+    A dominant article is hard-rejected unless the §5 HDEC material-event
+    exception applies; the fact that a stock moved is never itself the event.
+    The decision uses title / publisher subtitle / factual summary / explicit
+    classification fields only.
+    """
+    decision = ai_centrality.classify(article)
+    structural = bool(decision.structural_event)
+    canonical_dominant = decision.surface_market and not structural
+    evidence: tuple[str, ...] = decision.exclusion_terms if canonical_dominant else ()
+
+    title = f" {_lower(ai_centrality.article_title(article))} "
+    extended_hits = _has(title, _STOCK_DOMINANT_EXTENDED_TERMS)
+    extended_dominant = bool(extended_hits) and not structural
+    if extended_dominant:
+        evidence = tuple(dict.fromkeys(evidence + extended_hits))
+
+    summary_dominant = False
+    if not (canonical_dominant or extended_dominant or structural):
+        after = _mapping(article, "after")
+        summary = _lower(
+            _value(article, "summary")
+            or _value(article, "snippet")
+            or after.get("summary")
+            or after.get("snippet")
+        )
+        if summary:
+            summary_hits = _has(f" {summary} ", _ALL_STOCK_MARKET_TERMS)
+            distinct = {term.replace(" ", "") for term in summary_hits}
+            if len(distinct) >= 2 and not _has(title, _CONFIRMED_ACTION_TERMS):
+                summary_dominant = True
+                evidence = tuple(dict.fromkeys(evidence + summary_hits))
+
+    dominant = canonical_dominant or extended_dominant or summary_dominant
+    blunt = bool(_has(f" {_core_article_text(article)} ", _STOCK_TERMS))
+    material_term = (
+        _hdec_direct_material_event(article) if (dominant or blunt) else ""
+    )
+    if dominant and not material_term:
+        return StockMarketGateDecision(
+            dominant=True,
+            hdec_material_event=False,
+            eligible=False,
+            exclusion_reason=STOCK_MARKET_EXCLUSION_REASON,
+            evidence_terms=evidence,
+            blunt_stock_evidence=blunt,
+        )
+    exception_reason = (
+        f"hdec_material_event:{material_term}" if material_term else ""
+    )
+    return StockMarketGateDecision(
+        dominant=dominant,
+        hdec_material_event=bool(material_term),
+        eligible=True,
+        exception_reason=exception_reason,
+        evidence_terms=evidence,
+        blunt_stock_evidence=blunt,
+    )
+
+
+def _stock_neutralized_article(article: Mapping[str, Any]) -> dict[str, Any]:
+    """Copy with stock-market vocabulary scrubbed from factual text fields.
+
+    Used only for the §5 exception re-classification: the remaining evidence
+    (AI centrality, confirmed event, relevance) must independently qualify,
+    so the exception can never bypass any other gate.
+    """
+    ordered = sorted(_ALL_STOCK_MARKET_TERMS, key=len, reverse=True)
+
+    def scrub(value: object) -> str:
+        text = _clean(value)
+        for term in ordered:
+            text = re.sub(re.escape(term), " ", text, flags=re.IGNORECASE)
+        return " ".join(text.split())
+
+    neutralized = dict(article)
+    for key in ("title", "summary", "snippet"):
+        if _clean(neutralized.get(key)):
+            neutralized[key] = scrub(neutralized.get(key))
+    after = _mapping(article, "after")
+    if after:
+        after_copy = dict(after)
+        for key in ("title", "summary", "snippet"):
+            if _clean(after_copy.get(key)):
+                after_copy[key] = scrub(after_copy.get(key))
+        neutralized["after"] = after_copy
+    return neutralized
+
+
 def evaluate_teams_push_policy(
     article: Mapping[str, Any],
     *,
@@ -1396,7 +1598,36 @@ def evaluate_teams_push_policy(
             True, False, "malformed_required_field",
         )
 
+    # R4-R9B §4 — the stock-market hard gate is decided before topic
+    # classification, ranking, the ledger, the major-media source gate, the
+    # specialist holdback, and every fallback: a hard-rejected article never
+    # becomes a candidate at all.  The five decision fields are stamped on
+    # the normalized row so every downstream audit sees the same verdict.
+    stock_gate = evaluate_stock_market_gate(article)
+    article["stock_market_dominant_subject"] = stock_gate.dominant
+    article["hdec_direct_material_event"] = stock_gate.hdec_material_event
+    article["stock_market_exclusion_reason"] = stock_gate.exclusion_reason
+    article["stock_market_exception_reason"] = stock_gate.exception_reason
+    article["teams_stock_market_eligible"] = stock_gate.eligible
+
     topic = classify_ai_topic(article)
+    if not topic.eligible:
+        stock_class_reasons = {
+            "stock_or_theme_article",
+            f"excluded_{ai_centrality.EXCLUSION_STOCK_MARKET}",
+        }
+        if (
+            topic.exclusion_reason in stock_class_reasons
+            and stock_gate.eligible
+            and stock_gate.hdec_material_event
+        ):
+            # R4-R9B §5 — the dominant confirmed event is independently
+            # material to Hyundai E&C, so a market reference must not itself
+            # reject the article.  Re-classify on the stock-neutralized
+            # evidence: every other gate (AI centrality, speculation,
+            # relevance, importance, source gate, ledger) still applies to
+            # the remaining evidence and can still reject it.
+            topic = classify_ai_topic(_stock_neutralized_article(article))
     if not topic.eligible:
         if topic.exclusion_reason == "speculation_without_confirmed_event":
             reason = "speculation_only"
@@ -1409,10 +1640,28 @@ def evaluate_teams_push_policy(
             reason = topic.exclusion_reason
         else:
             reason = "not_ai_core"
+        if not stock_gate.eligible and not reason.startswith(
+            ("excluded_", "ai_not_central_")
+        ):
+            # R4-R9B §4 — a hard-rejected dominant market article records the
+            # stock exclusion rather than a vague legacy bucket; canonical
+            # granular reasons above keep their existing vocabulary.
+            reason = "excluded_stock_market_dominant"
         return TeamsPolicyEvaluation(
             article, topic, False,
             ImportanceDecision(False, reason=topic.exclusion_reason),
             True, False, reason,
+            stock_market=stock_gate,
+        )
+
+    if not stock_gate.eligible:
+        # R4-R9B §4 — extended/summary-lane dominant market article that the
+        # canonical title vocabulary missed (e.g. "AI 랠리…코스피" forms).
+        return TeamsPolicyEvaluation(
+            article, topic, False,
+            ImportanceDecision(False, reason=STOCK_MARKET_EXCLUSION_REASON),
+            True, False, "excluded_stock_market_dominant",
+            stock_market=stock_gate,
         )
 
     hdec_relevant = is_executive_relevant_for_push(article, topic)
@@ -1421,6 +1670,7 @@ def evaluate_teams_push_policy(
             article, topic, False,
             ImportanceDecision(False, reason="insufficient_executive_relevance"),
             True, False, "insufficient_hdec_relevance",
+            stock_market=stock_gate,
         )
 
     importance = map_importance(article, topic)
@@ -1432,6 +1682,7 @@ def evaluate_teams_push_policy(
         return TeamsPolicyEvaluation(
             article, topic, True, importance, True, False,
             reason_map.get(importance.reason, "other_policy_reason"),
+            stock_market=stock_gate,
         )
 
     # R4-R6 §7 — an article cannot be sent with a category whose evidence is
@@ -1443,6 +1694,7 @@ def evaluate_teams_push_policy(
         return TeamsPolicyEvaluation(
             article, topic, True, importance, True, False,
             "no_evidenced_delivery_category",
+            stock_market=stock_gate,
         )
 
     # R4-R8: authority is not priority. A verified official article is a
@@ -1460,12 +1712,14 @@ def evaluate_teams_push_policy(
             "public_institution_not_promoted",
             delivery_category=category,
             public_routing=public_route,
+            stock_market=stock_gate,
         )
 
     return TeamsPolicyEvaluation(
         article, topic, True, importance, True, True, "",
         delivery_category=category,
         public_routing=public_route,
+        stock_market=stock_gate,
     )
 
 
@@ -1499,7 +1753,15 @@ def select_teams_push_from_artifact_with_audit(
     article (see :func:`map_importance`). Only the live-source guard remains, so
     mock/fallback artifacts and malformed article collections always return zero.
     """
-    empty_audit = {"policy_eligible": 0, "event_duplicates": 0, "distinct_events": 0}
+    empty_audit = {
+        "policy_eligible": 0,
+        "event_duplicates": 0,
+        "distinct_events": 0,
+        "stock_market_dominant_rows": 0,
+        "stock_market_hard_rejected_rows": 0,
+        "stock_market_hdec_exception_rows": 0,
+        "stock_market_fallback_blocked_rows": 0,
+    }
     if not isinstance(payload, Mapping):
         return (), empty_audit
     validated_brief = False
@@ -1807,7 +2069,31 @@ def apply_major_media_first_gate(
     immediate: list[GatedCandidate] = []
     holdback_lane: list[GatedCandidate] = []
     rejected: list[GatedCandidate] = []
+    stock_gate_rejected = 0
     for candidate in accepted:
+        # R4-R9B §4 — defensive re-check at the gate boundary.  Policy-built
+        # candidates can never be stock-ineligible (the policy rejects them
+        # first), so this only guards directly-constructed batches: a
+        # dominant market article must not become immediate, held, or
+        # fallback-eligible regardless of age, importance, or publisher.
+        stock_decision = evaluate_stock_market_gate(candidate.article)
+        if not stock_decision.eligible:
+            stock_gate_rejected += 1
+            rejected.append(
+                GatedCandidate(
+                    candidate=candidate,
+                    gate=SourceGateDecision(
+                        gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+                        tier="",
+                        tier_rank=99,
+                        publisher_rank=99,
+                        immediate=False,
+                        fallback_blocked=True,
+                        reason="stock_market_hard_excluded",
+                    ),
+                )
+            )
+            continue
         gate = evaluate_source_gate(candidate)
         item = GatedCandidate(candidate=candidate, gate=gate)
         if gate.immediate:
@@ -1950,6 +2236,9 @@ def apply_major_media_first_gate(
             item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
             for item in selected
         ),
+        # R4-R9B §4 — normally zero; non-zero means a stock-dominant article
+        # reached the gate boundary directly and was force-rejected there.
+        "stock_market_gate_rejected_rows": stock_gate_rejected,
     }
     return SourceGateBatchResult(
         selected=selected,
@@ -2052,6 +2341,11 @@ def select_teams_push_candidates_with_audit(
     public_routes: list[
         public_institution_routing.PublicInstitutionRoutingDecision
     ] = []
+    # R4-R9B §6 — stock-market gate counters over every policy-reached row.
+    stock_dominant_rows = 0
+    stock_hard_rejected_rows = 0
+    stock_exception_rows = 0
+    stock_fallback_blocked_rows = 0
     for article in articles:
         if not isinstance(article, Mapping):
             continue
@@ -2060,6 +2354,27 @@ def select_teams_push_candidates_with_audit(
             article,
             require_validated_fields=require_validated_fields,
         )
+        stock_gate = evaluation.stock_market
+        if stock_gate is not None:
+            stock_dominant_rows += stock_gate.dominant
+            stock_exception_rows += bool(stock_gate.exception_reason)
+            if stock_gate.dominant and not stock_gate.hdec_material_event:
+                stock_hard_rejected_rows += 1
+                # A hard-rejected row can never re-enter through the §6
+                # specialist fallback; count the rows whose source lane
+                # would otherwise have been the holdback/fallback lane.
+                policy = source_priority.teams_delivery_source_policy(
+                    _clean(
+                        _value(article, "source")
+                        or _value(article, "display_source")
+                    ),
+                    publisher_direct.publisher_url(article),
+                )
+                if (
+                    str(policy["teams_lane"])
+                    == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK
+                ):
+                    stock_fallback_blocked_rows += 1
         if not evaluation.eligible:
             continue
         candidates.append(
@@ -2139,6 +2454,14 @@ def select_teams_push_candidates_with_audit(
             candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
             for candidate in ranked
         ),
+        # R4-R9B §6 — reconciliation contract: dominant_rows equals
+        # hard_rejected_rows plus the dominant subset of exception rows;
+        # fallback_blocked_rows is the specialist-lane subset of the hard
+        # rejections (they may never re-enter through the §6 fallback).
+        "stock_market_dominant_rows": stock_dominant_rows,
+        "stock_market_hard_rejected_rows": stock_hard_rejected_rows,
+        "stock_market_hdec_exception_rows": stock_exception_rows,
+        "stock_market_fallback_blocked_rows": stock_fallback_blocked_rows,
     }
     if effective_cap is None:
         return tuple(ranked), audit
