@@ -180,6 +180,16 @@
       "sent_at": "2026-08-05T08:03:53+09:00",
       "source": "뉴스핌"
     },
+    "bf6807439f080338": {
+      "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
+      "delivery_id": "teams_ai_push:7081b3470e08",
+      "first_sent_at": "2026-08-05T18:14:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
+      "sent_at": "2026-08-05T18:14:03+09:00",
+      "source": "퍼블릭뉴스통신(Public news-network for TTL)"
+    },
     "ce4967d2f47ff405": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
       "delivery_id": "teams_ai_push:6f167df94e8c",
@@ -621,6 +631,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증": {
+      "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
+      "delivery_id": "teams_ai_push:7081b3470e08",
+      "first_sent_at": "2026-08-05T18:14:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
+      "sent_at": "2026-08-05T18:14:03+09:00",
+      "source": "퍼블릭뉴스통신(Public news-network for TTL)"
     },
     "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
@@ -1163,7 +1183,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T15:15:38+09:00",
+  "last_successful_send_at": "2026-08-05T18:14:03+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1214,6 +1234,16 @@
       "material_signature": "7cb7190d67ec1a50d70fa6e5bf46d3a279d01b78360a5e8a0f034e65abda5699",
       "sent_at": "2026-07-29T18:11:48+09:00",
       "source": "srtimes.kr"
+    },
+    "http://www.ttlnews.com/news/articleView.html?idxno=3131687": {
+      "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
+      "delivery_id": "teams_ai_push:7081b3470e08",
+      "first_sent_at": "2026-08-05T18:14:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
+      "sent_at": "2026-08-05T18:14:03+09:00",
+      "source": "퍼블릭뉴스통신(Public news-network for TTL)"
     },
     "https://biz.heraldcorp.com/article/10823717": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
@@ -1776,6 +1806,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증": {
+      "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
+      "delivery_id": "teams_ai_push:7081b3470e08",
+      "first_sent_at": "2026-08-05T18:14:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
+      "sent_at": "2026-08-05T18:14:03+09:00",
+      "source": "퍼블릭뉴스통신(Public news-network for TTL)"
     },
     "ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
