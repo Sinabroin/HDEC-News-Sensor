@@ -80,7 +80,9 @@ EXPECTED_PROTECTED_SHA256 = {
         # conservative '1' env fallback until the operator sets 5).
         # R4-R9B adds the major-media source-gate and stock-market
         # hard-exclusion verifiers to the mock-safe gate.
-        "ba6a062b009effd71f79b77f797125db759f7f166325c02750a070dc4c8568a6"
+        # R4-R9D wires the strict major-media/official-source Teams gate
+        # verifier (verify_teams_strict_source_gate.py) into the mock-safe gate.
+        "c735b4b186f80a2ccf44d2d1117f3583e9b1f94544d9be0bc162e7bdc7952940"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"
@@ -95,9 +97,9 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main 599abef, merged without modification —
-        # routine successor-pin refresh).
-        "80baa8fd75701b41c510b8ce5613d1853b6c7842f6df96623e0c91a6a763cceb"
+        # (through origin/main 36f6fb8 "chore: persist Teams AI push dedup
+        # state", merged without modification — routine successor-pin refresh).
+        "8682290603e4d4712153c72cc2def61d1ec3f635e465f53b4637e9dce4622440"
     ),
 }
 
