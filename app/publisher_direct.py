@@ -277,6 +277,13 @@ def publisher_url(article: Mapping) -> str:
         normalized = normalize_publisher_canonical_url(value)
         if normalized:
             return normalized
+        # R4-R11: a SafeLinks/security-intermediary wrapper resolves to its
+        # validated destination BEFORE publisher classification. The wrapper
+        # is never a publisher, and a wrapped long-tail URL must not degrade
+        # to label-only (spoofable) source classification.
+        unwrapped = unwrap_security_intermediary_url(value)
+        if unwrapped:
+            return unwrapped
     return ""
 
 

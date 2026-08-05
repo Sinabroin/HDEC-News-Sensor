@@ -56,7 +56,7 @@
     "excluded": "제외 출처"
   },
   "teams_delivery_source_policy": {
-    "note": "D7-AK-6E R4-R9A/R4-R9D/R4-R10 Teams 발송 전용 소스 게이트. 핵심 10·보조 3·승격 공식기관만 즉시 발송 자격이다. R4-R9D 이후 specialist/trusted_other는 자동 폴백이 제거돼 단독 자동 발송되지 않는다. never_automatic_publishers는 R4-R10 실사용 회귀(S저널 s-journal.co.kr 자동 발송)로 추가된 명시적 배제 목록이며, 어떤 tier로도 승격되지 않고 lane은 항상 never_automatic으로 고정된다(never primary_10·never secondary_3·never promoted official). 이 정책은 Teams 발송에만 적용되고 Daily/Weekly/News Censor 자격에는 영향을 주지 않는다.",
+    "note": "D7-AK-6E R4-R9A/R4-R9D/R4-R10/R4-R11 Teams 발송 전용 소스 게이트. 핵심 10·보조 3·승격 공식기관만 즉시 발송 자격이다. R4-R9D 이후 specialist/trusted_other는 자동 폴백이 제거돼 단독 자동 발송되지 않는다. never_automatic_publishers는 실사용 회귀로 추가된 명시적 배제 목록이다: R4-R10 S저널(s-journal.co.kr 자동 발송), R4-R11 TTL뉴스/퍼블릭뉴스통신(ttlnews.com idxno=3131687 자동 발송, delivery_id teams_ai_push:7081b3470e08). 목록의 매체는 어떤 tier로도 승격되지 않고 lane은 항상 never_automatic으로 고정된다(never primary_10·never secondary_3·never promoted official). 이 정책은 Teams 발송에만 적용되고 Daily/Weekly/News Censor 자격에는 영향을 주지 않는다.",
     "specialist_publishers": [
       {"name": "테크M", "aliases": ["테크m", "techm"], "domains": ["techm.kr"]},
       {"name": "테크월드", "aliases": ["테크월드", "epnc"], "domains": ["epnc.co.kr"]}
@@ -65,7 +65,15 @@
       {"name": "뉴스워커", "aliases": ["뉴스워커", "newsworker"], "domains": ["newsworker.co.kr"]}
     ],
     "never_automatic_publishers": [
-      {"name": "S저널", "aliases": ["s저널", "s-저널", "sjournal", "s journal", "에스저널"], "domains": ["s-journal.co.kr"]}
+      {"name": "S저널", "aliases": ["s저널", "s-저널", "sjournal", "s journal", "에스저널"], "domains": ["s-journal.co.kr"]},
+      {
+        "name": "TTL뉴스 / 퍼블릭뉴스통신",
+        "aliases": [
+          "ttl뉴스", "티티엘뉴스", "퍼블릭뉴스통신",
+          "public news-network for ttl", "public news network for ttl", "ttlnews"
+        ],
+        "domains": ["ttlnews.com", "www.ttlnews.com"]
+      }
     ]
   }
 }

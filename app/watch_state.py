@@ -89,7 +89,18 @@ def save_state(state: dict, path: str | Path | None = None) -> Path:
 
 
 def normalize_url(url: str) -> str:
-    """Canonical URL key for seen matching; removes common tracking noise."""
+    """Canonical URL identity key for seen/dedup matching; never an href.
+
+    R4-R11: one publisher URL identity — http/https and www/non-www variants
+    of the same article collapse to a single key, so a scheme or host-prefix
+    variant can never evade dedup or a policy regression fixture (the TTL
+    production send was ledgered as ``http://www.ttlnews.com/…`` while probes
+    searched ``https://www.ttlnews.com/…``). Tracking query noise is removed
+    and the remaining query is sorted, so query-order variants collapse too.
+    Legacy ledger keys recorded before this canonicalization are matched by
+    the lookup-side fallbacks (``first_seen_match`` /
+    ``teams_push_state.evaluate_dedup``), never by rewriting stored state.
+    """
     raw = (url or "").strip()
     if not raw:
         return ""
@@ -99,7 +110,11 @@ def normalize_url(url: str) -> str:
         return raw.lower().rstrip("/")
 
     scheme = (parsed.scheme or "https").lower()
+    if scheme == "http":
+        scheme = "https"
     netloc = parsed.netloc.lower()
+    if netloc.startswith("www."):
+        netloc = netloc[4:]
     path = re.sub(r"/{2,}", "/", urllib.parse.unquote(parsed.path or "/")).rstrip("/")
     if not path:
         path = "/"
@@ -132,11 +147,24 @@ def article_identity(article: dict) -> dict:
     }
 
 
+def _legacy_url_key_match(mapping: dict, canonical_key: str) -> bool:
+    """R4-R11: match ledger keys recorded before URL canonicalization.
+
+    Stored state is never rewritten; a legacy scheme/www-preserving key like
+    ``http://www.example.com/a`` still matches its canonical identity.
+    """
+    if not canonical_key or not isinstance(mapping, dict):
+        return False
+    return any(normalize_url(str(key)) == canonical_key for key in mapping)
+
+
 def first_seen_match(state: dict, article: dict) -> str | None:
     keys = article_identity(article)
     if keys["article_id"] and keys["article_id"] in state["seen_article_ids"]:
         return "article_id"
-    if keys["normalized_url"] and keys["normalized_url"] in state["normalized_urls"]:
+    if keys["normalized_url"] and (
+            keys["normalized_url"] in state["normalized_urls"]
+            or _legacy_url_key_match(state["normalized_urls"], keys["normalized_url"])):
         return "normalized_url"
     if (keys["title_fingerprint"]
             and keys["title_fingerprint"] in state["normalized_title_fingerprints"]):

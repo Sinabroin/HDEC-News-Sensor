@@ -1981,6 +1981,19 @@ def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
     tier = str(policy["tier"])
     tier_rank = int(policy["tier_rank"])
     publisher_rank = int(policy["publisher_rank"])
+    # R4-R11: the explicit never_automatic pin outranks every other gate
+    # class including promoted-official — a spoofed institutional lane or
+    # label combined with an excluded publisher's URL must never become an
+    # immediate Teams card.
+    if policy.get("explicit_never_automatic"):
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=False,
+            reason="explicit_never_automatic_publisher",
+        )
     if (
         candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
         and candidate.teams_alert_eligible

@@ -251,8 +251,20 @@ def material_signature(article: object) -> str:
 def _lookup(state: Mapping[str, Any], map_name: str, key: str) -> dict[str, Any] | None:
     if not key:
         return None
-    entry = state.get(map_name, {}).get(key)
-    return entry if isinstance(entry, dict) else None
+    mapping = state.get(map_name, {})
+    entry = mapping.get(key)
+    if isinstance(entry, dict):
+        return entry
+    if map_name == "normalized_urls" and isinstance(mapping, Mapping):
+        # R4-R11: ledger keys recorded before URL canonicalization preserved
+        # scheme and the www. prefix (the TTL production entry is keyed
+        # ``http://www.ttlnews.com/…``). The stored ledger is never rewritten;
+        # instead every legacy key still matches its canonical identity here,
+        # so an http/https or www/non-www variant can never evade dedup.
+        for legacy_key, legacy_entry in mapping.items():
+            if isinstance(legacy_entry, dict) and normalize_url(str(legacy_key)) == key:
+                return legacy_entry
+    return None
 
 
 def evaluate_dedup(

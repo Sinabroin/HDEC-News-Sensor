@@ -19,7 +19,14 @@ state writes 0):
   promoted official / HDEC official release / ministry publicity / stock
   exclusion / hard-gate bypass);
 * §8 the specialist audit counters, with the invariant specialist_rows_selected
-  == 0.
+  == 0;
+* §9 the exact R4-R10 S저널 production regression (never_automatic pin);
+* §10 the exact R4-R11 TTL뉴스/퍼블릭뉴스통신 production regression — the
+  ledger-traced http article and its https/bare-host/query variants all pin to
+  never_automatic, one canonical URL identity prevents scheme/www/query
+  evasion, the legacy http ledger key still dedups the https form read-only,
+  and spoofed labels / SafeLinks wrappers / a spoofed promoted-official lane
+  can never promote ttlnews.com.
 
 All delivery runs reuse the production sender ``deliver()`` with the injected
 fake SMTP recorder; gate-shape fixtures call the pure ``apply_major_media_first_gate``.
@@ -45,7 +52,10 @@ from verify_teams_ai_push_production import (  # noqa: E402
 )
 from app import public_institution_routing as pir  # noqa: E402
 from app import source_priority  # noqa: E402
-from app.publisher_direct import unwrap_security_intermediary_url  # noqa: E402
+from app.publisher_direct import (  # noqa: E402
+    publisher_url,
+    unwrap_security_intermediary_url,
+)
 from app.teams_ai_push import (  # noqa: E402
     IMPORTANCE_TOP,
     SOURCE_GATE_NEVER_AUTOMATIC,
@@ -62,9 +72,11 @@ from app.teams_ai_push import (  # noqa: E402
 from app.teams_push_state import (  # noqa: E402
     HELD_SPECIALISTS_KEY,
     empty_state,
+    evaluate_dedup,
     observe_held_specialist,
     save_state,
 )
+from app.watch_state import normalize_url  # noqa: E402
 
 NOW = "2026-08-04T17:00:00+09:00"
 AGED_FIRST_SEEN = "2026-08-04T14:30:00+09:00"   # 150 minutes before NOW
@@ -99,6 +111,27 @@ LONG_TAIL = [
 SJOURNAL_URL = "https://www.s-journal.co.kr/news/articleView.html?idxno=42865"
 SJOURNAL_SOURCE = "S저널"
 SJOURNAL_TITLE = "최태원, HBM으로 빅테크 묶었다…5000억 달러 'AI 동맹' SKT까지 확장"
+
+# §10 R4-R11 — the EXACT 2026-08-05 18:14 KST production regression. TTL뉴스/
+# 퍼블릭뉴스통신 (ttlnews.com) was auto-delivered on main as delivery_id
+# teams_ai_push:7081b3470e08 and ledgered under the scheme/www-preserving key
+# http://www.ttlnews.com/… — which is why an https-only ledger probe produced
+# a false negative. The explicit never_automatic pin plus canonical URL
+# identity (http/https · www/non-www · query-order variants collapse to one
+# key) must refuse every form of it, and the legacy ledger key must keep
+# matching its canonical identity without the production state ever being
+# rewritten.
+TTL_URL_HTTP = "http://www.ttlnews.com/news/articleView.html?idxno=3131687"
+TTL_URL_HTTPS = "https://www.ttlnews.com/news/articleView.html?idxno=3131687"
+TTL_URL_BARE = "https://ttlnews.com/news/articleView.html?idxno=3131687"
+TTL_URL_QUERY_VARIANT = (
+    "https://www.ttlnews.com/news/articleView.html?utm_source=teams&idxno=3131687"
+)
+TTL_SOURCE = "퍼블릭뉴스통신(Public news-network for TTL)"
+TTL_TITLE = "AI데이터센터 매출 폭풍성장…SK텔레콤 2분기 영업익 67.3% 급증"
+TTL_DELIVERY_ID = "teams_ai_push:7081b3470e08"
+TTL_PIN_NAME = "TTL뉴스 / 퍼블릭뉴스통신"
+PRODUCTION_STATE_PATH = ROOT / "data" / "teams_push_state.json"
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -153,6 +186,21 @@ def sjournal(**overrides):
         ),
         hdec_relevance="현대건설 직접 영향(AI 데이터센터 전력 인프라)",
         shadow_confirmed_event_types=["partnership_signed"],
+    )
+    base.update(overrides)
+    return base
+
+
+def ttlnews(url: str = TTL_URL_HTTP, **overrides):
+    """The exact TTL production article (verbatim title / source label / URL)
+    framed as a confirmed HDEC contract event so every pre-gate (AI topic,
+    importance, stock lane) passes and ONLY the source gate can stop it."""
+    base = specialist_article(
+        "obs-ttl-3131687", TTL_SOURCE, url,
+        title=TTL_TITLE,
+        summary="현대건설이 AI 데이터센터 전력 인프라 계약을 체결했다.",
+        hdec_relevance="현대건설 직접 영향(AI 데이터센터 전력 인프라)",
+        shadow_confirmed_event_types=["contract_signed"],
     )
     base.update(overrides)
     return base
@@ -489,6 +537,137 @@ def main() -> int:
               and summary["selected_specialist_rows"] == 0
               and summary["delivered_count"] == 1, str(summary))
 
+    # ---------------------------------------------------- §10 R4-R11 TTL regression
+    import hashlib
+    import json
+
+    state_bytes_before = PRODUCTION_STATE_PATH.read_bytes()
+    production_state = json.loads(state_bytes_before)
+
+    # (a) the production send is traced in the committed ledger exactly as
+    # delivered: legacy scheme/www-preserving key, delivery id, source label.
+    ledger_entry = (production_state.get("normalized_urls") or {}).get(TTL_URL_HTTP)
+    check("§10 TTL production send is traced in the ledger under the legacy http key",
+          isinstance(ledger_entry, dict)
+          and ledger_entry.get("delivery_id") == TTL_DELIVERY_ID
+          and ledger_entry.get("source") == TTL_SOURCE, str(ledger_entry))
+
+    # (b) publisher policy: every URL form of the exact article is pinned
+    # never_automatic (never primary_10 / secondary_3 / official).
+    for label, url in (("http", TTL_URL_HTTP), ("https", TTL_URL_HTTPS),
+                       ("bare-host", TTL_URL_BARE), ("query-variant", TTL_URL_QUERY_VARIANT)):
+        ttl_policy = source_priority.teams_delivery_source_policy(TTL_SOURCE, url)
+        check(f"§10 TTL {label} URL is never_automatic on the explicit pin",
+              ttl_policy["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC
+              and ttl_policy["explicit_never_automatic"] == TTL_PIN_NAME
+              and ttl_policy["tier"] not in source_priority.TEAMS_IMMEDIATE_TIERS
+              and ttl_policy["tier"] != "official_institution", str(ttl_policy))
+    for alias in ("TTL뉴스", "티티엘뉴스", "퍼블릭뉴스통신", "ttlnews"):
+        alias_policy = source_priority.teams_delivery_source_policy(alias, "")
+        check(f"§10 TTL alias '{alias}' alone is never_automatic",
+              alias_policy["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC
+              and alias_policy["explicit_never_automatic"] == TTL_PIN_NAME,
+              str(alias_policy))
+
+    # (c) spoof resistance: a major-media label, a SafeLinks wrapper, and even
+    # a spoofed promoted-official candidate cannot promote ttlnews.com.
+    spoof_major = source_priority.teams_delivery_source_policy("연합뉴스", TTL_URL_HTTPS)
+    check("§10 spoofed 연합뉴스 label on ttlnews.com stays never_automatic",
+          spoof_major["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC,
+          str(spoof_major))
+    ttl_wrapped = (
+        "https://nam11.safelinks.protection.outlook.com/?url="
+        + TTL_URL_HTTPS.replace(":", "%3A").replace("/", "%2F") + "&data=x&reserved=0"
+    )
+    ttl_unwrapped = unwrap_security_intermediary_url(ttl_wrapped)
+    spoof_wrapped = source_priority.teams_delivery_source_policy(
+        "연합뉴스", publisher_url({"url": ttl_wrapped}))
+    check("§10 SafeLinks-wrapped ttlnews.com resolves to the destination before "
+          "classification and stays never_automatic",
+          "ttlnews.com" in ttl_unwrapped
+          and spoof_wrapped["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC,
+          f"{ttl_unwrapped} {spoof_wrapped}")
+    spoof_official = make_candidate(
+        source=TTL_SOURCE, url=TTL_URL_HTTPS, cluster="evt-ttl-spoof", official=True)
+    spoof_gate = evaluate_source_gate(spoof_official)
+    check("§10 spoofed promoted-official lane on ttlnews.com is still never_automatic",
+          spoof_gate.gate_class == SOURCE_GATE_NEVER_AUTOMATIC
+          and not spoof_gate.immediate
+          and spoof_gate.reason == "explicit_never_automatic_publisher",
+          str(spoof_gate))
+
+    # (d) one canonical URL identity: scheme/www/query-order variants collapse,
+    # and the https form matches the legacy http ledger entry read-only — a
+    # scheme variant can never evade dedup, and the state is never rewritten.
+    canonical_keys = {normalize_url(u) for u in (
+        TTL_URL_HTTP, TTL_URL_HTTPS, TTL_URL_BARE, TTL_URL_QUERY_VARIANT)}
+    check("§10 http/https/www/query variants collapse to one canonical identity",
+          len(canonical_keys) == 1, str(canonical_keys))
+    dedup_https = evaluate_dedup(
+        production_state,
+        {"title": "완전히 다른 제목의 후속 기사", "url": TTL_URL_HTTPS, "id": "ttl-probe"},
+        cluster_key="", signature="probe", is_material_update=False)
+    check("§10 https variant of the exact article is deduped against the legacy "
+          "http ledger key",
+          dedup_https.send_allowed is False
+          and dedup_https.matched_key == "normalized_url", str(dedup_https))
+
+    with tempfile.TemporaryDirectory(prefix="hdec-r4r11-ttl-") as raw:
+        tmp = Path(raw)
+        # (e) exact article through the production sender, http and https:
+        # selected 0, accepted/delivered 0, sent 0, never_automatic_rejected 1,
+        # specialist_or_neutral_rejected 1.
+        for label, url in (("http", TTL_URL_HTTP), ("https", TTL_URL_HTTPS)):
+            st = tmp / f"ttl-exact-{label}.json"
+            summary, rec = deliver(tmp, [ttlnews(url)], st)
+            check(f"§10 exact TTL article ({label}): selected=0 accepted=0 sent=0",
+                  summary["selected"] == 0 and rec.attempts == []
+                  and summary["delivered_count"] == 0
+                  and summary["smtp_attempted_rows"] == 0, str(summary))
+            check(f"§10 exact TTL article ({label}): never_automatic_rejected_rows == 1 "
+                  "and specialist_or_neutral_rejected_rows == 1",
+                  summary["never_automatic_rejected_rows"] == 1
+                  and summary["specialist_or_neutral_rejected_rows"] == 1
+                  and summary["source_gate_rejected_rows"] == 1, str(summary))
+        cand = select_teams_push_candidates([ttlnews()], max_articles=None)
+        check("§10 TTL candidate passes every pre-gate yet the source gate refuses it",
+              len(cand) == 1
+              and evaluate_source_gate(cand[0]).gate_class == SOURCE_GATE_NEVER_AUTOMATIC
+              and evaluate_source_gate(cand[0]).reason
+              == "explicit_never_automatic_publisher", str(cand))
+        # (f) the verbatim production framing (earnings summary, no confirmed
+        # material event) is additionally stopped by the stock-market hard
+        # lane — two independent gates now reject the observed send.
+        st = tmp / "ttl-verbatim.json"
+        summary, rec = deliver(
+            tmp,
+            [ttlnews(summary="SK텔레콤이 AI 데이터센터 매출 성장에 힘입어 2분기 실적을 발표했다.",
+                     hdec_relevance="AI 데이터센터 전력 인프라 수요 확대",
+                     shadow_confirmed_event_types=["earnings_update"])],
+            st,
+        )
+        check("§10 verbatim earnings framing is also blocked (stock lane, selected 0)",
+              summary["selected"] == 0 and rec.attempts == []
+              and summary["delivered_count"] == 0, str(summary))
+        # (g) TTL + a same-event primary-ten card: the primary is the only
+        # selection; the never-automatic publisher is never the representative.
+        st = tmp / "ttl-plus-primary.json"
+        summary, rec = deliver(
+            tmp,
+            [ttlnews(cluster_key="evt-ttl"),
+             primary("p-ttl", "연합뉴스: SK텔레콤 AI 데이터센터 실적 공식 발표",
+                     "연합뉴스", cluster_key="evt-ttl",
+                     hdec_relevance="현대건설 직접 영향",
+                     shadow_confirmed_event_types=["contract_signed"])],
+            st,
+        )
+        check("§10 TTL + same-event primary: primary only, never-automatic selected 0",
+              summary["selected"] == 1 and summary["selected_primary_10_rows"] == 1
+              and summary["delivered_count"] == 1, str(summary))
+
+    check("§10 production ledger was read-only (byte-identical after the run)",
+          PRODUCTION_STATE_PATH.read_bytes() == state_bytes_before)
+
     print(f"checks={CHECKS} failures={len(FAILURES)}")
     if FAILURES:
         for name in FAILURES:
@@ -498,6 +677,10 @@ def main() -> int:
     print(
         "theguru_regression=blocked long_tail_publishers=10 "
         "sjournal_regression=blocked sjournal_specialist_or_neutral_rejected=1 "
+        "ttl_regression=blocked ttl_http_exact=blocked ttl_https_exact=blocked "
+        "ttl_never_automatic_rejected=1 ttl_specialist_or_neutral_rejected=1 "
+        "ttl_automatic_teams_selected=0 ttl_automatic_teams_sent=0 "
+        "url_identity_canonical=1 production_state_reads=readonly "
         "specialist_rows_selected=0 network_calls=0 real_smtp_connections=0 "
         "teams_sends=0 telegram_sends=0 production_state_writes=0 "
         f"specialist_max_per_batch={TEAMS_SPECIALIST_MAX_PER_BATCH}"

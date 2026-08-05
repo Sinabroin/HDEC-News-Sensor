@@ -103,9 +103,13 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main 17b6223 "chore: persist Teams AI push dedup
+        # (through origin/main 6c54e5a "chore: persist Teams AI push dedup
         # state", merged without modification — routine successor-pin refresh).
-        "93f26acbf2ae86de0496249fe96660914cd815e0f4156f7aeec2a65afedc3400"
+        # This state contains the R4-R11 TTL production send
+        # (teams_ai_push:7081b3470e08, http://www.ttlnews.com/…idxno=3131687);
+        # verify_teams_strict_source_gate §10 proves it read-only and pins the
+        # publisher to never_automatic.
+        "8b9282c71db714ab3c4af8f1da0a3bc5b3021a0e080836523f11acd4fdfa9370"
     ),
 }
 
