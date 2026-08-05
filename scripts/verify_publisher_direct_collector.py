@@ -105,15 +105,16 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main 6c54e5a "chore: persist Teams AI push dedup
-        # state", then 710a59a — merged without modification, routine successor-
-        # pin refresh; 710a59a adds the 신아일보 20:35 send, blocked on this
-        # branch by the generic R4-R9D never_automatic lane).
+        # (through origin/main 6c54e5a → 710a59a → 86d3e6b "chore: persist
+        # Teams AI push dedup state" — merged without modification, routine
+        # successor-pin refresh; 86d3e6b batch adds six overnight sends from
+        # ungated main, five of them non-major tier that this branch's
+        # R4-R9A/R9D source gate holds back or blocks).
         # This state contains the R4-R11 TTL production send
         # (teams_ai_push:7081b3470e08, http://www.ttlnews.com/…idxno=3131687);
         # verify_teams_strict_source_gate §10 proves it read-only and pins the
         # publisher to never_automatic.
-        "064a28e73cd30b7a9813ca921e496b4ea8222ebe2b5186ca2bd94baa0b3c072b"
+        "a0cb212b46562bd0a3e8012be75e527099bb4c0d35cc1704ae49960a906b85e6"
     ),
 }
 
