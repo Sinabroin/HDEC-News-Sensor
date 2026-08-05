@@ -99,7 +99,7 @@ def operator_health():
 
 
 @router.get("/api/auth/github/login")
-def github_login():
+def github_login(request: Request):
     if not operator_auth.oauth_configured():
         return JSONResponse(
             status_code=503,
@@ -108,6 +108,18 @@ def github_login():
     state = operator_auth.generate_state()
     response = RedirectResponse(operator_auth.github_authorize_url(state), status_code=302)
     operator_auth.set_state_cookie(response, state)
+    # R4-R9C — preserve only the validated local edition identity across the
+    # OAuth round-trip (never a caller-supplied URL); invalid input clears any
+    # stale return so the callback falls back to the fixed success URL.
+    editor_return = operator_auth.encode_editor_return(
+        request.query_params.get("product"),
+        request.query_params.get("edition_id"),
+        request.query_params.get("source"),
+    )
+    if editor_return:
+        operator_auth.set_editor_return_cookie(response, editor_return)
+    else:
+        operator_auth.clear_editor_return_cookie(response)
     return response
 
 
@@ -127,6 +139,7 @@ def github_callback(request: Request):
             content={"status": "auth_required", "authenticated": False},
         )
         operator_auth.clear_state_cookie(response)
+        operator_auth.clear_editor_return_cookie(response)
         return response
     try:
         token = operator_auth.exchange_code_for_token(code)
@@ -137,6 +150,7 @@ def github_callback(request: Request):
             content={"status": "auth_required", "authenticated": False},
         )
         operator_auth.clear_state_cookie(response)
+        operator_auth.clear_editor_return_cookie(response)
         return response
     if not operator_auth.allowed_github_login(login):
         response = JSONResponse(
@@ -144,9 +158,20 @@ def github_callback(request: Request):
             content={"status": "forbidden", "authenticated": False},
         )
         operator_auth.clear_state_cookie(response)
+        operator_auth.clear_editor_return_cookie(response)
         return response
-    response = RedirectResponse(config.OPERATOR_AUTH_SUCCESS_URL, status_code=302)
+    # R4-R9C — the post-login destination is re-validated from scratch and
+    # reconstructed from canonical constants; anything unknown or malformed
+    # fails closed to the fixed success URL (no open redirect surface).
+    success_url = (
+        operator_auth.editor_return_url_from_cookie(
+            request.cookies.get(config.OPERATOR_EDITOR_RETURN_COOKIE)
+        )
+        or config.OPERATOR_AUTH_SUCCESS_URL
+    )
+    response = RedirectResponse(success_url, status_code=302)
     operator_auth.clear_state_cookie(response)
+    operator_auth.clear_editor_return_cookie(response)
     operator_auth.set_session_cookie(response, login)
     return response
 

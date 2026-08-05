@@ -33,6 +33,7 @@ for _path in (ROOT, SCRIPTS):
         sys.path.insert(0, str(_path))
 
 from app import (collector, editorial_briefing_state, editorial_briefings, editorial_review, news_access, news_censor_verified_state, publisher_direct)  # noqa: E402
+from app import public_urls as public_url_contract  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
 RUNTIME_MANIFEST = "runtime-manifest.json"
@@ -282,6 +283,43 @@ def _runtime_dir(value: str | None, edition_type: str) -> Path:
     return path
 
 
+def _edition_manifest_docs_path(edition_id: str, docs_root: Path | None = None) -> Path:
+    """Append-only immutable Daily edition manifest location (id embeds revision)."""
+    if not public_url_contract.parse_daily_edition_id(edition_id):
+        raise OrchestratorError("invalid daily edition id")
+    root = docs_root if docs_root is not None else ROOT
+    return root / "docs" / "editorial" / "daily" / "editions" / f"{edition_id}.json"
+
+
+def write_daily_edition_manifest(edition, *, docs_root: Path | None = None) -> str:
+    """R4-R9C — persist the immutable editor-load manifest, append-only.
+
+    A republished date mints a new edition_id, so the only same-path rewrite
+    ever allowed is the byte-identical idempotent one; a differing payload at
+    an existing path fails closed instead of overwriting an older edition."""
+    manifest_error = editorial_briefings.verify_daily_edition_manifest(
+        edition.edition_manifest
+    )
+    if manifest_error:
+        raise OrchestratorError(f"edition manifest invalid: {manifest_error}")
+    root = docs_root if docs_root is not None else ROOT
+    edition_manifest_file = _edition_manifest_docs_path(edition.edition_id, root)
+    payload = (
+        json.dumps(edition.edition_manifest, ensure_ascii=False, indent=2) + "\n"
+    ).encode("utf-8")
+    if edition_manifest_file.exists():
+        if edition_manifest_file.read_bytes() != payload:
+            raise OrchestratorError(
+                "edition manifest collision: refusing to overwrite an existing edition"
+            )
+    else:
+        editorial_briefings.atomic_write_bytes(edition_manifest_file, payload)
+    try:
+        return edition_manifest_file.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(edition_manifest_file.resolve())
+
+
 def _docs_paths(edition_type: str, key: str) -> tuple[Path, Path]:
     directory = ROOT / "docs" / "editorial" / edition_type
     return directory / f"{key}.html", directory / "latest.html"
@@ -313,7 +351,7 @@ def _load_runtime_manifest(runtime_dir: Path, edition_type: str) -> dict:
         "version", "edition_type", "edition_key", "coverage_start", "coverage_end",
         "html_sha256", "public_dated_url", "public_latest_url", "dated_path",
         "latest_path", "teams_text", "teams_html", "headline", "issue_mode",
-        "article_count",
+        "article_count", "edition_id", "editor_url",
     }
     optional = set(
         editorial_briefings.SelectionAuditCounters().manifest_fields()
@@ -321,6 +359,7 @@ def _load_runtime_manifest(runtime_dir: Path, edition_type: str) -> dict:
         "feedback_proposal_path",
         "feedback_proposal_sha256",
         "feedback_proposal_created",
+        "edition_manifest_path",
     }
     if (
         not isinstance(value, dict)
@@ -583,10 +622,19 @@ def run_publish(
                 review,
                 limit=editorial_briefings.DAILY_MAX_ARTICLES,
             )
+            # R4-R9C — the operator editor action requires the dated Review
+            # Console for this edition to already exist in the repository;
+            # otherwise the message degrades to public-link-only output.
+            editor_console_available = (
+                ROOT / "docs" / "editorial" / "review" / key / "index.html"
+            ).is_file()
             edition = editorial_briefings.render_daily(
                 selected_articles,
                 run_at=run_at,
                 root_url=root_url,
+                review_mode=review_mode,
+                review_decision=review_decision,
+                editor_console_available=editor_console_available,
             )
             raw_selection_manifest = bundle.get("selection_audit")
             if isinstance(raw_selection_manifest, dict):
@@ -620,6 +668,8 @@ def run_publish(
                         editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
                     ),
                     selection_audit=selection_counters,
+                    review_mode=review_mode,
+                    review_decision=review_decision,
                 )
             except editorial_briefings.EditorialError as exc:
                 if str(exc) != "empty edition":
@@ -666,7 +716,12 @@ def run_publish(
     editorial_briefings.atomic_write_bytes(latest_path, payload)
     if dated_path.read_bytes() != latest_path.read_bytes():
         raise OrchestratorError("dated/latest bytes differ after publication write")
+    edition_manifest_output = ""
+    if edition_type == "daily" and edition.editor_url:
+        edition_manifest_output = write_daily_edition_manifest(edition)
     manifest = editorial_briefings.manifest_for_runtime(edition, dated_path, latest_path)
+    if edition_manifest_output:
+        manifest["edition_manifest_path"] = edition_manifest_output
     if not selection_manifest:
         selection_manifest = selection_counters.manifest_fields()
     manifest.update(selection_manifest)
@@ -692,6 +747,7 @@ def run_publish(
     _github_output("edition", edition.edition_key)
     _github_output("dated_path", _publication_output_path(dated_path))
     _github_output("latest_path", _publication_output_path(latest_path))
+    _github_output("edition_manifest_path", edition_manifest_output)
     _github_output("delivery_authorized", str(not republish).lower())
     print(
         f"publish_ready edition_type={edition_type} edition={edition.edition_key} "

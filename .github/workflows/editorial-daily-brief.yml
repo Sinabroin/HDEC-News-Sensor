@@ -48,8 +48,9 @@ jobs:
 
       - name: Verify editorial contracts offline
         run: |
-          python3 -m py_compile app/editorial_briefings.py app/editorial_briefing_state.py scripts/run_editorial_briefing.py scripts/verify_editorial_briefings.py
+          python3 -m py_compile app/editorial_briefings.py app/editorial_briefing_state.py scripts/run_editorial_briefing.py scripts/verify_editorial_briefings.py scripts/verify_daily_editor_deep_link.py
           python3 scripts/verify_editorial_briefings.py
+          python3 scripts/verify_daily_editor_deep_link.py
 
       - name: Offline preview when production gate is closed
         if: github.ref != 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_dry_run == 'true')
@@ -84,16 +85,20 @@ jobs:
         if: steps.publish.outputs.skipped == 'false'
         env:
           EDITION: ${{ steps.publish.outputs.edition }}
+          EDITION_MANIFEST_PATH: ${{ steps.publish.outputs.edition_manifest_path }}
         run: |
           DATED_PATH="docs/editorial/daily/${EDITION}.html"
           LATEST_PATH="docs/editorial/daily/latest.html"
-          if [ -z "$(git status --porcelain -- "$DATED_PATH" "$LATEST_PATH")" ]; then
+          if [ -z "$(git status --porcelain -- "$DATED_PATH" "$LATEST_PATH" ${EDITION_MANIFEST_PATH:+"$EDITION_MANIFEST_PATH"})" ]; then
             echo "Daily publication already matches; continue to public verification"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$DATED_PATH" "$LATEST_PATH"
+          if [ -n "$EDITION_MANIFEST_PATH" ]; then
+            git add -- "$EDITION_MANIFEST_PATH"
+          fi
           git commit -m "chore: publish Daily editorial brief ${EDITION}"
           for attempt in 1 2 3; do
             git fetch origin main

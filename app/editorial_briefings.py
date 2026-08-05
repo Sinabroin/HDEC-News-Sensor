@@ -710,6 +710,13 @@ class RenderedEdition:
     issue_mode: str
     headline: str
     article_count: int
+    # R4-R9C — immutable Daily edition identity. editor_url stays "" unless the
+    # dated Review Console for this edition is known to exist, so a broken
+    # editor link can never be emitted; edition_manifest is the non-sensitive
+    # editor-load record whose digest the edition_id embeds.
+    edition_id: str = ""
+    editor_url: str = ""
+    edition_manifest: dict | None = None
 
     @property
     def html_sha256(self) -> str:
@@ -4428,11 +4435,121 @@ def _weekly_sources(articles: list[EditorialArticle]) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# R4-R9C — exact-edition identity for the Daily Teams operator action.
+# The edition manifest is the immutable, non-sensitive editor-load record: it
+# binds date, coverage window, ordered articles (titles / factual summaries /
+# categories / publishers / publisher-direct URLs), the Editor's Summary, the
+# review state and the publication digest. Its integrity digest names the
+# revision, and the edition_id embeds that revision, so a republished date
+# mints a new id instead of overwriting an older edition.
+# ---------------------------------------------------------------------------
+
+DAILY_EDITOR_LINK_LABEL = "Daily Brief 편집기에서 열기"
+DAILY_PUBLISHED_LINK_LABEL = "게시된 Daily Brief 보기"
+EDITION_MANIFEST_IDENTITY_FIELDS = ("revision", "edition_id", "integrity")
+
+
+def canonical_edition_manifest_bytes(payload: Mapping) -> bytes:
+    """Digest input: sorted-key compact JSON of the manifest minus identity fields."""
+    core = {
+        key: value
+        for key, value in payload.items()
+        if key not in EDITION_MANIFEST_IDENTITY_FIELDS
+    }
+    return json.dumps(
+        core, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+
+
+def build_daily_edition_manifest(
+    *,
+    edition_key: str,
+    coverage: CoverageWindow,
+    articles: list[EditorialArticle],
+    html_sha256: str,
+    dated_url: str,
+    latest_url: str,
+    run_at: datetime,
+    review_mode: str,
+    review_decision: str,
+) -> dict:
+    manifest = {
+        "version": 1,
+        "product": "daily",
+        "edition_key": edition_key,
+        "coverage_start": coverage.start.isoformat(),
+        "coverage_end": coverage.end.isoformat(),
+        "published_run_at": _as_kst(run_at).isoformat(timespec="seconds"),
+        "review_mode": str(review_mode or "not_applicable"),
+        "review_decision": str(review_decision or "not_applicable"),
+        "headline_title": articles[0].title,
+        "editor_summary": articles[0].summary,
+        "articles": [
+            {
+                "position": index,
+                "headline": index == 1,
+                "title": article.title,
+                "summary": article.summary,
+                "category": article.category,
+                "publisher": article.source,
+                "publisher_url": article.selected_url,
+                "published_at": article.published_at.astimezone(KST).isoformat(
+                    timespec="seconds"
+                ),
+            }
+            for index, article in enumerate(articles, start=1)
+        ],
+        "publication": {
+            "dated_url": dated_url,
+            "latest_url": latest_url,
+            "html_sha256": html_sha256,
+            "publication_state": "published",
+        },
+    }
+    digest = hashlib.sha256(canonical_edition_manifest_bytes(manifest)).hexdigest()
+    manifest["revision"] = digest[:16]
+    manifest["edition_id"] = f"daily-{edition_key}-{digest[:16]}"
+    manifest["integrity"] = {
+        "algorithm": "sha256",
+        "canonicalization": "sorted-compact-json-utf8",
+        "digest": digest,
+    }
+    return manifest
+
+
+def verify_daily_edition_manifest(manifest: object) -> str:
+    """Fail-closed manifest validation; returns "" when valid, else the reason."""
+    if not isinstance(manifest, Mapping):
+        return "manifest_not_object"
+    edition_id = str(manifest.get("edition_id") or "")
+    embedded_key = public_url_contract.parse_daily_edition_id(edition_id)
+    if not embedded_key:
+        return "edition_id_malformed"
+    if manifest.get("product") != "daily" or manifest.get("edition_key") != embedded_key:
+        return "identity_mismatch"
+    integrity = manifest.get("integrity")
+    if not isinstance(integrity, Mapping):
+        return "integrity_missing"
+    digest = str(integrity.get("digest") or "")
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        return "digest_malformed"
+    if manifest.get("revision") != digest[:16] or not edition_id.endswith(digest[:16]):
+        return "revision_mismatch"
+    recomputed = hashlib.sha256(canonical_edition_manifest_bytes(manifest)).hexdigest()
+    if recomputed != digest:
+        return "digest_mismatch"
+    return ""
+
+
 def render_daily(
     articles: list[EditorialArticle],
     *,
     run_at: datetime,
     root_url: str,
+    review_mode: str = "not_applicable",
+    review_decision: str = "not_applicable",
+    editor_console_available: bool = False,
 ) -> RenderedEdition:
     if not articles:
         raise EditorialError("daily edition has no eligible linked articles")
@@ -4462,25 +4579,58 @@ def render_daily(
             "FOOTER_HTML": _brief_footer("daily", key, coverage),
         },
     )
+    bound_articles = articles[:DAILY_MAX_ARTICLES]
+    edition_manifest = build_daily_edition_manifest(
+        edition_key=key,
+        coverage=coverage,
+        articles=bound_articles,
+        html_sha256=hashlib.sha256(html.encode("utf-8")).hexdigest(),
+        dated_url=dated_url,
+        latest_url=latest_url,
+        run_at=run_at,
+        review_mode=review_mode,
+        review_decision=review_decision,
+    )
+    edition_id = edition_manifest["edition_id"]
+    # The operator action is emitted only when the dated Review Console for
+    # this edition is known to exist — a missing editor identity degrades to
+    # public-link-only output, never to a guessed or broken editor link.
+    editor_url = (
+        public_url_contract.daily_editor_console_url(edition_id, root_url=root_url)
+        if editor_console_available
+        else ""
+    )
     text_lines = [
         f"[AI 경영 T&I Daily Brief] {key}",
         headline.title,
         "",
-        f"오늘의 Daily Brief 보기: {public_url_contract.DAILY_LATEST_URL}",
-        f"전체 뉴스 대시보드 보기: {public_url_contract.CANONICAL_DASHBOARD_URL}",
     ]
+    if editor_url:
+        text_lines.append(f"{DAILY_EDITOR_LINK_LABEL}: {editor_url}")
+    text_lines.extend(
+        [
+            f"{DAILY_PUBLISHED_LINK_LABEL}: {dated_url}",
+            f"전체 뉴스 대시보드 보기: {public_url_contract.CANONICAL_DASHBOARD_URL}",
+        ]
+    )
     teams_text = "\n".join(text_lines)
     teams_html = _teams_html(
         "AI 경영 T&I Daily Brief",
         key,
         coverage,
         [("오늘의 헤드라인", escape(headline.title))],
-        public_url_contract.DAILY_LATEST_URL,
-        "오늘의 Daily Brief 보기",
+        dated_url,
+        DAILY_PUBLISHED_LINK_LABEL,
+        leading_actions=(
+            ((DAILY_EDITOR_LINK_LABEL, editor_url),) if editor_url else ()
+        ),
     )
     return RenderedEdition(
         "daily", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
         "daily", headline.title, len(articles),
+        edition_id=edition_id,
+        editor_url=editor_url,
+        edition_manifest=edition_manifest,
     )
 
 
@@ -4648,6 +4798,8 @@ def _teams_html(
     sections: list[tuple[str, str]],
     public_url: str,
     cta: str,
+    *,
+    leading_actions: tuple[tuple[str, str], ...] = (),
 ) -> str:
     blocks = "".join(
         f"<p><strong>{escape(label)}</strong><br>{body}</p>" for label, body in sections
@@ -4657,10 +4809,15 @@ def _teams_html(
         "border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:700"
     )
     dashboard_url = public_url_contract.CANONICAL_DASHBOARD_URL
+    leading = "".join(
+        f'<a href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer" '
+        f'style="{button_style}">{escape(label)}</a>'
+        for label, url in leading_actions
+    )
     return (
         '<!doctype html><html lang="ko"><body style="font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;max-width:640px;color:#101218">'
         f"<h2>{escape(heading)}</h2><p>{escape(key)}<br>{escape(coverage.label())}</p>{blocks}"
-        f'<p><a href="{escape(public_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">{escape(cta)}</a>'
+        f'<p>{leading}<a href="{escape(public_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">{escape(cta)}</a>'
         f'<a href="{escape(dashboard_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">전체 뉴스 대시보드 보기</a></p>'
         '</body></html>'
     )
@@ -4685,6 +4842,9 @@ def render_edition(
     preference_runtime: (
         "editorial_preference_runtime.EditorialPreferenceRuntime | None"
     ) = None,
+    review_mode: str = "not_applicable",
+    review_decision: str = "not_applicable",
+    editor_console_available: bool = False,
 ) -> RenderedEdition:
     coverage = coverage_for(edition_type, run_at)
     limit = DAILY_MAX_ARTICLES if edition_type == "daily" else WEEKLY_MAX_ARTICLES
@@ -4707,7 +4867,14 @@ def render_edition(
         edition_type=edition_type,
     )
     if edition_type == "daily":
-        return render_daily(articles, run_at=run_at, root_url=root_url)
+        return render_daily(
+            articles,
+            run_at=run_at,
+            root_url=root_url,
+            review_mode=review_mode,
+            review_decision=review_decision,
+            editor_console_available=editor_console_available,
+        )
     if edition_type == "weekly":
         return render_weekly(articles, run_at=run_at, root_url=root_url)
     raise EditorialError("unsupported edition type")
@@ -4724,23 +4891,80 @@ def validate_rendered(edition: RenderedEdition) -> None:
         raise EditorialError("empty edition")
 
     teams_anchors = re.findall(r"<a\b[^>]*>", edition.teams_html)
-    if len(teams_anchors) != 2:
-        raise EditorialError("Teams message must contain brief and dashboard CTAs")
-
-    expected_brief_url = public_url_contract.latest_brief_url(edition.edition_type)
-    expected_href = f'href="{escape(expected_brief_url, quote=True)}"'
-    if expected_href not in teams_anchors[0]:
-        raise EditorialError("Teams brief CTA does not target canonical latest")
     dashboard_href = (
         f'href="{escape(public_url_contract.CANONICAL_DASHBOARD_URL, quote=True)}"'
     )
-    if dashboard_href not in teams_anchors[1]:
-        raise EditorialError("Teams dashboard CTA is not canonical")
+    if edition.edition_type == "daily":
+        # R4-R9C — the reader action targets the immutable dated publication,
+        # and the optional leading operator action targets the validated
+        # exact-edition editor deep link. The mutable latest URL is never a
+        # Daily Teams action.
+        if public_url_contract.parse_daily_edition_id(edition.edition_id) != (
+            edition.edition_key
+        ):
+            raise EditorialError("daily edition identity is invalid")
+        manifest_error = verify_daily_edition_manifest(edition.edition_manifest)
+        if manifest_error:
+            raise EditorialError(f"daily edition manifest invalid: {manifest_error}")
+        manifest = dict(edition.edition_manifest or {})
+        if manifest.get("edition_id") != edition.edition_id:
+            raise EditorialError("daily edition manifest identity mismatch")
+        publication = manifest.get("publication") or {}
+        if publication.get("html_sha256") != edition.html_sha256 or (
+            publication.get("dated_url") != edition.public_dated_url
+        ):
+            raise EditorialError("daily edition manifest publication mismatch")
+        dated_suffix = f"/editorial/daily/{edition.edition_key}.html"
+        if not edition.public_dated_url.endswith(dated_suffix):
+            raise EditorialError("daily dated URL contract mismatch")
+        public_root = edition.public_dated_url[: -len(dated_suffix)]
+        expected_anchor_count = 3 if edition.editor_url else 2
+        if len(teams_anchors) != expected_anchor_count:
+            raise EditorialError("Teams message action count mismatch")
+        anchor_index = 0
+        if edition.editor_url:
+            expected_editor_url = public_url_contract.daily_editor_console_url(
+                edition.edition_id, root_url=public_root
+            )
+            if not expected_editor_url or edition.editor_url != expected_editor_url:
+                raise EditorialError(
+                    "Teams editor CTA is not a validated exact-edition link"
+                )
+            editor_href = f'href="{escape(edition.editor_url, quote=True)}"'
+            if editor_href not in teams_anchors[0]:
+                raise EditorialError("Teams editor CTA anchor mismatch")
+            if edition.editor_url not in edition.teams_text:
+                raise EditorialError("Teams text editor CTA missing")
+            anchor_index = 1
+        dated_href = f'href="{escape(edition.public_dated_url, quote=True)}"'
+        if dated_href not in teams_anchors[anchor_index]:
+            raise EditorialError(
+                "Teams published CTA does not target the immutable dated page"
+            )
+        if dashboard_href not in teams_anchors[anchor_index + 1]:
+            raise EditorialError("Teams dashboard CTA is not canonical")
+        if edition.public_dated_url not in edition.teams_text:
+            raise EditorialError("Teams text published CTA missing")
+        if public_url_contract.CANONICAL_DASHBOARD_URL not in edition.teams_text:
+            raise EditorialError("Teams text dashboard CTA missing")
+        for surface in (edition.teams_text, edition.teams_html):
+            if public_url_contract.DAILY_LATEST_URL in surface:
+                raise EditorialError("mutable latest URL is not a Daily Teams action")
+    else:
+        if len(teams_anchors) != 2:
+            raise EditorialError("Teams message must contain brief and dashboard CTAs")
 
-    if expected_brief_url not in edition.teams_text:
-        raise EditorialError("Teams text public brief CTA missing")
-    if public_url_contract.CANONICAL_DASHBOARD_URL not in edition.teams_text:
-        raise EditorialError("Teams text dashboard CTA missing")
+        expected_brief_url = public_url_contract.latest_brief_url(edition.edition_type)
+        expected_href = f'href="{escape(expected_brief_url, quote=True)}"'
+        if expected_href not in teams_anchors[0]:
+            raise EditorialError("Teams brief CTA does not target canonical latest")
+        if dashboard_href not in teams_anchors[1]:
+            raise EditorialError("Teams dashboard CTA is not canonical")
+
+        if expected_brief_url not in edition.teams_text:
+            raise EditorialError("Teams text public brief CTA missing")
+        if public_url_contract.CANONICAL_DASHBOARD_URL not in edition.teams_text:
+            raise EditorialError("Teams text dashboard CTA missing")
 
     for anchor in re.findall(r"<a\b[^>]*>", edition.html):
         if 'target="_blank"' not in anchor or 'rel="noopener noreferrer"' not in anchor:
@@ -4904,6 +5128,8 @@ def manifest_for_runtime(edition: RenderedEdition, dated_path: Path, latest_path
         "headline": edition.headline,
         "issue_mode": edition.issue_mode,
         "article_count": edition.article_count,
+        "edition_id": edition.edition_id,
+        "editor_url": edition.editor_url,
     }
 
 
