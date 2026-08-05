@@ -150,6 +150,16 @@
       "sent_at": "2026-08-04T10:12:23+09:00",
       "source": "뉴스워커"
     },
+    "6459abd581ed3d06": {
+      "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
+      "delivery_id": "teams_ai_push:23dadd9efafe",
+      "first_sent_at": "2026-08-06T08:07:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
+      "sent_at": "2026-08-06T08:07:51+09:00",
+      "source": "대한경제"
+    },
     "699e303754c965c7": {
       "cluster_key": "title:산은우정사업본부1조원규모ai인프라펀드조성",
       "delivery_id": "teams_ai_push:54d92180c628",
@@ -721,6 +731,16 @@
       "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
       "sent_at": "2026-08-05T18:14:03+09:00",
       "source": "퍼블릭뉴스통신(Public news-network for TTL)"
+    },
+    "title:ai데이터센터속도전쟁혁신병기": {
+      "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
+      "delivery_id": "teams_ai_push:23dadd9efafe",
+      "first_sent_at": "2026-08-06T08:07:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
+      "sent_at": "2026-08-06T08:07:51+09:00",
+      "source": "대한경제"
     },
     "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
@@ -1323,7 +1343,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-06T06:57:47+09:00",
+  "last_successful_send_at": "2026-08-06T08:07:51+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1583,6 +1603,16 @@
       "last_material_update_at": null,
       "material_signature": "9fbd651e0be15ef9ec94090479d606018f49759bd66089ebeac01f26df14f269",
       "sent_at": "2026-08-06T06:57:47+09:00",
+      "source": "대한경제"
+    },
+    "https://www.dnews.co.kr/uhtml/view.jsp?idxno=202607251643146770492": {
+      "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
+      "delivery_id": "teams_ai_push:23dadd9efafe",
+      "first_sent_at": "2026-08-06T08:07:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
+      "sent_at": "2026-08-06T08:07:51+09:00",
       "source": "대한경제"
     },
     "https://www.dnews.co.kr/uhtml/view.jsp?idxno=202607271251435930645": {
@@ -2036,6 +2066,16 @@
       "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
       "sent_at": "2026-08-05T18:14:03+09:00",
       "source": "퍼블릭뉴스통신(Public news-network for TTL)"
+    },
+    "ai데이터센터속도전쟁혁신병기": {
+      "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
+      "delivery_id": "teams_ai_push:23dadd9efafe",
+      "first_sent_at": "2026-08-06T08:07:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
+      "sent_at": "2026-08-06T08:07:51+09:00",
+      "source": "대한경제"
     },
     "ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
