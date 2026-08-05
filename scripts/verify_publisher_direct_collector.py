@@ -66,14 +66,18 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-R5 publishes both exact-reference dashboard paths from one artifact,
         # leaves sender state out, gates on validated-Brief field equivalence,
         # and considers every displayed article for cached/bounded local imagery.
-        "e31b1e054481b61f20ed293f48a87a65487b63a194edb073707752d91bf10454"
+        # R4-R9B adds the stock-market hard-exclusion and dashboard-freshness
+        # verifiers to the mock-safe gate (before the build step).
+        "bf99534e934b0ab99f3d6631b9ccb72159f652d6465c759f49c2134119fb1a04"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
         # ledger after proving its serializer/selector semantic equivalence.
         # R4-R6 documents the 0-5 batch contract (cap Variable 1-5, clamp >5,
         # conservative '1' env fallback until the operator sets 5).
-        "c056b17a8ceeb9f4a39a2f5f463bfa84dac003211a4f581f185819a01ac3a806"
+        # R4-R9B adds the major-media source-gate and stock-market
+        # hard-exclusion verifiers to the mock-safe gate.
+        "ba6a062b009effd71f79b77f797125db759f7f166325c02750a070dc4c8568a6"
     ),
     ".github/workflows/telegram-notify.yml": (
         "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"

@@ -47,7 +47,7 @@ jobs:
       #    예약 발송 가드 + 사람 검토 게이트 + 리포트/대시보드/정직성 회귀 검사.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/verify_news_censor_image_coverage.py scripts/verify_news_censor_semantic_filters.py scripts/verify_news_censor_reference_parity.py scripts/verify_news_censor_verified_state.py app/news_censor_verified_state.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py
+          python3 -m py_compile scripts/build_news_censor.py scripts/audit_news_censor_funnel.py scripts/verify_news_censor.py scripts/verify_news_censor_image_coverage.py scripts/verify_news_censor_semantic_filters.py scripts/verify_news_censor_reference_parity.py scripts/verify_news_censor_verified_state.py app/news_censor_verified_state.py scripts/verify_hourly_delta_auto_send.py app/delta_classifier.py scripts/verify_meaningful_delta_quality.py scripts/verify_dashboard_freshness.py scripts/verify_stock_market_hard_exclusion.py
           python3 scripts/verify_news_censor.py
           python3 scripts/verify_news_censor_image_coverage.py
           python3 scripts/verify_news_censor_semantic_filters.py
@@ -77,6 +77,12 @@ jobs:
           python3 scripts/verify_site_article_sensing.py
           python3 scripts/verify_weather_risk.py
           python3 scripts/verify_market_source_audit.py
+          # R4-R9B — Teams stock-market hard exclusion + dashboard freshness.
+          # The freshness verifier also re-runs the two previously-deadlocking
+          # verifiers, guaranteeing the workflow can reach the build step that
+          # replaces a stale committed dashboard.
+          python3 scripts/verify_stock_market_hard_exclusion.py
+          python3 scripts/verify_dashboard_freshness.py
           # The exact NEW_CENSOR shell intentionally supersedes the retired
           # preview-dashboard UI contracts (operator buttons, legacy lens DOM,
           # Hormuz traffic card, simplification strip, RC3 public shell).  Their
