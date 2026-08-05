@@ -20,6 +20,16 @@
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
     },
+    "10b07c7aa601f2a4": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
+      "source": "비즈트리뷴"
+    },
     "1ca79f32b813120e": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -39,6 +49,26 @@
       "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
       "sent_at": "2026-08-05T03:49:29+09:00",
       "source": "뉴스퀘스트"
+    },
+    "2a9a29b7cae18c3d": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
+    },
+    "2cd26ada793ca48f": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
     },
     "2dea91c174766c96": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
@@ -79,6 +109,16 @@
       "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
+    },
+    "446333f3356c0838": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
     },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
@@ -130,6 +170,16 @@
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
     },
+    "84fd1439403ce4d1": {
+      "cluster_key": "title:1조원ai인프라펀드우정사업본부산은이조성",
+      "delivery_id": "teams_ai_push:01890a5e3d14",
+      "first_sent_at": "2026-08-06T05:38:47+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
+      "sent_at": "2026-08-06T05:38:47+09:00",
+      "source": "토큰포스트"
+    },
     "9c862b74fb8e8209": {
       "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
       "delivery_id": "teams_ai_push:5b97f9681df3",
@@ -159,6 +209,16 @@
       "material_signature": "797fdbfc0fbda331068b45a9dc48725b467d6375215c3357208d450fab58bc58",
       "sent_at": "2026-08-04T01:25:20+09:00",
       "source": "서울경제"
+    },
+    "ae27a34651878da5": {
+      "cluster_key": "title:pc면진장치결합하중진동잡는",
+      "delivery_id": "teams_ai_push:76697f99cb86",
+      "first_sent_at": "2026-08-06T06:57:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9fbd651e0be15ef9ec94090479d606018f49759bd66089ebeac01f26df14f269",
+      "sent_at": "2026-08-06T06:57:47+09:00",
+      "source": "대한경제"
     },
     "b64be0b5da1fca3b": {
       "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
@@ -622,6 +682,16 @@
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
     },
+    "title:1조원ai인프라펀드우정사업본부산은이조성": {
+      "cluster_key": "title:1조원ai인프라펀드우정사업본부산은이조성",
+      "delivery_id": "teams_ai_push:01890a5e3d14",
+      "first_sent_at": "2026-08-06T05:38:47+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
+      "sent_at": "2026-08-06T05:38:47+09:00",
+      "source": "토큰포스트"
+    },
     "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
       "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
       "delivery_id": "teams_ai_push:860f1b41957d",
@@ -702,6 +772,16 @@
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
     },
+    "title:pc면진장치결합하중진동잡는": {
+      "cluster_key": "title:pc면진장치결합하중진동잡는",
+      "delivery_id": "teams_ai_push:76697f99cb86",
+      "first_sent_at": "2026-08-06T06:57:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9fbd651e0be15ef9ec94090479d606018f49759bd66089ebeac01f26df14f269",
+      "sent_at": "2026-08-06T06:57:47+09:00",
+      "source": "대한경제"
+    },
     "title:sk이노베이션베트남에lngsmr협력방안제시": {
       "cluster_key": "title:sk이노베이션베트남에lngsmr협력방안제시",
       "delivery_id": "teams_ai_push:3e9e58dc129f",
@@ -751,6 +831,16 @@
       "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
+    },
+    "title:경북원전혜택있나산업용전기료4단계차등화": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
     },
     "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
@@ -822,6 +912,16 @@
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
     },
+    "title:동해안데이터센터이제는제도가길을열어야한다": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
+    },
     "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
       "delivery_id": "teams_ai_push:2d85b2b3d756",
@@ -841,6 +941,16 @@
       "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
+    "title:머스크방한설키운공급망동맹반도체넘어우주ai로": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
+      "source": "비즈트리뷴"
     },
     "title:멈추지않는공항삼성물산대만하늘길의심장을짓다": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
@@ -881,6 +991,16 @@
       "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
+    },
+    "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
     },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
@@ -1203,7 +1323,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T20:35:03+09:00",
+  "last_successful_send_at": "2026-08-06T06:57:47+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1223,6 +1343,16 @@
       "last_material_update_at": null,
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
+    },
+    "http://www.biztribune.co.kr/news/articleView.html?idxno=356977": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
       "source": "비즈트리뷴"
     },
     "http://www.choicenews.co.kr/news/articleView.html?idxno=169385": {
@@ -1445,6 +1575,16 @@
       "sent_at": "2026-07-28T06:49:39+09:00",
       "source": "조선일보"
     },
+    "https://www.dnews.co.kr/uhtml/view.jsp?idxno=202607241117327380386": {
+      "cluster_key": "title:pc면진장치결합하중진동잡는",
+      "delivery_id": "teams_ai_push:76697f99cb86",
+      "first_sent_at": "2026-08-06T06:57:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9fbd651e0be15ef9ec94090479d606018f49759bd66089ebeac01f26df14f269",
+      "sent_at": "2026-08-06T06:57:47+09:00",
+      "source": "대한경제"
+    },
     "https://www.dnews.co.kr/uhtml/view.jsp?idxno=202607271251435930645": {
       "cluster_key": "title:1ai가판키운전력인프라건설eng선점경쟁후",
       "delivery_id": "teams_ai_push:5d405e65818d",
@@ -1504,6 +1644,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "https://www.fortunekorea.co.kr/news/articleView.html?idxno=53469": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
     },
     "https://www.greened.kr/news/articleView.html?idxno=346822": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
@@ -1574,6 +1724,26 @@
       "material_signature": "0f554607c787c990655c4d3b30c3607ae70ba6e19aef148a941e5b8c9bd722c1",
       "sent_at": "2026-08-05T00:01:52+09:00",
       "source": "경남신문"
+    },
+    "https://www.kwnews.co.kr/article/20260805500203": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
+    },
+    "https://www.kyongbuk.co.kr/news/articleView.html?idxno=4080401": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
     },
     "https://www.news1.kr/realestate/general/6242752": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
@@ -1785,6 +1955,16 @@
       "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
     },
+    "https://www.tokenpost.kr/news/policy/385791": {
+      "cluster_key": "title:1조원ai인프라펀드우정사업본부산은이조성",
+      "delivery_id": "teams_ai_push:01890a5e3d14",
+      "first_sent_at": "2026-08-06T05:38:47+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
+      "sent_at": "2026-08-06T05:38:47+09:00",
+      "source": "토큰포스트"
+    },
     "https://www.viva100.com/article/20260803501092": {
       "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
       "delivery_id": "teams_ai_push:830fe42c7d3e",
@@ -1816,6 +1996,16 @@
       "material_signature": "0f1d220a6a2dbdba38adbaddd8e313a38f67b37094c167521d44be38fcfc5875",
       "sent_at": "2026-07-28T06:49:38+09:00",
       "source": "대한경제"
+    },
+    "1조원ai인프라펀드우정사업본부산은이조성": {
+      "cluster_key": "title:1조원ai인프라펀드우정사업본부산은이조성",
+      "delivery_id": "teams_ai_push:01890a5e3d14",
+      "first_sent_at": "2026-08-06T05:38:47+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
+      "sent_at": "2026-08-06T05:38:47+09:00",
+      "source": "토큰포스트"
     },
     "5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
       "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
@@ -1897,6 +2087,16 @@
       "sent_at": "2026-07-29T07:14:49+09:00",
       "source": "더벨"
     },
+    "pc면진장치결합하중진동잡는": {
+      "cluster_key": "title:pc면진장치결합하중진동잡는",
+      "delivery_id": "teams_ai_push:76697f99cb86",
+      "first_sent_at": "2026-08-06T06:57:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9fbd651e0be15ef9ec94090479d606018f49759bd66089ebeac01f26df14f269",
+      "sent_at": "2026-08-06T06:57:47+09:00",
+      "source": "대한경제"
+    },
     "sk이노베이션베트남에lngsmr협력방안제시": {
       "cluster_key": "title:sk이노베이션베트남에lngsmr협력방안제시",
       "delivery_id": "teams_ai_push:3e9e58dc129f",
@@ -1946,6 +2146,16 @@
       "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
+    },
+    "경북원전혜택있나산업용전기료4단계차등화": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
     },
     "구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
@@ -2017,6 +2227,16 @@
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
     },
+    "동해안데이터센터이제는제도가길을열어야한다": {
+      "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
+      "delivery_id": "teams_ai_push:36fbc03e8115",
+      "first_sent_at": "2026-08-06T03:58:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
+      "sent_at": "2026-08-06T03:58:57+09:00",
+      "source": "강원일보"
+    },
     "두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
       "delivery_id": "teams_ai_push:2d85b2b3d756",
@@ -2036,6 +2256,16 @@
       "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
+    "머스크방한설키운공급망동맹반도체넘어우주ai로": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
+      "source": "비즈트리뷴"
     },
     "멈추지않는공항삼성물산대만하늘길의심장을짓다": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
@@ -2076,6 +2306,16 @@
       "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
+    },
+    "미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
     },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
