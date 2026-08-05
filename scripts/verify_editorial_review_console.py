@@ -1770,7 +1770,16 @@ def main() -> int:
         encoding="utf-8"
     )
     v.check("publish reads approved review", "editorial_review.load_review" in run_source)
-    v.check("publish retains AI fallback", "live_collection_fallback" in run_source)
+    # R4-R11 — the reader-only live-collection fallback is removed: a missing
+    # review bundle skips the Daily publication fail-closed (machine-readable
+    # skip_reason) instead of publishing an AI fallback without its editor.
+    # A malformed review file still fails closed to the AI order within the
+    # bundle path (load_review_decision), which the check above pins.
+    v.check(
+        "publish fails closed without the review bundle (fallback removed)",
+        "live_collection_fallback" not in run_source
+        and '"daily_review_bundle_unavailable"' in run_source,
+    )
 
     print(f"checks={v.checks} failures={v.failures}")
     print("category_ticker_order=투자·산업>기업동향>기술정보")

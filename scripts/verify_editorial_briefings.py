@@ -2985,8 +2985,25 @@ def republish_contracts() -> None:
         original_load_review = runner.editorial_review.load_review
         original_choose = runner.editorial_review.choose_daily_articles
         original_atomic_state = state.atomic_write_state
+        original_console_path = runner._daily_console_path
+        original_editor_gate = runner.daily_editor_publication_error
+        # R4-R11 — this fixture's concern is republish regeneration semantics;
+        # the fail-closed exact-edition editor gate itself is proven
+        # functionally by verify_daily_editor_deep_link.py. Satisfy the gate
+        # with a fixture console file and a no-op reconstruction check.
+        fixture_console = root / "review" / key / "index.html"
+        fixture_console.parent.mkdir(parents=True, exist_ok=True)
+        fixture_console.write_text("<!doctype html>", encoding="utf-8")
+        original_manifest_writer = runner.write_daily_edition_manifest
+        manifest_writes: list[str] = []
         try:
             runner._docs_paths = lambda _edition_type, _key: (dated, latest)
+            runner._daily_console_path = lambda _key: fixture_console
+            runner.daily_editor_publication_error = lambda _edition: ""
+            runner.write_daily_edition_manifest = lambda edition, **_kwargs: (
+                manifest_writes.append(edition.edition_id)
+                or f"docs/editorial/daily/editions/{edition.edition_id}.json"
+            )
             state.load_state = lambda _edition_type, path=None: delivered
             runner.editorial_review.load_bundle = lambda *_args, **_kwargs: {}
             runner.editorial_review.load_review = lambda *_args, **_kwargs: {}
@@ -3014,6 +3031,9 @@ def republish_contracts() -> None:
                 )
         finally:
             runner._docs_paths = original_docs_paths
+            runner._daily_console_path = original_console_path
+            runner.daily_editor_publication_error = original_editor_gate
+            runner.write_daily_edition_manifest = original_manifest_writer
             state.load_state = original_load_state
             runner.editorial_review.load_bundle = original_load_bundle
             runner.editorial_review.load_review = original_load_review

@@ -688,9 +688,11 @@ def main() -> int:
     # Publish/send wiring and workflow gate.
     # ------------------------------------------------------------------
     check(
-        "publish emits the editor action only when the dated console exists",
-        "editor_console_available = (" in RUNNER_SOURCE
-        and '"review" / key / "index.html"' in RUNNER_SOURCE
+        "publish fails closed when the dated console is missing and writes the "
+        "manifest for every published Daily (R4-R11)",
+        "_daily_console_path(key).is_file()" in RUNNER_SOURCE
+        and '"daily_editor_console_missing"' in RUNNER_SOURCE
+        and "daily_editor_publication_error(edition)" in RUNNER_SOURCE
         and "write_daily_edition_manifest(edition)" in RUNNER_SOURCE,
     )
     check(
@@ -731,16 +733,92 @@ def main() -> int:
         f"console={console_crons} daily={daily_crons}",
     )
     check(
-        "fallback path still derives the exact-edition editor CTA availability",
-        'editor_console_available = (' in RUNNER_SOURCE
-        and 'review_mode = "live_collection_fallback"' in RUNNER_SOURCE
-        and "editor_console_available=editor_console_available" in RUNNER_SOURCE,
+        "reader-only degradation is removed: bundle-unavailable fallback skips "
+        "fail-closed with a machine-readable reason (R4-R11)",
+        '"daily_review_bundle_unavailable"' in RUNNER_SOURCE
+        and "_skip_daily_editor_unavailable(" in RUNNER_SOURCE
+        and "daily_reader_only_send_allowed=false" in RUNNER_SOURCE
+        and 'review_mode = "live_collection_fallback"' not in RUNNER_SOURCE,
     )
     check(
-        "delivered Daily lead-source gate is wired into the publish path",
+        "delivered Daily lead-source gate is wired into the publish path "
+        "(no fallback delivery remains to gate)",
         "filter_lead_source_eligible(" in RUNNER_SOURCE
-        and "lead_source_gate=True" in RUNNER_SOURCE,
+        and "lead_source_gate=True" not in RUNNER_SOURCE,
     )
+
+    # ------------------------------------------------------------------
+    # R4-R11 — fail-closed exact-edition editor publication gate, exercised
+    # functionally against a real console page rendered from the template.
+    # ------------------------------------------------------------------
+    with tempfile.TemporaryDirectory(prefix="d7ak6e-editor-gate-") as raw:
+        tmp = Path(raw)
+        gate_edition = render_with_editor()
+        console_file = tmp / "review" / gate_edition.edition_key / "index.html"
+        console_file.parent.mkdir(parents=True)
+
+        def write_console(edition_key: str, urls: list[str]) -> None:
+            bundle = {
+                "edition_key": edition_key,
+                "candidates": [
+                    {"candidate_id": f"candidate-{index}", "selected_url": url}
+                    for index, url in enumerate(urls, 1)
+                ],
+            }
+            embedded = json.dumps(bundle, ensure_ascii=False).replace("</", "<\\/")
+            console_file.write_text(
+                CONSOLE_TEMPLATE.replace("{{EDITION_KEY}}", edition_key)
+                .replace("{{COVERAGE_LABEL}}", "fixture")
+                .replace("{{CANDIDATE_JSON}}", embedded),
+                encoding="utf-8",
+            )
+
+        manifest_urls = [
+            row["publisher_url"] for row in gate_edition.edition_manifest["articles"]
+        ]
+        original_console_path = runner._daily_console_path
+        try:
+            runner._daily_console_path = lambda key: console_file
+            check(
+                "editor gate: missing dated console fails closed",
+                runner.daily_editor_publication_error(gate_edition)
+                == "daily_editor_console_missing",
+            )
+            write_console(gate_edition.edition_key, manifest_urls + [
+                "https://www.mk.co.kr/news/it/9999-unselected-candidate"
+            ])
+            check(
+                "editor gate: full adoption into the console bundle passes",
+                runner.daily_editor_publication_error(gate_edition) == "",
+            )
+            write_console(gate_edition.edition_key, manifest_urls[1:])
+            check(
+                "editor gate: a manifest article missing from the console "
+                "bundle fails closed",
+                runner.daily_editor_publication_error(gate_edition)
+                == "daily_editor_not_reconstructable",
+            )
+            write_console("2026-01-01", manifest_urls)
+            check(
+                "editor gate: a different edition's console bundle fails closed",
+                runner.daily_editor_publication_error(gate_edition)
+                == "daily_editor_not_reconstructable",
+            )
+            reader_only = brief.render_daily(
+                list(ARTICLES),
+                run_at=RUN_AT,
+                root_url=FIXTURE_ROOT,
+                review_mode="human_approved",
+                review_decision="approved",
+                editor_console_available=False,
+            )
+            check(
+                "editor gate: an edition without an editor identity fails closed",
+                runner.daily_editor_publication_error(reader_only)
+                == "daily_editor_identity_unavailable",
+            )
+        finally:
+            runner._daily_console_path = original_console_path
 
     # ------------------------------------------------------------------
     # §11-19/20/21/22 — format and previous-repair preservation.

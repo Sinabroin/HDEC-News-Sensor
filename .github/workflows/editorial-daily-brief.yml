@@ -19,10 +19,12 @@ on:
     # R4-R10 — these runs MUST start after the Editorial Review Console build
     # (editorial-review-console.yml, cron "20 22") so the dated console
     # docs/editorial/review/<edition>/index.html already exists when the brief
-    # publishes. That is what lets the morning Teams message carry the
-    # exact-edition editor CTA (편집기에서 열기) instead of degrading to a
-    # reader-only message. The three staggered runs are retries; the first
-    # successful one publishes and the rest skip.
+    # publishes. R4-R11 — the reader-only degradation is removed: when the
+    # dated console, review bundle, editor identity, or manifest-to-console
+    # reconstruction is unavailable the publication SKIPS fail-closed with a
+    # machine-readable skip_reason, and these three staggered runs are the
+    # only retry path. A delivered Daily always carries the exact-edition
+    # editor CTA (Daily Brief 편집기에서 열기).
     - cron: "30 22 * * *"
     - cron: "45 22 * * *"
     - cron: "55 22 * * *"

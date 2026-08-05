@@ -202,9 +202,14 @@ def main() -> int:
         encoding="utf-8"
     )
     check(
-        "run_editorial_briefing wires the delivered lead-source gate (bundle + fallback)",
+        "run_editorial_briefing wires the delivered lead-source gate; the "
+        "reader-only fallback is removed (R4-R11 fail-closed skip)",
         "filter_lead_source_eligible(" in runner_src
-        and "lead_source_gate=True" in runner_src,
+        # R4-R11 — the live-collection fallback no longer delivers anything,
+        # so there is no fallback lead to gate: a missing review bundle skips
+        # the publication fail-closed instead.
+        and '"daily_review_bundle_unavailable"' in runner_src
+        and "lead_source_gate=True" not in runner_src,
     )
 
     print(f"checks={CHECKS} failures={len(FAILURES)}")

@@ -4646,8 +4646,11 @@ def render_daily(
     )
     edition_id = edition_manifest["edition_id"]
     # The operator action is emitted only when the dated Review Console for
-    # this edition is known to exist — a missing editor identity degrades to
-    # public-link-only output, never to a guessed or broken editor link.
+    # this edition is known to exist — a missing editor identity never mints a
+    # guessed or broken editor link. R4-R11: the production caller
+    # (run_editorial_briefing.run_publish) additionally fails the whole Daily
+    # publication closed when editor_url is empty or the editor cannot be
+    # reconstructed, so a delivered Daily always carries the editor CTA.
     editor_url = (
         public_url_contract.daily_editor_console_url(edition_id, root_url=root_url)
         if editor_console_available

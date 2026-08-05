@@ -21,6 +21,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
+from urllib.parse import urlsplit, urlunsplit
 from email.message import EmailMessage
 from email.utils import parseaddr
 from pathlib import Path
@@ -564,6 +565,111 @@ def _skip_insufficient_quality(
     return None
 
 
+def _daily_console_path(key: str) -> Path:
+    """Dated Review Console artifact for one Daily edition — the exact page the
+    Teams editor CTA opens (docs/editorial/review/<edition>/index.html)."""
+    return ROOT / "docs" / "editorial" / "review" / key / "index.html"
+
+
+_CONSOLE_BUNDLE_RE = re.compile(
+    r'<script id="candidate-data" type="application/json">(.*?)</script>',
+    re.DOTALL,
+)
+
+
+def _console_candidate_bundle(console_path: Path) -> dict | None:
+    """Inline candidate bundle of a built Review Console page, or None."""
+    try:
+        match = _CONSOLE_BUNDLE_RE.search(console_path.read_text(encoding="utf-8"))
+        loaded = json.loads(match.group(1)) if match else None
+    except (OSError, ValueError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _console_url_key(value: object) -> str:
+    """Python mirror of the Review Console's JS ``canonicalKey`` — the URL
+    identity ``duplicateByUrl`` uses to match a manifest article to a console
+    candidate. Any divergence fails closed (returns "")."""
+    raw = str(value or "").strip()
+    try:
+        parsed = urlsplit(raw)
+        port = parsed.port
+    except ValueError:
+        return ""
+    scheme = parsed.scheme.lower()
+    host = (parsed.hostname or "").lower()
+    if scheme not in {"http", "https"} or not host:
+        return ""
+    default_port = 443 if scheme == "https" else 80
+    netloc = host if port in (None, default_port) else f"{host}:{port}"
+    path = re.sub(r"/+$", "", parsed.path) or "/"
+    return urlunsplit((scheme, netloc, path, parsed.query, ""))
+
+
+def daily_editor_publication_error(edition) -> str:
+    """R4-R11 §2 — fail-closed exact-edition editor availability gate.
+
+    Returns "" only when the delivered Daily's operator editor is fully
+    reconstructable from already-published artifacts: the editor deep link is
+    minted, the immutable edition manifest verifies, the dated Review Console
+    page exists, its inline candidate bundle carries the same edition key, and
+    every manifest article adopts into a distinct console candidate exactly the
+    way the browser-side ``adoptExactEdition`` will replay it. Any other state
+    returns a machine-readable reason and the publication must skip — a Daily
+    Teams message is never sent reader-only."""
+    if not getattr(edition, "editor_url", ""):
+        return "daily_editor_identity_unavailable"
+    manifest = getattr(edition, "edition_manifest", None)
+    if editorial_briefings.verify_daily_edition_manifest(manifest):
+        return "daily_editor_identity_unavailable"
+    console_path = _daily_console_path(edition.edition_key)
+    if not console_path.is_file():
+        return "daily_editor_console_missing"
+    bundle = _console_candidate_bundle(console_path)
+    if not bundle or str(bundle.get("edition_key") or "") != edition.edition_key:
+        return "daily_editor_not_reconstructable"
+    candidate_ids: dict[str, str] = {}
+    for candidate in bundle.get("candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        key = _console_url_key(candidate.get("selected_url"))
+        if key and key not in candidate_ids:
+            candidate_ids[key] = str(candidate.get("candidate_id") or "")
+    rows = manifest.get("articles") or []
+    matched: set[str] = set()
+    if not rows:
+        return "daily_editor_not_reconstructable"
+    for row in rows:
+        if not isinstance(row, dict):
+            return "daily_editor_not_reconstructable"
+        key = _console_url_key(row.get("publisher_url"))
+        candidate_id = candidate_ids.get(key)
+        if not key or not candidate_id or candidate_id in matched:
+            return "daily_editor_not_reconstructable"
+        matched.add(candidate_id)
+    return ""
+
+
+def _skip_daily_editor_unavailable(
+    key: str, review_decision: str, reason: str
+) -> None:
+    """R4-R11 §2.5 — the reader-only degradation policy is removed.
+
+    A Daily whose exact-edition editor cannot be reconstructed publishes
+    nothing and sends nothing: the skip is machine-readable and the later
+    scheduled attempt (cron 30/45/55 22) is the only retry path."""
+    _github_output("skipped", "true")
+    _github_output("edition", key)
+    _github_output("delivery_authorized", "false")
+    _github_output("review_mode", "editor_unavailable")
+    _github_output("review_decision", review_decision)
+    _github_output("skip_reason", reason)
+    print(f"publish_skip edition_type=daily edition={key} reason={reason}")
+    print("daily_reader_only_send_allowed=false")
+    return None
+
+
 def run_publish(
     edition_type: str,
     *,
@@ -641,19 +747,23 @@ def run_publish(
                     edition_type, key, review_decision
                 )
             selected_articles = gated_articles
-            # R4-R9C — the operator editor action requires the dated Review
-            # Console for this edition to already exist in the repository;
-            # otherwise the message degrades to public-link-only output.
-            editor_console_available = (
-                ROOT / "docs" / "editorial" / "review" / key / "index.html"
-            ).is_file()
+            # R4-R11 §2 — the operator editor action is mandatory on every
+            # delivered Daily. The dated Review Console for this edition must
+            # already exist (editorial-review-console.yml, cron "20 22"); when
+            # it is missing the publication skips fail-closed instead of
+            # degrading to a reader-only message, and the later scheduled
+            # attempt retries.
+            if not _daily_console_path(key).is_file():
+                return _skip_daily_editor_unavailable(
+                    key, review_decision, "daily_editor_console_missing"
+                )
             edition = editorial_briefings.render_daily(
                 selected_articles,
                 run_at=run_at,
                 root_url=root_url,
                 review_mode=review_mode,
                 review_decision=review_decision,
-                editor_console_available=editor_console_available,
+                editor_console_available=True,
             )
             raw_selection_manifest = bundle.get("selection_audit")
             if isinstance(raw_selection_manifest, dict):
@@ -675,36 +785,15 @@ def run_publish(
                     generated_at=generated_at,
                 )
         except editorial_review.EditorialReviewError:
-            review_mode = "live_collection_fallback"
-            # R4-R10 — even on the live-collection fallback, emit the exact-edition
-            # editor CTA when the dated Review Console for this edition exists.
-            editor_console_available = (
-                ROOT / "docs" / "editorial" / "review" / key / "index.html"
-            ).is_file()
-            try:
-                edition = editorial_briefings.render_edition(
-                    edition_type,
-                    collect(),
-                    run_at=run_at,
-                    root_url=root_url,
-                    allow_image_network=True,
-                    selection_mode=(
-                        editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
-                    ),
-                    selection_audit=selection_counters,
-                    review_mode=review_mode,
-                    review_decision=review_decision,
-                    editor_console_available=editor_console_available,
-                    # R4-R10 — the live-collection fallback delivers the same
-                    # major/official lead-source floor as the review-bundle path.
-                    lead_source_gate=True,
-                )
-            except editorial_briefings.EditorialError as exc:
-                if str(exc) != "empty edition":
-                    raise
-                return _skip_insufficient_quality(
-                    edition_type, key, review_decision
-                )
+            # R4-R11 §2.5 — the reader-only live-collection fallback is
+            # removed. Without this edition's review bundle the exact-edition
+            # editor can never be faithfully reconstructed (fresh collection is
+            # not the console's candidate pool), so the publication skips
+            # fail-closed with a machine-readable reason and the later
+            # scheduled attempt is the only retry path.
+            return _skip_daily_editor_unavailable(
+                key, review_decision, "daily_review_bundle_unavailable"
+            )
     else:
         raw_articles = collect()
         verified_added = 0
@@ -738,6 +827,17 @@ def run_publish(
     _github_output("review_mode", review_mode)
     _github_output("review_decision", review_decision)
     editorial_briefings.validate_rendered(edition)
+    if edition_type == "daily":
+        # R4-R11 §2.4 — before anything publishes, the exact-edition editor
+        # must be provably reconstructable: editor deep link minted, immutable
+        # manifest verified, dated console present, and every manifest article
+        # adopting into a distinct console candidate (the same replay the
+        # browser performs). Failure publishes nothing and sends nothing.
+        editor_gate_error = daily_editor_publication_error(edition)
+        if editor_gate_error:
+            return _skip_daily_editor_unavailable(
+                edition.edition_key, review_decision, editor_gate_error
+            )
     dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
     payload = edition.html.encode("utf-8")
     editorial_briefings.atomic_write_bytes(dated_path, payload)
@@ -745,7 +845,9 @@ def run_publish(
     if dated_path.read_bytes() != latest_path.read_bytes():
         raise OrchestratorError("dated/latest bytes differ after publication write")
     edition_manifest_output = ""
-    if edition_type == "daily" and edition.editor_url:
+    if edition_type == "daily":
+        # The editor gate above guarantees editor_url and a verified manifest;
+        # the immutable edition manifest is published for every delivered Daily.
         edition_manifest_output = write_daily_edition_manifest(edition)
     manifest = editorial_briefings.manifest_for_runtime(edition, dated_path, latest_path)
     if edition_manifest_output:
