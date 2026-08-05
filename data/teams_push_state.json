@@ -100,6 +100,16 @@
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
     },
+    "446333f3356c0838": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
+    },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
       "delivery_id": "teams_ai_push:cda34e0b7d63",
@@ -922,6 +932,16 @@
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
     },
+    "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
+    },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
       "delivery_id": "teams_ai_push:9d73b7a8f012",
@@ -1243,7 +1263,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-06T00:40:01+09:00",
+  "last_successful_send_at": "2026-08-06T02:15:06+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1554,6 +1574,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "https://www.fortunekorea.co.kr/news/articleView.html?idxno=53469": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
     },
     "https://www.greened.kr/news/articleView.html?idxno=346822": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
@@ -2156,6 +2186,16 @@
       "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
+    },
+    "미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장": {
+      "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
+      "delivery_id": "teams_ai_push:9b6185be5ded",
+      "first_sent_at": "2026-08-06T02:15:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
+      "sent_at": "2026-08-06T02:15:06+09:00",
+      "source": "포춘코리아"
     },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
