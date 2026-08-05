@@ -130,6 +130,16 @@
       "sent_at": "2026-08-04T01:25:20+09:00",
       "source": "서울경제"
     },
+    "b64be0b5da1fca3b": {
+      "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
+      "delivery_id": "teams_ai_push:d8891c057abf",
+      "first_sent_at": "2026-08-05T09:15:49+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
+      "sent_at": "2026-08-05T09:15:49+09:00",
+      "source": "theguru.co.kr"
+    },
     "b6ebf89632352331": {
       "cluster_key": "title:엘리스그룹온수냉각적용b300ai데이터센터구축",
       "delivery_id": "teams_ai_push:65b28e7ed6ad",
@@ -552,6 +562,16 @@
     }
   },
   "cluster_keys": {
+    "ai_event:232948c62378e00e3bdb91f3": {
+      "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
+      "delivery_id": "teams_ai_push:d8891c057abf",
+      "first_sent_at": "2026-08-05T09:15:49+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
+      "sent_at": "2026-08-05T09:15:49+09:00",
+      "source": "theguru.co.kr"
+    },
     "title:1ai가판키운전력인프라건설eng선점경쟁후": {
       "cluster_key": "title:1ai가판키운전력인프라건설eng선점경쟁후",
       "delivery_id": "teams_ai_push:5d405e65818d",
@@ -1103,7 +1123,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T08:03:53+09:00",
+  "last_successful_send_at": "2026-08-05T09:15:49+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1633,6 +1653,16 @@
       "last_material_update_at": null,
       "material_signature": "910ab407fcddeb253b9fdaac04f40af50685ac6c61bee92ff83854d1763abd17",
       "sent_at": "2026-08-04T05:06:36+09:00",
+      "source": "theguru.co.kr"
+    },
+    "https://www.theguru.co.kr/news/article.html?no=105359": {
+      "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
+      "delivery_id": "teams_ai_push:d8891c057abf",
+      "first_sent_at": "2026-08-05T09:15:49+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
+      "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
     },
     "https://www.viva100.com/article/20260803501092": {
@@ -2176,6 +2206,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "현대건설홀텍엔터지와걸프만smr사업협력ai데이터센터전력수요공략": {
+      "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
+      "delivery_id": "teams_ai_push:d8891c057abf",
+      "first_sent_at": "2026-08-05T09:15:49+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
+      "sent_at": "2026-08-05T09:15:49+09:00",
+      "source": "theguru.co.kr"
     },
     "현대제철ai인프라승부수철강업계새성장축될까": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
