@@ -50,6 +50,16 @@
       "sent_at": "2026-08-05T03:49:29+09:00",
       "source": "뉴스퀘스트"
     },
+    "2cd26ada793ca48f": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
+    },
     "2dea91c174766c96": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
       "delivery_id": "teams_ai_push:bec31cab7b44",
@@ -762,6 +772,16 @@
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
     },
+    "title:경북원전혜택있나산업용전기료4단계차등화": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
+    },
     "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
       "delivery_id": "teams_ai_push:bec31cab7b44",
@@ -1223,7 +1243,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T22:21:06+09:00",
+  "last_successful_send_at": "2026-08-06T00:40:01+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1605,6 +1625,16 @@
       "sent_at": "2026-08-05T00:01:52+09:00",
       "source": "경남신문"
     },
+    "https://www.kyongbuk.co.kr/news/articleView.html?idxno=4080401": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
+    },
     "https://www.news1.kr/realestate/general/6242752": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
       "delivery_id": "teams_ai_push:f20639b627fa",
@@ -1976,6 +2006,16 @@
       "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
+    },
+    "경북원전혜택있나산업용전기료4단계차등화": {
+      "cluster_key": "title:경북원전혜택있나산업용전기료4단계차등화",
+      "delivery_id": "teams_ai_push:50fdcc4e29b1",
+      "first_sent_at": "2026-08-06T00:40:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
+      "sent_at": "2026-08-06T00:40:01+09:00",
+      "source": "경북일보"
     },
     "구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
