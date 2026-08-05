@@ -53,8 +53,11 @@ EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/editorial-daily-brief.yml": (
         # R4-R9C wires the exact-edition editor deep-link verifier into the
         # offline gate and commits the append-only edition manifest through
-        # the explicit git-add allowlist.
-        "eafe21c5e2c1f5129667dad8c983edf5ad335575c5120f285a48a5f6e91f6c85"
+        # the explicit git-add allowlist. R4-R10 reschedules the runs after the
+        # Review Console build (cron 30/45/55 22) so the dated console exists and
+        # the morning Teams message carries the exact-edition editor CTA, and
+        # wires the delivered lead-source gate verifier into the offline gate.
+        "8d5b6ad30d4825ae090f66bd0771b1ac3c40ca4c18dc2b4ce084208e5ba652d3"
     ),
     ".github/workflows/editorial-review-console.yml": (
         "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"

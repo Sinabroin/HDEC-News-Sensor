@@ -262,6 +262,7 @@ def _teams_source_policy_entries() -> tuple[
     for kind, key in (
         ("specialist", "specialist_publishers"),
         ("fallback_blocked", "fallback_blocked_publishers"),
+        ("never_automatic", "never_automatic_publishers"),
     ):
         for entry in policy.get(key) or []:
             if not isinstance(entry, Mapping):
@@ -295,6 +296,7 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
     source_key = _delivery_source_key(source)
     host = _delivery_url_host(selected_url)
     explicit_specialist = ""
+    explicit_never_automatic = ""
     fallback_blocked = False
     for kind, name, aliases, domains in _teams_source_policy_entries():
         alias_match = any(
@@ -307,11 +309,20 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
         )
         if not (alias_match or domain_match):
             continue
+        if kind == "never_automatic":
+            explicit_never_automatic = explicit_never_automatic or name
+            continue
         explicit_specialist = explicit_specialist or name
         if kind == "fallback_blocked":
             fallback_blocked = True
     tier = str(tier_info["tier"])
-    if fallback_blocked:
+    # R4-R10: an explicitly excluded publisher (e.g. S저널 / s-journal.co.kr,
+    # traced from a real production auto-send) is pinned to never_automatic
+    # ahead of every other lane — it can never resolve to immediate/major,
+    # official, or specialist regardless of tier, alias, or domain drift.
+    if explicit_never_automatic:
+        lane = TEAMS_LANE_NEVER_AUTOMATIC
+    elif fallback_blocked:
         lane = TEAMS_LANE_SPECIALIST_HOLDBACK
     elif tier in TEAMS_IMMEDIATE_TIERS:
         lane = TEAMS_LANE_IMMEDIATE_MAJOR
@@ -325,6 +336,7 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
         **tier_info,
         "teams_lane": lane,
         "explicit_specialist": explicit_specialist,
+        "explicit_never_automatic": explicit_never_automatic,
         "fallback_blocked": fallback_blocked,
     }
 

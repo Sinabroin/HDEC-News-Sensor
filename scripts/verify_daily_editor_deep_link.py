@@ -213,6 +213,18 @@ def main() -> int:
         < edition.teams_html.index(brief.DAILY_PUBLISHED_LINK_LABEL),
     )
     check(
+        "R4-R10 delivered CTAs are ordered editor -> reader -> dashboard (plain text)",
+        edition.teams_text.index(brief.DAILY_EDITOR_LINK_LABEL)
+        < edition.teams_text.index(brief.DAILY_PUBLISHED_LINK_LABEL)
+        < edition.teams_text.index(public_url_contract.CANONICAL_DASHBOARD_URL),
+    )
+    check(
+        "R4-R10 delivered CTAs are ordered editor -> reader -> dashboard (HTML)",
+        edition.teams_html.index(brief.DAILY_EDITOR_LINK_LABEL)
+        < edition.teams_html.index(brief.DAILY_PUBLISHED_LINK_LABEL)
+        < edition.teams_html.index(public_url_contract.CANONICAL_DASHBOARD_URL),
+    )
+    check(
         "plain text carries both action URLs",
         edition.editor_url in edition.teams_text
         and edition.public_dated_url in edition.teams_text,
@@ -693,6 +705,41 @@ def main() -> int:
         in DAILY_WORKFLOW
         and 'git add -- "$EDITION_MANIFEST_PATH"' in DAILY_WORKFLOW
         and 'git add -- "$DATED_PATH" "$LATEST_PATH"' in DAILY_WORKFLOW,
+    )
+    # R4-R10 — the Daily brief must be scheduled AFTER the Review Console build so
+    # the dated console exists when it publishes and the editor CTA is emitted
+    # instead of degrading to a reader-only message (the observed defect).
+    review_console_workflow = (
+        ROOT / ".github" / "workflows" / "editorial-review-console.yml"
+    ).read_text(encoding="utf-8")
+
+    def _cron_minutes_of_day(text: str) -> list[int]:
+        return [
+            int(hour) * 60 + int(minute)
+            for minute, hour in re.findall(
+                r'cron:\s*"(\d+)\s+(\d+) \* \* \*"', text
+            )
+        ]
+
+    console_crons = _cron_minutes_of_day(review_console_workflow)
+    daily_crons = _cron_minutes_of_day(DAILY_WORKFLOW)
+    check(
+        "Daily brief runs after the Review Console build (editor CTA sequencing)",
+        bool(console_crons)
+        and bool(daily_crons)
+        and min(daily_crons) > max(console_crons),
+        f"console={console_crons} daily={daily_crons}",
+    )
+    check(
+        "fallback path still derives the exact-edition editor CTA availability",
+        'editor_console_available = (' in RUNNER_SOURCE
+        and 'review_mode = "live_collection_fallback"' in RUNNER_SOURCE
+        and "editor_console_available=editor_console_available" in RUNNER_SOURCE,
+    )
+    check(
+        "delivered Daily lead-source gate is wired into the publish path",
+        "filter_lead_source_eligible(" in RUNNER_SOURCE
+        and "lead_source_gate=True" in RUNNER_SOURCE,
     )
 
     # ------------------------------------------------------------------

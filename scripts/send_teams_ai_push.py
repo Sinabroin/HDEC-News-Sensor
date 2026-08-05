@@ -720,6 +720,14 @@ def deliver(
         ],
         "selected_specialist_rows": gate_batch.audit["selected_specialist_rows"],
         "source_gate_rejected_rows": gate_batch.audit["source_gate_rejected_rows"],
+        # R4-R10 — neutral/low + explicitly-excluded publisher rejections
+        # (e.g. S저널), and the combined specialist-or-neutral rejection total.
+        "never_automatic_rejected_rows": gate_batch.audit[
+            "never_automatic_rejected_rows"
+        ],
+        "specialist_or_neutral_rejected_rows": gate_batch.audit[
+            "specialist_or_neutral_rejected_rows"
+        ],
         # R4-R9B §6 — stock-market hard-exclusion counters (exact names).
         "stock_market_dominant_rows": int(
             selection_audit.get("stock_market_dominant_rows") or 0

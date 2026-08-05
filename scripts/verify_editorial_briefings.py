@@ -184,8 +184,11 @@ def workflow_contracts() -> None:
     daily_crons = re.findall(r'cron:\s*["\']([^"\']+)', daily)
     weekly_crons = re.findall(r'cron:\s*["\']([^"\']+)', weekly)
     check(
+        # R4-R10 — Daily runs are scheduled after the Review Console build
+        # (editorial-review-console.yml, "20 22") so the dated console exists and
+        # the morning Teams message carries the exact-edition editor CTA.
         "Daily cron set is exact",
-        daily_crons == ["0 22 * * *", "20 22 * * *", "40 22 * * *"],
+        daily_crons == ["30 22 * * *", "45 22 * * *", "55 22 * * *"],
         repr(daily_crons),
     )
     check(
@@ -2939,8 +2942,15 @@ def claim_delivery_contracts(daily: brief.RenderedEdition) -> None:
 def republish_contracts() -> None:
     run_at = dt("2026-07-27T07:00:00+09:00")
     coverage = brief.daily_coverage(run_at)
+    # R4-R10 — a delivered/republished Daily edition carries only major-source
+    # leads (the run_publish lead-source gate drops long-tail leads). Represent
+    # that with distinct primary-ten publishers so the edition stays non-empty.
+    _major_sources = ["연합뉴스", "SBS", "KBS", "매일경제", "한국경제", "MBC"]
+    _daily_rows = [dict(row) for row in brief.fixture_articles("daily", run_at)]
+    for _index, _row in enumerate(_daily_rows):
+        _row["source"] = _major_sources[_index % len(_major_sources)]
     articles = brief.normalize_articles(
-        brief.fixture_articles("daily", run_at),
+        _daily_rows,
         coverage,
         limit=brief.DAILY_MAX_ARTICLES,
         resolve_images=False,

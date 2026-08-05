@@ -141,6 +141,11 @@ SUBVERIFIERS = (
         r"RESULT=D7-AK-6E_R4R9D_TEAMS_STRICT_SOURCE_GATE_PASS",
     ),
     (
+        "DAILY_LEAD_SOURCE_GATE_VERIFIER",
+        "verify_daily_lead_source_gate.py",
+        r"RESULT=D7-AK-6E_R4R10_DAILY_LEAD_SOURCE_GATE_PASS",
+    ),
+    (
         "NEWS_CENSOR_FULL_IMAGE_COVERAGE_VERIFIER",
         "verify_news_censor_image_coverage.py",
         r"RESULT=D7-AK-6E_NEWS_CENSOR_FULL_IMAGE_COVERAGE_PASS",

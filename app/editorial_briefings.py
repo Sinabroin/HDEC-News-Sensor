@@ -1985,6 +1985,52 @@ def _select_with_diversity(
                 selected_ids.add(id(candidate))
 
 
+# R4-R10 — delivered Daily-Brief lead-source floor. A screenshot regression
+# showed long-tail / specialist publishers (비즈트리뷴·더퍼블릭·녹색경제신문) and
+# stock-theme stories arriving as delivered Daily lead cards. Only the locked
+# primary-ten / secondary-three / promoted-official publishers may become a
+# delivered lead card; specialist and long-tail (neutral·low) sources are kept
+# upstream as supporting evidence but never a standalone delivered card. The
+# tier is re-derived authoritatively from source_priority at render time so the
+# floor holds even when the article was rebuilt from a serialized review bundle.
+_LEAD_SOURCE_ELIGIBLE_TIERS = frozenset(
+    {"primary_10", "secondary_3", "official_institution"}
+)
+
+
+def lead_source_eligible_tier(source: str, selected_url: str = "") -> bool:
+    """True only for locked primary-ten / secondary-three / official publishers."""
+    tier = str(
+        source_priority.publisher_delivery_tier(source, selected_url).get("tier")
+    )
+    return tier in _LEAD_SOURCE_ELIGIBLE_TIERS
+
+
+def filter_lead_source_eligible(
+    articles: "list[EditorialArticle]",
+) -> "list[EditorialArticle]":
+    """Keep only delivered lead cards from major or promoted-official sources.
+
+    Order is preserved; a shorter (even empty) brief is preferred to padding
+    with a weak-source lead. An official-institution card must additionally be
+    main-surface eligible (a non-promoted institution never becomes a lead).
+    """
+    kept: list[EditorialArticle] = []
+    for article in articles:
+        tier = str(
+            source_priority.publisher_delivery_tier(
+                article.source, article.selected_url
+            ).get("tier")
+        )
+        if tier not in _LEAD_SOURCE_ELIGIBLE_TIERS:
+            continue
+        if tier == "official_institution" and not getattr(
+            article, "main_surface_eligible", True
+        ):
+            continue
+        kept.append(article)
+    return kept
+
 
 def _run_deterministic_selection(
     relevant: list[_ArticleCandidate],
@@ -4550,7 +4596,14 @@ def render_daily(
     review_mode: str = "not_applicable",
     review_decision: str = "not_applicable",
     editor_console_available: bool = False,
+    lead_source_gate: bool = False,
 ) -> RenderedEdition:
+    if lead_source_gate:
+        # R4-R10 — drop long-tail/specialist leads from the delivered brief.
+        # An empty result is a graceful "prefer zero" skip, not a crash.
+        articles = filter_lead_source_eligible(articles)
+        if not articles:
+            raise EditorialError("empty edition")
     if not articles:
         raise EditorialError("daily edition has no eligible linked articles")
     key = edition_key("daily", run_at)
@@ -4845,6 +4898,7 @@ def render_edition(
     review_mode: str = "not_applicable",
     review_decision: str = "not_applicable",
     editor_console_available: bool = False,
+    lead_source_gate: bool = False,
 ) -> RenderedEdition:
     coverage = coverage_for(edition_type, run_at)
     limit = DAILY_MAX_ARTICLES if edition_type == "daily" else WEEKLY_MAX_ARTICLES
@@ -4874,6 +4928,7 @@ def render_edition(
             review_mode=review_mode,
             review_decision=review_decision,
             editor_console_available=editor_console_available,
+            lead_source_gate=lead_source_gate,
         )
     if edition_type == "weekly":
         return render_weekly(articles, run_at=run_at, root_url=root_url)

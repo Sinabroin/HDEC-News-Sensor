@@ -622,6 +622,25 @@ def run_publish(
                 review,
                 limit=editorial_briefings.DAILY_MAX_ARTICLES,
             )
+            # R4-R10 — delivered Daily lead cards must come from locked
+            # primary-ten / secondary-three / promoted-official publishers.
+            # Long-tail/specialist leads (비즈트리뷴·더퍼블릭·녹색경제신문·S저널) are
+            # dropped from delivery; a shorter, honest brief is preferred to a
+            # weak-source lead. Long-tail articles remain operator-visible
+            # supporting evidence in the review bundle.
+            gated_articles = editorial_briefings.filter_lead_source_eligible(
+                selected_articles
+            )
+            print(
+                "daily_lead_source_gate "
+                f"delivered_leads={len(gated_articles)} "
+                f"long_tail_leads_dropped={len(selected_articles) - len(gated_articles)}"
+            )
+            if not gated_articles:
+                return _skip_insufficient_quality(
+                    edition_type, key, review_decision
+                )
+            selected_articles = gated_articles
             # R4-R9C — the operator editor action requires the dated Review
             # Console for this edition to already exist in the repository;
             # otherwise the message degrades to public-link-only output.
@@ -657,6 +676,11 @@ def run_publish(
                 )
         except editorial_review.EditorialReviewError:
             review_mode = "live_collection_fallback"
+            # R4-R10 — even on the live-collection fallback, emit the exact-edition
+            # editor CTA when the dated Review Console for this edition exists.
+            editor_console_available = (
+                ROOT / "docs" / "editorial" / "review" / key / "index.html"
+            ).is_file()
             try:
                 edition = editorial_briefings.render_edition(
                     edition_type,
@@ -670,6 +694,10 @@ def run_publish(
                     selection_audit=selection_counters,
                     review_mode=review_mode,
                     review_decision=review_decision,
+                    editor_console_available=editor_console_available,
+                    # R4-R10 — the live-collection fallback delivers the same
+                    # major/official lead-source floor as the review-bundle path.
+                    lead_source_gate=True,
                 )
             except editorial_briefings.EditorialError as exc:
                 if str(exc) != "empty edition":

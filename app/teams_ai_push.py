@@ -2030,7 +2030,9 @@ def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
         publisher_rank=publisher_rank,
         immediate=False,
         reason=(
-            "official_institution_not_promoted"
+            "explicit_never_automatic_publisher"
+            if policy.get("explicit_never_automatic")
+            else "official_institution_not_promoted"
             if lane == source_priority.TEAMS_LANE_OFFICIAL_INSTITUTION
             else "source_tier_not_eligible"
         ),
@@ -2221,6 +2223,27 @@ def apply_major_media_first_gate(
     )
 
     selected = tuple(immediate_selected) + tuple(fallback_selected)
+    specialist_rows_automatic_rejected = sum(
+        bool(item.holdback and not item.holdback.same_event_major_available)
+        for item in held
+    )
+    # R4-R10 — the "specialist or neutral" rejection family the strict source
+    # gate refuses to auto-send: rejected rows whose publisher tier is
+    # neutral/low, or an explicitly excluded publisher (e.g. S저널, traced from
+    # a real 2026-08-05 production auto-send). Stock hard-exclusion
+    # (stock_market_hard_excluded) and un-promoted official rejections are
+    # counted by their own dedicated counters, not here.
+    never_automatic_rejected_rows = sum(
+        item.gate.gate_class == SOURCE_GATE_NEVER_AUTOMATIC
+        and item.gate.reason in (
+            "source_tier_not_eligible",
+            "explicit_never_automatic_publisher",
+        )
+        for item in rejected
+    )
+    specialist_or_neutral_rejected_rows = (
+        specialist_rows_automatic_rejected + never_automatic_rejected_rows
+    )
     audit = {
         "teams_immediate_major_rows": len(immediate),
         "teams_specialist_held_rows": len(held),
@@ -2243,13 +2266,14 @@ def apply_major_media_first_gate(
             bool(item.holdback and item.holdback.same_event_major_available)
             for item in held
         ),
-        "specialist_rows_automatic_rejected": sum(
-            bool(item.holdback and not item.holdback.same_event_major_available)
-            for item in held
-        ),
+        "specialist_rows_automatic_rejected": specialist_rows_automatic_rejected,
         "specialist_rows_selected": len(fallback_selected),
         "specialist_automatic_fallback_removed": True,
         "source_gate_rejected_rows": len(rejected),
+        # R4-R10 — neutral/low + explicitly-excluded publisher rejections, and
+        # the combined "specialist or neutral" rejection total.
+        "never_automatic_rejected_rows": never_automatic_rejected_rows,
+        "specialist_or_neutral_rejected_rows": specialist_or_neutral_rejected_rows,
         "selected_primary_10_rows": sum(
             item.gate.gate_class == SOURCE_GATE_PRIMARY_10
             for item in selected

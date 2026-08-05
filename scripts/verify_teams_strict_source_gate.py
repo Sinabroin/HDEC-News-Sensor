@@ -89,6 +89,17 @@ LONG_TAIL = [
     ("비즈트리뷴", "https://www.biztribune.co.kr/news/articleView.html?idxno=900010"),
 ]
 
+# §9 R4-R10 — the EXACT 2026-08-05 production regression. S저널 (s-journal.co.kr)
+# is a neutral/long-tail publisher that carries none of the primary-ten /
+# secondary-three / official lanes, yet this exact article was delivered through
+# the teams_ai_push path on main (which does not contain this gate). The strict
+# gate — plus the explicit never_automatic_publishers pin in
+# data/source_priority_rules.json — must refuse it: selected 0, sent 0,
+# specialist_or_neutral_rejected 1. The pin is domain/alias/label resistant.
+SJOURNAL_URL = "https://www.s-journal.co.kr/news/articleView.html?idxno=42865"
+SJOURNAL_SOURCE = "S저널"
+SJOURNAL_TITLE = "최태원, HBM으로 빅테크 묶었다…5000억 달러 'AI 동맹' SKT까지 확장"
+
 
 def check(name: str, ok: bool, detail: str = "") -> None:
     global CHECKS
@@ -127,6 +138,24 @@ def theguru(**overrides):
         shadow_confirmed_event_types=["partnership_signed"],
         **overrides,
     )
+
+
+def sjournal(**overrides):
+    """The exact S저널 production article, otherwise fully pre-gate eligible
+    (AI-central, HDEC-relevant, confirmed material event) so ONLY the source
+    gate — via the explicit never_automatic_publishers pin — can stop it."""
+    base = specialist_article(
+        "obs-sjournal-42865", SJOURNAL_SOURCE, SJOURNAL_URL,
+        title=SJOURNAL_TITLE,
+        summary=(
+            "SK가 HBM 공급을 지렛대로 글로벌 빅테크와 5000억 달러 규모 AI 데이터센터 "
+            "동맹을 맺고 현대건설 전력 인프라 협력으로 확장한다."
+        ),
+        hdec_relevance="현대건설 직접 영향(AI 데이터센터 전력 인프라)",
+        shadow_confirmed_event_types=["partnership_signed"],
+    )
+    base.update(overrides)
+    return base
 
 
 def primary(key: str, title: str, source: str = "연합뉴스", **overrides):
@@ -409,6 +438,57 @@ def main() -> int:
           len(batchC.selected) == 1
           and a["selected_primary_10_rows"] == 1, str(a))
 
+    # ---------------------------------------------------- §9 R4-R10 S저널 regression
+    # The exact 2026-08-05 production auto-send (delivery_id teams_ai_push:…,
+    # importance important, source S저널, s-journal.co.kr) must be refused by the
+    # strict gate. On main the gate is absent; here it is proven blocked.
+    sj_policy = source_priority.teams_delivery_source_policy(SJOURNAL_SOURCE, SJOURNAL_URL)
+    check("§9 S저널 is never_automatic (never primary_10 / secondary_3 / official)",
+          sj_policy["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC
+          and sj_policy["tier"] not in source_priority.TEAMS_IMMEDIATE_TIERS
+          and sj_policy["tier"] != "official_institution", str(sj_policy))
+    check("§9 S저널 is on the explicit never_automatic_publishers pin",
+          sj_policy["explicit_never_automatic"] == "S저널", str(sj_policy))
+    sj_spoof = source_priority.teams_delivery_source_policy("Microsoft Teams", SJOURNAL_URL)
+    check("§9 s-journal.co.kr destination stays never_automatic under a spoofed label",
+          sj_spoof["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC, str(sj_spoof))
+
+    with tempfile.TemporaryDirectory(prefix="hdec-r4r10-sj-") as raw:
+        tmp = Path(raw)
+        # (a) exact article, otherwise fully eligible, through the production
+        # sender: selected 0, no SMTP attempt, specialist_or_neutral_rejected 1.
+        st = tmp / "sj-exact.json"
+        summary, rec = deliver(tmp, [sjournal()], st)
+        check("§9 exact S저널 article: selected=0 accepted=0 sent=0",
+              summary["selected"] == 0 and rec.attempts == []
+              and summary["delivered_count"] == 0, str(summary))
+        check("§9 exact S저널 article: specialist_or_neutral_rejected == 1",
+              summary["specialist_or_neutral_rejected_rows"] == 1
+              and summary["never_automatic_rejected_rows"] == 1
+              and summary["source_gate_rejected_rows"] == 1, str(summary))
+        cand = select_teams_push_candidates([sjournal()], max_articles=None)
+        check("§9 S저널 candidate passes every pre-gate yet the source gate refuses it",
+              len(cand) == 1
+              and evaluate_source_gate(cand[0]).gate_class == SOURCE_GATE_NEVER_AUTOMATIC
+              and evaluate_source_gate(cand[0]).reason
+              == "explicit_never_automatic_publisher", str(cand))
+        # (b) S저널 + a same-event primary-ten card: the primary is the only
+        # selection; no specialist/neutral is ever sent.
+        st = tmp / "sj-plus-primary.json"
+        summary, rec = deliver(
+            tmp,
+            [sjournal(cluster_key="evt-sj"),
+             primary("p-sj", "연합뉴스: 현대건설 AI 데이터센터 전력 인프라 협력 확정",
+                     "연합뉴스", cluster_key="evt-sj",
+                     hdec_relevance="현대건설 직접 영향",
+                     shadow_confirmed_event_types=["partnership_signed"])],
+            st,
+        )
+        check("§9 S저널 + same-event primary: primary only, specialist/neutral selected 0",
+              summary["selected"] == 1 and summary["selected_primary_10_rows"] == 1
+              and summary["selected_specialist_rows"] == 0
+              and summary["delivered_count"] == 1, str(summary))
+
     print(f"checks={CHECKS} failures={len(FAILURES)}")
     if FAILURES:
         for name in FAILURES:
@@ -417,6 +497,7 @@ def main() -> int:
     print("RESULT=D7-AK-6E_R4R9D_TEAMS_STRICT_SOURCE_GATE_PASS")
     print(
         "theguru_regression=blocked long_tail_publishers=10 "
+        "sjournal_regression=blocked sjournal_specialist_or_neutral_rejected=1 "
         "specialist_rows_selected=0 network_calls=0 real_smtp_connections=0 "
         "teams_sends=0 telegram_sends=0 production_state_writes=0 "
         f"specialist_max_per_batch={TEAMS_SPECIALIST_MAX_PER_BATCH}"
