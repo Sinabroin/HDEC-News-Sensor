@@ -303,12 +303,19 @@ def verify_reference_locked_model(model: dict, html: str) -> None:
     check("3a: article-data와 DOM 카드가 현재 모델을 공유", bool(articles), f"{len(articles)} rows")
     valid_tokens = {"all", "biz", "peers", "hdec", "safety", "global", "ai", "magazine"}
     emitted = {token for row in articles for token in _row_lens(row)}
-    # The exact reference uses opaque per-edition subfilter IDs alongside the
-    # seven stable top-level category tokens.  Those IDs are deterministic data,
-    # not a new visible category vocabulary.
+    # The exact reference uses opaque per-edition subfilter IDs and lens
+    # subfilter-group tokens alongside the stable top-level category tokens.
+    # build_news_censor emits them as "sub:<id>" / "lens:<key>" for the
+    # in-page subfilter chips; they are deterministic data, not a new visible
+    # category vocabulary.  A "lens:" token outside VALID_LENS is still drift
+    # and still fails (R4-R9B: the previous sub_/no-lens allowance never
+    # matched the builder contract and deadlocked the scheduled refresh
+    # before the build step that replaces the committed artifact).
     invalid = sorted(
         token for token in emitted
-        if token not in valid_tokens and not token.startswith("sub_")
+        if token not in valid_tokens
+        and not token.startswith(("sub_", "sub:"))
+        and not (token.startswith("lens:") and token[5:] in VALID_LENS)
     )
     check("3b: exact-reference 카테고리 토큰만 사용", not invalid, repr(invalid))
     hyper = [row for row in articles if _is_hyper(row)]
