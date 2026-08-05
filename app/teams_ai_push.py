@@ -38,12 +38,17 @@ MAX_TEAMS_ARTICLES = 10
 DEFAULT_TEAMS_BATCH_MAX = 5
 HARD_TEAMS_BATCH_MAX = 5
 
-# D7-AK-6E R4-R9A — Teams major-media-first source gate (canonical constants).
-# A specialist/trusted-other article becomes fallback-eligible only after a
-# 120-minute holdback, and at most one specialist article is selected per
-# natural run. Unused major-media capacity is never filled with specialists.
+# D7-AK-6E R4-R9A / R4-R9D — Teams major-media-first source gate (canonical
+# constants).  R4-R9D removes the automatic specialist/trusted-other fallback
+# entirely: a specialist article must never become a standalone Teams card,
+# even after the holdback elapses, even when the event is TOP and directly
+# relevant to Hyundai E&C.  The system prefers zero delivery over a
+# specialist-only delivery.  The 120-minute window survives only as
+# operator/audit metadata (age is still computed) — it can never select.
 TEAMS_SPECIALIST_HOLDBACK_MINUTES = 120
-TEAMS_SPECIALIST_MAX_PER_BATCH = 1
+# R4-R9D: 0 — automatic specialist fallback removed. Selection hard-clamps this
+# to 0 regardless of any caller-supplied override (see apply_major_media_first_gate).
+TEAMS_SPECIALIST_MAX_PER_BATCH = 0
 
 SOURCE_GATE_PRIMARY_10 = "primary_10"
 SOURCE_GATE_SECONDARY_3 = "secondary_3"
@@ -2150,7 +2155,12 @@ def apply_major_media_first_gate(
         elif filler_reason:
             block_reason = filler_reason
         else:
-            block_reason = ""
+            # R4-R9D — even a holdback-expired, TOP, directly-relevant specialist
+            # article is refused automatic selection. The diagnostic sub-reasons
+            # above still populate when they apply (operator/audit metadata); this
+            # branch is the residual "would have been eligible under the old
+            # policy" case, which the strict source gate now blocks outright.
+            block_reason = "specialist_automatic_fallback_removed"
         evaluated.append(
             replace(
                 item,
@@ -2169,10 +2179,14 @@ def apply_major_media_first_gate(
             )
         )
 
-    fallback_room = min(
-        max(0, cap - len(immediate_selected)),
-        max(0, int(max_specialist_per_batch)),
-    )
+    # R4-R9D — automatic specialist fallback removed. No specialist/trusted-other
+    # article is ever selected for automatic Teams delivery, regardless of
+    # holdback age, TOP importance, direct Hyundai E&C relevance, or any
+    # caller-supplied ``max_specialist_per_batch`` override (retained only for
+    # signature back-compatibility). Every holdback-lane row stays held —
+    # available as supporting evidence / Daily/Weekly review, never sent or
+    # accepted. The system prefers zero delivery over a specialist-only card.
+    fallback_room = 0
     fallback_selected: list[GatedCandidate] = []
     held: list[GatedCandidate] = []
     for item in evaluated:
@@ -2219,6 +2233,22 @@ def apply_major_media_first_gate(
             for item in evaluated
         ),
         "teams_specialist_selected_rows": len(fallback_selected),
+        # R4-R9D strict-source-gate audit counters. specialist_rows_selected is
+        # the authoritative invariant and is always 0 (automatic specialist
+        # fallback removed). "supporting_evidence" = held specialist rows that
+        # back a same-event major/official card; "automatic_rejected" = the
+        # specialist-only rows the gate refuses to auto-send (prefer zero).
+        "specialist_rows_seen": len(holdback_lane),
+        "specialist_rows_supporting_evidence": sum(
+            bool(item.holdback and item.holdback.same_event_major_available)
+            for item in held
+        ),
+        "specialist_rows_automatic_rejected": sum(
+            bool(item.holdback and not item.holdback.same_event_major_available)
+            for item in held
+        ),
+        "specialist_rows_selected": len(fallback_selected),
+        "specialist_automatic_fallback_removed": True,
         "source_gate_rejected_rows": len(rejected),
         "selected_primary_10_rows": sum(
             item.gate.gate_class == SOURCE_GATE_PRIMARY_10

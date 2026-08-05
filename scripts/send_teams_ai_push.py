@@ -697,6 +697,19 @@ def deliver(
         "teams_specialist_selected_rows": gate_batch.audit[
             "teams_specialist_selected_rows"
         ],
+        # R4-R9D §8 — strict-source-gate specialist counters. The invariant is
+        # specialist_rows_selected == 0 (automatic specialist fallback removed).
+        "specialist_rows_seen": gate_batch.audit["specialist_rows_seen"],
+        "specialist_rows_supporting_evidence": gate_batch.audit[
+            "specialist_rows_supporting_evidence"
+        ],
+        "specialist_rows_automatic_rejected": gate_batch.audit[
+            "specialist_rows_automatic_rejected"
+        ],
+        "specialist_rows_selected": gate_batch.audit["specialist_rows_selected"],
+        "specialist_automatic_fallback_removed": gate_batch.audit[
+            "specialist_automatic_fallback_removed"
+        ],
         "teams_specialist_replaced_by_major_rows": replaced_by_major_marks,
         "selected_primary_10_rows": gate_batch.audit["selected_primary_10_rows"],
         "selected_secondary_3_rows": gate_batch.audit[
@@ -848,6 +861,14 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         "teams_specialist_fallback_eligible_rows="
         + str(int(summary.get('teams_specialist_fallback_eligible_rows') or 0)),
         f"teams_specialist_selected_rows={int(summary.get('teams_specialist_selected_rows') or 0)}",
+        f"specialist_rows_seen={int(summary.get('specialist_rows_seen') or 0)}",
+        "specialist_rows_supporting_evidence="
+        + str(int(summary.get('specialist_rows_supporting_evidence') or 0)),
+        "specialist_rows_automatic_rejected="
+        + str(int(summary.get('specialist_rows_automatic_rejected') or 0)),
+        f"specialist_rows_selected={int(summary.get('specialist_rows_selected') or 0)}",
+        "specialist_automatic_fallback_removed="
+        + str(bool(summary.get('specialist_automatic_fallback_removed'))),
         "teams_specialist_replaced_by_major_rows="
         + str(int(summary.get('teams_specialist_replaced_by_major_rows') or 0)),
         f"selected_primary_10_rows={int(summary.get('selected_primary_10_rows') or 0)}",

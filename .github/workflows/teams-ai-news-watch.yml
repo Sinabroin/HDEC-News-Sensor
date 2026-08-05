@@ -71,6 +71,7 @@ jobs:
           python3 scripts/verify_teams_ai_push_production.py
           python3 scripts/verify_teams_validated_brief_semantic_equivalence.py
           python3 scripts/verify_teams_major_media_gate.py
+          python3 scripts/verify_teams_strict_source_gate.py
           python3 scripts/verify_stock_market_hard_exclusion.py
 
       # 2) 라이브 뉴스 메타데이터만 임시 파일로 생성한다(공개 docs/daily·Pages 미변경·미게시).
