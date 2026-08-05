@@ -147,11 +147,12 @@ const storageKey=`hdec-editorial-review-v2:${bundle.edition_key}`;
 const dimensionLabels={business_relevance:"업무 관련성",importance:"기사 중요도",source_reliability:"출처 신뢰도",specificity:"정보 구체성",executive_value:"임원 보고 가치",novelty:"새로움"};
 const exclusionLabels={low_trust_source:"듣보잡·신뢰도 낮음",promotional:"홍보성",clickbait:"제목 낚시",shallow:"내용이 얕음",duplicate:"중복 기사",low_hdec_relevance:"현대건설 관련성 낮음",not_ai:"AI 직접 관련 없음",stale:"오래된 기사",stock_market_noise:"증권·주가성",fact_check_needed:"사실 확인 부족"};
 const defaultSelected=bundle.candidates.filter(x=>x.ai_recommended).slice(0,MAX_SELECTED).map(x=>x.candidate_id);
-let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft"};
+let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:""};
 try{
   const saved=JSON.parse(localStorage.getItem(storageKey));
   if(saved&&Array.isArray(saved.selected))state={...state,...saved};
 }catch(error){}
+state.exactEditionId=typeof state.exactEditionId==="string"?state.exactEditionId:"";
 state.manualCandidates=Array.isArray(state.manualCandidates)?state.manualCandidates:[];
 state.ratings=state.ratings&&typeof state.ratings==="object"?state.ratings:{};
 state.edits=state.edits&&typeof state.edits==="object"?state.edits:{};
@@ -944,8 +945,19 @@ function adoptExactEdition(manifest){
       category:CATEGORY_ORDER.includes(row.category)?row.category:"기술정보"
     };
   }
-  state.selected=orderedIds;
-  state.edits={...state.edits,...driven};
+  // R4-R11 — a saved operator draft made under THIS exact edition id survives
+  // reload (title/summary edits, selection, ordering). Any other saved state
+  // (an older edition's draft or a plain-console working copy) still never
+  // masquerades as the linked edition: the manifest drives the form state.
+  const draftIsThisEdition=state.exactEditionId===manifest.edition_id
+    &&Array.isArray(state.selected)
+    &&state.selected.length>0
+    &&state.selected.every(id=>byId(id));
+  state.exactEditionId=manifest.edition_id;
+  if(!draftIsThisEdition){
+    state.selected=orderedIds;
+    state.edits={...state.edits,...driven};
+  }
   normalizeSelectedOrder();
   render();
   return true;

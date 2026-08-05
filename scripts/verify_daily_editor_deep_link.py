@@ -572,6 +572,10 @@ def main() -> int:
         "manifest DRIVES the editable form state (not a panel-only overlay)",
         "function adoptExactEdition" in module
         and "duplicateByUrl(row.publisher_url)" in module
+        # R4-R11 — a draft saved under this exact edition id survives reload;
+        # any other saved state never masquerades as the linked edition.
+        and "state.exactEditionId===manifest.edition_id" in module
+        and "state.exactEditionId=manifest.edition_id" in module
         and "state.selected=orderedIds" in module
         and "state.edits={...state.edits,...driven}" in module
         and "adoptExactEdition(manifest)" in module
