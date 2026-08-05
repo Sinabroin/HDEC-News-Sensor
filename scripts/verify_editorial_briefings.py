@@ -253,6 +253,7 @@ def workflow_contracts() -> None:
     check(
         "Daily exact publication/state git-add allowlist",
         'git add -- "$DATED_PATH" "$LATEST_PATH"' in daily
+        and 'git add -- "$EDITION_MANIFEST_PATH"' in daily
         and 'git add -- "$STATE_PATH"' in daily
         and 'DATED_PATH="docs/editorial/daily/${EDITION}.html"' in daily
         and 'LATEST_PATH="docs/editorial/daily/latest.html"' in daily
@@ -2357,18 +2358,21 @@ def smtp_and_state_contracts(daily: brief.RenderedEdition) -> None:
         for part in message.walk()
         if part.get_content_type() in {"text/plain", "text/html"}
     )
-    body_urls = re.findall(r"https?://[^\s\"'<>]+", body_text)
-    check("message contains only canonical Brief and dashboard links",
-          public_url_contract.DAILY_LATEST_URL in body_text
+    body_urls = re.findall(
+        r"https?://[^\s\"'<>]+", body_text.replace("&amp;", "&")
+    )
+    allowed_urls = {
+        daily.public_dated_url,
+        public_url_contract.CANONICAL_DASHBOARD_URL,
+    }
+    if daily.editor_url:
+        allowed_urls.add(daily.editor_url)
+    check("message contains only the exact-edition Brief and dashboard links",
+          daily.public_dated_url in body_text
           and public_url_contract.CANONICAL_DASHBOARD_URL in body_text
+          and public_url_contract.DAILY_LATEST_URL not in body_text
           and bool(body_urls)
-          and all(
-              url in {
-                  public_url_contract.DAILY_LATEST_URL,
-                  public_url_contract.CANONICAL_DASHBOARD_URL,
-              }
-              for url in body_urls
-          ))
+          and all(url in allowed_urls for url in body_urls))
 
     with tempfile.TemporaryDirectory(prefix="d7ak6e-smtp-state-") as temporary:
         root = Path(temporary)
@@ -4671,19 +4675,46 @@ def source_priority_and_link_integrity_contracts() -> None:
     weekly_urls = {article.selected_url for article in weekly_articles}
 
     check(
-        "Daily Teams text contains canonical Brief and dashboard URLs",
-        public_url_contract.DAILY_LATEST_URL in daily.teams_text
+        "Daily Teams text targets the immutable dated Brief and dashboard",
+        daily.public_dated_url in daily.teams_text
         and public_url_contract.CANONICAL_DASHBOARD_URL in daily.teams_text
+        and public_url_contract.DAILY_LATEST_URL not in daily.teams_text
         and all(url not in daily.teams_text for url in daily_urls),
     )
     check(
-        "Daily Teams HTML has Brief and dashboard CTAs and no article links",
+        "Daily Teams HTML has published and dashboard CTAs and no article links",
         daily.teams_html.count("<a ") == 2
-        and public_url_contract.DAILY_LATEST_URL in daily.teams_html
+        and daily.public_dated_url in daily.teams_html
         and public_url_contract.CANONICAL_DASHBOARD_URL in daily.teams_html
-        and "오늘의 Daily Brief 보기" in daily.teams_html
+        and brief.DAILY_PUBLISHED_LINK_LABEL in daily.teams_html
         and "전체 뉴스 대시보드 보기" in daily.teams_html
+        and public_url_contract.DAILY_LATEST_URL not in daily.teams_html
         and all(url not in daily.teams_html for url in daily_urls),
+    )
+    daily_with_editor = brief.render_daily(
+        daily_articles,
+        run_at=daily_run,
+        root_url=root_url,
+        review_mode="human_approved",
+        review_decision="approved",
+        editor_console_available=True,
+    )
+    brief.validate_rendered(daily_with_editor)
+    check(
+        "Daily Teams operator action opens the exact-edition editor",
+        daily_with_editor.teams_html.count("<a ") == 3
+        and brief.DAILY_EDITOR_LINK_LABEL in daily_with_editor.teams_html
+        and daily_with_editor.editor_url.startswith(
+            f"{root_url}/editorial/review/"
+            f"{daily_with_editor.edition_key}/index.html?"
+        )
+        and f"edition_id={daily_with_editor.edition_id}"
+        in daily_with_editor.editor_url
+        and "source=teams_daily" in daily_with_editor.editor_url
+        and daily_with_editor.editor_url in daily_with_editor.teams_text
+        and brief.DAILY_EDITOR_LINK_LABEL in daily_with_editor.teams_text
+        and daily_with_editor.teams_html.index(brief.DAILY_EDITOR_LINK_LABEL)
+        < daily_with_editor.teams_html.index(brief.DAILY_PUBLISHED_LINK_LABEL),
     )
     check(
         "Weekly Teams surfaces contain Brief and dashboard CTAs",

@@ -51,7 +51,10 @@ import build_telegram_digest  # noqa: E402
 
 EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/editorial-daily-brief.yml": (
-        "e0f23ba1c31ffe51d201f05cdb67d12ccdefa2aa44c7c9a59689c6c0a26daabd"
+        # R4-R9C wires the exact-edition editor deep-link verifier into the
+        # offline gate and commits the append-only edition manifest through
+        # the explicit git-add allowlist.
+        "eafe21c5e2c1f5129667dad8c983edf5ad335575c5120f285a48a5f6e91f6c85"
     ),
     ".github/workflows/editorial-review-console.yml": (
         "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"
