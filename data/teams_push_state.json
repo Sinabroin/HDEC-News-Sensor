@@ -20,6 +20,16 @@
       "sent_at": "2026-08-04T05:06:36+09:00",
       "source": "theguru.co.kr"
     },
+    "10b07c7aa601f2a4": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
+      "source": "비즈트리뷴"
+    },
     "1ca79f32b813120e": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -842,6 +852,16 @@
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
     },
+    "title:머스크방한설키운공급망동맹반도체넘어우주ai로": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
+      "source": "비즈트리뷴"
+    },
     "title:멈추지않는공항삼성물산대만하늘길의심장을짓다": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
       "delivery_id": "teams_ai_push:f20639b627fa",
@@ -1203,7 +1223,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T20:35:03+09:00",
+  "last_successful_send_at": "2026-08-05T22:21:06+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1223,6 +1243,16 @@
       "last_material_update_at": null,
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
+      "source": "비즈트리뷴"
+    },
+    "http://www.biztribune.co.kr/news/articleView.html?idxno=356977": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
       "source": "비즈트리뷴"
     },
     "http://www.choicenews.co.kr/news/articleView.html?idxno=169385": {
@@ -2036,6 +2066,16 @@
       "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
+    "머스크방한설키운공급망동맹반도체넘어우주ai로": {
+      "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
+      "delivery_id": "teams_ai_push:1d5ad5aed446",
+      "first_sent_at": "2026-08-05T22:21:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "61993a9f857ca0360bf9f7be1ea61398c935fadc6fd3fb571ff91fba8e2934ff",
+      "sent_at": "2026-08-05T22:21:06+09:00",
+      "source": "비즈트리뷴"
     },
     "멈추지않는공항삼성물산대만하늘길의심장을짓다": {
       "cluster_key": "title:멈추지않는공항삼성물산대만하늘길의심장을짓다",
