@@ -120,6 +120,16 @@
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
     },
+    "a063edc1ec303fbb": {
+      "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
+      "delivery_id": "teams_ai_push:610c8caf1765",
+      "first_sent_at": "2026-08-05T12:42:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9b662acf78fa3a9602210a048813a8d06ed26d270e01a67aab9e1cd09d0ec241",
+      "sent_at": "2026-08-05T12:42:15+09:00",
+      "source": "초이스경제"
+    },
     "a65de9a3ca0495dd": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
       "delivery_id": "teams_ai_push:96069100b0f3",
@@ -1042,6 +1052,16 @@
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
     },
+    "title:캐터필러호실적속국내전력기기주장중껑충": {
+      "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
+      "delivery_id": "teams_ai_push:610c8caf1765",
+      "first_sent_at": "2026-08-05T12:42:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9b662acf78fa3a9602210a048813a8d06ed26d270e01a67aab9e1cd09d0ec241",
+      "sent_at": "2026-08-05T12:42:15+09:00",
+      "source": "초이스경제"
+    },
     "title:통신3사si기업들국내ai데이터센터전방위구축본격화": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
       "delivery_id": "teams_ai_push:eaac50fef721",
@@ -1123,7 +1143,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T09:15:49+09:00",
+  "last_successful_send_at": "2026-08-05T12:42:15+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1144,6 +1164,16 @@
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
+    },
+    "http://www.choicenews.co.kr/news/articleView.html?idxno=169385": {
+      "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
+      "delivery_id": "teams_ai_push:610c8caf1765",
+      "first_sent_at": "2026-08-05T12:42:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9b662acf78fa3a9602210a048813a8d06ed26d270e01a67aab9e1cd09d0ec241",
+      "sent_at": "2026-08-05T12:42:15+09:00",
+      "source": "초이스경제"
     },
     "http://www.newsworker.co.kr/news/articleView.html?idxno=439527": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
@@ -2156,6 +2186,16 @@
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
+    },
+    "캐터필러호실적속국내전력기기주장중껑충": {
+      "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
+      "delivery_id": "teams_ai_push:610c8caf1765",
+      "first_sent_at": "2026-08-05T12:42:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9b662acf78fa3a9602210a048813a8d06ed26d270e01a67aab9e1cd09d0ec241",
+      "sent_at": "2026-08-05T12:42:15+09:00",
+      "source": "초이스경제"
     },
     "통신3사si기업들국내ai데이터센터전방위구축본격화": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
