@@ -120,6 +120,16 @@
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
     },
+    "9c862b74fb8e8209": {
+      "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
+      "delivery_id": "teams_ai_push:5b97f9681df3",
+      "first_sent_at": "2026-08-05T15:15:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2edfef183283b738ac3d580fc0229f763fd29a2a7fc657b251679d27432f50c4",
+      "sent_at": "2026-08-05T15:15:38+09:00",
+      "source": "S저널"
+    },
     "a063edc1ec303fbb": {
       "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
       "delivery_id": "teams_ai_push:610c8caf1765",
@@ -1052,6 +1062,16 @@
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
     },
+    "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장": {
+      "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
+      "delivery_id": "teams_ai_push:5b97f9681df3",
+      "first_sent_at": "2026-08-05T15:15:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2edfef183283b738ac3d580fc0229f763fd29a2a7fc657b251679d27432f50c4",
+      "sent_at": "2026-08-05T15:15:38+09:00",
+      "source": "S저널"
+    },
     "title:캐터필러호실적속국내전력기기주장중껑충": {
       "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
       "delivery_id": "teams_ai_push:610c8caf1765",
@@ -1143,7 +1163,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T12:42:15+09:00",
+  "last_successful_send_at": "2026-08-05T15:15:38+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1604,6 +1624,16 @@
       "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
       "sent_at": "2026-07-30T00:22:54+09:00",
       "source": "pressian.com"
+    },
+    "https://www.s-journal.co.kr/news/articleView.html?idxno=42865": {
+      "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
+      "delivery_id": "teams_ai_push:5b97f9681df3",
+      "first_sent_at": "2026-08-05T15:15:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2edfef183283b738ac3d580fc0229f763fd29a2a7fc657b251679d27432f50c4",
+      "sent_at": "2026-08-05T15:15:38+09:00",
+      "source": "S저널"
     },
     "https://www.sedaily.com/article/20072947": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
@@ -2186,6 +2216,16 @@
       "material_signature": "5b9ef10330de7e4895fdca823dc6f242add344478b2593e18504a27a8a3e2d61",
       "sent_at": "2026-07-28T18:27:42+09:00",
       "source": "서울경제"
+    },
+    "최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장": {
+      "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
+      "delivery_id": "teams_ai_push:5b97f9681df3",
+      "first_sent_at": "2026-08-05T15:15:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2edfef183283b738ac3d580fc0229f763fd29a2a7fc657b251679d27432f50c4",
+      "sent_at": "2026-08-05T15:15:38+09:00",
+      "source": "S저널"
     },
     "캐터필러호실적속국내전력기기주장중껑충": {
       "cluster_key": "title:캐터필러호실적속국내전력기기주장중껑충",
