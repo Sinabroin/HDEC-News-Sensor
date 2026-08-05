@@ -171,9 +171,10 @@ def seed_holds(articles, first_seen: str, state_path: Path) -> None:
 def main() -> int:
     import tempfile
 
-    check("named canonical constants hold the §6 contract",
+    check("R4-R9D canonical constants: holdback metadata retained (120), "
+          "automatic specialist fallback removed (max_per_batch == 0)",
           TEAMS_SPECIALIST_HOLDBACK_MINUTES == 120
-          and TEAMS_SPECIALIST_MAX_PER_BATCH == 1)
+          and TEAMS_SPECIALIST_MAX_PER_BATCH == 0)
 
     with tempfile.TemporaryDirectory(prefix="hdec-r4r9a-gate-") as raw:
         tmp = Path(raw)
@@ -246,24 +247,30 @@ def main() -> int:
               and summary["teams_specialist_fallback_eligible_rows"] == 0,
               str(summary))
 
-        # (7) unique TechM TOP aged 150min with direct HDEC relevance: exactly 1.
+        # (7) R4-R9D — a unique TechM TOP aged 150min with direct HDEC relevance
+        # is the exact case the old policy auto-sent. The strict source gate now
+        # refuses it: specialist selected 0, no send attempt, hold retained,
+        # ledger untouched. Prefer zero delivery over a specialist-only card.
         fallback_state = tmp / "state-eligible-top.json"
         seed_holds([top_techm], AGED_FIRST_SEEN, fallback_state)
         summary, rec = deliver(tmp, [top_techm], fallback_state)
-        check("aged unique TOP TechM with HDEC relevance: selected exactly 1",
-              summary["selected"] == 1 and summary["delivered_count"] == 1
-              and summary["teams_specialist_selected_rows"] == 1, str(summary))
-        check("fallback selection is capped at one per run",
-              summary["teams_specialist_selected_rows"]
-              <= TEAMS_SPECIALIST_MAX_PER_BATCH)
-        check("fallback delivery is audited as fallback mode",
-              summary["selected_source_audit"][0]["selection_mode"] == "fallback"
-              and summary["selected_source_audit"][0]["holdback_age_minutes"] >= 120,
+        check("aged unique TOP TechM with HDEC relevance: specialist selected 0",
+              summary["selected"] == 0 and summary["delivered_count"] == 0
+              and rec.attempts == []
+              and summary["teams_specialist_selected_rows"] == 0
+              and summary["specialist_rows_selected"] == 0, str(summary))
+        check("aged unique TOP TechM: no automatic fallback eligibility remains",
+              summary["teams_specialist_fallback_eligible_rows"] == 0
+              and summary["specialist_automatic_fallback_removed"] is True,
+              str(summary))
+        check("aged unique TOP TechM: audited as held, never a fallback card",
+              not summary["selected_source_audit"]
+              and summary["specialist_rows_automatic_rejected"] == 1,
               str(summary["selected_source_audit"]))
         fallback_saved = load_state(fallback_state)
-        check("delivered fallback clears its hold and enters the ledger once",
-              not (fallback_saved.get(HELD_SPECIALISTS_KEY) or {})
-              and len(fallback_saved["article_ids"]) == 1, str(fallback_saved))
+        check("aged unique TOP TechM: hold retained, never enters the ledger",
+              len(fallback_saved.get(HELD_SPECIALISTS_KEY) or {}) == 1
+              and not fallback_saved["article_ids"], str(fallback_saved))
 
         # (8) NewsWorker stays blocked from automatic fallback even aged TOP.
         top_newsworker = observed_newsworker(
@@ -386,8 +393,11 @@ def main() -> int:
               summary["selected"] == 1
               and summary["selected_primary_10_rows"] == 1
               and summary["teams_specialist_selected_rows"] == 0, str(summary))
-        check("undisplaced specialist stays fallback-eligible in the audit",
-              summary["teams_specialist_fallback_eligible_rows"] == 1)
+        check("undisplaced specialist is never fallback-eligible (fallback removed)",
+              summary["teams_specialist_fallback_eligible_rows"] == 0
+              and summary["specialist_rows_selected"] == 0
+              and summary["specialist_automatic_fallback_removed"] is True,
+              str(summary))
 
         # (14) a specialist cannot bypass AI centrality or hard exclusions —
         # and a hard-rejected article never creates a held record.
@@ -419,22 +429,25 @@ def main() -> int:
               summary["teams_specialist_held_rows"] == 3
               and summary["source_gate_rejected_rows"] == 0)
 
-        # (16) failed fallback delivery follows the retry contract: no ledger
-        # entry, hold retained, next run completes.
+        # (16) R4-R9D — a held TOP specialist is never selected, so there is no
+        # fallback send to attempt or retry: zero SMTP attempts, hold retained
+        # across runs, ledger never gains a specialist entry.
         retry_state = tmp / "state-retry.json"
         seed_holds([top_techm], AGED_FIRST_SEEN, retry_state)
         summary, rec = deliver(tmp, [top_techm], retry_state, statuses=(550,))
-        check("failed fallback: attempted once, delivered zero",
-              summary["SMTP_attempted"] == 1 and summary["delivered_count"] == 0
-              and summary["failed_count"] == 1, str(summary))
+        check("strict gate: held specialist is never attempted for send",
+              summary["SMTP_attempted"] == 0 and summary["delivered_count"] == 0
+              and summary["teams_specialist_selected_rows"] == 0
+              and rec.attempts == [], str(summary))
         retry_saved = load_state(retry_state)
-        check("failed fallback: hold retained, ledger untouched",
+        check("strict gate: hold retained, ledger untouched",
               len(retry_saved.get(HELD_SPECIALISTS_KEY) or {}) == 1
               and not retry_saved["article_ids"], str(retry_saved))
         summary, rec = deliver(tmp, [top_techm], retry_state, statuses=(250,))
-        check("failed fallback retries and completes on the next run",
-              summary["delivered_count"] == 1
-              and summary["teams_specialist_selected_rows"] == 1, str(summary))
+        check("strict gate: still zero specialist selected on the next run",
+              summary["delivered_count"] == 0
+              and summary["teams_specialist_selected_rows"] == 0
+              and summary["specialist_rows_selected"] == 0, str(summary))
 
         # (17) batch and source counters reconcile in a mixed worst case.
         mixed = [

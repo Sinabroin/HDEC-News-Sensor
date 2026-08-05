@@ -1437,8 +1437,10 @@ def check_source_gate(tmp: Path) -> None:
     check("dry run evaluates holdback but writes no state",
           summary["selected"] == 0 and not dry_state.exists())
 
-    # 3) Aged unique TOP specialist with direct HDEC relevance: the §6
-    #    exceptional fallback delivers exactly one and clears its hold.
+    # 3) R4-R9D — an aged unique TOP specialist with direct HDEC relevance is
+    #    the exact case the old §6 fallback delivered. Automatic specialist
+    #    fallback is now removed: it delivers zero, keeps its hold, and never
+    #    enters the sent ledger. The system prefers zero delivery here.
     fallback_article = _article(
         article_key="gate-f1",
         title=_CAP_TITLES[10],
@@ -1460,13 +1462,15 @@ def check_source_gate(tmp: Path) -> None:
         tmp, _payload([fallback_article]), aged_state_path,
         now="2026-08-04T09:05:00+09:00",
     )
-    check("aged unique TOP specialist falls back to exactly one delivery",
-          summary["delivered_count"] == 1
-          and summary["teams_specialist_selected_rows"] == 1, str(summary))
+    check("aged unique TOP specialist is never auto-selected (fallback removed)",
+          summary["delivered_count"] == 0
+          and summary["teams_specialist_selected_rows"] == 0
+          and summary["specialist_rows_selected"] == 0
+          and summary["specialist_automatic_fallback_removed"] is True, str(summary))
     fallback_saved = load_state(aged_state_path)
-    check("delivered fallback clears its hold and enters the sent ledger",
-          not (fallback_saved.get(HELD_SPECIALISTS_KEY) or {})
-          and len(fallback_saved["article_ids"]) == 1, str(fallback_saved))
+    check("undelivered specialist keeps its hold and never enters the sent ledger",
+          len(fallback_saved.get(HELD_SPECIALISTS_KEY) or {}) == 1
+          and not fallback_saved["article_ids"], str(fallback_saved))
 
     # 4) A fallback-blocked publisher never sends even under the same aged
     #    TOP conditions.
