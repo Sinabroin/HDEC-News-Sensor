@@ -27,7 +27,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "scripts" / "build_static_dashboard.py"
-DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
+# R4-R10: operator run-buttons live on the DEDICATED operator dashboard artifact, not the
+# sealed public News Censor screen (docs/daily/dashboard-latest.html, owned by
+# build_news_censor.py). Repointed to the authoritative operator artifact produced by
+# build_static_dashboard.py — same assertions, correct target.
+DASHBOARD = ROOT / "docs" / "daily" / "operator-dashboard-latest.html"
 GATEWAY = ROOT / "app" / "operator_gateway.py"
 API = ROOT / "app" / "operator_api.py"
 

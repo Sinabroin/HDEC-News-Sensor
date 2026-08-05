@@ -151,8 +151,8 @@ def check_builder_generation() -> None:
         except ValueError as exc:
             check("builder --json 파싱", False, str(exc))
         else:
-            check("builder default output == dashboard-latest.html",
-                  meta.get("default_output") == "docs/daily/dashboard-latest.html")
+            check("builder default output == operator-dashboard-latest.html",
+                  meta.get("default_output") == "docs/daily/operator-dashboard-latest.html")
             check("builder output has preview model",
                   meta.get("has_preview_model") is True)
             check("builder output keeps honesty labels",
@@ -288,10 +288,10 @@ def check_workflow_contract() -> None:
     text = _read(WORKFLOW)
     if not check("telegram workflow 존재", bool(text)):
         return
-    check("workflow builds dashboard-latest.html",
-          "build_static_dashboard.py --output docs/daily/dashboard-latest.html" in text)
-    check("workflow exact-stages dashboard with daily reports",
-          "git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html"
+    check("workflow builds operator-dashboard-latest.html (separate from News Censor canonical path)",
+          "build_static_dashboard.py --output docs/daily/operator-dashboard-latest.html" in text)
+    check("workflow exact-stages operator dashboard with daily reports",
+          "git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/operator-dashboard-latest.html"
           in text)
     check("workflow injects DASHBOARD_URL via vars/secrets only",
           bool(re.search(r"DASHBOARD_URL:\s*\$\{\{[^}]*"

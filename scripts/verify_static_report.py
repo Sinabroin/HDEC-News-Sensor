@@ -178,7 +178,7 @@ def check_report_builder_source() -> None:
     # 대시보드)과 '전체 리포트 빌더를 감싸지 않음'으로 검사한다. 네트워크/비밀값 미접근은
     # verify_dashboard_export / verify_dashboard_real_data의 소스 스캔이 별도로 보장한다.
     check("대시보드 export 빌더가 전체 리포트 빌더와 분리됨 (출력=요약 대시보드, report 빌더 미사용)",
-          'DEFAULT_OUTPUT = "docs/daily/dashboard-latest.html"' in dash_src
+          'DEFAULT_OUTPUT = "docs/daily/operator-dashboard-latest.html"' in dash_src
           and "import build_static_report" not in dash_src
           and "from build_static_report" not in dash_src
           and "render_report_html" not in dash_src)
@@ -248,11 +248,11 @@ def check_workflow() -> None:
     check("workflow가 operator-latest.html을 operator 뷰로 빌드",
           "build_static_report.py --output docs/daily/operator-latest.html --audience operator"
           in text)
-    check("workflow가 dashboard-latest.html 요약 대시보드를 빌드",
-          "build_static_dashboard.py --output docs/daily/dashboard-latest.html" in text)
+    check("workflow가 operator-dashboard-latest.html 요약 대시보드를 빌드",
+          "build_static_dashboard.py --output docs/daily/operator-dashboard-latest.html" in text)
     # commit step이 세 리포트 파일을 함께 add (operator/dashboard 스냅샷 누락 방지).
-    check("commit step이 latest.html·operator-latest.html·dashboard-latest.html을 함께 add",
-          "git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html"
+    check("commit step이 latest.html·operator-latest.html·operator-dashboard-latest.html을 함께 add",
+          "git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/operator-dashboard-latest.html"
           in text)
 
     report_lines = [line for line in text.splitlines()

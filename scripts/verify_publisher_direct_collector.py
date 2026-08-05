@@ -85,7 +85,10 @@ EXPECTED_PROTECTED_SHA256 = {
         "c735b4b186f80a2ccf44d2d1117f3583e9b1f94544d9be0bc162e7bdc7952940"
     ),
     ".github/workflows/telegram-notify.yml": (
-        "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"
+        # R4-R10 repoints the operator dashboard export off the sealed News Censor
+        # canonical path onto docs/daily/operator-dashboard-latest.html, removing the
+        # dual-writer race (scheduled-live-refresh.yml stays the sole News Censor writer).
+        "b9a26ae0ce41707591ff3f4ea0ab11cdc6515ff7a165be16c1646b517fa5973f"
     ),
     "templates/editorial_daily.html": (
         "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
@@ -97,9 +100,9 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main 36f6fb8 "chore: persist Teams AI push dedup
+        # (through origin/main 17b6223 "chore: persist Teams AI push dedup
         # state", merged without modification — routine successor-pin refresh).
-        "8682290603e4d4712153c72cc2def61d1ec3f635e465f53b4637e9dce4622440"
+        "93f26acbf2ae86de0496249fe96660914cd815e0f4156f7aeec2a65afedc3400"
     ),
 }
 
