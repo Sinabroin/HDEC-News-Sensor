@@ -110,6 +110,16 @@
       "sent_at": "2026-08-04T10:12:23+09:00",
       "source": "뉴스워커"
     },
+    "699e303754c965c7": {
+      "cluster_key": "title:산은우정사업본부1조원규모ai인프라펀드조성",
+      "delivery_id": "teams_ai_push:54d92180c628",
+      "first_sent_at": "2026-08-05T20:35:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f7dd61f7f3440a318cead209c3a51e9bbf4deebe9a6279220c8c2bdd9b1924a1",
+      "sent_at": "2026-08-05T20:35:03+09:00",
+      "source": "신아일보"
+    },
     "746826e161f73c48": {
       "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
       "delivery_id": "teams_ai_push:8b636aa3ff8e",
@@ -922,6 +932,16 @@
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
     },
+    "title:산은우정사업본부1조원규모ai인프라펀드조성": {
+      "cluster_key": "title:산은우정사업본부1조원규모ai인프라펀드조성",
+      "delivery_id": "teams_ai_push:54d92180c628",
+      "first_sent_at": "2026-08-05T20:35:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f7dd61f7f3440a318cead209c3a51e9bbf4deebe9a6279220c8c2bdd9b1924a1",
+      "sent_at": "2026-08-05T20:35:03+09:00",
+      "source": "신아일보"
+    },
     "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
       "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
       "delivery_id": "teams_ai_push:8aea2a01d24a",
@@ -1183,7 +1203,7 @@
       "source": "전자신문"
     }
   },
-  "last_successful_send_at": "2026-08-05T18:14:03+09:00",
+  "last_successful_send_at": "2026-08-05T20:35:03+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1695,6 +1715,16 @@
       "sent_at": "2026-08-04T01:25:20+09:00",
       "source": "서울경제"
     },
+    "https://www.shinailbo.co.kr/news/articleView.html?idxno=5048444": {
+      "cluster_key": "title:산은우정사업본부1조원규모ai인프라펀드조성",
+      "delivery_id": "teams_ai_push:54d92180c628",
+      "first_sent_at": "2026-08-05T20:35:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f7dd61f7f3440a318cead209c3a51e9bbf4deebe9a6279220c8c2bdd9b1924a1",
+      "sent_at": "2026-08-05T20:35:03+09:00",
+      "source": "신아일보"
+    },
     "https://www.sidae.com/article/2026072814463436475": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
       "delivery_id": "teams_ai_push:755189289545",
@@ -2096,6 +2126,16 @@
       "material_signature": "2a1e6d163573026057d9e3d85061b8bdf981f1645bb289aa287e2735367b8d46",
       "sent_at": "2026-07-29T22:19:24+09:00",
       "source": "뉴시스"
+    },
+    "산은우정사업본부1조원규모ai인프라펀드조성": {
+      "cluster_key": "title:산은우정사업본부1조원규모ai인프라펀드조성",
+      "delivery_id": "teams_ai_push:54d92180c628",
+      "first_sent_at": "2026-08-05T20:35:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f7dd61f7f3440a318cead209c3a51e9bbf4deebe9a6279220c8c2bdd9b1924a1",
+      "sent_at": "2026-08-05T20:35:03+09:00",
+      "source": "신아일보"
     },
     "스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
       "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
