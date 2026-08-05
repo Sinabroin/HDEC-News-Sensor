@@ -192,7 +192,12 @@ def main() -> int:
         non_ai, require_validated_fields=True
     )
     assert not non_ai_eval.eligible
-    assert non_ai_eval.rejection_reason == "not_ai_core"
+    # R4-R6 — the canonical AI-centrality gate rejects this earlier with the
+    # granular non-AI reason; both spellings prove the same contract.
+    assert non_ai_eval.rejection_reason in {
+        "not_ai_core",
+        "ai_not_central_non_ai",
+    }, non_ai_eval.rejection_reason
 
     # E. speculation-only AI content remains blocked.
     speculation = _serialized(

@@ -793,6 +793,11 @@ def run_browser_interaction(
   window.alert=()=>{};
   if(localStorage.getItem(phaseKey)!=="restore"){
     results.manual_fallback_initially_hidden=document.getElementById("manualFallback").hidden===true;
+    const laneButtons=[...document.querySelectorAll("[data-lane]")];
+    results.operator_lane_controls=laneButtons.map(button=>button.textContent.trim()).join(">")==="전체>주요 후보>공공기관·정책";
+    document.querySelector('[data-lane="public"]').click();
+    results.operator_public_lane_filter=[...document.querySelectorAll(".candidate")].every(card=>byId(card.dataset.id)?.editorial_lane==="public_institution");
+    document.querySelector('[data-lane="all"]').click();
     const initiallySelected=document.querySelector(".candidate.selected");
     const removedId=initiallySelected.dataset.id;
     initiallySelected.querySelector('input[type="checkbox"]').click();
@@ -1210,8 +1215,9 @@ def main() -> int:
                 {
                     "candidate_id": ids[0],
                     "origin": "ai_collected",
-                    "title": "사용자가 고친 제목",
+                    "title": "사용자가 고친 AI 데이터센터 제목",
                     "summary_html": "<strong>볼드 핵심</strong> 설명",
+                    "implication_html": "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요",
                     "category": "투자·산업",
                 },
                 {
@@ -1237,11 +1243,35 @@ def main() -> int:
         review = editorial_review.load_review(review_path, "2026-07-31")
         selected, mode = editorial_review.choose_daily_articles(bundle, review)
         v.equal("approved review mode", mode, "human_approved")
-        v.equal("edited title preserved", selected[0].title, "사용자가 고친 제목")
+        v.equal("edited title preserved", selected[0].title, "사용자가 고친 AI 데이터센터 제목")
         v.equal(
             "bold summary preserved",
             selected[0].summary_html,
             "<strong>볼드 핵심</strong> 설명",
+        )
+        v.equal(
+            "editor implication override preserved (R4-R6 §12)",
+            selected[0].implication_html,
+            "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요",
+        )
+        decision_review, decision = editorial_review.load_review_decision(
+            review_path, "2026-07-31"
+        )
+        v.equal("review decision approved (R4-R6 §12)", decision, "approved")
+        v.check("decision returns the review", decision_review is not None)
+        _absent, absent_decision = editorial_review.load_review_decision(
+            tmp_path / "missing-review.json", "2026-07-31"
+        )
+        v.equal("review decision absent (R4-R6 §12)", absent_decision, "absent")
+        malformed_path = tmp_path / "malformed-review.json"
+        malformed_path.write_text("{not json", encoding="utf-8")
+        malformed_review, malformed_decision = editorial_review.load_review_decision(
+            malformed_path, "2026-07-31"
+        )
+        v.equal("review decision malformed (R4-R6 §12)", malformed_decision, "malformed")
+        v.check(
+            "malformed review fails closed with no partial application",
+            malformed_review is None,
         )
         v.equal(
             "manual link selected",
@@ -1257,6 +1287,10 @@ def main() -> int:
             root_url="https://preview.fixture.test/HDEC-News-Sensor",
         )
         v.check("rendered HTML contains bold", "<strong>볼드 핵심</strong>" in edition.html)
+        v.check(
+            "rendered HTML carries the editor implication (R4-R6 §12)",
+            "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요" in edition.html,
+        )
         v.check("rendered HTML contains manual link", "manual-ai-investment" in edition.html)
         v.check(
             "rendered HTML contains category ticker",
@@ -1682,6 +1716,8 @@ def main() -> int:
             ("restored_sector_order", "reload preserves fixed sector order"),
             ("restored_images", "reload preserves image or fallback rendering"),
             ("manual_fallback_initially_hidden", "manual fallback is hidden before failure"),
+            ("operator_lane_controls", "operator lane controls remain exact"),
+            ("operator_public_lane_filter", "operator public lane hides non-public candidates"),
             ("import_enter_triggered", "Enter key triggers article import"),
             ("import_loading_state", "URL import shows loading and cancel state"),
             ("import_candidate_added", "URL import adds one left candidate"),
@@ -1734,7 +1770,16 @@ def main() -> int:
         encoding="utf-8"
     )
     v.check("publish reads approved review", "editorial_review.load_review" in run_source)
-    v.check("publish retains AI fallback", "live_collection_fallback" in run_source)
+    # R4-R11 — the reader-only live-collection fallback is removed: a missing
+    # review bundle skips the Daily publication fail-closed (machine-readable
+    # skip_reason) instead of publishing an AI fallback without its editor.
+    # A malformed review file still fails closed to the AI order within the
+    # bundle path (load_review_decision), which the check above pins.
+    v.check(
+        "publish fails closed without the review bundle (fallback removed)",
+        "live_collection_fallback" not in run_source
+        and '"daily_review_bundle_unavailable"' in run_source,
+    )
 
     print(f"checks={v.checks} failures={v.failures}")
     print("category_ticker_order=투자·산업>기업동향>기술정보")

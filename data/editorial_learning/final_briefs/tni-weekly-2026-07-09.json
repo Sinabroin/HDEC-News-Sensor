@@ -1,0 +1,87 @@
+{
+  "record_version": 1,
+  "parser_version": "human-editorial-extract-v1",
+  "product": "weekly_tni",
+  "kind": "final_brief",
+  "edition_key": "tni-weekly-2026-07-09",
+  "issue_label": "2026년 7월 2주차",
+  "issue_date": "2026-07-09",
+  "headline_title": "정부, 공공부문 AI 전환 본격화…\"AI가 일하는 방식을 바꾼다\"",
+  "human_editor_summary": "한성숙 국무총리가 7월 9일 국가정책조정회의에서 \"AI는 더 이상 기술이나 산업의 영역에 머물지 않고 일하는 방식과 삶의 방식 전반의 변화를 요구하고 있다\"며 공공부문 AI 전환을 본격화하겠다고 밝혔습니다. 정부는 행정 내부업무용 AI 시스템 '온AI'를 연말까지 47개 중앙행정기관으로 확대 도입 하고, 활용도가 높은 핵심 공공데이터 100종 을 순차 개방할 계획입니다. 아울러 산업·일자리 전환에 선제 대응하기 위한 '한국형 AI 노출 지수' 개발도 함께 추진합니다. 출처",
+  "article_count": 6,
+  "articles": [
+    {
+      "order": 0,
+      "headline": true,
+      "evidence_level": "gold_plus",
+      "category": "투자·산업",
+      "title": "정부, 공공부문 AI 전환 본격화…\"AI가 일하는 방식을 바꾼다\"",
+      "human_summary": "한성숙 국무총리가 7월 9일 국가정책조정회의에서 \"AI는 더 이상 기술이나 산업의 영역에 머물지 않고 일하는 방식과 삶의 방식 전반의 변화를 요구하고 있다\"며 공공부문 AI 전환을 본격화하겠다고 밝혔습니다. 정부는 행정 내부업무용 AI 시스템 '온AI'를 연말까지 47개 중앙행정기관으로 확대 도입 하고, 활용도가 높은 핵심 공공데이터 100종 을 순차 개방할 계획입니다. 아울러 산업·일자리 전환에 선제 대응하기 위한 '한국형 AI 노출 지수' 개발도 함께 추진합니다. 출처",
+      "source": "서울경제",
+      "canonical_url": "https://www.sedaily.com/article/20065718",
+      "published_date": "2026-07-09"
+    },
+    {
+      "order": 1,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "네이버·KAI, 방산 특화 AI 공동개발…'국방 소버린 AI' 나선다",
+      "human_summary": "네이버·네이버클라우드·KAI(한국항공우주산업)가 7월 6일 방산 특화 AI 파운데이션 모델을 공동 개발하기로 업무협약을 체결했습니다. 팀네이버의 AI·클라우드 기술과 KAI의 항공우주·방산 통합 역량을 결합해, 외산 의존을 줄인 국방 '소버린(주권) AI' 확보를 목표로 합니다 — '소버린 AI' 확보 경쟁이 국방 분야로 확산되고 있습니다.",
+      "source": "조선비즈",
+      "canonical_url": "https://v.daum.net/v/20260707092918801",
+      "published_date": "2026-07-07"
+    },
+    {
+      "order": 2,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "현대카드, 데이터 구조화에 5000억 투자…마케팅 설계 '3일→40분'",
+      "human_summary": "현대카드가 AI·데이터 사이언스에 10년간 1조원 이상을 투입했으며, 이 중 5000억원을 데이터 구조화에 집중했습니다. 자체 AI 플랫폼 '유니버스'를 활용해 최대 3일 걸리던 마케팅 설계를 20~40분으로 단축했습니다 — AI 성과는 도구가 아니라 데이터 구조화 역량에서 판가름 납니다.",
+      "source": "서울경제",
+      "canonical_url": "https://v.daum.net/v/20260707173802714",
+      "published_date": "2026-07-07"
+    },
+    {
+      "order": 3,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "효성, 'AI융합연구원' 신설…제조 전 부문에 AI 접목",
+      "human_summary": "효성이 7월 8일 그룹 차원의 AI 전환(AX)을 위해 'AI융합연구원'을 신설하고, 초대 원장(부사장)에 맹성현 KAIST 명예교수를 선임했습니다. 연구원은 중공업·섬유·화학 등 기존 사업에 AI를 접목해 고부가가치 신제품·신사업을 발굴합니다 — 기존 제조 사업에 AI를 접목해 고부가 신사업을 발굴하려는 포석입니다.",
+      "source": "동아일보",
+      "canonical_url": "https://v.daum.net/v/20260708150937603",
+      "published_date": "2026-07-08"
+    },
+    {
+      "order": 4,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "AI가 AI를 고용하고 '판사 AI'가 중재…에이전트 경제 현실로",
+      "human_summary": "AI 에이전트가 다른 AI에 업무를 발주하고, 분쟁이 생기면 이를 중재하는 '판사 AI'까지 등장하는 자율 에이전트 경제가 본격화하고 있습니다 — 자동화가 계약·거래·중재로 확장되며 새로운 리스크 관리 과제를 남깁니다.",
+      "source": "조선일보",
+      "canonical_url": "https://v.daum.net/v/20260707144851453",
+      "published_date": "2026-07-07"
+    },
+    {
+      "order": 5,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "챗GPT 구독료, 소비자물가지수에 반영…\"AI, 가계 필수 소비로\"",
+      "human_summary": "국가데이터처가 오는 12월부터 소비자물가지수에 챗GPT 등 AI 구독료를 반영하기로 했습니다 — AI가 가계 필수 소비 항목으로 공식 편입된 첫 사례입니다.",
+      "source": "매일경제",
+      "canonical_url": "https://v.daum.net/v/20260708072700414",
+      "published_date": "2026-07-08"
+    }
+  ],
+  "provenance": {
+    "source_filename": "AI경영_TnI_Weekly_2026-07월-2주차_최종.html",
+    "source_sha256": "441c7bf17f74a3900525dc1532cfc576fe7fb68c04f89223e159f992a2e90aa7",
+    "parser_version": "human-editorial-extract-v1",
+    "extracted_article_count": 6,
+    "extracted_at": "2026-08-04T01:22:19+00:00"
+  }
+}

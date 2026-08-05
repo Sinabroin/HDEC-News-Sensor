@@ -14,16 +14,24 @@ if str(REPO_ROOT) not in sys.path:
 
 from app.teams_ai_push import select_teams_push_candidates
 from app.teams_push_state import (
+    HELD_SPECIALISTS_KEY,
     InvalidTeamsPushState,
     article_identity,
+    clear_held_record,
     derive_event_cluster_key,
     empty_state,
     evaluate_dedup,
     filter_unsent_candidates,
+    get_held_record,
     load_state,
+    mark_held_replaced_by_major,
     mark_sent_after_success,
     material_signature,
+    minutes_between,
+    observe_held_specialist,
     persist_after_success,
+    save_state,
+    validate_state,
 )
 
 
@@ -213,6 +221,87 @@ def main() -> int:
             pass
         else:
             raise AssertionError("corrupt existing state must fail closed")
+
+    # ------------------------------------------------------------------
+    # D7-AK-6E R4-R9A — held-specialist holdback records.
+    # ------------------------------------------------------------------
+    # Backward compatibility: legacy states carry no held section, and the
+    # key is omitted again once the last hold clears (byte-stable schema).
+    assert validate_state(empty_state()) == empty_state()
+    assert HELD_SPECIALISTS_KEY not in validate_state(empty_state())
+
+    held_article = article(
+        article_key="held-1",
+        title="SK하이닉스, HBM 데이터센터 공급 계약 체결",
+        source="테크M",
+        url="https://www.techm.kr/news/articleView.html?idxno=880001",
+    )
+    observed = observe_held_specialist(
+        empty_state(), held_article,
+        cluster_key="title:sk하이닉스hbm데이터센터공급계약체결",
+        source="테크M", source_tier="neutral",
+        holdback_reason="holdback_active", fallback_eligible=False,
+        now="2026-08-04T07:00:00+09:00",
+    )
+    held_entry = get_held_record(observed, held_article)
+    assert held_entry is not None
+    assert held_entry["first_seen_at"] == "2026-08-04T07:00:00+09:00"
+    assert held_entry["source_tier"] == "neutral"
+    assert held_entry["fallback_eligible"] is False
+    # A held record never touches the sent-ledger maps.
+    assert not observed["article_ids"] and not observed["cluster_keys"]
+    assert observed["last_successful_send_at"] is None
+
+    # first_seen_at is stable across later observations; last_seen_at moves.
+    reobserved = observe_held_specialist(
+        observed, held_article,
+        cluster_key="title:sk하이닉스hbm데이터센터공급계약체결",
+        source="테크M", source_tier="neutral",
+        holdback_reason="holdback_active", fallback_eligible=False,
+        now="2026-08-04T09:10:00+09:00",
+    )
+    reentry = get_held_record(reobserved, held_article)
+    assert reentry["first_seen_at"] == "2026-08-04T07:00:00+09:00"
+    assert reentry["last_seen_at"] == "2026-08-04T09:10:00+09:00"
+    assert minutes_between(
+        reentry["first_seen_at"], reentry["last_seen_at"]
+    ) == 130.0
+    # Malformed timestamps read as "not aged" (held, fail-closed).
+    assert minutes_between("broken", reentry["last_seen_at"]) == 0.0
+
+    # A delivered same-event major marks the held specialist as supporting
+    # evidence and removes its fallback eligibility.
+    replaced, marks = mark_held_replaced_by_major(
+        reobserved, "title:sk하이닉스hbm데이터센터공급계약체결",
+        major_identity="teams_ai_push:deadbeef0001", major_source="연합뉴스",
+    )
+    assert marks == 1
+    replaced_entry = get_held_record(replaced, held_article)
+    assert replaced_entry["replaced_by_major_media"] == "teams_ai_push:deadbeef0001"
+    assert replaced_entry["representative_publisher"] == "연합뉴스"
+    assert replaced_entry["fallback_eligible"] is False
+
+    # Clearing the last hold returns the state to the legacy shape.
+    cleared = clear_held_record(replaced, held_article)
+    assert HELD_SPECIALISTS_KEY not in cleared and cleared == empty_state()
+
+    # Held records round-trip through save/load, and a malformed held
+    # section fails closed like every other malformed state.
+    with tempfile.TemporaryDirectory() as tmp:
+        held_path = Path(tmp) / "teams_push_state_held.json"
+        save_state(reobserved, held_path)
+        assert load_state(held_path) == validate_state(reobserved)
+        held_raw = json.loads(held_path.read_text(encoding="utf-8"))
+        held_raw[HELD_SPECIALISTS_KEY] = {"key": "not-an-object"}
+        held_path.write_text(
+            json.dumps(held_raw, ensure_ascii=False), encoding="utf-8"
+        )
+        try:
+            load_state(held_path)
+        except InvalidTeamsPushState:
+            pass
+        else:
+            raise AssertionError("malformed held_specialists must fail closed")
 
     print("RESULT=D7-AK-5B_TEAMS_PUSH_STATE_VERIFIER_PASS")
     print(json.dumps({"cluster_key": cluster, "stored_articles": len(sent_update["article_ids"])}, ensure_ascii=False))

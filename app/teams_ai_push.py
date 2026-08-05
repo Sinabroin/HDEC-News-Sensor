@@ -14,17 +14,50 @@ from __future__ import annotations
 
 import html
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
 
-from app import publisher_direct
+from app import (
+    ai_centrality,
+    editorial_preference_runtime,
+    public_institution_routing,
+    publisher_direct,
+    source_priority,
+)
 from app.public_urls import CANONICAL_DASHBOARD_URL
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
 
 KST = timezone(timedelta(hours=9))
 # D7-AK-6C: up to ten important/top-priority AI articles per run (was three).
 MAX_TEAMS_ARTICLES = 10
+# D7-AK-6E R4-R6: the production sender delivers 0-5 articles per natural run.
+# DEFAULT applies when no cap is configured; HARD is the ceiling any
+# configuration clamps to. Never invent filler to reach a minimum — "minimum
+# one" applies only when at least one qualified unsent article exists.
+DEFAULT_TEAMS_BATCH_MAX = 5
+HARD_TEAMS_BATCH_MAX = 5
+
+# D7-AK-6E R4-R9A / R4-R9D — Teams major-media-first source gate (canonical
+# constants).  R4-R9D removes the automatic specialist/trusted-other fallback
+# entirely: a specialist article must never become a standalone Teams card,
+# even after the holdback elapses, even when the event is TOP and directly
+# relevant to Hyundai E&C.  The system prefers zero delivery over a
+# specialist-only delivery.  The 120-minute window survives only as
+# operator/audit metadata (age is still computed) — it can never select.
+TEAMS_SPECIALIST_HOLDBACK_MINUTES = 120
+# R4-R9D: 0 — automatic specialist fallback removed. Selection hard-clamps this
+# to 0 regardless of any caller-supplied override (see apply_major_media_first_gate).
+TEAMS_SPECIALIST_MAX_PER_BATCH = 0
+
+SOURCE_GATE_PRIMARY_10 = "primary_10"
+SOURCE_GATE_SECONDARY_3 = "secondary_3"
+SOURCE_GATE_PROMOTED_OFFICIAL = "promoted_official"
+SOURCE_GATE_SPECIALIST_HOLDBACK = "specialist_holdback"
+SOURCE_GATE_NEVER_AUTOMATIC = "never_automatic"
+
+SELECTION_MODE_IMMEDIATE = "immediate"
+SELECTION_MODE_FALLBACK = "fallback"
 
 IMPORTANCE_TOP = "top"
 IMPORTANCE_IMPORTANT = "important"
@@ -440,6 +473,70 @@ _MAJOR_CONFIRMED_EVENT_TOKENS = (
     "정책", "법", "승인", "착공", "선정",
 )
 
+# ---------------------------------------------------------------------------
+# R4-R9B §4 — Teams stock-market dominant-subject hard exclusion.
+#
+# Market-commentary title forms the canonical ai_centrality vocabulary does
+# not carry: rally / index / sector-rotation / profit-taking / sentiment /
+# strategy / valuation-debate framing.  Observed-production evidence: the
+# NewsPim "[5일 중국증시] AI 랠리 훈풍…순환매 장세" delivery would still pass
+# every layer once "증시" were absent — "랠리/순환매/코스피" alone had no rule.
+# Deliberately absent: bare "투자" (strategic action signal), bare
+# "강세/약세" (industry demand phrasing), bare "수혜" (policy-benefit
+# phrasing) — those would reject legitimate industry events.
+# ---------------------------------------------------------------------------
+_STOCK_DOMINANT_EXTENDED_TERMS = (
+    "랠리", "순환매", "차익실현", "차익 실현", "투자심리", "투자 심리",
+    "투자전략", "투자 전략", "매수 추천", "매도 추천", "비중 확대", "비중확대",
+    "저가 매수", "매수세", "매도세", "순매수", "순매도", "공매도",
+    "코스피", "코스닥", "나스닥", "다우지수", "다우존스", "s&p500", "s&p 500",
+    "주식시장", "주식 시장", "장세", "시황", "폭등", "폭락", "신고가", "신저가",
+    "수혜 종목", "고평가 논란", "저평가 논란", "거품 논란", "버블 논란",
+)
+
+#: Named Hyundai E&C entities — the §5 exception is entity-strict; broad
+#: industry context ("건설", "EPC") can never create it.
+_HDEC_ENTITY_TITLE_TERMS = (
+    "현대건설",
+    "현대엔지니어링",
+    "hyundai e&c",
+    "hyundai engineering & construction",
+)
+
+#: Confirmed material HDEC event forms (title/lead zone).  Definite forms
+#: only — bare "수주"/"계약" would let "수주 기대감" speculation qualify.
+_HDEC_MATERIAL_EVENT_TERMS = (
+    "계약 체결", "계약을 체결", "계약 공시", "공급계약", "공급 계약",
+    "수주했", "수주 확정", "수주 계약", "수주 성공", "낙찰", "우선협상대상자",
+    "착공", "준공", "공시", "제재", "과징금", "행정처분", "영업정지",
+    "중대재해", "사고", "인수 완료", "인수 확정", "투자 확정", "투자한다",
+    "승인", "발효", "시행", "협약 체결", "mou 체결",
+)
+
+STOCK_MARKET_EXCLUSION_REASON = "stock_market_dominant_no_hdec_material_event"
+
+
+@dataclass(frozen=True)
+class StockMarketGateDecision:
+    """R4-R9B §4/§5 — one evidence-based stock-market gate decision.
+
+    ``dominant`` is the §4 dominant-subject verdict; ``eligible`` is False
+    only for the hard rejection (dominant without the §5 HDEC material-event
+    exception).  ``blunt_stock_evidence`` records legacy full-text stock-term
+    hits so the §5 exception can also lift the pre-existing blunt text
+    rejection for a materially HDEC article (fixture: EPC contract with a
+    secondary share-price mention).  Generated why-it-matters text is never
+    an evidence zone here.
+    """
+
+    dominant: bool
+    hdec_material_event: bool
+    eligible: bool
+    exclusion_reason: str = ""
+    exception_reason: str = ""
+    evidence_terms: tuple[str, ...] = ()
+    blunt_stock_evidence: bool = False
+
 
 @dataclass(frozen=True)
 class TopicDecision:
@@ -468,6 +565,35 @@ class TeamsPushCandidate:
     cluster_key: str
     material_signature: str
     is_update: bool = False
+    # R4-R6 §7 — evidence-based delivery category from the canonical
+    # title/lead map; a sendable candidate always carries one.
+    delivery_category: str = ""
+    # R4-R7 §4 stage 8 — human-memory preference decision. Audit-only shadow
+    # while the committed profile is inactive: ranks expose the would-change
+    # ordering; the bounded adjustment reorders equal-importance peers only
+    # when an explicitly activated (or preview-fixture) profile is verified.
+    editorial_memory_profile: str = ""
+    editorial_memory_active: bool = False
+    approved_precedent_ids: tuple[str, ...] = ()
+    rejected_precedent_ids: tuple[str, ...] = ()
+    near_miss_precedent_ids: tuple[str, ...] = ()
+    silver_precedent_ids: tuple[str, ...] = ()
+    memory_preference_score: float = 0.0
+    memory_preference_adjustment: float = 0.0
+    memory_rank_before: int = 0
+    memory_rank_after: int = 0
+    memory_changed_selection: bool = False
+    source_class: str = public_institution_routing.SOURCE_CLASS_OTHER
+    editorial_lane: str = public_institution_routing.LANE_MAIN
+    public_institution_type: str = ""
+    official_source_name: str = ""
+    default_surface: str = public_institution_routing.SURFACE_MAIN
+    main_surface_eligible: bool = True
+    teams_alert_eligible: bool = True
+    tni_brief_eligible: bool = True
+    tni_report_topic_eligible: bool = False
+    promotion_reason: str = "not_public_institution"
+    final_category: str = ""
 
 
 @dataclass(frozen=True)
@@ -481,6 +607,14 @@ class TeamsPolicyEvaluation:
     source_authority_passed: bool
     eligible: bool
     rejection_reason: str = ""
+    delivery_category: str = ""
+    public_routing: (
+        public_institution_routing.PublicInstitutionRoutingDecision
+    ) = public_institution_routing.PublicInstitutionRoutingDecision()
+    # R4-R9B — stock-market gate decision; None only on the transport-level
+    # early rejections (carry-forward / freshness / authority / malformed)
+    # that never reach any delivery lane.
+    stock_market: StockMarketGateDecision | None = None
 
 
 def _value(obj: object, key: str, default: Any = "") -> Any:
@@ -785,6 +919,31 @@ def classify_ai_topic(article: object) -> TopicDecision:
         return TopicDecision(
             False,
             exclusion_reason="low_or_excluded_source",
+        )
+
+    # R4-R6/R4-R7 — canonical AI-centrality hard gate. Title-level stock /
+    # political / real-estate / civic exclusions and the
+    # explicit-or-enabling-core requirement come from app.ai_centrality;
+    # a summary AI keyword can never rescue an excluded or incidental
+    # article, while a structural AI causal event (budget reallocation,
+    # talent loss, infrastructure investment) keeps the human-precedent
+    # market articles eligible.
+    centrality = ai_centrality.classify(article)
+    if centrality.exclusion:
+        return TopicDecision(
+            False,
+            matched_terms=centrality.exclusion_terms,
+            exclusion_reason=f"excluded_{centrality.exclusion}",
+        )
+    if centrality.level not in ai_centrality.CENTRAL_LEVELS:
+        return TopicDecision(
+            False,
+            matched_terms=tuple(
+                dict.fromkeys(
+                    centrality.title_ai_terms + centrality.lead_ai_terms
+                )
+            ),
+            exclusion_reason=f"ai_not_central_{centrality.level}",
         )
 
     speculative_hits = _has(text, _SPECULATION_TERMS)
@@ -1255,6 +1414,140 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
     )
 
 
+_ALL_STOCK_MARKET_TERMS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        _STOCK_TERMS
+        + ai_centrality.STOCK_MARKET_TITLE_TERMS
+        + _STOCK_DOMINANT_EXTENDED_TERMS
+    )
+)
+
+
+def _hdec_direct_material_event(article: object) -> str:
+    """R4-R9B §5 — matched confirmed-HDEC-event term, or "".
+
+    Entity evidence must be a named Hyundai E&C entity in the *title*; the
+    confirmed material action may come from title, publisher subtitle, or the
+    first lead sentence.  Generated why-it-matters/relevance fields are never
+    consulted, so they can never create the exception.
+    """
+    title = f" {_lower(ai_centrality.article_title(article))} "
+    if not _has(title, _HDEC_ENTITY_TITLE_TERMS):
+        return ""
+    zone = " ".join(
+        part
+        for part in (
+            title,
+            _lower(ai_centrality.article_subtitle(article)),
+            ai_centrality.article_lead_sentence(article),
+        )
+        if part.strip()
+    )
+    hits = _has(f" {zone} ", _HDEC_MATERIAL_EVENT_TERMS)
+    return hits[0] if hits else ""
+
+
+def evaluate_stock_market_gate(article: object) -> StockMarketGateDecision:
+    """R4-R9B §4 — semantic, evidence-based stock-market hard gate.
+
+    Dominance lanes (title first, per the P0-C1.11 precedent):
+
+    1. canonical — :func:`app.ai_centrality.classify` surface-market form
+       (title tokens or finance-desk section) without a structural AI causal
+       event;
+    2. extended — a :data:`_STOCK_DOMINANT_EXTENDED_TERMS` commentary form in
+       the title, again without a structural AI causal event;
+    3. summary — two or more distinct market signals in the publisher factual
+       summary while the title carries no confirmed action.
+
+    A dominant article is hard-rejected unless the §5 HDEC material-event
+    exception applies; the fact that a stock moved is never itself the event.
+    The decision uses title / publisher subtitle / factual summary / explicit
+    classification fields only.
+    """
+    decision = ai_centrality.classify(article)
+    structural = bool(decision.structural_event)
+    canonical_dominant = decision.surface_market and not structural
+    evidence: tuple[str, ...] = decision.exclusion_terms if canonical_dominant else ()
+
+    title = f" {_lower(ai_centrality.article_title(article))} "
+    extended_hits = _has(title, _STOCK_DOMINANT_EXTENDED_TERMS)
+    extended_dominant = bool(extended_hits) and not structural
+    if extended_dominant:
+        evidence = tuple(dict.fromkeys(evidence + extended_hits))
+
+    summary_dominant = False
+    if not (canonical_dominant or extended_dominant or structural):
+        after = _mapping(article, "after")
+        summary = _lower(
+            _value(article, "summary")
+            or _value(article, "snippet")
+            or after.get("summary")
+            or after.get("snippet")
+        )
+        if summary:
+            summary_hits = _has(f" {summary} ", _ALL_STOCK_MARKET_TERMS)
+            distinct = {term.replace(" ", "") for term in summary_hits}
+            if len(distinct) >= 2 and not _has(title, _CONFIRMED_ACTION_TERMS):
+                summary_dominant = True
+                evidence = tuple(dict.fromkeys(evidence + summary_hits))
+
+    dominant = canonical_dominant or extended_dominant or summary_dominant
+    blunt = bool(_has(f" {_core_article_text(article)} ", _STOCK_TERMS))
+    material_term = (
+        _hdec_direct_material_event(article) if (dominant or blunt) else ""
+    )
+    if dominant and not material_term:
+        return StockMarketGateDecision(
+            dominant=True,
+            hdec_material_event=False,
+            eligible=False,
+            exclusion_reason=STOCK_MARKET_EXCLUSION_REASON,
+            evidence_terms=evidence,
+            blunt_stock_evidence=blunt,
+        )
+    exception_reason = (
+        f"hdec_material_event:{material_term}" if material_term else ""
+    )
+    return StockMarketGateDecision(
+        dominant=dominant,
+        hdec_material_event=bool(material_term),
+        eligible=True,
+        exception_reason=exception_reason,
+        evidence_terms=evidence,
+        blunt_stock_evidence=blunt,
+    )
+
+
+def _stock_neutralized_article(article: Mapping[str, Any]) -> dict[str, Any]:
+    """Copy with stock-market vocabulary scrubbed from factual text fields.
+
+    Used only for the §5 exception re-classification: the remaining evidence
+    (AI centrality, confirmed event, relevance) must independently qualify,
+    so the exception can never bypass any other gate.
+    """
+    ordered = sorted(_ALL_STOCK_MARKET_TERMS, key=len, reverse=True)
+
+    def scrub(value: object) -> str:
+        text = _clean(value)
+        for term in ordered:
+            text = re.sub(re.escape(term), " ", text, flags=re.IGNORECASE)
+        return " ".join(text.split())
+
+    neutralized = dict(article)
+    for key in ("title", "summary", "snippet"):
+        if _clean(neutralized.get(key)):
+            neutralized[key] = scrub(neutralized.get(key))
+    after = _mapping(article, "after")
+    if after:
+        after_copy = dict(after)
+        for key in ("title", "summary", "snippet"):
+            if _clean(after_copy.get(key)):
+                after_copy[key] = scrub(after_copy.get(key))
+        neutralized["after"] = after_copy
+    return neutralized
+
+
 def evaluate_teams_push_policy(
     article: Mapping[str, Any],
     *,
@@ -1267,6 +1560,7 @@ def evaluate_teams_push_policy(
     fields are then required before the unchanged AI/HDEC/importance policy runs.
     """
     article = normalize_teams_article_fields(article)
+    public_route = public_institution_routing.classify(article)
     empty_topic = TopicDecision(False)
     empty_importance = ImportanceDecision(False)
     if (
@@ -1309,17 +1603,70 @@ def evaluate_teams_push_policy(
             True, False, "malformed_required_field",
         )
 
+    # R4-R9B §4 — the stock-market hard gate is decided before topic
+    # classification, ranking, the ledger, the major-media source gate, the
+    # specialist holdback, and every fallback: a hard-rejected article never
+    # becomes a candidate at all.  The five decision fields are stamped on
+    # the normalized row so every downstream audit sees the same verdict.
+    stock_gate = evaluate_stock_market_gate(article)
+    article["stock_market_dominant_subject"] = stock_gate.dominant
+    article["hdec_direct_material_event"] = stock_gate.hdec_material_event
+    article["stock_market_exclusion_reason"] = stock_gate.exclusion_reason
+    article["stock_market_exception_reason"] = stock_gate.exception_reason
+    article["teams_stock_market_eligible"] = stock_gate.eligible
+
     topic = classify_ai_topic(article)
     if not topic.eligible:
-        reason = (
-            "speculation_only"
-            if topic.exclusion_reason == "speculation_without_confirmed_event"
-            else "not_ai_core"
-        )
+        stock_class_reasons = {
+            "stock_or_theme_article",
+            f"excluded_{ai_centrality.EXCLUSION_STOCK_MARKET}",
+        }
+        if (
+            topic.exclusion_reason in stock_class_reasons
+            and stock_gate.eligible
+            and stock_gate.hdec_material_event
+        ):
+            # R4-R9B §5 — the dominant confirmed event is independently
+            # material to Hyundai E&C, so a market reference must not itself
+            # reject the article.  Re-classify on the stock-neutralized
+            # evidence: every other gate (AI centrality, speculation,
+            # relevance, importance, source gate, ledger) still applies to
+            # the remaining evidence and can still reject it.
+            topic = classify_ai_topic(_stock_neutralized_article(article))
+    if not topic.eligible:
+        if topic.exclusion_reason == "speculation_without_confirmed_event":
+            reason = "speculation_only"
+        elif topic.exclusion_reason.startswith(
+            ("excluded_", "ai_not_central_")
+        ):
+            # Canonical AI-centrality rejections stay granular so the audit
+            # can distinguish stock/political/real-estate/civic exclusions
+            # from incidental-AI and non-AI subjects.
+            reason = topic.exclusion_reason
+        else:
+            reason = "not_ai_core"
+        if not stock_gate.eligible and not reason.startswith(
+            ("excluded_", "ai_not_central_")
+        ):
+            # R4-R9B §4 — a hard-rejected dominant market article records the
+            # stock exclusion rather than a vague legacy bucket; canonical
+            # granular reasons above keep their existing vocabulary.
+            reason = "excluded_stock_market_dominant"
         return TeamsPolicyEvaluation(
             article, topic, False,
             ImportanceDecision(False, reason=topic.exclusion_reason),
             True, False, reason,
+            stock_market=stock_gate,
+        )
+
+    if not stock_gate.eligible:
+        # R4-R9B §4 — extended/summary-lane dominant market article that the
+        # canonical title vocabulary missed (e.g. "AI 랠리…코스피" forms).
+        return TeamsPolicyEvaluation(
+            article, topic, False,
+            ImportanceDecision(False, reason=STOCK_MARKET_EXCLUSION_REASON),
+            True, False, "excluded_stock_market_dominant",
+            stock_market=stock_gate,
         )
 
     hdec_relevant = is_executive_relevant_for_push(article, topic)
@@ -1328,6 +1675,7 @@ def evaluate_teams_push_policy(
             article, topic, False,
             ImportanceDecision(False, reason="insufficient_executive_relevance"),
             True, False, "insufficient_hdec_relevance",
+            stock_market=stock_gate,
         )
 
     importance = map_importance(article, topic)
@@ -1339,10 +1687,44 @@ def evaluate_teams_push_policy(
         return TeamsPolicyEvaluation(
             article, topic, True, importance, True, False,
             reason_map.get(importance.reason, "other_policy_reason"),
+            stock_market=stock_gate,
+        )
+
+    # R4-R6 §7 — an article cannot be sent with a category whose evidence is
+    # absent from the title/lead evidence map.
+    category, _category_terms, _category_zone = ai_centrality.delivery_category(
+        article
+    )
+    if not category:
+        return TeamsPolicyEvaluation(
+            article, topic, True, importance, True, False,
+            "no_evidenced_delivery_category",
+            stock_market=stock_gate,
+        )
+
+    # R4-R8: authority is not priority. A verified official article is a
+    # default no-send candidate unless a material promotion condition was
+    # independently proven from its title/lead. This runs after every existing
+    # deterministic hard gate and cannot rescue any rejected article.
+    if public_route.is_public_lane and not public_route.teams_alert_eligible:
+        return TeamsPolicyEvaluation(
+            article,
+            topic,
+            True,
+            importance,
+            True,
+            False,
+            "public_institution_not_promoted",
+            delivery_category=category,
+            public_routing=public_route,
+            stock_market=stock_gate,
         )
 
     return TeamsPolicyEvaluation(
         article, topic, True, importance, True, True, "",
+        delivery_category=category,
+        public_routing=public_route,
+        stock_market=stock_gate,
     )
 
 
@@ -1359,12 +1741,16 @@ def _published_sort_value(article: object) -> float:
     return dt.timestamp()
 
 
-def select_teams_push_from_artifact(
+def select_teams_push_from_artifact_with_audit(
     payload: object,
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
-) -> tuple[TeamsPushCandidate, ...]:
-    """Fail-closed entrypoint for a raw delta artifact.
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
+) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int | bool | str]]:
+    """Fail-closed entrypoint for a raw delta artifact, with selection audit.
 
     D7-AK-6C — the artifact-level ``shadow_alert_delta`` flag is no longer required: a
     live-delta artifact can produce candidates even when no article is shadow-confirmed,
@@ -1372,8 +1758,17 @@ def select_teams_push_from_artifact(
     article (see :func:`map_importance`). Only the live-source guard remains, so
     mock/fallback artifacts and malformed article collections always return zero.
     """
+    empty_audit = {
+        "policy_eligible": 0,
+        "event_duplicates": 0,
+        "distinct_events": 0,
+        "stock_market_dominant_rows": 0,
+        "stock_market_hard_rejected_rows": 0,
+        "stock_market_hdec_exception_rows": 0,
+        "stock_market_fallback_blocked_rows": 0,
+    }
     if not isinstance(payload, Mapping):
-        return ()
+        return (), empty_audit
     validated_brief = False
     if _clean(payload.get("source")) == "live-delta":
         articles = payload.get("articles")
@@ -1387,37 +1782,666 @@ def select_teams_push_from_artifact(
         articles = payload.get("news_censor_display_articles")
         validated_brief = True
     else:
-        return ()
+        return (), empty_audit
     if not isinstance(articles, list):
-        return ()
-    return select_teams_push_candidates(
+        return (), empty_audit
+    return select_teams_push_candidates_with_audit(
         articles,
         max_articles=max_articles,
         require_validated_fields=validated_brief,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=memory_batch_cap,
     )
 
 
-def select_teams_push_candidates(
+def select_teams_push_from_artifact(
+    payload: object,
+    *,
+    max_articles: int | None = MAX_TEAMS_ARTICLES,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
+) -> tuple[TeamsPushCandidate, ...]:
+    """Compatibility wrapper over :func:`select_teams_push_from_artifact_with_audit`."""
+    selected, _audit = select_teams_push_from_artifact_with_audit(
+        payload,
+        max_articles=max_articles,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=memory_batch_cap,
+    )
+    return selected
+
+
+def publisher_delivery_priority(article: object) -> tuple[int, int]:
+    """Canonical delivery-priority sort key: (tier rank, locked publisher rank).
+
+    Tier order is the shared contract in :mod:`app.source_priority` —
+    primary_10 → secondary_3 → official_institution → specialist →
+    trusted_other → neutral → low → excluded."""
+    tier = source_priority.publisher_delivery_tier(
+        _clean(_value(article, "source") or _value(article, "display_source")),
+        publisher_direct.publisher_url(article),
+    )
+    return int(tier["tier_rank"]), int(tier["publisher_rank"])
+
+
+def _distinct_event_rank_key(item: "TeamsPushCandidate") -> tuple:
+    """Distinct-event ranking: importance tier first, then publisher priority,
+    then 현대건설 direct impact, score, and recency (§7)."""
+    return (
+        IMPORTANCE_RANK.get(item.importance.level, 9),
+        *publisher_delivery_priority(item.article),
+        -int(item.importance.hdec_direct),
+        -(item.importance.score if item.importance.score is not None else -1.0),
+        -_published_sort_value(item.article),
+    )
+
+
+def _event_representative_key(item: "TeamsPushCandidate") -> tuple:
+    """Same-event representative choice: locked publisher tier first (primary
+    ten, then secondary three, then official/specialist/trusted), then
+    importance, 현대건설 direct impact, score, and recency (§7)."""
+    return (
+        *publisher_delivery_priority(item.article),
+        IMPORTANCE_RANK.get(item.importance.level, 9),
+        -int(item.importance.hdec_direct),
+        -(item.importance.score if item.importance.score is not None else -1.0),
+        -_published_sort_value(item.article),
+    )
+
+
+def collapse_event_duplicates(
+    candidates: Sequence["TeamsPushCandidate"],
+) -> tuple[tuple["TeamsPushCandidate", ...], tuple["TeamsPushCandidate", ...]]:
+    """Keep one representative per event cluster; return (kept, dropped)."""
+    representatives: dict[str, TeamsPushCandidate] = {}
+    order: list[str] = []
+    dropped: list[TeamsPushCandidate] = []
+    for index, candidate in enumerate(candidates):
+        key = candidate.cluster_key or f"__solo__:{index}"
+        existing = representatives.get(key)
+        if existing is None:
+            representatives[key] = candidate
+            order.append(key)
+        elif _event_representative_key(candidate) < _event_representative_key(existing):
+            dropped.append(existing)
+            representatives[key] = candidate
+        else:
+            dropped.append(candidate)
+    return (
+        tuple(representatives[key] for key in order),
+        tuple(dropped),
+    )
+
+
+# ---------------------------------------------------------------------------
+# D7-AK-6E R4-R9A — Teams major-media-first source gate.
+#
+# The gate runs strictly AFTER every existing hard gate (required fields,
+# publisher-direct safety, AI centrality, hard exclusions, executive
+# relevance, importance, event dedup, the accepted ledger): it partitions
+# already-eligible unsent candidates and can therefore never rescue a
+# rejected article. It applies to the Teams push surface only — Daily,
+# Weekly, News Censor, operator review, Report evidence, and editorial
+# memory never consume it.
+
+# Title-only filler screen for the exceptional specialist fallback lane
+# (rules §6 condition 7). Stock/theme, promo/review, and recruit/book
+# content is already excluded upstream by :func:`classify_ai_topic`; this
+# adds ordinary-earnings, award, event-publicity, and press-release-filler
+# markers. Judged on the title only, so aggregate-snippet noise cannot flip
+# the decision. "수상태양광" (floating solar) is exempt from the award rule.
+_SPECIALIST_FALLBACK_FILLER_TERMS = (
+    "실적 발표", "영업이익", "순이익", "분기 실적", "어닝", "earnings",
+    "수상", "시상", "어워드", "award", "기념식", "축하",
+    "개최", "참가", "참석", "부스", "전시회", "박람회", "세미나", "웨비나",
+    "포럼", "컨퍼런스",
+    "보도자료", "press release", "후원", "협찬",
+)
+
+
+def _specialist_fallback_filler_reason(article: object) -> str:
+    title = f" {_lower(_value(article, 'title'))} "
+    if "수상태양광" in title:
+        title = title.replace("수상태양광", " ")
+    hits = _has(title, _SPECIALIST_FALLBACK_FILLER_TERMS)
+    return f"specialist_filler:{hits[0]}" if hits else ""
+
+
+@dataclass(frozen=True)
+class SourceGateDecision:
+    """Teams-only source-gate class for one already-eligible candidate."""
+
+    gate_class: str
+    tier: str
+    tier_rank: int
+    publisher_rank: int
+    immediate: bool
+    fallback_blocked: bool = False
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class HoldbackEvaluation:
+    """Deterministic §6 fallback evaluation for one held specialist."""
+
+    first_seen_at: str
+    age_minutes: float
+    holdback_expired: bool
+    importance_top: bool
+    material_relevance: bool
+    filler_reason: str
+    same_event_major_available: bool
+    replaced_by_major_media: str
+    fallback_eligible: bool
+    holdback_reason: str
+
+
+@dataclass(frozen=True)
+class GatedCandidate:
+    candidate: TeamsPushCandidate
+    gate: SourceGateDecision
+    holdback: HoldbackEvaluation | None = None
+    selection_mode: str = ""
+
+
+@dataclass(frozen=True)
+class SourceGateBatchResult:
+    """One deterministic gate application over the ledger-filtered batch."""
+
+    selected: tuple[GatedCandidate, ...]
+    immediate: tuple[GatedCandidate, ...]
+    immediate_selected: tuple[GatedCandidate, ...]
+    deferred_major: tuple[GatedCandidate, ...]
+    held: tuple[GatedCandidate, ...]
+    rejected: tuple[GatedCandidate, ...]
+    fallback_selected: tuple[GatedCandidate, ...]
+    holdback_observations: tuple[Mapping[str, Any], ...]
+    now_iso_value: str
+    audit: dict[str, int]
+
+
+def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
+    """Classify one candidate into its Teams source-gate class.
+
+    Publisher-direct safety and Teams editorial eligibility stay separate: a
+    safe direct link is not automatically Teams-send eligible. Promotion for
+    an official institution is decided by the existing independently proven
+    material-event policy (:mod:`app.public_institution_routing`) — this gate
+    only consumes that verdict and never re-derives it.
+    """
+    article = candidate.article
+    source = _clean(
+        _value(article, "source") or _value(article, "display_source")
+    )
+    policy = source_priority.teams_delivery_source_policy(
+        source, publisher_direct.publisher_url(article)
+    )
+    tier = str(policy["tier"])
+    tier_rank = int(policy["tier_rank"])
+    publisher_rank = int(policy["publisher_rank"])
+    # R4-R11: the explicit never_automatic pin outranks every other gate
+    # class including promoted-official — a spoofed institutional lane or
+    # label combined with an excluded publisher's URL must never become an
+    # immediate Teams card.
+    if policy.get("explicit_never_automatic"):
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=False,
+            reason="explicit_never_automatic_publisher",
+        )
+    if (
+        candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
+        and candidate.teams_alert_eligible
+    ):
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_PROMOTED_OFFICIAL,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=True,
+            reason="promoted_official_institution",
+        )
+    lane = str(policy["teams_lane"])
+    if lane == source_priority.TEAMS_LANE_IMMEDIATE_MAJOR:
+        gate_class = (
+            SOURCE_GATE_PRIMARY_10
+            if tier == "primary_10"
+            else SOURCE_GATE_SECONDARY_3
+        )
+        return SourceGateDecision(
+            gate_class=gate_class,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=True,
+            reason=f"immediate_{tier}",
+        )
+    if lane == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK:
+        fallback_blocked = bool(policy["fallback_blocked"])
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_SPECIALIST_HOLDBACK,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=False,
+            fallback_blocked=fallback_blocked,
+            reason=(
+                "fallback_blocked_publisher"
+                if fallback_blocked
+                else "specialist_holdback"
+            ),
+        )
+    return SourceGateDecision(
+        gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+        tier=tier,
+        tier_rank=tier_rank,
+        publisher_rank=publisher_rank,
+        immediate=False,
+        reason=(
+            "explicit_never_automatic_publisher"
+            if policy.get("explicit_never_automatic")
+            else "official_institution_not_promoted"
+            if lane == source_priority.TEAMS_LANE_OFFICIAL_INSTITUTION
+            else "source_tier_not_eligible"
+        ),
+    )
+
+
+def apply_major_media_first_gate(
+    accepted: Sequence[TeamsPushCandidate],
+    *,
+    state: Mapping[str, Any] | None,
+    run_cap: int,
+    now_iso_value: str = "",
+    holdback_minutes: int = TEAMS_SPECIALIST_HOLDBACK_MINUTES,
+    max_specialist_per_batch: int = TEAMS_SPECIALIST_MAX_PER_BATCH,
+) -> SourceGateBatchResult:
+    """Partition the ledger-filtered ranked batch by the Teams source gate.
+
+    Pure transform: reads held-record state, never writes it. The caller
+    (production sender) applies ``holdback_observations`` through
+    ``app.teams_push_state`` in send mode only, so a dry run changes nothing.
+
+    Selection: immediate-class candidates (locked primary ten, secondary
+    three, promoted official institutions) fill the batch in existing rank
+    order; a specialist/trusted-other candidate is selected only through the
+    §6 exceptional fallback (holdback expired · unique TOP event · direct
+    HDEC or independently proven material strategic relevance · no filler ·
+    publisher not fallback-blocked), capped at
+    :data:`TEAMS_SPECIALIST_MAX_PER_BATCH` and never displacing an available
+    major candidate. Ordinary specialist supply never fills unused capacity.
+    """
+    from app import teams_push_state as push_state
+
+    now_value = _clean(now_iso_value) or push_state.now_iso()
+    state_map: Mapping[str, Any] = state if isinstance(state, Mapping) else {}
+    ledger_clusters = {
+        _clean(key)
+        for key in (state_map.get("cluster_keys") or {})
+        if _clean(key)
+    }
+
+    immediate: list[GatedCandidate] = []
+    holdback_lane: list[GatedCandidate] = []
+    rejected: list[GatedCandidate] = []
+    stock_gate_rejected = 0
+    for candidate in accepted:
+        # R4-R9B §4 — defensive re-check at the gate boundary.  Policy-built
+        # candidates can never be stock-ineligible (the policy rejects them
+        # first), so this only guards directly-constructed batches: a
+        # dominant market article must not become immediate, held, or
+        # fallback-eligible regardless of age, importance, or publisher.
+        stock_decision = evaluate_stock_market_gate(candidate.article)
+        if not stock_decision.eligible:
+            stock_gate_rejected += 1
+            rejected.append(
+                GatedCandidate(
+                    candidate=candidate,
+                    gate=SourceGateDecision(
+                        gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+                        tier="",
+                        tier_rank=99,
+                        publisher_rank=99,
+                        immediate=False,
+                        fallback_blocked=True,
+                        reason="stock_market_hard_excluded",
+                    ),
+                )
+            )
+            continue
+        gate = evaluate_source_gate(candidate)
+        item = GatedCandidate(candidate=candidate, gate=gate)
+        if gate.immediate:
+            immediate.append(item)
+        elif gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK:
+            holdback_lane.append(item)
+        else:
+            rejected.append(item)
+
+    cap = max(0, int(run_cap))
+    immediate_selected = tuple(
+        replace(item, selection_mode=SELECTION_MODE_IMMEDIATE)
+        for item in immediate[:cap]
+    )
+    deferred_major = tuple(immediate[cap:])
+    selected_clusters = {
+        _clean(item.candidate.cluster_key)
+        for item in immediate_selected
+        if _clean(item.candidate.cluster_key)
+    }
+
+    evaluated: list[GatedCandidate] = []
+    for item in holdback_lane:
+        candidate = item.candidate
+        prior = push_state.get_held_record(state_map, candidate.article) or {}
+        first_seen = _clean(prior.get("first_seen_at")) or now_value
+        age_minutes = max(
+            0.0, push_state.minutes_between(first_seen, now_value)
+        )
+        holdback_expired = age_minutes >= float(holdback_minutes)
+        importance_top = candidate.importance.level == IMPORTANCE_TOP
+        material_relevance = bool(
+            candidate.importance.hdec_direct
+        ) or _has_strong_ai_strategic_override(
+            f" {_core_article_text(candidate.article)} "
+        )
+        filler_reason = _specialist_fallback_filler_reason(candidate.article)
+        replaced_by = _clean(prior.get("replaced_by_major_media"))
+        cluster = _clean(candidate.cluster_key)
+        same_event_major_available = bool(
+            cluster
+            and (cluster in selected_clusters or cluster in ledger_clusters)
+        ) or bool(replaced_by)
+        if item.gate.fallback_blocked:
+            block_reason = "fallback_blocked_publisher"
+        elif same_event_major_available:
+            block_reason = "same_event_major_available"
+        elif not holdback_expired:
+            block_reason = "holdback_active"
+        elif not importance_top:
+            block_reason = "importance_not_top"
+        elif not material_relevance:
+            block_reason = "no_material_relevance"
+        elif filler_reason:
+            block_reason = filler_reason
+        else:
+            # R4-R9D — even a holdback-expired, TOP, directly-relevant specialist
+            # article is refused automatic selection. The diagnostic sub-reasons
+            # above still populate when they apply (operator/audit metadata); this
+            # branch is the residual "would have been eligible under the old
+            # policy" case, which the strict source gate now blocks outright.
+            block_reason = "specialist_automatic_fallback_removed"
+        evaluated.append(
+            replace(
+                item,
+                holdback=HoldbackEvaluation(
+                    first_seen_at=first_seen,
+                    age_minutes=round(age_minutes, 1),
+                    holdback_expired=holdback_expired,
+                    importance_top=importance_top,
+                    material_relevance=material_relevance,
+                    filler_reason=filler_reason,
+                    same_event_major_available=same_event_major_available,
+                    replaced_by_major_media=replaced_by,
+                    fallback_eligible=not block_reason,
+                    holdback_reason=block_reason or "fallback_eligible",
+                ),
+            )
+        )
+
+    # R4-R9D — automatic specialist fallback removed. No specialist/trusted-other
+    # article is ever selected for automatic Teams delivery, regardless of
+    # holdback age, TOP importance, direct Hyundai E&C relevance, or any
+    # caller-supplied ``max_specialist_per_batch`` override (retained only for
+    # signature back-compatibility). Every holdback-lane row stays held —
+    # available as supporting evidence / Daily/Weekly review, never sent or
+    # accepted. The system prefers zero delivery over a specialist-only card.
+    fallback_room = 0
+    fallback_selected: list[GatedCandidate] = []
+    held: list[GatedCandidate] = []
+    for item in evaluated:
+        if (
+            len(fallback_selected) < fallback_room
+            and item.holdback is not None
+            and item.holdback.fallback_eligible
+        ):
+            fallback_selected.append(
+                replace(item, selection_mode=SELECTION_MODE_FALLBACK)
+            )
+        else:
+            held.append(item)
+
+    holdback_observations = tuple(
+        {
+            "article": item.candidate.article,
+            "cluster_key": item.candidate.cluster_key,
+            "source": _clean(
+                _value(item.candidate.article, "source")
+                or _value(item.candidate.article, "display_source")
+            ),
+            "source_tier": item.gate.tier,
+            "holdback_reason": (
+                item.holdback.holdback_reason if item.holdback else ""
+            ),
+            "fallback_eligible": bool(
+                item.holdback and item.holdback.fallback_eligible
+            ),
+        }
+        for item in evaluated
+    )
+
+    selected = tuple(immediate_selected) + tuple(fallback_selected)
+    specialist_rows_automatic_rejected = sum(
+        bool(item.holdback and not item.holdback.same_event_major_available)
+        for item in held
+    )
+    # R4-R10 — the "specialist or neutral" rejection family the strict source
+    # gate refuses to auto-send: rejected rows whose publisher tier is
+    # neutral/low, or an explicitly excluded publisher (e.g. S저널, traced from
+    # a real 2026-08-05 production auto-send). Stock hard-exclusion
+    # (stock_market_hard_excluded) and un-promoted official rejections are
+    # counted by their own dedicated counters, not here.
+    never_automatic_rejected_rows = sum(
+        item.gate.gate_class == SOURCE_GATE_NEVER_AUTOMATIC
+        and item.gate.reason in (
+            "source_tier_not_eligible",
+            "explicit_never_automatic_publisher",
+        )
+        for item in rejected
+    )
+    specialist_or_neutral_rejected_rows = (
+        specialist_rows_automatic_rejected + never_automatic_rejected_rows
+    )
+    audit = {
+        "teams_immediate_major_rows": len(immediate),
+        "teams_specialist_held_rows": len(held),
+        "teams_specialist_holdback_expired_rows": sum(
+            bool(item.holdback and item.holdback.holdback_expired)
+            for item in evaluated
+        ),
+        "teams_specialist_fallback_eligible_rows": sum(
+            bool(item.holdback and item.holdback.fallback_eligible)
+            for item in evaluated
+        ),
+        "teams_specialist_selected_rows": len(fallback_selected),
+        # R4-R9D strict-source-gate audit counters. specialist_rows_selected is
+        # the authoritative invariant and is always 0 (automatic specialist
+        # fallback removed). "supporting_evidence" = held specialist rows that
+        # back a same-event major/official card; "automatic_rejected" = the
+        # specialist-only rows the gate refuses to auto-send (prefer zero).
+        "specialist_rows_seen": len(holdback_lane),
+        "specialist_rows_supporting_evidence": sum(
+            bool(item.holdback and item.holdback.same_event_major_available)
+            for item in held
+        ),
+        "specialist_rows_automatic_rejected": specialist_rows_automatic_rejected,
+        "specialist_rows_selected": len(fallback_selected),
+        "specialist_automatic_fallback_removed": True,
+        "source_gate_rejected_rows": len(rejected),
+        # R4-R10 — neutral/low + explicitly-excluded publisher rejections, and
+        # the combined "specialist or neutral" rejection total.
+        "never_automatic_rejected_rows": never_automatic_rejected_rows,
+        "specialist_or_neutral_rejected_rows": specialist_or_neutral_rejected_rows,
+        "selected_primary_10_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_PRIMARY_10
+            for item in selected
+        ),
+        "selected_secondary_3_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_SECONDARY_3
+            for item in selected
+        ),
+        "selected_promoted_official_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_PROMOTED_OFFICIAL
+            for item in selected
+        ),
+        "selected_specialist_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
+            for item in selected
+        ),
+        # R4-R9B §4 — normally zero; non-zero means a stock-dominant article
+        # reached the gate boundary directly and was force-rejected there.
+        "stock_market_gate_rejected_rows": stock_gate_rejected,
+    }
+    return SourceGateBatchResult(
+        selected=selected,
+        immediate=tuple(immediate),
+        immediate_selected=immediate_selected,
+        deferred_major=deferred_major,
+        held=tuple(held),
+        rejected=tuple(rejected),
+        fallback_selected=tuple(fallback_selected),
+        holdback_observations=holdback_observations,
+        now_iso_value=now_value,
+        audit=audit,
+    )
+
+
+def _apply_editorial_memory_stage(
+    ranked: Sequence["TeamsPushCandidate"],
+    *,
+    batch_cap: int | None,
+    runtime: "editorial_preference_runtime.EditorialPreferenceRuntime | None" = None,
+) -> list["TeamsPushCandidate"]:
+    """R4-R7 §4 stage 8 — human-memory preference adjustment.
+
+    Runs strictly after publisher-direct/safety, AI-centrality, hard
+    exclusion, executive relevance, importance, event deduplication, and
+    publisher-priority ranking, over already-eligible candidates only — so
+    memory can never resurrect a rejected article, bypass the importance
+    minimum, or unhide previously sent state. While the committed profile is
+    inactive (production today) the deterministic order is returned
+    unchanged and each candidate carries its audit-only shadow decision:
+    would-be rank and whether the capped batch membership would change. An
+    explicitly activated profile (test fixture / preview) applies the
+    bounded reorder to equal-importance peers only."""
+    if not ranked:
+        return list(ranked)
+    if runtime is None:
+        runtime = editorial_preference_runtime.default_runtime()
+    decisions = [
+        runtime.decide(editorial_preference_runtime.PRODUCT_TEAMS, item.article)
+        for item in ranked
+    ]
+    order = editorial_preference_runtime.memory_adjusted_order(
+        len(ranked),
+        [decision.preference_adjustment for decision in decisions],
+        group_of=lambda index: IMPORTANCE_RANK.get(
+            ranked[index].importance.level, 9
+        ),
+    )
+    member_count = len(ranked) if batch_cap is None else min(batch_cap, len(ranked))
+    baseline_members = set(range(member_count))
+    adjusted_members = set(order[:member_count])
+    rank_after = {index: position + 1 for position, index in enumerate(order)}
+    final_indices = order if runtime.memory_active else list(range(len(ranked)))
+    return [
+        replace(
+            ranked[index],
+            editorial_memory_profile=decisions[index].profile_version,
+            editorial_memory_active=decisions[index].memory_active,
+            approved_precedent_ids=decisions[index].approved_precedent_ids,
+            rejected_precedent_ids=decisions[index].rejected_precedent_ids,
+            near_miss_precedent_ids=(
+                decisions[index].near_miss_precedent_ids
+            ),
+            silver_precedent_ids=decisions[index].silver_precedent_ids,
+            memory_preference_score=decisions[index].preference_score,
+            memory_preference_adjustment=(
+                decisions[index].preference_adjustment
+            ),
+            memory_rank_before=index + 1,
+            memory_rank_after=rank_after[index],
+            memory_changed_selection=(
+                (index in baseline_members) != (index in adjusted_members)
+            ),
+        )
+        for index in final_indices
+    ]
+
+
+def select_teams_push_candidates_with_audit(
     articles: Iterable[Mapping[str, Any]],
     *,
     max_articles: int | None = MAX_TEAMS_ARTICLES,
     require_validated_fields: bool = False,
-) -> tuple[TeamsPushCandidate, ...]:
-    """Filter, rank, and cap important Teams AI push candidates (default: up to ten).
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
+) -> tuple[tuple[TeamsPushCandidate, ...], dict[str, int | bool | str]]:
+    """Filter, collapse same-event duplicates, rank, and cap Teams candidates.
 
-    Ranking is highest-importance first, then 현대건설 직접 영향, then score, then recency —
-    so the cap keeps the most decision-relevant articles when more than ``max_articles``
-    qualify."""
+    Policy eligibility is unchanged. Same-event multi-publisher clusters keep
+    exactly one representative (locked primary ten first, secondary three next,
+    then official/specialist/trusted). Distinct events rank importance-first,
+    then publisher priority, 현대건설 direct impact, score, and recency. The
+    production sender applies its own 0-5 batch cap only after accepted-ledger
+    filtering, so lower-priority rows remain deferred, never lost."""
     from app.teams_push_state import derive_event_cluster_key, material_signature
 
     candidates: list[TeamsPushCandidate] = []
+    public_routes: list[
+        public_institution_routing.PublicInstitutionRoutingDecision
+    ] = []
+    # R4-R9B §6 — stock-market gate counters over every policy-reached row.
+    stock_dominant_rows = 0
+    stock_hard_rejected_rows = 0
+    stock_exception_rows = 0
+    stock_fallback_blocked_rows = 0
     for article in articles:
         if not isinstance(article, Mapping):
             continue
+        public_routes.append(public_institution_routing.classify(article))
         evaluation = evaluate_teams_push_policy(
             article,
             require_validated_fields=require_validated_fields,
         )
+        stock_gate = evaluation.stock_market
+        if stock_gate is not None:
+            stock_dominant_rows += stock_gate.dominant
+            stock_exception_rows += bool(stock_gate.exception_reason)
+            if stock_gate.dominant and not stock_gate.hdec_material_event:
+                stock_hard_rejected_rows += 1
+                # A hard-rejected row can never re-enter through the §6
+                # specialist fallback; count the rows whose source lane
+                # would otherwise have been the holdback/fallback lane.
+                policy = source_priority.teams_delivery_source_policy(
+                    _clean(
+                        _value(article, "source")
+                        or _value(article, "display_source")
+                    ),
+                    publisher_direct.publisher_url(article),
+                )
+                if (
+                    str(policy["teams_lane"])
+                    == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK
+                ):
+                    stock_fallback_blocked_rows += 1
         if not evaluation.eligible:
             continue
         candidates.append(
@@ -1430,20 +2454,106 @@ def select_teams_push_candidates(
                 ),
                 material_signature=material_signature(article),
                 is_update=_lower(_value(article, "change_type")) == "material_content_update",
+                delivery_category=evaluation.delivery_category,
+                source_class=evaluation.public_routing.source_class,
+                editorial_lane=evaluation.public_routing.editorial_lane,
+                public_institution_type=(
+                    evaluation.public_routing.public_institution_type
+                ),
+                official_source_name=evaluation.public_routing.official_source_name,
+                default_surface=evaluation.public_routing.default_surface,
+                main_surface_eligible=(
+                    evaluation.public_routing.main_surface_eligible
+                ),
+                teams_alert_eligible=(
+                    evaluation.public_routing.teams_alert_eligible
+                ),
+                tni_brief_eligible=evaluation.public_routing.tni_brief_eligible,
+                tni_report_topic_eligible=(
+                    evaluation.public_routing.tni_report_topic_eligible
+                ),
+                promotion_reason=evaluation.public_routing.promotion_reason,
+                final_category=evaluation.public_routing.final_category,
             )
         )
 
-    candidates.sort(
-        key=lambda item: (
-            IMPORTANCE_RANK.get(item.importance.level, 9),
-            -int(item.importance.hdec_direct),
-            -(item.importance.score if item.importance.score is not None else -1.0),
-            -_published_sort_value(item.article),
-        )
+    representatives, event_duplicates = collapse_event_duplicates(candidates)
+    ranked = sorted(representatives, key=_distinct_event_rank_key)
+    effective_cap = (
+        None
+        if max_articles is None
+        else max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))
     )
-    if max_articles is None:
-        return tuple(candidates)
-    return tuple(candidates[: max(0, min(int(max_articles), MAX_TEAMS_ARTICLES))])
+    audit_cap = memory_batch_cap
+    if audit_cap is None:
+        audit_cap = effective_cap
+    if audit_cap is None:
+        audit_cap = MAX_TEAMS_ARTICLES
+    audit_cap = max(0, min(int(audit_cap), MAX_TEAMS_ARTICLES))
+    ranked = _apply_editorial_memory_stage(
+        ranked,
+        batch_cap=audit_cap,
+        runtime=preference_runtime,
+    )
+    audit = {
+        "policy_eligible": len(candidates),
+        "event_duplicates": len(event_duplicates),
+        "distinct_events": len(ranked),
+        "editorial_memory_invoked": bool(ranked),
+        "editorial_memory_profile": (
+            ranked[0].editorial_memory_profile if ranked else ""
+        ),
+        "editorial_memory_active": (
+            ranked[0].editorial_memory_active if ranked else False
+        ),
+        "public_institution_lane_count": sum(
+            route.is_public_lane for route in public_routes
+        ),
+        "promoted_public_candidate_count": sum(
+            route.is_public_lane and route.main_surface_eligible
+            for route in public_routes
+        ),
+        "non_promoted_public_candidate_count": sum(
+            route.is_public_lane and not route.main_surface_eligible
+            for route in public_routes
+        ),
+        "teams_public_candidate_count": sum(
+            candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
+            for candidate in ranked
+        ),
+        # R4-R9B §6 — reconciliation contract: dominant_rows equals
+        # hard_rejected_rows plus the dominant subset of exception rows;
+        # fallback_blocked_rows is the specialist-lane subset of the hard
+        # rejections (they may never re-enter through the §6 fallback).
+        "stock_market_dominant_rows": stock_dominant_rows,
+        "stock_market_hard_rejected_rows": stock_hard_rejected_rows,
+        "stock_market_hdec_exception_rows": stock_exception_rows,
+        "stock_market_fallback_blocked_rows": stock_fallback_blocked_rows,
+    }
+    if effective_cap is None:
+        return tuple(ranked), audit
+    return tuple(ranked[:effective_cap]), audit
+
+
+def select_teams_push_candidates(
+    articles: Iterable[Mapping[str, Any]],
+    *,
+    max_articles: int | None = MAX_TEAMS_ARTICLES,
+    require_validated_fields: bool = False,
+    preference_runtime: (
+        "editorial_preference_runtime.EditorialPreferenceRuntime | None"
+    ) = None,
+    memory_batch_cap: int | None = None,
+) -> tuple[TeamsPushCandidate, ...]:
+    """Compatibility wrapper over :func:`select_teams_push_candidates_with_audit`."""
+    selected, _audit = select_teams_push_candidates_with_audit(
+        articles,
+        max_articles=max_articles,
+        require_validated_fields=require_validated_fields,
+        preference_runtime=preference_runtime,
+        memory_batch_cap=memory_batch_cap,
+    )
+    return selected
 
 
 def _fmt_kst(value: object) -> str:
@@ -1501,10 +2611,16 @@ def build_teams_article_card(
     importance: ImportanceDecision,
     detected_at: str = "",
     is_update: bool = False,
+    delivery_category: str = "",
 ) -> dict[str, Any]:
     """Build exactly one Teams Workflows Adaptive Card message for one article."""
     if not topic.eligible or not importance.sendable:
         raise ValueError("non-sendable article cannot be rendered as a Teams push card")
+    category = _clean(delivery_category) or ai_centrality.delivery_category(article)[0]
+    if not category:
+        raise ValueError(
+            "article has no evidenced delivery category in its title/lead map"
+        )
 
     title = _article_field(article, "title") or "제목 없음"
     summary = _article_field(article, "summary", "snippet") or "핵심 요약이 제공되지 않았습니다."
@@ -1527,7 +2643,7 @@ def build_teams_article_card(
     importance_color = "Attention" if importance.level == IMPORTANCE_TOP else "Warning"
     body: list[dict[str, Any]] = [
         _text_block(importance.label, weight="Bolder", color=importance_color, size="Medium"),
-        _text_block(topic.topic_label, isSubtle=True, spacing="None"),
+        _text_block(category, isSubtle=True, spacing="None"),
         _text_block(f"{title_prefix}{title}", weight="Bolder", size="Large", spacing="Medium"),
         _text_block("핵심 요약", weight="Bolder", spacing="Medium"),
         _text_block(summary, spacing="Small"),
@@ -1579,6 +2695,7 @@ def build_candidate_card(alert: object, candidate: TeamsPushCandidate, *, detect
         importance=candidate.importance,
         detected_at=detected_at,
         is_update=candidate.is_update,
+        delivery_category=candidate.delivery_category,
     )
 
 
@@ -1732,6 +2849,14 @@ def render_article_email(
     article = candidate.article
     topic = candidate.topic
     importance = candidate.importance
+    category = (
+        _clean(candidate.delivery_category)
+        or ai_centrality.delivery_category(article)[0]
+    )
+    if not category:
+        raise ValueError(
+            "article has no evidenced delivery category in its title/lead map"
+        )
     title = _article_field(article, "title") or "제목 없음"
     summary = _compact_summary(
         _article_field(article, "summary", "snippet")
@@ -1765,7 +2890,7 @@ def render_article_email(
     subject = f"[HDEC AI 레이더] {importance_label} · {prefix}{title}".strip()
 
     text_body = "\n".join((
-        f"카테고리: {topic.topic_label}",
+        f"카테고리: {category}",
         f"제목: {prefix}{title}",
         f"요약: {summary}",
         f"왜 중요한가: {why}",
@@ -1793,7 +2918,7 @@ def render_article_email(
         f'background:{badge_background};border-radius:12px;padding:3px 8px;">'
         f'{escaped(importance_label)}</span>'
         f'<p style="font-size:13px;color:#667085;margin:12px 0 6px;">'
-        f'<strong>카테고리</strong> {escaped(topic.topic_label)}</p>'
+        f'<strong>카테고리</strong> {escaped(category)}</p>'
         f'<h2 style="font-size:22px;line-height:1.35;margin:8px 0 12px;">'
         f'{escaped(prefix + title)}</h2>'
         f'<p style="margin:0 0 14px;"><strong>요약</strong><br>{escaped(summary)}</p>'

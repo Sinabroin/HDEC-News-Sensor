@@ -1,0 +1,4 @@
+# The weekly T&I template is the sealed reference document with content
+# islands only. It is byte-exact CRLF by contract (R4-R6 §14): never translate
+# its line endings, and treat CR at EOL as the line terminator, not whitespace.
+templates/editorial_weekly_tni.html -text whitespace=cr-at-eol

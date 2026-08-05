@@ -9,6 +9,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from app import ai_centrality, public_institution_routing
 from app.editorial_briefings import (
     EditorialArticle,
     EditorialError,
@@ -55,6 +56,34 @@ class EditorialReviewError(EditorialError):
 
 def _clean(value: object) -> str:
     return " ".join(str(value or "").split())
+
+
+#: R4-R6 §6 — an operator may keep a non-AI-central article only through an
+#: explicit override with a written reason; silent override is forbidden.
+AI_CENTRALITY_OPERATOR_OVERRIDE = "operator_override"
+
+
+def _resolve_review_ai_centrality(
+    title: str,
+    summary: str,
+    item: Mapping[str, Any] | None,
+) -> str:
+    """AI-centrality of the FINAL edited fields (§6).
+
+    The editor may not override a non-AI article into the AI Brief merely by
+    editing its title or category: the decision reruns on the final title and
+    summary. The only escape is a non-empty ``operator_override_reason`` on
+    the review item, which is preserved as an explicit, auditable override."""
+    decision = ai_centrality.classify({"title": title, "snippet": summary})
+    if decision.is_central:
+        return decision.level
+    reason = _clean((item or {}).get("operator_override_reason"))
+    if reason:
+        return AI_CENTRALITY_OPERATOR_OVERRIDE
+    raise EditorialReviewError(
+        "review article is not AI-central and carries no operator_override_reason"
+        f" (level={decision.level}, exclusion={decision.exclusion or '-'})"
+    )
 
 
 def analyze_editorial_category(
@@ -226,6 +255,37 @@ def article_to_candidate(
         "image_remote_url": article.image_remote_url or article.image_url,
         "image_quality_accepted": article.image_quality_accepted,
         "image_quality_reason": article.image_quality_reason,
+        # D7-AK-6E R4-R6 §11/§12 — explainable selection factors + implication
+        # surfaced to the editor console and preserved through approval.
+        "materiality_score": article.materiality_score,
+        "hdec_relevance_score": article.hdec_relevance_score,
+        "publisher_tier": article.publisher_tier,
+        "publisher_priority_label": article.publisher_priority_label,
+        "executive_relevance_reason": article.executive_relevance_reason,
+        "materiality_reason": article.materiality_reason,
+        "executive_implication": article.executive_implication,
+        "ai_centrality_level": article.ai_centrality_level,
+        "source_class": article.source_class,
+        "editorial_lane": article.editorial_lane,
+        "public_institution_type": article.public_institution_type,
+        "official_source_name": article.official_source_name,
+        "source_registry_id": article.source_registry_id,
+        "source_domain": article.source_domain,
+        "default_surface": article.default_surface,
+        "main_surface_eligible": article.main_surface_eligible,
+        "teams_alert_eligible": article.teams_alert_eligible,
+        "tni_brief_eligible": article.tni_brief_eligible,
+        "tni_report_topic_eligible": article.tni_report_topic_eligible,
+        "promotion_reason": article.promotion_reason,
+        "promotion_condition": article.promotion_condition,
+        "final_surface": article.final_surface,
+        "final_category": article.final_category,
+        "human_placement_override": article.human_placement_override,
+        "human_placement_reason": article.human_placement_reason,
+        "headline_eligible": article.headline_eligible,
+        "authority_verified": article.authority_verified,
+        "duplicate_event_cluster": article.duplicate_event_cluster,
+        "supporting_evidence_only": article.supporting_evidence_only,
     }
 
 
@@ -270,6 +330,52 @@ def candidate_to_article(
     )
     if not all((title, summary, source, selected_url)):
         raise EditorialReviewError("candidate required field is empty")
+    routing_input = dict(candidate)
+    routing_input.update(
+        {
+            "title": title,
+            "source": source,
+            "publisher_url": selected_url,
+            "snippet": _clean(candidate.get("summary")),
+        }
+    )
+    public_route = public_institution_routing.classify(routing_input)
+    placement_edit = dict(edit)
+    if public_route.is_public_lane and category != public_route.final_category:
+        placement_edit["final_category"] = category
+    try:
+        human_placement_override, final_surface, final_category = (
+            public_institution_routing.validate_placement_override(
+                {
+                    **public_route.metadata(),
+                    "final_surface": public_route.default_surface,
+                },
+                placement_edit,
+            )
+        )
+    except ValueError as exc:
+        raise EditorialReviewError(str(exc)) from exc
+    placement_reason = _clean(edit.get("human_placement_reason"))
+    headline_eligible = public_route.headline_eligible or (
+        human_placement_override
+        and final_surface == public_institution_routing.SURFACE_MAIN
+    )
+    route_fields = public_route.metadata()
+    route_fields.update(
+        {
+            "final_surface": final_surface,
+            "final_category": final_category or category,
+            "human_placement_override": human_placement_override,
+            "human_placement_reason": placement_reason,
+            "headline_eligible": headline_eligible,
+        }
+    )
+    raw_implication_override = _clean(edit.get("implication_html"))
+    implication_html = (
+        sanitize_editorial_inline_html(raw_implication_override)
+        if raw_implication_override
+        else ""
+    )
 
     return EditorialArticle(
         title=title,
@@ -301,6 +407,18 @@ def candidate_to_article(
         image_remote_url=_clean(candidate.get("image_remote_url") or candidate.get("image_url")),
         image_quality_accepted=bool(candidate.get("image_quality_accepted")),
         image_quality_reason=_clean(candidate.get("image_quality_reason")),
+        materiality_score=float(candidate.get("materiality_score") or 0.0),
+        hdec_relevance_score=float(candidate.get("hdec_relevance_score") or 0.0),
+        publisher_tier=_clean(candidate.get("publisher_tier")),
+        publisher_priority_label=_clean(candidate.get("publisher_priority_label")),
+        executive_relevance_reason=_clean(candidate.get("executive_relevance_reason")),
+        materiality_reason=_clean(candidate.get("materiality_reason")),
+        executive_implication=_clean(candidate.get("executive_implication")),
+        implication_html=implication_html,
+        ai_centrality_level=_resolve_review_ai_centrality(title, summary, edit),
+        **route_fields,
+        duplicate_event_cluster=_clean(candidate.get("duplicate_event_cluster")),
+        supporting_evidence_only=bool(candidate.get("supporting_evidence_only")),
     )
 
 
@@ -318,7 +436,53 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
     published_at = _published_at(item.get("published_at"))
     if not all((title, source, summary, selected_url)):
         raise EditorialReviewError("manual article requires URL, source, title, and summary")
+    public_route = public_institution_routing.classify(
+        {
+            **dict(item),
+            "title": title,
+            "source": source,
+            "publisher_url": selected_url,
+            "snippet": summary,
+        }
+    )
+    placement_item = dict(item)
+    if public_route.is_public_lane and category != public_route.final_category:
+        placement_item["final_category"] = category
+    try:
+        human_placement_override, final_surface, final_category = (
+            public_institution_routing.validate_placement_override(
+                {
+                    **public_route.metadata(),
+                    "final_surface": public_route.default_surface,
+                },
+                placement_item,
+            )
+        )
+    except ValueError as exc:
+        raise EditorialReviewError(str(exc)) from exc
+    route_fields = public_route.metadata()
+    route_fields.update(
+        {
+            "final_surface": final_surface,
+            "final_category": final_category or category,
+            "human_placement_override": human_placement_override,
+            "human_placement_reason": _clean(item.get("human_placement_reason")),
+            "headline_eligible": (
+                public_route.headline_eligible
+                or (
+                    human_placement_override
+                    and final_surface == public_institution_routing.SURFACE_MAIN
+                )
+            ),
+        }
+    )
     image_url = valid_http_url(item.get("image_url"))
+    raw_manual_implication = _clean(item.get("implication_html"))
+    manual_implication_html = (
+        sanitize_editorial_inline_html(raw_manual_implication)
+        if raw_manual_implication
+        else ""
+    )
     return EditorialArticle(
         title=title,
         summary=summary,
@@ -340,6 +504,9 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         image_source_kind="human_supplied" if image_url else "fallback",
         image_fallback_used=not bool(image_url),
         image_reason="human_supplied" if image_url else "no_manual_image",
+        implication_html=manual_implication_html,
+        ai_centrality_level=_resolve_review_ai_centrality(title, summary, item),
+        **route_fields,
     )
 
 
@@ -420,6 +587,27 @@ def load_bundle(path: Path, edition_key: str) -> dict[str, Any]:
     return payload
 
 
+REVIEW_DECISION_APPROVED = "approved"
+REVIEW_DECISION_ABSENT = "absent"
+REVIEW_DECISION_MALFORMED = "malformed"
+
+
+def load_review_decision(
+    path: Path, edition_key: str
+) -> tuple[dict[str, Any] | None, str]:
+    """§12 decision trace: (review, approved|absent|malformed).
+
+    A malformed review fails closed to None — the caller falls back to the
+    documented AI order with no partial application, and the reason stays
+    machine-readable."""
+    if not path.exists():
+        return None, REVIEW_DECISION_ABSENT
+    review = load_review(path, edition_key)
+    if review is None:
+        return None, REVIEW_DECISION_MALFORMED
+    return review, REVIEW_DECISION_APPROVED
+
+
 def load_review(path: Path, edition_key: str) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -488,3 +676,309 @@ def choose_daily_articles(
         )
         for item in auto
     ], "ai_fallback"
+
+
+FEEDBACK_PROPOSAL_VERSION = 1
+
+
+def candidate_pool_digest(candidates: Sequence[Mapping[str, Any]]) -> str:
+    """Digest the sanitized candidate identities carried by a proposal."""
+    identities = sorted(
+        (
+            {
+                "candidate_id": _clean(item.get("candidate_id")),
+                "title": _clean(item.get("title")),
+            }
+            for item in candidates
+        ),
+        key=lambda item: (item["candidate_id"], item["title"]),
+    )
+    return hashlib.sha256(
+        json.dumps(
+            identities,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def build_feedback_proposal(
+    bundle: Mapping[str, Any],
+    review: Mapping[str, Any] | None,
+    final_articles: Sequence[EditorialArticle],
+    *,
+    review_mode: str,
+    generated_at: str,
+) -> dict[str, Any]:
+    """R4-R7 §8 — append-only post-editor feedback PROPOSAL.
+
+    Captures the human editorial delta of one approved Daily review —
+    candidate-pool digest, final selected/excluded IDs and order, headline,
+    per-field edits, exclusion tags, ratings, and the operator approval
+    timestamp — as a proposed corpus decision. Writing this artifact never
+    mutates the committed corpus; a separately reviewed ingestion command
+    (``scripts/ingest_editorial_feedback.py``) imports it after human review.
+    Corrections append superseding proposals — earlier records never change."""
+    candidates = list(bundle.get("candidates") or [])
+    by_id = {str(item.get("candidate_id") or ""): item for item in candidates}
+    selected_items = list((review or {}).get("selected_items") or [])
+    selected_ids = [str(item.get("candidate_id") or "") for item in selected_items]
+    if any(not candidate_id for candidate_id in selected_ids):
+        raise EditorialReviewError("feedback proposal selected ID is empty")
+    selected_by_id = {
+        str(item.get("candidate_id") or ""): item for item in selected_items
+    }
+    unknown_selected = sorted(
+        candidate_id
+        for candidate_id in set(selected_ids) - set(by_id)
+        if selected_by_id[candidate_id].get("origin") != "human_link"
+    )
+    if unknown_selected:
+        raise EditorialReviewError("feedback proposal selected ID is unknown")
+    excluded_ids = [cid for cid in by_id if cid not in set(selected_ids)]
+
+    edits: list[dict[str, Any]] = []
+    for order, item in enumerate(selected_items, start=1):
+        cid = str(item.get("candidate_id") or "")
+        base = by_id.get(cid, item if item.get("origin") == "human_link" else {})
+        base_summary = editorial_inline_plain_text(
+            sanitize_editorial_inline_html(
+                str(base.get("summary_html") or escape(_clean(base.get("summary"))))
+            )
+        )
+        edited_title = _clean(item.get("title"))
+        edited_summary = (
+            editorial_inline_plain_text(
+                sanitize_editorial_inline_html(str(item.get("summary_html")))
+            )
+            if item.get("summary_html")
+            else ""
+        )
+        edited_category = _clean(item.get("category"))
+        edited_implication = editorial_inline_plain_text(
+            sanitize_editorial_inline_html(str(item.get("implication_html") or ""))
+        )
+        base_implication = _clean(base.get("executive_implication"))
+        final_title = edited_title or _clean(base.get("title"))
+        final_summary = edited_summary or base_summary
+        final_category = edited_category or _clean(base.get("category"))
+        final_implication = edited_implication or base_implication
+        edits.append(
+            {
+                "candidate_id": cid,
+                "origin": _clean(item.get("origin")),
+                "order": order,
+                "title_edited": bool(
+                    edited_title and edited_title != _clean(base.get("title"))
+                ),
+                "summary_edited": bool(
+                    edited_summary and edited_summary != base_summary
+                ),
+                "category_edited": bool(
+                    edited_category
+                    and edited_category != _clean(base.get("category"))
+                ),
+                "executive_implication_edited": bool(
+                    edited_implication and edited_implication != base_implication
+                ),
+                "original_title": _clean(base.get("title")),
+                "final_title": final_title,
+                "original_summary": base_summary,
+                "final_summary": final_summary,
+                "original_category": _clean(base.get("category")),
+                "final_category": final_category,
+                "original_executive_implication": base_implication,
+                "final_executive_implication": final_implication,
+                "operator_override_reason": _clean(
+                    item.get("operator_override_reason")
+                ),
+                "source_class": _clean(
+                    base.get("source_class")
+                ) or public_institution_routing.SOURCE_CLASS_OTHER,
+                "editorial_lane": _clean(
+                    base.get("editorial_lane")
+                ) or public_institution_routing.LANE_MAIN,
+                "public_institution_type": _clean(
+                    base.get("public_institution_type")
+                ),
+                "main_surface_eligible": bool(
+                    base.get("main_surface_eligible", True)
+                ),
+                "teams_alert_eligible": bool(
+                    base.get("teams_alert_eligible", True)
+                ),
+                "tni_brief_eligible": bool(
+                    base.get("tni_brief_eligible", True)
+                ),
+                "tni_report_topic_eligible": bool(
+                    base.get("tni_report_topic_eligible", False)
+                ),
+                "default_surface": _clean(
+                    base.get("default_surface")
+                ) or public_institution_routing.SURFACE_MAIN,
+                "final_surface": _clean(
+                    item.get("final_surface") or base.get("final_surface")
+                ) or public_institution_routing.SURFACE_MAIN,
+                "promotion_reason": _clean(base.get("promotion_reason")),
+                "human_placement_override": bool(
+                    item.get("human_placement_override")
+                ),
+                "human_placement_reason": _clean(
+                    item.get("human_placement_reason")
+                ),
+            }
+        )
+
+    exclusion_tags: dict[str, list[str]] = {}
+    raw_exclusions = (review or {}).get("excluded_items")
+    if isinstance(raw_exclusions, list):
+        for item in raw_exclusions:
+            if isinstance(item, Mapping) and item.get("candidate_id"):
+                tags = item.get("tags")
+                exclusion_tags[str(item["candidate_id"])] = [
+                    _clean(tag) for tag in tags if _clean(tag)
+                ] if isinstance(tags, list) else []
+    ratings = (review or {}).get("ratings")
+    pool_digest = candidate_pool_digest(candidates)
+    edition_key = _clean(bundle.get("edition_key"))
+    candidate_pool = [
+        {
+            "candidate_id": _clean(item.get("candidate_id")),
+            "title": _clean(item.get("title")),
+            "source_class": _clean(item.get("source_class")),
+            "editorial_lane": _clean(item.get("editorial_lane")),
+            "public_institution_type": _clean(
+                item.get("public_institution_type")
+            ),
+            "main_surface_eligible": bool(
+                item.get("main_surface_eligible", True)
+            ),
+            "teams_alert_eligible": bool(
+                item.get("teams_alert_eligible", True)
+            ),
+            "tni_brief_eligible": bool(
+                item.get("tni_brief_eligible", True)
+            ),
+            "tni_report_topic_eligible": bool(
+                item.get("tni_report_topic_eligible", False)
+            ),
+            "default_surface": _clean(item.get("default_surface")),
+            "final_category": (
+                _clean(item.get("final_category"))
+                if _clean(item.get("editorial_lane"))
+                == public_institution_routing.LANE_PUBLIC
+                else _clean(item.get("final_category") or item.get("category"))
+            ),
+            "promotion_reason": _clean(item.get("promotion_reason")),
+        }
+        for item in candidates
+    ]
+    edit_by_id = {item["candidate_id"]: item for item in edits}
+    placement_decisions = []
+    selected_set = set(selected_ids)
+    for item in candidate_pool:
+        cid = item["candidate_id"]
+        selected_edit = edit_by_id.get(cid, {})
+        placement_decisions.append(
+            {
+                **item,
+                "selected": cid in selected_set,
+                "recommended_final_category": _clean(
+                    item.get("final_category")
+                ),
+                "final_surface": _clean(
+                    selected_edit.get("final_surface")
+                    or item.get("default_surface")
+                ),
+                "final_category": _clean(
+                    selected_edit.get("final_category")
+                    or item.get("final_category")
+                ),
+                "human_placement_override": bool(
+                    selected_edit.get("human_placement_override")
+                ),
+                "human_placement_reason": _clean(
+                    selected_edit.get("human_placement_reason")
+                ),
+            }
+        )
+    title_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_title"],
+            "after": item["final_title"],
+        }
+        for item in edits
+        if item["title_edited"]
+    ]
+    summary_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_summary"],
+            "after": item["final_summary"],
+        }
+        for item in edits
+        if item["summary_edited"]
+    ]
+    category_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_category"],
+            "after": item["final_category"],
+        }
+        for item in edits
+        if item["category_edited"]
+    ]
+    implication_edits = [
+        {
+            "candidate_id": item["candidate_id"],
+            "before": item["original_executive_implication"],
+            "after": item["final_executive_implication"],
+        }
+        for item in edits
+        if item["executive_implication_edited"]
+    ]
+    return {
+        "proposal_version": FEEDBACK_PROPOSAL_VERSION,
+        "record_type": "post_editor_feedback_proposal",
+        "proposed_decision_id": f"feedback-{edition_key}-{pool_digest[:12]}",
+        "edition_type": "daily",
+        "edition_key": edition_key,
+        "edition": edition_key,
+        "review_mode": review_mode,
+        "candidate_pool_digest": pool_digest,
+        "candidate_count": len(candidates),
+        "candidate_ids": [item["candidate_id"] for item in candidate_pool],
+        "candidate_pool": candidate_pool,
+        "final_selected_ids": selected_ids,
+        "selection_order": selected_ids,
+        "selected_order": selected_ids,
+        "excluded_ids": sorted(excluded_ids),
+        "headline": final_articles[0].title if final_articles else "",
+        "title_edits": title_edits,
+        "summary_edits": summary_edits,
+        "category_edits": category_edits,
+        "executive_implication_edits": implication_edits,
+        "placement_decisions": placement_decisions,
+        "edits": edits,
+        "exclusion_tags": exclusion_tags,
+        "ratings": dict(ratings) if isinstance(ratings, Mapping) else {},
+        "operator_approval_time": _clean(
+            (review or {}).get("approved_at")
+            or (review or {}).get("generated_at")
+            or generated_at
+        ),
+        "operator_approved_at": _clean(
+            (review or {}).get("approved_at")
+            or (review or {}).get("generated_at")
+            or generated_at
+        ),
+        "prior_proposal_id": _clean((review or {}).get("prior_proposal_id")),
+        "supersedes": _clean((review or {}).get("supersedes")),
+        "generated_at": generated_at,
+        "corpus_mutation": (
+            "none — proposal only; import via scripts/ingest_editorial_feedback.py "
+            "after human review"
+        ),
+    }

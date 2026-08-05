@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 경영 T&amp;I · Weekly Brief — {{TNI_TITLE_ISSUE}}</title>
+<style>
+  :root{
+    --bg:#F2F3F6;
+    --card:#FFFFFF;
+    --ink:#101218;
+    --ink-2:#3A4150;
+    --muted:#777F8D;
+    --faint:#9CA3B0;
+    --line:rgba(16,18,24,.10);
+    --navy:#002C5F;
+    --navy-2:#004B93;
+    --c-invest:#A26B12;
+    --c-corp:#0D9488;
+    --c-tech:#4F46E5;
+    --r-lg:22px;
+    --r-md:16px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,Arial,sans-serif;
+    line-height:1.6;letter-spacing:-.012em;-webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  .page{max-width:680px;margin:0 auto;padding:0 20px 56px;}
+  .masthead{text-align:center;padding:8px 0 10px;}
+  .brandmark{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:18px;font-weight:800;letter-spacing:.1em;color:var(--navy);
+    text-transform:uppercase;
+  }
+  .masthead h1{
+    margin:14px 0 10px;font-size:clamp(40px,9vw,58px);font-weight:800;
+    letter-spacing:-.045em;line-height:1.04;color:var(--ink);
+  }
+  .masthead .desc{margin:0;font-size:13.5px;color:var(--ink-2);font-weight:600;}
+  .issue{
+    margin-top:26px;font-size:15px;font-weight:700;color:var(--ink);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .sec-label{
+    display:inline-block;
+    font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
+    border:2px solid var(--ink);border-radius:999px;
+    padding:6px 18px;background:var(--card);
+    margin:44px 0 16px;
+  }
+  .hero{
+    position:relative;overflow:hidden;border-radius:var(--r-lg);
+    background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);
+    color:#fff;padding:34px 30px 30px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .hero .hero-week{
+    position:relative;display:inline-block;
+    font-size:12.5px;font-weight:800;color:var(--navy);
+    background:#fff;border-radius:999px;padding:4px 13px;margin-bottom:18px;
+  }
+  .hero h2{
+    position:relative;margin:0;
+    font-size:clamp(25px,5.6vw,33px);font-weight:800;letter-spacing:-.035em;line-height:1.28;
+  }
+  .hero .hero-rule{position:relative;height:1px;background:rgba(255,255,255,.35);margin:22px 0 12px;max-width:340px;}
+  .hero .hero-foot{
+    position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;
+    font-size:13px;font-weight:600;color:rgba(255,255,255,.85);
+  }
+  .ednote{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:0 0 var(--r-lg) var(--r-lg);
+    margin-top:-14px;padding:30px 30px 24px;
+    box-shadow:0 10px 28px -18px rgba(16,18,24,.18);
+  }
+  .ednote .ed-k{margin:0 0 12px;font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+  .ednote p{margin:0 0 13px;font-size:17.5px;line-height:1.74;color:var(--ink-2);}
+  .ednote p:last-of-type{margin-bottom:0;}
+  .card{
+    display:grid;grid-template-columns:128px 1fr;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+    overflow:hidden;margin-bottom:12px;
+    box-shadow:0 1px 2px rgba(16,18,24,.03),0 10px 24px -18px rgba(16,18,24,.14);
+  }
+  .thumb{position:relative;min-height:128px;background:#1a1a2e;overflow:hidden;}
+  .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .card-body{padding:16px 18px 14px;min-width:0;}
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:800;letter-spacing:.02em;
+    color:var(--cat);background:var(--tint);
+    border-radius:999px;padding:3px 10px;margin-bottom:8px;
+  }
+  .card h3{
+    margin:0 0 8px;font-size:18.5px;font-weight:800;letter-spacing:-.025em;line-height:1.38;color:var(--ink);
+  }
+  .card .sum{margin:0;font-size:15.5px;line-height:1.62;color:var(--ink-2);}
+  .card .sum b{font-weight:700;color:var(--ink);}
+  .src{
+    margin-top:10px;font-size:11.5px;color:var(--faint);font-weight:600;
+    display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
+  }
+  .src a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);}
+  .src a:hover{color:var(--ink);border-color:var(--ink);}
+  .src .dt{color:var(--faint);font-weight:500;margin-left:3px;}
+  .taxo{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:16px 18px;display:grid;gap:8px;
+  }
+  .taxo .t-row{display:flex;gap:10px;align-items:baseline;font-size:13px;}
+  .taxo .t-name{flex:none;width:84px;font-weight:800;color:var(--ink);display:inline-flex;align-items:center;gap:6px;}
+  .taxo .t-desc{color:var(--muted);font-weight:500;}
+  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:22px;text-align:center;}
+  footer .pub{font-size:13.5px;font-weight:800;color:var(--ink-2);margin:0 0 8px;}
+  footer .note{font-size:12px;color:var(--muted);line-height:1.8;margin:0;}
+  footer .meta-line{margin-top:14px;font-size:11px;color:var(--faint);letter-spacing:.05em;}
+  @media (max-width:560px){
+    .page{padding:0 14px 44px;}
+    .card{grid-template-columns:96px 1fr;}
+    .thumb{min-height:96px;}
+    .hero{padding:26px 20px 24px;}
+    .ednote{padding:24px 20px 20px;}
+  }
+  @media print{
+    body{background:#fff;}
+    .page{max-width:none;padding:0;}
+    .card,.hero,.ednote{break-inside:avoid;page-break-inside:avoid;box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+<div class="page" style="max-width: 680px; margin: 0px auto; padding: 0px 20px 56px; font-family: &quot;Pretendard Variable&quot;, Pretendard, &quot;Noto Sans KR&quot;, &quot;Malgun Gothic&quot;, &quot;Apple SD Gothic Neo&quot;, system-ui, Arial, sans-serif; color: rgb(16, 18, 24); line-height: 1.6; font-size: 12pt;">
+<div style="height: 24px; line-height: 1px; font-size: 1px;">&nbsp;</div>
+<header class="masthead" style="text-align:center;padding:0;">
+<div class="brandmark" style="display: inline-block; background: rgb(0, 44, 95); color: rgb(255, 255, 255); padding: 10px 26px; border-radius: 999px; font-size: 22px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.5;">AI 경영 T&amp;I</div>
+<h1 style="margin: 14px 0px 10px; font-size: 45px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; color: rgb(16, 18, 24);">Weekly Brief</h1>
+<p class="desc" style="margin: 0px; font-size: 13.5px; color: rgb(58, 65, 80); font-weight: 600; line-height: 1.5;">AI디자인랩이 매주 전하는 경영진용 Trend &amp; Insight</p>
+<div class="issue" style="margin-top: 22px; font-size: 15px; font-weight: 700; color: rgb(16, 18, 24); display: inline-flex; align-items: center; gap: 10px; line-height: 1.5;">{{TNI_ISSUE_LABEL}}</div>
+</header>
+<div style="height: 36px; line-height: 1px; font-size: 1px;">&nbsp;</div>
+<div class="sec-label" style="display: inline-block; font-size: 15px; font-weight: 800; color: rgb(16, 18, 24); border: 2px solid rgb(16, 18, 24); border-radius: 999px; padding: 6px 18px; background: rgb(255, 255, 255); margin: 0px 0px 16px; line-height: 1.5;">이번 주 헤드라인</div>
+<section class="hero" style="position:relative;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);color:#fff;padding:34px 30px 30px;">{{TNI_HERO_IMAGE}}
+<div style="position: absolute; inset: 0px; background: linear-gradient(135deg, rgba(10, 20, 60, 0.82) 0%, rgba(6, 48, 40, 0.72) 100%); z-index: 1; line-height: 1.5;">&nbsp;</div>
+<h2 style="position: relative; z-index: 2; margin: 0px; font-size: 30px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.3; color: rgb(255, 255, 255);">{{TNI_HERO_TITLE}}</h2>
+<div class="hero-rule" style="position: relative; z-index: 2; height: 1px; background: rgba(255, 255, 255, 0.35); margin: 22px 0px 12px; max-width: 340px; line-height: 1.5;">&nbsp;</div>
+<div class="hero-foot" style="position: relative; z-index: 2; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.85); line-height: 1.5;"><span style="font-size: 9.8pt;">{{TNI_HERO_CATEGORY}}</span></div></section>
+<div class="ednote" style="background: rgb(255, 255, 255); border: 1px solid rgba(16, 18, 24, 0.1); border-radius: 0px 0px 22px 22px; margin-top: -14px; padding: 30px 30px 24px; line-height: 1.5;"><h3 class="ed-k" style="line-height: 1.5;">Editor's Summary</h3>
+{{TNI_EDNOTE_HTML}}
+<div class="src" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgb(238, 240, 244); font-size: 11.5px; color: rgb(156, 163, 176); font-weight: 600; line-height: 1.5;">출처 {{TNI_EDNOTE_SOURCE}}</div></div>
+<div style="height: 36px; line-height: 1px; font-size: 1px;">&nbsp;</div>
+<div class="sec-label" style="display: inline-block; font-size: 15px; font-weight: 800; color: rgb(16, 18, 24); border: 2px solid rgb(16, 18, 24); border-radius: 999px; padding: 6px 18px; background: rgb(255, 255, 255); margin: 0px 0px 16px; line-height: 1.5;">이번 주 브리핑</div>
+{{TNI_CARDS}}
+<div style="height: 36px; line-height: 1px; font-size: 1px;">&nbsp;</div>
+<div class="sec-label" style="display: inline-block; font-size: 15px; font-weight: 800; color: rgb(16, 18, 24); border: 2px solid rgb(16, 18, 24); border-radius: 999px; padding: 6px 18px; background: rgb(255, 255, 255); margin: 0px 0px 16px; line-height: 1.5;">정보 분류 기준</div>
+<div class="taxo" style="background: rgb(255, 255, 255); border: 1px solid rgba(16, 18, 24, 0.1); border-radius: 16px; padding: 16px 18px; line-height: 1.5;">
+<div class="t-row" style="display: flex; gap: 10px; align-items: baseline; font-size: 13px; margin: 0px 0px 8px; line-height: 1.5;"><span class="t-name" style="width: 84px; flex: 0 0 auto; font-weight: 800; color: rgb(16, 18, 24); font-size: 9.8pt;"><span style="color: rgb(162, 107, 18); font-size: 12px; margin-right: 6px;">●</span>투자·산업</span><span class="t-desc" style="color: rgb(119, 127, 141); font-weight: 500; font-size: 9.8pt;">자본과 인프라의 흐름 — 대규모 투자, 시장 재편, 정책·글로벌 동향</span> </div>
+<div class="t-row" style="display: flex; gap: 10px; align-items: baseline; font-size: 13px; margin: 0px 0px 8px; line-height: 1.5;"><span class="t-name" style="width: 84px; flex: 0 0 auto; font-weight: 800; color: rgb(16, 18, 24); font-size: 9.8pt;"><span style="color: rgb(13, 148, 136); font-size: 12px; margin-right: 6px;">●</span>기업동향</span><span class="t-desc" style="color: rgb(119, 127, 141); font-weight: 500; font-size: 9.8pt;">경쟁사 및 선도 기업의 AI 도입·전환 전략과 움직임</span> </div>
+<div class="t-row" style="display: flex; gap: 10px; align-items: baseline; font-size: 13px; line-height: 1.5;"><span class="t-name" style="width: 84px; flex: 0 0 auto; font-weight: 800; color: rgb(16, 18, 24); font-size: 9.8pt;"><span style="color: rgb(79, 70, 229); font-size: 12px; margin-right: 6px;">●</span>기술정보</span><span class="t-desc" style="color: rgb(119, 127, 141); font-weight: 500; font-size: 9.8pt;">신규 AI 모델·기술의 등장과 활용 리스크·규제 등 영향</span> </div></div>
+<div style="height: 36px; line-height: 1px; font-size: 1px;">&nbsp;</div>
+<footer style="border-top:1px solid rgba(16,18,24,.10);padding-top:22px;text-align:center;"><p class="pub" style="font-size: 10.1pt; line-height: 1.5; margin-top: 0px; margin-bottom: 0px;">발행 — 워크이노베이션센터 | AI디자인랩</p>
+<p class="note" style="font-size: 9pt; line-height: 1.5; margin-top: 0px; margin-bottom: 0px;">본 브리핑은 주요 외신 및 국내 언론, 공신력 있는 전문지 등의 외부 보도를 중심으로 요약한 자료로, 세부 수치는 원문 기준입니다. </p>
+<div class="meta-line" style="font-size: 8.3pt; line-height: 1.5;">AI 경영 T&amp;I · WEEKLY BRIEF · {{TNI_META_ISSUE}}</div></footer></div>
+</body>
+</html>

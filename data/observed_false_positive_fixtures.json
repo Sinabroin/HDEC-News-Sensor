@@ -1,0 +1,283 @@
+{
+  "version": 1,
+  "fixture_contract": "OBSERVED_FALSE_POSITIVE_REGRESSION_V1",
+  "observed_from": "Human review of actual production Daily/Teams outputs (origin/main deployment), reported 2026-08-04. Titles are the exact observed articles; summaries are representative leads reconstructing how each article presented, including the incidental AI-data-center sentences that must never rescue a non-AI-central article.",
+  "reference_run_at_kst": "2026-08-04T06:30:00+09:00",
+  "articles": [
+    {
+      "id": "obs_daily_reject_renaissance_square",
+      "surface": "daily_reject",
+      "title": "중수청 품은 서울 을지로 '르네스퀘어' 다시 매물로",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/realestate/20260804A01",
+      "snippet": "서울 을지로의 오피스 빌딩 '르네스퀘어'가 다시 매물로 나왔다. 중앙수사청 입주로 안정적 임차 수요를 확보했다는 평가 속에 매각 희망가는 4천억원대가 거론된다. 일부 층에는 AI 데이터센터 운영사가 임차해 있다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T05:10:00+09:00",
+      "score": 3.8,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "unrelated_domain",
+        "reason_detail": "real_estate_transaction",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_daily_reject_political_candidacy",
+      "surface": "daily_reject",
+      "title": "권향엽, 민주당 전남광주특별시당 위원장 출마 선언",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260804A02",
+      "snippet": "권향엽 의원이 더불어민주당 전남광주특별시당 위원장 선거 출마를 선언했다. 당 조직 정비와 당원 확대를 핵심 공약으로 내걸었다. 지역 AI 데이터센터 유치 지원도 공약에 포함됐다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T04:50:00+09:00",
+      "score": 3.6,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "unrelated_domain",
+        "reason_detail": "political_activity",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_daily_reject_flood_forum",
+      "surface": "daily_reject",
+      "title": "“도심 홍수, 선제적 예방으로”…광주전남특별시, 전문가·시민사회와 대응 논의",
+      "source": "KBS",
+      "url": "https://news.kbs.co.kr/news/view.do?ncd=20260804A03",
+      "snippet": "광주전남특별시가 도심 침수 선제 예방을 위해 전문가·시민사회와 함께 대응 방안을 논의했다. 배수 인프라 확충과 AI 기반 침수 예측 시스템 도입이 안건에 올랐다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T04:30:00+09:00",
+      "score": 3.6,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "unrelated_domain",
+        "reason_detail": "public_campaign_or_civic_event",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_daily_reject_memory_semiconductor_education",
+      "surface": "daily_reject",
+      "title": "주식투자를 안해도 메모리 반도체는 일상에 영향을 미친다",
+      "source": "한국경제",
+      "url": "https://www.hankyung.com/article/20260804A04",
+      "snippet": "주식 투자를 하지 않아도 메모리 반도체 가격은 스마트폰·가전 가격을 통해 일상에 영향을 준다. AI 데이터센터 수요가 D램 가격을 끌어올리고 있다는 분석과 함께 반도체 상식을 정리했다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T04:10:00+09:00",
+      "score": 3.7,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "stock_market",
+        "reason_detail": "title_stock_token:주식",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_daily_reject_hd_hyundai_electric_earnings",
+      "surface": "daily_reject",
+      "title": "HD현대일렉트릭, 전 사업부 고른 성장…수주잔고 확대에 중장기 기대",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/business/20260804A05",
+      "snippet": "HD현대일렉트릭이 AI 데이터센터향 전력기기 수요 확대에 힘입어 변압기 등 전 사업부에서 고른 성장을 이어갔다. 수주잔고가 늘어 중장기 실적 기대가 커졌다는 평가가 나온다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T03:50:00+09:00",
+      "score": 3.9,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "incidental_ai",
+        "reason_detail": "earnings_outlook_without_material_ai_nexus",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_teams_reject_onsemi_featured_stock",
+      "surface": "teams_reject",
+      "title": "[미국 특징주] 온세미, 3분기 가이던스 기대치 상회…시간 외 6% 반등",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/stock-world/20260804B01",
+      "snippet": "AI 데이터센터용 전력 반도체 수요 확대 속에 온세미가 3분기 가이던스에서 시장 기대치를 상회했다. 발표 직후 시간 외 거래에서 6% 반등했다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T05:20:00+09:00",
+      "score": 4.0,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "stock_market",
+        "reason_detail": "title_stock_token:특징주·가이던스·시간 외",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_teams_reject_spacex_earnings",
+      "surface": "teams_reject",
+      "title": "[마켓인사이드] 스페이스X 상장후 첫 실적발표 D-1…숫자보다 더 관심 쏠리는 것은",
+      "source": "한국경제",
+      "url": "https://www.hankyung.com/article/20260804B02",
+      "snippet": "AI 데이터센터와 위성통신 수요 확대 속에 스페이스X가 상장 후 첫 실적 발표를 하루 앞뒀다. 시장의 관심은 실적 숫자보다 스타링크 가입자 증가세에 쏠린다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T05:00:00+09:00",
+      "score": 4.0,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "stock_market",
+        "reason_detail": "title_stock_token:마켓인사이드·상장·실적발표",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_teams_reject_hyundai_steel_earnings_shock",
+      "surface": "teams_reject",
+      "title": "영업익 8190억 포스코 웃을 때⋯ 현대제철 ‘어닝쇼크’",
+      "source": "중앙일보",
+      "url": "https://www.joongang.co.kr/article/20260804B03",
+      "snippet": "AI 데이터센터 건설용 철강 수요 기대 속에 포스코는 영업이익 8190억원을 지켰지만 현대제철은 컨센서스를 크게 밑도는 어닝쇼크를 기록했다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T04:40:00+09:00",
+      "score": 4.0,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "stock_market",
+        "reason_detail": "title_stock_token:영업익·어닝쇼크",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_teams_reject_onsemi_duplicate_second_publisher",
+      "surface": "teams_reject",
+      "title": "[미국 특징주] 온세미, 3분기 가이던스 기대치 상회…시간 외 6% 반등",
+      "source": "한국경제",
+      "url": "https://www.hankyung.com/article/20260804B04",
+      "snippet": "온세미가 AI 데이터센터용 전력 반도체 수요에 힘입어 3분기 가이던스 기대치를 상회했다고 밝혔다. 시간 외 거래에서 6% 반등했다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T05:25:00+09:00",
+      "score": 4.0,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "stock_market",
+        "reason_detail": "title_stock_token:특징주·가이던스·시간 외",
+        "ai_centrality_max": "incidental_ai_mention",
+        "daily_selected": false,
+        "teams_eligible": false,
+        "delivery_category": ""
+      }
+    },
+    {
+      "id": "obs_teams_accept_jeonnam_20mw_datacenter_construction",
+      "surface": "teams_eligible",
+      "title": "전남광주·장성, 20MW AI 데이터센터 구축 착수…美 AI 패브릭 참여",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260804C01",
+      "snippet": "전남광주특별시와 장성군이 20MW 규모 AI 데이터센터 구축에 착수했다. 미국 AI 패브릭 컨소시엄이 참여해 GPU 클러스터 기반 인프라를 조성한다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T05:30:00+09:00",
+      "score": 4.6,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "eligible",
+        "reason_detail": "ai_datacenter_construction_direct_subject",
+        "ai_centrality_min": "explicit_ai_core",
+        "daily_selectable": true,
+        "teams_eligible": true,
+        "delivery_category": "AI 데이터센터"
+      }
+    },
+    {
+      "id": "obs_teams_accept_us_datacenter_water_constraint",
+      "surface": "teams_eligible",
+      "title": "미국 AI 데이터센터 건설, 전력 이어 '물 부족'이 새 복병",
+      "source": "조선일보",
+      "url": "https://www.chosun.com/economy/20260804C02",
+      "snippet": "미국 AI 데이터센터 건설 현장에서 전력난에 이어 냉각용수 부족이 새로운 제약으로 떠올랐다. 용수 확보 여건이 신규 데이터센터 입지 선정의 핵심 변수로 부상했다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T05:15:00+09:00",
+      "score": 4.1,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "eligible",
+        "reason_detail": "ai_datacenter_infrastructure_risk_direct_subject",
+        "ai_centrality_min": "explicit_ai_core",
+        "daily_selectable": true,
+        "teams_eligible": true,
+        "delivery_category": "AI 데이터센터"
+      }
+    },
+    {
+      "id": "obs_teams_accept_ai_infra_longterm_contract_risk",
+      "surface": "teams_eligible",
+      "title": "AI 인프라 선점의 역설…빅테크 장기계약, 투자위험으로 돌아오나",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/it/20260804C03",
+      "snippet": "빅테크가 선점한 AI 인프라 장기계약이 수요 둔화 국면에서는 투자위험으로 전이될 수 있다는 분석이 나왔다. 데이터센터 전력 구매계약 구조가 쟁점으로 꼽힌다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T04:55:00+09:00",
+      "score": 3.8,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "eligible",
+        "reason_detail": "ai_infrastructure_contract_capital_risk_direct_subject",
+        "ai_centrality_min": "explicit_ai_core",
+        "daily_selectable": true,
+        "teams_eligible": true,
+        "delivery_category": "AI 데이터센터"
+      }
+    },
+    {
+      "id": "obs_teams_conditional_china_nuclear_editorial",
+      "surface": "teams_eligible",
+      "title": "[사설] 中, 원전 8기 추가 승인…더 이상 머뭇거릴 때 아니다",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/editorial/20260804C04",
+      "snippet": "AI 데이터센터발 전력 수요 급증 속에 중국이 원전 8기 건설을 추가 승인했다. 원전 확충 속도를 더 늦춰서는 안 된다는 주장이 담겼다.",
+      "query": "AI 데이터센터",
+      "published_at": "2026-08-04T04:20:00+09:00",
+      "score": 3.9,
+      "shadow_urgency_status": "none",
+      "shadow_confirmed_event_types": [],
+      "expected": {
+        "reason_class": "eligible",
+        "reason_detail": "nuclear_power_strategy_with_material_ai_power_demand",
+        "ai_centrality_min": "enabling_infrastructure_core",
+        "daily_selectable": true,
+        "teams_eligible": true,
+        "delivery_category": "AI 전력·에너지",
+        "delivery_category_must_not_be": "AI 데이터센터",
+        "opinion_labeled": true
+      }
+    }
+  ]
+}

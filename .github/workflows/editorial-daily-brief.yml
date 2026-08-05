@@ -16,9 +16,18 @@ on:
         type: choice
         options: ["false", "true"]
   schedule:
-    - cron: "0 22 * * *"
-    - cron: "20 22 * * *"
-    - cron: "40 22 * * *"
+    # R4-R10 — these runs MUST start after the Editorial Review Console build
+    # (editorial-review-console.yml, cron "20 22") so the dated console
+    # docs/editorial/review/<edition>/index.html already exists when the brief
+    # publishes. R4-R11 — the reader-only degradation is removed: when the
+    # dated console, review bundle, editor identity, or manifest-to-console
+    # reconstruction is unavailable the publication SKIPS fail-closed with a
+    # machine-readable skip_reason, and these three staggered runs are the
+    # only retry path. A delivered Daily always carries the exact-edition
+    # editor CTA (Daily Brief 편집기에서 열기).
+    - cron: "30 22 * * *"
+    - cron: "45 22 * * *"
+    - cron: "55 22 * * *"
 
 permissions:
   contents: write
@@ -48,8 +57,10 @@ jobs:
 
       - name: Verify editorial contracts offline
         run: |
-          python3 -m py_compile app/editorial_briefings.py app/editorial_briefing_state.py scripts/run_editorial_briefing.py scripts/verify_editorial_briefings.py
+          python3 -m py_compile app/editorial_briefings.py app/editorial_briefing_state.py scripts/run_editorial_briefing.py scripts/verify_editorial_briefings.py scripts/verify_daily_editor_deep_link.py scripts/verify_daily_lead_source_gate.py
           python3 scripts/verify_editorial_briefings.py
+          python3 scripts/verify_daily_editor_deep_link.py
+          python3 scripts/verify_daily_lead_source_gate.py
 
       - name: Offline preview when production gate is closed
         if: github.ref != 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_dry_run == 'true')
@@ -84,16 +95,20 @@ jobs:
         if: steps.publish.outputs.skipped == 'false'
         env:
           EDITION: ${{ steps.publish.outputs.edition }}
+          EDITION_MANIFEST_PATH: ${{ steps.publish.outputs.edition_manifest_path }}
         run: |
           DATED_PATH="docs/editorial/daily/${EDITION}.html"
           LATEST_PATH="docs/editorial/daily/latest.html"
-          if [ -z "$(git status --porcelain -- "$DATED_PATH" "$LATEST_PATH")" ]; then
+          if [ -z "$(git status --porcelain -- "$DATED_PATH" "$LATEST_PATH" ${EDITION_MANIFEST_PATH:+"$EDITION_MANIFEST_PATH"})" ]; then
             echo "Daily publication already matches; continue to public verification"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$DATED_PATH" "$LATEST_PATH"
+          if [ -n "$EDITION_MANIFEST_PATH" ]; then
+            git add -- "$EDITION_MANIFEST_PATH"
+          fi
           git commit -m "chore: publish Daily editorial brief ${EDITION}"
           for attempt in 1 2 3; do
             git fetch origin main

@@ -1,0 +1,7 @@
+{
+  "pointer_version": 1,
+  "profile": "profile-v001.json",
+  "profile_digest": "96cedd1d4cb7dd09afacc591ce185cd5fdf6538da828193caa201b569c969fdb",
+  "active": false,
+  "activation_note": "Built profiles never activate automatically; activation is a committed pointer change after backtest + regression + human approval through normal PR review."
+}

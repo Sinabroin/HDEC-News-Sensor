@@ -2,26 +2,31 @@
 """Build the standalone HDEC News Censor static surface.
 
 The page reuses the sealed executive-brief and publisher-direct policies.  It
-does not fetch in the browser, send notifications, mutate production state, or
-add itself to an existing page's navigation.
+does not fetch in the browser, send notifications, or add itself to an existing
+page's navigation.  Live image mode may update only the explicitly supplied
+verified-image association fields after same-origin materialization succeeds.
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
 import json
 import os
 import re
 import sys
 import tempfile
+import threading
+import time as monotonic_time
 import unicodedata
 from collections import Counter
 from difflib import SequenceMatcher
 from datetime import date, datetime, timedelta, timezone
 from html import escape
+from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Callable, Iterable, Mapping
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +35,14 @@ for item in (ROOT, SCRIPTS):
     if str(item) not in sys.path:
         sys.path.insert(0, str(item))
 
-from app import publisher_direct, topic_profiles  # noqa: E402
+from app import (  # noqa: E402
+    ai_centrality,
+    ai_value_chain,
+    news_censor_verified_state,
+    publisher_direct,
+    radar_signals,
+    topic_profiles,
+)
 from build_executive_brief import load_brief_json  # noqa: E402
 
 TEMPLATE = ROOT / "templates" / "news_censor.html"
@@ -116,6 +128,24 @@ FRESH_MAX_HOURS = 72
 BACKFILL_MAX_HOURS = 7 * 24
 CATEGORY_TARGET = 3
 PUBLIC_HARD_MAX = 40
+IMAGE_GLOBAL_CONCURRENCY = 4
+IMAGE_PER_HOST_CONCURRENCY = 1
+IMAGE_TOTAL_DEADLINE_SECONDS = 180
+IMAGE_PUBLIC_SRC_PREFIX = "/HDEC-News-Sensor/news-censor/assets/images/"
+IMAGE_FALLBACK_REASONS = frozenset({
+    "no_image_candidate",
+    "publisher_blocked",
+    "timeout",
+    "invalid_mime",
+    "invalid_magic",
+    "dimensions_too_small",
+    "logo_or_banner_rejected",
+    "duplicate_image_rejected",
+    "unsafe_url_rejected",
+    "download_failed",
+    "materialization_failed",
+    "total_deadline_exhausted_after_attempt",
+})
 PUBLIC_TARGET_MIN = 20
 PUBLISHER_SHARE_PREFERENCE = 0.40
 STAGE_LOSS_KEYS = (
@@ -178,12 +208,297 @@ def _metadata(row: Mapping) -> dict:
     return dict(value) if isinstance(value, Mapping) else {}
 
 
-def _category_tokens(row: Mapping) -> set[str]:
-    raw = row.get("category_memberships")
-    if not isinstance(raw, (list, tuple, set)):
-        return {"all"}
-    valid = {str(value) for value in raw if str(value) in PRIMARY_CATEGORY_IDS}
-    return {"all", *valid}
+def _semantic_text(value: object) -> str:
+    return re.sub(
+        r"\s+",
+        " ",
+        unicodedata.normalize("NFKC", str(value or "")).casefold(),
+    ).strip()
+
+
+def _first_semantic_hit(text: str, terms: Iterable[str]) -> str:
+    return next(
+        (term for term in terms if _semantic_text(term) in text),
+        "",
+    )
+
+
+def _strict_business_lens_reason(
+    lens_id: str,
+    article: Mapping,
+    base_reason: str,
+) -> str | None:
+    """Reject weak substring and metaphor matches before public lens tagging.
+
+    The shared topic-profile classifier is intentionally broad enough for
+    collection.  A visible dashboard filter is a stronger claim: the selected
+    lens must be a material subject of the article.  This second-stage guard is
+    local to News Censor and never changes collection or Teams policy.
+    """
+    title = _semantic_text(article.get("title"))
+    snippet = _semantic_text(article.get("snippet"))
+    text = f"{title} {snippet}".strip()
+    direct_terms = {
+        "civil_infrastructure": (
+            "토목", "soc", "도로", "철도", "gtx", "항만", "공항", "교량",
+            "터널", "지하공간", "수자원", "댐", "하천", "공공공사",
+        ),
+        "building_housing": (
+            "국내건축", "주택", "아파트", "힐스테이트", "디에이치", "도시정비",
+            "재건축", "재개발", "리모델링", "분양", "미분양", "공사비",
+        ),
+        "plant": (
+            "플랜트", "원전", "lng", "epc", "발전소", "정유", "석유화학",
+            "산업설비", "수처리",
+        ),
+        "new_energy": (
+            "smr", "수소", "재생에너지", "해상풍력", "풍력", "태양광", "ess",
+            "전력망", "송전", "배전", "데이터센터 전력", "데이터센터 냉각",
+            "전력 인프라", "전력인프라", "냉각", "에너지 인프라", "탄소중립",
+            "ccus",
+        ),
+        "development_business": (
+            "개발사업", "도시개발사업", "복합개발", "브릿지론", "본pf", "pf사업",
+            "pf 사업", "토지확보", "토지매입", "시공사 선정",
+        ),
+    }
+
+    if lens_id in direct_terms:
+        hit = _first_semantic_hit(text, direct_terms[lens_id])
+        return f"material {lens_id} subject: {hit}; {base_reason}" if hit else None
+
+    if lens_id == "safety_quality":
+        strong = _first_semantic_hit(text, (
+            "중대재해", "특별감독", "산업안전", "철근누락", "철근 누락",
+            "부실시공", "사망사고", "안전사고", "산재", "품질 결함",
+            "품질결함", "하자", "안전점검", "안전 점검", "안전대책",
+            "안전 대책", "현장점검", "행정처분", "벌점", "d·e등급",
+        ))
+        if strong:
+            return f"material construction safety/quality subject: {strong}; {base_reason}"
+        if "붕괴" in text:
+            financial_metaphor = _first_semantic_hit(title, (
+                "레버리지", "펀드", "월가", "증시", "주가", "채권", "몰락",
+                "수익률", "가상자산", "코인",
+            ))
+            physical_context = _first_semantic_hit(text, (
+                "붕괴사고", "건물 붕괴", "교량 붕괴", "터널 붕괴", "구조물 붕괴",
+                "현장 붕괴", "공사장 붕괴", "해체공사", "시설물",
+            ))
+            if physical_context and not financial_metaphor:
+                return f"physical collapse evidence: {physical_context}; {base_reason}"
+        return None
+
+    if lens_id == "global_business":
+        geography = _first_semantic_hit(text, (
+            "해외수주", "해외사업", "해외현장", "해외지사", "해외법인", "중동",
+            "사우디", "카타르", "uae", "이라크", "호르무즈", "지정학", "북미",
+            "미국", "유럽", "아시아", "글로벌",
+        ))
+        project = _first_semantic_hit(text, (
+            "수주", "발주", "계약", "프로젝트", "건설", "epc", "투자", "공급망",
+            "규제", "인프라", "데이터센터", "플랜트", "현장", "생산",
+        ))
+        if geography and project:
+            return f"foreign project/exposure: {geography} + {project}; {base_reason}"
+        return None
+
+    return base_reason
+
+
+def _material_ai_reason(article: Mapping) -> str | None:
+    """Return explicit title-level evidence that AI is a material subject."""
+    title = _semantic_text(article.get("title"))
+    if not title:
+        return None
+    hit = _first_semantic_hit(title, (
+        " ai ", "ai·", "ai-", "ai가", "ai는", "ai를", "ai의", "ai와", "ai 투자",
+        "인공지능", "생성형 ai", "피지컬 ai", "데이터센터", "데이터 센터",
+        "스마트건설", "스마트 건설", "bim", "디지털 트윈", "건설로봇", "로봇",
+        "ai 팩토리",
+    ))
+    # Padding makes a bare leading/trailing ASCII AI token deterministic without
+    # treating an arbitrary substring inside another word as evidence.
+    padded = f" {title} "
+    if not hit and re.search(r"(?<![0-9a-z])ai(?![0-9a-z])", padded):
+        hit = "AI"
+    return f"material title subject: {hit}" if hit else None
+
+
+def _semantic_filter_contract(row: Mapping) -> dict:
+    """Derive every public filter token from explicit article-level evidence."""
+    article = {
+        "title": str(row.get("title") or ""),
+        "snippet": str(row.get("snippet") or ""),
+        "source": str(row.get("source") or row.get("display_source") or ""),
+    }
+    categories = {"all", "biz"}
+    lens_tokens: set[str] = set()
+    evidence: dict[str, list[str]] = {
+        "all": ["canonical verified display article"],
+        "biz": [
+            "display relevance: "
+            + str(row.get("display_relevance_reason") or "qualified")
+        ],
+    }
+
+    def add(token: str, reason: str) -> None:
+        evidence.setdefault(token, [])
+        if reason not in evidence[token]:
+            evidence[token].append(reason)
+
+    business_lenses = set(topic_profiles.classify_business_lenses(article))
+    for lens_id in sorted(business_lenses):
+        profile = topic_profiles.get_business_lens(lens_id)
+        reason = (
+            topic_profiles.business_lens_reason(article, profile)
+            if profile is not None
+            else None
+        )
+        if reason:
+            reason = _strict_business_lens_reason(lens_id, article, reason)
+        if reason:
+            token = f"lens:{lens_id}"
+            lens_tokens.add(token)
+            add(token, reason)
+
+    # The collection profiles intentionally omit some country names and exact
+    # safety phrases to keep query fan-out bounded.  These two visible filters
+    # may be established independently when the stricter material-subject guard
+    # itself has complete evidence.
+    for lens_id in ("global_business", "safety_quality"):
+        token = f"lens:{lens_id}"
+        if token in lens_tokens:
+            continue
+        reason = _strict_business_lens_reason(
+            lens_id,
+            article,
+            "strict dashboard material-subject evidence",
+        )
+        if reason:
+            lens_tokens.add(token)
+            add(token, reason)
+
+    profile_reasons: dict[str, str] = {}
+    for profile_id in (
+        "hdec_direct",
+        "hyundai_group",
+        "competitor_contractors",
+        "developers",
+    ):
+        profile = topic_profiles.get_topic_profile(profile_id)
+        reason = (
+            topic_profiles.topic_profile_reason(article, profile)
+            if profile is not None
+            else None
+        )
+        if reason:
+            profile_reasons[profile_id] = reason
+
+    if "competitor_contractors" in profile_reasons:
+        categories.add("peers")
+        lens_tokens.add("lens:competitor_contractors")
+        add("peers", profile_reasons["competitor_contractors"])
+        add("lens:competitor_contractors", profile_reasons["competitor_contractors"])
+    if "hdec_direct" in profile_reasons or "hyundai_group" in profile_reasons:
+        categories.add("hdec")
+        for reason in (
+            profile_reasons.get("hdec_direct"),
+            profile_reasons.get("hyundai_group"),
+        ):
+            if reason:
+                add("hdec", reason)
+    if "hyundai_group" in profile_reasons:
+        lens_tokens.add("lens:hyundai_group")
+        add("lens:hyundai_group", profile_reasons["hyundai_group"])
+    if "developers" in profile_reasons:
+        lens_tokens.add("lens:developers")
+        add("lens:developers", profile_reasons["developers"])
+
+    if "lens:safety_quality" in lens_tokens:
+        categories.add("safety")
+        add("safety", evidence["lens:safety_quality"][0])
+    if "lens:global_business" in lens_tokens:
+        categories.add("global")
+        add("global", evidence["lens:global_business"][0])
+
+    value_chain = ai_value_chain.classify_ai_value_chain(
+        article["title"], article["source"], article["snippet"]
+    )
+    radar = radar_signals.classify_ai_radar(article, section=True)
+    ai_material = _material_ai_reason(article)
+    # R4-R6 §2 — the dashboard AI subcategory reuses the canonical
+    # AI-centrality decision as a conjunctive gate: a stock/political/
+    # incidental-AI article never earns the AI filter even when a legacy
+    # radar/value-chain signal fires.
+    centrality = ai_centrality.classify(article)
+    if ai_material and centrality.is_central and (
+        radar.get("eligible") or ai_value_chain.is_executive_ai_candidate(value_chain)
+    ):
+        categories.add("ai")
+        lens_tokens.add("lens:ai")
+        ai_reasons = [ai_material, f"AI centrality: {centrality.level}"]
+        if radar.get("eligible"):
+            ai_reasons.append(
+                "AI radar: "
+                + ", ".join(
+                    str(value)
+                    for value in (
+                        *(radar.get("qualifying_infra") or []),
+                        *(radar.get("qualifying_anchors") or []),
+                    )
+                )
+            )
+        if ai_value_chain.is_executive_ai_candidate(value_chain):
+            ai_reasons.append("AI value chain: " + str(value_chain.get("reason") or "qualified"))
+        for reason in ai_reasons:
+            add("ai", reason)
+            add("lens:ai", reason)
+
+    text = f'{article["title"]} {article["snippet"]}'
+    company_parents = {
+        "GS건설": "competitor_contractors",
+        "대우건설": "competitor_contractors",
+        "롯데건설": "competitor_contractors",
+        "현대엔지니어링": "hyundai_group",
+    }
+    for company, token in COMPANY_SUBFILTERS.items():
+        parent = company_parents[company]
+        if company in text and parent in profile_reasons:
+            lens_tokens.add(token)
+            add(token, f"material subject: {company}; {profile_reasons[parent]}")
+
+    domestic = topic_profiles.get_execution_scope_tag("domestic_site")
+    if (
+        domestic is not None
+        and "hdec" in categories
+        and topic_profiles.match_lens_tag(article, domestic)
+    ):
+        lens_tokens.add("lens:domestic_site")
+        add("lens:domestic_site", "explicit domestic construction-site phrase")
+
+    approved = {
+        token
+        for rows in APPROVED_SUBFILTERS.values()
+        for _label, token, _sub2 in rows
+        if token not in {"all", "magazine"}
+    }
+    lens_tokens &= approved
+    evidence = {
+        token: reasons
+        for token, reasons in evidence.items()
+        if token in categories or token in lens_tokens
+    }
+    return {
+        "categories": categories,
+        "lens_tokens": lens_tokens,
+        "evidence": evidence,
+        "upstream_category_memberships": sorted({
+            str(value)
+            for value in row.get("category_memberships") or []
+            if str(value) in PRIMARY_CATEGORY_IDS
+        }),
+    }
 
 
 def _candidate_rows(brief: Mapping) -> Iterable[dict]:
@@ -265,69 +580,6 @@ def validate_brief_artifact(brief: Mapping, *, require_live: bool) -> None:
         raise LiveBriefRejected("with-articles health has zero eligible publishers")
     if status == LIVE_HEALTHY_NO_ELIGIBLE_ARTICLES and eligible != 0:
         raise LiveBriefRejected("healthy-empty health conflicts with eligible article count")
-
-
-def _subfilter_labels(row: Mapping) -> list[str]:
-    labels: list[str] = []
-    values: list[object] = [
-        row.get("topic"),
-        row.get("category_label"),
-        row.get("radar_label"),
-        row.get("executive_label"),
-        *(row.get("secondary_labels") or []),
-    ]
-    for value in values:
-        label = re.sub(r"\s+", " ", str(value or "")).strip()
-        if label and label not in labels and label not in CATEGORY_LABELS.values():
-            labels.append(label[:40])
-    return labels[:6]
-
-
-def _approved_subfilter_tokens(row: Mapping, categories: set[str]) -> list[str]:
-    """Map current verified facts into the reference-locked filter vocabulary."""
-    article = {
-        "title": str(row.get("title") or ""),
-        "snippet": str(row.get("snippet") or ""),
-        "source": str(row.get("source") or row.get("display_source") or ""),
-    }
-    tokens = {
-        f"lens:{lens}"
-        for lens in topic_profiles.classify_business_lenses(article)
-    }
-    for profile_id in ("competitor_contractors", "hyundai_group", "developers"):
-        profile = topic_profiles.get_topic_profile(profile_id)
-        if profile and topic_profiles.match_topic_profile(article, profile):
-            tokens.add(f"lens:{profile_id}")
-
-    # The canonical display taxonomy may supply the cross-cutting dashboard
-    # lenses; this affects dashboard filtering only and never Teams AI policy.
-    category_lenses = {
-        "peers": "lens:competitor_contractors",
-        "hdec": "lens:hyundai_group",
-        "safety": "lens:safety_quality",
-        "global": "lens:global_business",
-        "ai": "lens:ai",
-    }
-    tokens.update(
-        lens for category, lens in category_lenses.items() if category in categories
-    )
-
-    text = f'{article["title"]} {article["snippet"]}'
-    for company, token in COMPANY_SUBFILTERS.items():
-        if company in text:
-            tokens.add(token)
-    if "hdec" in categories and any(
-        marker in text for marker in ("국내 현장", "국내현장", "건설현장")
-    ):
-        tokens.add("lens:domestic_site")
-
-    approved_tokens = {
-        token
-        for rows in APPROVED_SUBFILTERS.values()
-        for _label, token, _sub2 in rows
-        if token not in {"all", "magazine"}
-    }
-    return sorted(tokens & approved_tokens)
 
 
 def _market_pane(brief: Mapping) -> dict:
@@ -685,7 +937,8 @@ def select_display_articles(
         )
         canonical = assessment.publisher_url
         safe_id = _safe_article_id(raw, canonical, index)
-        categories = _category_tokens(raw)
+        semantic = _semantic_filter_contract(raw)
+        categories = set(semantic["categories"])
         freshness = _freshness_info(raw, reference)
         record = {
             "safe_article_id": safe_id,
@@ -693,6 +946,10 @@ def select_display_articles(
             "source": str(raw.get("display_source") or raw.get("source") or ""),
             "publication_timestamp": str(raw.get("published_at") or ""),
             "assigned_categories": sorted(categories - {"all"}),
+            "semantic_filter_evidence": dict(semantic["evidence"]),
+            "upstream_category_memberships": list(
+                semantic["upstream_category_memberships"]
+            ),
             "display_eligibility": False,
             "freshness_status": freshness["status"],
             "backfill_status": "not_applicable",
@@ -758,7 +1015,8 @@ def select_display_articles(
         eligible.append({
             "row": dict(raw),
             "categories": set(categories),
-            "subfilters": set(_subfilter_labels(raw)),
+            "subfilters": set(semantic["lens_tokens"]),
+            "semantic": semantic,
             "freshness": freshness,
             "publisher_key": _publisher_key(raw),
             "record_id": safe_id,
@@ -773,8 +1031,6 @@ def select_display_articles(
             by_canonical[canonical] = item
             canonical_survivors.append(item)
             continue
-        survivor["categories"].update(item["categories"])
-        survivor["subfilters"].update(item["subfilters"])
         decisions[item["record_id"]]["canonical_cluster"] = decisions[
             survivor["record_id"]
         ]["canonical_cluster"]
@@ -797,8 +1053,6 @@ def select_display_articles(
             ).hexdigest()[:16]
             decisions[item["record_id"]]["event_cluster"] = event_key
             continue
-        duplicate["categories"].update(item["categories"])
-        duplicate["subfilters"].update(item["subfilters"])
         event_key = decisions[duplicate["record_id"]]["event_cluster"]
         decisions[item["record_id"]]["event_cluster"] = event_key
         decisions[item["record_id"]]["final_rejection_reason"] = "event_duplicate"
@@ -1059,7 +1313,8 @@ def build_model(
         if article_id in article_ids:
             raise RuntimeError("duplicate DOM article identity collision")
         article_ids.add(article_id)
-        categories_for_row = set(item["categories"])
+        semantic = item["semantic"]
+        categories_for_row = set(semantic["categories"])
         articles.append({
             "id": article_id,
             "title": str(row.get("title") or "").strip(),
@@ -1074,7 +1329,11 @@ def build_model(
             "publisher_direct": True,
             "authority_label": "Publisher Direct",
             "categories": sorted(categories_for_row, key=lambda token: tuple(CATEGORY_LABELS).index(token)),
-            "subfilter_ids": _approved_subfilter_tokens(row, categories_for_row),
+            "subfilter_ids": sorted(semantic["lens_tokens"]),
+            "semantic_filter_evidence": dict(semantic["evidence"]),
+            "upstream_category_memberships": list(
+                semantic["upstream_category_memberships"]
+            ),
             "initials": _initials(source),
             "tint": ("#0B6B3A", "#1E5F8A", "#8F6A2E", "#455B73", "#68716A")[index % 5],
             "score": round(float(row.get("final_score") or 0), 2),
@@ -1127,6 +1386,16 @@ def build_model(
     for article in articles:
         article["image_src"] = _fallback_image_data(article)
         article["image_status"] = "deterministic_fallback"
+        article["image_source_kind"] = "fallback"
+        article["image_source_page_url"] = article["url"]
+        article["image_width"] = None
+        article["image_height"] = None
+        article["image_quality_accepted"] = False
+        article["image_reason"] = "no_image_candidate"
+        article["image_attempted"] = False
+        article["image_cache_hit"] = False
+        article["image_materialized"] = False
+        article["image_retry_after"] = ""
 
     health = brief.get("collector_health") or {}
     live_mode = brief.get("news_data_mode") == "live"
@@ -1521,6 +1790,12 @@ def _article_data(model: Mapping) -> dict:
             "verdictColor": article["verdict_color"], "why": article["why"],
             "snippet": article["summary"], "body": "", "bodyImages": [],
             "url": article["url"], "sourceUrl": article["url"], "tint": article["tint"],
+            "categories": list(article.get("categories") or []),
+            "subfilterIds": list(article.get("subfilter_ids") or []),
+            "magazine": bool(article.get("magazine")),
+            "semanticFilterEvidence": dict(
+                article.get("semantic_filter_evidence") or {}
+            ),
         }
         for article in model.get("articles") or []
     }
@@ -1585,35 +1860,229 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
     os.replace(temporary, path)
 
 
-def materialize_article_images(
-    model: dict,
-    *,
+def _fallback_reason(raw_reason: object, *, deadline_expired: bool = False) -> str:
+    """Map resolver/materializer detail to the sealed public-image audit vocabulary."""
+    if deadline_expired:
+        return "total_deadline_exhausted_after_attempt"
+    reason = str(raw_reason or "").casefold()
+    if "timeout" in reason:
+        return "timeout"
+    if "content_type" in reason or "svg" in reason:
+        return "invalid_mime"
+    if "magic" in reason or "decode" in reason:
+        return "invalid_magic"
+    if "dimension" in reason or "too_small" in reason:
+        return "dimensions_too_small"
+    if any(marker in reason for marker in (
+        "logo", "default_image", "site_default", "banner", "representative"
+    )):
+        return "logo_or_banner_rejected"
+    if "duplicate" in reason:
+        return "duplicate_image_rejected"
+    if any(marker in reason for marker in (
+        "unsafe", "redirect", "invalid_url", "non_https", "aggregator"
+    )):
+        return "unsafe_url_rejected"
+    if any(marker in reason for marker in (
+        "no_safe", "no_image", "had_no_safe", "not_attempted"
+    )):
+        return "no_image_candidate"
+    if "publisher_page_unavailable" in reason or "publisher_blocked" in reason:
+        return "publisher_blocked"
+    if any(marker in reason for marker in (
+        "http_", "httperror", "urlerror", "connectionerror", "gaierror",
+        "download", "tls", "empty_body", "oversized",
+    )):
+        return "download_failed"
+    return "materialization_failed"
+
+
+def _retry_after(reason: str, reference: datetime) -> str:
+    delay = (
+        timedelta(hours=1)
+        if reason in {"timeout", "download_failed", "total_deadline_exhausted_after_attempt"}
+        else timedelta(hours=24)
+        if reason in {
+            "invalid_mime", "invalid_magic", "dimensions_too_small",
+            "logo_or_banner_rejected", "duplicate_image_rejected",
+            "unsafe_url_rejected", "materialization_failed",
+        }
+        else timedelta(hours=6)
+    )
+    return (reference + delay).isoformat(timespec="seconds")
+
+
+def _future_retry(value: object, reference: datetime) -> bool:
+    try:
+        retry = datetime.fromisoformat(str(value or ""))
+    except (TypeError, ValueError):
+        return False
+    if retry.tzinfo is None:
+        retry = retry.replace(tzinfo=KST)
+    return retry.astimezone(KST) > reference
+
+
+def _previous_html_image_paths(output_root: Path) -> dict[str, str]:
+    latest = output_root / "latest.html"
+    if not latest.is_file():
+        return {}
+    try:
+        html = latest.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return {}
+    output: dict[str, str] = {}
+    for attributes, body in re.findall(
+        r"<article\b([^>]*)>(.*?)</article>", html, re.S | re.I
+    ):
+        identity = re.search(r'data-article="([^"]+)"', attributes)
+        source = re.search(
+            r'class="thumb"[^>]+background-image:url\(\'([^\']+)\'\)',
+            body,
+            re.I,
+        )
+        if identity and source:
+            output[identity.group(1)] = source.group(1)
+    return output
+
+
+def _valid_cached_asset(
     output_root: Path,
-    image_limit: int = 8,
-) -> dict:
-    """Use the existing bounded image resolver/quality gate, then copy only local bytes."""
+    raw_path: object,
+    *,
+    editorial_briefings,
+) -> tuple[Path, int, int] | None:
+    text = str(raw_path or "").strip()
+    if text.startswith(IMAGE_PUBLIC_SRC_PREFIX):
+        name = text.removeprefix(IMAGE_PUBLIC_SRC_PREFIX)
+    elif text.startswith("assets/images/"):
+        name = text.removeprefix("assets/images/")
+    else:
+        return None
+    if not name or Path(name).name != name:
+        return None
+    candidate = output_root / "assets" / "images" / name
+    if candidate.parent.resolve() != (output_root / "assets" / "images").resolve():
+        return None
+    try:
+        payload = candidate.read_bytes()
+        extension, rejection = editorial_briefings._image_magic_extension(
+            payload, "image/octet-stream"
+        )
+        if rejection or not extension or editorial_briefings.Image is None:
+            return None
+        with editorial_briefings.Image.open(BytesIO(payload)) as decoded:
+            decoded.load()
+            width, height = decoded.size
+        if width < editorial_briefings.IMAGE_MIN_WIDTH or height < editorial_briefings.IMAGE_MIN_HEIGHT:
+            return None
+        if _dashboard_image_quality_rejection(
+            payload,
+            editorial_briefings=editorial_briefings,
+        ):
+            return None
+    except (OSError, ValueError):
+        return None
+    return candidate, width, height
+
+
+class _ImageNetworkBudget:
+    """Shared global deadline and one-request-per-host guard for image work."""
+
+    def __init__(self, *, deadline: float, downloader: Callable | None = None):
+        self.deadline = deadline
+        self.downloader = downloader
+        self._lock = threading.Lock()
+        self._host_locks: dict[str, threading.BoundedSemaphore] = {}
+
+    def expired(self) -> bool:
+        return monotonic_time.monotonic() >= self.deadline
+
+    def _run(self, url: str, operation: Callable):
+        remaining = self.deadline - monotonic_time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("image total deadline exhausted")
+        host = (urlparse(str(url or "")).hostname or "").casefold()
+        if not host:
+            raise ValueError("image URL host missing")
+        with self._lock:
+            semaphore = self._host_locks.setdefault(
+                host, threading.BoundedSemaphore(IMAGE_PER_HOST_CONCURRENCY)
+            )
+        if not semaphore.acquire(timeout=remaining):
+            raise TimeoutError("image host deadline exhausted")
+        try:
+            if self.expired():
+                raise TimeoutError("image total deadline exhausted")
+            return operation()
+        finally:
+            semaphore.release()
+
+    def fetch_page(self, url: str):
+        from app import editorial_briefings
+
+        return self._run(
+            url,
+            lambda: editorial_briefings._fetch_publisher_html(
+                url,
+                counters=editorial_briefings.ImageResolutionCounters(),
+            ),
+        )
+
+    def probe(self, url: str) -> bool:
+        from app import editorial_briefings
+
+        return self._run(
+            url,
+            lambda: editorial_briefings._probe_image_mime(
+                url,
+                counters=editorial_briefings.ImageResolutionCounters(),
+            ),
+        )
+
+    def download(self, url: str, *, referer_url: str = "", opener=None):
+        from app import editorial_briefings
+
+        download = self.downloader or editorial_briefings._download_image_bytes
+        return self._run(
+            url,
+            lambda: download(url, referer_url=referer_url, opener=opener),
+        )
+
+
+def _image_task(
+    index: int,
+    article: Mapping,
+    *,
+    stage_root: Path,
+    network: _ImageNetworkBudget,
+    resolver: Callable,
+):
     from app import editorial_briefings
 
-    articles = model.get("articles") or []
-    if not articles or image_limit <= 0:
-        return {"attempted": 0, "materialized": 0, "fallback": len(articles)}
-
-    candidates: list[editorial_briefings.EditorialArticle] = []
-    selected_rows = articles[: min(len(articles), image_limit)]
-    for article in selected_rows:
-        published = _parse_datetime(article.get("published_at")) or datetime.now(KST)
-        image_input = {
-            "selected_url": article["url"],
-            "url": article["url"],
-            "title": article["title"],
-            "source": article["source"],
-            "published_at": article.get("published_at"),
-        }
-        resolution = editorial_briefings.resolve_article_image(
+    if network.expired():
+        return index, None, None, None, "total_deadline_exhausted_after_attempt", 0
+    image_input = {
+        "selected_url": article["url"],
+        "url": article["url"],
+        "title": article["title"],
+        "source": article["source"],
+        "published_at": article.get("published_at"),
+    }
+    try:
+        resolution = resolver(
             image_input,
             allow_network=True,
+            page_fetcher=network.fetch_page,
+            image_probe=network.probe,
         )
-        candidates.append(editorial_briefings.EditorialArticle(
+        if resolution.fallback_used:
+            reason = _fallback_reason(
+                resolution.reason,
+                deadline_expired=network.expired(),
+            )
+            return index, resolution, None, None, reason, 0
+        published = _parse_datetime(article.get("published_at")) or datetime.now(KST)
+        candidate = editorial_briefings.EditorialArticle(
             title=str(article["title"]),
             summary=str(article.get("summary") or ""),
             source=str(article.get("source") or "발행처"),
@@ -1631,45 +2100,419 @@ def materialize_article_images(
             image_source_page_url=resolution.source_page_url,
             image_width=resolution.width,
             image_height=resolution.height,
-            image_fallback_used=resolution.fallback_used,
+            image_fallback_used=False,
             image_reason=resolution.reason,
             image_candidates=resolution.candidates,
-        ))
+        )
+        article_stage = stage_root / f"article-{index:03d}"
+        dashboard_quality_rejections = 0
 
+        def quality_guarded_download(url: str, **kwargs):
+            nonlocal dashboard_quality_rejections
+            download = network.download(url, **kwargs)
+            if 200 <= download.status < 400:
+                _extension, byte_rejection = editorial_briefings._image_magic_extension(
+                    download.payload,
+                    download.content_type,
+                )
+                if not byte_rejection:
+                    rejection = _dashboard_image_quality_rejection(
+                        download.payload,
+                        editorial_briefings=editorial_briefings,
+                    )
+                    if rejection:
+                        dashboard_quality_rejections += 1
+                        raise editorial_briefings.ImageDownloadError(
+                            rejection,
+                            status=download.status,
+                            content_type=download.content_type,
+                            byte_size=len(download.payload),
+                        )
+            return download
+
+        materialized, counters = editorial_briefings.materialize_preview_images(
+            [candidate],
+            article_stage,
+            html_dir=article_stage,
+            downloader=quality_guarded_download,
+        )
+        result = materialized[0]
+        reason = "" if result.image_quality_accepted else _fallback_reason(
+            result.image_materialization_reason or result.image_reason,
+            deadline_expired=network.expired(),
+        )
+        return (
+            index,
+            resolution,
+            result,
+            counters,
+            reason,
+            dashboard_quality_rejections,
+        )
+    except Exception as exc:  # Resolver/download errors are fail-closed per article.
+        return (
+            index,
+            None,
+            None,
+            None,
+            _fallback_reason(type(exc).__name__, deadline_expired=network.expired()),
+            0,
+        )
+
+
+def _dashboard_image_quality_rejection(payload: bytes, *, editorial_briefings) -> str:
+    """Apply dashboard thumbnail dimensions and conservative logo/banner checks."""
+    try:
+        signals, width, height = editorial_briefings._decoded_image_quality_signals(
+            payload
+        )
+        if (
+            width < editorial_briefings.IMAGE_MIN_WIDTH
+            or height < editorial_briefings.IMAGE_MIN_HEIGHT
+        ):
+            return "dimensions_too_small"
+        with editorial_briefings.Image.open(BytesIO(payload)) as decoded:
+            decoded.load()
+            sample = editorial_briefings._flatten_for_quality(decoded)
+        sample.thumbnail((192, 192))
+        rgb = sample.convert("RGB")
+        pixels = list(
+            getattr(rgb, "get_flattened_data", rgb.getdata)()
+        )
+        dominant, _count = Counter(pixels).most_common(1)[0]
+        active = [
+            (index % sample.width, index // sample.width)
+            for index, pixel in enumerate(pixels)
+            if sum(abs(pixel[channel] - dominant[channel]) for channel in range(3)) > 35
+        ]
+        if active:
+            active_width = (max(x for x, _y in active) - min(x for x, _y in active) + 1) / sample.width
+            active_height = (max(y for _x, y in active) - min(y for _x, y in active) + 1) / sample.height
+            active_ratio = len(active) / len(pixels)
+        else:
+            active_width = active_height = active_ratio = 0.0
+        signal_set = set(signals)
+        aspect_ratio = width / height
+        centered_logo = (
+            "small_effective_content_area" in signal_set
+            and active_ratio < 0.22
+            and active_width < 0.90
+            and active_height < 0.60
+        )
+        banner_like = (
+            "logo_like_dimensions" in signal_set
+            and aspect_ratio >= 4.0
+        )
+        if centered_logo or banner_like:
+            return "logo_or_banner_rejected"
+    except (OSError, ValueError, editorial_briefings.ImageDownloadError):
+        return "invalid_magic"
+    return ""
+
+
+def _persist_image_associations(
+    state_path: Path | None,
+    state: dict | None,
+    articles: list[dict],
+    *,
+    reference: datetime,
+) -> None:
+    if state_path is None or state is None or not state_path.exists():
+        return
+    by_url = {
+        publisher_direct.normalize_publisher_canonical_url(article["url"])
+        or str(article["url"]): article
+        for article in articles
+    }
+    changed = False
+    for entry in state.get("entries") or []:
+        article = by_url.get(str(entry.get("canonical_url") or ""))
+        if article is None:
+            continue
+        src = str(article.get("image_src") or "")
+        local_path = (
+            "assets/images/" + src.removeprefix(IMAGE_PUBLIC_SRC_PREFIX)
+            if src.startswith(IMAGE_PUBLIC_SRC_PREFIX)
+            else ""
+        )
+        source_page = publisher_direct.normalize_publisher_canonical_url(
+            article["image_source_page_url"]
+        ) or str(article["url"])
+        values = {
+            "image_local_path": local_path,
+            "image_status": article["image_status"],
+            "image_source_kind": article["image_source_kind"],
+            "image_source_page_url": source_page,
+            "image_width": article["image_width"],
+            "image_height": article["image_height"],
+            "image_quality_accepted": article["image_quality_accepted"],
+            "image_reason": article["image_reason"],
+            "image_attempted": article["image_attempted"],
+            "image_cache_hit": article["image_cache_hit"],
+            "image_materialized": article["image_materialized"],
+            "image_retry_after": article["image_retry_after"],
+        }
+        changed = changed or any(entry.get(key) != value for key, value in values.items())
+        entry.update(values)
+    if not changed:
+        return
+    state["generated_at"] = reference.isoformat(timespec="seconds")
+    state["entries"] = sorted(
+        state.get("entries") or [],
+        key=lambda entry: str(entry["canonical_url"]).casefold(),
+    )
+    news_censor_verified_state.atomic_write_state(state_path, state)
+
+
+def materialize_article_images(
+    model: dict,
+    *,
+    output_root: Path,
+    verified_state_path: Path | None = None,
+    total_deadline_seconds: int = IMAGE_TOTAL_DEADLINE_SECONDS,
+    resolver: Callable | None = None,
+    downloader: Callable | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Consider every rendered article with cache-first, bounded image work."""
+    from app import editorial_briefings
+
+    articles: list[dict] = list(model.get("articles") or [])
+    reference = (now or datetime.now(KST)).astimezone(KST)
+    state = None
+    state_by_url: dict[str, dict] = {}
+    if verified_state_path is not None:
+        loaded = news_censor_verified_state.load_state(
+            verified_state_path,
+            now=reference,
+        )
+        state = loaded.state
+        state_by_url = {
+            str(entry["canonical_url"]): entry
+            for entry in state.get("entries") or []
+        }
+    previous_paths = _previous_html_image_paths(output_root)
+    pending: list[tuple[int, dict]] = []
+    used_digests: set[str] = set()
+    used_asset_names: set[str] = set()
+    valid_cached = negative_cache_hits = 0
+
+    for index, article in enumerate(articles):
+        canonical_url = (
+            publisher_direct.normalize_publisher_canonical_url(article["url"])
+            or str(article["url"])
+        )
+        entry = state_by_url.get(canonical_url) or {}
+        cached_path = entry.get("image_local_path") or previous_paths.get(article["id"])
+        cached = _valid_cached_asset(
+            output_root,
+            cached_path,
+            editorial_briefings=editorial_briefings,
+        )
+        if cached is not None:
+            asset, width, height = cached
+            digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+            if digest not in used_digests and asset.name not in used_asset_names:
+                used_digests.add(digest)
+                used_asset_names.add(asset.name)
+                article.update({
+                    "image_src": IMAGE_PUBLIC_SRC_PREFIX + asset.name,
+                    "image_status": "local_materialized",
+                    "image_source_kind": str(entry.get("image_source_kind") or "cached_local"),
+                    "image_source_page_url": str(entry.get("image_source_page_url") or article["url"]),
+                    "image_width": int(entry.get("image_width") or width),
+                    "image_height": int(entry.get("image_height") or height),
+                    "image_quality_accepted": True,
+                    "image_reason": "cached_local_image",
+                    "image_attempted": False,
+                    "image_cache_hit": True,
+                    "image_materialized": True,
+                    "image_retry_after": "",
+                })
+                valid_cached += 1
+                continue
+        cached_reason = str(entry.get("image_reason") or "")
+        if (
+            entry.get("image_status") == "deterministic_fallback"
+            and cached_reason in IMAGE_FALLBACK_REASONS
+            and _future_retry(entry.get("image_retry_after"), reference)
+        ):
+            article.update({
+                "image_source_kind": str(entry.get("image_source_kind") or "fallback"),
+                "image_source_page_url": str(entry.get("image_source_page_url") or article["url"]),
+                "image_width": None,
+                "image_height": None,
+                "image_quality_accepted": False,
+                "image_reason": cached_reason,
+                "image_attempted": False,
+                "image_cache_hit": True,
+                "image_materialized": False,
+                "image_retry_after": str(entry.get("image_retry_after") or ""),
+            })
+            negative_cache_hits += 1
+            continue
+        pending.append((index, article))
+
+    deadline = monotonic_time.monotonic() + max(1, int(total_deadline_seconds))
+    network = _ImageNetworkBudget(deadline=deadline, downloader=downloader)
+    image_resolver = resolver or editorial_briefings.resolve_article_image
+    task_results: list[tuple] = []
     with tempfile.TemporaryDirectory(
         prefix="hdec-news-censor-images-",
         dir="/tmp",
     ) as stage_name:
         stage = Path(stage_name)
-        materialized, counters = editorial_briefings.materialize_preview_images(
-            candidates,
-            stage,
-            html_dir=stage,
-        )
-        materialized_count = 0
-        for model_article, image_article in zip(selected_rows, materialized):
-            asset = str(image_article.image_local_asset or "")
-            source = stage / "assets" / "images" / asset
-            if (
-                image_article.image_quality_accepted
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=IMAGE_GLOBAL_CONCURRENCY,
+            thread_name_prefix="news-censor-image",
+        ) as executor:
+            futures = [
+                executor.submit(
+                    _image_task,
+                    index,
+                    article,
+                    stage_root=stage,
+                    network=network,
+                    resolver=image_resolver,
+                )
+                for index, article in pending
+            ]
+            task_results = [future.result() for future in futures]
+
+        resolution_successes = download_attempts = quality_rejections = 0
+        newly_materialized = 0
+        for (
+            index,
+            resolution,
+            image_article,
+            counters,
+            reason,
+            dashboard_quality_rejections,
+        ) in task_results:
+            article = articles[index]
+            article["image_attempted"] = True
+            resolution_successes += int(
+                resolution is not None and not resolution.fallback_used
+            )
+            if counters is not None:
+                download_attempts += int(counters.image_download_attempts)
+                quality_rejections += int(counters.image_quality_rejections)
+            quality_rejections += dashboard_quality_rejections
+            asset = str(
+                image_article.image_local_asset
+                if image_article is not None
+                else ""
+            )
+            source = stage / f"article-{index:03d}" / "assets" / "images" / asset
+            accepted = bool(
+                image_article is not None
+                and image_article.image_quality_accepted
                 and asset
                 and source.is_file()
-            ):
+            )
+            if accepted:
+                payload = source.read_bytes()
+                digest = hashlib.sha256(payload).hexdigest()
+                if accepted and (digest in used_digests or asset in used_asset_names):
+                    accepted = False
+                    reason = "duplicate_image_rejected"
+                elif accepted:
+                    used_digests.add(digest)
+                    used_asset_names.add(asset)
+            if accepted:
                 destination = output_root / "assets" / "images" / asset
-                _atomic_write_bytes(destination, source.read_bytes())
-                # Both public dashboard paths receive byte-identical HTML. Use
-                # one same-origin asset authority so the relative directory of
-                # either HTML file cannot create a second image product.
-                model_article["image_src"] = f"/HDEC-News-Sensor/news-censor/assets/images/{asset}"
-                model_article["image_status"] = "local_materialized"
-                materialized_count += 1
-        model["image_materialization"] = {
-            "attempted": len(selected_rows),
-            "materialized": materialized_count,
-            "fallback": len(articles) - materialized_count,
-            "quality_rejections": int(counters.image_quality_rejections),
-        }
-        return dict(model["image_materialization"])
+                _atomic_write_bytes(destination, payload)
+                with editorial_briefings.Image.open(BytesIO(payload)) as decoded:
+                    decoded.load()
+                    width, height = decoded.size
+                article.update({
+                    "image_src": IMAGE_PUBLIC_SRC_PREFIX + asset,
+                    "image_status": "local_materialized",
+                    "image_source_kind": str(image_article.image_source_kind or "publisher_page"),
+                    "image_source_page_url": str(image_article.image_source_page_url or article["url"]),
+                    "image_width": width,
+                    "image_height": height,
+                    "image_quality_accepted": True,
+                    "image_reason": "image_materialized",
+                    "image_cache_hit": False,
+                    "image_materialized": True,
+                    "image_retry_after": "",
+                })
+                newly_materialized += 1
+                continue
+            final_reason = reason if reason in IMAGE_FALLBACK_REASONS else _fallback_reason(reason)
+            article.update({
+                "image_status": "deterministic_fallback",
+                "image_source_kind": str(
+                    getattr(resolution, "source_kind", "fallback") or "fallback"
+                ),
+                "image_source_page_url": str(
+                    getattr(resolution, "source_page_url", "") or article["url"]
+                ),
+                "image_width": None,
+                "image_height": None,
+                "image_quality_accepted": False,
+                "image_reason": final_reason,
+                "image_cache_hit": False,
+                "image_materialized": False,
+                "image_retry_after": _retry_after(final_reason, reference),
+            })
+
+    local_positions = [
+        index + 1 for index, article in enumerate(articles)
+        if article["image_status"] == "local_materialized"
+    ]
+    fallback_positions = [
+        index + 1 for index, article in enumerate(articles)
+        if article["image_status"] == "deterministic_fallback"
+    ]
+    fallback_reasons = Counter(
+        article["image_reason"]
+        for article in articles
+        if article["image_status"] == "deterministic_fallback"
+    )
+    fallback_count = len(fallback_positions)
+    local_count = len(local_positions)
+    counters = {
+        "displayed_articles": len(articles),
+        "valid_cached_local_images": valid_cached,
+        "negative_cache_hits": negative_cache_hits,
+        "image_resolution_attempted": len(pending),
+        "image_resolution_successes": resolution_successes,
+        "image_download_attempts": download_attempts,
+        "image_materialized": local_count,
+        "new_image_materialized": newly_materialized,
+        "local_materialized": local_count,
+        "deterministic_fallbacks": fallback_count,
+        "quality_rejections": quality_rejections,
+        "unsafe_url_rejections": fallback_reasons["unsafe_url_rejected"],
+        "duplicate_image_rejections": fallback_reasons["duplicate_image_rejected"],
+        "deadline_exhausted": fallback_reasons["total_deadline_exhausted_after_attempt"],
+        "not_attempted_due_to_cap": 0,
+        "fallback_reason_counts": dict(sorted(fallback_reasons.items())),
+        "real_image_positions": local_positions,
+        "fallback_positions": fallback_positions,
+        "accounting_pass": len(articles) == local_count + fallback_count,
+        "all_displayed_considered": (
+            len(articles) == valid_cached + negative_cache_hits + len(pending)
+        ),
+    }
+    if not counters["accounting_pass"] or not counters["all_displayed_considered"]:
+        raise RuntimeError("News Censor image accounting mismatch")
+    if any(
+        article["image_status"] == "deterministic_fallback"
+        and article["image_reason"] not in IMAGE_FALLBACK_REASONS
+        for article in articles
+    ):
+        raise RuntimeError("News Censor fallback reason outside sealed vocabulary")
+    model["image_materialization"] = counters
+    _persist_image_associations(
+        verified_state_path,
+        state,
+        articles,
+        reference=reference,
+    )
+    return dict(counters)
 
 
 def build(
@@ -1703,7 +2546,14 @@ def main(argv: list[str] | None = None) -> int:
         default="off",
         help="off=deterministic local-data fallback; live=bounded local image materialization",
     )
-    parser.add_argument("--image-limit", type=int, default=8)
+    parser.add_argument(
+        "--verified-state",
+        type=Path,
+        help=(
+            "optional verified-state file used only for cached local image "
+            "associations and retry TTLs"
+        ),
+    )
     parser.add_argument(
         "--canonical-output",
         type=Path,
@@ -1722,7 +2572,11 @@ def main(argv: list[str] | None = None) -> int:
             materialize_article_images(
                 model,
                 output_root=args.output_root.resolve(),
-                image_limit=max(0, min(24, args.image_limit)),
+                verified_state_path=(
+                    args.verified_state.resolve()
+                    if args.verified_state is not None
+                    else None
+                ),
             )
         html = render_html(model)
     except LiveBriefRejected as exc:
@@ -1759,9 +2613,14 @@ def main(argv: list[str] | None = None) -> int:
         "weather_status": model["weather"]["status"],
         "safety_status": model["safety"]["status"],
         "image_materialization": model.get("image_materialization") or {
-            "attempted": 0,
-            "materialized": 0,
-            "fallback": model["article_count"],
+            "displayed_articles": model["article_count"],
+            "valid_cached_local_images": 0,
+            "image_resolution_attempted": 0,
+            "image_resolution_successes": 0,
+            "image_download_attempts": 0,
+            "image_materialized": 0,
+            "deterministic_fallbacks": model["article_count"],
+            "not_attempted_due_to_cap": 0,
         },
         "subfilter_count": len(model["subfilters"]),
         "html_chars": len(html),
@@ -1785,6 +2644,15 @@ def main(argv: list[str] | None = None) -> int:
             f"news censor written: {latest} + {archive} ({len(html)} chars) "
             f"news_data_mode={model['news_data_mode']} articles={model['article_count']} "
             f"canonical_mirror={'yes' if args.canonical_output else 'no'}"
+        )
+        print(
+            "news censor image accounting: "
+            + json.dumps(
+                model.get("image_materialization") or {},
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
         )
         return 0
 

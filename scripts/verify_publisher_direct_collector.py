@@ -51,7 +51,15 @@ import build_telegram_digest  # noqa: E402
 
 EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/editorial-daily-brief.yml": (
-        "e0f23ba1c31ffe51d201f05cdb67d12ccdefa2aa44c7c9a59689c6c0a26daabd"
+        # R4-R9C wires the exact-edition editor deep-link verifier into the
+        # offline gate and commits the append-only edition manifest through
+        # the explicit git-add allowlist. R4-R10 reschedules the runs after the
+        # Review Console build (cron 30/45/55 22) so the dated console exists and
+        # the morning Teams message carries the exact-edition editor CTA, and
+        # wires the delivered lead-source gate verifier into the offline gate.
+        # R4-R11 removes the reader-only degradation: editor-unavailable
+        # publications skip fail-closed with a machine-readable skip_reason.
+        "e454f9d880fe5471b2bf64cecc775200feb4d8b85aa8f85105c689db3365bebc"
     ),
     ".github/workflows/editorial-review-console.yml": (
         "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"
@@ -64,26 +72,50 @@ EXPECTED_PROTECTED_SHA256 = {
     ),
     ".github/workflows/scheduled-live-refresh.yml": (
         # R4-R5 publishes both exact-reference dashboard paths from one artifact,
-        # leaves sender state out, and gates on validated-Brief field equivalence.
-        "c4039845e3eaaf7f1c45019d779c4d68ad8cf5039cf7b1510742f4da1b4dfcd2"
+        # leaves sender state out, gates on validated-Brief field equivalence,
+        # and considers every displayed article for cached/bounded local imagery.
+        # R4-R9B adds the stock-market hard-exclusion and dashboard-freshness
+        # verifiers to the mock-safe gate (before the build step).
+        "bf99534e934b0ab99f3d6631b9ccb72159f652d6465c759f49c2134119fb1a04"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
         # ledger after proving its serializer/selector semantic equivalence.
-        "7d7a995a51abc78b154ad105db6d4fce87e074b793aec95a2281de12d6d0c25b"
+        # R4-R6 documents the 0-5 batch contract (cap Variable 1-5, clamp >5,
+        # conservative '1' env fallback until the operator sets 5).
+        # R4-R9B adds the major-media source-gate and stock-market
+        # hard-exclusion verifiers to the mock-safe gate.
+        # R4-R9D wires the strict major-media/official-source Teams gate
+        # verifier (verify_teams_strict_source_gate.py) into the mock-safe gate.
+        "c735b4b186f80a2ccf44d2d1117f3583e9b1f94544d9be0bc162e7bdc7952940"
     ),
     ".github/workflows/telegram-notify.yml": (
-        "18ed4f6df937685329dda440a29bb8979d780c06e169af721b9c2218f01f379c"
+        # R4-R10 repoints the operator dashboard export off the sealed News Censor
+        # canonical path onto docs/daily/operator-dashboard-latest.html, removing the
+        # dual-writer race (scheduled-live-refresh.yml stays the sole News Censor writer).
+        "b9a26ae0ce41707591ff3f4ea0ab11cdc6515ff7a165be16c1646b517fa5973f"
     ),
     "templates/editorial_daily.html": (
         "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
     ),
     "data/editorial_daily_state.json": (
-        # Verified successor after the accepted 2026-08-03 Daily delivery.
-        "7760bb68f289e09effe4be93ae7ac8da98b3c90ad27a4e27d65944f2c451f988"
+        # Verified successor after the accepted 2026-08-06 Daily delivery
+        # (origin/main 9b6e351 via 564462f, merged without modification —
+        # sent by main's legacy reader-only path that this branch forbids).
+        "68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155"
     ),
     "data/teams_push_state.json": (
-        "3032d829262085164cc159d902701b65526c58bec34b52531abd9ed78bbdca3a"
+        # Verified successor from the production watch's own state commits
+        # (through origin/main 6c54e5a → 710a59a → 86d3e6b → 564462f "chore:
+        # persist Teams AI push dedup state" — merged without modification,
+        # routine successor-pin refresh; the 86d3e6b batch plus 1710754 add
+        # seven ungated-main sends, six of them non-major tier that this
+        # branch's R4-R9A/R9D source gate holds back or blocks).
+        # This state contains the R4-R11 TTL production send
+        # (teams_ai_push:7081b3470e08, http://www.ttlnews.com/…idxno=3131687);
+        # verify_teams_strict_source_gate §10 proves it read-only and pins the
+        # publisher to never_automatic.
+        "4b3f78ee92152d98e704695004af5367d18fa61e9ce38ec8794a49bedee96e3d"
     ),
 }
 

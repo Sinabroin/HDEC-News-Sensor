@@ -61,6 +61,17 @@ _ENTRY_KEYS = frozenset(
         "publisher_authority_policy_version",
         "source_quality_policy_version",
         "image_local_path",
+        "image_status",
+        "image_source_kind",
+        "image_source_page_url",
+        "image_width",
+        "image_height",
+        "image_quality_accepted",
+        "image_reason",
+        "image_attempted",
+        "image_cache_hit",
+        "image_materialized",
+        "image_retry_after",
         "invalidated",
         "invalidation_reason",
         "carry_forward_eligible",
@@ -69,6 +80,22 @@ _ENTRY_KEYS = frozenset(
         "retry_after_at",
     }
 )
+
+_IMAGE_STATUSES = {"", "local_materialized", "deterministic_fallback"}
+_IMAGE_FALLBACK_REASONS = {
+    "no_image_candidate",
+    "publisher_blocked",
+    "timeout",
+    "invalid_mime",
+    "invalid_magic",
+    "dimensions_too_small",
+    "logo_or_banner_rejected",
+    "duplicate_image_rejected",
+    "unsafe_url_rejected",
+    "download_failed",
+    "materialization_failed",
+    "total_deadline_exhausted_after_attempt",
+}
 
 
 class VerifiedStateError(ValueError):
@@ -218,6 +245,53 @@ def validate_entry(raw: object) -> dict:
         if str(raw.get(optional_timestamp) or ""):
             _parse_iso(raw.get(optional_timestamp), optional_timestamp)
 
+    image_status = str(raw.get("image_status") or "")
+    if image_status not in _IMAGE_STATUSES:
+        raise VerifiedStateError("unsupported image_status")
+    image_path = _validate_local_image_path(raw.get("image_local_path"))
+    image_reason = str(raw.get("image_reason") or "")[:120]
+    image_source_page_url = str(raw.get("image_source_page_url") or "").strip()
+    if image_source_page_url:
+        image_source_page_url = (
+            publisher_direct.normalize_publisher_canonical_url(
+                image_source_page_url
+            )
+            or ""
+        )
+        if not image_source_page_url:
+            raise VerifiedStateError("unsafe image_source_page_url")
+    image_width = raw.get("image_width")
+    image_height = raw.get("image_height")
+    if image_width is not None and (
+        not isinstance(image_width, int) or image_width <= 0
+    ):
+        raise VerifiedStateError("invalid image_width")
+    if image_height is not None and (
+        not isinstance(image_height, int) or image_height <= 0
+    ):
+        raise VerifiedStateError("invalid image_height")
+    image_quality_accepted = bool(raw.get("image_quality_accepted", False))
+    image_attempted = bool(raw.get("image_attempted", False))
+    image_cache_hit = bool(raw.get("image_cache_hit", False))
+    image_materialized = bool(raw.get("image_materialized", False))
+    image_retry_after = str(raw.get("image_retry_after") or "")[:40]
+    if image_retry_after:
+        _parse_iso(image_retry_after, "image_retry_after")
+    if image_status == "local_materialized" and (
+        not image_path
+        or not image_quality_accepted
+        or not image_materialized
+        or not image_reason
+    ):
+        raise VerifiedStateError("incomplete local image state")
+    if image_status == "deterministic_fallback" and (
+        image_path
+        or image_quality_accepted
+        or image_materialized
+        or image_reason not in _IMAGE_FALLBACK_REASONS
+    ):
+        raise VerifiedStateError("incomplete fallback image state")
+
     return {
         "contract": STATE_CONTRACT,
         "version": STATE_VERSION,
@@ -242,7 +316,18 @@ def validate_entry(raw: object) -> dict:
             raw["publisher_authority_policy_version"]
         ),
         "source_quality_policy_version": str(raw["source_quality_policy_version"]),
-        "image_local_path": _validate_local_image_path(raw.get("image_local_path")),
+        "image_local_path": image_path,
+        "image_status": image_status,
+        "image_source_kind": str(raw.get("image_source_kind") or "")[:80],
+        "image_source_page_url": image_source_page_url,
+        "image_width": image_width,
+        "image_height": image_height,
+        "image_quality_accepted": image_quality_accepted,
+        "image_reason": image_reason,
+        "image_attempted": image_attempted,
+        "image_cache_hit": image_cache_hit,
+        "image_materialized": image_materialized,
+        "image_retry_after": image_retry_after,
         "invalidated": bool(raw["invalidated"]),
         "invalidation_reason": reason[:120],
         "carry_forward_eligible": bool(raw["carry_forward_eligible"]),
@@ -552,6 +637,21 @@ def verified_entry_from_article(
         "publisher_authority_policy_version": PUBLISHER_AUTHORITY_POLICY_VERSION,
         "source_quality_policy_version": SOURCE_QUALITY_POLICY_VERSION,
         "image_local_path": str(previous.get("image_local_path") or ""),
+        "image_status": str(previous.get("image_status") or ""),
+        "image_source_kind": str(previous.get("image_source_kind") or ""),
+        "image_source_page_url": str(
+            previous.get("image_source_page_url") or ""
+        ),
+        "image_width": previous.get("image_width"),
+        "image_height": previous.get("image_height"),
+        "image_quality_accepted": bool(
+            previous.get("image_quality_accepted", False)
+        ),
+        "image_reason": str(previous.get("image_reason") or ""),
+        "image_attempted": bool(previous.get("image_attempted", False)),
+        "image_cache_hit": bool(previous.get("image_cache_hit", False)),
+        "image_materialized": bool(previous.get("image_materialized", False)),
+        "image_retry_after": str(previous.get("image_retry_after") or ""),
         "invalidated": False,
         "invalidation_reason": "",
         "carry_forward_eligible": bool(display_relevant and source_quality_passed),

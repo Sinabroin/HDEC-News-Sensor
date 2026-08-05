@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "schema_contract": "HDEC_PUBLIC_INSTITUTION_SOURCE_REGISTRY_V1",
+  "note": "Official status requires both an explicit organization identity and a publisher-direct domain in this registry. Portal hosts and generated prose are never authority evidence.",
+  "sources": [
+    {
+      "source_id": "molit",
+      "display_name": "국토교통부",
+      "aliases": ["국토교통부", "MOLIT"],
+      "domains": ["molit.go.kr"],
+      "public_institution_type": "central_government"
+    },
+    {
+      "source_id": "msit",
+      "display_name": "과학기술정보통신부",
+      "aliases": ["과학기술정보통신부", "과기정통부", "MSIT"],
+      "domains": ["msit.go.kr"],
+      "public_institution_type": "central_government"
+    },
+    {
+      "source_id": "mois",
+      "display_name": "행정안전부",
+      "aliases": ["행정안전부", "MOIS"],
+      "domains": ["mois.go.kr"],
+      "public_institution_type": "central_government"
+    },
+    {
+      "source_id": "motie",
+      "display_name": "산업통상자원부",
+      "aliases": ["산업통상자원부", "산업부", "MOTIE"],
+      "domains": ["motie.go.kr"],
+      "public_institution_type": "central_government"
+    },
+    {
+      "source_id": "pps",
+      "display_name": "조달청",
+      "aliases": ["조달청", "PPS"],
+      "domains": ["pps.go.kr", "g2b.go.kr"],
+      "public_institution_type": "regulator"
+    },
+    {
+      "source_id": "korea_policy_briefing",
+      "display_name": "대한민국 정책브리핑",
+      "aliases": ["정책브리핑", "대한민국 정책브리핑"],
+      "domains": ["korea.kr"],
+      "public_institution_type": "central_government"
+    },
+    {
+      "source_id": "national_archives",
+      "display_name": "국가기록원",
+      "aliases": ["국가기록원"],
+      "domains": ["archives.go.kr", "mois.go.kr"],
+      "title_identity_allowed": true,
+      "public_institution_type": "public_agency"
+    },
+    {
+      "source_id": "nia",
+      "display_name": "한국지능정보사회진흥원",
+      "aliases": ["한국지능정보사회진흥원", "NIA"],
+      "domains": ["nia.or.kr"],
+      "public_institution_type": "public_agency"
+    },
+    {
+      "source_id": "iitp",
+      "display_name": "정보통신기획평가원",
+      "aliases": ["정보통신기획평가원", "IITP"],
+      "domains": ["iitp.kr"],
+      "public_institution_type": "research_institute"
+    },
+    {
+      "source_id": "kepco",
+      "display_name": "한국전력공사",
+      "aliases": ["한국전력공사", "한국전력", "한전", "KEPCO"],
+      "domains": ["kepco.co.kr"],
+      "public_institution_type": "public_corporation"
+    },
+    {
+      "source_id": "khnp",
+      "display_name": "한국수력원자력",
+      "aliases": ["한국수력원자력", "한수원", "KHNP"],
+      "domains": ["khnp.co.kr"],
+      "public_institution_type": "public_corporation"
+    },
+    {
+      "source_id": "lh",
+      "display_name": "한국토지주택공사",
+      "aliases": ["한국토지주택공사", "LH"],
+      "domains": ["lh.or.kr"],
+      "public_institution_type": "public_corporation"
+    },
+    {
+      "source_id": "eu_official_journal",
+      "display_name": "European Union",
+      "aliases": ["European Union", "EU Official Journal", "EUR-Lex"],
+      "domains": ["eur-lex.europa.eu"],
+      "public_institution_type": "international_public_body"
+    },
+    {
+      "source_id": "european_commission",
+      "display_name": "European Commission",
+      "aliases": ["European Commission", "EU Commission"],
+      "domains": ["ec.europa.eu", "digital-strategy.ec.europa.eu"],
+      "public_institution_type": "regulator"
+    }
+  ]
+}

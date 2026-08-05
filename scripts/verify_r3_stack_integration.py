@@ -131,6 +131,41 @@ SUBVERIFIERS = (
         r"RESULT=D7-AK-6E_TEAMS_VALIDATED_BRIEF_SEMANTIC_EQUIVALENCE_PASS",
     ),
     (
+        "TEAMS_MAJOR_MEDIA_GATE_VERIFIER",
+        "verify_teams_major_media_gate.py",
+        r"RESULT=D7-AK-6E_R4R9A_TEAMS_MAJOR_MEDIA_GATE_PASS",
+    ),
+    (
+        "TEAMS_STRICT_SOURCE_GATE_VERIFIER",
+        "verify_teams_strict_source_gate.py",
+        r"RESULT=D7-AK-6E_R4R9D_TEAMS_STRICT_SOURCE_GATE_PASS",
+    ),
+    (
+        "DAILY_LEAD_SOURCE_GATE_VERIFIER",
+        "verify_daily_lead_source_gate.py",
+        r"RESULT=D7-AK-6E_R4R10_DAILY_LEAD_SOURCE_GATE_PASS",
+    ),
+    (
+        "NEWS_CENSOR_FULL_IMAGE_COVERAGE_VERIFIER",
+        "verify_news_censor_image_coverage.py",
+        r"RESULT=D7-AK-6E_NEWS_CENSOR_FULL_IMAGE_COVERAGE_PASS",
+    ),
+    (
+        "NEWS_CENSOR_SEMANTIC_FILTER_VERIFIER",
+        "verify_news_censor_semantic_filters.py",
+        r"NEWS_CENSOR_SEMANTIC_FILTERS=PASS",
+    ),
+    (
+        "WEEKLY_TNI_REFERENCE_PARITY_VERIFIER",
+        "verify_weekly_tni_reference_parity.py",
+        r"RESULT=D7-AK-6E_WEEKLY_TNI_REFERENCE_PARITY_PASS",
+    ),
+    (
+        "PUBLIC_INSTITUTION_EDITORIAL_LANE_VERIFIER",
+        "verify_public_institution_editorial_lane.py",
+        r"RESULT=D7-AK-6E_R4_R8_PUBLIC_INSTITUTION_LANE_PASS",
+    ),
+    (
         "SCHEDULED_REFRESH_VERIFIER",
         "verify_scheduled_refresh_and_telegram.py",
         r"RESULT: PASS",
@@ -154,6 +189,21 @@ SUBVERIFIERS = (
         "HUMAN_REVIEW_GATE",
         "verify_human_review_gate.py",
         r"RESULT: PASS",
+    ),
+    (
+        "OBSERVED_FALSE_POSITIVE_REGRESSION",
+        "verify_observed_false_positive_regression.py",
+        r"OBSERVED_FALSE_POSITIVE_REGRESSION=PASS checks=(?P<passed>\d+) failures=0",
+    ),
+    (
+        "EDITORIAL_MEMORY_VERIFIER",
+        "verify_editorial_memory.py",
+        r"EDITORIAL_MEMORY_VERIFIER=PASS checks=(?P<passed>\d+) failures=0",
+    ),
+    (
+        "EDITORIAL_MEMORY_RUNTIME_INTEGRATION_VERIFIER",
+        "verify_editorial_memory_runtime_integration.py",
+        r"EDITORIAL_MEMORY_RUNTIME_INTEGRATION=PASS checks=(?P<passed>\d+) failures=0",
     ),
 )
 

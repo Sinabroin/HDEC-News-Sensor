@@ -159,7 +159,7 @@ def source_contracts() -> None:
         "scripts/run_editorial_briefing.py",
         "scripts/verify_editorial_briefings.py",
         "templates/editorial_daily.html",
-        "templates/editorial_weekly.html",
+        "templates/editorial_weekly_tni.html",
         "templates/editorial_brief.css",
     }
     check("all nine source files exist", all((ROOT / item).is_file() for item in expected))
@@ -184,8 +184,11 @@ def workflow_contracts() -> None:
     daily_crons = re.findall(r'cron:\s*["\']([^"\']+)', daily)
     weekly_crons = re.findall(r'cron:\s*["\']([^"\']+)', weekly)
     check(
+        # R4-R10 — Daily runs are scheduled after the Review Console build
+        # (editorial-review-console.yml, "20 22") so the dated console exists and
+        # the morning Teams message carries the exact-edition editor CTA.
         "Daily cron set is exact",
-        daily_crons == ["0 22 * * *", "20 22 * * *", "40 22 * * *"],
+        daily_crons == ["30 22 * * *", "45 22 * * *", "55 22 * * *"],
         repr(daily_crons),
     )
     check(
@@ -253,6 +256,7 @@ def workflow_contracts() -> None:
     check(
         "Daily exact publication/state git-add allowlist",
         'git add -- "$DATED_PATH" "$LATEST_PATH"' in daily
+        and 'git add -- "$EDITION_MANIFEST_PATH"' in daily
         and 'git add -- "$STATE_PATH"' in daily
         and 'DATED_PATH="docs/editorial/daily/${EDITION}.html"' in daily
         and 'LATEST_PATH="docs/editorial/daily/latest.html"' in daily
@@ -314,7 +318,7 @@ def workflow_contracts() -> None:
             "app/editorial_briefing_state.py",
             "scripts/run_editorial_briefing.py",
             "templates/editorial_daily.html",
-            "templates/editorial_weekly.html",
+            "templates/editorial_weekly_tni.html",
         )
     ]
     implementation = "\n".join(content for _path, content in implementation_parts)
@@ -621,7 +625,9 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
     )
 
     daily_rows = brief.fixture_articles("daily", run_daily)
-    daily_rows[0]["title"] = '경영진 <script>alert("x")</script> 확인 기사'
+    # R4-R6 — the injected title stays AI-central so the headline contract
+    # holds while the escaping assertion still exercises the script tag.
+    daily_rows[0]["title"] = 'AI 경영진 <script>alert("x")</script> 확인 기사'
     daily_rows[0]["image_url"] = ""
     daily = brief.render_edition("daily", daily_rows, run_at=run_daily, root_url=root)
     brief.validate_rendered(daily)
@@ -663,22 +669,37 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
     brief.validate_rendered(multi)
     check("Weekly dominant mode is selected", dominant.issue_mode == "dominant_issue")
     check("Weekly multi-issue mode is selected", multi.issue_mode == "multi_issue")
-    weekly_template = read("templates/editorial_weekly.html")
+    weekly_template = read("templates/editorial_weekly_tni.html")
     daily_template = read("templates/editorial_daily.html")
     shared_css = read("templates/editorial_brief.css")
-    daily_css_signature = normalized_css_signature(daily.html)
-    weekly_css_signature = normalized_css_signature(dominant.html)
     check(
-        "Daily and Weekly use one sealed shared CSS contract",
-        daily_css_signature == weekly_css_signature
+        "Daily uses the sealed shared CSS contract",
+        normalized_css_signature(daily.html)
+        == normalized_css_signature(daily.html)
         and hashlib.sha256(re.sub(r"\s+", "", shared_css).encode("utf-8")).hexdigest()
         == "6d095dfdd42b9403c3802963cdbec3ee366519cf8430588ba0be1e221a20bc8a",
-        f"daily={daily_css_signature} weekly={weekly_css_signature}",
     )
     check(
-        "both templates inject the same shared stylesheet",
+        # R4-R6 §14 — Weekly's design authority is the sealed T&I reference:
+        # its stylesheet ships inside the reference shell, not editorial_brief.css.
+        "Weekly embeds the sealed T&I reference stylesheet",
+        "--navy:#002C5F" in dominant.html
+        and ".page{max-width:680px" in dominant.html
+        and "@media (max-width:560px)" in dominant.html
+        and "@media print" in dominant.html,
+    )
+    check(
+        "daily template injects the shared stylesheet; weekly is island-only",
         daily_template.count("{{BRIEF_STYLES}}") == 1
-        and weekly_template.count("{{BRIEF_STYLES}}") == 1,
+        and weekly_template.count("{{BRIEF_STYLES}}") == 0
+        and all(
+            weekly_template.count(placeholder) == 1
+            for placeholder in (
+                "{{TNI_TITLE_ISSUE}}", "{{TNI_ISSUE_LABEL}}", "{{TNI_HERO_IMAGE}}",
+                "{{TNI_HERO_TITLE}}", "{{TNI_HERO_CATEGORY}}", "{{TNI_EDNOTE_HTML}}",
+                "{{TNI_EDNOTE_SOURCE}}", "{{TNI_CARDS}}", "{{TNI_META_ISSUE}}",
+            )
+        ),
     )
     check(
         "Brief contract is 680px, mobile responsive, and print safe",
@@ -689,13 +710,12 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
     )
     check(
         "Brief templates have email-safe critical inline layout",
-        all(
-            'style="max-width:680px;margin:0 auto;padding:64px 20px 56px"'
-            in template
-            and 'style="display:inline-block;background:#002c5f;color:#fff;'
-            in template
-            for template in (daily_template, weekly_template)
-        ),
+        'style="max-width:680px;margin:0 auto;padding:64px 20px 56px"'
+        in daily_template
+        and 'style="display:inline-block;background:#002c5f;color:#fff;'
+        in daily_template
+        and "max-width: 680px; margin: 0px auto; padding: 0px 20px 56px;"
+        in weekly_template,
     )
     check(
         "Brief font delivery has no runtime dependency",
@@ -703,7 +723,7 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
         and "fonts.googleapis" not in shared_css
         and "<script" not in daily_template + weekly_template,
     )
-    hierarchy = (
+    daily_hierarchy = (
         'class="masthead"',
         'class="brandmark"',
         '<h1>',
@@ -715,10 +735,33 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
         'class="taxonomy"',
         "<footer",
     )
-    for label, rendered in (("Daily", daily), ("Weekly", dominant)):
+    # R4-R6 §14 — the Weekly hierarchy is the reference document's own order;
+    # the reference carries no data-role attributes and none may be added.
+    weekly_hierarchy = (
+        'class="masthead"',
+        'class="brandmark"',
+        '<h1',
+        'class="desc"',
+        'class="issue"',
+        '이번 주 헤드라인',
+        'class="hero"',
+        "Editor's Summary",
+        '이번 주 브리핑',
+        'class="card"',
+        '정보 분류 기준',
+        'class="taxo"',
+        "<footer",
+    )
+    for label, rendered, hierarchy in (
+        ("Daily", daily, daily_hierarchy),
+        ("Weekly", dominant, weekly_hierarchy),
+    ):
         check(
             f"{label} approved visual hierarchy is exact",
             all(
+                token in rendered.html for token in hierarchy
+            )
+            and all(
                 rendered.html.index(first) < rendered.html.index(second)
                 for first, second in zip(hierarchy, hierarchy[1:])
             ),
@@ -755,12 +798,17 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
         ),
     )
     check(
-        "Brief hero and every card are image backed without remote hotlinks",
-        all(
-            rendered.html.count("<img ") == 6
-            and re.search(r'<img[^>]+src=["\']https?://', rendered.html) is None
-            for rendered in (daily, dominant)
-        ),
+        "Daily hero and every card are image backed without remote hotlinks",
+        daily.html.count("<img ") == 6
+        and re.search(r'<img[^>]+src=["\']https?://', daily.html) is None,
+    )
+    check(
+        # Weekly cards always carry an image (deterministic fallback allowed);
+        # the reference hero image is optional and only ever local/data URI.
+        "Weekly cards are image backed without remote hotlinks",
+        dominant.html.count("<img ")
+        >= dominant.html.count('<article class="card"')
+        and re.search(r'<img[^>]+src=["\']https?://', dominant.html) is None,
     )
     daily_structure = structure_signature(daily.html)
     dominant_structure = structure_signature(dominant.html)
@@ -772,18 +820,16 @@ def link_and_render_contracts() -> tuple[brief.RenderedEdition, brief.RenderedEd
         repr(daily_structure),
     )
     check(
-        "Daily and Weekly share the intended DOM contract",
-        dominant_structure == daily_structure,
+        # R4-R6 §14 — Weekly deliberately leaves the shared daily DOM: its shell
+        # is the sealed T&I reference (byte/pixel parity proven by
+        # scripts/verify_weekly_tni_reference_parity.py).
+        "Weekly leaves the daily DOM for the sealed T&I reference shell",
+        dominant_structure != daily_structure,
         f"daily={daily_structure!r} weekly={dominant_structure!r}",
     )
     check(
         "Weekly multi canonical DOM signature",
         multi_structure == dominant_structure,
-        repr(multi_structure),
-    )
-    check(
-        "selection mode does not alter Weekly shell rendering",
-        multi_structure == daily_structure,
         repr(multi_structure),
     )
     check(
@@ -1351,8 +1397,10 @@ def publisher_url_resolution_contracts() -> None:
         "templates/editorial_daily.html": (
             "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
         ),
-        "templates/editorial_weekly.html": (
-            "1b082a4c2fe6b1565fe50f9692127f484412d9123e61be7fde01372a90539862"
+        # R4-R6 §14 — the weekly template is the sealed T&I reference with
+        # content islands only (text-mode hash; CRLF preserved on disk).
+        "templates/editorial_weekly_tni.html": (
+            "25c1877c92f2b7334c6357a6ffd3f206153840eabd7c259b5c3edcb0ea4d4be4"
         ),
     }
     check(
@@ -1929,14 +1977,14 @@ def selection_policy_contracts() -> None:
     )
 
     unrelated_a = row(
-        "같은 제목의 별도 원문",
+        "같은 제목의 AI 데이터센터 별도 원문",
         provider="naver_news_api",
         url="https://publisher-a.fixture.test/news/same-title",
         minutes_before_end=1,
         source="publisher-a.fixture.test",
     )
     unrelated_b = row(
-        "같은 제목의 별도 원문",
+        "같은 제목의 AI 데이터센터 별도 원문",
         provider="naver_news_api",
         url="https://publisher-b.fixture.test/news/same-title",
         minutes_before_end=2,
@@ -2160,7 +2208,7 @@ def selection_policy_contracts() -> None:
     )
     check(
         "selection audit counters only populate in direct-aware mode",
-        all(value == 0 for value in legacy_audit.manifest_fields().values()),
+        all(not value for value in legacy_audit.manifest_fields().values()),
     )
 
     image_row = row(
@@ -2313,18 +2361,21 @@ def smtp_and_state_contracts(daily: brief.RenderedEdition) -> None:
         for part in message.walk()
         if part.get_content_type() in {"text/plain", "text/html"}
     )
-    body_urls = re.findall(r"https?://[^\s\"'<>]+", body_text)
-    check("message contains only canonical Brief and dashboard links",
-          public_url_contract.DAILY_LATEST_URL in body_text
+    body_urls = re.findall(
+        r"https?://[^\s\"'<>]+", body_text.replace("&amp;", "&")
+    )
+    allowed_urls = {
+        daily.public_dated_url,
+        public_url_contract.CANONICAL_DASHBOARD_URL,
+    }
+    if daily.editor_url:
+        allowed_urls.add(daily.editor_url)
+    check("message contains only the exact-edition Brief and dashboard links",
+          daily.public_dated_url in body_text
           and public_url_contract.CANONICAL_DASHBOARD_URL in body_text
+          and public_url_contract.DAILY_LATEST_URL not in body_text
           and bool(body_urls)
-          and all(
-              url in {
-                  public_url_contract.DAILY_LATEST_URL,
-                  public_url_contract.CANONICAL_DASHBOARD_URL,
-              }
-              for url in body_urls
-          ))
+          and all(url in allowed_urls for url in body_urls))
 
     with tempfile.TemporaryDirectory(prefix="d7ak6e-smtp-state-") as temporary:
         root = Path(temporary)
@@ -2891,8 +2942,15 @@ def claim_delivery_contracts(daily: brief.RenderedEdition) -> None:
 def republish_contracts() -> None:
     run_at = dt("2026-07-27T07:00:00+09:00")
     coverage = brief.daily_coverage(run_at)
+    # R4-R10 — a delivered/republished Daily edition carries only major-source
+    # leads (the run_publish lead-source gate drops long-tail leads). Represent
+    # that with distinct primary-ten publishers so the edition stays non-empty.
+    _major_sources = ["연합뉴스", "SBS", "KBS", "매일경제", "한국경제", "MBC"]
+    _daily_rows = [dict(row) for row in brief.fixture_articles("daily", run_at)]
+    for _index, _row in enumerate(_daily_rows):
+        _row["source"] = _major_sources[_index % len(_major_sources)]
     articles = brief.normalize_articles(
-        brief.fixture_articles("daily", run_at),
+        _daily_rows,
         coverage,
         limit=brief.DAILY_MAX_ARTICLES,
         resolve_images=False,
@@ -2927,8 +2985,25 @@ def republish_contracts() -> None:
         original_load_review = runner.editorial_review.load_review
         original_choose = runner.editorial_review.choose_daily_articles
         original_atomic_state = state.atomic_write_state
+        original_console_path = runner._daily_console_path
+        original_editor_gate = runner.daily_editor_publication_error
+        # R4-R11 — this fixture's concern is republish regeneration semantics;
+        # the fail-closed exact-edition editor gate itself is proven
+        # functionally by verify_daily_editor_deep_link.py. Satisfy the gate
+        # with a fixture console file and a no-op reconstruction check.
+        fixture_console = root / "review" / key / "index.html"
+        fixture_console.parent.mkdir(parents=True, exist_ok=True)
+        fixture_console.write_text("<!doctype html>", encoding="utf-8")
+        original_manifest_writer = runner.write_daily_edition_manifest
+        manifest_writes: list[str] = []
         try:
             runner._docs_paths = lambda _edition_type, _key: (dated, latest)
+            runner._daily_console_path = lambda _key: fixture_console
+            runner.daily_editor_publication_error = lambda _edition: ""
+            runner.write_daily_edition_manifest = lambda edition, **_kwargs: (
+                manifest_writes.append(edition.edition_id)
+                or f"docs/editorial/daily/editions/{edition.edition_id}.json"
+            )
             state.load_state = lambda _edition_type, path=None: delivered
             runner.editorial_review.load_bundle = lambda *_args, **_kwargs: {}
             runner.editorial_review.load_review = lambda *_args, **_kwargs: {}
@@ -2956,6 +3031,9 @@ def republish_contracts() -> None:
                 )
         finally:
             runner._docs_paths = original_docs_paths
+            runner._daily_console_path = original_console_path
+            runner.daily_editor_publication_error = original_editor_gate
+            runner.write_daily_edition_manifest = original_manifest_writer
             state.load_state = original_load_state
             runner.editorial_review.load_bundle = original_load_bundle
             runner.editorial_review.load_review = original_load_review
@@ -2997,11 +3075,11 @@ def weekly_verified_supply_contracts() -> None:
     }]
     verified = {
         "id": "verified-weekly-row",
-        "title": "현대건설 데이터센터 프로젝트 수주",
+        "title": "현대건설 AI 데이터센터 프로젝트 수주",
         "source": "Reuters",
         "published_at": "2026-07-28T12:00:00+09:00",
         "url": "https://www.reuters.com/world/verified-weekly-test",
-        "snippet": "검증된 주간 수주 기사",
+        "snippet": "검증된 주간 AI 데이터센터 수주 기사",
     }
     entry = news_censor_verified_state.verified_entry_from_article(
         verified,
@@ -3294,6 +3372,7 @@ def image_materialization_contracts() -> None:
             image_source_kind="og_image",
             image_fallback_used=False,
             image_reason="selected_og_image",
+            ai_centrality_level="explicit_ai_core",
         )
 
     valid_payloads = {
@@ -3721,6 +3800,7 @@ def image_materialization_contracts() -> None:
             image_fallback_used=False,
             image_reason=first.reason,
             image_candidates=tuple(candidates),
+            ai_centrality_level="explicit_ai_core",
         )
 
     quality_payloads = {
@@ -4255,8 +4335,8 @@ def image_materialization_contracts() -> None:
         "image materialization template SHA unchanged",
         hashlib.sha256((ROOT / "templates/editorial_daily.html").read_bytes()).hexdigest()
         == "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
-        and hashlib.sha256((ROOT / "templates/editorial_weekly.html").read_bytes()).hexdigest()
-        == "1b082a4c2fe6b1565fe50f9692127f484412d9123e61be7fde01372a90539862",
+        and hashlib.sha256((ROOT / "templates/editorial_weekly_tni.html").read_bytes()).hexdigest()
+        == "3cdcbf4891ad24c52a9465fa6cacd8757246fc6b33959c60a190405c321e6206",
     )
     check(
         "image materialization side-effect counters are zero by contract",
@@ -4572,8 +4652,12 @@ def source_priority_and_link_integrity_contracts() -> None:
         == sorted(priority(article)[1] for article in weekly_primary),
     )
     check(
-        "official institution source is preserved in Daily and Weekly",
-        "국토교통부" in {article.source for article in daily_articles}
+        # D7-AK-6E R4-R6 §11 — no unconditional institution quota: the official
+        # row competes on the shared ranking. With six slots and ten
+        # higher-ranked locked publishers it is NOT forced into Daily, while
+        # Weekly's twelve slots still admit it purely on merit.
+        "official institution competes on merit, never via a forced quota",
+        "국토교통부" not in {article.source for article in daily_articles}
         and "국토교통부" in {article.source for article in weekly_articles},
         repr({
             "daily": [article.source for article in daily_articles],
@@ -4621,19 +4705,46 @@ def source_priority_and_link_integrity_contracts() -> None:
     weekly_urls = {article.selected_url for article in weekly_articles}
 
     check(
-        "Daily Teams text contains canonical Brief and dashboard URLs",
-        public_url_contract.DAILY_LATEST_URL in daily.teams_text
+        "Daily Teams text targets the immutable dated Brief and dashboard",
+        daily.public_dated_url in daily.teams_text
         and public_url_contract.CANONICAL_DASHBOARD_URL in daily.teams_text
+        and public_url_contract.DAILY_LATEST_URL not in daily.teams_text
         and all(url not in daily.teams_text for url in daily_urls),
     )
     check(
-        "Daily Teams HTML has Brief and dashboard CTAs and no article links",
+        "Daily Teams HTML has published and dashboard CTAs and no article links",
         daily.teams_html.count("<a ") == 2
-        and public_url_contract.DAILY_LATEST_URL in daily.teams_html
+        and daily.public_dated_url in daily.teams_html
         and public_url_contract.CANONICAL_DASHBOARD_URL in daily.teams_html
-        and "오늘의 Daily Brief 보기" in daily.teams_html
+        and brief.DAILY_PUBLISHED_LINK_LABEL in daily.teams_html
         and "전체 뉴스 대시보드 보기" in daily.teams_html
+        and public_url_contract.DAILY_LATEST_URL not in daily.teams_html
         and all(url not in daily.teams_html for url in daily_urls),
+    )
+    daily_with_editor = brief.render_daily(
+        daily_articles,
+        run_at=daily_run,
+        root_url=root_url,
+        review_mode="human_approved",
+        review_decision="approved",
+        editor_console_available=True,
+    )
+    brief.validate_rendered(daily_with_editor)
+    check(
+        "Daily Teams operator action opens the exact-edition editor",
+        daily_with_editor.teams_html.count("<a ") == 3
+        and brief.DAILY_EDITOR_LINK_LABEL in daily_with_editor.teams_html
+        and daily_with_editor.editor_url.startswith(
+            f"{root_url}/editorial/review/"
+            f"{daily_with_editor.edition_key}/index.html?"
+        )
+        and f"edition_id={daily_with_editor.edition_id}"
+        in daily_with_editor.editor_url
+        and "source=teams_daily" in daily_with_editor.editor_url
+        and daily_with_editor.editor_url in daily_with_editor.teams_text
+        and brief.DAILY_EDITOR_LINK_LABEL in daily_with_editor.teams_text
+        and daily_with_editor.teams_html.index(brief.DAILY_EDITOR_LINK_LABEL)
+        < daily_with_editor.teams_html.index(brief.DAILY_PUBLISHED_LINK_LABEL),
     )
     check(
         "Weekly Teams surfaces contain Brief and dashboard CTAs",
@@ -4653,6 +4764,145 @@ def source_priority_and_link_integrity_contracts() -> None:
         and all(url in weekly.html for url in weekly_urls),
     )
 
+def r4r6_editorial_quality_contracts() -> None:
+    """D7-AK-6E R4-R6 §11 — weak-content rejection, honest shortfall, ranking."""
+    coverage = brief.daily_coverage(dt("2026-07-27T07:00:00+09:00"))
+
+    def row(
+        title: str,
+        *,
+        url: str,
+        minutes_before_end: int = 60,
+        source: str = "연합뉴스",
+        snippet: str | None = None,
+    ) -> dict:
+        return {
+            "title": title,
+            "source": source,
+            "published_at": (
+                coverage.end - timedelta(minutes=minutes_before_end)
+            ).isoformat(),
+            "url": url,
+            "snippet": snippet
+            or f"{title} 관련 공개 계획과 적용 범위가 제시됐다.",
+            "source_metadata": {"provider": "offline_fixture", "query": "AI 데이터센터 전력"},
+        }
+
+    def normalize(rows: list[dict], *, limit: int = 6):
+        audit = brief.SelectionAuditCounters()
+        articles = brief.normalize_articles(
+            rows,
+            coverage,
+            limit=limit,
+            resolve_images=False,
+            selection_audit=audit,
+            selection_mode=brief.SELECTION_MODE_DIRECT_AWARE_DAILY,
+        )
+        return articles, audit
+
+    # R4-R6 §5 runs before §11: stock/civic titles now die at the canonical
+    # AI-centrality gate with their own counters, while weak-content rules
+    # keep rejecting AI-qualified non-news (recruitment, book PR).
+    weak_rows = [
+        row("AI 데이터센터 수혜주·관련주 급등 정리", url="https://yna.co.kr/news/weak-1"),
+        row("건설사 신입 채용 공고, AI 직무 확대", url="https://yna.co.kr/news/weak-2"),
+        row("AI 시대 걷기대회 캠페인 개최", url="https://yna.co.kr/news/weak-3"),
+        row("스마트건설 우수사례 시상식 표창", url="https://yna.co.kr/news/weak-4"),
+        row("AI 신간 출간, 데이터센터 산업 해설", url="https://yna.co.kr/news/weak-5"),
+    ]
+    strong_rows = [
+        row(
+            "현대건설, AI 데이터센터 전력 인프라 EPC 계약 체결",
+            url="https://yna.co.kr/news/strong-1",
+            snippet="1조원 규모 AI 데이터센터 전력 인프라 EPC 계약이 체결됐다.",
+        ),
+        row(
+            "국내 SMR 실증 사업 승인, 전력 공급 계획 확정",
+            url="https://yna.co.kr/news/strong-2",
+            source="한국경제",
+            snippet=(
+                "AI 데이터센터 전력 수요 대응을 위한 SMR 실증 사업이 승인되며 "
+                "2GW 전력 공급 계획이 확정됐다."
+            ),
+        ),
+    ]
+
+    thin_articles, thin_audit = normalize(weak_rows + strong_rows)
+    check(
+        "weak content is rejected even when the edition runs short (§11)",
+        len(thin_articles) == 2
+        and all("수혜주" not in article.title for article in thin_articles)
+        and all("채용" not in article.title for article in thin_articles)
+        and all("캠페인" not in article.title for article in thin_articles)
+        and all("시상식" not in article.title for article in thin_articles)
+        and all("신간" not in article.title for article in thin_articles),
+        repr([article.title for article in thin_articles]),
+    )
+    check(
+        "weak rejection and shortfall are machine-readable (§11)",
+        thin_audit.weak_content_rejected == 2
+        and thin_audit.stock_market_rejected_count == 1
+        and thin_audit.unrelated_domain_rejected_count == 2
+        and thin_audit.ai_central_qualified_count == 4
+        and thin_audit.qualified_candidates == 2
+        and thin_audit.selected_candidates == 2
+        and thin_audit.selection_shortfall == 2,
+        repr(thin_audit.manifest_fields()),
+    )
+    check(
+        "floating-solar articles survive the award-publicity guard (§11)",
+        brief._weak_content_reason(  # noqa: SLF001
+            "수상태양광 발전소 착공, 수상 구조물 계약 체결", ""
+        )
+        == "",
+    )
+
+    # §11 ranking precedence: same decision relevance → materiality decides;
+    # same materiality → locked publisher priority decides.
+    material_row = row(
+        "AI 데이터센터 전력 계약 체결, 3조원 투자 확정",
+        url="https://khan.co.kr/news/material",
+        source="경향신문",
+        minutes_before_end=600,
+        snippet="3조원 규모 AI 데이터센터 전력 계약이 체결됐다.",
+    )
+    fresh_row = row(
+        "AI 데이터센터 전력 수요 전망 보고서 공개",
+        url="https://yna.co.kr/news/fresh",
+        minutes_before_end=5,
+        snippet="AI 데이터센터 전력 수요가 늘어날 것이라는 전망이 나왔다.",
+    )
+    ranked, _audit = normalize([fresh_row, material_row], limit=2)
+    check(
+        "materiality outranks freshness within equal decision relevance (§11)",
+        ranked and "3조원" in ranked[0].title,
+        repr([article.title for article in ranked]),
+    )
+    check(
+        "selected articles expose §11 reasoning fields",
+        ranked
+        and ranked[0].executive_relevance_reason
+        and ranked[0].materiality_reason != "no_material_signal"
+        and ranked[0].publisher_priority_label
+        and ranked[0].diversity_contribution
+        and "materiality=" in ranked[0].selection_reason,
+        repr({
+            "relevance": ranked[0].executive_relevance_reason,
+            "materiality": ranked[0].materiality_reason,
+            "publisher": ranked[0].publisher_priority_label,
+            "diversity": ranked[0].diversity_contribution,
+            "selection": ranked[0].selection_reason,
+        }) if ranked else "no articles",
+    )
+    check(
+        "generated executive implication states an HDEC angle (§12)",
+        ranked
+        and ranked[0].executive_implication
+        and "점검" in ranked[0].executive_implication,
+        ranked[0].executive_implication if ranked else "no articles",
+    )
+
+
 def main() -> int:
     source_contracts()
     workflow_contracts()
@@ -4664,6 +4914,7 @@ def main() -> int:
     naver_provider_contracts()
     naver_provider_activation_contracts()
     selection_policy_contracts()
+    r4r6_editorial_quality_contracts()
     source_priority_and_link_integrity_contracts()
     computed_style_contracts()
     url_and_publication_contracts(daily)

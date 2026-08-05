@@ -25,6 +25,11 @@ from app.watch_state import normalize_url, title_fingerprint
 KST = timezone(timedelta(hours=9))
 STATE_VERSION = 1
 DEFAULT_STATE_PATH = config.DATA_DIR / "teams_push_state.json"
+# D7-AK-6E R4-R9A — optional held-specialist section. A held article is only
+# observed: it is never sent, accepted, or consumed. The key is omitted
+# entirely while no specialist is held, so existing state files stay
+# byte-identical until a hold actually occurs.
+HELD_SPECIALISTS_KEY = "held_specialists"
 
 _ENTITY_TERMS = (
     "현대건설", "hyundai e&c", "openai", "오픈ai", "microsoft", "마이크로소프트",
@@ -93,6 +98,20 @@ def validate_state(data: object) -> dict[str, Any]:
     if last is not None and not isinstance(last, str):
         raise InvalidTeamsPushState("last_successful_send_at must be a string or null")
     state["last_successful_send_at"] = last
+    held = data.get(HELD_SPECIALISTS_KEY)
+    if held is not None:
+        if not isinstance(held, dict) or any(
+            not isinstance(key, str) or not isinstance(value, dict)
+            for key, value in held.items()
+        ):
+            raise InvalidTeamsPushState(
+                f"{HELD_SPECIALISTS_KEY} contains invalid entries"
+            )
+        # Backward-compatible by construction: the key is preserved only when
+        # non-empty, so legacy states (and states whose last hold was cleared)
+        # round-trip byte-identically without it.
+        if held:
+            state[HELD_SPECIALISTS_KEY] = copy.deepcopy(held)
     return state
 
 
@@ -232,8 +251,20 @@ def material_signature(article: object) -> str:
 def _lookup(state: Mapping[str, Any], map_name: str, key: str) -> dict[str, Any] | None:
     if not key:
         return None
-    entry = state.get(map_name, {}).get(key)
-    return entry if isinstance(entry, dict) else None
+    mapping = state.get(map_name, {})
+    entry = mapping.get(key)
+    if isinstance(entry, dict):
+        return entry
+    if map_name == "normalized_urls" and isinstance(mapping, Mapping):
+        # R4-R11: ledger keys recorded before URL canonicalization preserved
+        # scheme and the www. prefix (the TTL production entry is keyed
+        # ``http://www.ttlnews.com/…``). The stored ledger is never rewritten;
+        # instead every legacy key still matches its canonical identity here,
+        # so an http/https or www/non-www variant can never evade dedup.
+        for legacy_key, legacy_entry in mapping.items():
+            if isinstance(legacy_entry, dict) and normalize_url(str(legacy_key)) == key:
+                return legacy_entry
+    return None
 
 
 def evaluate_dedup(
@@ -373,3 +404,150 @@ def persist_after_success(
     )
     save_state(updated, path)
     return updated
+
+
+# ---------------------------------------------------------------------------
+# D7-AK-6E R4-R9A — held-specialist holdback records.
+#
+# These helpers are pure state transforms (no filesystem I/O): the production
+# sender applies them in send mode only and saves through ``save_state``, so a
+# dry run can evaluate holdback without writing anything. A held record never
+# marks an article as sent — the accepted ledger maps stay the only send
+# authority.
+
+
+def holdback_identity_key(article: object) -> str:
+    """Single stable held-record key: normalized URL, then id, then title."""
+    identity = article_identity(article)
+    return (
+        identity["normalized_url"]
+        or identity["article_id"]
+        or identity["title_fingerprint"]
+    )
+
+
+def get_held_record(
+    state: Mapping[str, Any], article: object
+) -> dict[str, Any] | None:
+    key = holdback_identity_key(article)
+    if not key:
+        return None
+    held = state.get(HELD_SPECIALISTS_KEY)
+    entry = held.get(key) if isinstance(held, Mapping) else None
+    return dict(entry) if isinstance(entry, dict) else None
+
+
+def minutes_between(earlier_iso: object, later_iso: object) -> float:
+    """Signed minutes from ``earlier`` to ``later``; malformed input yields 0.0.
+
+    A malformed timestamp therefore reads as "not aged", which keeps the
+    holdback fail-closed (held, never released early)."""
+    try:
+        earlier = datetime.fromisoformat(
+            _clean(earlier_iso).replace("Z", "+00:00")
+        )
+        later = datetime.fromisoformat(_clean(later_iso).replace("Z", "+00:00"))
+    except ValueError:
+        return 0.0
+    if earlier.tzinfo is None:
+        earlier = earlier.replace(tzinfo=KST)
+    if later.tzinfo is None:
+        later = later.replace(tzinfo=KST)
+    return (later - earlier).total_seconds() / 60.0
+
+
+def observe_held_specialist(
+    state: Mapping[str, Any],
+    article: object,
+    *,
+    cluster_key: str,
+    source: str,
+    source_tier: str,
+    holdback_reason: str,
+    fallback_eligible: bool,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Create or refresh one held-specialist observation; returns new state.
+
+    ``first_seen_at`` is set once on the first observation and preserved on
+    every later one; ``last_seen_at`` always advances. Prior
+    replaced-by-major evidence is preserved."""
+    current = validate_state(state)
+    key = holdback_identity_key(article)
+    if not key:
+        return current
+    identity = article_identity(article)
+    ts = _clean(now) or now_iso()
+    held = dict(current.get(HELD_SPECIALISTS_KEY) or {})
+    prior = held.get(key)
+    prior = prior if isinstance(prior, dict) else {}
+    held[key] = {
+        "first_seen_at": _clean(prior.get("first_seen_at")) or ts,
+        "last_seen_at": ts,
+        "article_id": identity["article_id"],
+        "normalized_url": identity["normalized_url"],
+        "title_fingerprint": identity["title_fingerprint"],
+        "cluster_key": _clean(cluster_key),
+        "source": _clean(source),
+        "source_tier": _clean(source_tier),
+        "holdback_reason": _clean(holdback_reason),
+        "fallback_eligible": bool(fallback_eligible),
+        "representative_publisher": _clean(prior.get("representative_publisher")),
+        "replaced_by_major_media": _clean(prior.get("replaced_by_major_media")),
+    }
+    current[HELD_SPECIALISTS_KEY] = held
+    return current
+
+
+def mark_held_replaced_by_major(
+    state: Mapping[str, Any],
+    cluster_key: str,
+    *,
+    major_identity: str,
+    major_source: str,
+) -> tuple[dict[str, Any], int]:
+    """Mark held records of one event as replaced by a delivered major card.
+
+    The held specialist becomes supporting evidence: it stays recorded, loses
+    fallback eligibility, and names the representative publisher. Returns the
+    new state and how many records were marked."""
+    current = validate_state(state)
+    cluster = _clean(cluster_key)
+    held = dict(current.get(HELD_SPECIALISTS_KEY) or {})
+    if not cluster or not held:
+        return current, 0
+    changed = 0
+    for key, entry in held.items():
+        if not isinstance(entry, dict):
+            continue
+        if _clean(entry.get("cluster_key")) != cluster:
+            continue
+        if _clean(entry.get("replaced_by_major_media")):
+            continue
+        held[key] = {
+            **entry,
+            "replaced_by_major_media": _clean(major_identity),
+            "representative_publisher": _clean(major_source),
+            "fallback_eligible": False,
+            "holdback_reason": "replaced_by_major_media",
+        }
+        changed += 1
+    if changed:
+        current[HELD_SPECIALISTS_KEY] = held
+    return current, changed
+
+
+def clear_held_record(
+    state: Mapping[str, Any], article: object
+) -> dict[str, Any]:
+    """Drop one held record (used after its article is actually delivered)."""
+    current = validate_state(state)
+    key = holdback_identity_key(article)
+    held = dict(current.get(HELD_SPECIALISTS_KEY) or {})
+    if key and key in held:
+        del held[key]
+        if held:
+            current[HELD_SPECIALISTS_KEY] = held
+        else:
+            current.pop(HELD_SPECIALISTS_KEY, None)
+    return current

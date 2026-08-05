@@ -1,0 +1,252 @@
+{
+  "record_version": 1,
+  "parser_version": "human-editorial-extract-v1",
+  "product": "weekly_tni",
+  "kind": "candidate_pool",
+  "edition_key": "tni-weekly-2026-07-23",
+  "issue_label": "2026년 7월 4주차",
+  "issue_date": "2026-07-23",
+  "headline_title": "중국 AI, 미국 턱밑까지미국은 '기술 절도' 제재 카드",
+  "human_editor_summary": "중국 AI 기업들이 성능과 가격을 함께 앞세우며 미국을 빠르게 따라잡고 있습니다. 화면만 보여주고 명령하면 주식 앱과 3D 게임을 만들어 내는 수준으로, 미국 기업이 쓰는 토큰 사용량 가운데 중국산 AI 비중은 지난해 한 자릿수에서 45% 까지 올라섰습니다. 스콧 베센트 미국 재무장관은 \"해외 AI 모델이 미국 기업의 기술을 훔쳤다면 그 절도를 근거로 제재 할 수 있다\"며 중국 기업의 무단 증류 의혹을 조사하겠다고 밝혔고, 중국 정부는 근거 없는 트집이라고 반박했습니다. 출처",
+  "article_count": 21,
+  "articles": [
+    {
+      "order": 0,
+      "headline": true,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "중국 AI, 미국 턱밑까지미국은 '기술 절도' 제재 카드",
+      "human_summary": "중국 AI 기업들이 성능과 가격을 함께 앞세우며 미국을 빠르게 따라잡고 있습니다. 화면만 보여주고 명령하면 주식 앱과 3D 게임을 만들어 내는 수준으로, 미국 기업이 쓰는 토큰 사용량 가운데 중국산 AI 비중은 지난해 한 자릿수에서 45% 까지 올라섰습니다. 스콧 베센트 미국 재무장관은 \"해외 AI 모델이 미국 기업의 기술을 훔쳤다면 그 절도를 근거로 제재 할 수 있다\"며 중국 기업의 무단 증류 의혹을 조사하겠다고 밝혔고, 중국 정부는 근거 없는 트집이라고 반박했습니다. 출처",
+      "source": "JTBC",
+      "canonical_url": "https://v.daum.net/v/20260723203607585",
+      "published_date": "2026-07-23"
+    },
+    {
+      "order": 1,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "구글, AI 투자 2050억달러로…한 분기 만에 또 상향",
+      "human_summary": "구글이 올해 자본지출(CapEx) 계획을 1950억~2050억달러로 올려 잡아 직전 분기 예상치 1900억달러를 한 분기 만에 다시 상향했습니다. 아나트 아슈케나지 최고재무책임자는 \"지금도 공급이 수요를 따라가지 못한다\"며 데이터센터·서버 확충에 속도를 내겠다고 밝혔습니다 — 이제 관건은 투자 규모가 아니라 이 지출이 언제 수익으로 돌아오느냐입니다.",
+      "source": "한국경제",
+      "canonical_url": "https://v.daum.net/v/20260723085310264",
+      "published_date": "2026-07-23"
+    },
+    {
+      "order": 2,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "이재용·정의선, 젠슨 황 주도 글로벌 AI 리더모임 자문위원",
+      "human_summary": "이재용 삼성전자 회장과 정의선 현대차그룹 회장이 젠슨 황 엔비디아 CEO가 이끄는 글로벌 AI 리더모임의 자문위원으로 나란히 위촉됐습니다. 11월 실리콘밸리에서 열리는 CEO 포럼에는 사티아 나델라·리사 수 등 공동의장 5명과 앤디 재시 등 자문위원 40여 명을 포함해 약 350명이 모입니다 — 국내 총수들이 글로벌 AI 의제를 만드는 자리에 이름을 올렸습니다.",
+      "source": "헤럴드경제",
+      "canonical_url": "https://v.daum.net/v/20260723073855259",
+      "published_date": "2026-07-23"
+    },
+    {
+      "order": 3,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "김용범 \"AI 접근은 기본권\"…국산 AI 국민에 무료 제공",
+      "human_summary": "김용범 청와대 정책실장이 \"AI 접근은 하나의 기본권\"이라며 국가가 국산 AI를 전 국민에게 무료로 제공하는 'AI 기본사회' 구상을 제시했습니다. 배경훈 부총리는 전 국민 대상 서비스 '모두의 AI'를 올해 12월 출시하겠다고 밝혔고, 공공·행정용 'AI 국민비서'도 핵심 정책으로 내놨습니다 — 무료 제공으로 데이터를 모아 민간 AI 시장을 키우겠다는 구상입니다.",
+      "source": "경향신문",
+      "canonical_url": "https://v.daum.net/v/20260721103927504",
+      "published_date": "2026-07-21"
+    },
+    {
+      "order": 4,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "'모두의 AI' 공모…카카오·네이버·SKT가 유력한 이유",
+      "human_summary": "과학기술정보통신부가 국민 누구나 무료로 쓰는 AI 챗봇 '모두의 AI' 컨소시엄을 8월 11일까지 공모합니다. 우수 독자 모델을 절반 이상 활용해 9월 베타, 연내 정식 서비스를 목표로 하는데, 카카오톡(4748만)·네이버(4625만)·에이닷전화(1425만) 등 이용자 기반이 큰 3사가 확산 속도에서 유리합니다 — 무료 AI의 성패는 모델 성능보다 배포 채널의 도달 범위에서 갈립니다.",
+      "source": "조선일보",
+      "canonical_url": "https://v.daum.net/v/20260719141811980",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 5,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "\"공무원이 만든 에이전트\"…행안부 'AI 정부 실험실' 가동",
+      "human_summary": "행정안전부가 공무원이 직접 AI 서비스를 개발·검증하는 'AI 정부 실험실'을 7월 3일부터 시범 운영하고 있습니다. '나라 예산 한눈에', '재난 문자 지도', '모두의 민원콜' 등이 등록됐고 2027년까지 동시접속 3000명 규모로 확대할 계획입니다 — AI 도입을 외주가 아니라 현장 공무원의 자체 개발로 돌리는 실험입니다.",
+      "source": "지디넷코리아",
+      "canonical_url": "https://v.daum.net/v/20260722125849371",
+      "published_date": "2026-07-22"
+    },
+    {
+      "order": 6,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "한국 AI 도입률, 10년 뒤 주요국 1위…생산성은 뒤처져",
+      "human_summary": "국회예산정책처는 한국의 생성형 AI 도입률이 현재 6%에서 2036년 50%로 올라 주요국 1위에 오를 것으로 내다봤습니다. 다만 10년 누적 생산성 증가는 4.4%p로 미국·영국(4.5%p)에 못 미치는데, AI 노출도가 낮은 제조업이 GDP의 36.7%를 차지하는 산업 구조가 원인입니다 — 도입 속도만으로는 부족하고 산업별 맞춤형 투자가 성과를 가릅니다.",
+      "source": "한국일보",
+      "canonical_url": "https://v.daum.net/v/20260719143127220",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 7,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "빅테크마다 칩·데이터센터·AI 다 만드는 이유 '풀스택'",
+      "human_summary": "구글·아마존·MS·메타가 AI 칩부터 데이터센터, 모델까지 전 계층을 직접 만드는 '풀스택' 전략으로 사업 구조가 수렴하고 있습니다. 구글은 2015년 개발한 TPU를 학습·추론용으로 나눠 내놨고 아마존 자체 칩 매출은 연 200억달러를 넘겼는데, AI 데이터센터 칩 시장의 90%를 쥔 엔비디아 종속에서 벗어나려는 움직임입니다 — 엔비디아 의존을 줄이려는 자체 칩 확보가 빅테크의 공통 과제로 굳어졌습니다.",
+      "source": "서울경제",
+      "canonical_url": "https://v.daum.net/v/20260720074239877",
+      "published_date": "2026-07-20"
+    },
+    {
+      "order": 8,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "철강업계 'AI 데이터센터용 강재 잡아라'…수출 출렁",
+      "human_summary": "포스코가 미래수요개발실을 열고 AI·전력 인프라용 강재 판매를 2030년 100만톤까지 늘리기로 했고, 현대제철도 30~40명 규모 태스크포스를 꾸렸습니다. AI 데이터센터 건설이 늘며 지난달 철강 수출액은 전년 동월 대비 9.6% 증가한 21억4000만달러를 기록했습니다 — 데이터센터 붐이 소재 산업의 수출 구조까지 흔들고 있습니다.",
+      "source": "머니투데이",
+      "canonical_url": "https://v.daum.net/v/20260720065137779",
+      "published_date": "2026-07-20"
+    },
+    {
+      "order": 9,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "투자·산업",
+      "title": "게임 대신 AI…콘텐츠 소비 패턴이 바뀐다",
+      "human_summary": "한국인의 게임 이용률이 3년 만에 74.4%에서 50.2%로 주저앉는 사이, 떠난 이용자들이 AI 컴패니언 서비스로 몰리고 있습니다. AI 동반자 앱 인앱결제는 올 1분기 1억5000만달러로 3년 새 12배 늘었고 스캐터랩 '제타'의 월평균 사용 시간은 40시간에 이릅니다 — 여가 시간을 두고 게임과 AI 콘텐츠가 처음으로 맞붙기 시작했습니다.",
+      "source": "매일경제",
+      "canonical_url": "https://v.daum.net/v/20260719171803192",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 10,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기업동향",
+      "title": "정의선, 사재 1200억 더 넣어…보스턴다이내믹스 지분 25%로",
+      "human_summary": "정의선 현대차그룹 회장이 사재 약 1200억원을 추가로 넣어 보스턴다이내믹스 지분율을 25%대로 끌어올립니다. 소프트뱅크가 풋옵션으로 내놓은 지분 9.65%를 기존 주주들이 지분율대로 나눠 인수하는 구조로, 정 회장의 누적 투자는 8000억원 안팎에 이릅니다 — 지분 정리가 끝나며 나스닥 상장과 휴머노이드 '아틀라스'를 앞세운 피지컬 AI 선점에 속도가 붙습니다.",
+      "source": "매일경제",
+      "canonical_url": "https://v.daum.net/v/20260719083901733",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 11,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기업동향",
+      "title": "삼성전자, 로봇 컨트롤타워 'RX실' 신설…상용화 시동",
+      "human_summary": "삼성전자가 노태문 DX부문 대표 직속으로 로봇 사업 컨트롤타워 'RX(Robotics eXperience)사업추진실'을 신설했습니다. 구미사업장에 로봇 학습용 '데이터 팩토리'를 짓고 보스턴다이내믹스 출신 이동건 부사장과 학계 석학을 영입해, 2030년까지 글로벌 공장을 'AI 자율공장'으로 바꾸는 로드맵을 내놨습니다 — 연구를 넘어 제조 현장 투입과 휴머노이드 상용화로 무게를 옮겼습니다.",
+      "source": "서울경제",
+      "canonical_url": "https://v.daum.net/v/20260721100856775",
+      "published_date": "2026-07-21"
+    },
+    {
+      "order": 12,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기업동향",
+      "title": "FT \"삼성, 프랑스 미스트랄에 수억유로 투자 논의\"",
+      "human_summary": "파이낸셜타임스는 삼성이 프랑스 AI 스타트업 미스트랄의 투자 라운드에 약 10억유로(1조7000억원) 규모로 참여하는 방안을 논의 중이라고 보도했습니다. 미스트랄은 기업가치 200억유로를 목표로 자금을 모으고 있으며, 지난해 9월에도 17억유로를 조달한 바 있습니다 — 삼성이 유럽의 독립 AI 모델 진영에 지분으로 발을 들이려는 움직임입니다.",
+      "source": "한국경제",
+      "canonical_url": "https://v.daum.net/v/20260722150650732",
+      "published_date": "2026-07-22"
+    },
+    {
+      "order": 13,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "현대차 '플레오스 커넥트'…아반떼부터 차가 계속 진화한다",
+      "human_summary": "현대차그룹이 무선 업데이트(OTA)로 차가 출고 뒤에도 계속 바뀌는 차세대 SDV 플랫폼 '플레오스 커넥트'를 공개했습니다. 안드로이드 오토모티브(AAOS) 기반 앱 마켓과 생성형 AI 음성비서 '글레오 AI'를 얹어 디 올 뉴 아반떼부터 기본 적용합니다 — 자동차가 출고 시점에 완성되는 제품에서 앱으로 기능이 늘어나는 플랫폼으로 넘어갑니다.",
+      "source": "동아일보",
+      "canonical_url": "https://v.daum.net/v/20260723213937838",
+      "published_date": "2026-07-23"
+    },
+    {
+      "order": 14,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "중국 문샷 '키미 K3' 충격…미·중 AI 격차 2~3개월로",
+      "human_summary": "중국 문샷AI가 2조8000억 매개변수급 오픈웨이트 모델 '키미 K3'를 공개하자, 미·중 기술 격차가 기존 6~12개월에서 2~3개월로 좁혀졌다는 평가가 나왔습니다. 아레나 웹개발 평가에서 클로드 페이블5를 제치고 1위에 올랐고, 저가 대신 프리미엄 가격을 매기며 6개월 내 홍콩 증시 상장도 추진합니다 — 중국 AI가 '가성비'를 넘어 성능과 수익성으로 경쟁 축을 옮겼습니다.",
+      "source": "매일경제",
+      "canonical_url": "https://v.daum.net/v/20260719082400558",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 15,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "\"GPT 없으면 일 못해요\"…40분 장애에 직장인 '멘붕'",
+      "human_summary": "15일 오전 업무 시작 시간대에 챗GPT가 약 40분간 접속 장애를 일으켜 로그인 실패 등 15개 기능이 멈췄고, 카카오톡의 '챗GPT 포 카카오'도 함께 끊겼습니다. 국내 챗GPT 월간 이용자는 1544만 명으로 상반기 신규 설치 1위를 기록할 만큼 업무에 깊이 파고든 상태입니다 — 생성형 AI가 업무 필수 도구가 되면서 짧은 장애도 곧바로 업무 중단으로 이어집니다.",
+      "source": "한국경제",
+      "canonical_url": "https://v.daum.net/v/20260719130247604",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 16,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "챗GPT가 멋대로 외부 해킹…초유의 'AI 보안사고'",
+      "human_summary": "오픈AI의 최신 모델 'GPT-5.6 솔' 등이 내부 평가 도중 격리 환경의 통제를 벗어나 개방형 AI 플랫폼 '허깅페이스'를 해킹하고 인증 정보를 탈취한 사실이 확인됐습니다. 모델들이 평가 문제 해결에 과도하게 집중해 극단적 수단까지 동원한 것으로 분석됐고, 오픈AI는 통제 강화를 예고했습니다 — AI 자율성이 높아질수록 목표 몰입이 통제 이탈로 이어지는 위험이 현실로 나타났습니다.",
+      "source": "연합뉴스",
+      "canonical_url": "https://v.daum.net/v/20260722092852777",
+      "published_date": "2026-07-22"
+    },
+    {
+      "order": 17,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "\"앱으로 불면증 치료가 사기?\"…약만큼 효과 냈다",
+      "human_summary": "국내 1호 디지털 치료기기 '솜즈'가 불면증 치료 반응률 60% 이상, 완치율 40% 안팎으로 식약처 허가를 받아 수면제를 대체하고 있습니다. 뇌졸중 시야장애 치료기기 '비비드브레인'도 도입됐지만, 아직 비급여라 환자가 수십만원을 전액 부담하는 점이 확산의 걸림돌입니다 — AI·소프트웨어가 의약품의 영역으로 들어왔으나 제도가 뒤따르지 못하고 있습니다.",
+      "source": "매일경제",
+      "canonical_url": "https://v.daum.net/v/20260720190900463",
+      "published_date": "2026-07-20"
+    },
+    {
+      "order": 18,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "'사라지는 암묵지' 시급한데…제조AI 도입 중기 0.1%뿐",
+      "human_summary": "뿌리산업 종사자 74만여 명 중 50대 이상이 36.8%로 숙련공 고령화가 빠른데, 산업부의 '제조 암묵지 AI 모델' 사업에는 143개 컨소시엄이 몰려 30개 과제가 뽑혔습니다. 그러나 제조 AI를 실제 도입한 기업은 전체의 0.1%, 전담 조직을 둔 곳도 0.8%에 그칩니다 — 데이터화 수요는 폭발하는데 현장 도입은 제자리라 기술 단절 속도를 따라잡지 못하고 있습니다.",
+      "source": "서울경제",
+      "canonical_url": "https://v.daum.net/v/20260719174649678",
+      "published_date": "2026-07-19"
+    },
+    {
+      "order": 19,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "씨에스이엔지, AI 자율주행 지하굴착 기술…올해 시험시공",
+      "human_summary": "지하굴착 전문기업 씨에스이엔지가 토크·추진압·막장압 등 장비·지반 데이터를 실시간 분석해 굴진 편차와 지반 침하를 자동 보정하는 AI 자율주행 지하굴착 기술을 개발하고 있습니다. 도심 전력구·상하수도·통신관로 공사를 겨냥해 올해 시험시공, 내년 현장 적용을 목표로 합니다 — 비개착 시공에 AI를 얹어 도심 지하공사의 안전 변수를 줄이려는 시도입니다.",
+      "source": "한국일보",
+      "canonical_url": "https://v.daum.net/v/20260720140840103",
+      "published_date": "2026-07-20"
+    },
+    {
+      "order": 20,
+      "headline": false,
+      "evidence_level": "silver_candidate",
+      "category": "기술정보",
+      "title": "피아스페이스, VLM CCTV 이상 감지로 해외서도 수주",
+      "human_summary": "AI 영상분석 기업 피아스페이스가 VLM 기반 CCTV 이상 감지 기술을 국내 최초로 제품화해 쓰러짐·폭력·화재·침입을 실시간 탐지합니다. 올해 55억원 시리즈 A 투자를 유치하고 상반기 74억원을 수주했으며, 태국 콘캔시 경찰청 등 해외 고객도 확보했습니다 — 영상 관제가 사람이 지켜보는 방식에서 AI 자동 판독으로 바뀌고 있습니다.",
+      "source": "한국일보",
+      "canonical_url": "https://v.daum.net/v/20260720134908254",
+      "published_date": "2026-07-20"
+    }
+  ],
+  "provenance": {
+    "source_filename": "AI경영_TnI_Weekly_2026-07월-4주차_후보_RV3_embed 1.html",
+    "source_sha256": "3f63667086deb3c698086289861ba072a3ac19e1af6cb11fdda57746eb25ef34",
+    "parser_version": "human-editorial-extract-v1",
+    "extracted_article_count": 21,
+    "extracted_at": "2026-08-04T01:22:19+00:00"
+  }
+}

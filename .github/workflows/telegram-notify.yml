@@ -109,13 +109,13 @@ jobs:
             # 공개 latest.html은 항상 executive 뷰로 게시한다 (operator 기본값 유출 방지, P0-D3R).
             # 같은 live 데이터로 운영자 진단용 operator-latest.html 스냅샷도 함께 생성한다.
             python3 scripts/build_static_report.py --output docs/daily/operator-latest.html --audience operator
-            python3 scripts/build_static_dashboard.py --output docs/daily/dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --market-mode live --weather-mode live
+            python3 scripts/build_static_dashboard.py --output docs/daily/operator-dashboard-latest.html --operator-api-base "$OPERATOR_API_BASE" --market-mode live --weather-mode live
             echo "live_ok=true" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · live RSS collected > 0 · executive report published + operator snapshot + dashboard export"
           else
             echo "live_ok=false" >> "$GITHUB_OUTPUT"
             echo "NEWS_MODE=live · live collection failed/empty · fell back to mock · NOT publishing as live"
-            git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html || true
+            git checkout -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/operator-dashboard-latest.html || true
           fi
 
       # live 성공 시에만 변경분을 main에 commit (변경 없으면 skip — 실패 안 함).
@@ -124,10 +124,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html; then
+          if git diff --quiet -- docs/daily/latest.html docs/daily/operator-latest.html docs/daily/operator-dashboard-latest.html; then
             echo "live report unchanged — no diff, skip commit"
           else
-            git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/dashboard-latest.html
+            git add docs/daily/latest.html docs/daily/operator-latest.html docs/daily/operator-dashboard-latest.html
             git commit -m "chore: update live daily report"
             git push
             echo "live report committed and pushed"

@@ -3,7 +3,7 @@
 
 `/dashboard-preview` is served from `templates/dashboard_preview.html` (demo preview).
 This builder reuses that checked-in template *shell* but injects the REAL daily-brief
-article data into the preview-model island so `docs/daily/dashboard-latest.html` shows
+article data into the preview-model island so `docs/daily/operator-dashboard-latest.html` shows
 the same collected articles as `docs/daily/latest.html` — both derive from the one
 shared brief object (`build_executive_brief.build_brief_via_mock_pipeline`).
 
@@ -64,7 +64,12 @@ from app import weather_risk  # noqa: E402
 from app import site_watchlist  # noqa: E402
 
 SOURCE_TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
-DEFAULT_OUTPUT = "docs/daily/dashboard-latest.html"
+# R4-R10: this operator/executive dashboard builder owns a DEDICATED artifact path.
+# docs/daily/dashboard-latest.html is the sealed public News Censor artifact owned
+# exclusively by build_news_censor.py (scheduled-live-refresh.yml). Defaulting here to
+# a separate operator path removes the dual-writer race over the canonical News Censor
+# file and keeps the retired preview/operator UI off the public screen.
+DEFAULT_OUTPUT = "docs/daily/operator-dashboard-latest.html"
 EXPORT_TITLE = "HDEC Executive Radar — 요약 대시보드"
 EXPORT_MARKER = "dashboard-export:summary"
 _KST = timezone(timedelta(hours=9))
@@ -1722,7 +1727,7 @@ def _strip_hormuz_demo_card(html: str) -> str:
 
     templates/dashboard_preview.html(내부 비프로덕션 /dashboard-preview 라우트)은 이
     함수를 거치지 않아 원본 그대로 데모 카드를 유지한다 — 디자인 미리보기 목적은
-    남아있고, 여기서 지우는 건 오직 공개 정적 산출물(docs/daily/dashboard-latest.html)
+    남아있고, 여기서 지우는 건 오직 공개 정적 산출물(docs/daily/operator-dashboard-latest.html)
     뿐이다. 인터랙션 스크립트(#hzTimeSeg 기반 IIFE)는 `el("hzTimeSeg")`가 없으면
     즉시 return하도록 이미 가드돼 있어(byte-identical 유지 원칙상 스크립트는 건드리지
     않는다) 카드만 지워도 런타임 에러가 나지 않는다.

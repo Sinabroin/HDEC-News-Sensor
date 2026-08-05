@@ -504,9 +504,22 @@ def verify_concurrent_resolution() -> None:
 
 
 def verify_cache_integration(tmp: Path) -> None:
-    row = article(700, host="cache-integration.example")
+    # This check runs the real collector._run_live(), which evaluates cache
+    # reuse against the actual wall clock (VERIFY_REUSE_TTL / carry-forward
+    # windows).  The warm fixture must therefore be anchored to the real
+    # current time — a frozen NOW here expires after 24h and turns this
+    # check into a scheduled-workflow time bomb (R4-R9B root cause).
+    real_now = datetime.now(timezone.utc).replace(microsecond=0)
+    row = article(
+        700,
+        host="cache-integration.example",
+        published=real_now - timedelta(hours=4),
+    )
     state_path = tmp / "warm-state.json"
-    verified_state.atomic_write_state(state_path, state_for([entry_for(row)]))
+    verified_state.atomic_write_state(
+        state_path,
+        state_for([entry_for(row, verified_at=real_now)], generated_at=real_now),
+    )
     saved = (
         live_collector.fetch_publisher_direct_sources,
         live_collector.fetch_all,

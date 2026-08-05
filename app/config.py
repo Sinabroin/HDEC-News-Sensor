@@ -135,6 +135,9 @@ OPERATOR_AUTH_SUCCESS_URL = (
 ).strip()
 OPERATOR_SESSION_COOKIE = "hdec_operator_session"
 OPERATOR_OAUTH_STATE_COOKIE = "hdec_operator_oauth_state"
+# R4-R9C — 로그인 전에 보고 있던 "정확한 에디션"의 검증된 로컬 식별자만 담는 단기 쿠키.
+# 임의 URL은 절대 저장하지 않으며, callback이 식별자를 재검증해 상수 root로만 복원한다.
+OPERATOR_EDITOR_RETURN_COOKIE = "hdec_operator_editor_return"
 OPERATOR_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
 OPERATOR_OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
 

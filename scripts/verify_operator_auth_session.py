@@ -15,7 +15,11 @@ if str(ROOT) not in sys.path:
 API = ROOT / "app" / "operator_api.py"
 AUTH = ROOT / "app" / "operator_auth.py"
 GATEWAY = ROOT / "app" / "operator_gateway.py"
-DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
+# R4-R10: operator OAuth/session UI lives on the DEDICATED operator dashboard artifact,
+# not the sealed public News Censor screen (docs/daily/dashboard-latest.html, owned by
+# build_news_censor.py). This verifier is repointed to the authoritative operator
+# artifact produced by build_static_dashboard.py — same assertions, correct target.
+DASHBOARD = ROOT / "docs" / "daily" / "operator-dashboard-latest.html"
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
 
 ALLOWED_ORIGIN = "https://guides.playground-aidesignlab.co.kr"

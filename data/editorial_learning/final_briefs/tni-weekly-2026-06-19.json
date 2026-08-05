@@ -1,0 +1,87 @@
+{
+  "record_version": 1,
+  "parser_version": "human-editorial-extract-v1",
+  "product": "weekly_tni",
+  "kind": "final_brief",
+  "edition_key": "tni-weekly-2026-06-19",
+  "issue_label": "2026년 6월 3주차",
+  "issue_date": "2026-06-19",
+  "headline_title": "李대통령, G7서 'AI 격차 해소·안전' 주도 …'모두의 AI' 소개",
+  "human_editor_summary": "6월 17일(현지시간) 프랑스 에비앙 G7 정상회의 마지막 일정인 업무오찬 에서 'AI 도입'이 핵심 의제로 다뤄졌습니다. 오픈AI·앤트로픽·구글 딥마인드·미스트랄 등 세계 주요 AI 기업 CEO들이 G7·초청국 정상들과 한 테이블에 앉은 이례적 자리였습니다. 이재명 대통령은 AI 시대의 두 축으로 \"혜택을 모두가 누려야 한다\" (격차 해소)와 \"악용 시 위협이 크니 안전장치가 필요하다\" (안전)를 제시하며 '모두의 AI' 구상을 소개했습니다. AI 규제·안전 규칙이 국제 표준으로 굳어질 수 있어, 기업도 방향을 미리 읽어둘 필요가 있습니다. 출처",
+  "article_count": 6,
+  "articles": [
+    {
+      "order": 0,
+      "headline": true,
+      "evidence_level": "gold_plus",
+      "category": "투자·산업",
+      "title": "李대통령, G7서 'AI 격차 해소·안전' 주도 …'모두의 AI' 소개",
+      "human_summary": "6월 17일(현지시간) 프랑스 에비앙 G7 정상회의 마지막 일정인 업무오찬 에서 'AI 도입'이 핵심 의제로 다뤄졌습니다. 오픈AI·앤트로픽·구글 딥마인드·미스트랄 등 세계 주요 AI 기업 CEO들이 G7·초청국 정상들과 한 테이블에 앉은 이례적 자리였습니다. 이재명 대통령은 AI 시대의 두 축으로 \"혜택을 모두가 누려야 한다\" (격차 해소)와 \"악용 시 위협이 크니 안전장치가 필요하다\" (안전)를 제시하며 '모두의 AI' 구상을 소개했습니다. AI 규제·안전 규칙이 국제 표준으로 굳어질 수 있어, 기업도 방향을 미리 읽어둘 필요가 있습니다. 출처",
+      "source": "뉴스핌디지털타임스",
+      "canonical_url": "https://www.dt.co.kr/article/12068195",
+      "published_date": ""
+    },
+    {
+      "order": 1,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "\"AI 잘하는 사람 모셔라\"…삼성·SK·LG 인재 쟁탈전",
+      "human_summary": "전사적 AI 전환을 선언한 대기업들이 인재 확보전에 돌입했습니다. 삼성은 17개 계열사가 'AI 보안' 경력직을 동시 채용, SK·LG도 AI 개발자를 대거 모집 중. 특히 SK하이닉스는 6/17 신입 채용에서 학력 제한을 폐지 — 학벌보다 실력으로 AI 인재를 잡겠다는 신호입니다.",
+      "source": "파이낸셜뉴스 파이낸셜뉴스",
+      "canonical_url": "https://www.fnnews.com/news/202606171850207705",
+      "published_date": ""
+    },
+    {
+      "order": 2,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "삼성, 제품을 '가상 공장'에서 먼저 만든다…개발기간 확 단축",
+      "human_summary": "삼성전자가 공장·제품을 컴퓨터 속에 똑같이 만들어 시험하는 '디지털 트윈'을 본격 도입(고성능 서버 517대 자체 구축). 실물로 떨어뜨려 보던 TV 내구성 검사를 15일→2일, 세탁기는 15일→5일로 단축했습니다. 2030년 '스스로 돌아가는 AI 공장'이 목표입니다.",
+      "source": "파이낸셜뉴스",
+      "canonical_url": "https://www.fnnews.com/news/202606151813292484",
+      "published_date": "2026-06-15"
+    },
+    {
+      "order": 3,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기업동향",
+      "title": "메타, 서둘러 만든 AI 조직서 내부 불만 폭발…저커버그 \"실수\"",
+      "human_summary": "메타가 3월 급하게 만든 AI 조직(약 6,500명)에서 직원들이 \"일이 단순 반복적이고 입사 때 들은 것과 다르다\"고 집단 반발, 사내 회의에서 욕설 항의까지 나왔습니다. 저커버그는 \"AI 전환 과정에서 실수가 있었다\"고 인정. 빠른 조직 개편의 부작용을 드러낸 사례입니다.",
+      "source": "AI타임스",
+      "canonical_url": "https://www.aitimes.com/news/articleView.html?idxno=211705",
+      "published_date": "2026-06-13"
+    },
+    {
+      "order": 4,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "기술정보",
+      "title": "美, 자국 AI 해외사용 차단…\"우리 AI 없으면 위험\" 경고음",
+      "human_summary": "미국 정부가 AI 기업 앤트로픽의 최신 모델을 안보를 이유로 외국인은 못 쓰게 차단, 협력 프로그램에 갓 합류한 한국 기관·기업도 곧바로 막혔습니다. \"남의 나라 AI에 의존하면 언제든 끊길 수 있다\"는 위기감에, 자체 AI를 확보하자는 'AI 주권' 논의가 다시 불붙었습니다 — AI가 곧 안보 자산이 됐다는 신호입니다.",
+      "source": "서울신문 경향신문",
+      "canonical_url": "https://www.khan.co.kr/article/202606142029005",
+      "published_date": ""
+    },
+    {
+      "order": 5,
+      "headline": false,
+      "evidence_level": "gold_selected",
+      "category": "투자·산업",
+      "title": "전북 새만금이 'AI 산업단지'로…삼성 합류도 저울질",
+      "human_summary": "전북 새만금이 국내 최대 AI·첨단산업 거점으로 떠올랐습니다. 현대차 9조원 등 10조원 넘는 투자가 확정됐고, 엔비디아 젠슨 황 CEO도 AI 데이터센터 참여 의사를 밝혔습니다. 삼성도 반도체 공장 후보지로 검토 중이며, 6/29 이재명 대통령 주재 회의에서 거점이 최종 확정될 전망입니다.",
+      "source": "한국경제 서울경제",
+      "canonical_url": "https://www.sedaily.com/article/20053221",
+      "published_date": ""
+    }
+  ],
+  "provenance": {
+    "source_filename": "AI경영_TnI_Weekly_2026-06월-3주차_최종.html",
+    "source_sha256": "424e02f8a382279fd8232ef6036d19d4796253c23c03574dd33ea8e8808f6bbd",
+    "parser_version": "human-editorial-extract-v1",
+    "extracted_article_count": 6,
+    "extracted_at": "2026-08-04T01:22:19+00:00"
+  }
+}

@@ -19,11 +19,48 @@ import urllib.request
 from http.cookies import SimpleCookie
 
 from app import config
+from app import public_urls as public_url_contract
 
 _GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
 _GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 _GITHUB_USER_URL = "https://api.github.com/user"
 _TIMEOUT_SECONDS = 15
+
+
+def validated_editor_return_url(product, edition_id, source) -> str:
+    """R4-R9C safe post-login destination, or "" when anything is not exact.
+
+    Only validated local identifiers are accepted (product must be "daily",
+    edition_id must match the immutable Daily edition-id contract, source must
+    be a short lowercase tag). The URL is reconstructed from the canonical
+    public root constant — a caller-supplied URL, path, protocol-relative
+    value, or traversal token can never survive because no raw input reaches
+    the output; unknown or malformed identities fail closed to ""."""
+    if str(product or "") != "daily":
+        return ""
+    edition_value = str(edition_id or "")
+    if not public_url_contract.parse_daily_edition_id(edition_value):
+        return ""
+    source_value = str(source or "") or public_url_contract.DAILY_EDITOR_LINK_SOURCE
+    return public_url_contract.daily_editor_console_url(
+        edition_value, source=source_value
+    )
+
+
+def encode_editor_return(product, edition_id, source) -> str:
+    """Cookie payload for the validated edition identity ("" when invalid)."""
+    if not validated_editor_return_url(product, edition_id, source):
+        return ""
+    source_value = str(source or "") or public_url_contract.DAILY_EDITOR_LINK_SOURCE
+    return f"daily|{edition_id}|{source_value}"
+
+
+def editor_return_url_from_cookie(raw_value) -> str:
+    """Re-validate the cookie payload from scratch; fail closed to ""."""
+    parts = str(raw_value or "").split("|")
+    if len(parts) != 3:
+        return ""
+    return validated_editor_return_url(parts[0], parts[1], parts[2])
 
 
 def oauth_configured() -> bool:
@@ -206,6 +243,31 @@ def set_state_cookie(response, state: str) -> None:
 def clear_state_cookie(response) -> None:
     response.set_cookie(
         config.OPERATOR_OAUTH_STATE_COOKIE,
+        "",
+        max_age=0,
+        expires=0,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+    )
+
+
+def set_editor_return_cookie(response, value: str) -> None:
+    response.set_cookie(
+        config.OPERATOR_EDITOR_RETURN_COOKIE,
+        value,
+        max_age=config.OPERATOR_OAUTH_STATE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+    )
+
+
+def clear_editor_return_cookie(response) -> None:
+    response.set_cookie(
+        config.OPERATOR_EDITOR_RETURN_COOKIE,
         "",
         max_age=0,
         expires=0,

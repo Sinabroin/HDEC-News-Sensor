@@ -203,6 +203,7 @@ def main() -> int:
         collection_audit["feedback_queries_attempted"] = len(feedback_queries)
         collection_audit["feedback_articles_collected"] = len(feedback_rows)
 
+    selection_counters = editorial_briefings.SelectionAuditCounters()
     articles = editorial_briefings.normalize_articles(
         raw_articles,
         coverage,
@@ -210,6 +211,9 @@ def main() -> int:
         resolve_images=not args.fixture,
         allow_image_network=not args.fixture,
         selection_mode=editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY,
+        selection_audit=selection_counters,
+        edition_type="daily",
+        operator_review=True,
     )
     if not articles:
         raise SystemExit("no candidate articles in Daily coverage")
@@ -243,14 +247,39 @@ def main() -> int:
     # Default report order required by the editor. Human drag-and-drop may override it.
     candidates.sort(
         key=lambda item: (
+            int(bool(item.get("supporting_evidence_only"))),
+            int(
+                item.get("editorial_lane") == "public_institution"
+                and not item.get("main_surface_eligible")
+            ),
             editorial_review.category_rank(item.get("category")),
             -float(item["adjusted_score"]),
             int(item["ai_rank"]),
         )
     )
+    headline_available = any(
+        bool(item.get("headline_eligible"))
+        and not bool(item.get("supporting_evidence_only"))
+        for item in candidates
+    )
+    recommendation_count = 0
     for rank, item in enumerate(candidates, 1):
         item["adjusted_rank"] = rank
-        item["ai_recommended"] = rank <= editorial_briefings.DAILY_MAX_ARTICLES
+        publication_eligible = (
+            not bool(item.get("supporting_evidence_only"))
+            and (
+                item.get("editorial_lane") != "public_institution"
+                or bool(item.get("tni_brief_eligible"))
+            )
+        )
+        recommended = (
+            headline_available
+            and publication_eligible
+            and recommendation_count < editorial_briefings.DAILY_MAX_ARTICLES
+        )
+        item["ai_recommended"] = recommended
+        if recommended:
+            recommendation_count += 1
 
     output_root = args.output_root.resolve()
     edition_dir = output_root / edition_key
@@ -272,6 +301,7 @@ def main() -> int:
     bundle["feedback_profile_version"] = profile.get("version", 2)
     bundle["article_import_api_url"] = article_import_api_url
     bundle["article_import_enabled"] = bool(article_import_api_url)
+    bundle["selection_audit"] = selection_counters.manifest_fields()
     (edition_dir / "candidates.json").write_text(
         json.dumps(bundle, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -291,6 +321,16 @@ def main() -> int:
         "edition_key": edition_key,
         "category_order": list(editorial_review.CATEGORY_ORDER),
         "candidate_count": len(candidates),
+        "main_candidate_lane_count": selection_counters.main_candidate_lane_count,
+        "public_institution_lane_count": (
+            selection_counters.public_institution_lane_count
+        ),
+        "promoted_public_candidate_count": (
+            selection_counters.promoted_public_candidate_count
+        ),
+        "non_promoted_public_candidate_count": (
+            selection_counters.non_promoted_public_candidate_count
+        ),
         "generated_at": generated_at,
         "edition_console": str(edition_dir / "index.html"),
         "latest_console": str(latest_dir / "index.html"),
@@ -299,6 +339,7 @@ def main() -> int:
         "teams_sends": 0,
         "telegram_sends": 0,
         "production_state_writes": 0,
+        **selection_counters.manifest_fields(),
         "article_import_api_configured": bool(article_import_api_url),
         "image_network_calls": image_counters.image_download_attempts,
         **image_counters.manifest_fields(),

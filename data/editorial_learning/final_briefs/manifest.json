@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "parser_version": "human-editorial-extract-v1",
+  "extracted_at": "2026-08-04T01:22:19+00:00",
+  "extracted": [
+    {
+      "source_filename": "260730_AI경영_T&I_Brief_2026-07월-5주차.html",
+      "source_sha256": "f197270e5a5dedf9d6ced5c945b973f01fc879164d0fbc2fae515df6f40cafb3",
+      "parser_version": "human-editorial-extract-v1",
+      "kind": "final_brief",
+      "edition_key": "tni-weekly-2026-07-30",
+      "issue_date": "2026-07-30",
+      "extracted_article_count": 8,
+      "extracted_at": "2026-08-04T01:22:19+00:00",
+      "output": "data/editorial_learning/final_briefs/tni-weekly-2026-07-30.json"
+    },
+    {
+      "source_filename": "AI경영_TnI_Weekly_2026-06월-3주차_최종.html",
+      "source_sha256": "424e02f8a382279fd8232ef6036d19d4796253c23c03574dd33ea8e8808f6bbd",
+      "parser_version": "human-editorial-extract-v1",
+      "kind": "final_brief",
+      "edition_key": "tni-weekly-2026-06-19",
+      "issue_date": "2026-06-19",
+      "extracted_article_count": 6,
+      "extracted_at": "2026-08-04T01:22:19+00:00",
+      "output": "data/editorial_learning/final_briefs/tni-weekly-2026-06-19.json"
+    },
+    {
+      "source_filename": "AI경영_TnI_Weekly_2026-06월-4주차_최종.html",
+      "source_sha256": "e61ab1663643360ba0d05e2058888d5f086f828c5562dc21296a0073bca4c611",
+      "parser_version": "human-editorial-extract-v1",
+      "kind": "final_brief",
+      "edition_key": "tni-weekly-2026-06-26",
+      "issue_date": "2026-06-26",
+      "extracted_article_count": 5,
+      "extracted_at": "2026-08-04T01:22:19+00:00",
+      "output": "data/editorial_learning/final_briefs/tni-weekly-2026-06-26.json"
+    },
+    {
+      "source_filename": "AI경영_TnI_Weekly_2026-07월-2주차_최종.html",
+      "source_sha256": "441c7bf17f74a3900525dc1532cfc576fe7fb68c04f89223e159f992a2e90aa7",
+      "parser_version": "human-editorial-extract-v1",
+      "kind": "final_brief",
+      "edition_key": "tni-weekly-2026-07-09",
+      "issue_date": "2026-07-09",
+      "extracted_article_count": 6,
+      "extracted_at": "2026-08-04T01:22:19+00:00",
+      "output": "data/editorial_learning/final_briefs/tni-weekly-2026-07-09.json"
+    },
+    {
+      "source_filename": "AI경영_TnI_Weekly_2026-07월-3주차_최종 (1).html",
+      "source_sha256": "e71308b7e1a9ee4697a5a597d5b074ce5aa1ec7ba60f83e597ebbdab6873dea2",
+      "parser_version": "human-editorial-extract-v1",
+      "kind": "final_brief",
+      "edition_key": "tni-weekly-2026-07-15",
+      "issue_date": "2026-07-15",
+      "extracted_article_count": 8,
+      "extracted_at": "2026-08-04T01:22:19+00:00",
+      "output": "data/editorial_learning/final_briefs/tni-weekly-2026-07-15.json"
+    },
+    {
+      "source_filename": "AI경영_TnI_Weekly_2026-07월-4주차_후보_RV3_embed 1.html",
+      "source_sha256": "3f63667086deb3c698086289861ba072a3ac19e1af6cb11fdda57746eb25ef34",
+      "parser_version": "human-editorial-extract-v1",
+      "kind": "candidate_pool",
+      "edition_key": "tni-weekly-2026-07-23",
+      "issue_date": "2026-07-23",
+      "extracted_article_count": 21,
+      "extracted_at": "2026-08-04T01:22:19+00:00",
+      "output": "data/editorial_learning/candidate_pools/tni-weekly-2026-07-23.json"
+    }
+  ],
+  "fail_closed": [
+    {
+      "source_filename": "AI경영_TnI_Weekly_2026-07월-1주차_최종.html",
+      "reason": "brief body not identifiable (no hero/cards found — likely an Autoway wrapper page whose mail body was not saved)"
+    }
+  ]
+}
