@@ -99,22 +99,23 @@ EXPECTED_PROTECTED_SHA256 = {
         "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
     ),
     "data/editorial_daily_state.json": (
-        # Verified successor after the accepted 2026-08-05 Daily delivery
-        # (origin/main 87f7ed3, merged without modification).
-        "65f2221aa15f672d8ba96df714583f24969f36a3c455c964140f27a6f00ad7d0"
+        # Verified successor after the accepted 2026-08-06 Daily delivery
+        # (origin/main 9b6e351 via 564462f, merged without modification —
+        # sent by main's legacy reader-only path that this branch forbids).
+        "68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155"
     ),
     "data/teams_push_state.json": (
         # Verified successor from the production watch's own state commits
-        # (through origin/main 6c54e5a → 710a59a → 86d3e6b "chore: persist
-        # Teams AI push dedup state" — merged without modification, routine
-        # successor-pin refresh; 86d3e6b batch adds six overnight sends from
-        # ungated main, five of them non-major tier that this branch's
-        # R4-R9A/R9D source gate holds back or blocks).
+        # (through origin/main 6c54e5a → 710a59a → 86d3e6b → 564462f "chore:
+        # persist Teams AI push dedup state" — merged without modification,
+        # routine successor-pin refresh; the 86d3e6b batch plus 1710754 add
+        # seven ungated-main sends, six of them non-major tier that this
+        # branch's R4-R9A/R9D source gate holds back or blocks).
         # This state contains the R4-R11 TTL production send
         # (teams_ai_push:7081b3470e08, http://www.ttlnews.com/…idxno=3131687);
         # verify_teams_strict_source_gate §10 proves it read-only and pins the
         # publisher to never_automatic.
-        "a0cb212b46562bd0a3e8012be75e527099bb4c0d35cc1704ae49960a906b85e6"
+        "4b3f78ee92152d98e704695004af5367d18fa61e9ce38ec8794a49bedee96e3d"
     ),
 }
 
