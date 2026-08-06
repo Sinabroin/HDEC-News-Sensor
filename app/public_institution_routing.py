@@ -60,6 +60,14 @@ class PublicInstitutionRoutingDecision:
     final_category: str = ""
     headline_eligible: bool = True
     authority_verified: bool = False
+    # R4-R12 §2 — official semantic AI gate. Non-official rows keep the
+    # permissive defaults (the gate applies to official institutions only);
+    # official rows carry the exact categorical verdict, and the Daily
+    # candidate pool admits an official row only when the gate is eligible.
+    official_ai_centrality_level: str = ""
+    official_ai_gate_reason: str = ""
+    official_material_event: bool = False
+    official_daily_pool_eligible: bool = True
 
     @property
     def is_public_lane(self) -> bool:
@@ -239,6 +247,102 @@ _PUBLIC_TECH_SERVICE_TERMS = (
     "서비스 개시", "플랫폼", "포털", "모델", "대화형 검색",
 )
 
+# ---------------------------------------------------------------------------
+# R4-R12 §2 — official-institution AI-centrality gate for the AI Daily pool.
+#
+# Official source status is authority, never relevance: an official article may
+# enter the AI Daily candidate pool only when AI is explicit and central to the
+# title or the concrete announced action, the article carries a material
+# confirmed event, and the subject sits in an executive decision domain.
+# Tourism, festivals, ceremonies, campaigns, and broad ministry reports where
+# AI is one bullet are excluded before any tier authority applies.
+
+OFFICIAL_AI_GATE_ELIGIBLE = "official_ai_central_material_event"
+OFFICIAL_AI_GATE_PUBLICITY = "unrelated_domain_or_event_publicity"
+OFFICIAL_AI_GATE_INCIDENTAL = "incidental_ai_in_broad_government_report"
+OFFICIAL_AI_GATE_NO_EVENT = "no_material_confirmed_event"
+OFFICIAL_AI_GATE_DOMAIN = "outside_executive_decision_domain"
+
+# Ceremonial / tourism / local-event publicity vocabulary for official press
+# releases, on top of the shared campaign/training publicity terms.
+_EVENT_PUBLICITY_TERMS = _PUBLICITY_TERMS + (
+    "축제", "관광", "박람회", "기념식", "축하공연", "걷기", "체험 행사",
+    "체험행사", "포상", "시상", "수여식", "페스티벌", "전시관", "밤바다",
+    "특별한 추억", "축하 행사", "어울림 한마당",
+)
+
+_EXECUTIVE_DOMAIN_TERMS = (
+    "건설", "시공", "착공", "인프라", "에너지", "전력", "원전", "smr",
+    "데이터센터", "데이터 센터", "컴퓨팅", "gpu", "로봇", "로보틱스",
+    "안전 기술", "안전기술", "스마트 안전", "조달", "입찰", "발주",
+    "규제", "법", "예산", "투자", "기업", "엔터프라이즈",
+    "enterprise", "compliance", "procurement", "regulation", "investment",
+    "construction", "infrastructure", "energy", "data center", "robotics",
+)
+
+
+@dataclass(frozen=True)
+class OfficialAiCentralityDecision:
+    """One deterministic semantic-eligibility verdict for an official article."""
+
+    ai_centrality_level: str = ""
+    ai_central: bool = False
+    material_event: bool = False
+    material_condition: str = ""
+    domain_relevant: bool = False
+    publicity: bool = False
+    eligible: bool = False
+    reason: str = ""
+
+
+def official_ai_centrality(title: str, lead: str) -> OfficialAiCentralityDecision:
+    """Semantic AI eligibility for one official-institution article.
+
+    Reads only the title and the factual lead (never generated commentary) and
+    reuses the canonical :mod:`app.ai_centrality` decision, so the official
+    gate can never drift from the product-wide AI definition."""
+    from app import ai_centrality  # local import — avoids a module cycle
+
+    title = _clean(title)
+    lead = _clean(lead)
+    text = f"{title} {lead}".strip()
+    centrality = ai_centrality.classify({"title": title, "snippet": lead})
+    ai_central = (
+        not centrality.exclusion
+        and centrality.level in ai_centrality.CENTRAL_LEVELS
+    )
+    condition, _condition_reason = _promotion(text)
+    publicity = _contains(text, _EVENT_PUBLICITY_TERMS)
+    domain_relevant = _contains(text, _EXECUTIVE_DOMAIN_TERMS)
+    if ai_central and condition and domain_relevant and not publicity:
+        reason = OFFICIAL_AI_GATE_ELIGIBLE
+        eligible = True
+    elif publicity:
+        reason = OFFICIAL_AI_GATE_PUBLICITY
+        eligible = False
+    elif centrality.level == ai_centrality.LEVEL_INCIDENTAL_AI_MENTION:
+        reason = OFFICIAL_AI_GATE_INCIDENTAL
+        eligible = False
+    elif not ai_central:
+        reason = OFFICIAL_AI_GATE_PUBLICITY
+        eligible = False
+    elif not condition:
+        reason = OFFICIAL_AI_GATE_NO_EVENT
+        eligible = False
+    else:
+        reason = OFFICIAL_AI_GATE_DOMAIN
+        eligible = False
+    return OfficialAiCentralityDecision(
+        ai_centrality_level=centrality.level,
+        ai_central=ai_central,
+        material_event=bool(condition),
+        material_condition=condition,
+        domain_relevant=domain_relevant,
+        publicity=publicity,
+        eligible=eligible,
+        reason=reason,
+    )
+
 
 def _contains(text: str, terms: tuple[str, ...]) -> bool:
     lowered = text.casefold()
@@ -379,6 +483,7 @@ def classify(article: Mapping[str, Any]) -> PublicInstitutionRoutingDecision:
             promotion_reason="institution_identity_or_domain_not_verified",
             headline_eligible=False,
             authority_verified=False,
+            official_daily_pool_eligible=False,
         )
 
     title = _clean(article.get("title"))
@@ -390,7 +495,14 @@ def classify(article: Mapping[str, Any]) -> PublicInstitutionRoutingDecision:
     )
     factual_text = f"{title} {lead}".strip()
     condition, reason = _promotion(factual_text)
-    promoted = bool(condition)
+    # R4-R12 §2 — semantic eligibility precedes tier authority: a material
+    # promotion condition can only elevate an official article whose subject
+    # independently passes the official AI-centrality gate. A non-AI or
+    # publicity release is never promoted, whatever its condition vocabulary.
+    official_ai = official_ai_centrality(title, lead)
+    promoted = bool(condition) and official_ai.eligible
+    if condition and not promoted:
+        reason = f"official_ai_gate_rejected:{official_ai.reason}"
     brief_eligible = _brief_eligibility(factual_text, promoted)
     category = _final_category(
         factual_text,
@@ -424,10 +536,14 @@ def classify(article: Mapping[str, Any]) -> PublicInstitutionRoutingDecision:
         tni_brief_eligible=brief_eligible,
         tni_report_topic_eligible=report_eligible,
         promotion_reason=reason,
-        promotion_condition=condition,
+        promotion_condition=condition if promoted else "",
         final_category=category if brief_eligible else "",
         headline_eligible=promoted,
         authority_verified=True,
+        official_ai_centrality_level=official_ai.ai_centrality_level,
+        official_ai_gate_reason=official_ai.reason,
+        official_material_event=official_ai.material_event,
+        official_daily_pool_eligible=official_ai.eligible,
     )
 
 

@@ -203,7 +203,20 @@ def main() -> int:
         edition_type="daily",
     )
     check("Daily headline remains a main candidate", bool(daily) and daily[0].editorial_lane == routing.LANE_MAIN)
-    check("Daily can carry public secondary article in existing card supply", any(item.source == "행정안전부" for item in daily[1:]))
+    # R4-R12 §2 — reversed by operator directive: an official article without a
+    # material confirmed event (the AI-portal service launch) must never enter
+    # the AI Daily candidate pool, however AI-central its subject is. Official
+    # source status is authority, never relevance.
+    check(
+        "R4-R12 §2: official row without material confirmed event never enters the Daily pool",
+        all(item.source != "행정안전부" for item in daily),
+    )
+    check(
+        "R4-R12 §2: official gate accounting is exposed for the Daily run",
+        daily_audit.official_rows_seen >= 1
+        and daily_audit.official_ai_central_rows >= 1
+        and daily_audit.official_selected_rows == 0,
+    )
     check("same-event primary-ten representative wins", bool(daily) and daily[0].source == "연합뉴스")
     check("duplicate cluster count is audited", daily_audit.duplicate_official_media_event_clusters == 1)
     check("official duplicate remains supporting evidence in audit", "national-ai-center" in daily_audit.public_supporting_evidence_ids)
@@ -221,7 +234,14 @@ def main() -> int:
     )
     supporting = [item for item in operator_rows if item.supporting_evidence_only]
     check("operator review preserves official duplicate evidence", len(supporting) == 1 and supporting[0].source == "과학기술정보통신부")
-    check("operator audit exposes public candidate counts", operator_audit.public_institution_lane_count >= 3)
+    # R4-R12 §2 — gate-rejected officials are no longer operator-visible pool
+    # candidates; the official gate counters expose them instead.
+    check(
+        "operator audit exposes official gate accounting",
+        operator_audit.official_rows_seen >= 4
+        and operator_audit.official_unrelated_domain_rejected_rows >= 2
+        and operator_audit.public_institution_lane_count >= 1,
+    )
 
     weekly_audit = editorial_briefings.SelectionAuditCounters()
     weekly = editorial_briefings.normalize_articles(
