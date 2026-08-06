@@ -270,6 +270,16 @@
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
     },
+    "b76f3cf87859283e": {
+      "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
+      "delivery_id": "teams_ai_push:3157bb8de447",
+      "first_sent_at": "2026-08-06T22:25:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "4b17f004174ac4707904ee9a0c80fcde8c337e7b9eb0c4fd84ff1e80c49c2858",
+      "sent_at": "2026-08-06T22:25:27+09:00",
+      "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
+    },
     "be78a660fee97ba4": {
       "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
       "delivery_id": "teams_ai_push:860f1b41957d",
@@ -771,6 +781,16 @@
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
+    },
+    "title:ai인프라디벨로퍼뉴마이웨이개척자": {
+      "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
+      "delivery_id": "teams_ai_push:3157bb8de447",
+      "first_sent_at": "2026-08-06T22:25:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "4b17f004174ac4707904ee9a0c80fcde8c337e7b9eb0c4fd84ff1e80c49c2858",
+      "sent_at": "2026-08-06T22:25:27+09:00",
+      "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
     },
     "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
@@ -1525,7 +1545,7 @@
       "title_fingerprint": "제네시스홀딩스그룹충남500kw급태양광발전소인수"
     }
   },
-  "last_successful_send_at": "2026-08-06T20:42:11+09:00",
+  "last_successful_send_at": "2026-08-06T22:25:27+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -1656,6 +1676,16 @@
       "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
+    },
+    "https://mk.co.kr/news/business/12113296": {
+      "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
+      "delivery_id": "teams_ai_push:3157bb8de447",
+      "first_sent_at": "2026-08-06T22:25:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "4b17f004174ac4707904ee9a0c80fcde8c337e7b9eb0c4fd84ff1e80c49c2858",
+      "sent_at": "2026-08-06T22:25:27+09:00",
+      "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
     },
     "https://mk.co.kr/news/business/12119528": {
       "cluster_key": "title:구광모내주실리콘밸리행젠슨황만나피지컬ai협력",
@@ -2288,6 +2318,16 @@
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
+    },
+    "ai인프라디벨로퍼뉴마이웨이개척자": {
+      "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
+      "delivery_id": "teams_ai_push:3157bb8de447",
+      "first_sent_at": "2026-08-06T22:25:27+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "4b17f004174ac4707904ee9a0c80fcde8c337e7b9eb0c4fd84ff1e80c49c2858",
+      "sent_at": "2026-08-06T22:25:27+09:00",
+      "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
     },
     "ai인프라선점의역설빅테크장기계약투자위험으로돌아오나": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
