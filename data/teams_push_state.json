@@ -1377,8 +1377,8 @@
       "cluster_key": "title:포항ai데이터센터영광ess선정지역활성화투자펀드10호까지확정",
       "fallback_eligible": false,
       "first_seen_at": "2026-08-06T12:45:57+09:00",
-      "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-06T12:45:57+09:00",
+      "holdback_reason": "importance_not_top",
+      "last_seen_at": "2026-08-06T15:20:29+09:00",
       "normalized_url": "https://biz.heraldcorp.com/article/10832593",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -1413,6 +1413,20 @@
       "source": "마이데일리",
       "source_tier": "trusted_other",
       "title_fingerprint": "제네시스홀딩스그룹충남태양광발전소인수추진"
+    },
+    "https://newsis.com/view/NISX20260806_0003739183": {
+      "article_id": "2cd199e30d8f9565",
+      "cluster_key": "title:lguai데이터센터에2조투자빚은안낸다",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-06T15:20:29+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-06T15:20:29+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260806_0003739183",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "lguai데이터센터에2조투자빚은안낸다"
     },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
