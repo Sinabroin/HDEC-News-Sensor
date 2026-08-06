@@ -4560,10 +4560,26 @@ def source_priority_and_link_integrity_contracts() -> None:
             })
 
         rows.append({
-            "title": "국토부 AI 건설 안전 정책 발표",
+            # R4-R12 §2 — the official row must carry a material confirmed
+            # event (mandatory rule in force) to be Daily/Weekly pool
+            # eligible; a bare policy announcement is no longer admissible.
+            "title": "국토부, 건설현장 AI 안전관리 의무 규정 시행",
             "source": "국토교통부",
             "published_at": coverage.end.isoformat(),
             "url": "https://molit.go.kr/news/official-ai-construction",
+            "snippet": (
+                "건설현장 AI 안전관리 의무 규정이 시행돼 건설사 준수 일정이 "
+                "확정됐다. 건설사 대응 범위를 점검할 필요가 있다."
+            ),
+            "source_metadata": {"provider": "offline_fixture"},
+        })
+        rows.append({
+            # R4-R12 §2 negative control — an official announcement without a
+            # material confirmed event must appear on no surface at all.
+            "title": "국토부 AI 건설 안전 정책 발표",
+            "source": "국토교통부",
+            "published_at": coverage.end.isoformat(),
+            "url": "https://molit.go.kr/news/official-ai-policy-brief",
             "snippet": (
                 "건설현장 AI 안전관리 정책과 적용 일정이 발표됐다. "
                 "건설사 대응 범위를 점검할 필요가 있다."
@@ -4652,13 +4668,18 @@ def source_priority_and_link_integrity_contracts() -> None:
         == sorted(priority(article)[1] for article in weekly_primary),
     )
     check(
-        # D7-AK-6E R4-R6 §11 — no unconditional institution quota: the official
-        # row competes on the shared ranking. With six slots and ten
-        # higher-ranked locked publishers it is NOT forced into Daily, while
-        # Weekly's twelve slots still admit it purely on merit.
+        # D7-AK-6E R4-R6 §11 + R4-R12 §2 — no unconditional institution quota:
+        # the official row competes on the shared ranking only after passing
+        # the official AI-centrality/material-event gate. The gate-eligible
+        # mandate-in-force release earns its Weekly slot on merit, while the
+        # no-material policy announcement appears on no surface at all — a
+        # quota would have forced both in.
         "official institution competes on merit, never via a forced quota",
-        "국토교통부" not in {article.source for article in daily_articles}
-        and "국토교통부" in {article.source for article in weekly_articles},
+        "국토교통부" in {article.source for article in weekly_articles}
+        and all(
+            article.title != "국토부 AI 건설 안전 정책 발표"
+            for article in list(daily_articles) + list(weekly_articles)
+        ),
         repr({
             "daily": [article.source for article in daily_articles],
             "weekly": [article.source for article in weekly_articles],

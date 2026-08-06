@@ -157,6 +157,111 @@ def _row_source_tier_counts(rows) -> dict[str, int]:
     return counts
 
 
+def _major_row_decision_traces(
+    *,
+    article_rows,
+    policy_evaluations,
+    verified_object_ids,
+    candidates,
+    baseline,
+    gate_batch,
+    records,
+) -> list[dict[str, Any]]:
+    """R4-R12 §1 — categorical decision trace for every major-lane row.
+
+    One trace entry per primary_10 / secondary_3 / promoted-official row that
+    reached the sender, so a zero-selected run is explainable at row level
+    from the run log alone. Log-safe by construction: only the non-reversible
+    article reference, the publisher display name, and categorical decision
+    codes — never a URL, title, or credential (rules.md §4)."""
+    outcome_by_ref: dict[str, dict[str, Any]] = {}
+    for record in records:
+        outcome_by_ref.setdefault(str(record.get("article_ref")), record)
+    stage_by_ref: dict[str, tuple[str, str]] = {}
+    for item in gate_batch.rejected:
+        stage_by_ref[article_ref(item.candidate.article)] = (
+            "source_gate_rejected", item.gate.reason
+        )
+    for item in gate_batch.held:
+        stage_by_ref[article_ref(item.candidate.article)] = (
+            "specialist_held",
+            item.holdback.holdback_reason if item.holdback else "holdback_active",
+        )
+    for item in gate_batch.deferred_major:
+        stage_by_ref[article_ref(item.candidate.article)] = (
+            "deferred_due_to_cap", "run_cap_reached"
+        )
+    for item in gate_batch.selected:
+        stage_by_ref[article_ref(item.candidate.article)] = (
+            "selected", item.gate.reason
+        )
+    dedup_by_ref = {
+        article_ref(candidate.article): decision
+        for candidate, decision in zip(candidates, baseline)
+    }
+    traces: list[dict[str, Any]] = []
+    for row, evaluation in zip(article_rows, policy_evaluations):
+        policy = source_priority.teams_delivery_source_policy(
+            str(row.get("source") or row.get("display_source") or ""),
+            publisher_direct.publisher_url(row),
+        )
+        tier = str(policy["tier"])
+        routing = evaluation.public_routing
+        promoted_official = bool(
+            routing.is_public_lane and routing.teams_alert_eligible
+        )
+        if tier not in {"primary_10", "secondary_3"} and not promoted_official:
+            continue
+        ref = article_ref(row)
+        stage, stage_reason = "", ""
+        smtp_status = "no_request"
+        selected = False
+        if not evaluation.eligible:
+            stage = "policy_rejected"
+            stage_reason = evaluation.rejection_reason
+        else:
+            dedup_decision = dedup_by_ref.get(ref)
+            if dedup_decision is not None and not dedup_decision.send_allowed:
+                stage = "ledger_blocked"
+                stage_reason = dedup_decision.reason
+            else:
+                stage, stage_reason = stage_by_ref.get(
+                    ref, ("event_duplicate_collapsed", "same_event_representative_exists")
+                )
+        record = outcome_by_ref.get(ref)
+        if record is not None:
+            smtp_status = str(record.get("status") or "no_request")
+            selected = record.get("outcome") in {
+                "delivered", "failed", "dry_run_no_send"
+            }
+        if stage == "selected":
+            selected = True
+        stock = evaluation.stock_market
+        traces.append({
+            "article_ref": ref,
+            "source": str(row.get("source") or row.get("display_source") or ""),
+            "source_tier": tier,
+            "teams_lane": str(policy["teams_lane"]),
+            "publisher_rank": int(policy["publisher_rank"]),
+            "verified": id(row) in verified_object_ids,
+            "gate_class": "promoted_official" if promoted_official else tier,
+            "ai_core": bool(evaluation.topic.eligible),
+            "ai_exclusion": str(evaluation.topic.exclusion_reason or ""),
+            "hdec_relevant": bool(evaluation.hdec_relevant),
+            "importance_sendable": bool(evaluation.importance.sendable),
+            "importance_level": str(evaluation.importance.level or ""),
+            "confirmed_event": bool(row.get("shadow_confirmed_event_types")),
+            "freshness_current": row.get("current_run_seen") is not False
+            and row.get("carried_forward") is not True,
+            "stock_market_excluded": bool(stock is not None and not stock.eligible),
+            "stage": stage,
+            "rejection_reason": stage_reason,
+            "final_selected": selected and stage == "selected",
+            "smtp_status": smtp_status,
+        })
+    return traces
+
+
 @dataclass(frozen=True)
 class EmailChannelCredentials:
     """Gmail SMTP + Teams channel address, resolved from secrets (never printed)."""
@@ -617,6 +722,15 @@ def deliver(
         and len(selected) == attempted + loop_dedup_blocked + dry_run_skipped
         and rejection_reconciled
     )
+    major_row_decision_trace = _major_row_decision_traces(
+        article_rows=article_rows,
+        policy_evaluations=policy_evaluations,
+        verified_object_ids=verified_object_ids,
+        candidates=candidates,
+        baseline=baseline,
+        gate_batch=gate_batch,
+        records=records,
+    )
     selected_source_audit = [
         {
             "article_ref": article_ref(gated.candidate.article),
@@ -745,6 +859,9 @@ def deliver(
             gate_batch.audit.get("stock_market_gate_rejected_rows") or 0
         ),
         "selected_source_audit": selected_source_audit,
+        # R4-R12 §1 — row-level categorical decision trace for every
+        # primary_10 / secondary_3 / promoted-official row in this run.
+        "major_row_decision_trace": major_row_decision_trace,
         "skip_reasons": {
             "already_sent": blocked,
             "deferred_due_to_cap": len(deferred),
@@ -898,6 +1015,25 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
             "Teams AI email: "
             f"article={record['article_ref']} outcome={record['outcome']} "
             f"dedup={record['dedup_reason']} status={record['status']}"
+        )
+    for trace in summary.get("major_row_decision_trace", ()):
+        print(
+            "Teams major-row trace: "
+            f"article={trace['article_ref']} "
+            f"source={trace['source']} "
+            f"tier={trace['source_tier']} "
+            f"lane={trace['teams_lane']} "
+            f"gate_class={trace['gate_class']} "
+            f"ai_core={'true' if trace['ai_core'] else 'false'} "
+            f"hdec_relevant={'true' if trace['hdec_relevant'] else 'false'} "
+            f"importance={trace['importance_level'] or '-'} "
+            f"confirmed_event={'true' if trace['confirmed_event'] else 'false'} "
+            f"freshness_current={'true' if trace['freshness_current'] else 'false'} "
+            f"stock_excluded={'true' if trace['stock_market_excluded'] else 'false'} "
+            f"stage={trace['stage']} "
+            f"rejection_reason={trace['rejection_reason'] or '-'} "
+            f"selected={'true' if trace['final_selected'] else 'false'} "
+            f"smtp={trace['smtp_status']}"
         )
     for entry in summary.get("selected_source_audit", ()):
         print(

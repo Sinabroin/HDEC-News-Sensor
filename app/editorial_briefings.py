@@ -65,6 +65,20 @@ IMAGE_DOWNLOAD_MAX_TOTAL_BYTES_PER_ARTICLE = (
 PREVIEW_IMAGE_ASSET_DIGEST_CHARS = 24
 IMAGE_MIN_WIDTH = 120
 IMAGE_MIN_HEIGHT = 90
+# R4-R12 §3 — hard floors for every Daily candidate / delivered-lead image.
+# The 250x24 MOIS banner class fails both the height floor and the banner
+# ratio; nothing below these limits may ever reach a Daily card.
+DAILY_IMAGE_MIN_WIDTH = 320
+DAILY_IMAGE_MIN_HEIGHT = 180
+DAILY_IMAGE_MAX_BANNER_RATIO = 4.0
+DAILY_IMAGE_MAX_VERTICAL_RATIO = 3.0
+DAILY_CATEGORY_FALLBACK_DIR = config.DATA_DIR / "editorial_image_fallbacks"
+DAILY_CATEGORY_FALLBACK_ASSETS = {
+    "투자·산업": "category-invest-industry.png",
+    "기업동향": "category-corporate.png",
+    "기술정보": "category-technology.png",
+}
+DAILY_CATEGORY_FALLBACK_GENERIC = "category-ai-infrastructure.png"
 PUBLISHER_URL_MAX_LENGTH = 2048
 PUBLISHER_PAGE_MAX_BYTES = 1_000_000
 PUBLISHER_PAGE_TIMEOUT_SECONDS = 8
@@ -313,6 +327,13 @@ class ImageMaterializationCounters:
     images_from_image_src: int = 0
     images_from_body: int = 0
     images_from_fallback: int = 0
+    # R4-R12 §3 — hard Daily-image gate accounting. A blank card is
+    # impossible: every article without a valid article image materializes a
+    # labeled deterministic category visual instead.
+    daily_hard_gate_rejections: int = 0
+    daily_duplicate_image_rejections: int = 0
+    category_fallbacks_materialized: int = 0
+    blank_cards: int = 0
 
     def account_source(self, source_kind: str) -> None:
         if source_kind in {
@@ -369,6 +390,14 @@ class ImageMaterializationCounters:
             "images_from_image_src": self.images_from_image_src,
             "images_from_body": self.images_from_body,
             "images_from_fallback": self.images_from_fallback,
+            "daily_hard_gate_rejections": self.daily_hard_gate_rejections,
+            "daily_duplicate_image_rejections": (
+                self.daily_duplicate_image_rejections
+            ),
+            "category_fallbacks_materialized": (
+                self.category_fallbacks_materialized
+            ),
+            "blank_cards": self.blank_cards,
         }
 
 
@@ -515,6 +544,15 @@ class SelectionAuditCounters:
     promoted_public_candidate_ids: tuple[str, ...] = ()
     public_supporting_evidence_ids: tuple[str, ...] = ()
     public_candidate_category_map: tuple[str, ...] = ()
+    # R4-R12 §2 — official-institution semantic gate accounting. Official
+    # source status is authority only: these counters prove the AI Daily pool
+    # admitted an official row solely on semantic eligibility.
+    official_rows_seen: int = 0
+    official_ai_central_rows: int = 0
+    official_incidental_ai_rejected_rows: int = 0
+    official_unrelated_domain_rejected_rows: int = 0
+    official_material_event_rows: int = 0
+    official_selected_rows: int = 0
 
     def manifest_fields(
         self,
@@ -593,6 +631,16 @@ class SelectionAuditCounters:
             "public_candidate_category_map": (
                 self.public_candidate_category_map
             ),
+            "official_rows_seen": self.official_rows_seen,
+            "official_ai_central_rows": self.official_ai_central_rows,
+            "official_incidental_ai_rejected_rows": (
+                self.official_incidental_ai_rejected_rows
+            ),
+            "official_unrelated_domain_rejected_rows": (
+                self.official_unrelated_domain_rejected_rows
+            ),
+            "official_material_event_rows": self.official_material_event_rows,
+            "official_selected_rows": self.official_selected_rows,
         }
 
 
@@ -648,6 +696,9 @@ class EditorialArticle:
     image_quality_accepted: bool = False
     image_quality_reason: str = ""
     image_quality_signals: tuple[str, ...] = ()
+    # R4-R12 §3 — a category fallback is a clearly-labeled deterministic
+    # neutral visual, never presented as an article photograph.
+    image_is_category_fallback: bool = False
     image_candidates: tuple[ImageCandidateOption, ...] = ()
     image_candidate_attempts: tuple[ImageCandidateAttempt, ...] = ()
     # D7-AK-6E R4-R6 §11 — explainable selection factors, safe for surfaces.
@@ -689,6 +740,11 @@ class EditorialArticle:
     human_placement_reason: str = ""
     headline_eligible: bool = True
     authority_verified: bool = False
+    # R4-R12 §2 — official semantic AI gate verdict (authority never precedes it).
+    official_ai_centrality_level: str = ""
+    official_ai_gate_reason: str = ""
+    official_material_event: bool = False
+    official_daily_pool_eligible: bool = True
     duplicate_event_cluster: str = ""
     supporting_evidence_only: bool = False
 
@@ -2185,8 +2241,43 @@ def _select_article_candidates(
     # R4-R6 §5 — AI-only scope is the first gate: an AI-branded edition never
     # fills with non-AI-central articles, whatever the supply looks like.
     # Every rejection class is counted machine-readably.
+    # R4-R12 §2 — for a verified official institution the dedicated semantic
+    # gate runs first: official source status is authority, never relevance,
+    # so a tourism/ceremony release or a broad ministry report with AI as one
+    # bullet is excluded before candidate selection — including the
+    # operator-review extras lane.
     ai_qualified: list[_ArticleCandidate] = []
     for candidate in candidates:
+        if candidate.is_official_institution:
+            article = candidate.article
+            if audit is not None:
+                audit.official_rows_seen += 1
+                if article.official_ai_centrality_level in (
+                    ai_centrality.CENTRAL_LEVELS
+                ):
+                    audit.official_ai_central_rows += 1
+                if article.official_material_event:
+                    audit.official_material_event_rows += 1
+            if not article.official_daily_pool_eligible:
+                if audit is not None:
+                    if article.official_ai_gate_reason == (
+                        public_institution_routing.OFFICIAL_AI_GATE_INCIDENTAL
+                    ):
+                        audit.official_incidental_ai_rejected_rows += 1
+                    elif article.official_ai_gate_reason == (
+                        public_institution_routing.OFFICIAL_AI_GATE_PUBLICITY
+                    ):
+                        audit.official_unrelated_domain_rejected_rows += 1
+                    # no-material-event / outside-domain rejections stay
+                    # visible as official_ai_central_rows > official_selected_rows.
+                    legacy_class = candidate.ai_rejection_class
+                    if legacy_class == "stock_market":
+                        audit.stock_market_rejected_count += 1
+                    elif legacy_class == "incidental_ai":
+                        audit.incidental_ai_rejected_count += 1
+                    elif legacy_class:
+                        audit.unrelated_domain_rejected_count += 1
+                continue
         rejection = candidate.ai_rejection_class
         if not rejection:
             ai_qualified.append(candidate)
@@ -2346,6 +2437,9 @@ def _select_article_candidates(
         audit.selected_candidates = min(len(selected), limit)
         audit.selected_public_candidate_count = sum(
             item.is_public_lane for item in selected[:limit]
+        )
+        audit.official_selected_rows = sum(
+            item.is_official_institution for item in selected[:limit]
         )
         target_floor = (
             DAILY_TARGET_MIN_ARTICLES
@@ -3372,6 +3466,75 @@ def assess_image_quality(
     return ImageQualityAssessment(True, "image_quality_passed", signals)
 
 
+@dataclass(frozen=True)
+class DailyImageAssessment:
+    """R4-R12 §3 — one hard-gate verdict for a materialized Daily image."""
+
+    valid: bool
+    reason: str
+    width: int = 0
+    height: int = 0
+
+
+def assess_daily_image_asset(
+    payload: bytes,
+    *,
+    duplicate_article_key: str = "",
+) -> DailyImageAssessment:
+    """Hard Daily-image gate: dimensional floors, ratio limits, emptiness,
+    and unconditional cross-article duplicate rejection.
+
+    Runs on decoded bytes only (the semantic/text-marker layer stays in
+    :func:`assess_image_quality`); every Daily candidate image and every
+    delivered Daily lead image must pass this gate or be replaced by a
+    labeled category fallback."""
+    if duplicate_article_key:
+        return DailyImageAssessment(
+            False, "daily_image_duplicate_across_articles"
+        )
+    try:
+        signals, width, height = _decoded_image_quality_signals(payload)
+    except ImageDownloadError as exc:
+        return DailyImageAssessment(False, f"daily_{exc.reason}")
+    if width < DAILY_IMAGE_MIN_WIDTH:
+        return DailyImageAssessment(
+            False, "daily_image_below_min_width", width, height
+        )
+    if height < DAILY_IMAGE_MIN_HEIGHT:
+        return DailyImageAssessment(
+            False, "daily_image_below_min_height", width, height
+        )
+    if height and width / height > DAILY_IMAGE_MAX_BANNER_RATIO:
+        return DailyImageAssessment(
+            False, "daily_image_extreme_banner_ratio", width, height
+        )
+    if width and height / width > DAILY_IMAGE_MAX_VERTICAL_RATIO:
+        return DailyImageAssessment(
+            False, "daily_image_extreme_vertical_ratio", width, height
+        )
+    signal_set = set(signals)
+    if "logo_like_transparency" in signal_set:
+        return DailyImageAssessment(
+            False, "daily_image_transparent_or_empty", width, height
+        )
+    if {
+        "small_effective_content_area",
+        "very_low_visual_variation",
+    } <= signal_set:
+        return DailyImageAssessment(
+            False, "daily_image_transparent_or_empty", width, height
+        )
+    return DailyImageAssessment(True, "daily_image_valid", width, height)
+
+
+def daily_category_fallback_asset(category: str) -> Path:
+    """Committed deterministic category visual for one Brief category."""
+    name = DAILY_CATEGORY_FALLBACK_ASSETS.get(
+        " ".join(str(category or "").split()), DAILY_CATEGORY_FALLBACK_GENERIC
+    )
+    return DAILY_CATEGORY_FALLBACK_DIR / name
+
+
 def _preview_image_relative_src(asset_path: Path, html_dir: Path) -> str:
     return os.path.relpath(asset_path, start=html_dir).replace(os.sep, "/")
 
@@ -3866,6 +4029,111 @@ def _article_image_candidates(
     return tuple(output)
 
 
+def _daily_fallback_fingerprint(article: EditorialArticle) -> str:
+    """Stable per-article fingerprint for the deterministic category fallback.
+
+    Deliberately title-inclusive: two unrelated articles in one category (and
+    even two rows that share a publisher_article_url/selected_url) must resolve
+    to distinct fingerprints, so their fallback visuals never collide."""
+    return "|".join(
+        (
+            " ".join((article.title or "").split()),
+            (article.source or "").strip(),
+            str(article.published_at or ""),
+            _article_quality_key(article),
+        )
+    )
+
+
+def _render_article_fallback_variant(base_payload: bytes, fingerprint: str) -> bytes:
+    """R4-R12 §3 — deterministic per-article variation of a committed category
+    base visual.
+
+    Overlays a fingerprint-seeded pixel band on the committed base PNG. The
+    baked Korean '카테고리 이미지' label and the no-trademark guarantee are
+    preserved (pixel-only overlay, no runtime font), while unrelated articles
+    receive byte-distinct assets. Deterministic byte-for-byte for a fixed
+    Pillow build; the overlay only adds pixel variation, so the hard-gate
+    emptiness signals can never fire because of it. Falls back to the base
+    bytes verbatim when Pillow is unavailable."""
+    if Image is None:
+        return base_payload
+    from PIL import ImageDraw
+
+    seed = hashlib.sha256(fingerprint.encode("utf-8")).digest()
+    with Image.open(BytesIO(base_payload)) as opened:
+        image = opened.convert("RGB")
+    draw = ImageDraw.Draw(image)
+    width, height = image.size
+    columns = len(seed)
+    col_w = max(1, width // columns)
+    for index, value in enumerate(seed):
+        x0 = index * col_w
+        x1 = width if index == columns - 1 else x0 + col_w
+        bar_h = 6 + (value % 18)
+        shade = (
+            40 + (value * 3) % 180,
+            60 + (value * 7) % 170,
+            90 + (value * 11) % 150,
+        )
+        draw.rectangle((x0, 0, x1, bar_h), fill=shade)
+    buffer = BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+def _materialize_daily_category_fallback(
+    article: EditorialArticle,
+    *,
+    assets_dir: Path,
+    target_html_dir: Path,
+    counters: ImageMaterializationCounters,
+    assets_by_digest: dict[str, Path],
+    failure_reason: str,
+) -> EditorialArticle:
+    """R4-R12 §3 — replace a missing/invalid article image with a deterministic
+    per-article category visual. Never leaves a blank card; the visual is
+    explicitly labeled as a category image, never an article photograph, and
+    two unrelated same-category articles receive distinct assets."""
+    base_payload = daily_category_fallback_asset(article.category).read_bytes()
+    payload = _render_article_fallback_variant(
+        base_payload, _daily_fallback_fingerprint(article)
+    )
+    digest = hashlib.sha256(payload).hexdigest()
+    asset_path = assets_by_digest.get(digest)
+    if asset_path is None:
+        asset_path = assets_dir / (
+            f"{digest[:PREVIEW_IMAGE_ASSET_DIGEST_CHARS]}.png"
+        )
+        atomic_write_bytes(asset_path, payload)
+        assets_by_digest[digest] = asset_path
+        counters.image_assets_materialized += 1
+    local_src = _preview_image_relative_src(asset_path, target_html_dir)
+    counters.category_fallbacks_materialized += 1
+    verdict = assess_daily_image_asset(payload)
+    return replace(
+        article,
+        image_url=local_src,
+        image_remote_url="",
+        image_source_kind="category_fallback",
+        image_source_page_url="",
+        image_width=verdict.width or None,
+        image_height=verdict.height or None,
+        image_fallback_used=True,
+        image_reason=failure_reason or "daily_category_fallback",
+        image_download_status="category_fallback_materialized",
+        image_download_content_type="image/png",
+        image_download_bytes=len(payload),
+        image_local_asset=asset_path.name,
+        image_local_src=local_src,
+        image_duplicate_asset_reused=False,
+        image_materialization_reason="daily_category_fallback",
+        image_quality_accepted=True,
+        image_quality_reason="daily_category_fallback_asset",
+        image_is_category_fallback=True,
+    )
+
+
 def materialize_preview_images(
     articles: Iterable[EditorialArticle],
     preview_root: Path,
@@ -3873,8 +4141,16 @@ def materialize_preview_images(
     html_dir: Path | None = None,
     downloader: Callable[..., ImageDownload] | None = None,
     opener: object | None = None,
+    daily: bool = False,
 ) -> tuple[list[EditorialArticle], ImageMaterializationCounters]:
-    """Download browser-loadable image bytes into a bounded /tmp preview bundle."""
+    """Download browser-loadable image bytes into a bounded /tmp preview bundle.
+
+    ``daily=True`` activates the R4-R12 §3 Daily image contract: the hard
+    dimensional/ratio/emptiness gate, unconditional cross-article duplicate
+    rejection, and per-article category-fallback materialization (no blank
+    cards). ``daily=False`` (the default, used by non-Daily / generic callers)
+    preserves the original semantic-quality-only behavior exactly, so a small
+    but legitimate photo is not rejected by a Daily-only dimensional floor."""
     output_root = preview_root.resolve()
     system_tmp = Path("/tmp").resolve()
     if output_root == system_tmp or system_tmp not in output_root.parents:
@@ -3895,16 +4171,28 @@ def materialize_preview_images(
         candidates = _article_image_candidates(article)
         if not candidates:
             counters.images_from_fallback += 1
-            materialized.append(
-                replace(
-                    article,
-                    image_url="",
-                    image_remote_url="",
-                    image_fallback_used=True,
-                    image_download_status="not_attempted",
-                    image_materialization_reason=article.image_reason,
+            if daily:
+                materialized.append(
+                    _materialize_daily_category_fallback(
+                        article,
+                        assets_dir=assets_dir,
+                        target_html_dir=target_html_dir,
+                        counters=counters,
+                        assets_by_digest=assets_by_digest,
+                        failure_reason=article.image_reason or "image_url_missing",
+                    )
                 )
-            )
+            else:
+                materialized.append(
+                    replace(
+                        article,
+                        image_url="",
+                        image_remote_url="",
+                        image_fallback_used=True,
+                        image_download_status="not_attempted",
+                        image_materialization_reason=article.image_reason,
+                    )
+                )
             continue
 
         counters.image_urls_resolved += 1
@@ -3968,6 +4256,71 @@ def materialize_preview_images(
                 counters.image_downloads_succeeded += 1
                 counters.image_bytes_validated += len(download.payload)
                 counters.image_quality_checks += 1
+                # R4-R12 §3 — cross-article duplicate rejection (Daily only):
+                # one image may represent one article only (category fallbacks
+                # are per-article deterministic, so they never collide here).
+                duplicate_owner = article_key_by_digest.get(digest, "")
+                if (
+                    daily
+                    and duplicate_owner
+                    and duplicate_owner != _article_quality_key(article)
+                ):
+                    counters.daily_duplicate_image_rejections += 1
+                    counters.image_candidate_failures += 1
+                    quality_rejected_for_article = True
+                    last_failure = ImageDownloadError(
+                        "daily_image_duplicate_across_articles",
+                        status=download.status,
+                        content_type=download.content_type,
+                        byte_size=len(download.payload),
+                    )
+                    attempts.append(
+                        ImageCandidateAttempt(
+                            source_kind=candidate.source_kind,
+                            host=_url_host(remote_url),
+                            status="rejected",
+                            reason="daily_image_duplicate_across_articles",
+                            content_type=download.content_type.split(";", 1)[0].strip(),
+                            byte_size=len(download.payload),
+                            byte_validation_status="passed",
+                            quality_accepted=False,
+                            quality_rejection_reason=(
+                                "daily_image_duplicate_across_articles"
+                            ),
+                        )
+                    )
+                    continue
+                # R4-R12 §3 — hard dimensional/emptiness gate ahead of the
+                # heuristic quality layer (Daily only): the 250x24 banner class
+                # can never pass on a single missing heuristic signal again.
+                hard_verdict = (
+                    assess_daily_image_asset(download.payload) if daily else None
+                )
+                if hard_verdict is not None and not hard_verdict.valid:
+                    counters.daily_hard_gate_rejections += 1
+                    counters.image_quality_rejections += 1
+                    counters.image_candidate_failures += 1
+                    quality_rejected_for_article = True
+                    last_failure = ImageDownloadError(
+                        hard_verdict.reason,
+                        status=download.status,
+                        content_type=download.content_type,
+                        byte_size=len(download.payload),
+                    )
+                    attempts.append(
+                        ImageCandidateAttempt(
+                            source_kind=candidate.source_kind,
+                            host=_url_host(remote_url),
+                            status="rejected",
+                            reason=hard_verdict.reason,
+                            content_type=download.content_type.split(";", 1)[0].strip(),
+                            byte_size=len(download.payload),
+                            byte_validation_status="passed",
+                            quality_accepted=False,
+                            quality_rejection_reason=hard_verdict.reason,
+                        )
+                    )
+                    continue
                 assessment = assess_image_quality(
                     download.payload,
                     remote_url=remote_url,
@@ -4060,8 +4413,8 @@ def materialize_preview_images(
                     image_remote_url=remote_url,
                     image_source_kind=candidate.source_kind,
                     image_source_page_url=candidate.source_page_url,
-                    image_width=candidate.width,
-                    image_height=candidate.height,
+                    image_width=(hard_verdict.width if hard_verdict else 0) or candidate.width,
+                    image_height=(hard_verdict.height if hard_verdict else 0) or candidate.height,
                     image_fallback_used=False,
                     image_reason=candidate.reason or f"selected_{candidate.source_kind}",
                     image_download_status="success",
@@ -4134,6 +4487,22 @@ def materialize_preview_images(
         counters.images_from_fallback += 1
         if quality_rejected_for_article:
             counters.images_fallback_after_quality_rejection += 1
+        if daily:
+            # R4-R12 §3 — every remote candidate failed the download, quality,
+            # or hard gate: materialize the labeled per-article deterministic
+            # category visual instead of a blank card. The last failure reason
+            # stays on the record.
+            materialized.append(
+                _materialize_daily_category_fallback(
+                    replace(article, image_candidate_attempts=tuple(attempts)),
+                    assets_dir=assets_dir,
+                    target_html_dir=target_html_dir,
+                    counters=counters,
+                    assets_by_digest=assets_by_digest,
+                    failure_reason=last_failure.reason,
+                )
+            )
+            continue
         fallback_remote_url = next(
             (
                 normalized
