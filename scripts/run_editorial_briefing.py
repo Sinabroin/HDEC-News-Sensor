@@ -33,13 +33,22 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import (collector, editorial_briefing_state, editorial_briefings, editorial_review, news_access, news_censor_verified_state, publisher_direct)  # noqa: E402
+from app import (collector, daily_publication, editorial_briefing_state, editorial_briefings, editorial_review, news_access, news_censor_verified_state, publisher_direct)  # noqa: E402
 from app import public_urls as public_url_contract  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
 RUNTIME_MANIFEST = "runtime-manifest.json"
 PUBLICATION_TIMEOUT_SECONDS = 300
 PUBLICATION_INTERVAL_SECONDS = 10
+
+# R4-R12 §6 step 10 — a Daily edition may be claimed and sent only after every
+# exact immutable resource (the dated reader page AND the content-addressed
+# edition manifest) publicly resolves and reconstructs. The machine-readable
+# skip reason is the shared contract constant; the earlier gates keep their own
+# more granular reasons and skip fail-closed before publish
+# (daily_editor_console_missing / daily_review_bundle_unavailable /
+# daily_editor_not_reconstructable / insufficient_quality).
+SKIP_PUBLIC_RESOURCE_VERIFICATION = daily_publication.SKIP_PUBLIC_RESOURCE
 
 
 class OrchestratorError(RuntimeError):
@@ -476,6 +485,7 @@ def run_live_preview(
         html_dir=output_dir,
         downloader=image_downloader,
         opener=image_opener,
+        daily=True,
     )
     edition = editorial_briefings.render_daily(
         articles, run_at=run_at, root_url=fixture_root
@@ -938,6 +948,56 @@ def poll_public_dated_page(
         sleeper(min(interval_seconds, max(0.0, deadline - time.monotonic())))
 
 
+def verify_public_edition_manifest_once(
+    url: str,
+    expected_edition_id: str,
+    *,
+    opener: Callable | None = None,
+) -> bool:
+    """True only when the public immutable edition manifest resolves (HTTP 200),
+    parses, reconstructs (``verify_daily_edition_manifest`` returns "") and
+    carries the exact expected edition id. Any deviation returns False so the
+    caller fails closed."""
+    if not editorial_briefings.valid_http_url(url) or not expected_edition_id:
+        return False
+    open_url = opener or urllib.request.urlopen
+    try:
+        response = open_url(url, timeout=15)
+        with response:
+            if _response_status(response) != 200:
+                return False
+            body = response.read(2_000_000).decode("utf-8", errors="replace")
+    except (OSError, TimeoutError, urllib.error.URLError, ValueError):
+        return False
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        return False
+    if editorial_briefings.verify_daily_edition_manifest(payload):
+        return False
+    return str(payload.get("edition_id") or "") == expected_edition_id
+
+
+def poll_public_edition_manifest(
+    url: str,
+    expected_edition_id: str,
+    *,
+    timeout_seconds: int = PUBLICATION_TIMEOUT_SECONDS,
+    interval_seconds: int = PUBLICATION_INTERVAL_SECONDS,
+    opener: Callable | None = None,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> bool:
+    if timeout_seconds < 0 or interval_seconds <= 0:
+        raise OrchestratorError("invalid polling configuration")
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        if verify_public_edition_manifest_once(url, expected_edition_id, opener=opener):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        sleeper(min(interval_seconds, max(0.0, deadline - time.monotonic())))
+
+
 def build_link_message(manifest: dict, from_address: str, recipient: str) -> EmailMessage:
     message = EmailMessage()
     prefix = "[HDEC AI Daily Brief]" if manifest["edition_type"] == "daily" else "[AI 경영 T&I]"
@@ -1009,6 +1069,83 @@ def _emit_claim_outputs(
     _github_output("send_authorized", str(send_authorized).lower())
     _github_output("edition", edition_key)
     _github_output("claim_owner", claim_owner)
+
+
+def run_verify_public(
+    edition_type: str,
+    *,
+    run_at: datetime,
+    runtime_dir: Path,
+    opener: Callable | None = None,
+    publication_timeout_seconds: int = PUBLICATION_TIMEOUT_SECONDS,
+    publication_interval_seconds: int = PUBLICATION_INTERVAL_SECONDS,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> bool:
+    """R4-R12 §6 step 10 — verify every exact immutable Daily resource publicly
+    resolves and reconstructs, strictly after the publication commit/push and
+    strictly before ``run_claim``.
+
+    For Daily this reconstructs both the dated reader page and the content
+    -addressed immutable edition manifest. Any failure emits the machine-readable
+    ``daily_public_resource_verification_failed`` skip reason and fails closed, so
+    the later claim/send workflow steps (gated on ``success()``) never run.
+    Reader-only delivery stays impossible: no verified manifest → no claim, and
+    ``run_send`` refuses to send without the durable claim."""
+    _require_production_gate()
+    key = editorial_briefings.edition_key(edition_type, run_at)
+    manifest = _load_runtime_manifest(runtime_dir, edition_type)
+    if manifest["edition_key"] != key:
+        raise OrchestratorError("runtime edition does not match current catch-up edition")
+    _verify_local_publication(manifest)
+    root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
+    dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
+    if manifest["public_dated_url"] != dated_url or manifest["public_latest_url"] != latest_url:
+        raise OrchestratorError("runtime public URL mismatch")
+
+    def _fail(reason: str) -> None:
+        _github_output("resources_verified", "false")
+        _github_output("skip_reason", reason)
+        print(
+            f"public_resource_skip edition_type={edition_type} edition={key} "
+            f"reason={reason}"
+        )
+        print(
+            "daily_reader_only_send_allowed="
+            + str(daily_publication.READER_ONLY_SEND_ALLOWED).lower()
+        )
+        raise OrchestratorError(reason)
+
+    if not poll_public_dated_page(
+        dated_url,
+        key,
+        timeout_seconds=publication_timeout_seconds,
+        interval_seconds=publication_interval_seconds,
+        opener=opener,
+        sleeper=sleeper,
+    ):
+        _fail(SKIP_PUBLIC_RESOURCE_VERIFICATION)
+    if edition_type == "daily":
+        edition_id = str(manifest.get("edition_id") or "")
+        manifest_url = public_url_contract.daily_edition_manifest_url(
+            edition_id, root_url=root_url
+        )
+        if not poll_public_edition_manifest(
+            manifest_url,
+            edition_id,
+            timeout_seconds=publication_timeout_seconds,
+            interval_seconds=publication_interval_seconds,
+            opener=opener,
+            sleeper=sleeper,
+        ):
+            _fail(SKIP_PUBLIC_RESOURCE_VERIFICATION)
+    _github_output("resources_verified", "true")
+    _github_output("edition", key)
+    print(
+        f"public_resources_verified edition_type={edition_type} edition={key} "
+        "dated_page=200 edition_manifest=reconstructed "
+        "smtp_attempts=0 teams_sends=0 telegram_calls=0 state_writes=0"
+    )
+    return True
 
 
 def run_claim(
@@ -1237,6 +1374,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--live-preview", action="store_true")
     mode.add_argument("--publish", action="store_true")
     mode.add_argument("--republish", action="store_true")
+    mode.add_argument("--verify-public", action="store_true")
     mode.add_argument("--claim", action="store_true")
     mode.add_argument("--send", action="store_true")
     parser.add_argument("--run-at", default="")
@@ -1281,6 +1419,12 @@ def main(argv: list[str] | None = None) -> int:
                 run_at=run_at,
                 runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),
                 republish=True,
+            )
+        elif args.verify_public:
+            run_verify_public(
+                args.edition_type,
+                run_at=run_at,
+                runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),
             )
         elif args.claim:
             run_claim(

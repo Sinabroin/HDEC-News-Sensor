@@ -125,6 +125,24 @@ jobs:
             fi
           done
 
+      - name: Verify public immutable Daily resources before claim
+        id: verify_public
+        if: success() && steps.publish.outputs.delivery_authorized == 'true'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          EDITORIAL_RUNTIME_DIR: ${{ runner.temp }}/editorial-daily
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          # R4-R12 §6 step 10 — the dated reader page AND the content-addressed
+          # immutable edition manifest must publicly resolve and reconstruct
+          # before the edition is claimed or sent. Failure fails the job closed
+          # (daily_public_resource_verification_failed); the claim/send steps
+          # below are gated on success() so they never run reader-only.
+          python3 scripts/run_editorial_briefing.py \
+            --edition-type daily \
+            --verify-public \
+            --runtime-dir "$EDITORIAL_RUNTIME_DIR"
+
       - name: Claim exact Daily edition after public verification
         id: claim
         if: success() && steps.publish.outputs.delivery_authorized == 'true'
