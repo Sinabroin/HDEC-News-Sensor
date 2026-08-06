@@ -190,6 +190,16 @@
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
     },
+    "84bce4f8ae1192ce": {
+      "cluster_key": "title:북부네이멍구에축구장20개크기ai데이터센터가동",
+      "delivery_id": "teams_ai_push:3d5b573895b4",
+      "first_sent_at": "2026-08-06T20:42:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "91bc09e4af664a07d22eb7c57289a65af0e020ad607cfd3bb03f49babe6382e8",
+      "sent_at": "2026-08-06T20:42:11+09:00",
+      "source": "연합뉴스"
+    },
     "84fd1439403ce4d1": {
       "cluster_key": "title:1조원ai인프라펀드우정사업본부산은이조성",
       "delivery_id": "teams_ai_push:01890a5e3d14",
@@ -1062,6 +1072,16 @@
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
     },
+    "title:북부네이멍구에축구장20개크기ai데이터센터가동": {
+      "cluster_key": "title:북부네이멍구에축구장20개크기ai데이터센터가동",
+      "delivery_id": "teams_ai_push:3d5b573895b4",
+      "first_sent_at": "2026-08-06T20:42:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "91bc09e4af664a07d22eb7c57289a65af0e020ad607cfd3bb03f49babe6382e8",
+      "sent_at": "2026-08-06T20:42:11+09:00",
+      "source": "연합뉴스"
+    },
     "title:빌게이츠내달방한목skhd현대와공급망확대논의전망": {
       "cluster_key": "title:빌게이츠내달방한목skhd현대와공급망확대논의전망",
       "delivery_id": "teams_ai_push:edec3cfb2964",
@@ -1505,7 +1525,7 @@
       "title_fingerprint": "제네시스홀딩스그룹충남500kw급태양광발전소인수"
     }
   },
-  "last_successful_send_at": "2026-08-06T18:23:26+09:00",
+  "last_successful_send_at": "2026-08-06T20:42:11+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2186,6 +2206,16 @@
       "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
+    },
+    "https://yna.co.kr/view/AKR20260806144700083": {
+      "cluster_key": "title:북부네이멍구에축구장20개크기ai데이터센터가동",
+      "delivery_id": "teams_ai_push:3d5b573895b4",
+      "first_sent_at": "2026-08-06T20:42:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "91bc09e4af664a07d22eb7c57289a65af0e020ad607cfd3bb03f49babe6382e8",
+      "sent_at": "2026-08-06T20:42:11+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -2558,6 +2588,16 @@
       "material_signature": "0c0872fcaf3fd347ed18f8290e3296ddf8e79a52c4e9360f1595083db541a98f",
       "sent_at": "2026-07-28T15:45:43+09:00",
       "source": "sidae.com"
+    },
+    "북부네이멍구에축구장20개크기ai데이터센터가동": {
+      "cluster_key": "title:북부네이멍구에축구장20개크기ai데이터센터가동",
+      "delivery_id": "teams_ai_push:3d5b573895b4",
+      "first_sent_at": "2026-08-06T20:42:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "91bc09e4af664a07d22eb7c57289a65af0e020ad607cfd3bb03f49babe6382e8",
+      "sent_at": "2026-08-06T20:42:11+09:00",
+      "source": "연합뉴스"
     },
     "빌게이츠내달방한목skhd현대와공급망확대논의전망": {
       "cluster_key": "title:빌게이츠내달방한목skhd현대와공급망확대논의전망",
