@@ -230,6 +230,7 @@ def main() -> int:
             articles,
             image_stage,
             html_dir=image_stage,
+            daily=True,
         )
 
     candidates = []
