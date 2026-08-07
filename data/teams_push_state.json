@@ -1600,6 +1600,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "lguai데이터센터에2조투자빚은안낸다"
     },
+    "https://sedaily.com/article/20077073": {
+      "article_id": "3432f5a38227f84d",
+      "cluster_key": "title:네이버ai팩토리내년부터수익창출",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T18:19:49+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T18:19:49+09:00",
+      "normalized_url": "https://sedaily.com/article/20077073",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "네이버ai팩토리내년부터수익창출"
+    },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
       "cluster_key": "title:제네시스홀딩스그룹충남500kw급태양광발전소인수",
