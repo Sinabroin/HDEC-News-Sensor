@@ -1460,6 +1460,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "삼성전자fms부스에사흘간2000명방문차세대ai메모리관심쏟아져"
     },
+    "https://dnews.co.kr/uhtml/view.jsp?idxno=202608071234257470191": {
+      "article_id": "e2ce3f525ef75af5",
+      "cluster_key": "title:네이버2분기매출역대최대3조3888억원ai탭1000만ai팩토리마진",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T12:43:10+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T12:43:10+09:00",
+      "normalized_url": "https://dnews.co.kr/uhtml/view.jsp?idxno=202608071234257470191",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "대한경제",
+      "source_tier": "specialist",
+      "title_fingerprint": "네이버2분기매출역대최대3조3888억원ai탭1000만ai팩토리마진"
+    },
     "https://etnews.com/20260806000330": {
       "article_id": "718834e62668084e",
       "cluster_key": "title:통신사ai토큰배울바크다",
@@ -1501,6 +1515,20 @@
       "source": "파이낸셜뉴스",
       "source_tier": "trusted_other",
       "title_fingerprint": "삼성운용반도체etf차별화엔비디아빼고cpu에투자"
+    },
+    "https://fnnews.com/news/202608071127528166": {
+      "article_id": "8b40106bbc8df777",
+      "cluster_key": "title:네이버2q최대매출엔비디아와ai인프라기업도약",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T12:43:10+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T12:43:10+09:00",
+      "normalized_url": "https://fnnews.com/news/202608071127528166",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "네이버2q최대매출엔비디아와ai인프라기업도약"
     },
     "https://hankookilbo.com/news/article/A2026080616160004110": {
       "article_id": "0d3c23bcd3e92c75",
