@@ -1488,6 +1488,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "통신사ai토큰배울바크다"
     },
+    "https://etnews.com/20260807000229": {
+      "article_id": "c06452c798b7a8e2",
+      "cluster_key": "title:2분기호실적낸기판업계ai훈풍하반기도잇는다",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T14:27:58+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T14:27:58+09:00",
+      "normalized_url": "https://etnews.com/20260807000229",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "미래를 보는 창 - 전자신문",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "2분기호실적낸기판업계ai훈풍하반기도잇는다"
+    },
     "https://fnnews.com/news/202608060946395174": {
       "article_id": "1f64909770943141",
       "cluster_key": "title:포항ai전용dc영광bess지역활성화투자프로젝트로선정",
