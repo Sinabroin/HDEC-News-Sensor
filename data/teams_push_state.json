@@ -1488,6 +1488,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "통신사ai토큰배울바크다"
     },
+    "https://etnews.com/20260807000124": {
+      "article_id": "58874d88c2f08a61",
+      "cluster_key": "title:엔비디아서6gai기지국파트너물색엣지ai시대",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T17:14:17+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T17:14:17+09:00",
+      "normalized_url": "https://etnews.com/20260807000124",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "미래를 보는 창 - 전자신문",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "엔비디아서6gai기지국파트너물색엣지ai시대"
+    },
     "https://etnews.com/20260807000229": {
       "article_id": "c06452c798b7a8e2",
       "cluster_key": "title:2분기호실적낸기판업계ai훈풍하반기도잇는다",
