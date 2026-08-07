@@ -1592,6 +1592,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "트럼프중국에ai패권안뺏긴다시진핑과정상회담서정면승부"
     },
+    "https://fnnews.com/news/202608080337015136": {
+      "article_id": "7926af4e77d6503b",
+      "cluster_key": "title:바이트댄스앤스로픽미토스급거대ai모델추진미국제친다",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T04:39:42+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T04:39:42+09:00",
+      "normalized_url": "https://fnnews.com/news/202608080337015136",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "바이트댄스앤스로픽미토스급거대ai모델추진미국제친다"
+    },
     "https://hankookilbo.com/news/article/A2026080616160004110": {
       "article_id": "0d3c23bcd3e92c75",
       "cluster_key": "title:통신망시스템에서인프라플랫폼으로ai체질개선나선기업",
@@ -1640,7 +1654,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-07T22:46:09+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-08T03:30:36+09:00",
+      "last_seen_at": "2026-08-08T04:39:42+09:00",
       "normalized_url": "https://newsis.com/view/NISX20260807_0003741156",
       "replaced_by_major_media": "",
       "representative_publisher": "",
