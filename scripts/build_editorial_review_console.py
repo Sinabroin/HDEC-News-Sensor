@@ -332,6 +332,27 @@ def main() -> int:
         "non_promoted_public_candidate_count": (
             selection_counters.non_promoted_public_candidate_count
         ),
+        # R4-R16 — primary-publisher discovery-lane counters, propagated verbatim
+        # from collection_audit. Discovery-only: selection, ranking, and
+        # publication eligibility above are unchanged.
+        "primary_publisher_queries_attempted": int(
+            collection_audit.get("primary_publisher_queries_attempted", 0) or 0
+        ),
+        "primary_publisher_queries_ok": int(
+            collection_audit.get("primary_publisher_queries_ok", 0) or 0
+        ),
+        "primary_publisher_articles_collected": int(
+            collection_audit.get("primary_publisher_articles_collected", 0) or 0
+        ),
+        "primary_10_articles_collected": int(
+            collection_audit.get("primary_10_articles_collected", 0) or 0
+        ),
+        "secondary_3_articles_collected": int(
+            collection_audit.get("secondary_3_articles_collected", 0) or 0
+        ),
+        "primary_publisher_lane_budget_exhausted": bool(
+            collection_audit.get("primary_publisher_lane_budget_exhausted", False)
+        ),
         "generated_at": generated_at,
         "edition_console": str(edition_dir / "index.html"),
         "latest_console": str(latest_dir / "index.html"),

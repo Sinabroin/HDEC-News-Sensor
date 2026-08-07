@@ -219,10 +219,35 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
             "queries_attempted": 0,
             "queries_ok": 0,
             "credentials_present": naver_credentials_present,
+            "primary_publisher_queries_attempted": 0,
+            "primary_publisher_queries_ok": 0,
+            "primary_publisher_articles_collected": 0,
+            "primary_10_articles_collected": 0,
+            "secondary_3_articles_collected": 0,
+            "primary_publisher_lane_budget_exhausted": False,
         }
     naver_status = str(naver_result.get("status") or "unknown")
     naver_requests = int(naver_result.get("queries_attempted") or 0)
     naver_queries_ok = int(naver_result.get("queries_ok") or 0)
+    # R4-R16 — non-secret primary-publisher discovery-lane counters.
+    primary_publisher_queries_attempted = int(
+        naver_result.get("primary_publisher_queries_attempted") or 0
+    )
+    primary_publisher_queries_ok = int(
+        naver_result.get("primary_publisher_queries_ok") or 0
+    )
+    primary_publisher_articles_collected = int(
+        naver_result.get("primary_publisher_articles_collected") or 0
+    )
+    primary_10_articles_collected = int(
+        naver_result.get("primary_10_articles_collected") or 0
+    )
+    secondary_3_articles_collected = int(
+        naver_result.get("secondary_3_articles_collected") or 0
+    )
+    primary_publisher_lane_budget_exhausted = bool(
+        naver_result.get("primary_publisher_lane_budget_exhausted")
+    )
     naver_credentials_present = bool(
         naver_result.get("credentials_present") or naver_credentials_present
     )
@@ -277,6 +302,14 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
         "publisher_direct_rss_articles_collected": len(direct_rows),
         "publisher_direct_eligible_count": len(combined),
         "publisher_direct_quarantine_count": len(quarantined),
+        "primary_publisher_queries_attempted": primary_publisher_queries_attempted,
+        "primary_publisher_queries_ok": primary_publisher_queries_ok,
+        "primary_publisher_articles_collected": primary_publisher_articles_collected,
+        "primary_10_articles_collected": primary_10_articles_collected,
+        "secondary_3_articles_collected": secondary_3_articles_collected,
+        "primary_publisher_lane_budget_exhausted": (
+            primary_publisher_lane_budget_exhausted
+        ),
         "final_portal_urls": 0,
     }
     return combined, audit
@@ -450,6 +483,12 @@ def run_live_preview(
         "naver_articles_collected": 0,
         "naver_originallinks_collected": 0,
         "google_news_articles_collected": 0,
+        "primary_publisher_queries_attempted": 0,
+        "primary_publisher_queries_ok": 0,
+        "primary_publisher_articles_collected": 0,
+        "primary_10_articles_collected": 0,
+        "secondary_3_articles_collected": 0,
+        "primary_publisher_lane_budget_exhausted": False,
     }
     if collect is collect_live_articles:
         raw_articles, collection_audit = collect_live_article_bundle()
