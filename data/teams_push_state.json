@@ -1506,7 +1506,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-08T07:01:01+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-08T07:54:49+09:00",
+      "last_seen_at": "2026-08-08T08:34:12+09:00",
       "normalized_url": "https://biz.heraldcorp.com/article/10834613",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -1569,6 +1569,20 @@
       "source": "미래를 보는 창 - 전자신문",
       "source_tier": "trusted_other",
       "title_fingerprint": "2분기호실적낸기판업계ai훈풍하반기도잇는다"
+    },
+    "https://etnews.com/20260808000003": {
+      "article_id": "64235a6468246c8c",
+      "cluster_key": "title:트럼프중국이ai가상자산추월하는꼴못봐내달시진핑과담판",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T08:34:12+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T08:34:12+09:00",
+      "normalized_url": "https://etnews.com/20260808000003",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "미래를 보는 창 - 전자신문",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "트럼프중국이ai가상자산추월하는꼴못봐내달시진핑과담판"
     },
     "https://fnnews.com/news/202608060946395174": {
       "article_id": "1f64909770943141",
@@ -1709,6 +1723,20 @@
       "source": "뉴시스",
       "source_tier": "trusted_other",
       "title_fingerprint": "트럼프데이터센터반대운동자금의혹시진핑과논의할것"
+    },
+    "https://sedaily.com/article/20077003": {
+      "article_id": "7a86b7754aa8ff61",
+      "cluster_key": "title:npu스타트업매출1000억시대오나",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T08:34:12+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T08:34:12+09:00",
+      "normalized_url": "https://sedaily.com/article/20077003",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "npu스타트업매출1000억시대오나"
     },
     "https://sedaily.com/article/20077073": {
       "article_id": "3432f5a38227f84d",
