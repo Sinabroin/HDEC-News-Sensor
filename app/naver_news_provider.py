@@ -45,6 +45,14 @@ STATUS_SKIPPED_MISSING_CREDENTIALS = "skipped_missing_credentials"
 STATUS_ACTIVE = "active"
 STATUS_ERROR = "error"
 
+# D7-AK-6E R4-R17 — non-secret discovery-lane marker. It records ONLY *how* a
+# row was found (which lane surfaced it), never *whether* it is qualified. The
+# marker is discovery provenance and must never be consumed as executive
+# qualification evidence downstream (see editorial_briefings; the Naver query
+# text — which contains a publisher name — is likewise never authority).
+DISCOVERY_LANE_GENERAL = "general"
+DISCOVERY_LANE_PRIMARY_PUBLISHER = "primary_publisher"
+
 # X(엑스) 계열은 Day-1 전체 금지 — 코드 트리 grep 규약에 걸리지 않게 조각으로 조립한다.
 _FORBIDDEN_HOST_TOKENS = ("".join(("twit", "ter.com")), "x.com", "t.co", "api.x")
 
@@ -176,6 +184,10 @@ def _normalize_item(item: dict, query: str, collected_at: str,
             "provider_response_id": url_hash[:16],
             "discovery_url": naver_link or url,
             "discovery_provider": "naver",
+            # Discovery provenance only — defaults to the general lane; the
+            # primary-publisher lane overrides accepted rows to
+            # DISCOVERY_LANE_PRIMARY_PUBLISHER. Never a qualification signal.
+            "discovery_lane": DISCOVERY_LANE_GENERAL,
             "publisher_url": direct_url,
             "publisher_domain": _host_of(direct_url),
             "publisher_direct": False,
@@ -190,6 +202,7 @@ def _normalize_item(item: dict, query: str, collected_at: str,
         },
         "discovery_url": naver_link or url,
         "discovery_provider": "naver",
+        "discovery_lane": DISCOVERY_LANE_GENERAL,
         "publisher_url": direct_url,
         "publisher_domain": _host_of(direct_url),
         "publisher_direct": False,
@@ -266,6 +279,20 @@ PRIMARY_PUBLISHER_MAX_TOPICS = 3
 def _dedup_key(url: str) -> str:
     """Canonical dedup key shared by both lanes (mirrors collector.make_url_hash)."""
     return (url or "").strip().lower().rstrip("/")
+
+
+def _mark_discovery_lane(row: dict, lane: str) -> dict:
+    """Stamp the discovery-lane provenance marker on a normalized row in place.
+
+    Records only *how* the row was surfaced (which lane), never *whether* it is
+    qualified. Mutates both the top-level field and the source_metadata mirror so
+    the audit layer can read it regardless of which it inspects.
+    """
+    row["discovery_lane"] = lane
+    metadata = row.get("source_metadata")
+    if isinstance(metadata, dict):
+        metadata["discovery_lane"] = lane
+    return row
 
 
 def primary_publisher_query_specs(
@@ -394,6 +421,11 @@ def _run_primary_publisher_lane(
             if key in seen_keys:
                 continue
             seen_keys.add(key)
+            # Discovery provenance only: this row was found via the bounded
+            # primary-publisher lane. It grants no qualification authority; the
+            # editorial layer even withholds the provider-query relevance boost
+            # from primary-publisher rows so the query text is never evidence.
+            _mark_discovery_lane(row, DISCOVERY_LANE_PRIMARY_PUBLISHER)
             results.append(row)
             per_query += 1
             stats["articles_collected"] += 1
