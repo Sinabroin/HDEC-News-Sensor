@@ -1627,6 +1627,20 @@
       "source": "세계일보",
       "source_tier": "trusted_other",
       "title_fingerprint": "제네시스홀딩스그룹충남500kw급태양광발전소인수"
+    },
+    "https://tjmbc.co.kr/NewsArticle/855562": {
+      "article_id": "08ee1281ae3ba615",
+      "cluster_key": "title:ai심장데이터센터사활거는이유는",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T21:12:46+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T21:12:46+09:00",
+      "normalized_url": "https://tjmbc.co.kr/NewsArticle/855562",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "대전MBC",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
   "last_successful_send_at": "2026-08-06T22:25:27+09:00",
