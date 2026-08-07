@@ -1500,6 +1500,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "삼성전자fms부스에사흘간2000명방문차세대ai메모리관심쏟아져"
     },
+    "https://biz.heraldcorp.com/article/10834613": {
+      "article_id": "00690929e245f392",
+      "cluster_key": "title:차세대hbm거론되는cxl엔비디아가확산걸림돌이라고칩칩팹팹",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T07:01:01+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T07:01:01+09:00",
+      "normalized_url": "https://biz.heraldcorp.com/article/10834613",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "헤럴드경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "차세대hbm거론되는cxl엔비디아가확산걸림돌이라고칩칩팹팹"
+    },
     "https://dnews.co.kr/uhtml/view.jsp?idxno=202608071234257470191": {
       "article_id": "e2ce3f525ef75af5",
       "cluster_key": "title:네이버2분기매출역대최대3조3888억원ai탭1000만ai팩토리마진",
@@ -1716,7 +1730,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-08T06:12:16+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-08T06:12:16+09:00",
+      "last_seen_at": "2026-08-08T07:01:01+09:00",
       "normalized_url": "https://sedaily.com/article/20077123",
       "replaced_by_major_media": "",
       "representative_publisher": "",
