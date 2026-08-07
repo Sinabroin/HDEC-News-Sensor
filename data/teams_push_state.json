@@ -1594,17 +1594,17 @@
     },
     "https://fnnews.com/news/202608080337015136": {
       "article_id": "7926af4e77d6503b",
-      "cluster_key": "title:바이트댄스앤스로픽미토스급거대ai모델추진미국제친다",
+      "cluster_key": "title:바이트댄스앤스로픽미토스급ai모델학습미국추월야",
       "fallback_eligible": false,
       "first_seen_at": "2026-08-08T04:39:42+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-08T04:39:42+09:00",
+      "last_seen_at": "2026-08-08T05:25:02+09:00",
       "normalized_url": "https://fnnews.com/news/202608080337015136",
       "replaced_by_major_media": "",
       "representative_publisher": "",
       "source": "파이낸셜뉴스",
       "source_tier": "trusted_other",
-      "title_fingerprint": "바이트댄스앤스로픽미토스급거대ai모델추진미국제친다"
+      "title_fingerprint": "바이트댄스앤스로픽미토스급ai모델학습미국추월야"
     },
     "https://hankookilbo.com/news/article/A2026080616160004110": {
       "article_id": "0d3c23bcd3e92c75",
@@ -1703,6 +1703,20 @@
       "source": "서울경제",
       "source_tier": "trusted_other",
       "title_fingerprint": "대통령해남청정에너지반도체ai움직이는힘지역활력이어"
+    },
+    "https://sedaily.com/article/20077169": {
+      "article_id": "53601445523ff05c",
+      "cluster_key": "title:트럼프ai가상화폐장악안돼다음달과논의",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T05:25:02+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T05:25:02+09:00",
+      "normalized_url": "https://sedaily.com/article/20077169",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "트럼프ai가상화폐장악안돼다음달과논의"
     },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
