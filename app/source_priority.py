@@ -132,6 +132,45 @@ def locked_publisher_names(tier: str) -> tuple[str, ...]:
     )
 
 
+_LOCKED_DOMAIN_MAP_TIERS = frozenset({"primary_10", "secondary_3"})
+
+
+def locked_publisher_domain_map(
+    tiers: Sequence[str] = ("primary_10", "secondary_3"),
+) -> dict[str, str]:
+    """Return ``{normalized domain: canonical publisher name}`` for the locked tiers.
+
+    ``data/source_priority_rules.json`` (via :func:`_publisher_delivery_policies`)
+    is the single source of truth: this reads the operator-locked primary-ten /
+    secondary-three policy and never a duplicated publisher list. Only the
+    ``primary_10`` and ``secondary_3`` tiers are addressable — any other tier is
+    rejected — and the result is a freshly built dict so a caller can never
+    mutate the cached policy through it. Requesting ``("primary_10",)`` yields
+    every domain of the ten primary publishers; requesting both tiers yields the
+    full thirteen-publisher policy.
+    """
+    requested = (tiers,) if isinstance(tiers, str) else tuple(tiers)
+    if not requested:
+        raise ValueError("at least one tier is required")
+    wanted: set[str] = set()
+    for tier in requested:
+        cleaned = _clean(tier)
+        if cleaned not in _LOCKED_DOMAIN_MAP_TIERS:
+            raise ValueError(f"unsupported tier: {tier!r}")
+        wanted.add(cleaned)
+    mapping: dict[str, str] = {}
+    for policy_tier, _rank, name, _aliases, domains in _publisher_delivery_policies():
+        if policy_tier not in wanted:
+            continue
+        for domain in domains:
+            normalized = _clean(domain).casefold()
+            if normalized.startswith("www."):
+                normalized = normalized[4:]
+            if normalized:
+                mapping[normalized] = name
+    return mapping
+
+
 def _delivery_source_key(source: str) -> str:
     return re.sub(
         r"\s+", "", unicodedata.normalize("NFKC", str(source or "")).casefold()

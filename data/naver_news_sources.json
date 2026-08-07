@@ -7,6 +7,18 @@
   "sort": "date",
   "max_per_query": 10,
   "max_total": 180,
+  "_primary_publisher_lane_note": "D7-AK-6E R4-R16 — 핵심 10개 언론사(primary_10) bounded discovery lane 설정. 언론사 이름·domain은 이 JSON에 복제하지 않고 app/source_priority.py의 canonical policy(data/source_priority_rules.json)에서만 파생한다. 이 lane은 general/topic lane과 독립된 별도 query/result budget을 쓰며, 코드가 max_queries≤30·max_per_query≤2·max_total≤40으로 하드 클램프한다.",
+  "primary_publisher_lane": {
+    "enabled": true,
+    "topics": [
+      "AI",
+      "AI 데이터센터",
+      "AI 투자"
+    ],
+    "max_queries": 30,
+    "max_per_query": 2,
+    "max_total": 40
+  },
   "queries": [
     "현대건설",
     "현대건설 수주",
