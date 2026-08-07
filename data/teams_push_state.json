@@ -1600,6 +1600,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "lguai데이터센터에2조투자빚은안낸다"
     },
+    "https://newsis.com/view/NISX20260807_0003741156": {
+      "article_id": "7d8ac6b242de3741",
+      "cluster_key": "title:이대통령해남청정에너지반도체클러스터움직이는힘지역소멸",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T22:46:09+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T22:46:09+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260807_0003741156",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "이대통령해남청정에너지반도체클러스터움직이는힘지역소멸"
+    },
     "https://sedaily.com/article/20077073": {
       "article_id": "3432f5a38227f84d",
       "cluster_key": "title:네이버ai팩토리내년부터수익창출",
@@ -1613,6 +1627,20 @@
       "source": "서울경제",
       "source_tier": "trusted_other",
       "title_fingerprint": "네이버ai팩토리내년부터수익창출"
+    },
+    "https://sedaily.com/article/20077151": {
+      "article_id": "2401afa4e58798af",
+      "cluster_key": "title:대통령해남청정에너지반도체ai움직이는힘지역활력이어",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-07T22:46:09+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-07T22:46:09+09:00",
+      "normalized_url": "https://sedaily.com/article/20077151",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "대통령해남청정에너지반도체ai움직이는힘지역활력이어"
     },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
