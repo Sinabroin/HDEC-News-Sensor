@@ -1912,6 +1912,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "강릉시장첫타운홀미팅피날레지역소통행보빛났다"
     },
+    "https://techm.kr/news/articleView.html?idxno=154076": {
+      "article_id": "fa0c5452ece020af",
+      "cluster_key": "title:38도폭염에도서늘한도심속nhn팩토리xgpu7656장쉴새",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-09T08:49:46+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-09T08:49:46+09:00",
+      "normalized_url": "https://techm.kr/news/articleView.html?idxno=154076",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "테크M",
+      "source_tier": "neutral",
+      "title_fingerprint": "38도폭염에도서늘한도심속nhn팩토리xgpu7656장쉴새"
+    },
     "https://tjmbc.co.kr/NewsArticle/855562": {
       "article_id": "08ee1281ae3ba615",
       "cluster_key": "title:ai심장데이터센터사활거는이유는",
