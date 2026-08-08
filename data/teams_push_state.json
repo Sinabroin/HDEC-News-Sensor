@@ -1701,8 +1701,8 @@
       "cluster_key": "title:한국판팔란티어꿈꾼다네이버가국방ai사업에진심인이유",
       "fallback_eligible": false,
       "first_seen_at": "2026-08-08T11:21:26+09:00",
-      "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-08T11:21:26+09:00",
+      "holdback_reason": "importance_not_top",
+      "last_seen_at": "2026-08-08T13:39:16+09:00",
       "normalized_url": "https://newsis.com/view/NISX20260805_0003737877",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -1765,6 +1765,20 @@
       "source": "서울경제",
       "source_tier": "trusted_other",
       "title_fingerprint": "npu스타트업매출1000억시대오나"
+    },
+    "https://sedaily.com/article/20077053": {
+      "article_id": "e6fa3e70eb97d5be",
+      "cluster_key": "title:건설한파에벼랑끝데크업계반도체ai데이터센터단비될까",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T13:39:16+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T13:39:16+09:00",
+      "normalized_url": "https://sedaily.com/article/20077053",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "건설한파에벼랑끝데크업계반도체ai데이터센터단비될까"
     },
     "https://sedaily.com/article/20077073": {
       "article_id": "3432f5a38227f84d",
