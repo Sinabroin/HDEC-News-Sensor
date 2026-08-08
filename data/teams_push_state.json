@@ -1458,6 +1458,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "포항ai데이터센터영광bess구축지역활성화투자펀드910호확정"
     },
+    "https://asiae.co.kr/article/2026080617250908231": {
+      "article_id": "d006dbd9f73c4cff",
+      "cluster_key": "title:차도옷도중국산ai도밀려나는유럽의위기",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T11:21:26+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T11:21:26+09:00",
+      "normalized_url": "https://asiae.co.kr/article/2026080617250908231",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "아시아경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "차도옷도중국산ai도밀려나는유럽의위기"
+    },
     "https://biz.heraldcorp.com/article/10832438": {
       "article_id": "73a59192bd9e8bf3",
       "cluster_key": "title:삼성전자fms어워드서핵심2개부문수상",
@@ -1682,6 +1696,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "제네시스홀딩스그룹충남태양광발전소인수추진"
     },
+    "https://newsis.com/view/NISX20260805_0003737877": {
+      "article_id": "261d8330dbfa66ec",
+      "cluster_key": "title:한국판팔란티어꿈꾼다네이버가국방ai사업에진심인이유",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T11:21:26+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T11:21:26+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260805_0003737877",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "한국판팔란티어꿈꾼다네이버가국방ai사업에진심인이유"
+    },
     "https://newsis.com/view/NISX20260806_0003739183": {
       "article_id": "2cd199e30d8f9565",
       "cluster_key": "title:lguai데이터센터에2조투자빚은안낸다",
@@ -1793,6 +1821,20 @@
       "source": "서울경제",
       "source_tier": "trusted_other",
       "title_fingerprint": "트럼프ai가상화폐장악안돼다음달과논의"
+    },
+    "https://sedaily.com/article/20077194": {
+      "article_id": "e946627405b13a2e",
+      "cluster_key": "title:베슬aigpu확보클라우드사업강화",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-08T11:21:26+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-08T11:21:26+09:00",
+      "normalized_url": "https://sedaily.com/article/20077194",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "베슬aigpu확보클라우드사업강화"
     },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
