@@ -876,7 +876,13 @@ if(!articleImportApiUrl){
 const EDITION_ID_RE=/^daily-(\d{4})-(\d{2})-(\d{2})-([0-9a-f]{16})$/;
 const SOURCE_TAG_RE=/^[a-z][a-z0-9_]{0,31}$/;
 const params=new URLSearchParams(window.location.search);
-if(![...params.keys()].length)return;
+// R4-R18 — deep-link intent is signalled ONLY by the identity params the Teams
+// editor URL mints (product + edition_id). A plain console decorated with
+// unknown/tracking query params (utm_source, v, foo, a bare source tag, …) is
+// NOT an editor deep link: open the plain console instead of failing closed.
+// Once either identity param is present the strict validation below still runs
+// unchanged (unsupported_product / malformed_edition_id / … all fail closed).
+if(!params.has("product")&&!params.has("edition_id"))return;
 const product=params.get("product")||"";
 const editionIdParam=params.get("edition_id")||"";
 const sourceRaw=params.get("source")||"";
