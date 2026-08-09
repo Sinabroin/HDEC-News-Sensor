@@ -1716,6 +1716,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "통신망시스템에서인프라플랫폼으로ai체질개선나선기업"
     },
+    "https://munhwa.com/article/11608171": {
+      "article_id": "1bdd4bdadac4a3fd",
+      "cluster_key": "title:생각지도못한ai데이터센터난제화재시보상은보험도감당",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-09T09:38:31+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-09T09:38:31+09:00",
+      "normalized_url": "https://munhwa.com/article/11608171",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "문화일보",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "생각지도못한ai데이터센터난제화재시보상은보험도감당"
+    },
     "https://mydaily.co.kr/page/view/2026080511065654526": {
       "article_id": "e53e7cd0458d44a6",
       "cluster_key": "title:제네시스홀딩스그룹충남태양광발전소인수추진",
