@@ -1608,6 +1608,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "차세대hbm거론되는cxl엔비디아가확산걸림돌이라고칩칩팹팹"
     },
+    "https://dnews.co.kr/uhtml/view.jsp?idxno=202608031546196040605": {
+      "article_id": "c30ee29da417555a",
+      "cluster_key": "title:2026대경스마트건설대상공모",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T06:48:52+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T06:48:52+09:00",
+      "normalized_url": "https://dnews.co.kr/uhtml/view.jsp?idxno=202608031546196040605",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "대한경제",
+      "source_tier": "specialist",
+      "title_fingerprint": "2026대경스마트건설대상공모"
+    },
     "https://dnews.co.kr/uhtml/view.jsp?idxno=202608071234257470191": {
       "article_id": "e2ce3f525ef75af5",
       "cluster_key": "title:네이버2분기매출역대최대3조3888억원ai탭1000만ai팩토리마진",
@@ -2090,7 +2104,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-09T18:07:47+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-10T04:53:43+09:00",
+      "last_seen_at": "2026-08-10T06:48:52+09:00",
       "normalized_url": "https://segye.com/newsView/20260809506980",
       "replaced_by_major_media": "",
       "representative_publisher": "",
