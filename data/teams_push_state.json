@@ -1712,7 +1712,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-10T04:14:01+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-10T04:14:01+09:00",
+      "last_seen_at": "2026-08-10T04:53:43+09:00",
       "normalized_url": "https://etnews.com/20260810000024",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -1803,6 +1803,20 @@
       "source": "파이낸셜뉴스",
       "source_tier": "trusted_other",
       "title_fingerprint": "제주남는재생에너지로ai돌린다40mw그린데이터센터승부수"
+    },
+    "https://hankookilbo.com/news/article/A2026072912000003603": {
+      "article_id": "3d5c782b9fdd850f",
+      "cluster_key": "title:고연봉아빠뒤엔독박육아대만반도체신화그늘들여",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T04:53:43+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T04:53:43+09:00",
+      "normalized_url": "https://hankookilbo.com/news/article/A2026072912000003603",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "한국일보",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "고연봉아빠뒤엔독박육아대만반도체신화그늘들여"
     },
     "https://hankookilbo.com/news/article/A2026080616160004110": {
       "article_id": "0d3c23bcd3e92c75",
@@ -2034,7 +2048,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-09T18:07:47+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-10T02:46:51+09:00",
+      "last_seen_at": "2026-08-10T04:53:43+09:00",
       "normalized_url": "https://segye.com/newsView/20260809506980",
       "replaced_by_major_media": "",
       "representative_publisher": "",
