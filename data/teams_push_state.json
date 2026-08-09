@@ -2098,6 +2098,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "엔비디아전력업체에4조원투자ai인프라확보에주목"
     },
+    "https://segye.com/newsView/20260809511970": {
+      "article_id": "84f9dc01d6abc29e",
+      "cluster_key": "title:네이버카카오ai수익화잰걸음",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T06:08:33+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T06:08:33+09:00",
+      "normalized_url": "https://segye.com/newsView/20260809511970",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "세계일보",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "네이버카카오ai수익화잰걸음"
+    },
     "https://segye.com/newsView/20260809514523": {
       "article_id": "74bef4c79c52ef99",
       "cluster_key": "title:포스코퓨처엠드디어lfp시장뚫었다배터리사와대규모장기공급",
