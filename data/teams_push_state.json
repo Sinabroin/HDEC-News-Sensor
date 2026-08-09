@@ -1706,6 +1706,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "광주시3만호ai도시30만m2첨단산단조성검토"
     },
+    "https://etnews.com/20260810000024": {
+      "article_id": "958796d46d0c4384",
+      "cluster_key": "title:경기도의회국힘ai반도체정책전환필요성제기",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T04:14:01+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T04:14:01+09:00",
+      "normalized_url": "https://etnews.com/20260810000024",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "미래를 보는 창 - 전자신문",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "경기도의회국힘ai반도체정책전환필요성제기"
+    },
     "https://fnnews.com/news/202608060946395174": {
       "article_id": "1f64909770943141",
       "cluster_key": "title:포항ai전용dc영광bess지역활성화투자프로젝트로선정",
