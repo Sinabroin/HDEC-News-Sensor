@@ -330,6 +330,16 @@
       "sent_at": "2026-08-05T18:14:03+09:00",
       "source": "퍼블릭뉴스통신(Public news-network for TTL)"
     },
+    "caba2288402c444f": {
+      "cluster_key": "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화",
+      "delivery_id": "teams_ai_push:947023cba38c",
+      "first_sent_at": "2026-08-09T11:53:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fab405b8d9b972ba08cc163b80168897baefffbf53b6665e33c8a6350c2b8224",
+      "sent_at": "2026-08-09T11:53:41+09:00",
+      "source": "IT조선"
+    },
     "ce4967d2f47ff405": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
       "delivery_id": "teams_ai_push:6f167df94e8c",
@@ -811,6 +821,16 @@
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
+    },
+    "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화": {
+      "cluster_key": "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화",
+      "delivery_id": "teams_ai_push:947023cba38c",
+      "first_sent_at": "2026-08-09T11:53:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fab405b8d9b972ba08cc163b80168897baefffbf53b6665e33c8a6350c2b8224",
+      "sent_at": "2026-08-09T11:53:41+09:00",
+      "source": "IT조선"
     },
     "title:ai인프라디벨로퍼뉴마이웨이개척자": {
       "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
@@ -1702,6 +1722,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "바이트댄스앤스로픽미토스급ai모델학습미국추월야"
     },
+    "https://fnnews.com/news/202608091110367088": {
+      "article_id": "fbc7086a656c881d",
+      "cluster_key": "title:제주남는재생에너지로ai돌린다40mw그린데이터센터승부수",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-09T11:53:37+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-09T11:53:37+09:00",
+      "normalized_url": "https://fnnews.com/news/202608091110367088",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "제주남는재생에너지로ai돌린다40mw그린데이터센터승부수"
+    },
     "https://hankookilbo.com/news/article/A2026080616160004110": {
       "article_id": "0d3c23bcd3e92c75",
       "cluster_key": "title:통신망시스템에서인프라플랫폼으로ai체질개선나선기업",
@@ -1955,7 +1989,7 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_successful_send_at": "2026-08-09T03:56:49+09:00",
+  "last_successful_send_at": "2026-08-09T11:53:41+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2086,6 +2120,16 @@
       "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
+    },
+    "https://it.chosun.com/news/articleView.html?idxno=2023092167599": {
+      "cluster_key": "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화",
+      "delivery_id": "teams_ai_push:947023cba38c",
+      "first_sent_at": "2026-08-09T11:53:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fab405b8d9b972ba08cc163b80168897baefffbf53b6665e33c8a6350c2b8224",
+      "sent_at": "2026-08-09T11:53:41+09:00",
+      "source": "IT조선"
     },
     "https://khan.co.kr/article/202608080600031": {
       "cluster_key": "title:노트북새로사도고쳐써도비싸다ai발반도체값상승영향경제뭔",
@@ -2758,6 +2802,16 @@
       "material_signature": "c99b3cf94baec4d3b8d42ddb3f1aca7ec7cbf923aacce91f9616351223c71fd0",
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
+    },
+    "ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화": {
+      "cluster_key": "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화",
+      "delivery_id": "teams_ai_push:947023cba38c",
+      "first_sent_at": "2026-08-09T11:53:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fab405b8d9b972ba08cc163b80168897baefffbf53b6665e33c8a6350c2b8224",
+      "sent_at": "2026-08-09T11:53:41+09:00",
+      "source": "IT조선"
     },
     "ai인프라디벨로퍼뉴마이웨이개척자": {
       "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
