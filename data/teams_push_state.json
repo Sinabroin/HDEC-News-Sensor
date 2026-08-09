@@ -1692,6 +1692,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "트럼프중국이ai가상자산추월하는꼴못봐내달시진핑과담판"
     },
+    "https://etnews.com/20260810000021": {
+      "article_id": "0c08258ef227e0cd",
+      "cluster_key": "title:광주시3만호ai도시30만m2첨단산단조성검토",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T03:19:52+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T03:19:52+09:00",
+      "normalized_url": "https://etnews.com/20260810000021",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "미래를 보는 창 - 전자신문",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "광주시3만호ai도시30만m2첨단산단조성검토"
+    },
     "https://fnnews.com/news/202608060946395174": {
       "article_id": "1f64909770943141",
       "cluster_key": "title:포항ai전용dc영광bess지역활성화투자프로젝트로선정",
