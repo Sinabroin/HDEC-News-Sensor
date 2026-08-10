@@ -2320,6 +2320,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "포스코퓨처엠드디어lfp시장뚫었다배터리사와대규모장기공급"
     },
+    "https://segye.com/newsView/20260810518652": {
+      "article_id": "7d402911130bf0db",
+      "cluster_key": "title:gs건설ls일렉ai데이터센터사업공조",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T06:57:32+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T06:57:32+09:00",
+      "normalized_url": "https://segye.com/newsView/20260810518652",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "세계일보",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "gs건설ls일렉ai데이터센터사업공조"
+    },
     "https://techm.kr/news/articleView.html?idxno=154076": {
       "article_id": "fa0c5452ece020af",
       "cluster_key": "title:38도폭염에도서늘한도심속nhn팩토리xgpu7656장쉴새",
