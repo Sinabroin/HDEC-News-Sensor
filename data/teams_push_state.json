@@ -2048,6 +2048,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "로봇도옷입는다반도체다음주도주로전자피부뜨나"
     },
+    "https://newsis.com/view/NISX20260811_0003743599": {
+      "article_id": "ebed65ebcedeea7c",
+      "cluster_key": "title:메타ai모델개방확대저커버그개인에더많은권한",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T02:14:49+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T02:14:49+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260811_0003743599",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "메타ai모델개방확대저커버그개인에더많은권한"
+    },
     "https://sedaily.com/article/20077003": {
       "article_id": "7a86b7754aa8ff61",
       "cluster_key": "title:npu스타트업매출1000억시대오나",
