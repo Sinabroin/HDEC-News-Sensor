@@ -40,6 +40,7 @@ from app import (
     ai_centrality,
     config,
     editorial_preference_runtime,
+    executive_materiality,
     news_access,
     news_coverage,
     public_institution_routing,
@@ -1517,38 +1518,17 @@ def _weak_content_reason(title: str, summary: str) -> str:
     return ""
 
 
-_MATERIAL_ACTION_TERMS = (
-    "체결", "확정", "수주", "선정", "승인", "착공", "준공", "인수", "합병",
-    "발주", "계약", "출자", "증설", "가동", "타결", "발효", "시행",
-)
-_MATERIAL_SCALE_RE = re.compile(
-    r"[0-9][0-9,.]*\s*(?:조|억|천억|백억|만)\s*(?:원|달러)|[0-9][0-9,.]*\s*(?:GW|MW|기가와트|메가와트)"
-)
-_MATERIAL_RISK_TERMS = (
-    "중대재해", "붕괴", "제재", "소송", "규제", "행정처분", "영업정지", "리콜",
-)
+# R4-OPS-2 — the material-event vocabulary and scorer now live in the shared
+# app.executive_materiality leaf so the Daily editorial gate and the real-time
+# Teams AI News Watch judge send-eligibility materiality by one rule (no drift).
+# The private module names are preserved as aliases for every existing caller.
+_MATERIAL_ACTION_TERMS = executive_materiality.MATERIAL_ACTION_TERMS
+_MATERIAL_SCALE_RE = executive_materiality.MATERIAL_SCALE_RE
+_MATERIAL_RISK_TERMS = executive_materiality.MATERIAL_RISK_TERMS
+_materiality_score = executive_materiality.materiality_score
 
 
-def _materiality_score(title: str, summary: str) -> tuple[float, tuple[str, ...]]:
-    """§11 factor 2 — confirmed action, concrete scale, or material risk."""
-    text = f"{title} {summary}"
-    score = 0.0
-    reasons: list[str] = []
-    action = next((term for term in _MATERIAL_ACTION_TERMS if term in text), "")
-    if action:
-        score += 1.0
-        reasons.append(f"confirmed_action:{action}")
-    if _MATERIAL_SCALE_RE.search(text):
-        score += 0.5
-        reasons.append("concrete_scale_figure")
-    risk = next((term for term in _MATERIAL_RISK_TERMS if term in text), "")
-    if risk:
-        score += 0.5
-        reasons.append(f"material_risk:{risk}")
-    return round(min(score, 2.0), 3), tuple(reasons)
-
-
-_HDEC_DIRECT_TERMS = ("현대건설", "현대엔지니어링", "힐스테이트", "디에이치")
+_HDEC_DIRECT_TERMS = executive_materiality.HDEC_DIRECT_TERMS
 _HDEC_STRATEGIC_TERMS = (
     "AI 데이터센터", "데이터센터", "SMR", "소형모듈원전", "원전", "스마트건설",
     "BIM", "디지털 트윈", "건설로봇", "해외수주", "전력 인프라", "송전", "변전",
@@ -1573,54 +1553,14 @@ _HDEC_STRATEGIC_TERMS = (
 # therefore cannot be rescued by search-query metadata, regardless of lane.
 # ---------------------------------------------------------------------------
 
-# Strategic HDEC infrastructure domains (physical/industrial layer HDEC builds
-# or operates). Mirrors ai_centrality._ENABLING_INFRA_TERMS in spirit.
-_EXEC_STRATEGIC_DOMAIN_TERMS: tuple[str, ...] = (
-    "데이터센터", "데이터 센터", "datacenter", "data center", "idc",
-    "전력망", "전력 인프라", "전력인프라", "송전", "변전", "송배전", "발전소",
-    "원전", "원자력", "smr", "소형모듈원전", "소형모듈원자로", "그리드",
-    "냉각", "용수", "전기자재",
-    "스마트건설", "스마트 건설", "bim", "디지털 트윈", "digital twin",
-    "건설로봇", "건설 로봇", "건설 자동화", "시공 자동화",
-)
-
-# Actual impact / constraint signals — the material consequence that turns a
-# bare strategic-domain noun into an executive-relevant story. A domain noun
-# alone is never enough.
-_EXEC_IMPACT_SIGNAL_TERMS: tuple[str, ...] = (
-    # power demand / capacity
-    "전력 수요", "전력수요", "수요 급증", "수요 폭증", "전력 부족", "용량 부족",
-    "전력 확보", "전력난",
-    # grid constraint / bottleneck
-    "계통 제약", "계통 포화", "병목", "제약", "포화",
-    # shortage / supply constraint
-    "부족", "공급난", "품귀", "수급", "조달 차질", "공급 차질",
-    # expansion / siting / permitting
-    "증설", "확충", "부지", "입지", "인허가", "인허가 지연", "허가 지연",
-    # local opposition
-    "반대", "반발", "민원", "주민 반발", "갈등", "저항", "논란",
-    # delay / cost
-    "지연", "차질", "중단", "비용 급등", "원가 부담", "비용 부담",
-    # cooling / water requirement
-    "냉각", "용수", "물 부족",
-    # regulation entering the picture
-    "규제", "의무화", "가이드라인",
-)
-
-# Material AI security / risk incidents (factual central AI incident).
-_EXEC_AI_SECURITY_TERMS: tuple[str, ...] = (
-    "해킹", "침해", "유출", "탈취", "취약점", "익스플로잇", "악용", "랜섬웨어",
-    "딥페이크", "위조", "사칭", "금지", "차단", "제재", "단속", "처분",
-    "리콜", "안전사고", "오작동", "장애 사태",
-)
-
-
-@dataclass(frozen=True)
-class _ExecutiveQualification:
-    """Deterministic Executive Qualification Gate verdict for one candidate."""
-
-    qualified: bool
-    reason: str
+# R4-OPS-2 — the strategic-domain / impact / AI-security vocabularies and the
+# gate verdict type now live in the shared app.executive_materiality leaf so the
+# Daily gate below and the real-time Teams Watch share one materiality contract.
+# Private names are preserved as aliases for any in-module reference.
+_EXEC_STRATEGIC_DOMAIN_TERMS = executive_materiality.EXEC_STRATEGIC_DOMAIN_TERMS
+_EXEC_IMPACT_SIGNAL_TERMS = executive_materiality.EXEC_IMPACT_SIGNAL_TERMS
+_EXEC_AI_SECURITY_TERMS = executive_materiality.EXEC_AI_SECURITY_TERMS
+_ExecutiveQualification = executive_materiality.ExecutiveQualification
 
 
 def _executive_evidence(candidate: "_ArticleCandidate") -> dict:
@@ -1649,61 +1589,14 @@ def _executive_qualification(
     corporate/industrial event, AI security incident, or a strategic HDEC
     infrastructure domain paired with an actual impact/constraint signal).
     Opinion-labelled pieces require a hard factual signal (1/2/3/5) and never
-    qualify on a strategic-domain+impact pairing alone."""
-    evidence = _executive_evidence(candidate)
-    title = ai_centrality.article_title(evidence)
-    subtitle = ai_centrality.article_subtitle(evidence)
-    lead = ai_centrality.article_lead_sentence(evidence)  # factual, lowercased
-    zone = " ".join(
-        part for part in (title.lower(), subtitle.lower(), lead) if part
-    )
-    opinion = ai_centrality.opinion_labeled(evidence)
+    qualify on a strategic-domain+impact pairing alone.
 
-    # Signal 1 — structural AI causal event (canonical leaf, title+lead only).
-    event_class, _terms = ai_centrality.structural_ai_causal_event(evidence)
-    if event_class:
-        return _ExecutiveQualification(True, f"structural_ai_event:{event_class}")
-
-    # Signal 3 — HDEC-direct AI event (highest executive priority).
-    hdec_hit = next(
-        (term for term in _HDEC_DIRECT_TERMS
-         if term in title or term in subtitle or term in lead),
-        "",
-    )
-    if hdec_hit:
-        return _ExecutiveQualification(True, f"hdec_direct_ai:{hdec_hit}")
-
-    # Signal 2 — material corporate/industrial event (confirmed action, concrete
-    # KRW/USD or MW/GW scale, or material risk) proven from title + factual lead.
-    _mscore, mreasons = _materiality_score(title, lead)
-    if mreasons:
-        return _ExecutiveQualification(True, f"material_event:{mreasons[0]}")
-
-    # Signal 5 — material AI security / risk incident.
-    security_hit = next((term for term in _EXEC_AI_SECURITY_TERMS if term in zone), "")
-    if security_hit:
-        return _ExecutiveQualification(True, f"ai_security_event:{security_hit}")
-
-    # Signal 4 — strategic HDEC infrastructure domain WITH an actual impact /
-    # constraint signal. A bare strategic-domain noun is not enough, and an
-    # opinion piece never qualifies on this pairing alone.
-    if not opinion:
-        domain_hit = next(
-            (term for term in _EXEC_STRATEGIC_DOMAIN_TERMS if term in zone), ""
-        )
-        impact_hit = next(
-            (term for term in _EXEC_IMPACT_SIGNAL_TERMS if term in zone), ""
-        )
-        if domain_hit and impact_hit:
-            return _ExecutiveQualification(
-                True, f"strategic_infra_impact:{domain_hit}->{impact_hit}"
-            )
-
-    return _ExecutiveQualification(
-        False,
-        "opinion_without_hard_material_signal"
-        if opinion
-        else "no_material_executive_signal",
+    R4-OPS-2 — the five-signal decision now lives in the shared
+    app.executive_materiality leaf (single source of truth for Daily and the
+    real-time Teams Watch); this wrapper only builds the allowed evidence
+    (title / subtitle / factual snippet) from the candidate and delegates."""
+    return executive_materiality.executive_qualification(
+        _executive_evidence(candidate)
     )
 
 
