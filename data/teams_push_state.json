@@ -10,6 +10,16 @@
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
     },
+    "0b23a184e967af18": {
+      "cluster_key": "title:배재규방향과시간에투자한투운용전략산업etf출시",
+      "delivery_id": "teams_ai_push:ec619304f7a9",
+      "first_sent_at": "2026-08-10T13:18:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "433bf10ec6ff960e68d57d7aa1f80598a19276d88d3934c9aff5955288c98c32",
+      "sent_at": "2026-08-10T13:18:59+09:00",
+      "source": "연합뉴스"
+    },
     "0e948b03d2ed7816": {
       "cluster_key": "title:ai인프라에주목하는엔비디아전력업체랜시엄에4조원투자",
       "delivery_id": "teams_ai_push:47f0f79edf16",
@@ -1192,6 +1202,16 @@
       "sent_at": "2026-07-28T13:20:48+09:00",
       "source": "cbci.co.kr"
     },
+    "title:배재규방향과시간에투자한투운용전략산업etf출시": {
+      "cluster_key": "title:배재규방향과시간에투자한투운용전략산업etf출시",
+      "delivery_id": "teams_ai_push:ec619304f7a9",
+      "first_sent_at": "2026-08-10T13:18:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "433bf10ec6ff960e68d57d7aa1f80598a19276d88d3934c9aff5955288c98c32",
+      "sent_at": "2026-08-10T13:18:59+09:00",
+      "source": "연합뉴스"
+    },
     "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
       "delivery_id": "teams_ai_push:755189289545",
@@ -2211,7 +2231,7 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_successful_send_at": "2026-08-09T16:28:29+09:00",
+  "last_successful_send_at": "2026-08-10T13:18:59+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2972,6 +2992,16 @@
       "material_signature": "4ded41a34695b97369675c436be639c768b558b2f179a5b0d6b4a8a48d82dbc3",
       "sent_at": "2026-08-09T03:56:49+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260810075000008": {
+      "cluster_key": "title:배재규방향과시간에투자한투운용전략산업etf출시",
+      "delivery_id": "teams_ai_push:ec619304f7a9",
+      "first_sent_at": "2026-08-10T13:18:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "433bf10ec6ff960e68d57d7aa1f80598a19276d88d3934c9aff5955288c98c32",
+      "sent_at": "2026-08-10T13:18:59+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -3394,6 +3424,16 @@
       "material_signature": "d144abc68134a3cbc1c0216fbaefb52ca92c8984bfe266d1998277e09e757f18",
       "sent_at": "2026-07-28T13:20:48+09:00",
       "source": "cbci.co.kr"
+    },
+    "배재규방향과시간에투자한투운용전략산업etf출시": {
+      "cluster_key": "title:배재규방향과시간에투자한투운용전략산업etf출시",
+      "delivery_id": "teams_ai_push:ec619304f7a9",
+      "first_sent_at": "2026-08-10T13:18:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "433bf10ec6ff960e68d57d7aa1f80598a19276d88d3934c9aff5955288c98c32",
+      "sent_at": "2026-08-10T13:18:59+09:00",
+      "source": "연합뉴스"
     },
     "변동성증시의식했나대우건설실적발표연기빅배스효과기대": {
       "cluster_key": "title:변동성증시의식했나대우건설실적발표연기빅배스효과기대",
