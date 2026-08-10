@@ -38,6 +38,12 @@ Product context to preserve:
 - Calibration Actions run `31398204844` succeeded with `candidate_count=0`, `qualified_candidates=0`, and zero sends/state writes.
 - The public Editor reports article import API unconfigured; this is separate from live news collection.
 - The stale Naver adapter verifier was reproduced against origin/main and minimally repaired on this branch by allowing and asserting the intentional `discovery_lane` provenance contract; provider and selection semantics were not changed.
+- A network-free calibration audit CLI now proves the exact 2026-08-11 funnel `548 provider rows → 35 eligible raw rows → 10 in-window/relevance rows → 2 AI-central → 2 materiality rejects → 0` and reports title-only evidence without guessing omitted leads.
+- Five Watch-held rows already known before the calibration generation time were absent from its raw inventory, including the LS Electric–GS E&C AI data-center partnership and HD Hyundai's KRW 956B data-center generator order. This is a documented Editor recall/supply seam; do not auto-promote sources or loosen policy.
+- Latest Watch #278 was live healthy but selected/sent zero; its six policy-eligible rows were all non-primary, with five source-gate rejections and one specialist hold.
+- Scheduled refresh remains red on main solely because the old Naver verifier is still deployed. The branch fix needs review/merge and a later natural schedule for production proof.
+- Last Daily success is 2026-08-06 08:06 KST. Exact-Editor CTA code was not in that run's ancestry, so first non-empty post-R4-R21 Daily → Teams → exact Editor proof remains operator work.
+- Article import remains fail-closed: the authenticated FastAPI route exists, but no HTTPS deployment/Editor build URL wiring is configured.
 - Do not auto-tune publisher tiers, executive-materiality thresholds, AI centrality, stock/ETF exclusions, specialist send policy, or Teams volume. Those require operator review.
 
 Safe autonomous scope:
@@ -62,7 +68,7 @@ MAIN_MERGES=0
 
 Never merge to main, send to production, dispatch a mutating/sending workflow, alter variables/secrets, directly edit production ledgers, rebase, or force push. Record any such next step as `REQUIRES_OPERATOR_APPROVAL=true` and continue other safe work.
 
-Primary remaining objectives are to audit the latest post-PR #39 Watch scheduled funnel and most relevant rejected rows; reconstruct the 2026-08-11 Editor calibration funnel and near misses; audit the import API and Daily exact-dated CTA/E2E state; reproduce and, only if objectively stale, minimally fix the Naver `discovery_lane` verifier contract; add a network-free rejection diagnostic only if existing tooling is insufficient; run all relevant offline verifiers; integrate fresh origin/main if needed; then update/push the same Draft PR and final handoff.
+The evidence audit, Naver verifier repair, and network-free rejection diagnostic are complete. Read the current handoff's human article classifications and blockers, then continue its `NEXT_SINGLE_ACTION`: run the full relevant offline verifier matrix, compare any failure with clean origin/main, integrate fresh origin/main only if needed and conflict-free, finalize the same Draft PR and handoff, and push a final remote seal.
 
 To start Codex from this file after the bootstrap commands, use the CLI form verified from `codex exec --help`:
 
