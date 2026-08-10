@@ -325,15 +325,23 @@ def main() -> int:
             collection_audit=collection_audit,
             selection_audit=selection_counters.manifest_fields(),
         )
-    if not articles:
-        raise SystemExit("no candidate articles in Daily coverage")
+    # R4-R21 — zero qualifying candidates on a thin news day is an HONEST EMPTY
+    # EDITION, not a build failure. The empty bundle, manifest, and console are
+    # produced below with candidate_count=0; the pipeline never pads a count.
+    # Publication and send paths gate on candidate_count and therefore skip an
+    # empty edition (no Daily mail / Teams / Telegram / production-state write).
+    empty_edition = not articles
 
     image_stage_handle = tempfile.TemporaryDirectory(
         prefix="editorial-review-images-",
         dir="/tmp",
     )
     image_stage = Path(image_stage_handle.name)
-    if args.fixture:
+    if empty_edition:
+        # No article images to resolve; skip image materialization entirely so
+        # the empty path stays network-free.
+        image_counters = editorial_briefings.ImageMaterializationCounters()
+    elif args.fixture:
         articles, image_counters = fixture_preview_images(articles, image_stage)
     else:
         articles, image_counters = editorial_briefings.materialize_preview_images(
@@ -493,7 +501,11 @@ def main() -> int:
     print("production_state_writes=0")
     print(f"article_import_api_configured={str(bool(article_import_api_url)).lower()}")
     print(f"image_assets_materialized={image_counters.image_assets_materialized}")
-    print("RESULT=D7-AK-6E-R3_REVIEW_CONSOLE_BUILD_PASS")
+    print(f"empty_edition={'true' if empty_edition else 'false'}")
+    if empty_edition:
+        print("RESULT=SUCCESS_EMPTY_EDITION")
+    else:
+        print("RESULT=D7-AK-6E-R3_REVIEW_CONSOLE_BUILD_PASS")
     return 0
 
 

@@ -436,7 +436,7 @@ function renderCandidates(){
     return true;
   });
   const root=document.getElementById("candidateList");
-  root.innerHTML=rows.map(candidateCard).join("");
+  root.innerHTML=rows.length?rows.map(candidateCard).join(""):(allCandidates().length===0?'<div class="sector-empty">현재 기준을 충족한 임원용 AI 뉴스가 없습니다.</div>':'<div class="sector-empty">현재 검색·필터 조건에 맞는 기사가 없습니다.</div>');
   root.querySelectorAll(".candidate").forEach(card=>{
     const id=card.dataset.id;
     card.addEventListener("dragstart",event=>{

@@ -548,7 +548,11 @@ def write_bundle(
     generated_at: str,
 ) -> dict[str, Any]:
     ids = [str(item.get("candidate_id") or "") for item in candidates]
-    if not candidates or any(not item for item in ids) or len(ids) != len(set(ids)):
+    # R4-R21 — an honest empty edition (zero qualifying candidates on a thin
+    # news day) is a valid bundle, not a failure: candidate_count=0 with an
+    # empty candidates list. Non-empty candidates still require unique,
+    # non-empty ids.
+    if any(not item for item in ids) or len(ids) != len(set(ids)):
         raise EditorialReviewError("candidate IDs must be non-empty and unique")
     payload = {
         "version": BUNDLE_VERSION,
