@@ -2,6 +2,12 @@ name: Editorial Review Console
 
 on:
   workflow_dispatch:
+    inputs:
+      calibration_only:
+        description: "Run live editorial calibration to workflow artifact only; no review publication"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "20 22 * * *"
 
@@ -34,16 +40,54 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Resolve calibration output root
+        id: mode
+        env:
+          CALIBRATION_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
+        run: |
+          if [ "${CALIBRATION_ONLY}" = "true" ]; then
+            resolved="${RUNNER_TEMP}/editorial-review-calibration"
+          else
+            resolved="docs/editorial/review"
+          fi
+          echo "output_root=${resolved}" >> "$GITHUB_OUTPUT"
+          echo "Resolved calibration_only=${CALIBRATION_ONLY}; output_root=${resolved}"
       - name: Build Daily Editorial Review Console
+        env:
+          OUTPUT_ROOT: ${{ steps.mode.outputs.output_root }}
         run: |
           python3 scripts/build_editorial_review_console.py \
-            --output-root docs/editorial/review \
+            --output-root "$OUTPUT_ROOT" \
             --candidate-limit 24
       - name: Verify no sender or production state mutation
         run: |
           python3 scripts/verify_editorial_review_console.py
           git diff --exit-code -- data/editorial_daily_state.json data/teams_push_state.json
+      - name: Assert calibration writes no tracked docs or production state
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
+        run: |
+          protected="docs/editorial/review data/editorial_daily_state.json data/editorial_weekly_state.json data/teams_push_state.json data/news_censor_verified_state.json"
+          git diff --exit-code -- $protected
+          dirty="$(git status --porcelain -- $protected)"
+          if [ -n "$dirty" ]; then
+            echo "Calibration mutated protected paths:"
+            echo "$dirty"
+            exit 1
+          fi
+          echo "Calibration isolation OK: docs/editorial/review and production state unchanged"
+      - name: Upload live calibration artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: editorial-live-calibration-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            ${{ steps.mode.outputs.output_root }}/*/candidates.json
+            ${{ steps.mode.outputs.output_root }}/*/manifest.json
+            ${{ steps.mode.outputs.output_root }}/*/index.html
       - name: Publish candidate console only
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.calibration_only) }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
