@@ -8,13 +8,13 @@ BASE_MAIN=0418478f1d5389067f01bbc0ba38cdb7630ed5f6
 CURRENT_ORIGIN_MAIN=9e51bdc415aa293067804a439f33eb8d317523b4
 
 TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-REMOTE_BRANCH_HEAD=1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788
-LOCAL_HEAD=WORKTREE_CHECKPOINT_ON_1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788
+REMOTE_BRANCH_HEAD=FINAL_CHECKPOINT_PENDING_FROM_8c3339f5ab3bb1f8fcfdc74e6200ebd8a05d665c
+LOCAL_HEAD=WORKTREE_FINAL_SEAL_ON_bb833d07d86efce6585196d13c4463f3168d1f52
 
 DRAFT_PR_NUMBER=40
 DRAFT_PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
 
-CURRENT_STATUS=ZEROING_AUDIT_EXTENDED_VERIFIER_CHECKPOINT_IN_PROGRESS
+CURRENT_STATUS=SAFE_WORK_EXHAUSTED_OPERATOR_APPROVAL_REQUIRED
 
 VERIFIED_WORK_COMPLETED=
 - Fresh task base was `origin/main=0418478f1d5389067f01bbc0ba38cdb7630ed5f6`; starting worktree was clean with divergence `0/0`.
@@ -34,6 +34,8 @@ VERIFIED_WORK_COMPLETED=
 - Latest scheduled refresh #522 (`31402738697`) fails only in `verify_naver_news_adapter.py` before live build; its log shows the same stale allowlist failure fixed on this branch.
 - Last successful Daily edition/send is `2026-08-06` / `2026-08-06T08:06:20+09:00`, SMTP 250. Exact-Editor CTA commit `4b8ad57` is not its ancestor and PR #31 merged at 08:28:56 KST, after that send. No post-contract production Daily/Teams proof exists.
 - Article import route exists at authenticated `POST /api/editorial/import-article`, but the public Editor bundle has empty URL and `article_import_api_configured=false`; the Editor workflow injects no `ARTICLE_IMPORT_API_URL`.
+- Fresh `origin/main=9e51bdc415aa293067804a439f33eb8d317523b4` moved from the task base only through a Watch-owned state successor. It was merged conflict-free into this WIP branch as `bb833d07d86efce6585196d13c4463f3168d1f52`; no merge to main occurred.
+- Final GitHub reread: `TEAMS_AI_NEWS_WATCH=1`; latest scheduled Watch remains successful #278; latest scheduled refresh remains failed #522; Draft PR #40 remains open and Draft.
 
 KNOWN_GOOD_BEHAVIOR=
 - Post-PR #39 Watch precision gates are active: ETF/fund launch noise is blocked, major-row rejection is logged, specialists never fill unused capacity, and no post-hardening bad card is observed.
@@ -84,6 +86,33 @@ DAILY_STATUS=
 - FIRST_POST_R4R21_NONEMPTY_DAILY_PROVEN=false
 - FIRST_CONTROLLED_DAILY_TEAMS_SEND_PROVEN=false
 
+SCHEDULE_STATUS=
+- EDITORIAL_REVIEW_0720_KST=true (`20 22 * * *` UTC)
+- DAILY_0730_KST=true (`30 22 * * *` UTC)
+- DAILY_0745_KST=true (`45 22 * * *` UTC)
+- DAILY_0755_KST=true (`55 22 * * *` UTC)
+- WATCH_BEST_EFFORT_10_MINUTE=true (`7,17,27,37,47,57 * * * *` UTC)
+- SCHEDULED_REFRESH_HOURLY_AT_17=true (`17 * * * *` UTC)
+
+CAN_WE_TEST_DAILY_EDITOR_E2E_TODAY=NO
+CANARY_REASON=No canonical input proves a real Teams delivery while preserving production state and sends at zero. `force_dry_run=true` is preview-only; `publish_only=true` maps to `--republish` and permanently disables delivery. The only production E2E path is `.github/workflows/editorial-daily-brief.yml` on main with `force_dry_run=false,publish_only=false`, executing `--publish → --verify-public → --claim → --send`; by design it writes Daily publication/claim/success state and sends SMTP to Teams.
+
+FINAL_PRODUCT_VERDICTS=
+- WATCH_PRECISION_VERDICT=GO
+- WATCH_RECALL_VERDICT=GO_WITH_BLOCKER
+- EDITOR_RECALL_VERDICT=GO_WITH_BLOCKER
+- WATCH_PRODUCTION_VERDICT=GO_WITH_BLOCKER
+- EDITOR_PRODUCTION_VERDICT=GO_WITH_BLOCKER
+- DAILY_GENERATION_VERDICT=GO_WITH_BLOCKER
+- DAILY_TEAMS_E2E_VERDICT=NO_GO
+- OVERALL_V1_VERDICT=NO_GO
+- OVER_FILTERING_DETECTED=true
+- UNDER_FILTERING_DETECTED=false
+- SCHEDULED_REFRESH_STATUS=PRODUCTION_RED_STALE_NAVER_VERIFIER_FIXED_ON_DRAFT_PR_PENDING_MERGE_AND_NATURAL_SCHEDULE_PROOF
+- DAILY_GENERATION_STATUS=HONEST_EMPTY_CURRENT_LAST_SUCCESS_2026-08-06_NO_POST_R4R21_NONEMPTY_PROOF
+- DAILY_TEAMS_E2E_STATUS=NOT_PROVEN_REQUIRES_OPERATOR_APPROVAL
+- SYSTEM_LAUNCHED=false
+
 PRODUCTION_BOUNDARIES=
 - No main merge, production Teams/SMTP/Telegram send, production workflow dispatch, repository variable/secret change, production-state write, force push, or rebase.
 - Only the dedicated WIP branch receives source/document commits and normal pushes.
@@ -118,7 +147,7 @@ VERIFIERS_RUN=
 
 FAILING_VERIFIERS=
 - Production scheduled refresh #522: stale origin/main `verify_naver_news_adapter.py` allowlist, fixed only on this WIP branch pending review/merge.
-- No failing branch-local verifier is known at this checkpoint. Complete the remaining offline matrix before the final seal.
+- No branch-local verifier fails with its repository environment. The system `python3` lacks Pillow, so the Editor verifier must use `.venv/bin/python`; that interpreter passed 200/200 after final origin/main integration.
 
 FILES_CHANGED=
 - `docs/handoff/HDEC_CURRENT_HANDOFF.md`
@@ -135,15 +164,31 @@ COMMITS_CREATED=
 - `0212c2a83dad4cac93130c4b5f50fa73c5e814a1 fix: align Naver discovery lane verifier contract`
 - `e9a4ab0bfb1932d1b8216f349adfd55edc8d0017 feat: add network-free calibration rejection audit`
 - `1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788 fix: make Naver operational verifier deterministic`
-- Extended verifier-zeroing checkpoint pending.
+- `8c3339f5ab3bb1f8fcfdc74e6200ebd8a05d665c fix: zero stale ingestion verifier contracts`
+- `bb833d07d86efce6585196d13c4463f3168d1f52 Merge remote-tracking branch 'origin/main' into wip/d7ak6e-final-readiness-zeroing-handoff`
+- Final handoff seal commit pending; resolve its exact SHA with `scripts/hdec_cross_machine_status.sh`.
 
 PRODUCTION_SENDS=0
 PRODUCTION_STATE_WRITES=0
+PRODUCTION_TEAMS_SENDS=0
+SMTP_ATTEMPTS=0
+TELEGRAM_SENDS=0
+PRODUCTION_VARIABLE_CHANGES=0
+PRODUCTION_WORKFLOW_DISPATCHES=0
+MAIN_MERGES=0
+TASK_BRANCH_MAIN_INTEGRATIONS=1
+
+VERIFIERS_PASS=26/26
+VERIFIERS_FAIL=0
+PUSH_EXECUTED=true
+DRAFT_PR_STATE=DRAFT
+REMOTE_CHECKPOINT_AVAILABLE=true
+CROSS_MACHINE_HANDOFF_READY=true
 
 REQUIRES_OPERATOR_APPROVAL=true
 - Required for source-tier/recall policy, Editor-only cross-lane supply changes, Operator API deployment/variables, and the first controlled non-empty Daily → Teams → exact Editor CTA proof.
 
-NEXT_SINGLE_ACTION=Fetch and integrate fresh origin/main into this WIP branch without rebase, rerun the focused offline seal, then finalize Draft PR #40 and the cross-machine handoff.
+NEXT_SINGLE_ACTION=Operator reviews Draft PR #40 and, if approved, merges it to main; then observe the next natural scheduled refresh before separately approving any production Daily E2E.
 
 COMPANY_RESUME_COMMANDS=
 ```bash
@@ -157,4 +202,4 @@ git pull --ff-only origin wip/d7ak6e-final-readiness-zeroing-handoff
 codex exec -C . - < docs/handoff/COMPANY_RESUME_PROMPT.md
 ```
 
-The live branch and commit facts printed by `scripts/hdec_cross_machine_status.sh` are authoritative. A Git commit cannot contain its own resulting SHA, so `LOCAL_HEAD` identifies the parent on which the in-progress checkpoint is being prepared.
+The live branch and commit facts printed by `scripts/hdec_cross_machine_status.sh` are authoritative. A Git commit cannot contain its own resulting SHA, so `LOCAL_HEAD` identifies the parent on which the final seal is being prepared.

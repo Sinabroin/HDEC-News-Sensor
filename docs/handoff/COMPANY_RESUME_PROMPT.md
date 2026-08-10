@@ -10,6 +10,7 @@ Repository and branch:
 - Base main at task start: `0418478f1d5389067f01bbc0ba38cdb7630ed5f6`
 - Draft PR: `#40` (`https://github.com/Sinabroin/HDEC-News-Sensor/pull/40`)
 - Teams Watch can autonomously advance `origin/main` with state-only commits.
+- Latest integrated origin/main at the HOME final seal: `9e51bdc415aa293067804a439f33eb8d317523b4`.
 
 Begin exactly as follows:
 
@@ -46,6 +47,8 @@ Product context to preserve:
 - Scheduled refresh remains red on main solely because the old Naver verifier is still deployed. The branch fix needs review/merge and a later natural schedule for production proof.
 - Last Daily success is 2026-08-06 08:06 KST. Exact-Editor CTA code was not in that run's ancestry, so first non-empty post-R4-R21 Daily → Teams → exact Editor proof remains operator work.
 - Article import remains fail-closed: the authenticated FastAPI route exists, but no HTTPS deployment/Editor build URL wiring is configured.
+- The branch has already merged the latest state-only origin/main successor without conflict and passed the focused post-merge verifier seal.
+- There is no non-polluting Daily→Editor→Teams production canary input. Dry-run and publish-only never send; the real `--publish → --verify-public → --claim → --send` workflow necessarily sends to Teams and writes production claim/success state. `CAN_WE_TEST_DAILY_EDITOR_E2E_TODAY=NO` and `SYSTEM_LAUNCHED=false`.
 - Do not auto-tune publisher tiers, executive-materiality thresholds, AI centrality, stock/ETF exclusions, specialist send policy, or Teams volume. Those require operator review.
 
 Safe autonomous scope:
@@ -70,7 +73,7 @@ MAIN_MERGES=0
 
 Never merge to main, send to production, dispatch a mutating/sending workflow, alter variables/secrets, directly edit production ledgers, rebase, or force push. Record any such next step as `REQUIRES_OPERATOR_APPROVAL=true` and continue other safe work.
 
-The evidence audit, verifier-only repairs, network-free rejection diagnostic, and extended offline verifier matrix are complete. Read the current handoff's human article classifications and blockers, then continue its `NEXT_SINGLE_ACTION`: integrate fresh origin/main only if needed and conflict-free, rerun the focused offline seal, finalize the same Draft PR and handoff, and push a final remote seal.
+The evidence audit, verifier-only repairs, network-free rejection diagnostic, extended offline verifier matrix, origin/main integration, Draft PR, and remote handoff seal are complete. Read the current handoff first. `NEXT_SINGLE_ACTION` is operator review of Draft PR #40; if approved, merge it to main and observe the next natural scheduled refresh. Do not perform source-policy tuning, Operator API deployment, or the production Daily E2E without separate operator approval. If any additional work is requested, continue the same branch and Draft PR, checkpoint normally, and never rebase or force push.
 
 To start Codex from this file after the bootstrap commands, use the CLI form verified from `codex exec --help`:
 
