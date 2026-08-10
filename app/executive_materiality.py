@@ -20,11 +20,14 @@ production.
   financial-product event, not a structural AI-industry event; it is executive
   noise UNLESS the same title/lead independently carries a real material
   industrial event (a non-launch confirmed corporate action in an
-  industrial/strategic context, an HDEC-direct entity, or a material AI-security
-  incident).  Fund SIZE / offering scale ALONE never rescues it (R4-OPS-2A).
-  Mirrors the observed production leak (연합뉴스 "…전략산업 ETF 출시",
-  2026-08-10) that the Watch sent as important while the Daily surface would
-  never publish it.
+  industrial/strategic context, an HDEC-direct entity PAIRED WITH such an
+  action, or a material AI-security incident).  Neither fund SIZE / offering
+  scale (R4-OPS-2A) nor a bare HDEC mention as a theme constituent / holding
+  (R4-OPS-2B) ever rescues it.  The fund vehicle is detected across the title
+  AND the first factual lead sentence, so a vehicle named only in the lead is
+  still caught (R4-OPS-2B).  Mirrors the observed production leak (연합뉴스
+  "…전략산업 ETF 출시", 2026-08-10) that the Watch sent as important while the
+  Daily surface would never publish it.
 
 Allowed evidence — title, publisher subtitle, and the first factual publisher
 lead/snippet sentence only (never a generated summary/why-it-matters and never
@@ -230,41 +233,48 @@ def is_fund_product_launch_noise(evidence: Mapping[str, Any]) -> bool:
     industrial event*.
 
     A financial product's SIZE is not industrial materiality: fund AUM /
-    offering scale ALONE never rescues the story.  (R4-OPS-2A — the earlier
-    rescue accepted any `materiality_score` reason, so a bare
-    ``concrete_scale_figure`` let "AI ETF 5,000억원 규모 출시" through.)  A fund
-    story is rescued ONLY by a real, separate industrial event in the same
-    title/lead:
+    offering scale ALONE never rescues the story (R4-OPS-2A).  Neither does a
+    bare HDEC mention — the company as a mere theme constituent / index holding
+    is not an industrial event (R4-OPS-2B).  A fund story is rescued ONLY by a
+    real, separate event proven in the title + first factual lead:
 
       * a NON-LAUNCH confirmed corporate action/risk (MATERIAL_ACTION_TERMS /
         MATERIAL_RISK_TERMS — note "출시" is deliberately absent) set in an
         industrial/strategic context (EXEC_STRATEGIC_DOMAIN_TERMS), OR
-      * an HDEC-direct entity (the executive's own company), OR
+      * an HDEC-direct entity PAIRED WITH such a material action/risk, OR
       * a material AI-security incident (EXEC_AI_SECURITY_TERMS).
 
-    e.g. "AI 데이터센터 펀드, 5,000억원 출자해 변전소 EPC 공급계약 체결" is KEPT
-    (출자/계약/체결 in a 데이터센터/변전 context); "AI 데이터센터 리츠 1조원 규모
-    출시" is REJECTED (scale only, no material action) — R4-OPS-2A §4/§9.
+    The fund vehicle itself is detected across the title AND the first factual
+    lead sentence (never the provider query or a generated summary), so a
+    vehicle named only in the lead is still caught (R4-OPS-2B).
+
+    e.g. KEPT — "AI 데이터센터 펀드, 5,000억원 출자해 변전소 EPC 공급계약 체결"
+    (출자/계약/체결 in a 데이터센터/변전 context) and "현대건설, AI 데이터센터
+    펀드에 5,000억원 출자 계약 체결" (HDEC + 출자/계약).  REJECTED — "AI 데이터센터
+    리츠 1조원 규모 출시" (scale only), "AI 현대건설 ETF 신규 출시" (HDEC name as
+    theme constituent, no action), and title "AI 전략산업 상품 출시" whose lead is
+    "…ETF 신규 출시" (lead-only vehicle) — R4-OPS-2A §4/§9, R4-OPS-2B §2/§6.
 
     Dependency is one-directional: this never calls executive_qualification.
     """
     title = ai_centrality.article_title(evidence)
     lead = ai_centrality.article_lead_sentence(evidence)  # factual, lowercased
-    title_l = title.lower()
-    if not any(term in title_l for term in FUND_PRODUCT_TERMS):
+    zone = f"{title.lower()} {lead}"  # title + factual lead only (no query/summary)
+    # Fund-product SUBJECT detection spans the title AND the factual lead, so a
+    # vehicle named only in the lead is still caught (R4-OPS-2B Gap D).
+    if not any(term in zone for term in FUND_PRODUCT_TERMS):
         return False  # not a financial-product story
     text = f"{title} {lead}"
-    zone = f"{title_l} {lead}"
-    # Fund SIZE / offering scale alone is NOT industrial materiality — a bare
-    # concrete-scale figure is deliberately NOT a rescue signal here.
     material_action = any(term in text for term in MATERIAL_ACTION_TERMS)
     material_risk = any(term in text for term in MATERIAL_RISK_TERMS)
     industrial_context = any(term in zone for term in EXEC_STRATEGIC_DOMAIN_TERMS)
     hdec_hit = any(term in title or term in lead for term in HDEC_DIRECT_TERMS)
     security_hit = any(term in zone for term in EXEC_AI_SECURITY_TERMS)
-    independent_industrial_event = (
-        ((material_action or material_risk) and industrial_context)
-        or hdec_hit
-        or security_hit
-    )
-    return not independent_industrial_event
+    # A financial-product launch is rescued ONLY by a real, separate event. A
+    # bare scale figure (fund AUM) and a bare HDEC mention (theme constituent /
+    # holding) never rescue: the HDEC route additionally requires a material
+    # action/risk (R4-OPS-2B Gap C).
+    industrial_event = (material_action or material_risk) and industrial_context
+    hdec_event = hdec_hit and (material_action or material_risk)
+    security_event = security_hit
+    return not (industrial_event or hdec_event or security_event)

@@ -18,9 +18,11 @@ editorial surface judge send-eligibility materiality by ONE shared contract
   competitor moves / mega-investment) that the strict Daily whitelist would
   drop. The alignment is a NOISE floor, not a Daily clone.
 * A fund-linked story that DOES carry an independent material industrial event
-  (a non-launch confirmed action in an industrial context / HDEC-direct) is NOT
-  treated as noise; fund SIZE / offering scale ALONE never rescues it, and the
-  exclusion is now shared by BOTH surfaces (R4-OPS-2A §4/§9).
+  (a non-launch confirmed action in an industrial context, or HDEC-direct WITH
+  such an action) is NOT treated as noise; the exclusion is shared by BOTH
+  surfaces (R4-OPS-2A §4/§9). Neither fund SIZE / offering scale nor a bare HDEC
+  name (theme constituent) ever rescues, and a fund vehicle named only in the
+  factual lead is still caught (R4-OPS-2B §2/§6).
 * The floor reads only title / subtitle / factual snippet — never the provider
   query string (SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0) and never publisher
   prestige alone (PRIMARY_PUBLISHER_ALONE_CAUSES_WATCH_SEND=0).
@@ -174,6 +176,19 @@ FUND_SET = ("AI 펀드 3,000억원 설정",
 # HDEC entity: this proves the action+context rescue on its own.
 FUND_INDEPENDENT = ("AI 데이터센터 펀드, 5,000억원 출자해 변전소 EPC 공급계약 체결",
                     "AI 데이터센터 펀드가 5,000억원을 출자해 변전소 EPC 공급계약을 체결했다.")
+# R4-OPS-2B Gap C — a bare HDEC name (theme constituent / index holding) is NOT
+# an industrial event: an HDEC fund product is rejected unless it also carries a
+# material action. HDEC_MATERIAL_FUND (출자/계약 체결) is the KEEP counterpart.
+HDEC_NAME_ONLY_FUND = ("AI 현대건설 ETF 신규 출시",
+                       "현대건설 등 건설·AI 관련 기업에 투자하는 ETF를 신규 출시했다.")
+HDEC_THEME_FUND = ("현대건설 포함 데이터센터 테마 리츠 1조원 규모 출시",
+                   "현대건설을 포함한 데이터센터 테마 리츠가 1조원 규모로 출시됐다.")
+HDEC_MATERIAL_FUND = ("현대건설, AI 데이터센터 펀드에 5,000억원 출자 계약 체결",
+                      "현대건설이 AI 데이터센터 펀드에 5,000억원 출자 계약을 체결했다.")
+# R4-OPS-2B Gap D — a fund vehicle named only in the factual LEAD, not the
+# title, must still be caught by the noise floor.
+LEAD_ONLY_FUND = ("AI 전략산업 상품 신규 출시",
+                  "인공지능 관련 기업에 투자하는 상장지수펀드(ETF)를 신규 출시했다.")
 
 print(f"# coverage {COVERAGE.start.isoformat()} .. {COVERAGE.end.isoformat()}")
 
@@ -292,6 +307,39 @@ fund_indep_accepted = (
 check("FUND_INDEPENDENT_INDUSTRIAL_EVENT_ACCEPTED — fund + 출자/EPC/계약 체결 kept on both surfaces",
       fund_indep_accepted)
 
+# 5e. R4-OPS-2B Gap C — a bare HDEC name (theme constituent / index holding)
+#     never rescues a fund product; the HDEC route requires a material action.
+#     Both the HDEC-name-only ETF and the HDEC-theme REIT are rejected on both
+#     surfaces; the HDEC fund WITH 출자/계약 체결 is kept.
+hdec_name_only_watch = (not watch_sends(*HDEC_NAME_ONLY_FUND)) and (not watch_sends(*HDEC_THEME_FUND))
+hdec_name_only_daily = (not daily_gate_quals(*HDEC_NAME_ONLY_FUND)) and (not daily_gate_quals(*HDEC_THEME_FUND))
+hdec_name_only_noise = _noise(HDEC_NAME_ONLY_FUND) and _noise(HDEC_THEME_FUND)
+hdec_material_fund_ok = (
+    (not _noise(HDEC_MATERIAL_FUND))
+    and daily_gate_quals(*HDEC_MATERIAL_FUND)
+    and watch_sends(*HDEC_MATERIAL_FUND)
+)
+check("WATCH_HDEC_NAME_ONLY_FUND_REJECTED — HDEC-name-only fund products are not sent by the Watch",
+      hdec_name_only_watch)
+check("DAILY_HDEC_NAME_ONLY_FUND_REJECTED — HDEC-name-only fund products rejected by the Daily gate",
+      hdec_name_only_daily)
+check("HDEC_NAME_ALONE_RESCUES_FUND_PRODUCT=0 — a bare HDEC mention never rescues a fund launch",
+      hdec_name_only_noise)
+check("HDEC_MATERIAL_FUND_EVENT_ACCEPTED — HDEC fund WITH 출자/계약 체결 kept on both surfaces",
+      hdec_material_fund_ok)
+
+# 5f. R4-OPS-2B Gap D — a fund vehicle named only in the factual LEAD (not the
+#     title) is still caught by the floor; both surfaces reject it.
+lead_only_noise = _noise(LEAD_ONLY_FUND)
+lead_only_watch = not watch_sends(*LEAD_ONLY_FUND)
+lead_only_daily = not daily_gate_quals(*LEAD_ONLY_FUND)
+check("WATCH_LEAD_ONLY_FUND_REJECTED — lead-only fund vehicle is not sent by the Watch",
+      lead_only_watch)
+check("DAILY_LEAD_ONLY_FUND_REJECTED — lead-only fund vehicle rejected by the Daily gate",
+      lead_only_daily)
+check("LEAD_ONLY_FUND_PRODUCT_ESCAPE=0 — a lead-only fund vehicle no longer escapes the floor",
+      lead_only_noise)
+
 # 6. SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0 — a rich material query never
 #    rescues the ETF; the floor reads title/lead only.
 etf_rich_query = watch_eval(*ETF_AI, query="AI 데이터센터 9560억원 공급 계약 체결 착공")
@@ -329,6 +377,13 @@ print("WATCH_FUND_SCALE_ONLY_REJECTED=" + ("PASS" if scale_only_watch else "FAIL
 print("DAILY_FUND_SCALE_ONLY_REJECTED=" + ("PASS" if scale_only_daily else "FAIL"))
 print("FUND_SCALE_ONLY_RESCUE=" + ("0" if scale_only_noise else "NONZERO"))
 print("FUND_INDEPENDENT_INDUSTRIAL_EVENT_ACCEPTED=" + ("PASS" if fund_indep_accepted else "FAIL"))
+print("WATCH_HDEC_NAME_ONLY_FUND_REJECTED=" + ("PASS" if hdec_name_only_watch else "FAIL"))
+print("DAILY_HDEC_NAME_ONLY_FUND_REJECTED=" + ("PASS" if hdec_name_only_daily else "FAIL"))
+print("HDEC_NAME_ALONE_RESCUES_FUND_PRODUCT=" + ("0" if hdec_name_only_noise else "NONZERO"))
+print("HDEC_MATERIAL_FUND_EVENT_ACCEPTED=" + ("PASS" if hdec_material_fund_ok else "FAIL"))
+print("WATCH_LEAD_ONLY_FUND_REJECTED=" + ("PASS" if lead_only_watch else "FAIL"))
+print("DAILY_LEAD_ONLY_FUND_REJECTED=" + ("PASS" if lead_only_daily else "FAIL"))
+print("LEAD_ONLY_FUND_PRODUCT_ESCAPE=" + ("0" if lead_only_noise else "NONZERO"))
 print("SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0")
 print("PRIMARY_PUBLISHER_ALONE_CAUSES_WATCH_SEND=0")
 print("EXTERNAL_NETWORK_CALLS=" + str(EXTERNAL["count"]))

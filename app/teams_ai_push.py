@@ -1596,9 +1596,11 @@ def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
     contract (app.executive_materiality — one rule, no drift), this floor
     rejects such a story UNLESS the same title/lead independently carries a real
     material industrial event (a non-launch confirmed corporate action in an
-    industrial context, an HDEC-direct entity, or a material AI-security
-    incident) — fund SIZE / offering scale alone never rescues it (R4-OPS-2A
-    §4/§9). Returns (is_noise, reason)."""
+    industrial context, an HDEC-direct entity PAIRED WITH such an action, or a
+    material AI-security incident) — neither fund SIZE / offering scale nor a
+    bare HDEC mention ever rescues it, and the fund vehicle is detected in the
+    title + factual lead (R4-OPS-2A §4/§9, R4-OPS-2B §2/§6). Returns
+    (is_noise, reason)."""
     evidence = _watch_executive_evidence(article)
     if executive_materiality.is_fund_product_launch_noise(evidence):
         return True, "fund_product_launch_without_material_event"
