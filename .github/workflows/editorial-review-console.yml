@@ -59,10 +59,14 @@ jobs:
         env:
           OUTPUT_ROOT: ${{ steps.mode.outputs.output_root }}
           RUN_AT: ${{ steps.mode.outputs.run_at }}
+          CALIBRATION_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
         run: |
           args=(--output-root "$OUTPUT_ROOT" --candidate-limit 24)
           if [ -n "$RUN_AT" ]; then
             args+=(--run-at "$RUN_AT")
+          fi
+          if [ "$CALIBRATION_ONLY" = "true" ]; then
+            args+=(--calibration-diagnostics)
           fi
           python3 scripts/build_editorial_review_console.py "${args[@]}"
       - name: Verify no sender or production state mutation
@@ -70,7 +74,7 @@ jobs:
           python3 scripts/verify_editorial_review_console.py
           git diff --exit-code -- data/editorial_daily_state.json data/teams_push_state.json
       - name: Assert calibration writes no tracked docs or production state
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
         run: |
           protected="docs/editorial/review data/editorial_daily_state.json data/editorial_weekly_state.json data/teams_push_state.json data/news_censor_verified_state.json"
           git diff --exit-code -- $protected
@@ -82,13 +86,14 @@ jobs:
           fi
           echo "Calibration isolation OK: docs/editorial/review and production state unchanged"
       - name: Upload live calibration artifact
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
         uses: actions/upload-artifact@v4
         with:
           name: editorial-live-calibration-${{ github.run_id }}
           if-no-files-found: error
           retention-days: 7
           path: |
+            ${{ steps.mode.outputs.output_root }}/calibration-diagnostic.json
             ${{ steps.mode.outputs.output_root }}/*/candidates.json
             ${{ steps.mode.outputs.output_root }}/*/manifest.json
             ${{ steps.mode.outputs.output_root }}/*/index.html
