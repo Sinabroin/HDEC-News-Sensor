@@ -310,6 +310,16 @@
       "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
     },
+    "b67d1c5d85d4720a": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
+    },
     "b6ebf89632352331": {
       "cluster_key": "title:엘리스그룹온수냉각적용b300ai데이터센터구축",
       "delivery_id": "teams_ai_push:65b28e7ed6ad",
@@ -1541,6 +1551,16 @@
       "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
+    },
+    "title:흔들리는구글위기인가새판짜기인가": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
     }
   },
   "held_specialists": {
@@ -1914,7 +1934,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T05:07:52+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-11T05:07:52+09:00",
+      "last_seen_at": "2026-08-11T06:03:05+09:00",
       "normalized_url": "https://fnnews.com/news/202608110320261727",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -2329,7 +2349,7 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_successful_send_at": "2026-08-10T13:18:59+09:00",
+  "last_successful_send_at": "2026-08-11T06:03:06+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2479,6 +2499,16 @@
       "last_material_update_at": null,
       "material_signature": "449fd27217c8f6f7647c7faff2733d5ea1380423921629030a9188510f31a39f",
       "sent_at": "2026-08-09T13:19:12+09:00",
+      "source": "IT조선"
+    },
+    "https://it.chosun.com/news/articleView.html?idxno=2023092167659": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
       "source": "IT조선"
     },
     "https://khan.co.kr/article/202608080600031": {
@@ -3872,6 +3902,16 @@
       "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
+    },
+    "흔들리는구글위기인가새판짜기인가": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
     }
   },
   "version": 1
