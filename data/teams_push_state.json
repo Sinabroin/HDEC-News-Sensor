@@ -1586,6 +1586,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "인텔150억달러규모신주발행ai사업실탄확보"
     },
+    "https://asiae.co.kr/article/2026081104562374854": {
+      "article_id": "4d2e858bfb0b5041",
+      "cluster_key": "title:엔비디아710조원ai자금조달나선다월가총출동",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T05:07:52+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T05:07:52+09:00",
+      "normalized_url": "https://asiae.co.kr/article/2026081104562374854",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "아시아경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "엔비디아710조원ai자금조달나선다월가총출동"
+    },
     "https://biz.heraldcorp.com/article/10832438": {
       "article_id": "73a59192bd9e8bf3",
       "cluster_key": "title:삼성전자fms어워드서핵심2개부문수상",
@@ -1893,6 +1907,20 @@
       "source": "파이낸셜뉴스",
       "source_tier": "trusted_other",
       "title_fingerprint": "ai데이터센터몸값가른다부동산보다귀해진전력권"
+    },
+    "https://fnnews.com/news/202608110320261727": {
+      "article_id": "404c4de5aba0842e",
+      "cluster_key": "title:메타ai모델빗장푼다견제하고오픈ai추격",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T05:07:52+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T05:07:52+09:00",
+      "normalized_url": "https://fnnews.com/news/202608110320261727",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "메타ai모델빗장푼다견제하고오픈ai추격"
     },
     "https://hankookilbo.com/news/article/A2026072912000003603": {
       "article_id": "3d5c782b9fdd850f",
