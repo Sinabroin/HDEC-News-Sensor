@@ -1594,9 +1594,11 @@ def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
     is a financial-product event, not an AI-industry event, and the Daily
     surface would never publish it. Using the shared executive-materiality
     contract (app.executive_materiality — one rule, no drift), this floor
-    rejects such a story UNLESS the same title/lead independently carries a hard
-    material signal (scaled/confirmed corporate action, HDEC-direct entity, or a
-    material AI-security incident) — R4-OPS-2 §9. Returns (is_noise, reason)."""
+    rejects such a story UNLESS the same title/lead independently carries a real
+    material industrial event (a non-launch confirmed corporate action in an
+    industrial context, an HDEC-direct entity, or a material AI-security
+    incident) — fund SIZE / offering scale alone never rescues it (R4-OPS-2A
+    §4/§9). Returns (is_noise, reason)."""
     evidence = _watch_executive_evidence(article)
     if executive_materiality.is_fund_product_launch_noise(evidence):
         return True, "fund_product_launch_without_material_event"

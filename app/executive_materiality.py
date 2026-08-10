@@ -1,26 +1,30 @@
 """Shared executive-materiality contract (R4-OPS-2).
 
-Single source of truth for "is this AI-central article materially useful to a
-Hyundai E&C executive?".  Extracted verbatim from the R4-R17 Daily Executive
-Qualification Gate (`app/editorial_briefings._executive_qualification`) so the
-Daily editorial curation surface and the real-time Teams AI News Watch judge
-send-eligibility materiality by the *same* deterministic rule and can never
-drift apart.
+Home of the shared executive-materiality primitives used by two intentionally
+*different* products — the R4-R17 Daily editorial curation surface and the
+real-time Teams AI News Watch.  The two do NOT share one whole gate: the Watch
+is deliberately broader (D7-AK-6C §8) and must keep alerting on strategic
+real-time AI events the strict Daily whitelist drops.  What they share is the
+materiality *primitives* and one **fund-product noise invariant**, so neither
+surface can regress on the financial-product noise class that leaked into
+production.
 
-Two products, one floor:
-
-* `executive_qualification(evidence)` — the canonical R4-R17 gate, byte-for-byte
-  the logic Daily already ships.  Daily delegates to it (pure refactor);
-  the Teams Watch adds it as its send-eligibility materiality floor.
-* `is_fund_product_launch_noise(evidence)` — an additional precision gate the
-  real-time Watch applies (Daily does not: its editorial relevance floor
-  already drops fund/ETF rows upstream).  An ETF / fund / REIT product launch
-  is a financial-product event, not a structural AI-industry event; it is
-  executive noise UNLESS the same title/lead independently carries a hard
-  material signal (confirmed corporate action + scale, HDEC-direct, or a
-  material AI-security incident).  Mirrors the observed production leak
-  (연합뉴스 "…전략산업 ETF 출시", 2026-08-10) that the Watch sent as important
-  while the Daily gate would never publish it.
+* `executive_qualification(evidence)` — the canonical R4-R17 Daily gate,
+  byte-for-byte the logic Daily already ships.  Daily delegates to it (pure
+  refactor).  As of R4-OPS-2A it rejects a financial-product launch first (see
+  below), before any structural-AI-event acceptance.  The Watch does NOT apply
+  this whole gate as its floor — that would drop the strategic real-time events
+  it must keep.
+* `is_fund_product_launch_noise(evidence)` — the shared fund-product noise
+  invariant, applied on BOTH surfaces.  An ETF / fund / REIT product launch is a
+  financial-product event, not a structural AI-industry event; it is executive
+  noise UNLESS the same title/lead independently carries a real material
+  industrial event (a non-launch confirmed corporate action in an
+  industrial/strategic context, an HDEC-direct entity, or a material AI-security
+  incident).  Fund SIZE / offering scale ALONE never rescues it (R4-OPS-2A).
+  Mirrors the observed production leak (연합뉴스 "…전략산업 ETF 출시",
+  2026-08-10) that the Watch sent as important while the Daily surface would
+  never publish it.
 
 Allowed evidence — title, publisher subtitle, and the first factual publisher
 lead/snippet sentence only (never a generated summary/why-it-matters and never
@@ -147,9 +151,19 @@ def executive_qualification(evidence: Mapping[str, Any]) -> ExecutiveQualificati
     Opinion-labelled pieces require a hard factual signal (1/2/3/5) and never
     qualify on a strategic-domain+impact pairing alone.
 
-    This is the canonical materiality floor shared by the Daily editorial
-    curation surface and the real-time Teams AI News Watch.
+    This is the canonical R4-R17 Daily materiality gate.  As of R4-OPS-2A it
+    first rejects a financial-product (ETF/fund/REIT) launch that carries no
+    independent material industrial event, so an "AI + 출시" fund launch cannot
+    qualify via the structural-AI-event signal below.
     """
+    # R4-OPS-2A — shared fund-product noise invariant, evaluated BEFORE any
+    # acceptance signal.  is_fund_product_launch_noise never calls back into
+    # executive_qualification, so the dependency stays one-directional.
+    if is_fund_product_launch_noise(evidence):
+        return ExecutiveQualification(
+            False, "fund_product_launch_without_industrial_event"
+        )
+
     title = ai_centrality.article_title(evidence)
     subtitle = ai_centrality.article_subtitle(evidence)
     lead = ai_centrality.article_lead_sentence(evidence)  # factual, lowercased
@@ -207,27 +221,50 @@ def executive_qualification(evidence: Mapping[str, Any]) -> ExecutiveQualificati
 
 
 def is_fund_product_launch_noise(evidence: Mapping[str, Any]) -> bool:
-    """R4-OPS-2 — is this a financial-product (ETF/fund/REIT) story with no
-    independent material industrial event?
+    """R4-OPS-2 / R4-OPS-2A — is this a financial-product (ETF/fund/REIT) story
+    with no independent material industrial event?
 
-    Real-time Watch precision gate only (Daily's editorial relevance floor
-    already drops these upstream).  Returns True (→ reject) when a fund-product
-    vehicle is the subject and the title/lead carries no hard material signal:
-    no confirmed material action / concrete scale / material risk (Signal 2),
-    no HDEC-direct entity (Signal 3), and no material AI-security incident
-    (Signal 5).  A fund-linked story that DOES carry such a signal (e.g. a
-    scaled 출자/계약 or an HDEC-direct deal) is a separate material event and is
-    NOT treated as noise — matching R4-OPS-2 §9 ("REJECT unless the article
-    itself contains a separate material industrial event").
+    The shared fund-product noise invariant, applied on BOTH the Daily gate and
+    the real-time Watch.  Returns True (→ reject) when a fund-product vehicle is
+    the subject of the title and the title/lead carries no *independent material
+    industrial event*.
+
+    A financial product's SIZE is not industrial materiality: fund AUM /
+    offering scale ALONE never rescues the story.  (R4-OPS-2A — the earlier
+    rescue accepted any `materiality_score` reason, so a bare
+    ``concrete_scale_figure`` let "AI ETF 5,000억원 규모 출시" through.)  A fund
+    story is rescued ONLY by a real, separate industrial event in the same
+    title/lead:
+
+      * a NON-LAUNCH confirmed corporate action/risk (MATERIAL_ACTION_TERMS /
+        MATERIAL_RISK_TERMS — note "출시" is deliberately absent) set in an
+        industrial/strategic context (EXEC_STRATEGIC_DOMAIN_TERMS), OR
+      * an HDEC-direct entity (the executive's own company), OR
+      * a material AI-security incident (EXEC_AI_SECURITY_TERMS).
+
+    e.g. "AI 데이터센터 펀드, 5,000억원 출자해 변전소 EPC 공급계약 체결" is KEPT
+    (출자/계약/체결 in a 데이터센터/변전 context); "AI 데이터센터 리츠 1조원 규모
+    출시" is REJECTED (scale only, no material action) — R4-OPS-2A §4/§9.
+
+    Dependency is one-directional: this never calls executive_qualification.
     """
     title = ai_centrality.article_title(evidence)
     lead = ai_centrality.article_lead_sentence(evidence)  # factual, lowercased
     title_l = title.lower()
     if not any(term in title_l for term in FUND_PRODUCT_TERMS):
-        return False
-    zone = f"{title.lower()} {lead}"
-    _mscore, mreasons = materiality_score(title, lead)
+        return False  # not a financial-product story
+    text = f"{title} {lead}"
+    zone = f"{title_l} {lead}"
+    # Fund SIZE / offering scale alone is NOT industrial materiality — a bare
+    # concrete-scale figure is deliberately NOT a rescue signal here.
+    material_action = any(term in text for term in MATERIAL_ACTION_TERMS)
+    material_risk = any(term in text for term in MATERIAL_RISK_TERMS)
+    industrial_context = any(term in zone for term in EXEC_STRATEGIC_DOMAIN_TERMS)
     hdec_hit = any(term in title or term in lead for term in HDEC_DIRECT_TERMS)
     security_hit = any(term in zone for term in EXEC_AI_SECURITY_TERMS)
-    # Fund product WITHOUT any hard material signal → executive noise.
-    return not (mreasons or hdec_hit or security_hit)
+    independent_industrial_event = (
+        ((material_action or material_risk) and industrial_context)
+        or hdec_hit
+        or security_hit
+    )
+    return not independent_industrial_event

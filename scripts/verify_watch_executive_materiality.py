@@ -17,8 +17,10 @@ editorial surface judge send-eligibility materiality by ONE shared contract
   keeps alerting on real-time strategic AI events (major enterprise adoption /
   competitor moves / mega-investment) that the strict Daily whitelist would
   drop. The alignment is a NOISE floor, not a Daily clone.
-* A fund-linked story that DOES carry an independent material event (scaled
-  confirmed action / HDEC-direct) is NOT treated as noise (R4-OPS-2 §9).
+* A fund-linked story that DOES carry an independent material industrial event
+  (a non-launch confirmed action in an industrial context / HDEC-direct) is NOT
+  treated as noise; fund SIZE / offering scale ALONE never rescues it, and the
+  exclusion is now shared by BOTH surfaces (R4-OPS-2A §4/§9).
 * The floor reads only title / subtitle / factual snippet — never the provider
   query string (SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0) and never publisher
   prestige alone (PRIMARY_PUBLISHER_ALONE_CAUSES_WATCH_SEND=0).
@@ -158,6 +160,20 @@ RECALL_ADOPTION = ("현대차·엔비디아 AI 데이터센터 협력 속도",
                    "피지컬 AI·자율주행·로봇·제조 AI와 데이터센터 협력을 확대했다.")
 RECALL_MEGA = ("메타, 블랙록과 20조원 규모 AI 데이터센터 구축",
                "대규모 AI 데이터센터 투자와 금융 조달 계획을 확정했다.")
+# R4-OPS-2A — fund SIZE / offering scale ALONE is not industrial materiality.
+# A fund launch whose only "material" token is a KRW scale figure must be
+# rejected by BOTH surfaces; a bare concrete_scale_figure never rescues it.
+ETF_SCALE = ("AI ETF 5,000억원 규모 출시",
+             "AI 산업에 투자하는 상장지수펀드(ETF)가 5,000억원 규모로 출시됐다.")
+REIT_SCALE = ("AI 데이터센터 리츠 1조원 규모 출시",
+              "AI 데이터센터에 투자하는 리츠가 1조원 규모로 출시됐다.")
+FUND_SET = ("AI 펀드 3,000억원 설정",
+            "AI 관련 기업에 투자하는 펀드가 3,000억원 규모로 설정됐다.")
+# R4-OPS-2A §4/§9 KEEP — a fund-linked story with a real, separate industrial
+# event (non-launch action in an industrial context), WITHOUT leaning on an
+# HDEC entity: this proves the action+context rescue on its own.
+FUND_INDEPENDENT = ("AI 데이터센터 펀드, 5,000억원 출자해 변전소 EPC 공급계약 체결",
+                    "AI 데이터센터 펀드가 5,000억원을 출자해 변전소 EPC 공급계약을 체결했다.")
 
 print(f"# coverage {COVERAGE.start.isoformat()} .. {COVERAGE.end.isoformat()}")
 
@@ -215,7 +231,10 @@ def daily_gate_quals(title: str, snippet: str) -> bool:
 
 consistent = True
 detail = []
-for name, (t, s) in {"STOCK": STOCK}.items():  # Daily-immaterial → Watch rejects
+# R4-OPS-2A — fund/ETF launches are now immaterial to the shared Daily gate too,
+# so they belong in the "Daily-immaterial → Watch also rejects" set.
+for name, (t, s) in {"STOCK": STOCK, "ETF_AI": ETF_AI,
+                     "ETF_SCALE": ETF_SCALE, "REIT_SCALE": REIT_SCALE}.items():  # Daily-immaterial → Watch rejects
     if daily_gate_quals(t, s):
         consistent = False
         detail.append(f"{name} unexpectedly material to the Daily gate")
@@ -232,12 +251,46 @@ for name, (t, s) in {"INFRA": INFRA, "BIG_INVEST": BIG_INVEST}.items():  # mater
 check("WATCH_DAILY_MATERIALITY_CONSISTENCY — Watch agrees with the shared Daily materiality gate direction",
       consistent, " | ".join(detail))
 
-# 5b. The one intended asymmetry: the Daily gate alone QUALifies the ETF
-#     (Signal 1 fires on ai+출시), but the Watch fund carve-out rejects it —
-#     the Watch is STRICTER on fund noise, never looser. This is exactly why a
-#     Watch-only carve-out (not a Daily-gate change) is the correct, minimal fix.
-check("Watch-only fund carve-out — Daily gate QUALs the ETF yet the Watch rejects it (stricter, never looser)",
-      daily_gate_quals(*ETF_AI) and not watch_sends(*ETF_AI))
+# 5b. R4-OPS-2A — the fund-product noise invariant is now SHARED: BOTH the Watch
+#     AND the canonical Daily executive gate reject the generic AI ETF. Before
+#     R4-OPS-2A the Daily gate QUALified it via Signal 1 (ai+출시) and only the
+#     Watch carve-out caught it; the exclusion now runs inside the shared gate,
+#     before any structural-AI-event acceptance.
+check("FUND_PRODUCT_LAUNCH_REJECTED_BY_WATCH — Watch rejects the generic AI ETF",
+      not watch_sends(*ETF_AI))
+check("FUND_PRODUCT_LAUNCH_REJECTED_BY_DAILY_GATE — shared Daily gate now rejects the generic AI ETF",
+      not daily_gate_quals(*ETF_AI))
+
+# 5c. R4-OPS-2A Gap A — fund SIZE / offering scale ALONE is not industrial
+#     materiality. A fund launch whose only "material" token is a KRW scale
+#     figure is rejected by BOTH surfaces; a bare concrete_scale_figure never
+#     rescues it (FUND_SCALE_ONLY_RESCUE=0).
+def _noise(pair):
+    return em.is_fund_product_launch_noise(
+        {"title": pair[0], "snippet": pair[1], "subtitle": "", "publisher_section": ""})
+
+
+scale_only_cases = (ETF_SCALE, REIT_SCALE, FUND_SET)
+scale_only_watch = all(not watch_sends(*c) for c in scale_only_cases)
+scale_only_daily = all(not daily_gate_quals(*c) for c in scale_only_cases)
+scale_only_noise = all(_noise(c) for c in scale_only_cases)
+check("WATCH_FUND_SCALE_ONLY_REJECTED — scale-only fund launches are not sent by the Watch",
+      scale_only_watch)
+check("DAILY_FUND_SCALE_ONLY_REJECTED — scale-only fund launches rejected by the Daily gate",
+      scale_only_daily)
+check("FUND_SCALE_ONLY_RESCUE=0 — a bare KRW scale figure never rescues a fund launch",
+      scale_only_noise)
+
+# 5d. R4-OPS-2A §4/§9 KEEP — a fund-linked story with a real, separate industrial
+#     event (non-launch action in an industrial context) is NOT noise and IS
+#     accepted on BOTH surfaces, even without an HDEC entity.
+fund_indep_accepted = (
+    (not _noise(FUND_INDEPENDENT))
+    and daily_gate_quals(*FUND_INDEPENDENT)
+    and watch_sends(*FUND_INDEPENDENT)
+)
+check("FUND_INDEPENDENT_INDUSTRIAL_EVENT_ACCEPTED — fund + 출자/EPC/계약 체결 kept on both surfaces",
+      fund_indep_accepted)
 
 # 6. SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0 — a rich material query never
 #    rescues the ETF; the floor reads title/lead only.
@@ -270,6 +323,12 @@ print("WATCH_MATERIAL_AI_INFRA_ACCEPTED=" + ("PASS" if watch_sends(*INFRA) else 
 print("WATCH_MAJOR_STRUCTURAL_AI_EVENT_ACCEPTED=" + ("PASS" if watch_sends(*BIG_INVEST) else "FAIL"))
 print("WATCH_REALTIME_RECALL_PRESERVED=" + ("true" if watch_sends(*RECALL_ADOPTION) and watch_sends(*RECALL_MEGA) else "false"))
 print("WATCH_DAILY_MATERIALITY_CONSISTENCY=" + ("PASS" if consistent else "FAIL"))
+print("FUND_PRODUCT_LAUNCH_REJECTED_BY_WATCH=" + ("PASS" if not watch_sends(*ETF_AI) else "FAIL"))
+print("FUND_PRODUCT_LAUNCH_REJECTED_BY_DAILY_GATE=" + ("PASS" if not daily_gate_quals(*ETF_AI) else "FAIL"))
+print("WATCH_FUND_SCALE_ONLY_REJECTED=" + ("PASS" if scale_only_watch else "FAIL"))
+print("DAILY_FUND_SCALE_ONLY_REJECTED=" + ("PASS" if scale_only_daily else "FAIL"))
+print("FUND_SCALE_ONLY_RESCUE=" + ("0" if scale_only_noise else "NONZERO"))
+print("FUND_INDEPENDENT_INDUSTRIAL_EVENT_ACCEPTED=" + ("PASS" if fund_indep_accepted else "FAIL"))
 print("SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0")
 print("PRIMARY_PUBLISHER_ALONE_CAUSES_WATCH_SEND=0")
 print("EXTERNAL_NETWORK_CALLS=" + str(EXTERNAL["count"]))
