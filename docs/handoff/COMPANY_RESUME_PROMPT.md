@@ -8,6 +8,7 @@ Repository and branch:
 - COMPANY checkout: `/mnt/d/HDEC-Projects/AI-DesignLab-Sensor`
 - Durable task branch: `wip/d7ak6e-final-readiness-zeroing-handoff`
 - Base main at task start: `0418478f1d5389067f01bbc0ba38cdb7630ed5f6`
+- Draft PR: `#40` (`https://github.com/Sinabroin/HDEC-News-Sensor/pull/40`)
 - Teams Watch can autonomously advance `origin/main` with state-only commits.
 
 Begin exactly as follows:
@@ -36,6 +37,7 @@ Product context to preserve:
 - Public Editor exact and latest pages for 2026-08-11 exist and are intentionally empty.
 - Calibration Actions run `31398204844` succeeded with `candidate_count=0`, `qualified_candidates=0`, and zero sends/state writes.
 - The public Editor reports article import API unconfigured; this is separate from live news collection.
+- The stale Naver adapter verifier was reproduced against origin/main and minimally repaired on this branch by allowing and asserting the intentional `discovery_lane` provenance contract; provider and selection semantics were not changed.
 - Do not auto-tune publisher tiers, executive-materiality thresholds, AI centrality, stock/ETF exclusions, specialist send policy, or Teams volume. Those require operator review.
 
 Safe autonomous scope:
