@@ -1572,6 +1572,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "차도옷도중국산ai도밀려나는유럽의위기"
     },
+    "https://asiae.co.kr/article/2026081100115650894": {
+      "article_id": "a18a700ec52ad5d0",
+      "cluster_key": "title:인텔150억달러규모신주발행ai사업실탄확보",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T00:15:41+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T00:15:41+09:00",
+      "normalized_url": "https://asiae.co.kr/article/2026081100115650894",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "아시아경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "인텔150억달러규모신주발행ai사업실탄확보"
+    },
     "https://biz.heraldcorp.com/article/10832438": {
       "article_id": "73a59192bd9e8bf3",
       "cluster_key": "title:삼성전자fms어워드서핵심2개부문수상",
