@@ -1650,6 +1650,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "네카오ai전략갈림길인프라냐서비스냐"
     },
+    "https://dnews.co.kr/uhtml/view.jsp?idxno=202608101016282540377": {
+      "article_id": "22a37155eca531cd",
+      "cluster_key": "title:gs건설ls일렉트릭과손잡고ai데이터센터사업경쟁력강화",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T11:33:11+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T11:33:11+09:00",
+      "normalized_url": "https://dnews.co.kr/uhtml/view.jsp?idxno=202608101016282540377",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "대한경제",
+      "source_tier": "specialist",
+      "title_fingerprint": "gs건설ls일렉트릭과손잡고ai데이터센터사업경쟁력강화"
+    },
     "https://etnews.com/20260806000330": {
       "article_id": "718834e62668084e",
       "cluster_key": "title:통신사ai토큰배울바크다",
@@ -1831,6 +1845,20 @@
       "source": "파이낸셜뉴스",
       "source_tier": "trusted_other",
       "title_fingerprint": "제주남는재생에너지로ai돌린다40mw그린데이터센터승부수"
+    },
+    "https://fnnews.com/news/202608101112318064": {
+      "article_id": "6bd9fea8f08b370d",
+      "cluster_key": "title:ai데이터센터몸값가른다부동산보다귀해진전력권",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T11:33:11+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T11:33:11+09:00",
+      "normalized_url": "https://fnnews.com/news/202608101112318064",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "ai데이터센터몸값가른다부동산보다귀해진전력권"
     },
     "https://hankookilbo.com/news/article/A2026072912000003603": {
       "article_id": "3d5c782b9fdd850f",
@@ -2069,6 +2097,20 @@
       "source": "서울경제",
       "source_tier": "trusted_other",
       "title_fingerprint": "산단ai에너지인프라로새틀짠다"
+    },
+    "https://sedaily.com/article/20077540": {
+      "article_id": "e538b1c7990cec78",
+      "cluster_key": "title:hd현대빅테크데이터센터발전엔진또수주9560억역대급",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T11:33:11+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T11:33:11+09:00",
+      "normalized_url": "https://sedaily.com/article/20077540",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "hd현대빅테크데이터센터발전엔진또수주9560억역대급"
     },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
