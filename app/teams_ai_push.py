@@ -21,6 +21,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from app import (
     ai_centrality,
     editorial_preference_runtime,
+    executive_materiality,
     public_institution_routing,
     publisher_direct,
     source_priority,
@@ -1548,6 +1549,64 @@ def _stock_neutralized_article(article: Mapping[str, Any]) -> dict[str, Any]:
     return neutralized
 
 
+def _watch_executive_evidence(article: Mapping[str, Any]) -> dict:
+    """R4-OPS-2 — allowed factual evidence for the executive-materiality floor.
+
+    Mirrors the Daily gate's evidence contract exactly: title, publisher
+    subtitle, and the first factual snippet sentence only. The generated
+    summary/why-it-matters and the provider query string are deliberately
+    excluded (no ``summary`` key is passed), so no generated text or
+    search-query metadata can qualify a Watch article for send
+    (SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0)."""
+    after = _mapping(article, "after")
+
+    def _pick(*keys: str) -> str:
+        for owner in (article, after):
+            for key in keys:
+                text = _clean(_value(owner, key))
+                if text:
+                    return text
+        return ""
+
+    return {
+        "title": _pick("title"),
+        "snippet": _pick("snippet"),
+        "subtitle": _pick("subtitle", "publisher_subtitle"),
+        "publisher_section": _pick("publisher_section", "section"),
+    }
+
+
+def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
+    """R4-OPS-2 — the real-time Watch executive-materiality noise floor.
+
+    The Teams AI News Watch is deliberately BROADER than the Daily editorial
+    digest (D7-AK-6C §8): it must keep alerting on real-time major AI events —
+    infrastructure investment/contract, datacenter/grid/power, enterprise
+    adoption, regulation, security incidents, HDEC-direct events, and major
+    competitor moves — even when they carry no confirmed-action term. So the
+    Watch does NOT apply the Daily whitelist gate (which would drop those
+    strategic events); it applies a narrow NOISE floor keyed to the observed
+    production defect.
+
+    Observed leak (연합뉴스 "…전략산업 ETF 출시", 2026-08-10, sent as important):
+    a financial-PRODUCT launch qualified only because the Watch importance path
+    treats a bare "출시" as a confirmed action. An ETF/fund/REIT product launch
+    is a financial-product event, not an AI-industry event, and the Daily
+    surface would never publish it. Using the shared executive-materiality
+    contract (app.executive_materiality — one rule, no drift), this floor
+    rejects such a story UNLESS the same title/lead independently carries a real
+    material industrial event (a non-launch confirmed corporate action in an
+    industrial context, an HDEC-direct entity PAIRED WITH such an action, or a
+    material AI-security incident) — neither fund SIZE / offering scale nor a
+    bare HDEC mention ever rescues it, and the fund vehicle is detected in the
+    title + factual lead (R4-OPS-2A §4/§9, R4-OPS-2B §2/§6). Returns
+    (is_noise, reason)."""
+    evidence = _watch_executive_evidence(article)
+    if executive_materiality.is_fund_product_launch_noise(evidence):
+        return True, "fund_product_launch_without_material_event"
+    return False, ""
+
+
 def evaluate_teams_push_policy(
     article: Mapping[str, Any],
     *,
@@ -1675,6 +1734,22 @@ def evaluate_teams_push_policy(
             article, topic, False,
             ImportanceDecision(False, reason="insufficient_executive_relevance"),
             True, False, "insufficient_hdec_relevance",
+            stock_market=stock_gate,
+        )
+
+    # R4-OPS-2 — executive-materiality noise floor. An AI-central, HDEC-relevant
+    # article is still not sent to executives if it is executive noise: an
+    # ETF/fund/REIT product-launch story with no independent material industrial
+    # event. This closes the observed production leak (연합뉴스 "…전략산업 ETF
+    # 출시", 2026-08-10) the importance path admitted via a bare "출시" confirmed
+    # action, while keeping the Watch broader than the Daily digest for genuine
+    # real-time AI events (D7-AK-6C §8 recall preserved).
+    is_noise, noise_reason = is_watch_send_noise(article)
+    if is_noise:
+        return TeamsPolicyEvaluation(
+            article, topic, True,
+            ImportanceDecision(False, reason=noise_reason),
+            True, False, "excluded_fund_product_noise",
             stock_market=stock_gate,
         )
 
