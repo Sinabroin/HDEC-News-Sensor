@@ -2034,6 +2034,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "트럼프데이터센터반대운동자금의혹시진핑과논의할것"
     },
+    "https://newsis.com/view/NISX20260810_0003742694": {
+      "article_id": "11cf6eec16d72eb5",
+      "cluster_key": "title:로봇도옷입는다반도체다음주도주로전자피부뜨나",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T01:14:24+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T01:14:24+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260810_0003742694",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "로봇도옷입는다반도체다음주도주로전자피부뜨나"
+    },
     "https://sedaily.com/article/20077003": {
       "article_id": "7a86b7754aa8ff61",
       "cluster_key": "title:npu스타트업매출1000억시대오나",
