@@ -47,18 +47,24 @@ jobs:
         run: |
           if [ "${CALIBRATION_ONLY}" = "true" ]; then
             resolved="${RUNNER_TEMP}/editorial-review-calibration"
+            run_at="$(python3 -c "from datetime import datetime, timedelta, time, timezone; kst = timezone(timedelta(hours=9)); target = datetime.now(kst).date() + timedelta(days=1); print(datetime.combine(target, time(7, 20), kst).isoformat())")"
           else
             resolved="docs/editorial/review"
+            run_at=""
           fi
           echo "output_root=${resolved}" >> "$GITHUB_OUTPUT"
-          echo "Resolved calibration_only=${CALIBRATION_ONLY}; output_root=${resolved}"
+          echo "run_at=${run_at}" >> "$GITHUB_OUTPUT"
+          echo "Resolved calibration_only=${CALIBRATION_ONLY}; output_root=${resolved}; run_at=${run_at}"
       - name: Build Daily Editorial Review Console
         env:
           OUTPUT_ROOT: ${{ steps.mode.outputs.output_root }}
+          RUN_AT: ${{ steps.mode.outputs.run_at }}
         run: |
-          python3 scripts/build_editorial_review_console.py \
-            --output-root "$OUTPUT_ROOT" \
-            --candidate-limit 24
+          args=(--output-root "$OUTPUT_ROOT" --candidate-limit 24)
+          if [ -n "$RUN_AT" ]; then
+            args+=(--run-at "$RUN_AT")
+          fi
+          python3 scripts/build_editorial_review_console.py "${args[@]}"
       - name: Verify no sender or production state mutation
         run: |
           python3 scripts/verify_editorial_review_console.py
