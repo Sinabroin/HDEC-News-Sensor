@@ -2124,6 +2124,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "메타ai모델개방확대저커버그개인에더많은권한"
     },
+    "https://newsis.com/view/NISX20260811_0003743716": {
+      "article_id": "85c0b3cb54f189d7",
+      "cluster_key": "title:케이웨더비엔아이엔씨날씨ai팩토리구축사업계약",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T08:22:59+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T08:22:59+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260811_0003743716",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "케이웨더비엔아이엔씨날씨ai팩토리구축사업계약"
+    },
     "https://sedaily.com/article/20077003": {
       "article_id": "7a86b7754aa8ff61",
       "cluster_key": "title:npu스타트업매출1000억시대오나",
