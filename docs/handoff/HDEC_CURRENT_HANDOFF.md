@@ -8,17 +8,17 @@ BASE_MAIN=0418478f1d5389067f01bbc0ba38cdb7630ed5f6
 CURRENT_ORIGIN_MAIN=9e51bdc415aa293067804a439f33eb8d317523b4
 
 TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-REMOTE_BRANCH_HEAD=0212c2a83dad4cac93130c4b5f50fa73c5e814a1
-LOCAL_HEAD=WORKTREE_CHECKPOINT_ON_0212c2a83dad4cac93130c4b5f50fa73c5e814a1
+REMOTE_BRANCH_HEAD=e9a4ab0bfb1932d1b8216f349adfd55edc8d0017
+LOCAL_HEAD=WORKTREE_CHECKPOINT_ON_e9a4ab0bfb1932d1b8216f349adfd55edc8d0017
 
 DRAFT_PR_NUMBER=40
 DRAFT_PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
 
-CURRENT_STATUS=ZEROING_AUDIT_OBSERVABILITY_CHECKPOINT_IN_PROGRESS
+CURRENT_STATUS=ZEROING_AUDIT_VERIFIER_CONTRACT_CHECKPOINT_IN_PROGRESS
 
 VERIFIED_WORK_COMPLETED=
 - Fresh task base was `origin/main=0418478f1d5389067f01bbc0ba38cdb7630ed5f6`; starting worktree was clean with divergence `0/0`.
-- Created and pushed the durable task branch and Draft PR #40. Checkpoints `58a1e08540b44062ed32c6514b19b391043c0fa7` and `0212c2a83dad4cac93130c4b5f50fa73c5e814a1` are on GitHub.
+- Created and pushed the durable task branch and Draft PR #40. Checkpoints `58a1e08540b44062ed32c6514b19b391043c0fa7`, `0212c2a83dad4cac93130c4b5f50fa73c5e814a1`, and `e9a4ab0bfb1932d1b8216f349adfd55edc8d0017` are on GitHub.
 - Current `TEAMS_AI_NEWS_WATCH=1` was read directly from the repository variable API; it was last updated 2026-08-10 17:43:27 KST.
 - Latest scheduled Watch #278 (`31402388302`) completed successfully at 2026-08-11 00:15 KST with `LIVE_HEALTHY_WITH_ARTICLES`.
 - Watch #278 funnel: raw 548; publisher-direct eligible/current 44; AI core 10; HDEC relevant 10; importance-qualified 6; alert-policy eligible 6; raw primary-10 4; secondary-3 0; specialist 3; immediate major 0; specialist held 1; source-gate rejected 5; selected 0; SMTP attempted/accepted 0/0.
@@ -28,6 +28,7 @@ VERIFIED_WORK_COMPLETED=
 - Added `scripts/audit_editorial_calibration.py`, a network-free/read-only diagnostic with an in-process self-test. It reports exact aggregates, explicitly title-only row annotations, and never guesses decisions omitted by calibration v1.
 - Cross-surface diagnostic proves that five Watch-held rows already seen before calibration generation (23:30:17 KST) and inside its coverage window were absent from all 35 calibration raw rows. These include the LS Electric–GS E&C AI data-center DC-distribution partnership and HD Hyundai's KRW 956B data-center generator order.
 - Reproduced the Naver adapter verifier failure on source byte-identical to origin/main. R4-R17 intentionally added `discovery_lane`; the old verifier allowlist omitted it. Applied a verifier-only allowlist/assertion fix; provider and selection behavior are unchanged.
+- Reproduced `verify_naver_provider_operational_wiring.py` failures identically in a detached clean `origin/main=9e51bdc415aa293067804a439f33eb8d317523b4` worktree. Its fixed June timestamp had expired, its provider stubs did not emit the now-required source/query health audit, and publisher resolution remained network-capable; this caused a dishonest mock fallback. The verifier-only fixture now uses a current timestamp, emits deterministic audit success, supplies verified publisher authority, and stubs every live outbound boundary. All operational-wiring checks pass in 1.7 seconds without changing collector/provider behavior.
 - Public exact/latest Editor 2026-08-11 both return HTTP 200 and their three core files are SHA-identical. Public Daily 2026-08-11 is HTTP 404; Daily latest and 2026-08-06 are HTTP 200.
 - Latest scheduled refresh #522 (`31402738697`) fails only in `verify_naver_news_adapter.py` before live build; its log shows the same stale allowlist failure fixed on this branch.
 - Last successful Daily edition/send is `2026-08-06` / `2026-08-06T08:06:20+09:00`, SMTP 250. Exact-Editor CTA commit `4b8ad57` is not its ancestor and PR #31 merged at 08:28:56 KST, after that send. No post-contract production Daily/Teams proof exists.
@@ -90,24 +91,27 @@ VERIFIERS_RUN=
 - `bash -n scripts/hdec_cross_machine_status.sh` — PASS
 - `./scripts/hdec_cross_machine_status.sh` — PASS for Git/fetch/status behavior
 - `python3 scripts/verify_naver_news_adapter.py` — origin/main-identical baseline FAIL 1; branch PASS 14
+- `python3 scripts/verify_naver_provider_operational_wiring.py` — clean origin/main baseline FAIL 2; branch PASS (all checks, temp DB, network-free provider boundaries)
 - `python3 scripts/audit_editorial_calibration.py --self-test` — PASS
 - Actual calibration audit — PASS with network_calls=0, sends=0, production_state_writes=0
 
 FAILING_VERIFIERS=
 - Production scheduled refresh #522: stale origin/main `verify_naver_news_adapter.py` allowlist, fixed only on this WIP branch pending review/merge.
-- Full offline verifier matrix is the next checkpoint; do not claim it complete yet.
+- No failing branch-local verifier is known at this checkpoint. Complete the remaining offline matrix before the final seal.
 
 FILES_CHANGED=
 - `docs/handoff/HDEC_CURRENT_HANDOFF.md`
 - `docs/handoff/COMPANY_RESUME_PROMPT.md`
 - `scripts/hdec_cross_machine_status.sh`
 - `scripts/verify_naver_news_adapter.py`
+- `scripts/verify_naver_provider_operational_wiring.py`
 - `scripts/audit_editorial_calibration.py`
 
 COMMITS_CREATED=
 - `58a1e08540b44062ed32c6514b19b391043c0fa7 chore: establish durable cross-machine handoff`
 - `0212c2a83dad4cac93130c4b5f50fa73c5e814a1 fix: align Naver discovery lane verifier contract`
-- Calibration audit observability checkpoint pending.
+- `e9a4ab0bfb1932d1b8216f349adfd55edc8d0017 feat: add network-free calibration rejection audit`
+- Naver operational-wiring verifier checkpoint pending.
 
 PRODUCTION_SENDS=0
 PRODUCTION_STATE_WRITES=0
