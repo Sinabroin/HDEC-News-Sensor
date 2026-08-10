@@ -39,6 +39,7 @@ Product context to preserve:
 - The public Editor reports article import API unconfigured; this is separate from live news collection.
 - The stale Naver adapter verifier was reproduced against origin/main and minimally repaired on this branch by allowing and asserting the intentional `discovery_lane` provenance contract; provider and selection semantics were not changed.
 - The Naver operational-wiring verifier also failed identically on a detached clean origin/main baseline: a fixed June timestamp had expired, current source/query health audit was not emitted, and publisher resolution was not fully stubbed. Its network-free fixture now uses current time, deterministic provider audit/authority rows, and a no-op outbound resolver; production collector/provider semantics remain unchanged.
+- Two additional verifier drifts were reproduced identically on detached clean origin/main and repaired without production-semantic changes: publisher-direct now pins the reviewed Daily/Editor workflows but snapshots the autonomously mutable Watch ledger only before/after execution; live-ingestion accepts and asserts the intentional Naver `discovery_lane` provenance. Publisher-direct is `91/0`; live-ingestion passes with zero external network/sends/state writes.
 - A network-free calibration audit CLI now proves the exact 2026-08-11 funnel `548 provider rows → 35 eligible raw rows → 10 in-window/relevance rows → 2 AI-central → 2 materiality rejects → 0` and reports title-only evidence without guessing omitted leads.
 - Five Watch-held rows already known before the calibration generation time were absent from its raw inventory, including the LS Electric–GS E&C AI data-center partnership and HD Hyundai's KRW 956B data-center generator order. This is a documented Editor recall/supply seam; do not auto-promote sources or loosen policy.
 - Latest Watch #278 was live healthy but selected/sent zero; its six policy-eligible rows were all non-primary, with five source-gate rejections and one specialist hold.
@@ -69,7 +70,7 @@ MAIN_MERGES=0
 
 Never merge to main, send to production, dispatch a mutating/sending workflow, alter variables/secrets, directly edit production ledgers, rebase, or force push. Record any such next step as `REQUIRES_OPERATOR_APPROVAL=true` and continue other safe work.
 
-The evidence audit, Naver verifier repair, and network-free rejection diagnostic are complete. Read the current handoff's human article classifications and blockers, then continue its `NEXT_SINGLE_ACTION`: run the full relevant offline verifier matrix, compare any failure with clean origin/main, integrate fresh origin/main only if needed and conflict-free, finalize the same Draft PR and handoff, and push a final remote seal.
+The evidence audit, verifier-only repairs, network-free rejection diagnostic, and extended offline verifier matrix are complete. Read the current handoff's human article classifications and blockers, then continue its `NEXT_SINGLE_ACTION`: integrate fresh origin/main only if needed and conflict-free, rerun the focused offline seal, finalize the same Draft PR and handoff, and push a final remote seal.
 
 To start Codex from this file after the bootstrap commands, use the CLI form verified from `codex exec --help`:
 

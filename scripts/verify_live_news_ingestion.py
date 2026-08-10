@@ -46,13 +46,14 @@ ALLOWED_ROW_KEYS = {"id", "title", "source", "published_at", "url",
                     "snippet", "source_metadata", "discovery_url",
                     "discovery_provider", "publisher_url", "publisher_domain",
                     "publisher_direct", "portal_resolution_status",
-                    "portal_resolution_reason"}
+                    "portal_resolution_reason", "discovery_lane"}
 ALLOWED_META_KEYS = {"provider", "query", "source_url", "collected_at",
                      "provider_response_id", "rss_source_url",
                      "rss_source_home_url", "discovery_url",
                      "discovery_provider", "publisher_url",
                      "publisher_domain", "publisher_direct",
-                     "portal_resolution_status", "portal_resolution_reason"}
+                     "portal_resolution_status", "portal_resolution_reason",
+                     "discovery_lane"}
 
 SAMPLE_RSS = """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>
 <item><title>현대건설 데이터센터 EPC 수주 - 연합뉴스</title>
@@ -376,6 +377,10 @@ def check_naver_provider() -> None:
               all(set(r.keys()) <= ALLOWED_ROW_KEYS for r in rows))
         check("naver 파서: source_metadata 키가 허용 집합뿐 (rules.md §3)",
               all(set(r["source_metadata"].keys()) <= ALLOWED_META_KEYS for r in rows))
+        check("naver 파서: discovery lane은 qualification이 아닌 provenance로 보존",
+              all(r.get("discovery_lane") == nv.DISCOVERY_LANE_GENERAL
+                  and r["source_metadata"].get("discovery_lane")
+                  == nv.DISCOVERY_LANE_GENERAL for r in rows))
         check("naver 파서: snippet에 HTML 태그 잔존 없음",
               all("<" not in (r["snippet"] or "") for r in rows))
         check("naver 파서: X(엑스)/x.com 소스 제외",

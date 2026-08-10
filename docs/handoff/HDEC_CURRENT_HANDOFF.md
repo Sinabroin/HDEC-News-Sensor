@@ -8,13 +8,13 @@ BASE_MAIN=0418478f1d5389067f01bbc0ba38cdb7630ed5f6
 CURRENT_ORIGIN_MAIN=9e51bdc415aa293067804a439f33eb8d317523b4
 
 TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-REMOTE_BRANCH_HEAD=e9a4ab0bfb1932d1b8216f349adfd55edc8d0017
-LOCAL_HEAD=WORKTREE_CHECKPOINT_ON_e9a4ab0bfb1932d1b8216f349adfd55edc8d0017
+REMOTE_BRANCH_HEAD=1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788
+LOCAL_HEAD=WORKTREE_CHECKPOINT_ON_1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788
 
 DRAFT_PR_NUMBER=40
 DRAFT_PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
 
-CURRENT_STATUS=ZEROING_AUDIT_VERIFIER_CONTRACT_CHECKPOINT_IN_PROGRESS
+CURRENT_STATUS=ZEROING_AUDIT_EXTENDED_VERIFIER_CHECKPOINT_IN_PROGRESS
 
 VERIFIED_WORK_COMPLETED=
 - Fresh task base was `origin/main=0418478f1d5389067f01bbc0ba38cdb7630ed5f6`; starting worktree was clean with divergence `0/0`.
@@ -29,6 +29,7 @@ VERIFIED_WORK_COMPLETED=
 - Cross-surface diagnostic proves that five Watch-held rows already seen before calibration generation (23:30:17 KST) and inside its coverage window were absent from all 35 calibration raw rows. These include the LS Electric–GS E&C AI data-center DC-distribution partnership and HD Hyundai's KRW 956B data-center generator order.
 - Reproduced the Naver adapter verifier failure on source byte-identical to origin/main. R4-R17 intentionally added `discovery_lane`; the old verifier allowlist omitted it. Applied a verifier-only allowlist/assertion fix; provider and selection behavior are unchanged.
 - Reproduced `verify_naver_provider_operational_wiring.py` failures identically in a detached clean `origin/main=9e51bdc415aa293067804a439f33eb8d317523b4` worktree. Its fixed June timestamp had expired, its provider stubs did not emit the now-required source/query health audit, and publisher resolution remained network-capable; this caused a dishonest mock fallback. The verifier-only fixture now uses a current timestamp, emits deterministic audit success, supplies verified publisher authority, and stubs every live outbound boundary. All operational-wiring checks pass in 1.7 seconds without changing collector/provider behavior.
+- Reproduced `verify_publisher_direct_collector.py` (`89/3`) and `verify_live_news_ingestion.py` (2 failures) identically on detached clean origin/main. The first pinned obsolete Daily/Editor workflow SHAs and an inherently mutable Watch ledger SHA; the second omitted the intentional Naver `discovery_lane` provenance keys. The verifier-only repair pins the reviewed R4-R12/R4-R19–R21 workflows, snapshots the bot-owned Watch ledger only before/after the test, and validates the discovery lane value. Branch results are publisher-direct `91/0` and live-ingestion PASS with zero external network/sends/state writes.
 - Public exact/latest Editor 2026-08-11 both return HTTP 200 and their three core files are SHA-identical. Public Daily 2026-08-11 is HTTP 404; Daily latest and 2026-08-06 are HTTP 200.
 - Latest scheduled refresh #522 (`31402738697`) fails only in `verify_naver_news_adapter.py` before live build; its log shows the same stale allowlist failure fixed on this branch.
 - Last successful Daily edition/send is `2026-08-06` / `2026-08-06T08:06:20+09:00`, SMTP 250. Exact-Editor CTA commit `4b8ad57` is not its ancestor and PR #31 merged at 08:28:56 KST, after that send. No post-contract production Daily/Teams proof exists.
@@ -94,6 +95,26 @@ VERIFIERS_RUN=
 - `python3 scripts/verify_naver_provider_operational_wiring.py` — clean origin/main baseline FAIL 2; branch PASS (all checks, temp DB, network-free provider boundaries)
 - `python3 scripts/audit_editorial_calibration.py --self-test` — PASS
 - Actual calibration audit — PASS with network_calls=0, sends=0, production_state_writes=0
+- `python3 scripts/verify_watch_executive_materiality.py` — PASS 31/31
+- `python3 scripts/verify_executive_qualification_hardening.py` — PASS 37/37
+- `python3 scripts/verify_editorial_briefings.py` — PASS 344/344
+- `python3 scripts/verify_material_ai_infra_recall.py` — PASS 25/25
+- `python3 scripts/verify_observed_false_positive_regression.py` — PASS 101/101
+- `python3 scripts/verify_teams_ai_push.py` — PASS
+- `python3 scripts/verify_teams_ai_push_production.py` — PASS 232/232
+- `python3 scripts/verify_teams_major_media_gate.py` — PASS 38/38
+- `python3 scripts/verify_teams_strict_source_gate.py` — PASS 62/62
+- `python3 scripts/verify_stock_market_hard_exclusion.py` — PASS 61/61
+- `python3 scripts/verify_editorial_review_console.py` — PASS 200/200
+- `python3 scripts/verify_daily_editor_deep_link.py` — PASS 118/118
+- `python3 scripts/verify_daily_lead_source_gate.py` — PASS 24/24
+- `python3 scripts/verify_daily_immutable_edition_manifest.py` — PASS 31/31
+- `python3 scripts/verify_primary_publisher_discovery_lane.py` — PASS 41/41
+- `python3 scripts/verify_scheduled_refresh_and_telegram.py` — PASS
+- `python3 scripts/verify_teams_ai_push_workflow_dry_run.py` — PASS
+- `python3 scripts/verify_operator_api_activation_readiness.py` — PASS
+- `python3 scripts/verify_publisher_direct_collector.py` — clean origin/main baseline FAIL 3; branch PASS 91/91
+- `python3 scripts/verify_live_news_ingestion.py` — clean origin/main baseline FAIL 2; branch PASS
 
 FAILING_VERIFIERS=
 - Production scheduled refresh #522: stale origin/main `verify_naver_news_adapter.py` allowlist, fixed only on this WIP branch pending review/merge.
@@ -105,13 +126,16 @@ FILES_CHANGED=
 - `scripts/hdec_cross_machine_status.sh`
 - `scripts/verify_naver_news_adapter.py`
 - `scripts/verify_naver_provider_operational_wiring.py`
+- `scripts/verify_publisher_direct_collector.py`
+- `scripts/verify_live_news_ingestion.py`
 - `scripts/audit_editorial_calibration.py`
 
 COMMITS_CREATED=
 - `58a1e08540b44062ed32c6514b19b391043c0fa7 chore: establish durable cross-machine handoff`
 - `0212c2a83dad4cac93130c4b5f50fa73c5e814a1 fix: align Naver discovery lane verifier contract`
 - `e9a4ab0bfb1932d1b8216f349adfd55edc8d0017 feat: add network-free calibration rejection audit`
-- Naver operational-wiring verifier checkpoint pending.
+- `1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788 fix: make Naver operational verifier deterministic`
+- Extended verifier-zeroing checkpoint pending.
 
 PRODUCTION_SENDS=0
 PRODUCTION_STATE_WRITES=0
@@ -119,7 +143,7 @@ PRODUCTION_STATE_WRITES=0
 REQUIRES_OPERATOR_APPROVAL=true
 - Required for source-tier/recall policy, Editor-only cross-lane supply changes, Operator API deployment/variables, and the first controlled non-empty Daily → Teams → exact Editor CTA proof.
 
-NEXT_SINGLE_ACTION=Run the complete relevant offline verifier matrix, classify any failure against clean origin/main, then integrate fresh origin/main if conflict-free and finalize the Draft PR/handoff seal.
+NEXT_SINGLE_ACTION=Fetch and integrate fresh origin/main into this WIP branch without rebase, rerun the focused offline seal, then finalize Draft PR #40 and the cross-machine handoff.
 
 COMPANY_RESUME_COMMANDS=
 ```bash

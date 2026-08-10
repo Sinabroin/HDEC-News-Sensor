@@ -59,10 +59,14 @@ EXPECTED_PROTECTED_SHA256 = {
         # wires the delivered lead-source gate verifier into the offline gate.
         # R4-R11 removes the reader-only degradation: editor-unavailable
         # publications skip fail-closed with a machine-readable skip_reason.
-        "e454f9d880fe5471b2bf64cecc775200feb4d8b85aa8f85105c689db3365bebc"
+        # R4-R12 then requires public immutable-manifest reconstruction before
+        # claim/send. This is the reviewed production workflow at origin/main.
+        "28da867978979ecd75e3e499a92d12abfcfad2905f5392454342ab9dad158d0c"
     ),
     ".github/workflows/editorial-review-console.yml": (
-        "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"
+        # R4-R19/R20 calibration artifacts and R4-R21 honest-empty publishing
+        # are part of the reviewed Editor production workflow.
+        "a862e0726f8d114ed46b0fc43cc8b5a3fff8d3ec641bfeb6605b5caedee30e50"
     ),
     ".github/workflows/editorial-weekly-ti.yml": (
         "0fcdd70c8d2a0fee45fd44cec92c7ef837d8bbda408a3e7551f1713feb953851"
@@ -104,20 +108,16 @@ EXPECTED_PROTECTED_SHA256 = {
         # sent by main's legacy reader-only path that this branch forbids).
         "68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155"
     ),
-    "data/teams_push_state.json": (
-        # Verified successor from the production watch's own state commits
-        # (through origin/main 6c54e5a → 710a59a → 86d3e6b → 564462f "chore:
-        # persist Teams AI push dedup state" — merged without modification,
-        # routine successor-pin refresh; the 86d3e6b batch plus 1710754 add
-        # seven ungated-main sends, six of them non-major tier that this
-        # branch's R4-R9A/R9D source gate holds back or blocks).
-        # This state contains the R4-R11 TTL production send
-        # (teams_ai_push:7081b3470e08, http://www.ttlnews.com/…idxno=3131687);
-        # verify_teams_strict_source_gate §10 proves it read-only and pins the
-        # publisher to never_automatic.
-        "4b3f78ee92152d98e704695004af5367d18fa61e9ce38ec8794a49bedee96e3d"
-    ),
 }
+
+# Watch owns this ledger and may advance it through autonomous state-only main
+# commits. An exact historical SHA would make the verifier stale after every
+# healthy run. Snapshot it around the test instead: any verifier write still
+# fails below, while the current authoritative production successor is accepted.
+RUNTIME_PROTECTED_PATHS = (
+    *EXPECTED_PROTECTED_SHA256,
+    "data/teams_push_state.json",
+)
 
 PASS = 0
 FAIL = 0
@@ -318,7 +318,7 @@ def teams_article(url: str) -> dict:
 
 def main() -> int:
     protected_before = {
-        path: sha256(ROOT / path) for path in EXPECTED_PROTECTED_SHA256
+        path: sha256(ROOT / path) for path in RUNTIME_PROTECTED_PATHS
     }
     for path, expected in EXPECTED_PROTECTED_SHA256.items():
         check(f"protected SHA256 exact: {path}", protected_before[path] == expected)
@@ -1335,7 +1335,7 @@ def main() -> int:
         ))
 
     protected_after = {
-        path: sha256(ROOT / path) for path in EXPECTED_PROTECTED_SHA256
+        path: sha256(ROOT / path) for path in RUNTIME_PROTECTED_PATHS
     }
     check("all workflows remain byte-identical", all(
         protected_after[path] == protected_before[path]
