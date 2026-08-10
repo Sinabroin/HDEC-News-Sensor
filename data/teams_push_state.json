@@ -2146,6 +2146,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "hd현대빅테크데이터센터발전엔진또수주9560억역대급"
     },
+    "https://sedaily.com/article/20077855": {
+      "article_id": "9174dff83e8b9ae5",
+      "cluster_key": "title:처럼승부수메타오픈웨이트ai모델공개",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-10T23:05:45+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-10T23:05:45+09:00",
+      "normalized_url": "https://sedaily.com/article/20077855",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "서울경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "처럼승부수메타오픈웨이트ai모델공개"
+    },
     "https://segye.com/newsView/20260805509850": {
       "article_id": "1b2f743867766320",
       "cluster_key": "title:제네시스홀딩스그룹충남500kw급태양광발전소인수",
