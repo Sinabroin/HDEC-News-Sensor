@@ -9,6 +9,7 @@ import os
 import shutil
 import sys
 import tempfile
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -141,11 +142,109 @@ def copy_preview_assets(source_root: Path, destination_dir: Path) -> None:
                 shutil.copy2(asset, target / asset.name)
 
 
+# R4-R20 — bound the sanitized raw inventory so a pathological supply cannot
+# bloat the calibration artifact. Counters record what was dropped.
+CALIBRATION_DIAGNOSTIC_MAX_RAW = 500
+
+
+def _diagnostic_publisher_domain(url: str) -> str:
+    try:
+        host = urlparse(str(url or "")).hostname or ""
+    except (TypeError, ValueError):
+        return ""
+    return host[4:] if host.startswith("www.") else host
+
+
+def _sanitized_diagnostic_row(raw: object) -> dict:
+    """Allowlist-only projection of one raw article row.
+
+    Emits only the provenance a human needs to judge live supply — never the
+    full source_metadata, query text, credentials, headers, cookies, env, or
+    any article body/HTML.
+    """
+    if not isinstance(raw, Mapping):
+        return {}
+    metadata = raw.get("source_metadata")
+    metadata = metadata if isinstance(metadata, Mapping) else {}
+    published = raw.get("published_at")
+    if isinstance(published, datetime):
+        published = published.isoformat()
+    url = str(raw.get("url") or "")
+    provider = str(
+        metadata.get("provider")
+        or raw.get("provider")
+        or raw.get("collection_source_kind")
+        or ""
+    )
+    discovery = str(
+        raw.get("discovery_provider")
+        or metadata.get("discovery_provider")
+        or ""
+    )
+    return {
+        "title": str(raw.get("title") or ""),
+        "source": str(raw.get("source") or ""),
+        "published_at": str(published or ""),
+        "url": url,
+        "publisher_domain": _diagnostic_publisher_domain(url),
+        "provider": provider,
+        "discovery_provider": discovery,
+    }
+
+
+def write_calibration_diagnostic(
+    output_root: Path,
+    *,
+    run_at: datetime,
+    edition_key: str,
+    coverage: editorial_briefings.CoverageWindow,
+    raw_articles: Iterable[Mapping],
+    normalized_count: int,
+    collection_audit: dict,
+    selection_audit: dict,
+) -> Path:
+    """Persist a network-free supply/selection diagnostic (calibration only).
+
+    Written after normalization for BOTH zero-candidate and populated runs so a
+    single live calibration reveals the exact stage where supply collapses. It
+    never changes failure semantics — the caller still fails closed on empty.
+    """
+    rows = list(raw_articles or [])
+    emitted = [
+        _sanitized_diagnostic_row(row)
+        for row in rows[:CALIBRATION_DIAGNOSTIC_MAX_RAW]
+    ]
+    payload = {
+        "version": 1,
+        "mode": "live_editorial_calibration",
+        "run_at": run_at.isoformat(),
+        "edition_key": edition_key,
+        "coverage_start": coverage.start.isoformat(),
+        "coverage_end": coverage.end.isoformat(),
+        "raw_article_count": len(rows),
+        "raw_articles_emitted": len(emitted),
+        "raw_articles_truncated": max(0, len(rows) - len(emitted)),
+        "normalized_candidate_count": int(normalized_count),
+        "collection_audit": collection_audit,
+        "selection_audit": selection_audit,
+        "raw_articles": emitted,
+    }
+    root = output_root.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    target = root / "calibration-diagnostic.json"
+    target.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return target
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-at", default="")
     parser.add_argument("--output-root", type=Path, default=ROOT / "docs" / "editorial" / "review")
     parser.add_argument("--candidate-limit", type=int, default=24)
+    parser.add_argument("--calibration-diagnostics", action="store_true")
     parser.add_argument("--fixture", action="store_true")
     parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE)
     parser.add_argument(
@@ -215,6 +314,17 @@ def main() -> int:
         edition_type="daily",
         operator_review=True,
     )
+    if args.calibration_diagnostics:
+        write_calibration_diagnostic(
+            args.output_root,
+            run_at=run_at,
+            edition_key=edition_key,
+            coverage=coverage,
+            raw_articles=raw_articles,
+            normalized_count=len(articles),
+            collection_audit=collection_audit,
+            selection_audit=selection_counters.manifest_fields(),
+        )
     if not articles:
         raise SystemExit("no candidate articles in Daily coverage")
 
