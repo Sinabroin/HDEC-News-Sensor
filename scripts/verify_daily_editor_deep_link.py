@@ -43,6 +43,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -189,6 +190,182 @@ def render_with_editor(run_at=RUN_AT, articles=None):
         review_decision="approved",
         editor_console_available=True,
     )
+
+
+# ----------------------------------------------------------------------------
+# R4-R18 — decoration-safe editor deep-link intent detection.
+#
+# The exact-edition module must treat a plain console decorated with unknown /
+# tracking query params (utm_source, v, foo, a bare source tag) as *not* a deep
+# link: it opens the plain console. Deep-link intent is signalled only by the
+# identity params the Teams editor URL mints (product, edition_id); once either
+# is present the strict validation is unchanged and every invalid identity still
+# fails closed. The matrix below is proven three ways: the guard/legacy-bail
+# structure, a node-free decision-table mirror of the module's synchronous
+# prefix, and — when node is present — an end-to-end run of the REAL extracted
+# module (native WebCrypto verifies the immutable manifest, so OPEN_EDITOR is a
+# genuine editor open, not a stub).
+# ----------------------------------------------------------------------------
+DEEP_LINK_MATRIX = (
+    ("A_plain_latest", ""),
+    ("B_utm_source", "?utm_source=chatgpt.com"),
+    ("C_v_test", "?v=test"),
+    ("D_foo_bar", "?foo=bar"),
+    ("D2_source_only", "?source=teams"),
+    ("E_valid_identity", "?product=daily&edition_id={id}&source=teams_daily"),
+    ("F_product_weekly", "?product=weekly"),
+    ("G_missing_edition_id", "?product=daily"),
+    ("G2_garbage_edition_id", "?product=daily&edition_id=not-an-edition"),
+    ("H_valid_plus_decoration", "?product=daily&edition_id={id}&source=teams_daily&utm_source=teams"),
+    ("X_edition_id_no_product", "?edition_id={id}"),
+)
+
+DEEP_LINK_EXPECTED = {
+    "A_plain_latest": "OPEN_PLAIN_CONSOLE",
+    "B_utm_source": "OPEN_PLAIN_CONSOLE",
+    "C_v_test": "OPEN_PLAIN_CONSOLE",
+    "D_foo_bar": "OPEN_PLAIN_CONSOLE",
+    "D2_source_only": "OPEN_PLAIN_CONSOLE",
+    "E_valid_identity": "OPEN_EDITOR",
+    "F_product_weekly": "FAILED:unsupported_product",
+    "G_missing_edition_id": "FAILED:malformed_edition_id",
+    "G2_garbage_edition_id": "FAILED:malformed_edition_id",
+    "H_valid_plus_decoration": "OPEN_EDITOR",
+    "X_edition_id_no_product": "FAILED:unsupported_product",
+}
+
+DEEP_LINK_DECORATION_CASES = (
+    "A_plain_latest", "B_utm_source", "C_v_test", "D_foo_bar", "D2_source_only",
+)
+
+# The synchronous prefix cannot decide OPEN_EDITOR (that needs the async manifest
+# fetch + digest verify); the mirror reports how far the sync gate lets a URL go.
+_MIRROR_PROCEEDS = "PROCEEDS_TO_MANIFEST"
+
+CONSOLE_MODULE_MARKER = '<script id="exact-edition-deep-link">'
+
+
+def deep_link_outcome_mirror(search: str, edition_key: str) -> str:
+    """Pure mirror of the module's synchronous intent-detection + product/id gate."""
+    query = search[1:] if search.startswith("?") else search
+    params = urllib.parse.parse_qs(query, keep_blank_values=True, separator="&")
+
+    def get(key: str) -> str:
+        return params.get(key, [""])[0]
+
+    # R4-R18 guard: identity params only (product | edition_id).
+    if "product" not in params and "edition_id" not in params:
+        return "OPEN_PLAIN_CONSOLE"
+    if get("product") != "daily":
+        return "FAILED:unsupported_product"
+    match = re.match(r"^daily-(\d{4})-(\d{2})-(\d{2})-([0-9a-f]{16})$", get("edition_id"))
+    if not match:
+        return "FAILED:malformed_edition_id"
+    if not (1 <= int(match.group(2)) <= 12 and 1 <= int(match.group(3)) <= 31):
+        return "FAILED:malformed_edition_id"
+    if f"{match.group(1)}-{match.group(2)}-{match.group(3)}" != edition_key:
+        return "FAILED:edition_console_mismatch"
+    return _MIRROR_PROCEEDS
+
+
+# node -e harness: runs the REAL extracted module against each matrix URL with a
+# minimal browser shim (native URLSearchParams/URL/TextEncoder/WebCrypto). argv:
+# [1]=module JS, [2]=fixture JSON, [3]=cases JSON. Emits {name: outcome} JSON.
+_DEEP_LINK_HARNESS_JS = r'''
+const moduleSrc = process.argv[1];
+const fixture = JSON.parse(process.argv[2]);
+const CASES = JSON.parse(process.argv[3]);
+const EDITION_KEY = fixture.edition_key;
+const MANIFEST = fixture.manifest;
+const URLS = fixture.publisher_urls;
+function runCase(search) {
+  return new Promise(function (resolve) {
+    const fetched = [];
+    const overlays = [];
+    var window = { location: { search: search }, crypto: globalThis.crypto };
+    var document = {
+      _app: { style: {} },
+      body: { appendChild: function (node) { if (node && node.id === "deepLinkFailClosed") overlays.push(node); } },
+      querySelector: function (sel) {
+        if (sel === ".app") return document._app;
+        if (sel === "main.right") return { firstChild: null, insertBefore: function () {} };
+        return null;
+      },
+      createElement: function () {
+        var node = { style: {}, dataset: {}, _attrs: {} };
+        node.setAttribute = function (k, v) { node._attrs[k] = v; };
+        node.appendChild = function () {};
+        return node;
+      },
+      getElementById: function () { return null; }
+    };
+    var fetch = function (url) {
+      fetched.push(String(url));
+      if (String(url).indexOf("/editions/") >= 0) {
+        return Promise.resolve({ ok: true, json: async function () { return JSON.parse(JSON.stringify(MANIFEST)); } });
+      }
+      return Promise.resolve({ ok: true, json: async function () { return { authenticated: false }; } });
+    };
+    var CATEGORY_ORDER = ["투자·산업", "기업동향", "기술정보"];
+    var articleImportApiUrl = "";
+    var state = { selected: [], edits: {}, exactEditionId: "" };
+    var bundle = { edition_key: EDITION_KEY, candidates: URLS.map(function (u, i) { return { candidate_id: "cand-" + i, selected_url: u, title: "T" + i, category: CATEGORY_ORDER[2], summary: "s" }; }) };
+    function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]; }); }
+    function safeUrl(value) { try { var p = new URL(String(value)); return ["http:", "https:"].indexOf(p.protocol) >= 0 ? p.href : ""; } catch (e) { return ""; } }
+    function duplicateByUrl(u) { return bundle.candidates.find(function (c) { return c.selected_url === u; }) || null; }
+    function byId() { return {}; }
+    function view() { return { title: "t", category: CATEGORY_ORDER[2], summary: "s" }; }
+    function normalizeSelectedOrder() {}
+    function render() {}
+    eval(moduleSrc);
+    setTimeout(function () {
+      var dbg = window.__exactEditionDebug;
+      var outcome;
+      if (!dbg) outcome = overlays.length ? "FAILED:overlay_no_debug" : "OPEN_PLAIN_CONSOLE";
+      else if (dbg.state === "failed") outcome = "FAILED:" + dbg.reason;
+      else if (dbg.state === "verified") outcome = "OPEN_EDITOR";
+      else outcome = "UNKNOWN";
+      resolve({ outcome: outcome, overlay: overlays.length, editionsFetched: fetched.some(function (u) { return u.indexOf("/editions/") >= 0; }) });
+    }, 80);
+  });
+}
+(async function () {
+  var results = {};
+  for (var i = 0; i < CASES.length; i++) { results[CASES[i][0]] = await runCase(CASES[i][1]); }
+  process.stdout.write(JSON.stringify(results));
+})();
+'''
+
+
+def run_deep_link_node_matrix(module_js: str, edition) -> dict | None:
+    node = shutil.which("node")
+    if not node:
+        return None
+    fixture = {
+        "edition_id": edition.edition_id,
+        "edition_key": edition.edition_key,
+        "manifest": edition.edition_manifest,
+        "publisher_urls": [
+            row["publisher_url"] for row in edition.edition_manifest["articles"]
+        ],
+    }
+    cases = [[name, tmpl.replace("{id}", edition.edition_id)] for name, tmpl in DEEP_LINK_MATRIX]
+    result = subprocess.run(
+        [
+            node, "-e", _DEEP_LINK_HARNESS_JS, module_js,
+            json.dumps(fixture, ensure_ascii=False),
+            json.dumps(cases, ensure_ascii=False),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"deep-link node harness failed rc={result.returncode}: "
+            f"{(result.stderr or result.stdout).strip()[:600]}"
+        )
+    return json.loads(result.stdout)
 
 
 def main() -> int:
@@ -591,6 +768,48 @@ def main() -> int:
         "driven editable rows are exposed for exact-edition acceptance proof",
         "editable:state.selected.map(" in module,
     )
+
+    # ------------------------------------------------------------------
+    # R4-R18 — decoration-safe deep-link intent detection (see module note).
+    # ------------------------------------------------------------------
+    check(
+        "R4-R18 deep-link intent guards on identity params only (product|edition_id)",
+        'if(!params.has("product")&&!params.has("edition_id"))return;' in module,
+    )
+    check(
+        "R4-R18 legacy zero-param-only bail is gone (decoration no longer fails closed)",
+        "[...params.keys()].length" not in module,
+    )
+    # Node-free decision-table mirror: every matrix URL's synchronous outcome.
+    for name, search_tmpl in DEEP_LINK_MATRIX:
+        search = search_tmpl.replace("{id}", edition.edition_id)
+        mirror = deep_link_outcome_mirror(search, edition.edition_key)
+        expected = DEEP_LINK_EXPECTED[name]
+        mirror_ok = (
+            mirror == _MIRROR_PROCEEDS if expected == "OPEN_EDITOR" else mirror == expected
+        )
+        check(f"R4-R18 mirror decision {name} -> {expected}", mirror_ok, mirror)
+    # End-to-end proof against the REAL extracted module in node (WebCrypto).
+    module_js = module[module.index(CONSOLE_MODULE_MARKER) + len(CONSOLE_MODULE_MARKER):]
+    node_matrix = run_deep_link_node_matrix(module_js, edition)
+    if node_matrix is None:
+        print("INFO node unavailable; R4-R18 matrix proven by structure + decision mirror")
+    else:
+        for name, expected in DEEP_LINK_EXPECTED.items():
+            outcome = node_matrix.get(name, {})
+            hit = outcome.get("outcome") == expected
+            if expected == "OPEN_EDITOR":
+                hit = hit and outcome.get("editionsFetched") is True
+            check(f"R4-R18 real-module matrix {name} -> {expected}", hit, outcome)
+        check(
+            "R4-R18 decoration/plain cases open the console with no fail-closed overlay",
+            all(node_matrix[name]["overlay"] == 0 for name in DEEP_LINK_DECORATION_CASES),
+        )
+        check(
+            "R4-R18 valid-identity cases reach the immutable-manifest fetch",
+            node_matrix["E_valid_identity"]["editionsFetched"] is True
+            and node_matrix["H_valid_plus_decoration"]["editionsFetched"] is True,
+        )
 
     # Cross-language digest parity: run the module's own canonicalJson in node
     # when available; otherwise prove Python canonicalization is key-order

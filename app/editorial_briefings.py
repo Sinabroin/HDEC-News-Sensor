@@ -92,9 +92,32 @@ HEADLINE_DIRECT_MARGIN = 0.75
 PUBLISHER_DIVERSITY_SOFT_CAP = 2
 CATEGORY_DIVERSITY_SOFT_CAP = 3
 TITLE_CLUSTER_TIME_WINDOW = timedelta(hours=6)
+# D7-AK-6E R4-R17 §C — same-publisher retransmission collapse window. A single
+# publisher re-emitting the identical headline at a different time within the
+# bounded Daily coverage window is one story, not two. This is same-publisher
+# only; different publishers reporting the same event are never collapsed here.
+SAME_PUBLISHER_RETRANSMISSION_WINDOW = timedelta(hours=24)
 SELECTION_MODE_LEGACY = "legacy"
 SELECTION_MODE_DIRECT_AWARE_DAILY = "direct_aware_daily"
 SELECTION_MODE_EDITORIAL_PRIORITY = SELECTION_MODE_DIRECT_AWARE_DAILY
+
+# D7-AK-6E R4-R17 — discovery-lane provenance marker (mirrors
+# naver_news_provider.DISCOVERY_LANE_PRIMARY_PUBLISHER). A row surfaced by the
+# bounded primary-publisher lane carries a query string that is literally
+# "<publisher name> <topic>"; that discovery text must never become relevance
+# authority, so a primary-publisher row is denied the provider-query relevance
+# boost and the provider-query-only fallback. Discovery ≠ qualification.
+DISCOVERY_LANE_PRIMARY_PUBLISHER = "primary_publisher"
+
+# D7-AK-6E R4-R17 — the executive materiality qualification layer is scoped to
+# the Daily/Review executive-brief curation surface: a daily edition built for
+# operator review (edition_type == "daily" AND operator_review). This is exactly
+# §G's "Review qualification path" and the surface where the raw primary-lane
+# supply exposed the observed noise; the published Daily is curated from this
+# gated pool. Other normalize_articles callers — the generic edition_type=None
+# mechanics/preview path and non-review daily previews (operator_review=False) —
+# keep their prior behavior unchanged.
+_EXECUTIVE_QUALIFICATION_EDITIONS = frozenset({"daily"})
 
 _SELECTION_MODES = {
     SELECTION_MODE_LEGACY,
@@ -553,6 +576,21 @@ class SelectionAuditCounters:
     official_unrelated_domain_rejected_rows: int = 0
     official_material_event_rows: int = 0
     official_selected_rows: int = 0
+    # D7-AK-6E R4-R17 — executive materiality qualification accounting. The
+    # hard Executive Qualification Gate runs after canonical AI-centrality and
+    # weak-content rejection, so a nonmaterial-but-AI-central row (generic "AI is
+    # the future" / "ChatGPT popularity" commentary, a strategic keyword with no
+    # impact) is provably excluded before final selection. None of these consume
+    # provider query metadata: query text is discovery provenance, never
+    # qualification evidence.
+    executive_qualified_count: int = 0
+    executive_materiality_rejected_count: int = 0
+    provider_query_only_rejected_count: int = 0
+    same_publisher_duplicate_rejected_count: int = 0
+    review_qualified_primary_10: int = 0
+    review_qualified_secondary_3: int = 0
+    review_qualified_official: int = 0
+    deliverable_major_lead_candidates: int = 0
 
     def manifest_fields(
         self,
@@ -641,6 +679,22 @@ class SelectionAuditCounters:
             ),
             "official_material_event_rows": self.official_material_event_rows,
             "official_selected_rows": self.official_selected_rows,
+            "executive_qualified_count": self.executive_qualified_count,
+            "executive_materiality_rejected_count": (
+                self.executive_materiality_rejected_count
+            ),
+            "provider_query_only_rejected_count": (
+                self.provider_query_only_rejected_count
+            ),
+            "same_publisher_duplicate_rejected_count": (
+                self.same_publisher_duplicate_rejected_count
+            ),
+            "review_qualified_primary_10": self.review_qualified_primary_10,
+            "review_qualified_secondary_3": self.review_qualified_secondary_3,
+            "review_qualified_official": self.review_qualified_official,
+            "deliverable_major_lead_candidates": (
+                self.deliverable_major_lead_candidates
+            ),
         }
 
 
@@ -1500,6 +1554,158 @@ _HDEC_STRATEGIC_TERMS = (
     "BIM", "디지털 트윈", "건설로봇", "해외수주", "전력 인프라", "송전", "변전",
 )
 
+# ---------------------------------------------------------------------------
+# D7-AK-6E R4-R17 §B — Executive Qualification Gate.
+#
+# An article being AI-central is necessary but NOT sufficient: an executive
+# brief must exclude generic "AI is the future" commentary, "ChatGPT
+# popularity" chatter, soft outlooks, and market/earnings-calendar pieces even
+# when they mention a famous AI company. After the canonical AI-centrality gate
+# and weak-content rejection, a NON-OFFICIAL candidate must additionally carry
+# at least one strong, machine-readable material signal. Official-institution
+# rows keep their dedicated semantic/material-event gate and are never
+# re-judged here (no weaker parallel path).
+#
+# Allowed evidence: title, publisher subtitle, and the first factual
+# publisher lead/snippet sentence only. Forbidden evidence (never read here):
+# the provider query string, the generated summary/why-it-matters/executive
+# implication/category, feedback, or publisher prestige on its own. The gate
+# therefore cannot be rescued by search-query metadata, regardless of lane.
+# ---------------------------------------------------------------------------
+
+# Strategic HDEC infrastructure domains (physical/industrial layer HDEC builds
+# or operates). Mirrors ai_centrality._ENABLING_INFRA_TERMS in spirit.
+_EXEC_STRATEGIC_DOMAIN_TERMS: tuple[str, ...] = (
+    "데이터센터", "데이터 센터", "datacenter", "data center", "idc",
+    "전력망", "전력 인프라", "전력인프라", "송전", "변전", "송배전", "발전소",
+    "원전", "원자력", "smr", "소형모듈원전", "소형모듈원자로", "그리드",
+    "냉각", "용수", "전기자재",
+    "스마트건설", "스마트 건설", "bim", "디지털 트윈", "digital twin",
+    "건설로봇", "건설 로봇", "건설 자동화", "시공 자동화",
+)
+
+# Actual impact / constraint signals — the material consequence that turns a
+# bare strategic-domain noun into an executive-relevant story. A domain noun
+# alone is never enough.
+_EXEC_IMPACT_SIGNAL_TERMS: tuple[str, ...] = (
+    # power demand / capacity
+    "전력 수요", "전력수요", "수요 급증", "수요 폭증", "전력 부족", "용량 부족",
+    "전력 확보", "전력난",
+    # grid constraint / bottleneck
+    "계통 제약", "계통 포화", "병목", "제약", "포화",
+    # shortage / supply constraint
+    "부족", "공급난", "품귀", "수급", "조달 차질", "공급 차질",
+    # expansion / siting / permitting
+    "증설", "확충", "부지", "입지", "인허가", "인허가 지연", "허가 지연",
+    # local opposition
+    "반대", "반발", "민원", "주민 반발", "갈등", "저항", "논란",
+    # delay / cost
+    "지연", "차질", "중단", "비용 급등", "원가 부담", "비용 부담",
+    # cooling / water requirement
+    "냉각", "용수", "물 부족",
+    # regulation entering the picture
+    "규제", "의무화", "가이드라인",
+)
+
+# Material AI security / risk incidents (factual central AI incident).
+_EXEC_AI_SECURITY_TERMS: tuple[str, ...] = (
+    "해킹", "침해", "유출", "탈취", "취약점", "익스플로잇", "악용", "랜섬웨어",
+    "딥페이크", "위조", "사칭", "금지", "차단", "제재", "단속", "처분",
+    "리콜", "안전사고", "오작동", "장애 사태",
+)
+
+
+@dataclass(frozen=True)
+class _ExecutiveQualification:
+    """Deterministic Executive Qualification Gate verdict for one candidate."""
+
+    qualified: bool
+    reason: str
+
+
+def _executive_evidence(candidate: "_ArticleCandidate") -> dict:
+    """Allowed evidence only — title / publisher subtitle / factual lead.
+
+    Reads the raw factual snippet (never the generated summary) and never the
+    provider query string, so search-query metadata can never qualify a row."""
+    raw = candidate.raw
+    return {
+        "title": candidate.article.title,
+        "snippet": str(raw.get("snippet") or ""),
+        "subtitle": str(raw.get("subtitle") or ""),
+        "publisher_section": str(
+            raw.get("publisher_section") or raw.get("section") or ""
+        ),
+    }
+
+
+def _executive_qualification(
+    candidate: "_ArticleCandidate",
+) -> _ExecutiveQualification:
+    """R4-R17 §B — is this AI-central candidate materially useful to an executive?
+
+    Returns qualified=True only when the title / subtitle / factual lead carry a
+    strong material signal (structural AI event, HDEC-direct AI event, confirmed
+    corporate/industrial event, AI security incident, or a strategic HDEC
+    infrastructure domain paired with an actual impact/constraint signal).
+    Opinion-labelled pieces require a hard factual signal (1/2/3/5) and never
+    qualify on a strategic-domain+impact pairing alone."""
+    evidence = _executive_evidence(candidate)
+    title = ai_centrality.article_title(evidence)
+    subtitle = ai_centrality.article_subtitle(evidence)
+    lead = ai_centrality.article_lead_sentence(evidence)  # factual, lowercased
+    zone = " ".join(
+        part for part in (title.lower(), subtitle.lower(), lead) if part
+    )
+    opinion = ai_centrality.opinion_labeled(evidence)
+
+    # Signal 1 — structural AI causal event (canonical leaf, title+lead only).
+    event_class, _terms = ai_centrality.structural_ai_causal_event(evidence)
+    if event_class:
+        return _ExecutiveQualification(True, f"structural_ai_event:{event_class}")
+
+    # Signal 3 — HDEC-direct AI event (highest executive priority).
+    hdec_hit = next(
+        (term for term in _HDEC_DIRECT_TERMS
+         if term in title or term in subtitle or term in lead),
+        "",
+    )
+    if hdec_hit:
+        return _ExecutiveQualification(True, f"hdec_direct_ai:{hdec_hit}")
+
+    # Signal 2 — material corporate/industrial event (confirmed action, concrete
+    # KRW/USD or MW/GW scale, or material risk) proven from title + factual lead.
+    _mscore, mreasons = _materiality_score(title, lead)
+    if mreasons:
+        return _ExecutiveQualification(True, f"material_event:{mreasons[0]}")
+
+    # Signal 5 — material AI security / risk incident.
+    security_hit = next((term for term in _EXEC_AI_SECURITY_TERMS if term in zone), "")
+    if security_hit:
+        return _ExecutiveQualification(True, f"ai_security_event:{security_hit}")
+
+    # Signal 4 — strategic HDEC infrastructure domain WITH an actual impact /
+    # constraint signal. A bare strategic-domain noun is not enough, and an
+    # opinion piece never qualifies on this pairing alone.
+    if not opinion:
+        domain_hit = next(
+            (term for term in _EXEC_STRATEGIC_DOMAIN_TERMS if term in zone), ""
+        )
+        impact_hit = next(
+            (term for term in _EXEC_IMPACT_SIGNAL_TERMS if term in zone), ""
+        )
+        if domain_hit and impact_hit:
+            return _ExecutiveQualification(
+                True, f"strategic_infra_impact:{domain_hit}->{impact_hit}"
+            )
+
+    return _ExecutiveQualification(
+        False,
+        "opinion_without_hard_material_signal"
+        if opinion
+        else "no_material_executive_signal",
+    )
+
 
 def _hdec_relevance_score(title: str, summary: str) -> float:
     """§11 factor 4 — 현대건설 direct impact first, strategic domain second."""
@@ -1578,11 +1784,21 @@ def _candidate_relevance(
 ) -> tuple[float, tuple[str, ...]]:
     metadata = _article_metadata(raw)
     query = str(metadata.get("query") or "").strip()
+    # D7-AK-6E R4-R17 — the primary-publisher discovery lane's query text is
+    # "<publisher name> <topic>", i.e. how the row was FOUND, not evidence that
+    # it is relevant. Deny such rows the provider-query relevance signals so the
+    # query text can never lift a row over the floor by itself; a
+    # primary-publisher row must earn relevance from its own title/summary
+    # content, category, or institution status.
+    lane = str(
+        metadata.get("discovery_lane") or raw.get("discovery_lane") or ""
+    ).strip()
+    query_is_authority = lane != DISCOVERY_LANE_PRIMARY_PUBLISHER
     text_groups = news_coverage.query_groups_for_text(title, summary)
     query_group = news_coverage.query_group_for_query(query)
     score = 0.0
     reasons: list[str] = []
-    if query_group:
+    if query_group and query_is_authority:
         score += 2.0
         reasons.append(f"query_group:{query_group}")
     if text_groups:
@@ -1603,9 +1819,11 @@ def _candidate_relevance(
         score += 0.5
         reasons.append("institution_relevant_category")
 
-    if not reasons and query:
+    if not reasons and query and query_is_authority:
         # Provider query evidence is weaker than text/query-group agreement but prevents
-        # complete blindness for configured non-coverage source files.
+        # complete blindness for configured non-coverage source files. It never
+        # reaches the selection floor on its own (0.5 < SELECTION_RELEVANCE_FLOOR)
+        # and is withheld entirely from the primary-publisher discovery lane.
         score += 0.5
         reasons.append("provider_query_only")
     if not reasons and not (_provider_tokens(raw) & {"google_news_rss", "naver_news_api"}):
@@ -1942,10 +2160,80 @@ def _public_media_duplicate_groups(
     return cluster_count, tuple(dict.fromkeys(supporting))
 
 
+def _retransmission_rank_key(candidate: _ArticleCandidate) -> tuple:
+    """Best-representation ordering for a same-publisher retransmission group.
+
+    Mirrors ``_is_better_duplicate``: canonical publisher tier/rank first, then
+    direct-link quality, then ranking/material evidence, then newer timestamp as
+    a final tie-breaker, with the URL as an absolute deterministic backstop."""
+    return (
+        -candidate.article.publisher_tier_rank,
+        -(candidate.article.publisher_rank or 999),
+        candidate.is_naver_direct,
+        candidate.is_direct,
+        candidate.total_ranking_score,
+        candidate.article.published_at.isoformat(),
+        candidate.selected_url,
+    )
+
+
+def _collapse_same_publisher_retransmissions(
+    candidates: list[_ArticleCandidate],
+    *,
+    retain_support: Callable[[_ArticleCandidate], None],
+    audit: SelectionAuditCounters | None,
+) -> list[_ArticleCandidate]:
+    """R4-R17 §C — collapse a single publisher's retransmitted identical headline.
+
+    A row is folded into an earlier one only when it shares the SAME publisher
+    identity AND the SAME normalized title fingerprint AND lies within the
+    bounded 24-hour window. Exactly one best representation survives per group;
+    the rest are counted and (for the public lane under operator review) retained
+    as supporting evidence. Different publishers are never collapsed here, so
+    explicit cross-publisher event-cluster semantics are untouched."""
+    groups: dict[tuple[str, str], list[_ArticleCandidate]] = {}
+    passthrough: list[_ArticleCandidate] = []
+    for candidate in candidates:
+        title_key = candidate.title_key
+        # Require a substantial fingerprint (mirrors the cluster_key len>=12
+        # floor) so short/degenerate titles are never over-collapsed.
+        if title_key and len(title_key) >= 12:
+            groups.setdefault((candidate.publisher_key, title_key), []).append(
+                candidate
+            )
+        else:
+            passthrough.append(candidate)
+
+    kept: list[_ArticleCandidate] = list(passthrough)
+    for members in groups.values():
+        if len(members) == 1:
+            kept.append(members[0])
+            continue
+        ordered = sorted(members, key=_retransmission_rank_key, reverse=True)
+        survivor = ordered[0]
+        window_kept = [survivor]
+        for other in ordered[1:]:
+            within_window = (
+                abs(other.article.published_at - survivor.article.published_at)
+                <= SAME_PUBLISHER_RETRANSMISSION_WINDOW
+            )
+            if within_window:
+                # Same publisher + same headline + inside window ⇒ retransmission.
+                if audit is not None:
+                    audit.same_publisher_duplicate_rejected_count += 1
+                retain_support(other)
+            else:
+                # A genuinely stale reissue outside the window survives on its own.
+                window_kept.append(other)
+        kept.extend(window_kept)
+    return kept
+
+
 def _deduplicate_article_candidates(
     candidates: list[_ArticleCandidate],
     *,
     preserve_public_supporting_duplicates: bool = False,
+    audit: SelectionAuditCounters | None = None,
 ) -> list[_ArticleCandidate]:
     supporting: list[_ArticleCandidate] = []
 
@@ -1976,9 +2264,18 @@ def _deduplicate_article_candidates(
         else:
             retain_support(candidate)
 
+    # R4-R17 §C — collapse same-publisher retransmissions (same publisher + same
+    # title fingerprint within 24h) before the cross-publisher cluster pass, so
+    # a publisher re-emitting one headline twice contributes exactly one row.
+    retransmission_deduped = _collapse_same_publisher_retransmissions(
+        list(by_exact.values()),
+        retain_support=retain_support,
+        audit=audit,
+    )
+
     clustered: list[_ArticleCandidate] = []
     by_cluster: dict[str, int] = {}
-    for candidate in sorted(by_exact.values(), key=_candidate_sort_key, reverse=True):
+    for candidate in sorted(retransmission_deduped, key=_candidate_sort_key, reverse=True):
         key = candidate.cluster_key
         idx = by_cluster.get(key) if key else None
         if idx is None:
@@ -2305,6 +2602,28 @@ def _select_article_candidates(
         if not candidate.weak_content_reason
     ]
     weak_rejected = len(floor_qualified) - len(quality_relevant)
+
+    # R4-R17 §B — Executive Qualification Gate. Runs AFTER weak-content
+    # rejection (so those counters are preserved) and only on the Daily/Review
+    # curation surface (edition_type == "daily" AND operator_review — §G's
+    # "Review qualification path"); the generic edition_type=None mechanics path
+    # and non-review daily previews are unchanged. A non-official AI-central
+    # candidate survives only with a strong material signal; official rows keep
+    # their dedicated semantic gate and are never re-judged here.
+    executive_gate_active = (
+        edition_type in _EXECUTIVE_QUALIFICATION_EDITIONS and bool(operator_review)
+    )
+    executive_qualified: list[_ArticleCandidate] = []
+    executive_rejected = 0
+    for candidate in quality_relevant:
+        if not executive_gate_active or candidate.is_official_institution:
+            executive_qualified.append(candidate)
+            continue
+        if _executive_qualification(candidate).qualified:
+            executive_qualified.append(candidate)
+        else:
+            executive_rejected += 1
+
     # R4-R8: an official item can be operator-visible without being eligible
     # for automated publication. Supporting duplicate releases also remain
     # available to the operator but never become a second final card.
@@ -2313,7 +2632,7 @@ def _select_article_candidates(
     ]
     relevant = [
         candidate
-        for candidate in quality_relevant
+        for candidate in executive_qualified
         if not candidate.article.supporting_evidence_only
         and (
             not candidate.is_public_lane
@@ -2322,6 +2641,38 @@ def _select_article_candidates(
     ]
     relevant.sort(key=_candidate_sort_key, reverse=True)
     public_review_candidates.sort(key=_candidate_sort_key, reverse=True)
+
+    if audit is not None and executive_gate_active:
+        # R4-R17 §D — executive materiality accounting (Daily/Review only). None
+        # of these consume provider query metadata.
+        audit.executive_qualified_count = len(executive_qualified)
+        audit.executive_materiality_rejected_count = executive_rejected
+        # A provider-query-only relevance signal never reaches the floor by
+        # itself (0.5 < SELECTION_RELEVANCE_FLOOR); count rows that had no
+        # stronger relevance evidence so query-only starvation stays visible.
+        audit.provider_query_only_rejected_count = sum(
+            1
+            for candidate in candidates
+            if candidate.relevance_score < SELECTION_RELEVANCE_FLOOR
+            and candidate.relevance_reasons == ("provider_query_only",)
+        )
+        audit.review_qualified_primary_10 = sum(
+            1 for candidate in relevant
+            if candidate.article.publisher_tier == "primary_10"
+        )
+        audit.review_qualified_secondary_3 = sum(
+            1 for candidate in relevant
+            if candidate.article.publisher_tier == "secondary_3"
+        )
+        audit.review_qualified_official = sum(
+            1 for candidate in relevant if candidate.is_official_institution
+        )
+        audit.deliverable_major_lead_candidates = sum(
+            1 for candidate in relevant
+            if lead_source_eligible_tier(
+                candidate.article.source, candidate.selected_url
+            )
+        )
 
     if audit is not None:
         public_ids = tuple(
@@ -3897,6 +4248,7 @@ def normalize_articles(
         deduped = _deduplicate_article_candidates(
             candidates,
             preserve_public_supporting_duplicates=operator_review,
+            audit=audit,
         )
         if audit is not None:
             audit.duplicate_official_media_event_clusters = duplicate_clusters
@@ -5500,10 +5852,15 @@ def fixture_articles(
     span = int((coverage.end - coverage.start).total_seconds())
     if profile not in {"dominant", "multi"}:
         raise EditorialError("unsupported fixture profile")
+    # R4-R17 §B — the preview/verifier fixtures represent a demo Daily/Review
+    # brief, so each dominant title carries a concrete material AI event (the
+    # executive-materiality bar the real Daily/Review now enforces). Sectors are
+    # unchanged (all 투자·산업), so the console layout and structure signatures
+    # are preserved while the executive qualification gate admits every row.
     dominant_titles = [
-        "AI 데이터센터 전력 조달 계획 공개",
-        "AI 데이터센터 전력망 연계 기준 논의",
-        "AI 데이터센터 전력 효율 기술 투자",
+        "AI 데이터센터 전력 조달 계약 체결",
+        "AI 데이터센터 전력망 연계 증설 착공",
+        "AI 데이터센터 전력 효율 기술 투자 확정",
         "AI 데이터센터 전력 수요 대응 협력",
         "AI 데이터센터 냉각 운영 기준 점검",
         "AI 데이터센터 공급망 계약 확대",
