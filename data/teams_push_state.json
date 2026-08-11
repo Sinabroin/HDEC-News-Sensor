@@ -130,6 +130,16 @@
       "sent_at": "2026-08-05T00:01:52+09:00",
       "source": "경남신문"
     },
+    "32c6c6ccd64378e0": {
+      "cluster_key": "title:ai연산능력10월부터선물시장서거래한다",
+      "delivery_id": "teams_ai_push:84139f34a79f",
+      "first_sent_at": "2026-08-12T04:30:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a0dba00fceae3d8f11a31091f7178da07e4d361bc9e7c3ed90bc09799e807636",
+      "sent_at": "2026-08-12T04:30:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "3400540a608c7015": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
       "delivery_id": "teams_ai_push:eaac50fef721",
@@ -921,6 +931,16 @@
       "material_signature": "fab405b8d9b972ba08cc163b80168897baefffbf53b6665e33c8a6350c2b8224",
       "sent_at": "2026-08-09T11:53:41+09:00",
       "source": "IT조선"
+    },
+    "title:ai연산능력10월부터선물시장서거래한다": {
+      "cluster_key": "title:ai연산능력10월부터선물시장서거래한다",
+      "delivery_id": "teams_ai_push:84139f34a79f",
+      "first_sent_at": "2026-08-12T04:30:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a0dba00fceae3d8f11a31091f7178da07e4d361bc9e7c3ed90bc09799e807636",
+      "sent_at": "2026-08-12T04:30:42+09:00",
+      "source": "파이낸셜뉴스"
     },
     "title:ai인프라디벨로퍼뉴마이웨이개척자": {
       "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
@@ -2479,8 +2499,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-11T19:40:06+09:00",
-  "last_successful_send_at": "2026-08-11T19:40:06+09:00",
+  "last_normal_send_at": "2026-08-12T04:30:42+09:00",
+  "last_successful_send_at": "2026-08-12T04:30:42+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2620,6 +2640,16 @@
       "last_material_update_at": null,
       "material_signature": "ef479082494c6ccb08806860c15ae3d9fef5ad3f203cfb5180a3e17f8c07cf79",
       "sent_at": "2026-08-11T16:44:43+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202608120347285467": {
+      "cluster_key": "title:ai연산능력10월부터선물시장서거래한다",
+      "delivery_id": "teams_ai_push:84139f34a79f",
+      "first_sent_at": "2026-08-12T04:30:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a0dba00fceae3d8f11a31091f7178da07e4d361bc9e7c3ed90bc09799e807636",
+      "sent_at": "2026-08-12T04:30:42+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hbnpress.com/news/view/1065599489272731": {
@@ -3393,6 +3423,16 @@
       "material_signature": "fab405b8d9b972ba08cc163b80168897baefffbf53b6665e33c8a6350c2b8224",
       "sent_at": "2026-08-09T11:53:41+09:00",
       "source": "IT조선"
+    },
+    "ai연산능력10월부터선물시장서거래한다": {
+      "cluster_key": "title:ai연산능력10월부터선물시장서거래한다",
+      "delivery_id": "teams_ai_push:84139f34a79f",
+      "first_sent_at": "2026-08-12T04:30:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a0dba00fceae3d8f11a31091f7178da07e4d361bc9e7c3ed90bc09799e807636",
+      "sent_at": "2026-08-12T04:30:42+09:00",
+      "source": "파이낸셜뉴스"
     },
     "ai인프라디벨로퍼뉴마이웨이개척자": {
       "cluster_key": "title:ai인프라디벨로퍼뉴마이웨이개척자",
