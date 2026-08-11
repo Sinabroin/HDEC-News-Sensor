@@ -200,6 +200,16 @@
       "sent_at": "2026-08-11T09:03:13+09:00",
       "source": "SBS 뉴스"
     },
+    "5b202fee03c23c1f": {
+      "cluster_key": "title:자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건",
+      "delivery_id": "teams_ai_push:7a80ca4d6c60",
+      "first_sent_at": "2026-08-12T06:17:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58d6f78a9a45cc993633d7123a7d5595548bb34ba30dbc50379cbe7cc410e5e8",
+      "sent_at": "2026-08-12T06:17:21+09:00",
+      "source": "KyungHyangSinmun"
+    },
     "5ffa9f633bcae8ad": {
       "cluster_key": "title:ai인프라주목엔비디아전력업체랜시움에4조투자",
       "delivery_id": "teams_ai_push:797208ad3705",
@@ -1452,6 +1462,16 @@
       "sent_at": "2026-08-11T16:44:43+09:00",
       "source": "파이낸셜뉴스"
     },
+    "title:자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건": {
+      "cluster_key": "title:자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건",
+      "delivery_id": "teams_ai_push:7a80ca4d6c60",
+      "first_sent_at": "2026-08-12T06:17:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58d6f78a9a45cc993633d7123a7d5595548bb34ba30dbc50379cbe7cc410e5e8",
+      "sent_at": "2026-08-12T06:17:21+09:00",
+      "source": "KyungHyangSinmun"
+    },
     "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
       "delivery_id": "teams_ai_push:9f4f184e2db4",
@@ -2499,8 +2519,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-12T04:30:42+09:00",
-  "last_successful_send_at": "2026-08-12T04:30:42+09:00",
+  "last_normal_send_at": "2026-08-12T06:17:21+09:00",
+  "last_successful_send_at": "2026-08-12T06:17:21+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2710,6 +2730,16 @@
       "last_material_update_at": null,
       "material_signature": "37b37561fb2e595750d309ec4a9fc91a88e65b28908ffa648af07e1a7aecd6e8",
       "sent_at": "2026-08-09T16:28:29+09:00",
+      "source": "KyungHyangSinmun"
+    },
+    "https://khan.co.kr/article/202608120600101": {
+      "cluster_key": "title:자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건",
+      "delivery_id": "teams_ai_push:7a80ca4d6c60",
+      "first_sent_at": "2026-08-12T06:17:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58d6f78a9a45cc993633d7123a7d5595548bb34ba30dbc50379cbe7cc410e5e8",
+      "sent_at": "2026-08-12T06:17:21+09:00",
       "source": "KyungHyangSinmun"
     },
     "https://mk.co.kr/news/business/12113296": {
@@ -3943,6 +3973,16 @@
       "material_signature": "ef479082494c6ccb08806860c15ae3d9fef5ad3f203cfb5180a3e17f8c07cf79",
       "sent_at": "2026-08-11T16:44:43+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건": {
+      "cluster_key": "title:자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건",
+      "delivery_id": "teams_ai_push:7a80ca4d6c60",
+      "first_sent_at": "2026-08-12T06:17:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "58d6f78a9a45cc993633d7123a7d5595548bb34ba30dbc50379cbe7cc410e5e8",
+      "sent_at": "2026-08-12T06:17:21+09:00",
+      "source": "KyungHyangSinmun"
     },
     "전기산업계유휴시험설비공유로대전력시험적체해소나선다": {
       "cluster_key": "title:전기산업계유휴시험설비공유로대전력시험적체해소나선다",
