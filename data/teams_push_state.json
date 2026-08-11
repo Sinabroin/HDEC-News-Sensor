@@ -180,6 +180,16 @@
       "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
     },
+    "580dc9643056c71d": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
+    },
     "5ffa9f633bcae8ad": {
       "cluster_key": "title:ai인프라주목엔비디아전력업체랜시움에4조투자",
       "delivery_id": "teams_ai_push:797208ad3705",
@@ -309,6 +319,16 @@
       "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
       "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
+    },
+    "b67d1c5d85d4720a": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
     },
     "b6ebf89632352331": {
       "cluster_key": "title:엘리스그룹온수냉각적용b300ai데이터센터구축",
@@ -821,6 +841,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
     },
     "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다": {
       "cluster_key": "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다",
@@ -1541,6 +1571,16 @@
       "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
+    },
+    "title:흔들리는구글위기인가새판짜기인가": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
     }
   },
   "held_specialists": {
@@ -1585,6 +1625,20 @@
       "source": "아시아경제",
       "source_tier": "trusted_other",
       "title_fingerprint": "인텔150억달러규모신주발행ai사업실탄확보"
+    },
+    "https://asiae.co.kr/article/2026081104562374854": {
+      "article_id": "4d2e858bfb0b5041",
+      "cluster_key": "title:엔비디아710조원ai자금조달나선다월가총출동",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T05:07:52+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T05:07:52+09:00",
+      "normalized_url": "https://asiae.co.kr/article/2026081104562374854",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "아시아경제",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "엔비디아710조원ai자금조달나선다월가총출동"
     },
     "https://biz.heraldcorp.com/article/10832438": {
       "article_id": "73a59192bd9e8bf3",
@@ -1894,6 +1948,34 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "ai데이터센터몸값가른다부동산보다귀해진전력권"
     },
+    "https://fnnews.com/news/202608110320261727": {
+      "article_id": "404c4de5aba0842e",
+      "cluster_key": "title:메타ai모델빗장푼다견제하고오픈ai추격",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T05:07:52+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T06:03:05+09:00",
+      "normalized_url": "https://fnnews.com/news/202608110320261727",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "메타ai모델빗장푼다견제하고오픈ai추격"
+    },
+    "https://fnnews.com/news/202608110446218436": {
+      "article_id": "a6f6d3c3c8c4afdf",
+      "cluster_key": "title:엔비디아월가5000억달러동맹ai경쟁금융전쟁으로",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T07:44:38+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T07:44:38+09:00",
+      "normalized_url": "https://fnnews.com/news/202608110446218436",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "파이낸셜뉴스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "엔비디아월가5000억달러동맹ai경쟁금융전쟁으로"
+    },
     "https://hankookilbo.com/news/article/A2026072912000003603": {
       "article_id": "3d5c782b9fdd850f",
       "cluster_key": "title:고연봉아빠뒤엔독박육아대만반도체신화그늘들여",
@@ -2033,6 +2115,48 @@
       "source": "뉴시스",
       "source_tier": "trusted_other",
       "title_fingerprint": "트럼프데이터센터반대운동자금의혹시진핑과논의할것"
+    },
+    "https://newsis.com/view/NISX20260810_0003742694": {
+      "article_id": "11cf6eec16d72eb5",
+      "cluster_key": "title:로봇도옷입는다반도체다음주도주로전자피부뜨나",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T01:14:24+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T03:08:55+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260810_0003742694",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "로봇도옷입는다반도체다음주도주로전자피부뜨나"
+    },
+    "https://newsis.com/view/NISX20260811_0003743599": {
+      "article_id": "ebed65ebcedeea7c",
+      "cluster_key": "title:메타ai모델개방확대저커버그개인에더많은권한",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T02:14:49+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T02:14:49+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260811_0003743599",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "메타ai모델개방확대저커버그개인에더많은권한"
+    },
+    "https://newsis.com/view/NISX20260811_0003743716": {
+      "article_id": "85c0b3cb54f189d7",
+      "cluster_key": "title:케이웨더비엔아이엔씨날씨ai팩토리구축사업계약",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T08:22:59+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T08:22:59+09:00",
+      "normalized_url": "https://newsis.com/view/NISX20260811_0003743716",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "뉴시스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "케이웨더비엔아이엔씨날씨ai팩토리구축사업계약"
     },
     "https://sedaily.com/article/20077003": {
       "article_id": "7a86b7754aa8ff61",
@@ -2244,6 +2368,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "포스코퓨처엠드디어lfp시장뚫었다배터리사와대규모장기공급"
     },
+    "https://segye.com/newsView/20260810518652": {
+      "article_id": "7d402911130bf0db",
+      "cluster_key": "title:gs건설ls일렉ai데이터센터사업공조",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T06:57:32+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T07:44:38+09:00",
+      "normalized_url": "https://segye.com/newsView/20260810518652",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "세계일보",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "gs건설ls일렉ai데이터센터사업공조"
+    },
     "https://techm.kr/news/articleView.html?idxno=154076": {
       "article_id": "fa0c5452ece020af",
       "cluster_key": "title:38도폭염에도서늘한도심속nhn팩토리xgpu7656장쉴새",
@@ -2273,7 +2411,7 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_successful_send_at": "2026-08-10T13:18:59+09:00",
+  "last_successful_send_at": "2026-08-11T09:03:13+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2425,6 +2563,16 @@
       "sent_at": "2026-08-09T13:19:12+09:00",
       "source": "IT조선"
     },
+    "https://it.chosun.com/news/articleView.html?idxno=2023092167659": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
+    },
     "https://khan.co.kr/article/202608080600031": {
       "cluster_key": "title:노트북새로사도고쳐써도비싸다ai발반도체값상승영향경제뭔",
       "delivery_id": "teams_ai_push:d68aaa1a251c",
@@ -2504,6 +2652,16 @@
       "material_signature": "bdd196ca38bdd066ea0dde6c91f40d92251129ae46fe16a86975e39ad692d7ae",
       "sent_at": "2026-07-30T06:11:10+09:00",
       "source": "news.mtn.co.kr"
+    },
+    "https://news.sbs.co.kr/news/endPage.do?news_id=N1008695417": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
     },
     "https://slownews.kr/163961": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
@@ -3086,6 +3244,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
     },
     "ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다": {
       "cluster_key": "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다",
@@ -3816,6 +3984,16 @@
       "material_signature": "8324e96d220203362ed73f568d9a4fa35f01a0222a92e4afe469a25cab0002a7",
       "sent_at": "2026-07-28T13:20:47+09:00",
       "source": "전자신문"
+    },
+    "흔들리는구글위기인가새판짜기인가": {
+      "cluster_key": "title:흔들리는구글위기인가새판짜기인가",
+      "delivery_id": "teams_ai_push:bfa28f33a32a",
+      "first_sent_at": "2026-08-11T06:03:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
+      "sent_at": "2026-08-11T06:03:06+09:00",
+      "source": "IT조선"
     }
   },
   "version": 1
