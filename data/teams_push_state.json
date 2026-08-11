@@ -180,6 +180,16 @@
       "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
     },
+    "580dc9643056c71d": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
+    },
     "5ffa9f633bcae8ad": {
       "cluster_key": "title:ai인프라주목엔비디아전력업체랜시움에4조투자",
       "delivery_id": "teams_ai_push:797208ad3705",
@@ -831,6 +841,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
     },
     "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다": {
       "cluster_key": "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다",
@@ -2391,7 +2411,7 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_successful_send_at": "2026-08-11T06:03:06+09:00",
+  "last_successful_send_at": "2026-08-11T09:03:13+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2632,6 +2652,16 @@
       "material_signature": "bdd196ca38bdd066ea0dde6c91f40d92251129ae46fe16a86975e39ad692d7ae",
       "sent_at": "2026-07-30T06:11:10+09:00",
       "source": "news.mtn.co.kr"
+    },
+    "https://news.sbs.co.kr/news/endPage.do?news_id=N1008695417": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
     },
     "https://slownews.kr/163961": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
@@ -3214,6 +3244,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
+      "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
+      "delivery_id": "teams_ai_push:40bcf7d09771",
+      "first_sent_at": "2026-08-11T09:03:13+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
+      "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
     },
     "ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다": {
       "cluster_key": "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다",
