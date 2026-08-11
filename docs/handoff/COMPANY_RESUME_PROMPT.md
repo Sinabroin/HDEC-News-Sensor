@@ -1,6 +1,6 @@
 # Codex continuation prompt — HDEC News Sensor R4-OPS-5
 
-Continue only if R4-OPS-5 has not already reached its remote final seal. Read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
+R4-OPS-5 is code-complete on its remote WIP checkpoint unless live refs prove otherwise. Read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
 
 Repository:
 
@@ -50,6 +50,8 @@ MAIN_MERGES=0
 
 Never rebase, force push, merge PR #40, write main, dispatch a production workflow, change variables/secrets, send SMTP/Teams/Telegram, or mutate production ledgers. If current `origin/main` moved, merge it into the WIP branch preserving history; stop on a genuine conflict.
 
-Before any stop, update both handoff files, commit coherently, push normally, verify remote/local equality, and update Draft PR #40. `SYSTEM_LAUNCHED=false` remains mandatory until an operator merges and real production evidence proves Watch send, Daily send, exact Editor link, and immutable dated reader link.
+The final offline seal is scheduled preflight 36/36, R4-OPS-5 replay 86/86, Editor 200/200, and all required Watch/Daily suites green with zero external test network, production sends, or direct production-state writes. Do not redo implementation when the remote branch contains this seal.
+
+Before any additional stop, update both handoff files, commit coherently, push normally, verify remote/local equality, and update Draft PR #40. `SYSTEM_LAUNCHED=false` remains mandatory until an operator merges and real production evidence proves Watch send, Daily send, exact Editor link, and immutable dated reader link.
 
 If the remote seal is already complete, do not redo implementation. The next single action is operator review/merge of Draft PR #40 followed by observation of natural production runs.

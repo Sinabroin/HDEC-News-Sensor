@@ -5,17 +5,18 @@ REPO=Sinabroin/HDEC-News-Sensor
 TASK=R4-OPS-5 final production acceptance closure
 
 BASE_ORIGIN_MAIN=8e70f3921c744eaaee6b76c600bbd8fd2636db96
-FINAL_ORIGIN_MAIN_BEFORE_CHECKPOINT=10b2ce7754d06a3a08702960c96ab94368ae422d
+FINAL_ORIGIN_MAIN=10b2ce7754d06a3a08702960c96ab94368ae422d
 TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-IMPLEMENTATION_HEAD=PENDING_COHERENT_COMMIT
-REMOTE_BRANCH_HEAD=05c7e2f6936a9af3d69c8e237e31181a7e3800ba
+IMPLEMENTATION_HEAD=d33d12df1d71249525592ac9f1dc539ffa45130d
+FINAL_MAIN_INTEGRATION_HEAD=590df412239fce36e4de545b2796fbc86e9b27ef
+REMOTE_BRANCH_HEAD=THIS_HANDOFF_SEAL_COMMIT_AFTER_PUSH
 
 PR_NUMBER=40
 PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
 PR_STATE=DRAFT
 
-CURRENT_STATUS=CODE_IMPLEMENTED_FINAL_MAIN_INTEGRATION_AND_REMOTE_SEAL_PENDING
-CODE_COMPLETE=PENDING_FINAL_POST_MERGE_VERIFIER_SEAL
+CURRENT_STATUS=CODE_COMPLETE_REMOTE_SEAL_PENDING
+CODE_COMPLETE=true
 SYSTEM_LAUNCHED=false
 
 ## Implemented production behavior
@@ -36,20 +37,21 @@ SYSTEM_LAUNCHED=false
 - Scheduled live refresh now runs the repaired Naver adapter, deterministic operational wiring, live-ingestion provenance, and publisher-direct verifiers before live build. The complete 36-command scheduled preflight reached all downstream gates locally.
 - PR #40's existing Naver discovery-lane, Naver operational fixture, publisher-direct pin/mutable-ledger, live-ingestion provenance, calibration CLI, and cross-machine handoff repairs are preserved.
 
-## Acceptance evidence before final main integration
+## Final post-merge acceptance evidence
 
 - `scripts/verify_r4_ops5_production_acceptance.py` — PASS 86/86; external network 0; production SMTP/Teams/state writes 0.
 - Exact replay: IT조선 contribution REJECT; 연합뉴스 ETF REJECT; stock/theme REJECT; LS Electric×GS E&C KEEP; HD현대 Tier-B material event KEEP; specialist opinion context Editor-only; weak Tier-B publisher-alone row REJECT.
-- Scheduled-live-refresh exact offline preflight — 36 commands, 0 failures after the stale AI-market verifier was aligned with the canonical `AI centrality + title materiality` contract. Runtime semantic policy was not weakened.
+- Scheduled-live-refresh exact offline preflight — 36 commands, 0 failures, from News Censor through repaired Naver/provider gates to dashboard freshness. The stale AI-market verifier was aligned with the canonical `AI centrality + title materiality` contract; runtime semantic policy was not weakened.
 - Naver adapter PASS; Naver operational wiring PASS; live ingestion PASS; publisher-direct 91/91.
 - Watch materiality PASS; executive qualification hardening PASS; material AI infrastructure recall PASS; observed false-positive regression 100/100.
 - Teams selector PASS; Teams production 232/232; major-media gate 38/38; strict-source gate 62/62; stock-market exclusion 61/61; state/dedup PASS.
-- Editor console 200/200; editorial briefings 344/344; Daily deep link 118/118; Daily lead source 24/24; immutable manifest 31/31.
-- Production ledgers remained byte-identical during verification: Teams SHA `a0306d0decb6fddeaf9897f084898777d2414ff28033b573b1b5360736f83d80`; Daily SHA `68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155`.
+- Editor console 200/200; editorial briefings 344/344; Daily deep link 118/118; Daily lead source 24/24; immutable manifest 31/31. One grouped Editor invocation hit the known Windows headless-Chrome 45-second startup timeout; the immediate isolated final run passed all 200 checks with zero external requests.
+- Production ledgers remained byte-identical throughout the final post-merge verification: Teams SHA `76c5932017ff2f5f7a46917fa7b14315b29f44fed0c7d4d2fc423efaec4583f4`; Daily SHA `68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155`.
+- `VERIFIERS_FAIL=0`, `EXTERNAL_TEST_NETWORK_CALLS=0`, `PRODUCTION_SMTP_ATTEMPTS=0`, `PRODUCTION_TEAMS_SENDS=0`, and `PRODUCTION_STATE_WRITES=0` in the final accepted runs.
 
 ## Final integration status
 
-`origin/main` advanced after implementation fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The implementation must first be committed, then that current main successor merged without rebase. If any conflict occurs, stop without guessing. After integration, rerun the final acceptance and scheduled preflight, update this handoff, commit, push, verify remote head, and update Draft PR #40.
+`origin/main` advanced after the initial fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The implementation was committed at `d33d12df1d71249525592ac9f1dc539ffa45130d`, then current main was merged without rebase or conflict at `590df412239fce36e4de545b2796fbc86e9b27ef`. The full post-merge seal above passed. This document commit is the final branch checkpoint; use the live task-branch ref for its SHA.
 
 ## Production boundary and remaining proof
 
@@ -61,7 +63,7 @@ PRODUCTION_VARIABLE_CHANGES=0
 PRODUCTION_WORKFLOW_DISPATCHES=0
 MAIN_MERGES=0
 
-`CODE_COMPLETE` can become true after the final post-merge verifier/remote seal. It is not launch proof. A later operator-authorized merge and real-world evidence are still required:
+`CODE_COMPLETE=true` is the offline engineering verdict. It is not launch proof. A later operator-authorized merge and real-world evidence are still required:
 
 - REAL_WATCH_SEND_PASS
 - REAL_DAILY_SEND_PASS (empty or non-empty natural edition)
@@ -72,7 +74,7 @@ MAIN_MERGES=0
 ARTICLE_IMPORT_UI_STATUS=DISABLED_ACCURATELY_LABELLED_API_UNCONFIGURED
 ARTICLE_IMPORT_API_STATUS=FAIL_CLOSED_NO_NEW_AUTH_DEPLOYMENT
 REQUIRES_OPERATOR_ACTION=Review and merge Draft PR #40, then observe natural production runs and validate the real Teams/Editor/dated-Daily links.
-NEXT_SINGLE_ACTION=Complete the conflict-free origin/main integration, final offline seal, branch push, and Draft PR #40 update; then hand control to the operator for review/merge.
+NEXT_SINGLE_ACTION=Operator review and merge Draft PR #40; then observe the next natural Watch, Daily, Editor, dated-reader, and scheduled-refresh paths.
 
 ## Company-machine resume
 
