@@ -9,15 +9,17 @@ FINAL_ORIGIN_MAIN=10b2ce7754d06a3a08702960c96ab94368ae422d
 TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
 IMPLEMENTATION_HEAD=d33d12df1d71249525592ac9f1dc539ffa45130d
 FINAL_MAIN_INTEGRATION_HEAD=590df412239fce36e4de545b2796fbc86e9b27ef
-REMOTE_BRANCH_HEAD=THIS_HANDOFF_SEAL_COMMIT_AFTER_PUSH
+REMOTE_BRANCH_HEAD=LIVE_TASK_BRANCH_REF_MATCHES_LOCAL_HEAD
 
 PR_NUMBER=40
 PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
 PR_STATE=DRAFT
 
-CURRENT_STATUS=CODE_COMPLETE_REMOTE_SEAL_PENDING
+CURRENT_STATUS=CODE_COMPLETE_REMOTE_SEAL_VERIFIED
 CODE_COMPLETE=true
 SYSTEM_LAUNCHED=false
+REMOTE_CHECKPOINT_AVAILABLE=true
+CROSS_MACHINE_HANDOFF_READY=true
 
 ## Implemented production behavior
 
@@ -51,7 +53,7 @@ SYSTEM_LAUNCHED=false
 
 ## Final integration status
 
-`origin/main` advanced after the initial fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The implementation was committed at `d33d12df1d71249525592ac9f1dc539ffa45130d`, then current main was merged without rebase or conflict at `590df412239fce36e4de545b2796fbc86e9b27ef`. The full post-merge seal above passed. This document commit is the final branch checkpoint; use the live task-branch ref for its SHA.
+`origin/main` advanced after the initial fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The implementation was committed at `d33d12df1d71249525592ac9f1dc539ffa45130d`, then current main was merged without rebase or conflict at `590df412239fce36e4de545b2796fbc86e9b27ef`. The full post-merge seal above passed. The final handoff commit is pushed normally and local/remote equality is verified after push; use the live task-branch ref for its self-referential SHA.
 
 ## Production boundary and remaining proof
 
