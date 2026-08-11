@@ -52,6 +52,28 @@ STARTUP_CONTRACT_PATHS = (
     ROOT / "docs" / "handoff" / "COMPANY_RESUME_PROMPT.md",
 )
 EMPTY_STATUS = "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다."
+SBS_PREMIUM_OBSERVED_URL = "https://premium.sbs.co.kr/article/r26f8YfJ9"
+SBS_PREMIUM_OBSERVED_CASE = "sbs_premium_observed_incident_r26f8YfJ9"
+SBS_PREMIUM_STRESS_CASE = "sbs_premium_synthetic_adversarial_stress"
+OBSERVABLE_REPLAY_FIELDS = (
+    "article_key",
+    "title",
+    "source",
+    "url",
+    "publisher_section",
+    "snippet",
+    "summary",
+    "hdec_relevance",
+    "published_at",
+    "publisher_direct",
+    "score",
+    "shadow_urgency_status",
+    "shadow_would_pass",
+    "shadow_confirmed_event_types",
+    "change_type",
+    "current_run_seen",
+    "search_query",
+)
 
 CHECKS = 0
 FAILURES: list[str] = []
@@ -103,6 +125,43 @@ def governing_standard_contracts() -> dict[str, bool]:
     return {
         "common_present": common_present,
         "project_present": project_present,
+    }
+
+
+def project_acceptance_overlay_contracts() -> dict[str, bool]:
+    text = PROJECT_ACCEPTANCE_PATH.read_text(encoding="utf-8")
+    version_updated = "**Version:** 1.1" in text
+    defect_present = (
+        "HDEC-DEFECT-005 — SBS Premium realtime authority leak" in text
+        and SBS_PREMIUM_OBSERVED_URL in text
+        and "operator_surface=editorial_analysis" in text
+        and "realtime standalone Teams auto-send is `false`" in text
+    )
+    authority_invariant = (
+        "KNOWN_AUTHORITATIVE_URL_IDENTITY > DISPLAY_SOURCE_ALIAS" in text
+        and "Unknown foreign hosts do not inherit alias authority" in text
+        and "Unenumerated\nsibling subdomains do not inherit parent-publication authority" in text
+        and "exact selected-URL host is configured" in text
+    )
+    opinion_contract = all(
+        token in text
+        for token in (
+            "clear bracketed title-boundary markers",
+            "leading or trailing title boundary",
+            "`Opinion`",
+            "`Editorial`",
+            "Summary,\nquery, and body text have zero authority",
+        )
+    )
+    check("HDEC project acceptance overlay version is 1.1", version_updated)
+    check("HDEC-DEFECT-005 is sealed in project acceptance", defect_present)
+    check("publisher URL authority invariant is sealed in project acceptance", authority_invariant)
+    check("trailing and English opinion contract is sealed in project acceptance", opinion_contract)
+    return {
+        "version_updated": version_updated,
+        "defect_present": defect_present,
+        "authority_invariant": authority_invariant,
+        "opinion_contract": opinion_contract,
     }
 
 
@@ -384,13 +443,145 @@ def opinion_contracts() -> dict[str, bool]:
     }
 
 
-def replay_contracts(rows: list[dict]) -> dict[str, bool]:
-    outcomes: dict[str, bool] = {}
+def replay_provenance_contracts(rows: list[dict]) -> dict[str, bool]:
+    observed_rows = [
+        row for row in rows if row.get("evidence_kind") == "observed_production"
+    ]
+    synthetic_rows = [
+        row for row in rows if row.get("evidence_kind") == "synthetic_adversarial"
+    ]
+
+    observed_failures = []
+    for row in observed_rows:
+        provenance = row.get("provenance") or {}
+        observed_fields = set(provenance.get("observed_fields") or [])
+        undeclared_metadata = [
+            field
+            for field in OBSERVABLE_REPLAY_FIELDS
+            if row.get(field) not in (None, "", "unknown")
+            and field not in observed_fields
+        ]
+        if not (
+            row.get("observed_url")
+            and "observed_url" in observed_fields
+            and provenance.get("evidence_source")
+            and provenance.get("historical_metadata_status")
+            == "unrecovered_from_committed_repository_evidence"
+            and not undeclared_metadata
+        ):
+            observed_failures.append(
+                {"case_id": row.get("case_id"), "undeclared_metadata": undeclared_metadata}
+            )
+    check(
+        "observed production replay rows declare provenance and no unverified metadata",
+        bool(observed_rows) and not observed_failures,
+        observed_failures,
+    )
+
+    synthetic_failures = []
+    for row in synthetic_rows:
+        labelled_text = all(
+            str(row.get(field) or "").startswith("[SYNTHETIC]")
+            for field in ("title", "snippet", "summary", "hdec_relevance", "search_query")
+        )
+        provenance = row.get("provenance") or {}
+        if not (
+            row.get("synthetic_metadata") is True
+            and labelled_text
+            and provenance.get("evidence_source")
+            and provenance.get("historical_claim") is False
+        ):
+            synthetic_failures.append(row.get("case_id"))
+    check(
+        "synthetic adversarial replay rows are explicit and never historical",
+        bool(synthetic_rows) and not synthetic_failures,
+        synthetic_failures,
+    )
+
+    observed_sbs = [
+        row for row in observed_rows
+        if row.get("case_id") == SBS_PREMIUM_OBSERVED_CASE
+    ]
+    synthetic_sbs = [
+        row for row in synthetic_rows
+        if row.get("case_id") == SBS_PREMIUM_STRESS_CASE
+    ]
+    sbs_split = (
+        len(observed_sbs) == 1
+        and observed_sbs[0].get("observed_url") == SBS_PREMIUM_OBSERVED_URL
+        and len(synthetic_sbs) == 1
+        and str(synthetic_sbs[0].get("url") or "").split("?", 1)[0]
+        == SBS_PREMIUM_OBSERVED_URL
+    )
+    check("SBS observed incident and synthetic stress are separate fixtures", sbs_split)
+
+    verdict = not observed_failures and not synthetic_failures and sbs_split
+    return {
+        "verdict": verdict,
+        "observed_present": len(observed_sbs) == 1,
+        "synthetic_present": len(synthetic_sbs) == 1,
+    }
+
+
+def replay_contracts(rows: list[dict]) -> dict[str, bool | None]:
+    outcomes: dict[str, bool | None] = {}
     query_caused_qualification = 0
     for row in rows:
+        evidence_kind = str(row.get("evidence_kind") or "legacy_regression")
+        source = str(row.get("source") or "")
+        url = str(row.get("observed_url") or row.get("url") or "")
         source_policy = source_priority.teams_delivery_source_policy(
-            row["source"], row["url"]
+            source, url
         )
+
+        if evidence_kind == "observed_production":
+            # Historical article metadata is unavailable for this incident. Do
+            # not fabricate semantic classifications: the exact configured
+            # editorial surface is independently sufficient to deny realtime
+            # authority, while every unverified article-level field stays unknown.
+            surface_rejected = (
+                source_policy["operator_surface"] == "editorial_analysis"
+                and not source_policy["realtime_auto_send"]
+            )
+            final: bool | None = False if surface_rejected else None
+            reason = (
+                "explicit_non_realtime_editorial_surface"
+                if surface_rejected
+                else "insufficient_observed_metadata_for_final_decision"
+            )
+            expected_final = row["human_expected"] == "KEEP"
+            expected_tokens = row.get("expected_reason_tokens") or []
+            check(
+                f"replay {row['case_id']} human/system final match",
+                final is expected_final,
+                {"expected": expected_final, "actual": final, "reason": reason},
+            )
+            check(
+                f"replay {row['case_id']} source tier expectation",
+                source_policy["operator_tier"] == row["expected_operator_tier"],
+                source_policy,
+            )
+            check(
+                f"replay {row['case_id']} reason expectation",
+                all(token in reason for token in expected_tokens),
+                reason,
+            )
+            print("TITLE=UNKNOWN")
+            print("SOURCE=UNKNOWN")
+            print(f"RESOLVED_PUBLISHER_IDENTITY={source_policy['publisher_identity']}")
+            print(f"SOURCE_TIER={source_policy['operator_tier']}")
+            print(f"OPERATOR_SURFACE={source_policy['operator_surface']}")
+            print("AI_CENTRAL=unknown")
+            print("EXECUTIVE_RELEVANT=unknown")
+            print("MATERIAL=unknown")
+            print("IMPORTANCE=unknown")
+            print("OPINION_GATE=unknown")
+            print("TEAMS_POLICY_ELIGIBLE=unknown")
+            print(f"FINAL_REALTIME_DECISION={'REJECT' if final is False else 'UNKNOWN'}")
+            print(f"REASON={reason}")
+            outcomes[row["case_id"]] = final
+            continue
+
         topic = classify_ai_topic(row)
         executive_relevant = is_executive_relevant_for_push(row, topic)
         material = _material_decision(row)
@@ -442,8 +633,8 @@ def replay_contracts(rows: list[dict]) -> dict[str, bool]:
         ):
             query_caused_qualification += 1
 
-        print(f"TITLE={row['title']}")
-        print(f"SOURCE={row['source']}")
+        print(f"TITLE={row.get('title') or 'UNKNOWN'}")
+        print(f"SOURCE={row.get('source') or 'UNKNOWN'}")
         print(f"RESOLVED_PUBLISHER_IDENTITY={source_policy['publisher_identity']}")
         print(f"SOURCE_TIER={source_policy['operator_tier']}")
         print(f"OPERATOR_SURFACE={source_policy['operator_surface']}")
@@ -896,10 +1087,12 @@ def main() -> int:
     try:
         rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
         replay = json.loads(REPLAY_PATH.read_text(encoding="utf-8"))
-        check("replay schema and required row count", replay.get("schema_version") == 1 and len(replay.get("rows") or []) >= 6)
+        check("replay schema and required row count", replay.get("schema_version") == 2 and len(replay.get("rows") or []) >= 7)
         governance = governing_standard_contracts()
+        overlay = project_acceptance_overlay_contracts()
         source_contract = publisher_contracts(rules)
         opinion_contract = opinion_contracts()
+        provenance = replay_provenance_contracts(replay["rows"])
         outcomes = replay_contracts(replay["rows"])
         pacing_contracts()
         daily_and_editor_contracts()
@@ -910,6 +1103,9 @@ def main() -> int:
     print(f"checks={CHECKS} failures={len(FAILURES)}")
     print(f"COMMON_EXECUTION_STANDARD_PRESENT={str(governance['common_present']).lower()}")
     print(f"PROJECT_ACCEPTANCE_CONTRACT_PRESENT={str(governance['project_present']).lower()}")
+    print(f"HDEC_PROJECT_ACCEPTANCE_UPDATED={str(overlay['version_updated']).lower()}")
+    print(f"HDEC_DEFECT_005_PRESENT={str(overlay['defect_present']).lower()}")
+    print(f"PUBLISHER_AUTHORITY_INVARIANT_PRESENT={str(overlay['authority_invariant']).lower()}")
     print(f"CROSS_PUBLISHER_ALIAS_URL_ELEVATION={source_contract['cross_publisher_alias_url_elevation']}")
     print("PUBLISHER_URL_AUTHORITY_VERDICT=" + ("PASS" if source_contract["cross_publisher_alias_url_elevation"] == 0 else "FAIL"))
     print(f"OPINION_LEADING_MARKER={'PASS' if opinion_contract['leading'] else 'FAIL'}")
@@ -918,8 +1114,13 @@ def main() -> int:
     print(f"OPINION_INCIDENTAL_TEXT_FALSE_POSITIVE={'PASS' if opinion_contract['incidental'] else 'FAIL'}")
     print(f"LS_ELECTRIC_GS_EC_ACTUAL={'KEEP' if outcomes.get('hankookilbo_ls_gs_dc_distribution') else 'REJECT'}")
     print(f"ETF_FALSE_POSITIVE_ACTUAL={'KEEP' if outcomes.get('yonhap_strategy_etf_false_positive') else 'REJECT'}")
+    observed_sbs = outcomes.get(SBS_PREMIUM_OBSERVED_CASE)
+    synthetic_sbs = outcomes.get(SBS_PREMIUM_STRESS_CASE)
     print("SBS_PREMIUM_REAL_INCIDENT_EXPECTED=REJECT")
-    print(f"SBS_PREMIUM_REAL_INCIDENT_ACTUAL={'KEEP' if outcomes.get('sbs_premium_editorial_surface_real_incident') else 'REJECT'}")
+    print(f"SBS_PREMIUM_REAL_INCIDENT_ACTUAL={'REJECT' if observed_sbs is False else 'FAIL'}")
+    print(f"SBS_PREMIUM_OBSERVED_INCIDENT={'REJECT' if observed_sbs is False else 'FAIL'}")
+    print(f"SBS_PREMIUM_ADVERSARIAL_STRESS={'REJECT' if synthetic_sbs is False else 'FAIL'}")
+    print(f"SBS_REPLAY_PROVENANCE_VERDICT={'PASS' if provenance['verdict'] else 'FAIL'}")
     print(f"SBS_PREMIUM_TIER_A_INHERITANCE={source_contract['sbs_premium_tier_a_inheritance']}")
     print(f"SBS_PREMIUM_REALTIME_AUTO_SEND={str(source_contract['sbs_premium_realtime_auto_send']).lower()}")
     print(f"EXTERNAL_TEST_NETWORK_CALLS={NETWORK_CALLS}")

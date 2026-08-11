@@ -1,23 +1,46 @@
 {
-  "schema_version": 1,
-  "fixture_name": "R4-OPS-5 observed production acceptance replay",
-  "generated_from": "committed Teams ledger, overnight audit evidence, and operator-supplied 2026-08-11 incidents",
+  "schema_version": 2,
+  "fixture_name": "R4-OPS-5 mixed-provenance production acceptance replay",
+  "generated_from": "committed Teams ledger, overnight audit evidence, operator-supplied incidents, and explicitly labelled synthetic adversarial cases",
   "rows": [
     {
-      "case_id": "sbs_premium_editorial_surface_real_incident",
+      "case_id": "sbs_premium_observed_incident_r26f8YfJ9",
+      "evidence_kind": "observed_production",
+      "human_expected": "REJECT",
+      "expected_operator_tier": "unlisted",
+      "expected_reason_tokens": ["explicit_non_realtime_editorial_surface"],
+      "observed_url": "https://premium.sbs.co.kr/article/r26f8YfJ9",
+      "title": null,
+      "source": null,
+      "publisher_section": null,
+      "snippet": null,
+      "summary": null,
+      "hdec_relevance": null,
+      "published_at": null,
+      "score": null,
+      "provenance": {
+        "evidence_source": "operator-supplied R4-OPS-5A production incident report",
+        "observed_fields": ["observed_url"],
+        "historical_metadata_status": "unrecovered_from_committed_repository_evidence"
+      }
+    },
+    {
+      "case_id": "sbs_premium_synthetic_adversarial_stress",
+      "evidence_kind": "synthetic_adversarial",
+      "synthetic_metadata": true,
       "human_expected": "REJECT",
       "expected_policy_eligible": true,
       "expected_operator_tier": "unlisted",
       "expected_reason_tokens": ["explicit_non_realtime_editorial_surface"],
-      "article_key": "sbs-premium-r26f8YfJ9",
-      "title": "현대건설, 5조원 AI 데이터센터 EPC 본계약 체결",
+      "article_key": "synthetic-sbs-premium-authority-stress",
+      "title": "[SYNTHETIC] 현대건설, 5조원 AI 데이터센터 EPC 본계약 체결",
       "source": "SBS",
-      "url": "https://premium.sbs.co.kr/article/r26f8YfJ9",
+      "url": "https://premium.sbs.co.kr/article/r26f8YfJ9?utm_source=synthetic&ref=authority-stress&refer=verifier",
       "publisher_section": "산업",
-      "snippet": "현대건설이 5조원 규모 AI 데이터센터 EPC 본계약을 체결하고 전력 인프라 구축에 착수했다.",
-      "summary": "대규모 AI 데이터센터 설계·조달·시공 계약이 확정됐다.",
-      "hdec_relevance": "현대건설 직접 AI 데이터센터 EPC 본계약",
-      "published_at": "2026-08-11T10:00:00+09:00",
+      "snippet": "[SYNTHETIC] 현대건설이 5조원 규모 AI 데이터센터 EPC 본계약을 체결하고 전력 인프라 구축에 착수했다.",
+      "summary": "[SYNTHETIC] 대규모 AI 데이터센터 설계·조달·시공 계약이 확정됐다.",
+      "hdec_relevance": "[SYNTHETIC] 현대건설 직접 AI 데이터센터 EPC 본계약",
+      "published_at": "2099-01-01T10:00:00+09:00",
       "publisher_direct": true,
       "score": 5.0,
       "shadow_urgency_status": "confirmed",
@@ -25,7 +48,12 @@
       "shadow_confirmed_event_types": ["contract_signed"],
       "change_type": "new_article",
       "current_run_seen": true,
-      "search_query": "현대건설 AI 데이터센터 5조 계약 TOP"
+      "search_query": "[SYNTHETIC] 현대건설 AI 데이터센터 5조 계약 TOP",
+      "provenance": {
+        "evidence_source": "R4-OPS-5B deterministic adversarial construction",
+        "purpose": "prove SBS Premium cannot gain realtime authority from TOP, HDEC-direct, high-score, material, or strong-query metadata",
+        "historical_claim": false
+      }
     },
     {
       "case_id": "it_chosun_contribution_20260811",

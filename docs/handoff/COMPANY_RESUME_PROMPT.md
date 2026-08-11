@@ -1,6 +1,6 @@
-# Codex continuation prompt — HDEC News Sensor R4-OPS-5A
+# Codex continuation prompt — HDEC News Sensor R4-OPS-5A/5B
 
-R4-OPS-5A is code-complete on its remote WIP checkpoint unless live refs prove otherwise. Before material work, read and obey `AI_PROJECT_EXECUTION_STANDARD.md`, then read `docs/acceptance/PROJECT_ACCEPTANCE.md`, and state the user-visible acceptance matrix. After both governing documents, read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
+R4-OPS-5A/5B is code-complete on its remote WIP checkpoint unless live refs prove otherwise. Before material work, read and obey `AI_PROJECT_EXECUTION_STANDARD.md`, then read `docs/acceptance/PROJECT_ACCEPTANCE.md`, and state the user-visible acceptance matrix. After both governing documents, read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
 
 Repository:
 
@@ -36,14 +36,16 @@ R4-OPS-5 implementation contract already present on the branch:
 - 07:20 Review followed by 07:50/08:05/08:15 Daily target/retries;
 - repaired PR #40 Naver/live-ingestion/publisher-direct verifier chain and calibration/handoff tooling.
 
-R4-OPS-5A audit-closure contract now present on the branch:
+R4-OPS-5A/5B audit-closure contract now present on the branch:
 
 - governing common/project acceptance files tracked exactly and required at startup;
 - exact known URL identity outranks contradictory display aliases across all configured Tier A/B/C domains;
 - unknown foreign hosts and unenumerated siblings never inherit automatic authority;
-- SBS Premium is explicit editorial-analysis, never Tier A, and the observed `r26f8YfJ9` incident is REJECT;
+- SBS Premium is explicit editorial-analysis and never Tier A; the exact observed `r26f8YfJ9` URL is independently REJECT;
 - explicit English opinion sections and leading/trailing bracketed opinion markers reject without incidental-prose false positives;
-- focused acceptance 114/114 and scheduled-live-refresh preflight 36/36, with all production transports and state writes at zero.
+- HDEC acceptance overlay v1.1 records HDEC-DEFECT-005 and the permanent URL-identity authority invariant;
+- the SBS observed incident is URL-only with unrecovered metadata null/unknown, while a separate explicitly synthetic TOP/HDEC-direct/material stress row proves the same surface rejection;
+- focused acceptance 124/124 and scheduled-live-refresh preflight 36/36, with all production transports and state writes at zero.
 
 Production boundaries remain absolute:
 
@@ -59,8 +61,8 @@ MAIN_MERGES=0
 
 Never rebase, force push, merge PR #40, write main, dispatch a production workflow, change variables/secrets, send SMTP/Teams/Telegram, or mutate production ledgers. If current `origin/main` moved, merge it into the WIP branch preserving history; stop on a genuine conflict.
 
-The final offline seal is scheduled preflight 36/36, R4-OPS-5A replay 114/114, Editor 200/200, and all required Watch/Daily suites green with zero external test network, production sends, or direct production-state writes. Do not redo implementation when the remote branch contains this seal.
+The final offline seal is scheduled preflight 36/36, R4-OPS-5A/5B replay 124/124, Editor 200/200, and all required Watch/Daily suites green with zero external test network, production sends, or direct production-state writes. Do not redo implementation when the remote branch contains this seal.
 
 Before any additional stop, update both handoff files, commit coherently, push normally, verify remote/local equality, and update Draft PR #40. `SYSTEM_LAUNCHED=false` remains mandatory until an operator merges and real production evidence proves Watch send, Daily send, exact Editor link, and immutable dated reader link.
 
-If the remote seal is already complete, do not redo implementation. The next single action is an independent Claude Code audit of the R4-OPS-5A commit range on Draft PR #40; keep the PR Draft and do not merge during that audit.
+If the remote seal is already complete, do not redo implementation. The next single action is a focused independent Claude Code audit of the R4-OPS-5A/5B closure on Draft PR #40; keep the PR Draft and do not merge during that audit.

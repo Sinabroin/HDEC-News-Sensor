@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.0  
+**Version:** 1.1
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -66,6 +66,9 @@ The following are hard failures:
 - IT조선 treated as 조선일보 merely because `it.chosun.com` is under `chosun.com`;
 - 조선비즈 treated as 조선일보 merely because `biz.chosun.com` is under `chosun.com`;
 - sibling publication/domain inheritance elevates source authority without explicit enumeration;
+- a display source alias overrides an explicitly configured URL publication identity;
+- an unknown foreign host or unenumerated sibling subdomain inherits authority from a display source alias or parent domain;
+- `premium.sbs.co.kr` inherits SBS Tier-A realtime authority or sends a standalone realtime Teams card;
 - opinion/column/contributed pieces auto-send as realtime Watch news;
 - ETF/fund/theme-stock articles auto-send merely because they mention AI;
 - weak specialist/trusted sources fill unused Teams capacity;
@@ -79,6 +82,19 @@ The following are hard failures:
 ---
 
 # 4. SOURCE TIER CONTRACT
+
+## Publisher identity authority
+
+The permanent authority invariant is:
+
+> **KNOWN_AUTHORITATIVE_URL_IDENTITY > DISPLAY_SOURCE_ALIAS**
+
+When an exact selected-URL host is configured for a publication, that URL
+publication identity is canonical and overrides a contradictory display source
+alias. Unknown foreign hosts do not inherit alias authority. Unenumerated
+sibling subdomains do not inherit parent-publication authority. Exact configured
+hosts and bounded exact aliases are permitted; broad substring or suffix
+matching must never elevate authority.
 
 ## Tier A — Core Major
 
@@ -163,6 +179,18 @@ Realtime Teams eligibility must continue to require the relevant combination of:
 
 `SEARCH_QUERY_CAUSED_QUALIFICATION=0` is a permanent invariant.
 
+## Realtime opinion contract
+
+The realtime opinion gate may use only explicit publisher-section values and
+clear bracketed title-boundary markers. Normalized Korean opinion sections and
+explicit English sections such as `Opinion`, `Editorial`, `Column`,
+`Commentary`, `Op-Ed`, and `OpEd` must reject. Bracketed markers must reject at
+either a clear leading or trailing title boundary, including forms such as
+`[기고] 제목`, `제목 [기고]`, `【Opinion】 제목`, and `제목 【Opinion】`.
+
+Incidental prose that merely contains a token must remain allowed. Summary,
+query, and body text have zero authority for this realtime gate.
+
 ---
 
 # 6. HISTORICAL REAL DEFECTS — PERMANENT REGRESSION CASES
@@ -226,6 +254,25 @@ Required expected result:
 - exact Editor and exact reader actions remain available;
 - no duplicate on retry.
 
+## HDEC-DEFECT-005 — SBS Premium realtime authority leak
+
+Observed production URL:
+
+- `https://premium.sbs.co.kr/article/r26f8YfJ9`
+
+Required expected result:
+
+- `premium.sbs.co.kr` must never inherit SBS Tier-A realtime authority;
+- `operator_surface=editorial_analysis`;
+- realtime standalone Teams auto-send is `false`;
+- TOP, HDEC-direct, high score, and strong query metadata cannot rescue this surface;
+- final realtime decision: REJECT;
+- Editor/supporting-context use may remain possible.
+
+The replay must keep the observed incident separate from synthetic adversarial
+metadata. Unverified historical title, source, timestamp, and article metadata
+must remain null/unknown rather than being represented as observed fact.
+
 ---
 
 # 7. REAL-CORPUS REPLAY MATRIX
@@ -239,6 +286,8 @@ The acceptance replay must contain at least:
 3. representative stock/theme article
 4. explicit opinion/column/contributed article
 5. weak Tier-C specialist article with no independently sufficient event
+6. observed SBS Premium incident URL with only verified provenance
+7. explicitly synthetic high-materiality SBS Premium authority stress case
 
 ### MUST BE CAPABLE OF TEAMS ELIGIBILITY
 
@@ -383,9 +432,15 @@ IT_CHOSUN_NOT_CHOSUN=PASS
 CHOSUN_BIZ_NOT_CHOSUN=PASS
 TRUE_CHOSUN_IDENTITY=PASS
 SIBLING_DOMAIN_INHERITANCE_BLOCKED=PASS
+PUBLISHER_URL_AUTHORITY_INVARIANT=PASS
+SBS_PREMIUM_OBSERVED_INCIDENT=PASS
+SBS_PREMIUM_ADVERSARIAL_STRESS=PASS
+SBS_REPLAY_PROVENANCE=PASS
 
 ETF_FALSE_POSITIVE_REJECTED=PASS
 OPINION_REALTIME_REJECTED=PASS
+OPINION_TRAILING_MARKER=PASS
+OPINION_ENGLISH_SECTION=PASS
 TIER_C_STANDALONE_AUTO_SEND_ZERO=PASS
 
 TIER_B_MATERIAL_EVENT_ELIGIBLE=PASS
