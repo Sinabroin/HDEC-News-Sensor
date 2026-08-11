@@ -35,6 +35,7 @@ _RANK = {
 PUBLISHER_DELIVERY_TIER_ORDER = (
     "primary_10",
     "secondary_3",
+    "major_secondary",
     "official_institution",
     "specialist",
     "trusted_other",
@@ -109,7 +110,7 @@ def _publisher_delivery_policies() -> tuple[tuple[str, int, str, tuple[str, ...]
         if not isinstance(entry, Mapping):
             continue
         tier = _clean(entry.get("tier"))
-        if tier not in {"primary_10", "secondary_3"}:
+        if tier not in {"primary_10", "secondary_3", "major_secondary"}:
             continue
         policies.append((
             tier,
@@ -132,7 +133,9 @@ def locked_publisher_names(tier: str) -> tuple[str, ...]:
     )
 
 
-_LOCKED_DOMAIN_MAP_TIERS = frozenset({"primary_10", "secondary_3"})
+_LOCKED_DOMAIN_MAP_TIERS = frozenset(
+    {"primary_10", "secondary_3", "major_secondary"}
+)
 
 
 def locked_publisher_domain_map(
@@ -179,10 +182,105 @@ def _delivery_source_key(source: str) -> str:
 
 def _delivery_url_host(url: str) -> str:
     try:
-        host = (urlsplit(str(url or "")).hostname or "").casefold()
+        host = (urlsplit(str(url or "")).hostname or "").casefold().rstrip(".")
     except ValueError:
         return ""
     return host[4:] if host.startswith("www.") else host
+
+
+def _normalized_policy_domain(domain: object) -> str:
+    value = _clean(domain).casefold().strip(".")
+    return value[4:] if value.startswith("www.") else value
+
+
+def _exact_domain_match(host: str, domains: Sequence[str]) -> bool:
+    """Publisher-domain authority is exact by default.
+
+    ``www`` is treated as the conventional alias of the apex. Every other
+    subdomain must be enumerated in policy. This deliberately prevents sibling
+    publications such as ``it.chosun.com`` / ``biz.chosun.com`` /
+    ``sports.chosun.com`` from inheriting the authority of ``chosun.com``.
+    """
+    return bool(host) and any(
+        host == _normalized_policy_domain(domain)
+        for domain in domains
+        if _normalized_policy_domain(domain)
+    )
+
+
+@lru_cache(maxsize=1)
+def _authoritative_publisher_identities() -> tuple[
+    tuple[str, int, str, tuple[str, ...], tuple[str, ...], str, str], ...
+]:
+    """Return every explicitly configured publication identity.
+
+    URL authority is exact-host-only.  The table is derived from the shared
+    Tier-A/B delivery policy plus the explicit Teams specialist and
+    never-automatic publication entries.  It is intentionally not a registrable
+    domain/suffix map: an unlisted child never inherits its parent publication.
+    """
+    identities: list[
+        tuple[str, int, str, tuple[str, ...], tuple[str, ...], str, str]
+    ] = []
+    locked_names: set[str] = set()
+    for tier, rank, name, aliases, domains in _publisher_delivery_policies():
+        identities.append((
+            tier, rank, name,
+            tuple(_delivery_source_key(alias) for alias in aliases),
+            tuple(_normalized_policy_domain(domain) for domain in domains),
+            "locked_delivery", "hard_news",
+        ))
+        locked_names.add(name)
+    for (
+        kind, name, aliases, domains, operator_surface
+    ) in _teams_source_policy_entries():
+        # Tier-B entries deliberately repeat the canonical delivery table. Keep
+        # only one identity row while retaining their Teams-lane metadata in
+        # _teams_source_policy_entries().
+        if name in locked_names:
+            continue
+        if kind in {"specialist", "fallback_blocked"}:
+            tier = "specialist"
+        else:
+            tier = "neutral"
+        identities.append((
+            tier, 0, name, aliases,
+            tuple(_normalized_policy_domain(domain) for domain in domains),
+            kind, operator_surface or "publication",
+        ))
+    return tuple(identities)
+
+
+def _identity_for_host(
+    host: str,
+) -> tuple[str, int, str, tuple[str, ...], tuple[str, ...], str, str] | None:
+    if not host:
+        return None
+    matches = [
+        identity
+        for identity in _authoritative_publisher_identities()
+        if host in identity[4]
+    ]
+    if len(matches) > 1:
+        names = ", ".join(identity[2] for identity in matches)
+        raise ValueError(f"conflicting authoritative publisher host {host!r}: {names}")
+    return matches[0] if matches else None
+
+
+def _identity_for_alias(
+    source_key: str,
+) -> tuple[str, int, str, tuple[str, ...], tuple[str, ...], str, str] | None:
+    if not source_key:
+        return None
+    matches = [
+        identity
+        for identity in _authoritative_publisher_identities()
+        if source_key in identity[3]
+    ]
+    if len(matches) > 1:
+        names = ", ".join(identity[2] for identity in matches)
+        raise ValueError(f"conflicting authoritative publisher alias {source_key!r}: {names}")
+    return matches[0] if matches else None
 
 
 def publisher_delivery_tier(source: str, selected_url: str = "") -> dict[str, Any]:
@@ -191,39 +289,38 @@ def publisher_delivery_tier(source: str, selected_url: str = "") -> dict[str, An
     Tier order is :data:`PUBLISHER_DELIVERY_TIER_ORDER`; the locked primary ten
     and secondary three carry their configured ``publisher_rank`` (1-based),
     every other tier reports ``publisher_rank`` 0. ``sort_key`` sorts best-first.
+
+    Resolution contract: an exact selected-URL host in the configured identity
+    table is authoritative and wins over the display alias. With no URL host,
+    an exact configured alias may identify the publication. If a configured
+    alias is paired with an unknown host, the pair fails closed as unlisted;
+    neither an unrelated host nor an unenumerated child inherits authority.
     """
     quality = source_quality.classify(source)
     tier = ""
     publisher_rank = 0
-    if quality.get("source_type") == "institution":
+    publisher_identity = ""
+    identity_evidence = ""
+    operator_surface = ""
+    source_key = _delivery_source_key(source)
+    host = _delivery_url_host(selected_url)
+    identity = _identity_for_host(host) if host else _identity_for_alias(source_key)
+    if identity is not None:
+        (
+            tier, publisher_rank, publisher_identity,
+            _aliases, _domains, _kind, operator_surface,
+        ) = identity
+        identity_evidence = "exact_domain" if host else "exact_alias"
+    elif host and _identity_for_alias(source_key) is not None:
+        # A URL was selected, but it does not resolve to any explicitly known
+        # publication identity. Do not let a display alias confer authority on
+        # an unknown foreign host or unenumerated sibling property.
+        tier = "neutral"
+        publisher_identity = host
+        identity_evidence = "unrecognized_url_host"
+        operator_surface = "unlisted"
+    elif quality.get("source_type") == "institution":
         tier = "official_institution"
-    else:
-        source_key = _delivery_source_key(source)
-        host = _delivery_url_host(selected_url)
-        for policy_tier, rank, _name, aliases, domains in _publisher_delivery_policies():
-            # R4-R9A: equality-or-prefix, never substring containment — the
-            # short alias "한경" must not classify the specialist daily
-            # "대한경제" as 한국경제 (a cross-publisher false positive), while
-            # family names (연합뉴스TV, SBS Biz, 한국경제TV) keep matching by
-            # prefix.
-            alias_match = any(
-                normalized_alias
-                and (
-                    source_key == normalized_alias
-                    or source_key.startswith(normalized_alias)
-                )
-                for normalized_alias in (
-                    re.sub(r"\s+", "", alias.casefold()) for alias in aliases
-                )
-            )
-            domain_match = any(
-                host == domain or host.endswith("." + domain)
-                for domain in domains
-            )
-            if alias_match or domain_match:
-                tier = policy_tier
-                publisher_rank = rank
-                break
     if not tier:
         source_quality_value = quality.get("source_quality")
         if source_quality_value == "excluded":
@@ -244,6 +341,9 @@ def publisher_delivery_tier(source: str, selected_url: str = "") -> dict[str, An
         "tier": tier,
         "tier_rank": tier_rank,
         "publisher_rank": publisher_rank,
+        "publisher_identity": publisher_identity or _clean(source),
+        "identity_evidence": identity_evidence or "source_quality_fallback",
+        "operator_surface": operator_surface or "publication",
         "label": labels.get(tier, tier),
         "sort_key": (tier_rank, publisher_rank),
     }
@@ -292,13 +392,14 @@ TEAMS_SPECIALIST_LANE_TIERS = frozenset({"specialist", "trusted_other"})
 
 @lru_cache(maxsize=1)
 def _teams_source_policy_entries() -> tuple[
-    tuple[str, str, tuple[str, ...], tuple[str, ...]], ...
+    tuple[str, str, tuple[str, ...], tuple[str, ...], str], ...
 ]:
     policy = _rules().get("teams_delivery_source_policy")
     if not isinstance(policy, Mapping):
         return ()
-    entries: list[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = []
+    entries: list[tuple[str, str, tuple[str, ...], tuple[str, ...], str]] = []
     for kind, key in (
+        ("major_secondary", "major_secondary_publishers"),
         ("specialist", "specialist_publishers"),
         ("fallback_blocked", "fallback_blocked_publishers"),
         ("never_automatic", "never_automatic_publishers"),
@@ -319,6 +420,7 @@ def _teams_source_policy_entries() -> tuple[
                     for domain in entry.get("domains") or []
                     if _clean(domain)
                 ),
+                _clean(entry.get("operator_surface")),
             ))
     return tuple(entries)
 
@@ -334,22 +436,29 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
     tier_info = publisher_delivery_tier(source, selected_url)
     source_key = _delivery_source_key(source)
     host = _delivery_url_host(selected_url)
+    explicit_major_secondary = ""
     explicit_specialist = ""
     explicit_never_automatic = ""
     fallback_blocked = False
-    for kind, name, aliases, domains in _teams_source_policy_entries():
-        alias_match = any(
-            source_key == alias or source_key.startswith(alias)
-            for alias in aliases
-        )
-        domain_match = any(
-            host == domain or host.endswith("." + domain)
-            for domain in domains
-        )
+    operator_surface = str(tier_info.get("operator_surface") or "publication")
+    for (
+        kind, name, aliases, domains, configured_surface
+    ) in _teams_source_policy_entries():
+        # Once a URL host is present, only that exact host has identity authority.
+        # Alias matching remains available solely for URL-less legacy records.
+        alias_match = not host and any(source_key == alias for alias in aliases)
+        domain_match = _exact_domain_match(host, domains)
         if not (alias_match or domain_match):
             continue
+        if configured_surface:
+            operator_surface = configured_surface
         if kind == "never_automatic":
             explicit_never_automatic = explicit_never_automatic or name
+            continue
+        if kind == "major_secondary":
+            # Tier B is an explicit allowlist. It is immediate only after all
+            # article-level substantive gates have passed in teams_ai_push.
+            explicit_major_secondary = explicit_major_secondary or name
             continue
         explicit_specialist = explicit_specialist or name
         if kind == "fallback_blocked":
@@ -363,7 +472,7 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
         lane = TEAMS_LANE_NEVER_AUTOMATIC
     elif fallback_blocked:
         lane = TEAMS_LANE_SPECIALIST_HOLDBACK
-    elif tier in TEAMS_IMMEDIATE_TIERS:
+    elif tier in TEAMS_IMMEDIATE_TIERS or explicit_major_secondary or tier == "major_secondary":
         lane = TEAMS_LANE_IMMEDIATE_MAJOR
     elif tier == "official_institution":
         lane = TEAMS_LANE_OFFICIAL_INSTITUTION
@@ -375,8 +484,20 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
         **tier_info,
         "teams_lane": lane,
         "explicit_specialist": explicit_specialist,
+        "explicit_major_secondary": explicit_major_secondary,
         "explicit_never_automatic": explicit_never_automatic,
         "fallback_blocked": fallback_blocked,
+        "operator_surface": operator_surface,
+        "realtime_auto_send": lane == TEAMS_LANE_IMMEDIATE_MAJOR,
+        "operator_tier": (
+            "tier_a_core_major"
+            if tier in TEAMS_IMMEDIATE_TIERS
+            else "tier_b_major_secondary"
+            if explicit_major_secondary or tier == "major_secondary"
+            else "tier_c_specialist_niche"
+            if explicit_specialist or fallback_blocked
+            else "unlisted"
+        ),
     }
 
 

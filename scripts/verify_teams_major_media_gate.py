@@ -55,6 +55,15 @@ FAILURES: list[str] = []
 NOW = "2026-08-04T17:00:00+09:00"
 AGED_FIRST_SEEN = "2026-08-04T14:30:00+09:00"  # 150 minutes before NOW
 FRESH_FIRST_SEEN = "2026-08-04T16:30:00+09:00"  # 30 minutes before NOW
+MAJOR_FIXTURE_DOMAINS = {
+    "연합뉴스": "yna.co.kr",
+    "MBC": "imbc.com",
+    "KBS": "kbs.co.kr",
+    "SBS": "news.sbs.co.kr",
+    "동아일보": "donga.com",
+    "한겨레": "hani.co.kr",
+    "경향신문": "khan.co.kr",
+}
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -124,7 +133,7 @@ def primary(key: str, title: str, source: str = "연합뉴스", **overrides):
         title=title,
         summary=f"{title} — 공식 확정 내용.",
         source=source,
-        url=f"https://publisher.example.test/major/{key}",
+        url=f"https://{MAJOR_FIXTURE_DOMAINS[source]}/major/{key}",
         score=4.7,
     )
     base.update(overrides)
@@ -293,10 +302,10 @@ def main() -> int:
         nine = [
             primary("p-nine", "정부, AI 데이터센터 전력망 투자 확정"),
             observed_techm(), observed_epnc(),
-            _article(article_key="spec-etnews",
+            _article(article_key="spec-it-chosun",
                      title="오라클, 클라우드 AI 데이터센터 신규 착공",
-                     source="전자신문",
-                     url="https://publisher.example.test/etnews/1"),
+                     source="IT조선",
+                     url="https://it.chosun.com/news/articleView.html?idxno=1"),
         ]
         nine_state = tmp / "state-one-primary.json"
         summary, rec = deliver(tmp, nine, nine_state)

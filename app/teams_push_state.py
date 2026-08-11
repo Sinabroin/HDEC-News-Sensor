@@ -74,6 +74,10 @@ def empty_state() -> dict[str, Any]:
         "title_fingerprints": {},
         "cluster_keys": {},
         "last_successful_send_at": None,
+        # R4-OPS-5 normal-card pacing is independent from TOP/HDEC-direct
+        # delivery. Only a successfully accepted normal/important card advances
+        # this rolling-window authority.
+        "last_normal_send_at": None,
     }
 
 
@@ -98,6 +102,10 @@ def validate_state(data: object) -> dict[str, Any]:
     if last is not None and not isinstance(last, str):
         raise InvalidTeamsPushState("last_successful_send_at must be a string or null")
     state["last_successful_send_at"] = last
+    last_normal = data.get("last_normal_send_at")
+    if last_normal is not None and not isinstance(last_normal, str):
+        raise InvalidTeamsPushState("last_normal_send_at must be a string or null")
+    state["last_normal_send_at"] = last_normal
     held = data.get(HELD_SPECIALISTS_KEY)
     if held is not None:
         if not isinstance(held, dict) or any(
@@ -342,6 +350,7 @@ def mark_sent_after_success(
     sent_at: str | None = None,
     is_update: bool = False,
     delivery_id: str = "",
+    advances_normal_pace: bool | None = None,
 ) -> dict[str, Any]:
     """Return updated state only when delivery succeeded; otherwise return unchanged state."""
     current = validate_state(state)
@@ -370,6 +379,10 @@ def mark_sent_after_success(
             first_sent = prior.get("first_sent_at") if isinstance(prior, dict) else None
             current[map_name][key] = {**entry, "first_sent_at": first_sent or ts}
     current["last_successful_send_at"] = ts
+    if advances_normal_pace is None:
+        advances_normal_pace = _clean(importance).lower() == "important"
+    if advances_normal_pace:
+        current["last_normal_send_at"] = ts
     return current
 
 
@@ -386,6 +399,7 @@ def persist_after_success(
     sent_at: str | None = None,
     is_update: bool = False,
     delivery_id: str = "",
+    advances_normal_pace: bool | None = None,
 ) -> dict[str, Any]:
     """Persist only after success. Failed delivery performs no filesystem write."""
     if not send_succeeded:
@@ -401,6 +415,7 @@ def persist_after_success(
         sent_at=sent_at,
         is_update=is_update,
         delivery_id=delivery_id,
+        advances_normal_pace=advances_normal_pace,
     )
     save_state(updated, path)
     return updated

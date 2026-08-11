@@ -50,6 +50,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from app import ai_value_chain  # noqa: E402  (offline import — no network at load)
+from build_news_censor import _semantic_filter_contract  # noqa: E402
 
 DASHBOARD = ROOT / "docs" / "daily" / "dashboard-latest.html"
 TEMPLATE = ROOT / "templates" / "dashboard_preview.html"
@@ -319,11 +320,23 @@ def verify_reference_locked_model(model: dict, html: str) -> None:
     )
     check("3b: exact-reference 카테고리 토큰만 사용", not invalid, repr(invalid))
     hyper = [row for row in articles if _is_hyper(row)]
-    missing_ai = [row.get("title") for row in hyper if "ai" not in _row_lens(row)]
+    # A named chip vendor in a political/labor/other non-AI title can make the
+    # broad value-chain classifier true from its snippet. That is a candidate
+    # pool signal, never authority to bypass the public AI-centrality/title
+    # conjunctive gate. Compare the committed page only for rows the canonical
+    # semantic filter says are materially AI-surface eligible.
+    material_hyper = [
+        row for row in hyper
+        if "ai" in _semantic_filter_contract(row).get("categories", [])
+    ]
+    missing_ai = [
+        row.get("title") for row in material_hyper if "ai" not in _row_lens(row)
+    ]
     check(
-        "3c: 수집된 하이퍼스케일러 밸류체인 기사는 AI 탭 노출",
+        "3c: AI-central 하이퍼스케일러 밸류체인 기사는 AI 탭 노출",
         not missing_ai,
-        f"hyper={len(hyper)} missing={missing_ai[:3]}",
+        f"hyper={len(hyper)} material_hyper={len(material_hyper)} "
+        f"missing={missing_ai[:3]}",
     )
     check(
         "3d: exact-reference 시장 pane/그룹/행 구조 유지",

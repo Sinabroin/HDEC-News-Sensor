@@ -91,8 +91,9 @@ def main() -> int:
 
     rejected = [a for a in articles if not a["expected"].get("teams_eligible")]
     accepted = [a for a in articles if a["expected"].get("teams_eligible")]
-    check("fixture covers 9 rejected and 4 eligible articles",
-          len(rejected) == 9 and len(accepted) == 4,
+    daily_accepted = [a for a in articles if a["expected"].get("daily_selectable")]
+    check("fixture covers 10 Teams rejects, 3 realtime events, and 4 Daily items",
+          len(rejected) == 10 and len(accepted) == 3 and len(daily_accepted) == 4,
           f"rejected={len(rejected)} accepted={len(accepted)}")
 
     # ------------------------------------------------------------------
@@ -160,9 +161,18 @@ def main() -> int:
                 evaluation.rejection_reason.startswith(("excluded_", "ai_not_central_")),
                 evaluation.rejection_reason,
             )
-            check(f"{name}: no delivery category emitted", category == "",
-                  category)
             reason_class = expected.get("reason_class")
+            if reason_class == "opinion_realtime_excluded":
+                check(
+                    f"{name}: material opinion stays categorized but realtime is excluded",
+                    evaluation.rejection_reason == "excluded_opinion_content"
+                    and category == expected["delivery_category"]
+                    and evaluation.delivery_category == "",
+                    f"reason={evaluation.rejection_reason!r} category={category!r}",
+                )
+            else:
+                check(f"{name}: no delivery category emitted", category == "",
+                      category)
             if reason_class == "stock_market":
                 check(
                     f"{name}: stock/market exclusion class",
@@ -204,15 +214,15 @@ def main() -> int:
             )
 
     # ------------------------------------------------------------------
-    # 2. Batch selection: only the eligible four survive the selector.
+    # 2. Batch selection: only factual realtime-eligible events survive.
     # ------------------------------------------------------------------
     selected = select_teams_push_candidates(
         [teams_row(a) for a in articles], max_articles=None
     )
     selected_titles = {c.article["title"] for c in selected}
     check(
-        "Teams selector keeps exactly the four eligible events",
-        len(selected) == 4
+        "Teams selector keeps exactly the three factual realtime events",
+        len(selected) == 3
         and selected_titles == {a["title"] for a in accepted},
         repr(sorted(selected_titles)),
     )
@@ -237,7 +247,7 @@ def main() -> int:
     daily_titles = [a.title for a in daily_articles]
     check(
         "Daily selects only AI-central articles",
-        set(daily_titles) == {a["title"] for a in accepted},
+        set(daily_titles) == {a["title"] for a in daily_accepted},
         repr(daily_titles),
     )
     check(
@@ -259,8 +269,12 @@ def main() -> int:
         daily_articles, run_at=run_at, root_url="https://fixture.invalid/root"
     )
     check(
-        "rendered Daily contains no rejected title",
-        all(a["title"] not in rendered.html for a in rejected),
+        "rendered Daily contains no Daily-rejected title",
+        all(
+            a["title"] not in rendered.html
+            for a in articles
+            if not a["expected"].get("daily_selectable")
+        ),
     )
 
     # Non-AI headline is a hard render failure.

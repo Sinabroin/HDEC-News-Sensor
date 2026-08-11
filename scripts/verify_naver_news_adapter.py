@@ -104,6 +104,7 @@ def main() -> int:
               and set(result["articles"][0]) <= {
                   "id", "title", "source", "published_at", "url", "snippet",
                   "source_metadata", "discovery_url", "discovery_provider",
+                  "discovery_lane",
                   "publisher_url", "publisher_domain", "publisher_direct",
                   "portal_resolution_status", "portal_resolution_reason",
               }
@@ -111,6 +112,14 @@ def main() -> int:
                   key in result["articles"][0]
                   for key in ("body", "article_body", "html", "content")
               ))
+        check(
+            "discovery lane은 qualification이 아닌 provenance로 보존",
+            result["articles"][0].get("discovery_lane")
+            == naver.DISCOVERY_LANE_GENERAL
+            and result["articles"][0].get("source_metadata", {}).get(
+                "discovery_lane"
+            ) == naver.DISCOVERY_LANE_GENERAL,
+        )
     finally:
         naver._request_json = original_request
         (config.NAVER_NEWS_ENABLED, config.NAVER_CLIENT_ID,

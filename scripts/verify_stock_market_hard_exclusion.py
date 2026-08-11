@@ -261,7 +261,7 @@ def verify_generic_stock_tiers(tmp: Path) -> None:
             title="AI 테마주 랠리 지속…코스피 신고가 경신",
             summary="AI 테마주 중심의 랠리가 이어지며 코스피가 신고가를 새로 썼다.",
             source="매일경제",
-            url="https://publisher.example.test/mk/stock-rally",
+            url="https://mk.co.kr/stock-rally",
             shadow_confirmed_event_types=[],
         )),
         ("secondary-three target price", _article(
@@ -269,7 +269,7 @@ def verify_generic_stock_tiers(tmp: Path) -> None:
             title="증권사, AI 반도체주 목표주가 일제 상향",
             summary="주요 증권사가 AI 반도체 종목 목표주가를 올려 잡았다.",
             source="동아일보",
-            url="https://publisher.example.test/donga/stock-target",
+            url="https://donga.com/stock-target",
             shadow_confirmed_event_types=[],
         )),
         ("specialist beneficiary stocks", _article(
@@ -311,7 +311,7 @@ def hdec_contract_article(**overrides):
             "발표 직후 주가도 상승했다."
         ),
         source="연합뉴스",
-        url="https://publisher.example.test/yna/hdec-epc-contract",
+        url="https://yna.co.kr/hdec-epc-contract",
         score=4.8,
         shadow_confirmed_event_types=["contract_signed"],
     )
@@ -350,7 +350,7 @@ def verify_hdec_exception(tmp: Path) -> None:
         title="현대건설 주가 급등…증권가 AI 수혜주 지목",
         summary="증권가가 현대건설을 AI 수혜주로 지목하며 주가가 급등했다.",
         source="연합뉴스",
-        url="https://publisher.example.test/yna/hdec-beneficiary",
+        url="https://yna.co.kr/hdec-beneficiary",
         shadow_confirmed_event_types=[],
     )
     gate_b = evaluate_stock_market_gate(beneficiary)
@@ -369,7 +369,7 @@ def verify_no_bypass(tmp: Path) -> None:
         title="현대건설 주가 상승…사우디 원전 공사 수주 확정",
         summary="현대건설이 사우디 원전 공사를 수주 확정했다. 주가도 상승했다.",
         source="연합뉴스",
-        url="https://publisher.example.test/yna/hdec-nuclear",
+        url="https://yna.co.kr/hdec-nuclear",
         shadow_confirmed_event_types=["contract_signed"],
     )
     evaluation = evaluate_teams_push_policy(non_ai)
@@ -417,13 +417,13 @@ def verify_counter_reconciliation(tmp: Path) -> None:
         _article(
             article_key="ctr-rally", title="AI 테마주 랠리 지속…코스피 신고가",
             summary="AI 테마주 랠리.", source="매일경제",
-            url="https://publisher.example.test/mk/ctr-rally",
+            url="https://mk.co.kr/ctr-rally",
             shadow_confirmed_event_types=[],
         ),
         _article(
             article_key="ctr-target", title="증권사, AI 반도체주 목표주가 상향",
             summary="목표주가 상향.", source="동아일보",
-            url="https://publisher.example.test/donga/ctr-target",
+            url="https://donga.com/ctr-target",
             shadow_confirmed_event_types=[],
         ),
         _article(
@@ -437,7 +437,7 @@ def verify_counter_reconciliation(tmp: Path) -> None:
             article_key="ctr-hdec-beneficiary",
             title="현대건설 주가 급등…AI 수혜주 지목",
             summary="주가 급등.", source="연합뉴스",
-            url="https://publisher.example.test/yna/ctr-bene",
+            url="https://yna.co.kr/ctr-bene",
             shadow_confirmed_event_types=[],
         ),
         _article(article_key="ctr-clean"),

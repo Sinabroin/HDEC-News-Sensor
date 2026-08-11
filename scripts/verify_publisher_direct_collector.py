@@ -51,18 +51,15 @@ import build_telegram_digest  # noqa: E402
 
 EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/editorial-daily-brief.yml": (
-        # R4-R9C wires the exact-edition editor deep-link verifier into the
-        # offline gate and commits the append-only edition manifest through
-        # the explicit git-add allowlist. R4-R10 reschedules the runs after the
-        # Review Console build (cron 30/45/55 22) so the dated console exists and
-        # the morning Teams message carries the exact-edition editor CTA, and
-        # wires the delivered lead-source gate verifier into the offline gate.
-        # R4-R11 removes the reader-only degradation: editor-unavailable
-        # publications skip fail-closed with a machine-readable skip_reason.
-        "e454f9d880fe5471b2bf64cecc775200feb4d8b85aa8f85105c689db3365bebc"
+        # R4-OPS-5 keeps Review at 07:20, targets Daily at 07:50 with
+        # idempotent 08:05/08:15 retries, and gates both truthful empty and
+        # non-empty immutable editions through the final offline acceptance.
+        "d4b8ff85d4772e1306240442cee02371568b06ee2bdc1d675813aa571c74d32f"
     ),
     ".github/workflows/editorial-review-console.yml": (
-        "1f88a8c69f546daab9fed5d69dee353fc0a541ca26b80bb49de805a6d93517f0"
+        # R4-R19/R20 calibration artifacts and R4-R21 honest-empty publishing
+        # are part of the reviewed Editor production workflow.
+        "a862e0726f8d114ed46b0fc43cc8b5a3fff8d3ec641bfeb6605b5caedee30e50"
     ),
     ".github/workflows/editorial-weekly-ti.yml": (
         "0fcdd70c8d2a0fee45fd44cec92c7ef837d8bbda408a3e7551f1713feb953851"
@@ -74,9 +71,10 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-R5 publishes both exact-reference dashboard paths from one artifact,
         # leaves sender state out, gates on validated-Brief field equivalence,
         # and considers every displayed article for cached/bounded local imagery.
-        # R4-R9B adds the stock-market hard-exclusion and dashboard-freshness
-        # verifiers to the mock-safe gate (before the build step).
-        "bf99534e934b0ab99f3d6631b9ccb72159f652d6465c759f49c2134119fb1a04"
+        # R4-OPS-5 runs the repaired Naver operational/live-ingestion/direct-
+        # publisher chain plus the final source/pacing/Daily acceptance before
+        # any live build can begin.
+        "3f3ab948a480448a8a46e6feaaf6cd5b5bcc2eaa1cd6c6b048f1cf39a05153cf"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
@@ -85,9 +83,10 @@ EXPECTED_PROTECTED_SHA256 = {
         # conservative '1' env fallback until the operator sets 5).
         # R4-R9B adds the major-media source-gate and stock-market
         # hard-exclusion verifiers to the mock-safe gate.
-        # R4-R9D wires the strict major-media/official-source Teams gate
-        # verifier (verify_teams_strict_source_gate.py) into the mock-safe gate.
-        "c735b4b186f80a2ccf44d2d1117f3583e9b1f94544d9be0bc162e7bdc7952940"
+        # R4-OPS-5 additionally gates the exact-domain publisher contract,
+        # explicit A/B/C tiers, opinion exclusion, real-corpus replay and
+        # rolling normal-card pacing before the live collection/send path.
+        "c0c44cdb2f2ffb9d9fb248b5255618638bf8559dd9ac42b13958880e4c01a285"
     ),
     ".github/workflows/telegram-notify.yml": (
         # R4-R10 repoints the operator dashboard export off the sealed News Censor
@@ -104,20 +103,16 @@ EXPECTED_PROTECTED_SHA256 = {
         # sent by main's legacy reader-only path that this branch forbids).
         "68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155"
     ),
-    "data/teams_push_state.json": (
-        # Verified successor from the production watch's own state commits
-        # (through origin/main 6c54e5a → 710a59a → 86d3e6b → 564462f "chore:
-        # persist Teams AI push dedup state" — merged without modification,
-        # routine successor-pin refresh; the 86d3e6b batch plus 1710754 add
-        # seven ungated-main sends, six of them non-major tier that this
-        # branch's R4-R9A/R9D source gate holds back or blocks).
-        # This state contains the R4-R11 TTL production send
-        # (teams_ai_push:7081b3470e08, http://www.ttlnews.com/…idxno=3131687);
-        # verify_teams_strict_source_gate §10 proves it read-only and pins the
-        # publisher to never_automatic.
-        "4b3f78ee92152d98e704695004af5367d18fa61e9ce38ec8794a49bedee96e3d"
-    ),
 }
+
+# Watch owns this ledger and may advance it through autonomous state-only main
+# commits. An exact historical SHA would make the verifier stale after every
+# healthy run. Snapshot it around the test instead: any verifier write still
+# fails below, while the current authoritative production successor is accepted.
+RUNTIME_PROTECTED_PATHS = (
+    *EXPECTED_PROTECTED_SHA256,
+    "data/teams_push_state.json",
+)
 
 PASS = 0
 FAIL = 0
@@ -318,7 +313,7 @@ def teams_article(url: str) -> dict:
 
 def main() -> int:
     protected_before = {
-        path: sha256(ROOT / path) for path in EXPECTED_PROTECTED_SHA256
+        path: sha256(ROOT / path) for path in RUNTIME_PROTECTED_PATHS
     }
     for path, expected in EXPECTED_PROTECTED_SHA256.items():
         check(f"protected SHA256 exact: {path}", protected_before[path] == expected)
@@ -1335,7 +1330,7 @@ def main() -> int:
         ))
 
     protected_after = {
-        path: sha256(ROOT / path) for path in EXPECTED_PROTECTED_SHA256
+        path: sha256(ROOT / path) for path in RUNTIME_PROTECTED_PATHS
     }
     check("all workflows remain byte-identical", all(
         protected_after[path] == protected_before[path]

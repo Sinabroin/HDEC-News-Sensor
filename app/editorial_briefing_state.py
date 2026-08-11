@@ -13,12 +13,12 @@ from typing import Mapping
 
 from app import config
 
-STATE_VERSION = 2
+STATE_VERSION = 3
 STATE_PATHS = {
     "daily": config.DATA_DIR / "editorial_daily_state.json",
     "weekly": config.DATA_DIR / "editorial_weekly_state.json",
 }
-_SUCCESS_FIELDS = {
+_SUCCESS_FIELDS_V2 = {
     "edition_key",
     "coverage_start",
     "coverage_end",
@@ -28,7 +28,7 @@ _SUCCESS_FIELDS = {
     "smtp_code",
     "sent_at",
 }
-_CLAIM_FIELDS = {
+_CLAIM_FIELDS_V2 = {
     "edition_key",
     "coverage_start",
     "coverage_end",
@@ -37,13 +37,16 @@ _CLAIM_FIELDS = {
     "claim_owner",
     "claimed_at",
 }
-_IDENTITY_FIELDS = (
+_SUCCESS_FIELDS = _SUCCESS_FIELDS_V2 | {"delivery_kind", "article_count"}
+_CLAIM_FIELDS = _CLAIM_FIELDS_V2 | {"delivery_kind", "article_count"}
+_BASE_IDENTITY_FIELDS = (
     "edition_key",
     "coverage_start",
     "coverage_end",
     "html_sha256",
     "public_url",
 )
+_IDENTITY_FIELDS = _BASE_IDENTITY_FIELDS + ("delivery_kind", "article_count")
 _V1_STATE_FIELDS = {
     "version",
     "edition_type",
@@ -135,6 +138,21 @@ def _validate_identity(record: Mapping, edition_type: str, kind: str) -> None:
         raise StateError(f"{kind} HTML SHA256 is malformed")
 
 
+def _validate_delivery_contract(record: Mapping, kind: str) -> None:
+    delivery_kind = record.get("delivery_kind")
+    article_count = record.get("article_count")
+    if delivery_kind in {"legacy_success", "legacy_claim"}:
+        if article_count is not None:
+            raise StateError(f"{kind} legacy article count must be null")
+        return
+    if delivery_kind not in {"nonempty_digest", "empty_status"}:
+        raise StateError(f"{kind} delivery kind is malformed")
+    if type(article_count) is not int or article_count < 0:
+        raise StateError(f"{kind} article count is malformed")
+    if (delivery_kind == "empty_status") != (article_count == 0):
+        raise StateError(f"{kind} delivery kind/count mismatch")
+
+
 def _validate_success_records(value: object, edition_type: str) -> tuple[list, set[str]]:
     if not isinstance(value, list):
         raise StateError("successful_editions must be a list")
@@ -143,6 +161,7 @@ def _validate_success_records(value: object, edition_type: str) -> tuple[list, s
         if not isinstance(record, dict) or set(record) != _SUCCESS_FIELDS:
             raise StateError("successful edition record is malformed")
         _validate_identity(record, edition_type, "successful edition record")
+        _validate_delivery_contract(record, "successful edition record")
         if not _valid_nonempty(record.get("smtp_status")) or not _valid_timestamp(
             record.get("sent_at")
         ):
@@ -176,12 +195,57 @@ def _validate_last_success(value: Mapping, records: list, seen: set[str]) -> Non
 def _upgrade_v1(value: Mapping, edition_type: str) -> dict:
     if set(value) != _V1_STATE_FIELDS or value.get("edition_type") != edition_type:
         raise StateError("legacy state fields or identity are malformed")
-    records, seen = _validate_success_records(value.get("successful_editions"), edition_type)
-    _validate_last_success(value, records, seen)
     upgraded = deepcopy(dict(value))
-    upgraded["version"] = STATE_VERSION
+    upgraded["version"] = 2
     upgraded["delivery_claims"] = {}
-    return upgraded
+    return _upgrade_v2(upgraded, edition_type)
+
+
+def _upgrade_v2(value: Mapping, edition_type: str) -> dict:
+    if set(value) != _STATE_FIELDS or value.get("edition_type") != edition_type:
+        raise StateError("version 2 state fields or identity are malformed")
+    records = value.get("successful_editions")
+    claims = value.get("delivery_claims")
+    if not isinstance(records, list) or not isinstance(claims, dict):
+        raise StateError("version 2 state collections are malformed")
+    upgraded_records = []
+    seen: set[str] = set()
+    for record in records:
+        if not isinstance(record, dict) or set(record) != _SUCCESS_FIELDS_V2:
+            raise StateError("version 2 success record is malformed")
+        _validate_identity(record, edition_type, "version 2 success record")
+        if (
+            record.get("smtp_status") != "accepted"
+            or record.get("smtp_code") != 250
+            or not _valid_timestamp(record.get("sent_at"))
+        ):
+            raise StateError("version 2 success record is not accepted")
+        if record["edition_key"] in seen:
+            raise StateError("duplicate successful edition")
+        seen.add(record["edition_key"])
+        upgraded_records.append(
+            {**record, "delivery_kind": "legacy_success", "article_count": None}
+        )
+    _validate_last_success(value, records, seen)
+    upgraded_claims = {}
+    for edition_key, claim in claims.items():
+        if not isinstance(claim, dict) or set(claim) != _CLAIM_FIELDS_V2:
+            raise StateError("version 2 delivery claim is malformed")
+        _validate_identity(claim, edition_type, "version 2 delivery claim")
+        upgraded_claims[edition_key] = {
+            **claim,
+            "delivery_kind": "legacy_claim",
+            "article_count": None,
+        }
+    upgraded = deepcopy(dict(value))
+    upgraded.update(
+        {
+            "version": STATE_VERSION,
+            "successful_editions": upgraded_records,
+            "delivery_claims": upgraded_claims,
+        }
+    )
+    return validate_state(upgraded, edition_type)
 
 
 def validate_state(value: object, edition_type: str) -> dict:
@@ -190,6 +254,8 @@ def validate_state(value: object, edition_type: str) -> dict:
         raise StateError("state fields are malformed")
     if type(value.get("version")) is int and value.get("version") == 1:
         return _upgrade_v1(value, edition_type)
+    if type(value.get("version")) is int and value.get("version") == 2:
+        return _upgrade_v2(value, edition_type)
     if set(value) != _STATE_FIELDS:
         raise StateError("state fields are malformed")
     if (
@@ -208,6 +274,7 @@ def validate_state(value: object, edition_type: str) -> dict:
         if not isinstance(claim, dict) or set(claim) != _CLAIM_FIELDS:
             raise StateError("delivery claim is malformed")
         _validate_identity(claim, edition_type, "delivery claim")
+        _validate_delivery_contract(claim, "delivery claim")
         if edition_key != claim["edition_key"]:
             raise StateError("delivery claim key does not match its edition")
         if edition_key in successful_keys:
@@ -286,15 +353,27 @@ def expire_stale_claims(
 
 
 def _same_identity(left: Mapping, right: Mapping) -> bool:
-    return all(left.get(field) == right.get(field) for field in _IDENTITY_FIELDS)
+    if not all(left.get(field) == right.get(field) for field in _BASE_IDENTITY_FIELDS):
+        return False
+    left_kind = left.get("delivery_kind")
+    right_kind = right.get("delivery_kind")
+    # A v2 claim already durably locked the exact HTML hash and public URL but
+    # predates delivery-kind accounting.  Permit that exact legacy identity to
+    # complete after deployment; all newly-created v3 identities remain strict.
+    if str(left_kind).startswith("legacy_") or str(right_kind).startswith("legacy_"):
+        return True
+    return all(left.get(field) == right.get(field) for field in ("delivery_kind", "article_count"))
 
 
 def add_claim(state: Mapping, edition_type: str, claim: Mapping) -> dict:
     current = validate_state(dict(state), edition_type)
     candidate = dict(claim)
+    if set(candidate) == _CLAIM_FIELDS_V2:
+        candidate.update(delivery_kind="legacy_claim", article_count=None)
     if set(candidate) != _CLAIM_FIELDS:
         raise StateError("delivery claim fields are malformed")
     _validate_identity(candidate, edition_type, "delivery claim")
+    _validate_delivery_contract(candidate, "delivery claim")
     if not _valid_claim_owner(candidate.get("claim_owner")):
         raise StateError("delivery claim owner is malformed")
     if not _valid_timestamp(candidate.get("claimed_at")):
@@ -342,9 +421,12 @@ def convert_claim_to_success(
 ) -> dict:
     current = validate_state(dict(state), edition_type)
     candidate = dict(record)
+    if set(candidate) == _SUCCESS_FIELDS_V2:
+        candidate.update(delivery_kind="legacy_success", article_count=None)
     if set(candidate) != _SUCCESS_FIELDS:
         raise StateError("success record fields are malformed")
     _validate_identity(candidate, edition_type, "success record")
+    _validate_delivery_contract(candidate, "success record")
     if not _valid_nonempty(candidate.get("sent_at")):
         raise StateError("success record contains an empty timestamp")
     if (

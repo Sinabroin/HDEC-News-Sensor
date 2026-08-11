@@ -69,6 +69,7 @@ for _path in (REPO_ROOT, SCRIPTS_DIR):
 from app.teams_ai_push import (  # noqa: E402
     DEFAULT_TEAMS_BATCH_MAX,
     HARD_TEAMS_BATCH_MAX,
+    IMPORTANCE_IMPORTANT,
     SELECTION_MODE_FALLBACK,
     apply_major_media_first_gate,
     evaluate_teams_push_policy,
@@ -116,6 +117,7 @@ REJECTION_COUNTER_KEYS = (
     "shadow_unavailable",
     "no_confirmed_event",
     "speculation_only",
+    "excluded_opinion_content",
     "already_sent",
     "exact_duplicate",
     "duplicate_event",
@@ -138,7 +140,12 @@ def _row_source_tier_counts(rows) -> dict[str, int]:
     ``specialist`` counts every specialist-holdback-lane publisher (tier
     specialist / trusted_other plus explicitly configured Teams specialists),
     matching the gate's own lane partition."""
-    counts = {"primary_10": 0, "secondary_3": 0, "specialist": 0}
+    counts = {
+        "primary_10": 0,
+        "secondary_3": 0,
+        "major_secondary": 0,
+        "specialist": 0,
+    }
     for row in rows:
         policy = source_priority.teams_delivery_source_policy(
             str(row.get("source") or row.get("display_source") or ""),
@@ -149,6 +156,8 @@ def _row_source_tier_counts(rows) -> dict[str, int]:
             counts["primary_10"] += 1
         elif tier == "secondary_3":
             counts["secondary_3"] += 1
+        elif tier == "major_secondary":
+            counts["major_secondary"] += 1
         elif (
             str(policy["teams_lane"])
             == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK
@@ -210,7 +219,7 @@ def _major_row_decision_traces(
         promoted_official = bool(
             routing.is_public_lane and routing.teams_alert_eligible
         )
-        if tier not in {"primary_10", "secondary_3"} and not promoted_official:
+        if tier not in {"primary_10", "secondary_3", "major_secondary"} and not promoted_official:
             continue
         ref = article_ref(row)
         stage, stage_reason = "", ""
@@ -642,6 +651,10 @@ def deliver(
                 send_succeeded=True,
                 is_update=decision.is_update,
                 delivery_id=f"teams_ai_push:{ref}",
+                advances_normal_pace=(
+                    candidate.importance.level == IMPORTANCE_IMPORTANT
+                    and not candidate.importance.hdec_direct
+                ),
             )
             state_changed = True
             state_committed += 1
@@ -792,9 +805,11 @@ def deliver(
         # R4-R9A §11 — Teams source-gate audit counters (exact names).
         "raw_primary_10_rows": raw_tier_counts["primary_10"],
         "raw_secondary_3_rows": raw_tier_counts["secondary_3"],
+        "raw_major_secondary_rows": raw_tier_counts["major_secondary"],
         "raw_specialist_rows": raw_tier_counts["specialist"],
         "verified_primary_10_rows": verified_tier_counts["primary_10"],
         "verified_secondary_3_rows": verified_tier_counts["secondary_3"],
+        "verified_major_secondary_rows": verified_tier_counts["major_secondary"],
         "verified_specialist_rows": verified_tier_counts["specialist"],
         "teams_immediate_major_rows": gate_batch.audit[
             "teams_immediate_major_rows"
@@ -829,6 +844,9 @@ def deliver(
         "selected_secondary_3_rows": gate_batch.audit[
             "selected_secondary_3_rows"
         ],
+        "selected_major_secondary_rows": gate_batch.audit[
+            "selected_major_secondary_rows"
+        ],
         "selected_promoted_official_rows": gate_batch.audit[
             "selected_promoted_official_rows"
         ],
@@ -857,6 +875,21 @@ def deliver(
         ),
         "stock_market_gate_rejected_rows": int(
             gate_batch.audit.get("stock_market_gate_rejected_rows") or 0
+        ),
+        "normal_pacing_window_open": bool(
+            gate_batch.audit.get("normal_pacing_window_open")
+        ),
+        "normal_pacing_age_minutes": int(
+            gate_batch.audit.get("normal_pacing_age_minutes") or 0
+        ),
+        "normal_rows_selected": int(
+            gate_batch.audit.get("normal_rows_selected") or 0
+        ),
+        "normal_rows_deferred_by_pacing": int(
+            gate_batch.audit.get("normal_rows_deferred_by_pacing") or 0
+        ),
+        "urgent_rows_selected": int(
+            gate_batch.audit.get("urgent_rows_selected") or 0
         ),
         "selected_source_audit": selected_source_audit,
         # R4-R12 §1 — row-level categorical decision trace for every
@@ -975,9 +1008,12 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         # R4-R9A §11 — Teams source-gate audit counters.
         f"raw_primary_10_rows={int(summary.get('raw_primary_10_rows') or 0)}",
         f"raw_secondary_3_rows={int(summary.get('raw_secondary_3_rows') or 0)}",
+        f"raw_major_secondary_rows={int(summary.get('raw_major_secondary_rows') or 0)}",
         f"raw_specialist_rows={int(summary.get('raw_specialist_rows') or 0)}",
         f"verified_primary_10_rows={int(summary.get('verified_primary_10_rows') or 0)}",
         f"verified_secondary_3_rows={int(summary.get('verified_secondary_3_rows') or 0)}",
+        "verified_major_secondary_rows="
+        + str(int(summary.get("verified_major_secondary_rows") or 0)),
         f"verified_specialist_rows={int(summary.get('verified_specialist_rows') or 0)}",
         f"teams_immediate_major_rows={int(summary.get('teams_immediate_major_rows') or 0)}",
         f"teams_specialist_held_rows={int(summary.get('teams_specialist_held_rows') or 0)}",
@@ -998,9 +1034,14 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         + str(int(summary.get('teams_specialist_replaced_by_major_rows') or 0)),
         f"selected_primary_10_rows={int(summary.get('selected_primary_10_rows') or 0)}",
         f"selected_secondary_3_rows={int(summary.get('selected_secondary_3_rows') or 0)}",
+        f"selected_major_secondary_rows={int(summary.get('selected_major_secondary_rows') or 0)}",
         f"selected_promoted_official_rows={int(summary.get('selected_promoted_official_rows') or 0)}",
         f"selected_specialist_rows={int(summary.get('selected_specialist_rows') or 0)}",
         f"source_gate_rejected_rows={int(summary.get('source_gate_rejected_rows') or 0)}",
+        f"normal_rows_selected={int(summary.get('normal_rows_selected') or 0)}",
+        "normal_rows_deferred_by_pacing="
+        + str(int(summary.get("normal_rows_deferred_by_pacing") or 0)),
+        f"urgent_rows_selected={int(summary.get('urgent_rows_selected') or 0)}",
     )
     try:
         with Path(path).open("a", encoding="utf-8") as handle:
@@ -1067,9 +1108,14 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
         f"{summary['teams_specialist_replaced_by_major_rows']} "
         f"selected_primary_10_rows={summary['selected_primary_10_rows']} "
         f"selected_secondary_3_rows={summary['selected_secondary_3_rows']} "
+        f"selected_major_secondary_rows={summary['selected_major_secondary_rows']} "
         f"selected_promoted_official_rows={summary['selected_promoted_official_rows']} "
         f"selected_specialist_rows={summary['selected_specialist_rows']} "
-        f"source_gate_rejected_rows={summary['source_gate_rejected_rows']}"
+        f"source_gate_rejected_rows={summary['source_gate_rejected_rows']} "
+        f"normal_rows_selected={summary['normal_rows_selected']} "
+        "normal_rows_deferred_by_pacing="
+        f"{summary['normal_rows_deferred_by_pacing']} "
+        f"urgent_rows_selected={summary['urgent_rows_selected']}"
     )
     print(
         "Teams AI push summary: transport=email_channel "

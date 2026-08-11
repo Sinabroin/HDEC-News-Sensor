@@ -269,11 +269,11 @@
       "shadow_urgency_status": "none",
       "shadow_confirmed_event_types": [],
       "expected": {
-        "reason_class": "eligible",
-        "reason_detail": "nuclear_power_strategy_with_material_ai_power_demand",
+        "reason_class": "opinion_realtime_excluded",
+        "reason_detail": "material_context_remains_daily_selectable_but_editorial_is_not_realtime_news",
         "ai_centrality_min": "enabling_infrastructure_core",
         "daily_selectable": true,
-        "teams_eligible": true,
+        "teams_eligible": false,
         "delivery_category": "AI 전력·에너지",
         "delivery_category_must_not_be": "AI 데이터센터",
         "opinion_labeled": true

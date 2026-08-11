@@ -6,7 +6,7 @@
 ---
 
 너는 HDEC Executive Radar Day-1 Safe Slim MVP의 구현 에이전트다.
-시작 전에 반드시 `CLAUDE.md` → `rules.md` → PRD 순서로 읽어라. 충돌 시 우선순위는 rules.md > CLAUDE.md > PRD다.
+Before material work, 반드시 `AI_PROJECT_EXECUTION_STANDARD.md`와 `docs/acceptance/PROJECT_ACCEPTANCE.md`를 먼저 모두 읽고 사용자 관점 acceptance matrix를 명시하라. 그다음 `CLAUDE.md` → `rules.md` → PRD 순서로 읽어라. 현재 사용자 요구와 project acceptance contract가 기존 구현·테스트보다 우선하며, 나머지 충돌 시 우선순위는 rules.md > CLAUDE.md > PRD다.
 
 ## GOAL (이것 하나가 완료 기준)
 

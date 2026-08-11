@@ -188,7 +188,7 @@ def workflow_contracts() -> None:
         # (editorial-review-console.yml, "20 22") so the dated console exists and
         # the morning Teams message carries the exact-edition editor CTA.
         "Daily cron set is exact",
-        daily_crons == ["30 22 * * *", "45 22 * * *", "55 22 * * *"],
+        daily_crons == ["50 22 * * *", "5 23 * * *", "15 23 * * *"],
         repr(daily_crons),
     )
     check(
@@ -457,15 +457,22 @@ def state_contracts() -> None:
         migrated = state.load_state("daily", legacy_path)
         check(
             "legacy version 1 state migrates to claim schema",
-            migrated["version"] == 2
-            and migrated["successful_editions"] == legacy["successful_editions"]
+            migrated["version"] == 3
+            and len(migrated["successful_editions"]) == 1
+            and {
+                key: value
+                for key, value in migrated["successful_editions"][0].items()
+                if key not in {"delivery_kind", "article_count"}
+            } == record
+            and migrated["successful_editions"][0]["delivery_kind"] == "legacy_success"
+            and migrated["successful_editions"][0]["article_count"] is None
             and migrated["last_successful_edition"] == legacy["last_successful_edition"]
             and migrated["last_successful_send_at"] == legacy["last_successful_send_at"]
             and migrated["delivery_claims"] == {},
         )
         check(
             "empty state contains no claims",
-            state.empty_state("daily")["version"] == 2
+            state.empty_state("daily")["version"] == 3
             and state.empty_state("daily")["delivery_claims"] == {}
             and not state.has_claim(state.empty_state("daily"), "2026-07-27"),
         )
@@ -2966,6 +2973,8 @@ def republish_contracts() -> None:
         "smtp_status": "accepted",
         "smtp_code": 250,
         "sent_at": "2026-07-27T07:05:00+09:00",
+        "delivery_kind": "nonempty_digest",
+        "article_count": len(articles),
     }
     delivered["successful_editions"] = [success]
     delivered["last_successful_edition"] = key

@@ -318,26 +318,67 @@ def check_dashboard_model_provider_fields() -> None:
 
 _RUN_PAYLOAD = r'''
 import os, sys, json, tempfile
+from datetime import datetime, timezone
 d = tempfile.mkdtemp()
 os.environ["DB_PATH"] = os.path.join(d, "t.db")
 os.environ["APP_MODE"] = "mock"
 ROOT = %r
 sys.path.insert(0, ROOT)
-from app import db, config, collector, live_collector, naver_news_provider as nv
+from app import (
+    db,
+    config,
+    collector,
+    live_collector,
+    naver_news_provider as nv,
+    publisher_direct,
+)
 config.NEWS_MODE = "live"
 db.init_db()
+NOW = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 def _raw(provider, title, url, source="출처 미상"):
-    return {"id": provider[:4] + title[:2], "title": title, "source": source,
-            "published_at": "2026-06-17T09:00:00+09:00", "url": url, "snippet": "s",
-            "source_metadata": {"provider": provider, "query": "q", "source_url": url,
-                                "collected_at": "t", "provider_response_id": "r"}}
+    row = {"id": provider[:4] + title[:2], "title": title, "source": source,
+           "published_at": NOW, "url": url, "snippet": "s",
+           "source_metadata": {"provider": provider, "query": "q", "source_url": url,
+                               "collected_at": NOW, "provider_response_id": "r"}}
+    return publisher_direct.apply_publisher_authority(
+        row,
+        publisher_canonical_url=url,
+        source=source,
+        published_at=NOW,
+        resolution_reason="offline_verifier_fixture",
+    )
 
-live_collector.fetch_all = lambda *a, **k: [
-    _raw("google_news_rss", "현대건설 원전 수주", "https://news.google.com/rss/articles/R1"),
-    _raw("google_news_rss", "삼성물산 데이터센터", "https://news.google.com/rss/articles/R2")]
+# The verifier is network-free: every live provider boundary is stubbed. Direct
+# canonical URLs below exercise the current publisher-URL dedup contract without
+# relying on aggregator resolution or an external HTTP redirect. The audit rows
+# are part of the current collector health contract, so the stubs emit them too.
+def _direct_stub(*a, **k):
+    audit = k.get("source_audit")
+    if isinstance(audit, list):
+        audit.append({"provider": "publisher_direct_rss", "source_id": "fixture",
+                      "status": "empty", "fetched_count": 0})
+    return []
+
+def _google_stub(*a, **k):
+    rows = [
+        _raw("google_news_rss", "현대건설 원전 수주", "https://www.yna.co.kr/v/1", "연합뉴스"),
+        _raw("google_news_rss", "삼성물산 데이터센터", "https://www.joongang.co.kr/article/1", "중앙일보")]
+    audit = k.get("query_audit")
+    if isinstance(audit, list):
+        audit.append({"provider": "google_news_rss", "group": "fixture", "query": "q",
+                      "status": "ok", "fetched_count": len(rows),
+                      "added_count": len(rows), "pass": "main"})
+    return rows
+
+live_collector.fetch_publisher_direct_sources = _direct_stub
+live_collector.fetch_all = _google_stub
+# Rows already carry deterministic verified publisher authority. This no-op is
+# the last outbound boundary in collector._run_live and keeps the verifier honest.
+live_collector.resolve_publisher_urls = lambda *a, **k: 0
 nv.fetch = lambda *a, **k: {"provider": "naver_news_api", "status": "active",
-    "credentials_present": True, "raw_count": 2, "articles": [
+    "credentials_present": True, "raw_count": 2,
+    "queries_attempted": 1, "queries_ok": 1, "articles": [
     _raw("naver_news_api", "현대건설, 원전 수주", "https://www.yna.co.kr/v/1", "연합뉴스"),
     _raw("naver_news_api", "현대건설 도시정비 단독", "https://www.mk.co.kr/only", "매일경제")]}
 

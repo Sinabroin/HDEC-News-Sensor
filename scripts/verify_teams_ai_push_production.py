@@ -56,9 +56,15 @@ SCRIPT = ROOT / "scripts" / "send_teams_ai_push.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "scheduled-live-refresh.yml"
 WATCH_WORKFLOW = ROOT / ".github" / "workflows" / "teams-ai-news-watch.yml"
 PRODUCTION_STATE = ROOT / "data" / "teams_push_state.json"
-DIRECT_ARTICLE_URL = "https://publisher.example.test/news/a"
+DIRECT_ARTICLE_URL = "https://yna.co.kr/news/a"
 GOOGLE_AGGREGATOR_URL = "https://news.google.com/rss/articles/teams-production-fixture"
 REPRESENTATIVE_IMAGE_URL = "https://images.publisher.example.test/news/a.jpg"
+MAJOR_FIXTURE_DOMAINS = {
+    "연합뉴스": "yna.co.kr",
+    "KBS": "kbs.co.kr",
+    "조선일보": "chosun.com",
+    "매일경제": "mk.co.kr",
+}
 
 # D7-AK-6C — the article-level Teams sender now lives solely in the 10-minute watch
 # workflow. The hourly scheduled-live-refresh no longer runs it (single owner).
@@ -227,7 +233,7 @@ def _cap_articles(n: int) -> list:
             title=_CAP_TITLES[i],
             summary=f"{_CAP_TITLES[i]} — 상세 내용.",
             source=sources[i % len(sources)],
-            url=f"https://publisher.example.test/cap/{i}",
+            url=f"https://{MAJOR_FIXTURE_DOMAINS[sources[i % len(sources)]]}/cap/{i}",
             score=round(4.7 - i * 0.05, 3),
             shadow_confirmed_event_types=["investment_confirmed"],
         )
@@ -682,7 +688,7 @@ def check_delivery(tmp: Path) -> None:
         title="AI 데이터센터 투자 계약 공식화한 Microsoft·OpenAI",
         summary="같은 사건을 다른 매체가 보도했다.",
         source="연합뉴스",
-        url="https://wire.publisher.example.test/news/b",
+        url="https://yna.co.kr/news/b",
     )
     summary, rec = _deliver(tmp, _payload([other_publisher]), state)
     blocked_reason = summary["records"][0]["dedup_reason"] if summary["records"] else ""
@@ -709,7 +715,7 @@ def check_delivery(tmp: Path) -> None:
         article_key="evt-fail",
         title="Google, AI 기반 스마트건설 로봇 자율 시공 솔루션 출시",
         summary="AI가 건설 로봇의 자율 시공을 지원하는 솔루션을 정식 출시했다.",
-        url="https://publisher.example.test/news/fail",
+        url="https://yna.co.kr/news/fail",
         score=3.9,
         shadow_confirmed_event_types=["product_available"],
     )
@@ -728,7 +734,7 @@ def check_delivery(tmp: Path) -> None:
     summary, rec = _deliver(
         tmp,
         _payload(
-            [_article(article_key="noflag", url="https://publisher.example.test/news/noflag")],
+            [_article(article_key="noflag", url="https://yna.co.kr/news/noflag")],
             shadow_alert_delta=False,
         ),
         noflag_state,
@@ -843,14 +849,14 @@ def check_cap_and_partial(tmp: Path) -> None:
     # -- §9 duplicate identity contract: URL variant, title variant.
     base_sent = _article(
         article_key="dup-base",
-        url="https://publisher.example.test/dup-base",
+        url="https://yna.co.kr/dup-base",
         title="현대건설, AI 데이터센터 EPC 본계약 체결",
     )
     dup_state = tmp / "dup-state.json"
     _deliver(tmp, _validated_payload([base_sent]), dup_state, max_articles=5)
     url_variant = _article(
         article_key="dup-url-variant",
-        url="https://publisher.example.test/dup-base?utm_source=teams&utm_medium=push",
+        url="https://yna.co.kr/dup-base?utm_source=teams&utm_medium=push",
         title="현대건설, AI 데이터센터 EPC 본계약 체결",
     )
     url_summary, url_transport = _deliver(
@@ -862,7 +868,7 @@ def check_cap_and_partial(tmp: Path) -> None:
           and not url_transport.attempts, str(url_summary))
     title_variant = _article(
         article_key="dup-title-variant",
-        url="https://publisher.example.test/dup-title-variant",
+        url="https://yna.co.kr/dup-title-variant",
         title="[속보] 현대건설 — \"AI 데이터센터\" EPC 본계약 체결!",
     )
     title_summary, title_transport = _deliver(
@@ -936,7 +942,7 @@ def check_cap_and_partial(tmp: Path) -> None:
     material_state = tmp / "material-state.json"
     original = _article(
         article_key="material-base",
-        url="https://publisher.example.test/material",
+        url="https://yna.co.kr/material",
         title="OpenAI, 미국 AI 데이터센터에 대규모 투자 계약 체결",
         summary="1단계 투자 규모는 100억 달러다.",
     )
@@ -966,7 +972,7 @@ def check_cap_and_partial(tmp: Path) -> None:
     # -- carry-forward-only rows never alert (unchanged contract).
     carry = _article(
         article_key="carry-only",
-        url="https://publisher.example.test/carry-only",
+        url="https://yna.co.kr/carry-only",
         carried_forward=True,
         current_run_seen=False,
         teams_newness_eligible=False,
@@ -1034,7 +1040,7 @@ def check_cap_and_partial(tmp: Path) -> None:
     zero_state = tmp / "zero-state.json"
     blocked_only = _article(
         article_key="blocked-only",
-        url="https://publisher.example.test/blocked",
+        url="https://yna.co.kr/blocked",
         shadow_urgency_status="blocked",
         shadow_would_pass=False,
         shadow_confirmed_event_types=[],
@@ -1113,7 +1119,7 @@ def check_cap_and_partial(tmp: Path) -> None:
 
 def check_no_leaks(tmp: Path) -> None:
     state = tmp / "leak-state.json"
-    direct_url = "https://publisher.example.test/news/no-log-leak"
+    direct_url = "https://yna.co.kr/news/no-log-leak"
     artifact = _write(
         tmp / "leak.json",
         _payload([
@@ -1346,43 +1352,44 @@ def check_source_gate(tmp: Path) -> None:
     #    trusted-other publishers are held, a neutral publisher never sends.
     mixed = [
         _article(article_key="gate-p1", title=_CAP_TITLES[0],
-                 source="연합뉴스", url="https://publisher.example.test/gate/1"),
+                 source="연합뉴스", url="https://yna.co.kr/gate/1"),
         _article(article_key="gate-p2", title=_CAP_TITLES[1],
-                 source="KBS", url="https://publisher.example.test/gate/2"),
+                 source="KBS", url="https://kbs.co.kr/gate/2"),
         _article(article_key="gate-s1", title=_CAP_TITLES[2],
-                 source="동아일보", url="https://publisher.example.test/gate/3"),
+                 source="동아일보", url="https://donga.com/gate/3"),
         _article(article_key="gate-h1", title=_CAP_TITLES[7],
                  source="테크M",
                  url="https://www.techm.kr/news/articleView.html?idxno=990001"),
         _article(article_key="gate-h2", title=_CAP_TITLES[8],
-                 source="전자신문", url="https://publisher.example.test/gate/5"),
+                 source="전자신문", url="https://etnews.com/gate/5"),
         _article(article_key="gate-n1", title=_CAP_TITLES[9],
                  source="Reuters", url="https://publisher.example.test/gate/6"),
     ]
     state = tmp / "state-source-gate.json"
     mixed_summary, rec = _deliver(
         tmp, _payload(mixed), state,
-        statuses=(250, 250, 250),
+        statuses=(250, 250, 250, 250),
         now="2026-08-04T09:00:00+09:00",
     )
-    check("source gate: only major-media articles deliver",
-          mixed_summary["delivered_count"] == 3
-          and rec.attempts == [FIXTURE_TEAMS_CHANNEL] * 3, str(mixed_summary))
+    check("source gate: only Tier-A/Tier-B major-media articles deliver",
+          mixed_summary["delivered_count"] == 4
+          and rec.attempts == [FIXTURE_TEAMS_CHANNEL] * 4, str(mixed_summary))
     check("source gate: specialist/trusted articles are held, not deferred",
-          mixed_summary["teams_specialist_held_rows"] == 2
+          mixed_summary["teams_specialist_held_rows"] == 1
           and mixed_summary["deferred_rows"] == 0, str(mixed_summary))
     check("source gate: neutral publisher is never selected",
           mixed_summary["source_gate_rejected_rows"] == 1, str(mixed_summary))
     check("source gate: selected tier counters are exact",
           mixed_summary["selected_primary_10_rows"] == 2
           and mixed_summary["selected_secondary_3_rows"] == 1
+          and mixed_summary["selected_major_secondary_rows"] == 1
           and mixed_summary["selected_specialist_rows"] == 0, str(mixed_summary))
     check("source gate: counters reconcile with the gate partition",
           mixed_summary["counters_reconciled"] is True)
     saved = load_state(state)
     held_records = saved.get(HELD_SPECIALISTS_KEY) or {}
     check("source gate: held specialists persist without entering the sent ledger",
-          len(held_records) == 2 and len(saved["article_ids"]) == 3,
+          len(held_records) == 1 and len(saved["article_ids"]) == 4,
           str(sorted(held_records)))
     check("source gate: held record carries identity and holdback fields",
           all(
@@ -1397,12 +1404,15 @@ def check_source_gate(tmp: Path) -> None:
           all(token in gh_text for token in (
               "raw_primary_10_rows=2",
               "raw_secondary_3_rows=1",
-              "raw_specialist_rows=2",
-              "teams_immediate_major_rows=3",
-              "teams_specialist_held_rows=2",
+              "raw_major_secondary_rows=1",
+              "raw_specialist_rows=1",
+              "verified_major_secondary_rows=1",
+              "teams_immediate_major_rows=4",
+              "teams_specialist_held_rows=1",
               "teams_specialist_selected_rows=0",
               "selected_primary_10_rows=2",
               "selected_secondary_3_rows=1",
+              "selected_major_secondary_rows=1",
               "selected_promoted_official_rows=0",
               "selected_specialist_rows=0",
               "source_gate_rejected_rows=1",

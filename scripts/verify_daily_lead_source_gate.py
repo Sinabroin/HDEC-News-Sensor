@@ -35,6 +35,10 @@ FAILURES: list[str] = []
 RUN_AT = brief.parse_published_at("2026-08-05T07:00:00+09:00")
 SJOURNAL_URL = "https://www.s-journal.co.kr/news/articleView.html?idxno=42865"
 SCREENSHOT_LONG_TAIL = ("비즈트리뷴", "더퍼블릭", "녹색경제신문")
+MAJOR_FIXTURE_DOMAINS = {
+    "연합뉴스": "yna.co.kr",
+    "SBS": "news.sbs.co.kr",
+}
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -53,7 +57,11 @@ def _row(idx: int, source: str, title: str, url: str | None = None) -> dict:
         "title": title,
         "source": source,
         "published_at": "2026-08-04T07:10:00+09:00",
-        "url": url or f"https://pub.fixture.test/{idx}",
+        "url": url or (
+            f"https://{MAJOR_FIXTURE_DOMAINS[source]}/{idx}"
+            if source in MAJOR_FIXTURE_DOMAINS
+            else f"https://pub.fixture.test/{idx}"
+        ),
         "snippet": (
             f"{title} 관련 공식 확인된 계약·발표 내용과 적용 범위가 제시됐다. "
             "세부 일정과 조건은 원문 발표를 기준으로 한다."
@@ -184,18 +192,19 @@ def main() -> int:
         len(brief.filter_lead_source_eligible(long_tail_only)) == 0,
         str([a.source for a in long_tail_only]),
     )
-    try:
-        brief.render_daily(
-            long_tail_only, run_at=RUN_AT, root_url="https://x.test",
-            lead_source_gate=True,
-        )
-        check("all-long-tail delivered edition raises empty (prefer zero over filler)", False)
-    except brief.EditorialError as exc:
-        check(
-            "all-long-tail delivered edition raises empty (prefer zero over filler)",
-            "empty" in str(exc),
-            str(exc),
-        )
+    empty_edition = brief.render_daily(
+        long_tail_only, run_at=RUN_AT, root_url="https://x.test",
+        lead_source_gate=True,
+    )
+    check(
+        "all-long-tail supply publishes a truthful empty status without filler",
+        empty_edition.article_count == 0
+        and empty_edition.issue_mode == "daily_empty_status"
+        and empty_edition.edition_manifest["edition_status"] == "empty"
+        and "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다." in empty_edition.html
+        and all(row.title not in empty_edition.html for row in long_tail_only),
+        empty_edition.html,
+    )
 
     # ------------------------------------------------------------- wiring
     runner_src = (ROOT / "scripts" / "run_editorial_briefing.py").read_text(

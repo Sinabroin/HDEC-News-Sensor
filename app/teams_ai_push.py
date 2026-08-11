@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import html
 import re
+import unicodedata
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
@@ -50,9 +51,11 @@ TEAMS_SPECIALIST_HOLDBACK_MINUTES = 120
 # R4-R9D: 0 — automatic specialist fallback removed. Selection hard-clamps this
 # to 0 regardless of any caller-supplied override (see apply_major_media_first_gate).
 TEAMS_SPECIALIST_MAX_PER_BATCH = 0
+TEAMS_NORMAL_PACING_MINUTES = 60
 
 SOURCE_GATE_PRIMARY_10 = "primary_10"
 SOURCE_GATE_SECONDARY_3 = "secondary_3"
+SOURCE_GATE_MAJOR_SECONDARY = "major_secondary"
 SOURCE_GATE_PROMOTED_OFFICIAL = "promoted_official"
 SOURCE_GATE_SPECIALIST_HOLDBACK = "specialist_holdback"
 SOURCE_GATE_NEVER_AUTOMATIC = "never_automatic"
@@ -546,6 +549,15 @@ class TopicDecision:
     topic_label: str = ""
     matched_terms: tuple[str, ...] = ()
     exclusion_reason: str = ""
+
+
+@dataclass(frozen=True)
+class OpinionGateDecision:
+    """Deterministic realtime exclusion using publisher-owned evidence only."""
+
+    excluded: bool
+    reason: str = ""
+    evidence: str = ""
 
 
 @dataclass(frozen=True)
@@ -1607,6 +1619,53 @@ def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
     return False, ""
 
 
+_OPINION_SECTION_MARKERS = (
+    "칼럼", "오피니언", "사설", "논설", "기고", "기고문", "전문가칼럼", "시론",
+    "Opinion", "Editorial", "Column", "Commentary", "Op-Ed", "OpEd",
+)
+_OPINION_TITLE_TOKEN = (
+    r"칼럼|기고|기고문|사설|오피니언|논설|전문가\s*칼럼|시론|"
+    r"opinion|editorial|column|commentary|op[\s-]*ed"
+)
+_OPINION_TITLE_RE = re.compile(
+    rf"(?:^\s*[\[［【]\s*(?P<leading>{_OPINION_TITLE_TOKEN})\s*[\]］】]|"
+    rf"[\[［【]\s*(?P<trailing>{_OPINION_TITLE_TOKEN})\s*[\]］】]\s*$)",
+    re.IGNORECASE,
+)
+
+
+def _normalized_opinion_section(value: object) -> str:
+    normalized = unicodedata.normalize("NFKC", _clean(value)).casefold()
+    return re.sub(r"[\s_\-‐‑‒–—]+", "", normalized)
+
+
+def evaluate_realtime_opinion_gate(
+    article: Mapping[str, Any],
+) -> OpinionGateDecision:
+    """Exclude explicit opinion/contributed content from realtime auto-send.
+
+    Only the authoritative title and publisher section are inspected. Generated
+    summaries, search queries, inferred body text, and ranking metadata are not
+    inputs, so neither discovery nor generation can manufacture this verdict.
+    """
+    evidence = _watch_executive_evidence(article)
+    section = _normalized_opinion_section(evidence.get("publisher_section"))
+    for marker in _OPINION_SECTION_MARKERS:
+        normalized = _normalized_opinion_section(marker)
+        if normalized and normalized == section:
+            return OpinionGateDecision(
+                True, "explicit_opinion_publisher_section", f"publisher_section:{marker}"
+            )
+    title = _clean(evidence.get("title"))
+    match = _OPINION_TITLE_RE.search(title)
+    if match:
+        marker = match.group("leading") or match.group("trailing")
+        return OpinionGateDecision(
+            True, "explicit_opinion_title_marker", f"title_marker:{marker}"
+        )
+    return OpinionGateDecision(False)
+
+
 def evaluate_teams_push_policy(
     article: Mapping[str, Any],
     *,
@@ -1660,6 +1719,18 @@ def evaluate_teams_push_policy(
             article, empty_topic, False,
             ImportanceDecision(False, reason="malformed_required_field"),
             True, False, "malformed_required_field",
+        )
+
+    opinion_gate = evaluate_realtime_opinion_gate(article)
+    if opinion_gate.excluded:
+        return TeamsPolicyEvaluation(
+            article,
+            empty_topic,
+            False,
+            ImportanceDecision(False, reason=opinion_gate.reason),
+            True,
+            False,
+            "excluded_opinion_content",
         )
 
     # R4-R9B §4 — the stock-market hard gate is decided before topic
@@ -2061,13 +2132,18 @@ def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
     # label combined with an excluded publisher's URL must never become an
     # immediate Teams card.
     if policy.get("explicit_never_automatic"):
+        reason = (
+            "explicit_non_realtime_editorial_surface"
+            if policy.get("operator_surface") == "editorial_analysis"
+            else "explicit_never_automatic_publisher"
+        )
         return SourceGateDecision(
             gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
             tier=tier,
             tier_rank=tier_rank,
             publisher_rank=publisher_rank,
             immediate=False,
-            reason="explicit_never_automatic_publisher",
+            reason=reason,
         )
     if (
         candidate.editorial_lane == public_institution_routing.LANE_PUBLIC
@@ -2083,11 +2159,20 @@ def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
         )
     lane = str(policy["teams_lane"])
     if lane == source_priority.TEAMS_LANE_IMMEDIATE_MAJOR:
-        gate_class = (
-            SOURCE_GATE_PRIMARY_10
-            if tier == "primary_10"
-            else SOURCE_GATE_SECONDARY_3
-        )
+        gate_class = {
+            "primary_10": SOURCE_GATE_PRIMARY_10,
+            "secondary_3": SOURCE_GATE_SECONDARY_3,
+            "major_secondary": SOURCE_GATE_MAJOR_SECONDARY,
+        }.get(tier, SOURCE_GATE_NEVER_AUTOMATIC)
+        if gate_class == SOURCE_GATE_NEVER_AUTOMATIC:
+            return SourceGateDecision(
+                gate_class=gate_class,
+                tier=tier,
+                tier_rank=tier_rank,
+                publisher_rank=publisher_rank,
+                immediate=False,
+                reason="unrecognized_immediate_tier",
+            )
         return SourceGateDecision(
             gate_class=gate_class,
             tier=tier,
@@ -2199,11 +2284,34 @@ def apply_major_media_first_gate(
             rejected.append(item)
 
     cap = max(0, int(run_cap))
+    urgent = [
+        item for item in immediate
+        if item.candidate.importance.level == IMPORTANCE_TOP
+        or item.candidate.importance.hdec_direct
+    ]
+    normal = [item for item in immediate if item not in urgent]
+    last_normal_send_at = _clean(state_map.get("last_normal_send_at"))
+    normal_pacing_age = (
+        push_state.minutes_between(last_normal_send_at, now_value)
+        if last_normal_send_at
+        else float(TEAMS_NORMAL_PACING_MINUTES)
+    )
+    normal_window_open = (
+        not last_normal_send_at
+        or normal_pacing_age >= float(TEAMS_NORMAL_PACING_MINUTES)
+    )
+    chosen: list[GatedCandidate] = urgent[:cap]
+    if normal_window_open and normal and len(chosen) < cap:
+        chosen.append(normal[0])
+    chosen_ids = {id(item) for item in chosen}
     immediate_selected = tuple(
         replace(item, selection_mode=SELECTION_MODE_IMMEDIATE)
-        for item in immediate[:cap]
+        for item in immediate
+        if id(item) in chosen_ids
     )
-    deferred_major = tuple(immediate[cap:])
+    deferred_major = tuple(
+        item for item in immediate if id(item) not in chosen_ids
+    )
     selected_clusters = {
         _clean(item.candidate.cluster_key)
         for item in immediate_selected
@@ -2370,6 +2478,10 @@ def apply_major_media_first_gate(
             item.gate.gate_class == SOURCE_GATE_SECONDARY_3
             for item in selected
         ),
+        "selected_major_secondary_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+            for item in selected
+        ),
         "selected_promoted_official_rows": sum(
             item.gate.gate_class == SOURCE_GATE_PROMOTED_OFFICIAL
             for item in selected
@@ -2381,6 +2493,21 @@ def apply_major_media_first_gate(
         # R4-R9B §4 — normally zero; non-zero means a stock-dominant article
         # reached the gate boundary directly and was force-rejected there.
         "stock_market_gate_rejected_rows": stock_gate_rejected,
+        "normal_pacing_window_open": int(normal_window_open),
+        "normal_pacing_age_minutes": int(max(0.0, normal_pacing_age)),
+        "normal_rows_selected": sum(
+            item.candidate.importance.level == IMPORTANCE_IMPORTANT
+            for item in selected
+        ),
+        "normal_rows_deferred_by_pacing": sum(
+            item.candidate.importance.level == IMPORTANCE_IMPORTANT
+            for item in deferred_major
+        ),
+        "urgent_rows_selected": sum(
+            item.candidate.importance.level == IMPORTANCE_TOP
+            or item.candidate.importance.hdec_direct
+            for item in selected
+        ),
     }
     return SourceGateBatchResult(
         selected=selected,
