@@ -1,6 +1,6 @@
 # Codex continuation prompt — HDEC News Sensor R4-OPS-5
 
-R4-OPS-5 is code-complete on its remote WIP checkpoint unless live refs prove otherwise. Read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
+R4-OPS-5 is code-complete on its remote WIP checkpoint unless live refs prove otherwise. Before material work, read and obey `AI_PROJECT_EXECUTION_STANDARD.md`, then read `docs/acceptance/PROJECT_ACCEPTANCE.md`, and state the user-visible acceptance matrix. After both governing documents, read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
 
 Repository:
 

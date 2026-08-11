@@ -45,6 +45,12 @@ from scripts import run_editorial_briefing as daily_runner  # noqa: E402
 KST = datetime.now().astimezone().tzinfo
 REPLAY_PATH = ROOT / "data" / "r4_ops5_production_replay.json"
 RULES_PATH = ROOT / "data" / "source_priority_rules.json"
+COMMON_STANDARD_PATH = ROOT / "AI_PROJECT_EXECUTION_STANDARD.md"
+PROJECT_ACCEPTANCE_PATH = ROOT / "docs" / "acceptance" / "PROJECT_ACCEPTANCE.md"
+STARTUP_CONTRACT_PATHS = (
+    ROOT / "docs" / "handoff" / "HDEC_CURRENT_HANDOFF.md",
+    ROOT / "docs" / "handoff" / "COMPANY_RESUME_PROMPT.md",
+)
 EMPTY_STATUS = "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다."
 
 CHECKS = 0
@@ -80,7 +86,27 @@ def _material_decision(row: dict) -> executive_materiality.ExecutiveQualificatio
     )
 
 
-def publisher_contracts(rules: dict) -> None:
+def governing_standard_contracts() -> dict[str, bool]:
+    common_present = COMMON_STANDARD_PATH.is_file()
+    project_present = PROJECT_ACCEPTANCE_PATH.is_file()
+    check("common execution standard is tracked at repository root", common_present)
+    check("project acceptance contract is tracked at canonical path", project_present)
+    for path in STARTUP_CONTRACT_PATHS:
+        text = path.read_text(encoding="utf-8") if path.is_file() else ""
+        normalized = text.casefold()
+        check(
+            f"{path.name} requires both governing documents before material work",
+            "ai_project_execution_standard.md" in normalized
+            and "docs/acceptance/project_acceptance.md" in normalized
+            and "before material work" in normalized,
+        )
+    return {
+        "common_present": common_present,
+        "project_present": project_present,
+    }
+
+
+def publisher_contracts(rules: dict) -> dict[str, object]:
     tier_a = [
         "연합뉴스", "MBC", "KBS", "조선일보", "YTN", "JTBC", "중앙일보",
         "매일경제", "한국경제", "SBS", "동아일보", "한겨레", "경향신문",
@@ -99,50 +125,134 @@ def publisher_contracts(rules: dict) -> None:
     check("Tier A operator list is exact", actual_a == tier_a, actual_a)
     check("Tier B operator allowlist is exact", actual_b == tier_b, actual_b)
 
-    adversarial = (
-        ("조선일보", "https://www.chosun.com/a", "primary_10", "조선일보"),
-        ("조선일보", "https://chosun.com/a", "primary_10", "조선일보"),
-        ("IT조선", "https://it.chosun.com/a", "neutral", "IT조선"),
-        ("조선비즈", "https://biz.chosun.com/a", "major_secondary", "조선비즈"),
-        ("스포츠조선", "https://sports.chosun.com/a", "neutral", "스포츠조선"),
+    # Known exact URL identity outranks every contradictory display alias. The
+    # last two rows are non-Chosun cross-family neighbors.
+    cross_identity_matrix = (
+        ("조선일보", "https://www.chosun.com/a", "primary_10", "조선일보", "tier_a_core_major"),
+        ("조선일보", "https://biz.chosun.com/a", "major_secondary", "조선비즈", "tier_b_major_secondary"),
+        ("연합뉴스", "https://it.chosun.com/a", "specialist", "IT조선", "tier_c_specialist_niche"),
+        ("한국일보", "https://www.chosun.com/a", "primary_10", "조선일보", "tier_a_core_major"),
+        ("연합뉴스", "https://hankookilbo.com/a", "major_secondary", "한국일보", "tier_b_major_secondary"),
+        ("서울경제", "https://ytn.co.kr/a", "primary_10", "YTN", "tier_a_core_major"),
     )
-    for source, url, expected_tier, identity in adversarial:
+    cross_identity_failures = []
+    for source, url, expected_tier, identity, operator_tier in cross_identity_matrix:
         resolved = source_priority.publisher_delivery_tier(source, url)
-        check(
-            f"publisher identity adversarial: {url}",
+        teams = source_priority.teams_delivery_source_policy(source, url)
+        correct = (
             resolved["tier"] == expected_tier
-            and resolved["publisher_identity"] == identity,
-            resolved,
+            and resolved["publisher_identity"] == identity
+            and resolved["identity_evidence"] == "exact_domain"
+            and teams["tier"] == resolved["tier"]
+            and teams["publisher_identity"] == resolved["publisher_identity"]
+            and teams["operator_tier"] == operator_tier
         )
-    spoofed = source_priority.publisher_delivery_tier(
-        "조선일보", "https://sports.chosun.com/a"
+        if not correct:
+            cross_identity_failures.append((source, url, resolved, teams))
+        check(
+            f"known URL identity defeats contradictory alias: {source} -> {url}",
+            correct,
+            {"tier": resolved, "teams": teams},
+        )
+
+    sibling_matrix = (
+        ("조선일보", "https://sports.chosun.com/a", "스포츠조선", "exact_domain"),
+        ("조선일보", "https://foo.chosun.com/a", "foo.chosun.com", "unrecognized_url_host"),
+        ("조선일보", "https://evilchosun.com/a", "evilchosun.com", "unrecognized_url_host"),
+        ("조선일보", "https://chosun.com.evil.example/a", "chosun.com.evil.example", "unrecognized_url_host"),
     )
+    for source, url, identity, evidence in sibling_matrix:
+        resolved = source_priority.publisher_delivery_tier(source, url)
+        teams = source_priority.teams_delivery_source_policy(source, url)
+        correct = (
+            resolved["tier"] == "neutral"
+            and resolved["publisher_identity"] == identity
+            and resolved["identity_evidence"] == evidence
+            and teams["publisher_identity"] == identity
+            and teams["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC
+            and not teams["realtime_auto_send"]
+        )
+        if not correct:
+            cross_identity_failures.append((source, url, resolved, teams))
+        check(
+            f"unlisted Chosun sibling never inherits 조선일보: {url}",
+            correct,
+            {"tier": resolved, "teams": teams},
+        )
+
+    unknown = source_priority.teams_delivery_source_policy(
+        "연합뉴스", "https://unknown.example/a"
+    )
+    unknown_correct = (
+        unknown["tier"] == "neutral"
+        and unknown["publisher_identity"] == "unknown.example"
+        and unknown["identity_evidence"] == "unrecognized_url_host"
+        and unknown["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC
+    )
+    if not unknown_correct:
+        cross_identity_failures.append(("연합뉴스", "https://unknown.example/a", unknown))
     check(
-        "authoritative sibling URL defeats a spoofed parent alias",
-        spoofed["tier"] != "primary_10",
-        spoofed,
+        "unknown foreign host does not inherit a known display alias",
+        unknown_correct,
+        unknown,
     )
 
-    # Audit the whole locked publisher table, not only the reported Chosun case.
-    # A fabricated child of every enumerated domain must never inherit that row.
+    specialist_rows = rules["teams_delivery_source_policy"]["specialist_publishers"]
+    configured_identities = [
+        (row["name"], row["tier"], row.get("domains") or [], (
+            "tier_a_core_major"
+            if row["tier"] in {"primary_10", "secondary_3"}
+            else "tier_b_major_secondary"
+        ))
+        for row in policies
+    ] + [
+        (row["name"], "specialist", row.get("domains") or [], "tier_c_specialist_niche")
+        for row in specialist_rows
+    ]
+
+    # Sweep every configured Tier-A/B/C domain with a deliberately contradictory
+    # alias from another publication. Both public resolvers must select the same
+    # exact URL identity and tier.
+    sweep_failures = []
+    for index, (name, tier, domains, operator_tier) in enumerate(configured_identities):
+        contradictory_source = configured_identities[(index + 1) % len(configured_identities)][0]
+        for domain in domains:
+            url = f"https://{domain}/cross-entry-audit"
+            resolved = source_priority.publisher_delivery_tier(contradictory_source, url)
+            teams = source_priority.teams_delivery_source_policy(contradictory_source, url)
+            if not (
+                resolved["publisher_identity"] == name
+                and resolved["tier"] == tier
+                and teams["publisher_identity"] == name
+                and teams["tier"] == tier
+                and teams["operator_tier"] == operator_tier
+            ):
+                sweep_failures.append((contradictory_source, url, name, resolved, teams))
+    check(
+        "all configured Tier-A/B/C domains defeat cross-entry aliases",
+        not sweep_failures,
+        sweep_failures,
+    )
+    cross_identity_failures.extend(sweep_failures)
+
+    # A fabricated child of every configured A/B/C domain must never inherit it.
     collision_failures = []
-    for policy in policies:
-        for domain in policy.get("domains", []):
+    for name, tier, domains, _operator_tier in configured_identities:
+        for domain in domains:
             normalized = domain.removeprefix("www.")
             child_url = f"https://unlisted-sibling.{normalized}/article/1"
             resolved = source_priority.publisher_delivery_tier(
-                policy["name"], child_url
+                name, child_url
             )
-            if (
-                resolved["tier"] == policy["tier"]
-                and resolved["publisher_identity"] == policy["name"]
-            ):
-                collision_failures.append((policy["name"], child_url, resolved))
+            teams = source_priority.teams_delivery_source_policy(name, child_url)
+            if resolved["tier"] == tier or resolved["publisher_identity"] == name or teams["realtime_auto_send"]:
+                collision_failures.append((name, child_url, resolved, teams))
     check(
-        "all locked publisher domains reject unenumerated child properties",
+        "all configured Tier-A/B/C domains reject unenumerated child properties",
         not collision_failures,
         collision_failures,
     )
+    cross_identity_failures.extend(collision_failures)
 
     tier_c_examples = {
         row["name"]
@@ -162,31 +272,121 @@ def publisher_contracts(rules: dict) -> None:
             policy,
         )
 
+    sbs_cases = (
+        ("SBS", "https://news.sbs.co.kr/article/1", "SBS", "primary_10", True, "hard_news"),
+        ("SBS", "https://sbs.co.kr/article/1", "SBS", "primary_10", True, "hard_news"),
+        ("SBS", "https://premium.sbs.co.kr/article/r26f8YfJ9", "SBS Premium", "neutral", False, "editorial_analysis"),
+        ("SBS", "https://foo.sbs.co.kr/article/1", "foo.sbs.co.kr", "neutral", False, "unlisted"),
+        ("arbitrary", "https://premium.sbs.co.kr/article/r26f8YfJ9?utm_source=x&ref=y&refer=z", "SBS Premium", "neutral", False, "editorial_analysis"),
+    )
+    sbs_failures = []
+    for source, url, identity, tier, realtime, surface in sbs_cases:
+        resolved = source_priority.publisher_delivery_tier(source, url)
+        teams = source_priority.teams_delivery_source_policy(source, url)
+        correct = (
+            resolved["publisher_identity"] == identity
+            and resolved["tier"] == tier
+            and teams["publisher_identity"] == identity
+            and teams["operator_surface"] == surface
+            and teams["realtime_auto_send"] is realtime
+        )
+        if not correct:
+            sbs_failures.append((source, url, resolved, teams))
+        check(f"SBS exact-surface authority: {url}", correct, {"tier": resolved, "teams": teams})
+
+    check(
+        "CROSS_PUBLISHER_ALIAS_URL_ELEVATION remains zero",
+        not cross_identity_failures,
+        cross_identity_failures,
+    )
+    premium_policies = [
+        source_priority.teams_delivery_source_policy(source, url)
+        for source, url, _identity, _tier, _realtime, _surface in sbs_cases
+        if "premium.sbs.co.kr" in url
+    ]
+    return {
+        "cross_publisher_alias_url_elevation": len(cross_identity_failures),
+        "sbs_premium_tier_a_inheritance": sum(
+            policy["tier"] in source_priority.TEAMS_IMMEDIATE_TIERS
+            for policy in premium_policies
+        ),
+        "sbs_premium_realtime_auto_send": any(
+            policy["realtime_auto_send"] for policy in premium_policies
+        ),
+    }
+
+
+def opinion_contracts() -> dict[str, bool]:
+    sections = (
+        "칼럼", "오피니언", "사설", "논설", "기고", "기고문", "전문가칼럼", "시론",
+        "Opinion", "Editorial", "Column", "Commentary", "Op-Ed", "OpEd",
+    )
+    for section in sections:
+        row = {"title": "AI 데이터센터 전력망 투자 계약 체결", "publisher_section": section}
+        check(
+            f"opinion section marker is a hard gate: {section}",
+            evaluate_realtime_opinion_gate(row).excluded,
+        )
+
+    title_cases = (
+        ("[기고] foo", "leading Korean square marker"),
+        ("foo [기고]", "trailing Korean square marker"),
+        ("【Opinion】 foo", "leading English corner marker"),
+        ("foo 【Opinion】", "trailing English corner marker"),
+        ("［사설］ 제목", "leading full-width square marker"),
+    )
+    title_results: dict[str, bool] = {}
+    for title, label in title_cases:
+        excluded = evaluate_realtime_opinion_gate(
+            {"title": title, "publisher_section": "산업"}
+        ).excluded
+        title_results[label] = excluded
+        check(f"opinion title boundary: {label}", excluded)
+
+    incidental_titles = (
+        "업계 관계자가 보고서에 기고했다고 밝혔다",
+        "칼럼비아대 연구진, AI 데이터센터 연구 발표",
+        "AI 데이터센터 [기고] 분석 보고서 발표",
+    )
+    incidental_pass = all(
+        not evaluate_realtime_opinion_gate(
+            {"title": title, "publisher_section": "산업"}
+        ).excluded
+        for title in incidental_titles
+    )
+    check("incidental opinion-token prose remains allowed", incidental_pass)
+    check(
+        "non-exact publisher section containing an opinion token remains allowed",
+        not evaluate_realtime_opinion_gate(
+            {"title": "AI 데이터센터 계약", "publisher_section": "오피니언룸 안내"}
+        ).excluded,
+    )
+    non_authoritative = {
+        "title": "AI 데이터센터 전력망 투자 계약 체결",
+        "publisher_section": "산업",
+        "snippet": "[기고] 본문 표시는 realtime opinion 판정 권한이 없다.",
+        "summary": "【Opinion】 생성 요약",
+        "search_query": "Editorial AI 데이터센터",
+        "body": "[사설] 본문",
+    }
+    metadata_zero_authority = not evaluate_realtime_opinion_gate(non_authoritative).excluded
+    check("summary/query/body have zero realtime opinion authority", metadata_zero_authority)
+    return {
+        "leading": title_results["leading Korean square marker"] and title_results["leading English corner marker"],
+        "trailing": title_results["trailing Korean square marker"] and title_results["trailing English corner marker"],
+        "english_section": all(
+            evaluate_realtime_opinion_gate(
+                {"title": "AI 데이터센터 계약", "publisher_section": section}
+            ).excluded
+            for section in ("Opinion", "Editorial")
+        ),
+        "incidental": incidental_pass and metadata_zero_authority,
+    }
+
 
 def replay_contracts(rows: list[dict]) -> dict[str, bool]:
     outcomes: dict[str, bool] = {}
     query_caused_qualification = 0
-    for marker in ("칼럼", "오피니언", "사설", "논설", "기고", "기고문", "전문가칼럼"):
-        section_row = {
-            "title": "AI 데이터센터 전력망 투자 계약 체결",
-            "publisher_section": marker,
-            "summary": "생성 요약의 내용은 판정 권한이 없다.",
-            "search_query": "주요 언론 AI 데이터센터 계약",
-        }
-        title_row = {
-            "title": f"[{marker}] AI 데이터센터 전력망 전략",
-            "publisher_section": "산업",
-            "summary": "생성 요약의 내용은 판정 권한이 없다.",
-            "search_query": "주요 언론 AI 데이터센터 계약",
-        }
-        check(
-            f"opinion section marker is a hard gate: {marker}",
-            evaluate_realtime_opinion_gate(section_row).excluded,
-        )
-        check(
-            f"opinion title marker is a hard gate: [{marker}]",
-            evaluate_realtime_opinion_gate(title_row).excluded,
-        )
     for row in rows:
         source_policy = source_priority.teams_delivery_source_policy(
             row["source"], row["url"]
@@ -246,6 +446,7 @@ def replay_contracts(rows: list[dict]) -> dict[str, bool]:
         print(f"SOURCE={row['source']}")
         print(f"RESOLVED_PUBLISHER_IDENTITY={source_policy['publisher_identity']}")
         print(f"SOURCE_TIER={source_policy['operator_tier']}")
+        print(f"OPERATOR_SURFACE={source_policy['operator_surface']}")
         print(f"AI_CENTRAL={str(topic.eligible).lower()}")
         print(f"EXECUTIVE_RELEVANT={str(executive_relevant).lower()}")
         print(f"MATERIAL={str(material.qualified).lower()}")
@@ -696,7 +897,9 @@ def main() -> int:
         rules = json.loads(RULES_PATH.read_text(encoding="utf-8"))
         replay = json.loads(REPLAY_PATH.read_text(encoding="utf-8"))
         check("replay schema and required row count", replay.get("schema_version") == 1 and len(replay.get("rows") or []) >= 6)
-        publisher_contracts(rules)
+        governance = governing_standard_contracts()
+        source_contract = publisher_contracts(rules)
+        opinion_contract = opinion_contracts()
         outcomes = replay_contracts(replay["rows"])
         pacing_contracts()
         daily_and_editor_contracts()
@@ -705,8 +908,20 @@ def main() -> int:
 
     check("deterministic acceptance made zero external network calls", NETWORK_CALLS == 0, NETWORK_CALLS)
     print(f"checks={CHECKS} failures={len(FAILURES)}")
+    print(f"COMMON_EXECUTION_STANDARD_PRESENT={str(governance['common_present']).lower()}")
+    print(f"PROJECT_ACCEPTANCE_CONTRACT_PRESENT={str(governance['project_present']).lower()}")
+    print(f"CROSS_PUBLISHER_ALIAS_URL_ELEVATION={source_contract['cross_publisher_alias_url_elevation']}")
+    print("PUBLISHER_URL_AUTHORITY_VERDICT=" + ("PASS" if source_contract["cross_publisher_alias_url_elevation"] == 0 else "FAIL"))
+    print(f"OPINION_LEADING_MARKER={'PASS' if opinion_contract['leading'] else 'FAIL'}")
+    print(f"OPINION_TRAILING_MARKER={'PASS' if opinion_contract['trailing'] else 'FAIL'}")
+    print(f"OPINION_ENGLISH_SECTION={'PASS' if opinion_contract['english_section'] else 'FAIL'}")
+    print(f"OPINION_INCIDENTAL_TEXT_FALSE_POSITIVE={'PASS' if opinion_contract['incidental'] else 'FAIL'}")
     print(f"LS_ELECTRIC_GS_EC_ACTUAL={'KEEP' if outcomes.get('hankookilbo_ls_gs_dc_distribution') else 'REJECT'}")
     print(f"ETF_FALSE_POSITIVE_ACTUAL={'KEEP' if outcomes.get('yonhap_strategy_etf_false_positive') else 'REJECT'}")
+    print("SBS_PREMIUM_REAL_INCIDENT_EXPECTED=REJECT")
+    print(f"SBS_PREMIUM_REAL_INCIDENT_ACTUAL={'KEEP' if outcomes.get('sbs_premium_editorial_surface_real_incident') else 'REJECT'}")
+    print(f"SBS_PREMIUM_TIER_A_INHERITANCE={source_contract['sbs_premium_tier_a_inheritance']}")
+    print(f"SBS_PREMIUM_REALTIME_AUTO_SEND={str(source_contract['sbs_premium_realtime_auto_send']).lower()}")
     print(f"EXTERNAL_TEST_NETWORK_CALLS={NETWORK_CALLS}")
     print("PRODUCTION_SMTP_ATTEMPTS=0")
     print("PRODUCTION_TEAMS_SENDS=0")

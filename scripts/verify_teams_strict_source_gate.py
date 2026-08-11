@@ -132,6 +132,11 @@ TTL_TITLE = "AI데이터센터 매출 폭풍성장…SK텔레콤 2분기 영업�
 TTL_DELIVERY_ID = "teams_ai_push:7081b3470e08"
 TTL_PIN_NAME = "TTL뉴스 / 퍼블릭뉴스통신"
 PRODUCTION_STATE_PATH = ROOT / "data" / "teams_push_state.json"
+MAJOR_FIXTURE_DOMAINS = {
+    "연합뉴스": "yna.co.kr",
+    "SBS": "news.sbs.co.kr",
+    "동아일보": "donga.com",
+}
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -209,7 +214,7 @@ def ttlnews(url: str = TTL_URL_HTTP, **overrides):
 def primary(key: str, title: str, source: str = "연합뉴스", **overrides):
     base = _article(
         article_key=key, title=title, summary=f"{title} — 공식 확정 내용.",
-        source=source, url=f"https://publisher.example.test/major/{key}", score=4.7,
+        source=source, url=f"https://{MAJOR_FIXTURE_DOMAINS[source]}/major/{key}", score=4.7,
     )
     base.update(overrides)
     return base
@@ -462,7 +467,7 @@ def main() -> int:
     # ---------------------------------------------------------------- §8 counters
     # specialist_rows_seen / _supporting_evidence / _automatic_rejected / _selected.
     p_major = make_candidate(source="연합뉴스",
-                             url="https://publisher.example.test/major/c8",
+                             url="https://yna.co.kr/major/c8",
                              cluster="evt-support", official=False)
     spec_support = make_candidate(source="테크M",
                                   url="https://www.techm.kr/news/articleView.html?idxno=900501",

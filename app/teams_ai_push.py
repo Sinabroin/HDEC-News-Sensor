@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import html
 import re
+import unicodedata
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
@@ -1620,11 +1621,22 @@ def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
 
 _OPINION_SECTION_MARKERS = (
     "칼럼", "오피니언", "사설", "논설", "기고", "기고문", "전문가칼럼", "시론",
+    "Opinion", "Editorial", "Column", "Commentary", "Op-Ed", "OpEd",
+)
+_OPINION_TITLE_TOKEN = (
+    r"칼럼|기고|기고문|사설|오피니언|논설|전문가\s*칼럼|시론|"
+    r"opinion|editorial|column|commentary|op[\s-]*ed"
 )
 _OPINION_TITLE_RE = re.compile(
-    r"^\s*[\[［【]\s*(칼럼|기고|기고문|사설|오피니언|논설|전문가\s*칼럼|시론)\s*[\]］】]",
+    rf"(?:^\s*[\[［【]\s*(?P<leading>{_OPINION_TITLE_TOKEN})\s*[\]］】]|"
+    rf"[\[［【]\s*(?P<trailing>{_OPINION_TITLE_TOKEN})\s*[\]］】]\s*$)",
     re.IGNORECASE,
 )
+
+
+def _normalized_opinion_section(value: object) -> str:
+    normalized = unicodedata.normalize("NFKC", _clean(value)).casefold()
+    return re.sub(r"[\s_\-‐‑‒–—]+", "", normalized)
 
 
 def evaluate_realtime_opinion_gate(
@@ -1637,18 +1649,19 @@ def evaluate_realtime_opinion_gate(
     inputs, so neither discovery nor generation can manufacture this verdict.
     """
     evidence = _watch_executive_evidence(article)
-    section = re.sub(r"\s+", "", _clean(evidence.get("publisher_section"))).casefold()
+    section = _normalized_opinion_section(evidence.get("publisher_section"))
     for marker in _OPINION_SECTION_MARKERS:
-        normalized = re.sub(r"\s+", "", marker).casefold()
-        if normalized and normalized in section:
+        normalized = _normalized_opinion_section(marker)
+        if normalized and normalized == section:
             return OpinionGateDecision(
                 True, "explicit_opinion_publisher_section", f"publisher_section:{marker}"
             )
     title = _clean(evidence.get("title"))
     match = _OPINION_TITLE_RE.search(title)
     if match:
+        marker = match.group("leading") or match.group("trailing")
         return OpinionGateDecision(
-            True, "explicit_opinion_title_marker", f"title_marker:{match.group(1)}"
+            True, "explicit_opinion_title_marker", f"title_marker:{marker}"
         )
     return OpinionGateDecision(False)
 
@@ -2119,13 +2132,18 @@ def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
     # label combined with an excluded publisher's URL must never become an
     # immediate Teams card.
     if policy.get("explicit_never_automatic"):
+        reason = (
+            "explicit_non_realtime_editorial_surface"
+            if policy.get("operator_surface") == "editorial_analysis"
+            else "explicit_never_automatic_publisher"
+        )
         return SourceGateDecision(
             gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
             tier=tier,
             tier_rank=tier_rank,
             publisher_rank=publisher_rank,
             immediate=False,
-            reason="explicit_never_automatic_publisher",
+            reason=reason,
         )
     if (
         candidate.editorial_lane == public_institution_routing.LANE_PUBLIC

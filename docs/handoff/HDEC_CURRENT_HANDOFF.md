@@ -1,5 +1,12 @@
 # HDEC News Sensor — R4-OPS-5 Production Acceptance Handoff
 
+## Mandatory agent startup
+
+Before material work, every implementation or audit agent must read and obey
+`AI_PROJECT_EXECUTION_STANDARD.md`, then read
+`docs/acceptance/PROJECT_ACCEPTANCE.md`, and state the user-visible acceptance
+matrix. Existing tests are evidence, not product authority.
+
 PROJECT=HDEC News Sensor
 REPO=Sinabroin/HDEC-News-Sensor
 TASK=R4-OPS-5 final production acceptance closure

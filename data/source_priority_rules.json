@@ -1,5 +1,5 @@
 {
-  "version": "r4-ops-5-publisher-authority-v2",
+  "version": "r4-ops-5a-publisher-authority-v3",
   "major_source_patterns": [
     "연합뉴스", "연합인포맥스", "한국경제", "매일경제", "서울경제", "조선비즈",
     "머니투데이", "이데일리", "아시아경제", "파이낸셜뉴스", "전자신문",
@@ -73,7 +73,7 @@
     "excluded": "제외 출처"
   },
   "teams_delivery_source_policy": {
-    "note": "R4-OPS-5 Teams A/B/C 정책. Tier A 13개 핵심 종합언론과 명시된 Tier B 16개 주요 종합·경제·산업 언론만 기사별 실질 게이트 통과 후 자동 발송 가능하다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 한다.",
+    "note": "R4-OPS-5A Teams A/B/C 정책. Tier A 13개 핵심 종합언론과 명시된 Tier B 16개 주요 종합·경제·산업 언론만 기사별 실질 게이트 통과 후 자동 발송 가능하다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 알려진 URL 호스트 신원은 표시 source alias보다 우선한다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 하며, 미열거 sibling/foreign host는 alias 권한을 상속하지 않는다.",
     "major_secondary_publishers": [
       {"name": "서울경제", "aliases": ["서울경제"], "domains": ["sedaily.com"]},
       {"name": "한국일보", "aliases": ["한국일보"], "domains": ["hankookilbo.com"]},
@@ -107,6 +107,8 @@
       {"name": "뉴스워커", "aliases": ["뉴스워커", "newsworker"], "domains": ["newsworker.co.kr"]}
     ],
     "never_automatic_publishers": [
+      {"name": "스포츠조선", "aliases": ["스포츠조선", "sports chosun"], "domains": ["sports.chosun.com"], "operator_surface": "unlisted_publication"},
+      {"name": "SBS Premium", "aliases": ["sbs premium", "스브스프리미엄"], "domains": ["premium.sbs.co.kr"], "operator_surface": "editorial_analysis"},
       {"name": "S저널", "aliases": ["s저널", "s-저널", "sjournal", "s journal", "에스저널"], "domains": ["s-journal.co.kr"]},
       {
         "name": "TTL뉴스 / 퍼블릭뉴스통신",
