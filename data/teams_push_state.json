@@ -440,6 +440,16 @@
       "sent_at": "2026-08-05T05:25:09+09:00",
       "source": "녹색경제신문"
     },
+    "f9d7840ab7297c93": {
+      "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
+      "delivery_id": "teams_ai_push:9d6109e1a26d",
+      "first_sent_at": "2026-08-11T19:40:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
+      "sent_at": "2026-08-11T19:40:06+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -1231,6 +1241,16 @@
       "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
       "sent_at": "2026-08-06T02:15:06+09:00",
       "source": "포춘코리아"
+    },
+    "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터": {
+      "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
+      "delivery_id": "teams_ai_push:9d6109e1a26d",
+      "first_sent_at": "2026-08-11T19:40:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
+      "sent_at": "2026-08-11T19:40:06+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
@@ -2459,8 +2479,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-11T16:44:43+09:00",
-  "last_successful_send_at": "2026-08-11T16:44:43+09:00",
+  "last_normal_send_at": "2026-08-11T19:40:06+09:00",
+  "last_successful_send_at": "2026-08-11T19:40:06+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2581,6 +2601,16 @@
       "material_signature": "4ad327472003fb494108cd43d1795a9f359738dbfcb56529285aaeb4aa825318",
       "sent_at": "2026-07-30T08:12:26+09:00",
       "source": "dealsite.co.kr"
+    },
+    "https://etnews.com/20260811000360": {
+      "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
+      "delivery_id": "teams_ai_push:9d6109e1a26d",
+      "first_sent_at": "2026-08-11T19:40:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
+      "sent_at": "2026-08-11T19:40:06+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "https://fnnews.com/news/202608111621114292": {
       "cluster_key": "title:위성곤지사kdd기업에ai실증제주제안관광에너지서협력모",
@@ -3683,6 +3713,16 @@
       "material_signature": "5bba20876786c2d67eee46a8e4441ee4e4d79222c2461e2cd20dda53a95960d8",
       "sent_at": "2026-08-06T02:15:06+09:00",
       "source": "포춘코리아"
+    },
+    "민형배전남광주시장국회예결위원장방문호남권반도체클러스터": {
+      "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
+      "delivery_id": "teams_ai_push:9d6109e1a26d",
+      "first_sent_at": "2026-08-11T19:40:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
+      "sent_at": "2026-08-11T19:40:06+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
