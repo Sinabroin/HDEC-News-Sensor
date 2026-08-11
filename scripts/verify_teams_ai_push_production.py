@@ -1362,27 +1362,28 @@ def check_source_gate(tmp: Path) -> None:
     state = tmp / "state-source-gate.json"
     mixed_summary, rec = _deliver(
         tmp, _payload(mixed), state,
-        statuses=(250, 250, 250),
+        statuses=(250, 250, 250, 250),
         now="2026-08-04T09:00:00+09:00",
     )
-    check("source gate: only major-media articles deliver",
-          mixed_summary["delivered_count"] == 3
-          and rec.attempts == [FIXTURE_TEAMS_CHANNEL] * 3, str(mixed_summary))
+    check("source gate: only Tier-A/Tier-B major-media articles deliver",
+          mixed_summary["delivered_count"] == 4
+          and rec.attempts == [FIXTURE_TEAMS_CHANNEL] * 4, str(mixed_summary))
     check("source gate: specialist/trusted articles are held, not deferred",
-          mixed_summary["teams_specialist_held_rows"] == 2
+          mixed_summary["teams_specialist_held_rows"] == 1
           and mixed_summary["deferred_rows"] == 0, str(mixed_summary))
     check("source gate: neutral publisher is never selected",
           mixed_summary["source_gate_rejected_rows"] == 1, str(mixed_summary))
     check("source gate: selected tier counters are exact",
           mixed_summary["selected_primary_10_rows"] == 2
           and mixed_summary["selected_secondary_3_rows"] == 1
+          and mixed_summary["selected_major_secondary_rows"] == 1
           and mixed_summary["selected_specialist_rows"] == 0, str(mixed_summary))
     check("source gate: counters reconcile with the gate partition",
           mixed_summary["counters_reconciled"] is True)
     saved = load_state(state)
     held_records = saved.get(HELD_SPECIALISTS_KEY) or {}
     check("source gate: held specialists persist without entering the sent ledger",
-          len(held_records) == 2 and len(saved["article_ids"]) == 3,
+          len(held_records) == 1 and len(saved["article_ids"]) == 4,
           str(sorted(held_records)))
     check("source gate: held record carries identity and holdback fields",
           all(
@@ -1397,12 +1398,15 @@ def check_source_gate(tmp: Path) -> None:
           all(token in gh_text for token in (
               "raw_primary_10_rows=2",
               "raw_secondary_3_rows=1",
-              "raw_specialist_rows=2",
-              "teams_immediate_major_rows=3",
-              "teams_specialist_held_rows=2",
+              "raw_major_secondary_rows=1",
+              "raw_specialist_rows=1",
+              "verified_major_secondary_rows=1",
+              "teams_immediate_major_rows=4",
+              "teams_specialist_held_rows=1",
               "teams_specialist_selected_rows=0",
               "selected_primary_10_rows=2",
               "selected_secondary_3_rows=1",
+              "selected_major_secondary_rows=1",
               "selected_promoted_official_rows=0",
               "selected_specialist_rows=0",
               "source_gate_rejected_rows=1",

@@ -1477,8 +1477,11 @@ def main() -> int:
     )
     v.check(
         "API-disabled console remains usable",
-        "기사 자동 불러오기 API가 설정되지 않았습니다" in template
-        and 'document.getElementById("importBtn").disabled=true' in template,
+        "기사 URL 자동 불러오기 · 현재 사용할 수 없음" in template
+        and "기존 후보 편집·정렬·미리보기는 정상 동작합니다" in template
+        and 'document.getElementById("importUrl").disabled=true' in template
+        and 'document.getElementById("importBtn").disabled=true' in template
+        and 'document.getElementById("importBtn").textContent="사용 불가"' in template,
     )
     v.check(
         "imported candidate keeps analysis and auto placement",

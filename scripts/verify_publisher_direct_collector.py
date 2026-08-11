@@ -51,17 +51,10 @@ import build_telegram_digest  # noqa: E402
 
 EXPECTED_PROTECTED_SHA256 = {
     ".github/workflows/editorial-daily-brief.yml": (
-        # R4-R9C wires the exact-edition editor deep-link verifier into the
-        # offline gate and commits the append-only edition manifest through
-        # the explicit git-add allowlist. R4-R10 reschedules the runs after the
-        # Review Console build (cron 30/45/55 22) so the dated console exists and
-        # the morning Teams message carries the exact-edition editor CTA, and
-        # wires the delivered lead-source gate verifier into the offline gate.
-        # R4-R11 removes the reader-only degradation: editor-unavailable
-        # publications skip fail-closed with a machine-readable skip_reason.
-        # R4-R12 then requires public immutable-manifest reconstruction before
-        # claim/send. This is the reviewed production workflow at origin/main.
-        "28da867978979ecd75e3e499a92d12abfcfad2905f5392454342ab9dad158d0c"
+        # R4-OPS-5 keeps Review at 07:20, targets Daily at 07:50 with
+        # idempotent 08:05/08:15 retries, and gates both truthful empty and
+        # non-empty immutable editions through the final offline acceptance.
+        "d4b8ff85d4772e1306240442cee02371568b06ee2bdc1d675813aa571c74d32f"
     ),
     ".github/workflows/editorial-review-console.yml": (
         # R4-R19/R20 calibration artifacts and R4-R21 honest-empty publishing
@@ -78,9 +71,10 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-R5 publishes both exact-reference dashboard paths from one artifact,
         # leaves sender state out, gates on validated-Brief field equivalence,
         # and considers every displayed article for cached/bounded local imagery.
-        # R4-R9B adds the stock-market hard-exclusion and dashboard-freshness
-        # verifiers to the mock-safe gate (before the build step).
-        "bf99534e934b0ab99f3d6631b9ccb72159f652d6465c759f49c2134119fb1a04"
+        # R4-OPS-5 runs the repaired Naver operational/live-ingestion/direct-
+        # publisher chain plus the final source/pacing/Daily acceptance before
+        # any live build can begin.
+        "3f3ab948a480448a8a46e6feaaf6cd5b5bcc2eaa1cd6c6b048f1cf39a05153cf"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
@@ -89,9 +83,10 @@ EXPECTED_PROTECTED_SHA256 = {
         # conservative '1' env fallback until the operator sets 5).
         # R4-R9B adds the major-media source-gate and stock-market
         # hard-exclusion verifiers to the mock-safe gate.
-        # R4-R9D wires the strict major-media/official-source Teams gate
-        # verifier (verify_teams_strict_source_gate.py) into the mock-safe gate.
-        "c735b4b186f80a2ccf44d2d1117f3583e9b1f94544d9be0bc162e7bdc7952940"
+        # R4-OPS-5 additionally gates the exact-domain publisher contract,
+        # explicit A/B/C tiers, opinion exclusion, real-corpus replay and
+        # rolling normal-card pacing before the live collection/send path.
+        "c0c44cdb2f2ffb9d9fb248b5255618638bf8559dd9ac42b13958880e4c01a285"
     ),
     ".github/workflows/telegram-notify.yml": (
         # R4-R10 repoints the operator dashboard export off the sealed News Censor

@@ -688,6 +688,11 @@ def daily_editor_publication_error(edition) -> str:
     rows = manifest.get("articles") or []
     matched: set[str] = set()
     if not rows:
+        if (
+            manifest.get("edition_status") == "empty"
+            and manifest.get("article_count") == 0
+        ):
+            return ""
         return "daily_editor_not_reconstructable"
     for row in rows:
         if not isinstance(row, dict):
@@ -707,7 +712,7 @@ def _skip_daily_editor_unavailable(
 
     A Daily whose exact-edition editor cannot be reconstructed publishes
     nothing and sends nothing: the skip is machine-readable and the later
-    scheduled attempt (cron 30/45/55 22) is the only retry path."""
+    scheduled attempt (07:50/08:05/08:15 KST) is the only retry path."""
     _github_output("skipped", "true")
     _github_output("edition", key)
     _github_output("delivery_authorized", "false")
@@ -792,9 +797,7 @@ def run_publish(
                 f"long_tail_leads_dropped={len(selected_articles) - len(gated_articles)}"
             )
             if not gated_articles:
-                return _skip_insufficient_quality(
-                    edition_type, key, review_decision
-                )
+                review_mode = "empty_edition"
             selected_articles = gated_articles
             # R4-R11 §2 — the operator editor action is mandatory on every
             # delivered Daily. The dated Review Console for this edition must
@@ -1075,12 +1078,17 @@ def _verify_local_publication(manifest: dict) -> None:
 
 
 def _manifest_identity(manifest: dict) -> dict:
+    article_count = int(manifest.get("article_count") or 0)
     return {
         "edition_key": manifest["edition_key"],
         "coverage_start": manifest["coverage_start"],
         "coverage_end": manifest["coverage_end"],
         "html_sha256": manifest["html_sha256"],
         "public_url": manifest["public_dated_url"],
+        "delivery_kind": (
+            "empty_status" if article_count == 0 else "nonempty_digest"
+        ),
+        "article_count": article_count,
     }
 
 

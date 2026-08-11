@@ -582,7 +582,7 @@ def load_bundle(path: Path, edition_key: str) -> dict[str, Any]:
         or payload.get("edition_key") != edition_key
         or payload.get("category_order") != list(CATEGORY_ORDER)
         or not isinstance(payload.get("candidates"), list)
-        or not payload["candidates"]
+        or payload.get("candidate_count") != len(payload["candidates"])
     ):
         raise EditorialReviewError("candidate bundle identity mismatch")
     ids = [str(item.get("candidate_id") or "") for item in payload["candidates"]]
@@ -673,7 +673,10 @@ def choose_daily_articles(
 
     auto = candidates[:limit]
     if not auto:
-        raise EditorialReviewError("candidate bundle has no automatic fallback")
+        # R4-OPS-5: an already-validated honest-empty Review bundle is the
+        # authority for a truthful empty Daily status edition. Missing or
+        # malformed bundles still fail closed in load_bundle before this point.
+        return [], "empty_edition"
     return [
         candidate_to_article(
             _candidate_for_daily_render(item, bundle.get("edition_key"))

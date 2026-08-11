@@ -1,82 +1,55 @@
-# Codex continuation prompt — HDEC News Sensor R4-OPS-4
+# Codex continuation prompt — HDEC News Sensor R4-OPS-5
 
-Continue the HDEC News Sensor R4-OPS-4 final article-selection zeroing and cross-machine handoff task from the COMPANY machine. This file is the complete continuation context; do not assume access to the HOME chat.
+Continue only if R4-OPS-5 has not already reached its remote final seal. Read `docs/handoff/HDEC_CURRENT_HANDOFF.md` completely, then treat live Git refs and `scripts/hdec_cross_machine_status.sh` as authoritative.
 
-Repository and branch:
+Repository:
 
 - GitHub: `Sinabroin/HDEC-News-Sensor`
-- COMPANY checkout: `/mnt/d/HDEC-Projects/AI-DesignLab-Sensor`
-- Durable task branch: `wip/d7ak6e-final-readiness-zeroing-handoff`
-- Base main at task start: `0418478f1d5389067f01bbc0ba38cdb7630ed5f6`
-- Draft PR: `#40` (`https://github.com/Sinabroin/HDEC-News-Sensor/pull/40`)
-- Teams Watch can autonomously advance `origin/main` with state-only commits.
-- Latest integrated origin/main at the HOME final seal: `9e51bdc415aa293067804a439f33eb8d317523b4`.
+- clean R4-OPS-5 worktree: `/mnt/d/HDEC-Projects/HDEC-News-Sensor-R4OPS5`
+- dirty company checkout (must not modify/reset/clean/stash): `/mnt/d/HDEC-Projects/AI-DesignLab-Sensor`
+- branch: `wip/d7ak6e-final-readiness-zeroing-handoff`
+- Draft PR: #40
 
-Begin exactly as follows:
+Bootstrap:
 
 ```bash
-cd /mnt/d/HDEC-Projects/AI-DesignLab-Sensor || exit 1
+cd /mnt/d/HDEC-Projects/HDEC-News-Sensor-R4OPS5 || exit 1
 git fetch origin --prune
 git status --short --branch
-git switch wip/d7ak6e-final-readiness-zeroing-handoff \
-  || git switch --track origin/wip/d7ak6e-final-readiness-zeroing-handoff
+git switch wip/d7ak6e-final-readiness-zeroing-handoff
 git pull --ff-only origin wip/d7ak6e-final-readiness-zeroing-handoff
 ./scripts/hdec_cross_machine_status.sh
 ```
 
-Read `docs/handoff/HDEC_CURRENT_HANDOFF.md` before doing any work. Treat the live status helper output and remote Git refs as authoritative. Inspect whether `origin/main` moved. Merge with `git merge --no-edit origin/main` only if integration is necessary. Never rebase, reset shared work, force push, or force-with-lease. If a merge conflicts, stop conflict resolution, preserve the last clean remote checkpoint, and document the conflict.
+R4-OPS-5 implementation contract already present on the branch:
 
-Continue `NEXT_SINGLE_ACTION` from the handoff. Keep working on the same task branch and update the existing Draft PR; do not create a second PR. Before every meaningful checkpoint: inspect the diff, confirm no secret or production-state change, update both handoff files, run relevant offline verifiers, commit, push normally, and verify local and remote branch heads match.
+- exact-by-default publisher domain authority; explicit aliases and publication domains only;
+- IT조선 is not 조선일보 and is Tier C; 조선비즈 is distinct explicit Tier B; sports.chosun.com is never 조선일보;
+- exact Tier A (13) / Tier B (16) / Tier C specialist policy;
+- article semantics still control all eligibility; publisher name and query text never qualify;
+- deterministic opinion/contribution realtime exclusion from authoritative title/section evidence;
+- one best normal `important` card per rolling 60 minutes with unsent backlog preservation; TOP/HDEC-direct bypass and do not consume the normal window;
+- real-corpus replay including IT조선, 연합뉴스 ETF, stock/theme, 한국일보 LS Electric×GS E&C, 서울경제 material infrastructure, specialist context, and weak Tier-B publisher-alone cases;
+- truthful immutable empty Daily status and normal non-empty Daily, exact dated Editor/reader actions, version-3 idempotent delivery-kind ledger;
+- Review empty bundle loading and exact empty-edition reconstruction;
+- unavailable article-import UI visibly disabled while the API remains fail-closed;
+- 07:20 Review followed by 07:50/08:05/08:15 Daily target/retries;
+- repaired PR #40 Naver/live-ingestion/publisher-direct verifier chain and calibration/handoff tooling.
 
-Product context to preserve:
-
-- R4-R21 honest-empty behavior is merged.
-- PR #39 Watch executive-materiality/fund/ETF noise hardening is merged.
-- `TEAMS_AI_NEWS_WATCH` was restored to production before this task.
-- Watch live collection has previously proven healthy with articles and intentionally favors precision.
-- Specialist/neutral publishers do not automatically fill unused send capacity.
-- Public Editor exact and latest pages for 2026-08-11 exist and are intentionally empty.
-- Calibration Actions run `31398204844` succeeded with `candidate_count=0`, `qualified_candidates=0`, and zero sends/state writes.
-- The public Editor reports article import API unconfigured; this is separate from live news collection.
-- The stale Naver adapter verifier was reproduced against origin/main and minimally repaired on this branch by allowing and asserting the intentional `discovery_lane` provenance contract; provider and selection semantics were not changed.
-- The Naver operational-wiring verifier also failed identically on a detached clean origin/main baseline: a fixed June timestamp had expired, current source/query health audit was not emitted, and publisher resolution was not fully stubbed. Its network-free fixture now uses current time, deterministic provider audit/authority rows, and a no-op outbound resolver; production collector/provider semantics remain unchanged.
-- Two additional verifier drifts were reproduced identically on detached clean origin/main and repaired without production-semantic changes: publisher-direct now pins the reviewed Daily/Editor workflows but snapshots the autonomously mutable Watch ledger only before/after execution; live-ingestion accepts and asserts the intentional Naver `discovery_lane` provenance. Publisher-direct is `91/0`; live-ingestion passes with zero external network/sends/state writes.
-- A network-free calibration audit CLI now proves the exact 2026-08-11 funnel `548 provider rows → 35 eligible raw rows → 10 in-window/relevance rows → 2 AI-central → 2 materiality rejects → 0` and reports title-only evidence without guessing omitted leads.
-- Five Watch-held rows already known before the calibration generation time were absent from its raw inventory, including the LS Electric–GS E&C AI data-center partnership and HD Hyundai's KRW 956B data-center generator order. This is a documented Editor recall/supply seam; do not auto-promote sources or loosen policy.
-- Latest Watch #278 was live healthy but selected/sent zero; its six policy-eligible rows were all non-primary, with five source-gate rejections and one specialist hold.
-- Scheduled refresh remains red on main solely because the old Naver verifier is still deployed. The branch fix needs review/merge and a later natural schedule for production proof.
-- Last Daily success is 2026-08-06 08:06 KST. Exact-Editor CTA code was not in that run's ancestry, so first non-empty post-R4-R21 Daily → Teams → exact Editor proof remains operator work.
-- Article import remains fail-closed: the authenticated FastAPI route exists, but no HTTPS deployment/Editor build URL wiring is configured.
-- The branch has already merged the latest state-only origin/main successor without conflict and passed the focused post-merge verifier seal.
-- There is no non-polluting Daily→Editor→Teams production canary input. Dry-run and publish-only never send; the real `--publish → --verify-public → --claim → --send` workflow necessarily sends to Teams and writes production claim/success state. `CAN_WE_TEST_DAILY_EDITOR_E2E_TODAY=NO` and `SYSTEM_LAUNCHED=false`.
-- Do not auto-tune publisher tiers, executive-materiality thresholds, AI centrality, stock/ETF exclusions, specialist send policy, or Teams volume. Those require operator review.
-
-Safe autonomous scope:
-
-- Git/GitHub reads, Actions log/artifact and public HTTP GET inspection.
-- Local source/docs changes on this WIP branch.
-- Network-free tests and diagnostics.
-- Low-risk objective engineering fixes that do not broaden send eligibility and have deterministic regression coverage.
-- Commits, normal branch pushes, Draft PR updates, and handoff maintenance.
-
-Hard production boundary:
+Production boundaries remain absolute:
 
 ```text
 PRODUCTION_TEAMS_SENDS=0
-SMTP_ATTEMPTS=0
-TELEGRAM_SENDS=0
+PRODUCTION_SMTP_ATTEMPTS=0
+PRODUCTION_TELEGRAM_SENDS=0
+PRODUCTION_STATE_WRITES=0
 PRODUCTION_VARIABLE_CHANGES=0
 PRODUCTION_WORKFLOW_DISPATCHES=0
-PRODUCTION_STATE_WRITES=0
 MAIN_MERGES=0
 ```
 
-Never merge to main, send to production, dispatch a mutating/sending workflow, alter variables/secrets, directly edit production ledgers, rebase, or force push. Record any such next step as `REQUIRES_OPERATOR_APPROVAL=true` and continue other safe work.
+Never rebase, force push, merge PR #40, write main, dispatch a production workflow, change variables/secrets, send SMTP/Teams/Telegram, or mutate production ledgers. If current `origin/main` moved, merge it into the WIP branch preserving history; stop on a genuine conflict.
 
-The evidence audit, verifier-only repairs, network-free rejection diagnostic, extended offline verifier matrix, origin/main integration, Draft PR, and remote handoff seal are complete. Read the current handoff first. `NEXT_SINGLE_ACTION` is operator review of Draft PR #40; if approved, merge it to main and observe the next natural scheduled refresh. Do not perform source-policy tuning, Operator API deployment, or the production Daily E2E without separate operator approval. If any additional work is requested, continue the same branch and Draft PR, checkpoint normally, and never rebase or force push.
+Before any stop, update both handoff files, commit coherently, push normally, verify remote/local equality, and update Draft PR #40. `SYSTEM_LAUNCHED=false` remains mandatory until an operator merges and real production evidence proves Watch send, Daily send, exact Editor link, and immutable dated reader link.
 
-To start Codex from this file after the bootstrap commands, use the CLI form verified from `codex exec --help`:
-
-```bash
-codex exec -C . - < docs/handoff/COMPANY_RESUME_PROMPT.md
-```
+If the remote seal is already complete, do not redo implementation. The next single action is operator review/merge of Draft PR #40 followed by observation of natural production runs.

@@ -2240,7 +2240,7 @@ def _select_with_diversity(
 # tier is re-derived authoritatively from source_priority at render time so the
 # floor holds even when the article was rebuilt from a serialized review bundle.
 _LEAD_SOURCE_ELIGIBLE_TIERS = frozenset(
-    {"primary_10", "secondary_3", "official_institution"}
+    {"primary_10", "secondary_3", "major_secondary", "official_institution"}
 )
 
 
@@ -5107,6 +5107,7 @@ def _weekly_sources(articles: list[EditorialArticle]) -> str:
 
 DAILY_EDITOR_LINK_LABEL = "Daily Brief 편집기에서 열기"
 DAILY_PUBLISHED_LINK_LABEL = "게시된 Daily Brief 보기"
+DAILY_EMPTY_STATUS_TEXT = "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다."
 EDITION_MANIFEST_IDENTITY_FIELDS = ("revision", "edition_id", "integrity")
 
 
@@ -5135,7 +5136,7 @@ def build_daily_edition_manifest(
     review_decision: str,
 ) -> dict:
     manifest = {
-        "version": 1,
+        "version": 2,
         "product": "daily",
         "edition_key": edition_key,
         "coverage_start": coverage.start.isoformat(),
@@ -5143,8 +5144,10 @@ def build_daily_edition_manifest(
         "published_run_at": _as_kst(run_at).isoformat(timespec="seconds"),
         "review_mode": str(review_mode or "not_applicable"),
         "review_decision": str(review_decision or "not_applicable"),
-        "headline_title": articles[0].title,
-        "editor_summary": articles[0].summary,
+        "edition_status": "nonempty" if articles else "empty",
+        "article_count": len(articles),
+        "headline_title": articles[0].title if articles else "",
+        "editor_summary": articles[0].summary if articles else DAILY_EMPTY_STATUS_TEXT,
         "articles": [
             {
                 "position": index,
@@ -5188,6 +5191,21 @@ def verify_daily_edition_manifest(manifest: object) -> str:
         return "edition_id_malformed"
     if manifest.get("product") != "daily" or manifest.get("edition_key") != embedded_key:
         return "identity_mismatch"
+    version = manifest.get("version")
+    articles = manifest.get("articles")
+    if not isinstance(articles, list):
+        return "articles_malformed"
+    if version == 2:
+        status = manifest.get("edition_status")
+        count = manifest.get("article_count")
+        if type(count) is not int or count != len(articles):
+            return "article_count_mismatch"
+        if status not in {"empty", "nonempty"}:
+            return "edition_status_malformed"
+        if (status == "empty") != (count == 0):
+            return "edition_status_mismatch"
+    elif version != 1 or not articles:
+        return "manifest_version_unsupported"
     integrity = manifest.get("integrity")
     if not isinstance(integrity, Mapping):
         return "integrity_missing"
@@ -5216,15 +5234,12 @@ def render_daily(
         # R4-R10 — drop long-tail/specialist leads from the delivered brief.
         # An empty result is a graceful "prefer zero" skip, not a crash.
         articles = filter_lead_source_eligible(articles)
-        if not articles:
-            raise EditorialError("empty edition")
-    if not articles:
-        raise EditorialError("daily edition has no eligible linked articles")
+    articles = articles[:DAILY_MAX_ARTICLES]
     key = edition_key("daily", run_at)
     coverage = daily_coverage(run_at)
     dated_url, latest_url = public_urls(root_url, "daily", key)
-    headline = articles[0]
-    if headline.ai_centrality_level not in DAILY_HEADLINE_ALLOWED_CENTRALITY:
+    headline = articles[0] if articles else None
+    if headline is not None and headline.ai_centrality_level not in DAILY_HEADLINE_ALLOWED_CENTRALITY:
         raise EditorialError(
             "daily headline is not AI-central: level="
             f"{headline.ai_centrality_level or 'unknown'}"
@@ -5237,16 +5252,32 @@ def render_daily(
             "EDITION_LABEL": escape(key),
             "COVERAGE_LABEL": escape(coverage.label()),
             "BRIEF_STYLES": _brief_styles(),
-            "HEADLINE_HTML": _daily_headline(headline),
+            "HEADLINE_HTML": (
+                _daily_headline(headline)
+                if headline is not None
+                else (
+                    '<section class="hero empty-edition" data-role="headline" '
+                    'data-edition-status="empty" style="border-radius:22px;'
+                    'background:#eef3f8;color:#002c5f;padding:34px 30px">'
+                    f'<h2 style="margin:0;line-height:1.45">{escape(DAILY_EMPTY_STATUS_TEXT)}</h2>'
+                    '</section><div class="ednote"><h3 class="ed-k">Editor\'s Summary</h3>'
+                    '<p>기준을 낮추거나 기사를 채워 넣지 않았습니다. 해당 수집 범위의 '
+                    '정직한 빈 에디션입니다.</p></div>'
+                )
+            ),
             "ARTICLE_CARDS_HTML": (
                 "".join(_daily_card(item) for item in articles[1:6])
-                or '<p class="empty">추가로 선정된 주요 기사 없음</p>'
+                or (
+                    '<p class="empty">추가로 선정된 주요 기사 없음</p>'
+                    if articles
+                    else '<p class="empty">오늘의 브리핑에 포함할 기사가 없습니다.</p>'
+                )
             ),
             "TAXONOMY_HTML": _taxonomy_html(),
             "FOOTER_HTML": _brief_footer("daily", key, coverage),
         },
     )
-    bound_articles = articles[:DAILY_MAX_ARTICLES]
+    bound_articles = articles
     edition_manifest = build_daily_edition_manifest(
         edition_key=key,
         coverage=coverage,
@@ -5271,8 +5302,8 @@ def render_daily(
         else ""
     )
     text_lines = [
-        f"[AI 경영 T&I Daily Brief] {key}",
-        headline.title,
+        f"HDEC AI Daily Brief · {key}",
+        headline.title if headline is not None else DAILY_EMPTY_STATUS_TEXT,
         "",
     ]
     if editor_url:
@@ -5285,10 +5316,13 @@ def render_daily(
     )
     teams_text = "\n".join(text_lines)
     teams_html = _teams_html(
-        "AI 경영 T&I Daily Brief",
+        "HDEC AI Daily Brief",
         key,
         coverage,
-        [("오늘의 헤드라인", escape(headline.title))],
+        [(
+            "오늘의 헤드라인" if headline is not None else "오늘의 상태",
+            escape(headline.title if headline is not None else DAILY_EMPTY_STATUS_TEXT),
+        )],
         dated_url,
         DAILY_PUBLISHED_LINK_LABEL,
         leading_actions=(
@@ -5297,7 +5331,9 @@ def render_daily(
     )
     return RenderedEdition(
         "daily", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
-        "daily", headline.title, len(articles),
+        "daily_empty_status" if not articles else "daily",
+        headline.title if headline is not None else DAILY_EMPTY_STATUS_TEXT,
+        len(articles),
         edition_id=edition_id,
         editor_url=editor_url,
         edition_manifest=edition_manifest,
@@ -5559,7 +5595,8 @@ def validate_rendered(edition: RenderedEdition) -> None:
         raise EditorialError("edition marker missing")
     if re.search(rb"\{\{[A-Z0-9_]+\}\}", encoded):
         raise EditorialError("unresolved template marker")
-    if edition.article_count < 1:
+    empty_daily = edition.edition_type == "daily" and edition.article_count == 0
+    if edition.article_count < 1 and not empty_daily:
         raise EditorialError("empty edition")
 
     teams_anchors = re.findall(r"<a\b[^>]*>", edition.teams_html)
@@ -5579,6 +5616,12 @@ def validate_rendered(edition: RenderedEdition) -> None:
         if manifest_error:
             raise EditorialError(f"daily edition manifest invalid: {manifest_error}")
         manifest = dict(edition.edition_manifest or {})
+        expected_status = "empty" if empty_daily else "nonempty"
+        if (
+            manifest.get("edition_status") != expected_status
+            or manifest.get("article_count") != edition.article_count
+        ):
+            raise EditorialError("daily edition status mismatch")
         if manifest.get("edition_id") != edition.edition_id:
             raise EditorialError("daily edition manifest identity mismatch")
         publication = manifest.get("publication") or {}
@@ -5655,6 +5698,13 @@ def validate_rendered(edition: RenderedEdition) -> None:
     else:
         if edition.html.count('data-role="headline"') != 1:
             raise EditorialError("brief headline count mismatch")
+        if empty_daily and (
+            'data-edition-status="empty"' not in edition.html
+            or DAILY_EMPTY_STATUS_TEXT not in edition.html
+            or DAILY_EMPTY_STATUS_TEXT not in edition.teams_text
+            or DAILY_EMPTY_STATUS_TEXT not in edition.teams_html
+        ):
+            raise EditorialError("truthful empty Daily status missing")
         if edition.html.count('data-role="article-card"') > 5:
             raise EditorialError("brief article card cap exceeded")
     if 'data-brief-contract="AI_TNI_EXECUTIVE_V1"' not in edition.html:

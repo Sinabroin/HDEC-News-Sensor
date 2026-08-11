@@ -90,10 +90,10 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
       <div class="pill" id="saveState">자동 저장</div>
     </div>
     <section class="import-panel" aria-labelledby="importLabel">
-      <label class="import-label" id="importLabel" for="importUrl">기사 URL로 자동 불러오기</label>
+      <label class="import-label" id="importLabel" for="importUrl">기사 URL 자동 불러오기 · 현재 사용할 수 없음</label>
       <div class="import-row">
-        <input id="importUrl" type="url" inputmode="url" autocomplete="url" placeholder="기사 URL 붙여넣기 · https://...">
-        <button id="importBtn" type="button">기사 불러오기</button>
+        <input id="importUrl" type="url" inputmode="url" autocomplete="url" placeholder="운영자 API 미구성" disabled>
+        <button id="importBtn" type="button" disabled>사용 불가</button>
       </div>
       <p class="import-status" id="importStatus" role="status" aria-live="polite"></p>
     </section>
@@ -859,10 +859,19 @@ window.__editorialReviewDebug=()=>({
   }))
 });
 render();
-if(!articleImportApiUrl){
+if(articleImportApiUrl){
+  document.getElementById("importLabel").textContent="기사 URL로 자동 불러오기";
+  document.getElementById("importUrl").disabled=false;
+  document.getElementById("importUrl").placeholder="기사 URL 붙여넣기 · https://...";
+  document.getElementById("importBtn").disabled=false;
+  document.getElementById("importBtn").textContent="기사 불러오기";
+}else{
+  document.getElementById("importLabel").textContent="기사 URL 자동 불러오기 · 현재 사용할 수 없음";
   document.getElementById("importUrl").disabled=true;
+  document.getElementById("importUrl").placeholder="운영자 API 미구성";
   document.getElementById("importBtn").disabled=true;
-  setImportStatus("기사 자동 불러오기 API가 설정되지 않았습니다.","error");
+  document.getElementById("importBtn").textContent="사용 불가";
+  setImportStatus("운영자 API가 구성되지 않아 URL 자동 불러오기를 사용할 수 없습니다. 기존 후보 편집·정렬·미리보기는 정상 동작합니다.","");
 }
 </script>
 <script id="exact-edition-deep-link">
@@ -936,7 +945,14 @@ function adoptExactEdition(manifest){
   // closed) when this console's candidate pool cannot faithfully rebuild the
   // edition, so a different or newer bundle can never masquerade as the link.
   const rows=Array.isArray(manifest.articles)?manifest.articles:[];
-  if(!rows.length)return false;
+  if(!rows.length){
+    if(manifest.edition_status!=="empty"||manifest.article_count!==0)return false;
+    state.exactEditionId=manifest.edition_id;
+    state.selected=[];
+    normalizeSelectedOrder();
+    render();
+    return true;
+  }
   const orderedIds=[];
   const driven={};
   for(const row of rows){

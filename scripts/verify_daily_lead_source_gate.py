@@ -184,18 +184,19 @@ def main() -> int:
         len(brief.filter_lead_source_eligible(long_tail_only)) == 0,
         str([a.source for a in long_tail_only]),
     )
-    try:
-        brief.render_daily(
-            long_tail_only, run_at=RUN_AT, root_url="https://x.test",
-            lead_source_gate=True,
-        )
-        check("all-long-tail delivered edition raises empty (prefer zero over filler)", False)
-    except brief.EditorialError as exc:
-        check(
-            "all-long-tail delivered edition raises empty (prefer zero over filler)",
-            "empty" in str(exc),
-            str(exc),
-        )
+    empty_edition = brief.render_daily(
+        long_tail_only, run_at=RUN_AT, root_url="https://x.test",
+        lead_source_gate=True,
+    )
+    check(
+        "all-long-tail supply publishes a truthful empty status without filler",
+        empty_edition.article_count == 0
+        and empty_edition.issue_mode == "daily_empty_status"
+        and empty_edition.edition_manifest["edition_status"] == "empty"
+        and "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다." in empty_edition.html
+        and all(row.title not in empty_edition.html for row in long_tail_only),
+        empty_edition.html,
+    )
 
     # ------------------------------------------------------------- wiring
     runner_src = (ROOT / "scripts" / "run_editorial_briefing.py").read_text(

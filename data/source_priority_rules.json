@@ -1,5 +1,5 @@
 {
-  "version": "d7-ak-6f-ops-r1-v1",
+  "version": "r4-ops-5-publisher-authority-v2",
   "major_source_patterns": [
     "연합뉴스", "연합인포맥스", "한국경제", "매일경제", "서울경제", "조선비즈",
     "머니투데이", "이데일리", "아시아경제", "파이낸셜뉴스", "전자신문",
@@ -33,21 +33,38 @@
   "publisher_delivery_policies": [
     {"tier": "primary_10", "rank": 1, "name": "연합뉴스", "aliases": ["연합뉴스", "yonhap"], "domains": ["yna.co.kr"]},
     {"tier": "primary_10", "rank": 2, "name": "MBC", "aliases": ["mbc"], "domains": ["imbc.com", "mbc.co.kr"]},
-    {"tier": "primary_10", "rank": 3, "name": "KBS", "aliases": ["kbs"], "domains": ["kbs.co.kr"]},
+    {"tier": "primary_10", "rank": 3, "name": "KBS", "aliases": ["kbs", "kbs 뉴스"], "domains": ["kbs.co.kr", "news.kbs.co.kr"]},
     {"tier": "primary_10", "rank": 4, "name": "조선일보", "aliases": ["조선일보"], "domains": ["chosun.com"]},
     {"tier": "primary_10", "rank": 5, "name": "YTN", "aliases": ["ytn"], "domains": ["ytn.co.kr"]},
-    {"tier": "primary_10", "rank": 6, "name": "JTBC", "aliases": ["jtbc"], "domains": ["jtbc.co.kr"]},
+    {"tier": "primary_10", "rank": 6, "name": "JTBC", "aliases": ["jtbc", "jtbc 뉴스"], "domains": ["jtbc.co.kr", "news.jtbc.co.kr"]},
     {"tier": "primary_10", "rank": 7, "name": "중앙일보", "aliases": ["중앙일보"], "domains": ["joongang.co.kr"]},
     {"tier": "primary_10", "rank": 8, "name": "매일경제", "aliases": ["매일경제", "매경"], "domains": ["mk.co.kr"]},
     {"tier": "primary_10", "rank": 9, "name": "한국경제", "aliases": ["한국경제", "한경"], "domains": ["hankyung.com"]},
-    {"tier": "primary_10", "rank": 10, "name": "SBS", "aliases": ["sbs"], "domains": ["sbs.co.kr"]},
+    {"tier": "primary_10", "rank": 10, "name": "SBS", "aliases": ["sbs", "sbs 뉴스"], "domains": ["sbs.co.kr", "news.sbs.co.kr"]},
     {"tier": "secondary_3", "rank": 1, "name": "동아일보", "aliases": ["동아일보"], "domains": ["donga.com"]},
     {"tier": "secondary_3", "rank": 2, "name": "한겨레", "aliases": ["한겨레"], "domains": ["hani.co.kr"]},
-    {"tier": "secondary_3", "rank": 3, "name": "경향신문", "aliases": ["경향신문"], "domains": ["khan.co.kr"]}
+    {"tier": "secondary_3", "rank": 3, "name": "경향신문", "aliases": ["경향신문"], "domains": ["khan.co.kr"]},
+    {"tier": "major_secondary", "rank": 1, "name": "서울경제", "aliases": ["서울경제"], "domains": ["sedaily.com"]},
+    {"tier": "major_secondary", "rank": 2, "name": "한국일보", "aliases": ["한국일보"], "domains": ["hankookilbo.com"]},
+    {"tier": "major_secondary", "rank": 3, "name": "뉴스1", "aliases": ["뉴스1", "news1"], "domains": ["news1.kr"]},
+    {"tier": "major_secondary", "rank": 4, "name": "뉴시스", "aliases": ["뉴시스", "newsis"], "domains": ["newsis.com"]},
+    {"tier": "major_secondary", "rank": 5, "name": "조선비즈", "aliases": ["조선비즈", "chosunbiz"], "domains": ["biz.chosun.com"]},
+    {"tier": "major_secondary", "rank": 6, "name": "머니투데이", "aliases": ["머니투데이"], "domains": ["mt.co.kr"]},
+    {"tier": "major_secondary", "rank": 7, "name": "이데일리", "aliases": ["이데일리"], "domains": ["edaily.co.kr"]},
+    {"tier": "major_secondary", "rank": 8, "name": "아시아경제", "aliases": ["아시아경제"], "domains": ["asiae.co.kr"]},
+    {"tier": "major_secondary", "rank": 9, "name": "파이낸셜뉴스", "aliases": ["파이낸셜뉴스", "fnnews"], "domains": ["fnnews.com"]},
+    {"tier": "major_secondary", "rank": 10, "name": "헤럴드경제", "aliases": ["헤럴드경제"], "domains": ["heraldcorp.com"]},
+    {"tier": "major_secondary", "rank": 11, "name": "전자신문", "aliases": ["전자신문", "etnews"], "domains": ["etnews.com"]},
+    {"tier": "major_secondary", "rank": 12, "name": "디지털타임스", "aliases": ["디지털타임스"], "domains": ["dt.co.kr"]},
+    {"tier": "major_secondary", "rank": 13, "name": "국민일보", "aliases": ["국민일보"], "domains": ["kmib.co.kr"]},
+    {"tier": "major_secondary", "rank": 14, "name": "세계일보", "aliases": ["세계일보"], "domains": ["segye.com"]},
+    {"tier": "major_secondary", "rank": 15, "name": "서울신문", "aliases": ["서울신문"], "domains": ["seoul.co.kr"]},
+    {"tier": "major_secondary", "rank": 16, "name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]}
   ],
   "publisher_delivery_tier_labels": {
     "primary_10": "핵심 10개 언론사",
     "secondary_3": "보조 3개 언론사",
+    "major_secondary": "Tier B 주요 종합·경제·산업 언론",
     "official_institution": "공식·기관",
     "specialist": "주요 전문지",
     "trusted_other": "신뢰 출처",
@@ -56,10 +73,35 @@
     "excluded": "제외 출처"
   },
   "teams_delivery_source_policy": {
-    "note": "D7-AK-6E R4-R9A/R4-R9D/R4-R10/R4-R11 Teams 발송 전용 소스 게이트. 핵심 10·보조 3·승격 공식기관만 즉시 발송 자격이다. R4-R9D 이후 specialist/trusted_other는 자동 폴백이 제거돼 단독 자동 발송되지 않는다. never_automatic_publishers는 실사용 회귀로 추가된 명시적 배제 목록이다: R4-R10 S저널(s-journal.co.kr 자동 발송), R4-R11 TTL뉴스/퍼블릭뉴스통신(ttlnews.com idxno=3131687 자동 발송, delivery_id teams_ai_push:7081b3470e08). 목록의 매체는 어떤 tier로도 승격되지 않고 lane은 항상 never_automatic으로 고정된다(never primary_10·never secondary_3·never promoted official). 이 정책은 Teams 발송에만 적용되고 Daily/Weekly/News Censor 자격에는 영향을 주지 않는다.",
+    "note": "R4-OPS-5 Teams A/B/C 정책. Tier A 13개 핵심 종합언론과 명시된 Tier B 16개 주요 종합·경제·산업 언론만 기사별 실질 게이트 통과 후 자동 발송 가능하다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 한다.",
+    "major_secondary_publishers": [
+      {"name": "서울경제", "aliases": ["서울경제"], "domains": ["sedaily.com"]},
+      {"name": "한국일보", "aliases": ["한국일보"], "domains": ["hankookilbo.com"]},
+      {"name": "뉴스1", "aliases": ["뉴스1", "news1"], "domains": ["news1.kr"]},
+      {"name": "뉴시스", "aliases": ["뉴시스", "newsis"], "domains": ["newsis.com"]},
+      {"name": "조선비즈", "aliases": ["조선비즈", "chosunbiz"], "domains": ["biz.chosun.com"]},
+      {"name": "머니투데이", "aliases": ["머니투데이"], "domains": ["mt.co.kr"]},
+      {"name": "이데일리", "aliases": ["이데일리"], "domains": ["edaily.co.kr"]},
+      {"name": "아시아경제", "aliases": ["아시아경제"], "domains": ["asiae.co.kr"]},
+      {"name": "파이낸셜뉴스", "aliases": ["파이낸셜뉴스", "fnnews"], "domains": ["fnnews.com"]},
+      {"name": "헤럴드경제", "aliases": ["헤럴드경제"], "domains": ["heraldcorp.com"]},
+      {"name": "전자신문", "aliases": ["전자신문", "etnews"], "domains": ["etnews.com"]},
+      {"name": "디지털타임스", "aliases": ["디지털타임스"], "domains": ["dt.co.kr"]},
+      {"name": "국민일보", "aliases": ["국민일보"], "domains": ["kmib.co.kr"]},
+      {"name": "세계일보", "aliases": ["세계일보"], "domains": ["segye.com"]},
+      {"name": "서울신문", "aliases": ["서울신문"], "domains": ["seoul.co.kr"]},
+      {"name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]}
+    ],
     "specialist_publishers": [
+      {"name": "IT조선", "aliases": ["it조선", "it chosun"], "domains": ["it.chosun.com"]},
+      {"name": "ZDNet Korea", "aliases": ["zdnet korea", "지디넷코리아"], "domains": ["zdnet.co.kr"]},
       {"name": "테크M", "aliases": ["테크m", "techm"], "domains": ["techm.kr"]},
-      {"name": "테크월드", "aliases": ["테크월드", "epnc"], "domains": ["epnc.co.kr"]}
+      {"name": "테크월드", "aliases": ["테크월드", "epnc"], "domains": ["epnc.co.kr"]},
+      {"name": "더벨", "aliases": ["더벨", "thebell"], "domains": ["thebell.co.kr"]},
+      {"name": "인베스트조선", "aliases": ["인베스트조선"], "domains": ["investchosun.com"]},
+      {"name": "대한경제", "aliases": ["대한경제", "건설경제"], "domains": ["dnews.co.kr"]},
+      {"name": "에너지경제", "aliases": ["에너지경제"], "domains": ["ekn.kr"]},
+      {"name": "전기신문", "aliases": ["전기신문"], "domains": ["electimes.com"]}
     ],
     "fallback_blocked_publishers": [
       {"name": "뉴스워커", "aliases": ["뉴스워커", "newsworker"], "domains": ["newsworker.co.kr"]}

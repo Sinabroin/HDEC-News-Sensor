@@ -73,6 +73,7 @@ jobs:
           python3 scripts/verify_teams_major_media_gate.py
           python3 scripts/verify_teams_strict_source_gate.py
           python3 scripts/verify_stock_market_hard_exclusion.py
+          python3 scripts/verify_r4_ops5_production_acceptance.py
 
       # 2) 라이브 뉴스 메타데이터만 임시 파일로 생성한다(공개 docs/daily·Pages 미변경·미게시).
       #    시장/기상은 기본 mock으로 두어 라이브 실측을 건너뛴다(뉴스 delta에는 불필요) — 경량 유지.

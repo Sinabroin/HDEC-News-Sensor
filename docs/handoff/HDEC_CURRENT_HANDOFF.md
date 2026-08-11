@@ -1,205 +1,88 @@
-# HDEC News Sensor — Current Cross-Machine Handoff
+# HDEC News Sensor — R4-OPS-5 Production Acceptance Handoff
 
 PROJECT=HDEC News Sensor
 REPO=Sinabroin/HDEC-News-Sensor
-TASK=R4-OPS-4 overnight final article-selection zeroing and durable home-to-company handoff
+TASK=R4-OPS-5 final production acceptance closure
 
-BASE_MAIN=0418478f1d5389067f01bbc0ba38cdb7630ed5f6
-CURRENT_ORIGIN_MAIN=9e51bdc415aa293067804a439f33eb8d317523b4
-
+BASE_ORIGIN_MAIN=8e70f3921c744eaaee6b76c600bbd8fd2636db96
+FINAL_ORIGIN_MAIN_BEFORE_CHECKPOINT=10b2ce7754d06a3a08702960c96ab94368ae422d
 TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-REMOTE_BRANCH_HEAD=FINAL_CHECKPOINT_PENDING_FROM_8c3339f5ab3bb1f8fcfdc74e6200ebd8a05d665c
-LOCAL_HEAD=WORKTREE_FINAL_SEAL_ON_bb833d07d86efce6585196d13c4463f3168d1f52
+IMPLEMENTATION_HEAD=PENDING_COHERENT_COMMIT
+REMOTE_BRANCH_HEAD=05c7e2f6936a9af3d69c8e237e31181a7e3800ba
 
-DRAFT_PR_NUMBER=40
-DRAFT_PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
+PR_NUMBER=40
+PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
+PR_STATE=DRAFT
 
-CURRENT_STATUS=SAFE_WORK_EXHAUSTED_OPERATOR_APPROVAL_REQUIRED
+CURRENT_STATUS=CODE_IMPLEMENTED_FINAL_MAIN_INTEGRATION_AND_REMOTE_SEAL_PENDING
+CODE_COMPLETE=PENDING_FINAL_POST_MERGE_VERIFIER_SEAL
+SYSTEM_LAUNCHED=false
 
-VERIFIED_WORK_COMPLETED=
-- Fresh task base was `origin/main=0418478f1d5389067f01bbc0ba38cdb7630ed5f6`; starting worktree was clean with divergence `0/0`.
-- Created and pushed the durable task branch and Draft PR #40. Checkpoints `58a1e08540b44062ed32c6514b19b391043c0fa7`, `0212c2a83dad4cac93130c4b5f50fa73c5e814a1`, and `e9a4ab0bfb1932d1b8216f349adfd55edc8d0017` are on GitHub.
-- Current `TEAMS_AI_NEWS_WATCH=1` was read directly from the repository variable API; it was last updated 2026-08-10 17:43:27 KST.
-- Latest scheduled Watch #278 (`31402388302`) completed successfully at 2026-08-11 00:15 KST with `LIVE_HEALTHY_WITH_ARTICLES`.
-- Watch #278 funnel: raw 548; publisher-direct eligible/current 44; AI core 10; HDEC relevant 10; importance-qualified 6; alert-policy eligible 6; raw primary-10 4; secondary-3 0; specialist 3; immediate major 0; specialist held 1; source-gate rejected 5; selected 0; SMTP attempted/accepted 0/0.
-- Watch #278 persisted only one new held row (`아시아경제`, Intel 15B share issuance for AI funding) through autonomous state-only main commit `9e51bdc415aa293067804a439f33eb8d317523b4`; this task did not write that state.
-- Downloaded calibration run `31398204844` artifact to `/tmp` only. Its exact/latest candidates and manifest report zero sends/state writes and intentional candidate_count 0.
-- Calibration exact funnel: provider collected sum 548 (Naver 220 + Google 288 + publisher-direct RSS 40); publisher-direct eligible/raw bundle 35; in-coverage/relevance-qualified direct rows 10; AI-central 2; main lane 2; executive-materiality rejected 2; qualified 0; final Editor candidates 0.
-- Added `scripts/audit_editorial_calibration.py`, a network-free/read-only diagnostic with an in-process self-test. It reports exact aggregates, explicitly title-only row annotations, and never guesses decisions omitted by calibration v1.
-- Cross-surface diagnostic proves that five Watch-held rows already seen before calibration generation (23:30:17 KST) and inside its coverage window were absent from all 35 calibration raw rows. These include the LS Electric–GS E&C AI data-center DC-distribution partnership and HD Hyundai's KRW 956B data-center generator order.
-- Reproduced the Naver adapter verifier failure on source byte-identical to origin/main. R4-R17 intentionally added `discovery_lane`; the old verifier allowlist omitted it. Applied a verifier-only allowlist/assertion fix; provider and selection behavior are unchanged.
-- Reproduced `verify_naver_provider_operational_wiring.py` failures identically in a detached clean `origin/main=9e51bdc415aa293067804a439f33eb8d317523b4` worktree. Its fixed June timestamp had expired, its provider stubs did not emit the now-required source/query health audit, and publisher resolution remained network-capable; this caused a dishonest mock fallback. The verifier-only fixture now uses a current timestamp, emits deterministic audit success, supplies verified publisher authority, and stubs every live outbound boundary. All operational-wiring checks pass in 1.7 seconds without changing collector/provider behavior.
-- Reproduced `verify_publisher_direct_collector.py` (`89/3`) and `verify_live_news_ingestion.py` (2 failures) identically on detached clean origin/main. The first pinned obsolete Daily/Editor workflow SHAs and an inherently mutable Watch ledger SHA; the second omitted the intentional Naver `discovery_lane` provenance keys. The verifier-only repair pins the reviewed R4-R12/R4-R19–R21 workflows, snapshots the bot-owned Watch ledger only before/after the test, and validates the discovery lane value. Branch results are publisher-direct `91/0` and live-ingestion PASS with zero external network/sends/state writes.
-- Public exact/latest Editor 2026-08-11 both return HTTP 200 and their three core files are SHA-identical. Public Daily 2026-08-11 is HTTP 404; Daily latest and 2026-08-06 are HTTP 200.
-- Latest scheduled refresh #522 (`31402738697`) fails only in `verify_naver_news_adapter.py` before live build; its log shows the same stale allowlist failure fixed on this branch.
-- Last successful Daily edition/send is `2026-08-06` / `2026-08-06T08:06:20+09:00`, SMTP 250. Exact-Editor CTA commit `4b8ad57` is not its ancestor and PR #31 merged at 08:28:56 KST, after that send. No post-contract production Daily/Teams proof exists.
-- Article import route exists at authenticated `POST /api/editorial/import-article`, but the public Editor bundle has empty URL and `article_import_api_configured=false`; the Editor workflow injects no `ARTICLE_IMPORT_API_URL`.
-- Fresh `origin/main=9e51bdc415aa293067804a439f33eb8d317523b4` moved from the task base only through a Watch-owned state successor. It was merged conflict-free into this WIP branch as `bb833d07d86efce6585196d13c4463f3168d1f52`; no merge to main occurred.
-- Final GitHub reread: `TEAMS_AI_NEWS_WATCH=1`; latest scheduled Watch remains successful #278; latest scheduled refresh remains failed #522; Draft PR #40 remains open and Draft.
+## Implemented production behavior
 
-KNOWN_GOOD_BEHAVIOR=
-- Post-PR #39 Watch precision gates are active: ETF/fund launch noise is blocked, major-row rejection is logged, specialists never fill unused capacity, and no post-hardening bad card is observed.
-- Live collection itself is healthy; zero delivery is not collection failure.
-- R4-R21 honest-empty Editor behavior is correct and public exact/latest 2026-08-11 are truthful.
-- Daily exact-edition identity, immutable manifest, exact dated Editor CTA, exact dated reader CTA, and fail-closed reconstruction gate are implemented and offline-verifiable.
-- Calibration-only Actions mode writes outside tracked docs, uploads an artifact, and proves zero sender/state mutation.
+- Publisher identity is exact-domain by default. `www` is the conventional apex alias; every other publication subdomain must be explicitly enumerated. Display-name aliases are exact and an authoritative sibling URL defeats a parent-publication alias.
+- `chosun.com` / `www.chosun.com` resolve to 조선일보. `it.chosun.com`, `biz.chosun.com`, and `sports.chosun.com` cannot inherit 조선일보. IT조선 is explicit Tier C; 조선비즈 is explicit Tier B; sports.chosun.com is not automatic.
+- Teams source policy is operator-explicit: Tier A is the existing 13 core publishers, Tier B is the exact 16-publisher general/economic/industrial allowlist, and the named specialist/niche publishers are Tier C. Tier B never bypasses article semantics, authority, freshness, materiality, stock/theme, dedup, or importance gates.
+- Realtime Teams deterministically excludes explicit publisher sections `칼럼/오피니언/사설/논설/기고/기고문/전문가칼럼` and equivalent bracketed title markers. Only title and publisher-section evidence are read; generated summary and provider query text are excluded.
+- Normal `important` cards are paced to the best one per rolling 60-minute window when supply exists. Unsent eligible rows remain out of the sent ledger and are reconsidered later. TOP and HDEC-direct rows bypass the pace; urgent sends do not consume the normal window. Failed SMTP never advances pacing or dedup. Filler remains zero.
+- The observed IT조선 contribution is rejected independently by the opinion gate and Tier-C standalone gate. The observed 연합뉴스 ETF and stock/theme regressions remain rejected. The 한국일보 LS일렉트릭×GS건설 직류배전 case and 서울경제 HD현대 9,560억 발전엔진 order are Tier-B eligible after substantive gates.
+- A committed deterministic real-corpus replay prints the required title/source/identity/tier/semantic/materiality/opinion/policy/final-reason fields for every row. `SEARCH_QUERY_CAUSED_QUALIFICATION=0` is asserted.
+- Daily immutable manifests are version 2 and explicitly record `edition_status` and `article_count`. Truthful empty editions render and publish with the exact no-qualified-news status, exact dated Editor CTA, and exact dated reader CTA. Mutable latest is never a Teams action authority.
+- Daily delivery state is version 3 and records `delivery_kind=nonempty_digest|empty_status` plus article count. v1/v2 state is upgraded in memory; exact legacy claims can complete. Empty status succeeds once and retries fail before transport.
+- The real Daily publish/send orchestrator is exercised offline against the committed zero-candidate 2026-08-11 Editor bundle: temp-only publication, one fake SMTP 250, one `empty_status` success, and retry transport count unchanged.
+- Daily schedule is Review Editor 07:20 KST, Daily primary 07:50, retry 08:05, final retry 08:15. GitHub cron remains best-effort; state is duplicate authority.
+- Empty Review candidate bundles are now valid, loadable exact-edition inputs instead of operational errors. Exact-edition browser reconstruction accepts a verified version-2 empty manifest.
+- Article import remains fail-closed because no authenticated public API URL is configured. The committed exact/latest 2026-08-11 Editor and template now start visibly disabled and accurately say unavailable; configured builds explicitly re-enable the control. Edit, drag/order, preview, and exact-edition functions remain active.
+- Scheduled live refresh now runs the repaired Naver adapter, deterministic operational wiring, live-ingestion provenance, and publisher-direct verifiers before live build. The complete 36-command scheduled preflight reached all downstream gates locally.
+- PR #40's existing Naver discovery-lane, Naver operational fixture, publisher-direct pin/mutable-ledger, live-ingestion provenance, calibration CLI, and cross-machine handoff repairs are preserved.
 
-KNOWN_BLOCKERS=
-- WATCH_RECALL_BLOCKER: strict primary-10/secondary-3 source gating held materially useful rows. Human audit marks the LS Electric–GS E&C AI data-center partnership `KEEP_FOR_TEAMS`; its specialist duplicate is supporting evidence only. This is editorial-policy evidence, not authorization to promote a source or loosen the gate.
-- EDITOR_RECALL_BLOCKER: all five pre-calibration Watch-held rows were absent from the Editor calibration inventory. The Editor and Watch collection surfaces are not recall-convergent even though the exact window overlaps.
-- CALIBRATION_OBSERVABILITY_BLOCKER: v1 omits the factual lead and row-level rejection decision. The new CLI refuses to infer those fields and labels title-only evidence explicitly.
-- SCHEDULED_REFRESH_BLOCKER: production main still has the stale Naver verifier, so hourly refresh remains red until this branch fix is reviewed/merged and a later schedule proves green.
-- DAILY_E2E_BLOCKER: no non-empty post-R4-R21 Daily has been published/sent with an exact dated Editor CTA; the current edition is empty and the last send predates the merged contract.
-- ARTICLE_IMPORT_BLOCKER: no authenticated HTTPS Operator API deployment/URL wiring exists for the public Editor.
+## Acceptance evidence before final main integration
 
-HUMAN_ARTICLE_AUDIT=
-- `KEEP_FOR_TEAMS` — 한국일보: LS일렉트릭, GS건설과 AI 데이터센터 직류배전 사업 협력. System: trusted_other holdback; absent from Editor calibration. Strong construction/AI-infrastructure relevance, but any source-policy exception requires operator review.
-- `KEEP_FOR_EDITOR_ONLY` — 서울경제: HD현대, 빅테크 데이터센터 발전엔진 9,560억 수주. System: trusted_other holdback; absent from Editor calibration. Material industrial order but not HDEC-direct.
-- `KEEP_FOR_EDITOR_ONLY` — 파이낸셜뉴스: AI 데이터센터 가치의 핵심인 전력권. System: trusted_other holdback; absent from Editor calibration. Strategically useful context, not a confirmed HDEC event.
-- `BORDERLINE` — 서울경제: Meta open-weight AI model. System: trusted_other holdback; absent from Editor calibration. AI-central but title carries no hard executive event.
-- `BORDERLINE` — 아시아경제: Intel 15B share issuance for AI funding. System: trusted_other holdback in Watch #278. Material financing but weak HDEC connection; calibration occurred before this row appeared.
-- `REJECT` — 애플경제: 국내 전 산업 부문, AI 데이터센터 구축에 참여. System aggregate: one of two AI-central rows rejected at executive materiality; title-only evidence has no confirmed action/scale/risk and source is neutral.
-- `KEEP_FOR_EDITOR_ONLY` — 중앙일보: 일본 semiconductor hidden champion analysis. Watch major trace: AI core/HDEC relevant but insufficient importance. Calibration aggregate implies the second AI-central materiality near-miss; no real-time Teams event is proven.
-- `KEEP_FOR_EDITOR_ONLY` — 연합뉴스: 3대 메가 프로젝트 초스피드 가동. Watch major trace rejects incidental AI mention; broad policy context may be useful in Editor, but not as an AI-only Teams alert.
-- `REJECT` — seven in-window MOIS rows: official authority but unrelated to the AI/HDEC brief; dedicated official semantic gate correctly excludes them.
+- `scripts/verify_r4_ops5_production_acceptance.py` — PASS 86/86; external network 0; production SMTP/Teams/state writes 0.
+- Exact replay: IT조선 contribution REJECT; 연합뉴스 ETF REJECT; stock/theme REJECT; LS Electric×GS E&C KEEP; HD현대 Tier-B material event KEEP; specialist opinion context Editor-only; weak Tier-B publisher-alone row REJECT.
+- Scheduled-live-refresh exact offline preflight — 36 commands, 0 failures after the stale AI-market verifier was aligned with the canonical `AI centrality + title materiality` contract. Runtime semantic policy was not weakened.
+- Naver adapter PASS; Naver operational wiring PASS; live ingestion PASS; publisher-direct 91/91.
+- Watch materiality PASS; executive qualification hardening PASS; material AI infrastructure recall PASS; observed false-positive regression 100/100.
+- Teams selector PASS; Teams production 232/232; major-media gate 38/38; strict-source gate 62/62; stock-market exclusion 61/61; state/dedup PASS.
+- Editor console 200/200; editorial briefings 344/344; Daily deep link 118/118; Daily lead source 24/24; immutable manifest 31/31.
+- Production ledgers remained byte-identical during verification: Teams SHA `a0306d0decb6fddeaf9897f084898777d2414ff28033b573b1b5360736f83d80`; Daily SHA `68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155`.
 
-ROOT_CAUSE_OF_ZERO_EDITOR_CANDIDATES=The point-in-time Editor bundle collapsed to 10 in-window/relevance-qualified rows; only two were AI-central and both lacked a hard executive-material signal. Separately, five policy-eligible Watch-held rows already known inside the same window never entered the calibration raw inventory, proving a cross-surface supply/retention recall seam rather than a live-collection outage.
+## Final integration status
 
-EDITOR_OVER_FILTERING_DETECTED=true
-UNDER_FILTERING_DETECTED=false
+`origin/main` advanced after implementation fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The implementation must first be committed, then that current main successor merged without rebase. If any conflict occurs, stop without guessing. After integration, rerun the final acceptance and scheduled preflight, update this handoff, commit, push, verify remote head, and update Draft PR #40.
 
-RECOMMENDED_PATCH_REQUIRING_OPERATOR_REVIEW=
-- Do not lower thresholds or promote publishers automatically.
-- Review a bounded, Editor-only union of current collection with Watch-held rows inside the exact Daily window. It must remain non-sending, preserve authoritative source tiers, deduplicate same-event variants, and expose row rejection stages.
-- In a future calibration schema, emit allowlisted row-level decisions generated during the real selection pass (never body/HTML/query/secret data). The current standalone diagnostic intentionally exposes that v1 cannot reconstruct them.
+## Production boundary and remaining proof
 
-ARTICLE_IMPORT_API_CURRENT_STATUS=UNCONFIGURED_FAIL_CLOSED
-ARTICLE_IMPORT_API_REQUIRED_COMPONENT=Deploy `app.operator_api:app` at authenticated HTTPS behind Cloudflare Access/Vercel Protection/company SSO (or configured GitHub OAuth session), allow the Pages origins, and inject the exact `/api/editorial/import-article` URL into the Editor build.
-ARTICLE_IMPORT_API_RECOMMENDED_NEXT_STEP=Operator provisions the authenticated API and server-side secrets, wires a non-secret repository variable into `editorial-review-console.yml`, rebuilds, then performs an authenticated import smoke. Do not deploy or change variables in this task.
-
-DAILY_STATUS=
-- LAST_SUCCESSFUL_DAILY_EDITION=2026-08-06
-- LAST_SUCCESSFUL_DAILY_SEND_AT=2026-08-06T08:06:20+09:00
-- DAILY_EDITOR_CTA_IMPLEMENTED=true
-- DAILY_EDITOR_CTA_EXACT_DATED=true
-- DAILY_READER_CTA_IMPLEMENTED=true
-- FIRST_POST_R4R21_NONEMPTY_DAILY_PROVEN=false
-- FIRST_CONTROLLED_DAILY_TEAMS_SEND_PROVEN=false
-
-SCHEDULE_STATUS=
-- EDITORIAL_REVIEW_0720_KST=true (`20 22 * * *` UTC)
-- DAILY_0730_KST=true (`30 22 * * *` UTC)
-- DAILY_0745_KST=true (`45 22 * * *` UTC)
-- DAILY_0755_KST=true (`55 22 * * *` UTC)
-- WATCH_BEST_EFFORT_10_MINUTE=true (`7,17,27,37,47,57 * * * *` UTC)
-- SCHEDULED_REFRESH_HOURLY_AT_17=true (`17 * * * *` UTC)
-
-CAN_WE_TEST_DAILY_EDITOR_E2E_TODAY=NO
-CANARY_REASON=No canonical input proves a real Teams delivery while preserving production state and sends at zero. `force_dry_run=true` is preview-only; `publish_only=true` maps to `--republish` and permanently disables delivery. The only production E2E path is `.github/workflows/editorial-daily-brief.yml` on main with `force_dry_run=false,publish_only=false`, executing `--publish → --verify-public → --claim → --send`; by design it writes Daily publication/claim/success state and sends SMTP to Teams.
-
-FINAL_PRODUCT_VERDICTS=
-- WATCH_PRECISION_VERDICT=GO
-- WATCH_RECALL_VERDICT=GO_WITH_BLOCKER
-- EDITOR_RECALL_VERDICT=GO_WITH_BLOCKER
-- WATCH_PRODUCTION_VERDICT=GO_WITH_BLOCKER
-- EDITOR_PRODUCTION_VERDICT=GO_WITH_BLOCKER
-- DAILY_GENERATION_VERDICT=GO_WITH_BLOCKER
-- DAILY_TEAMS_E2E_VERDICT=NO_GO
-- OVERALL_V1_VERDICT=NO_GO
-- OVER_FILTERING_DETECTED=true
-- UNDER_FILTERING_DETECTED=false
-- SCHEDULED_REFRESH_STATUS=PRODUCTION_RED_STALE_NAVER_VERIFIER_FIXED_ON_DRAFT_PR_PENDING_MERGE_AND_NATURAL_SCHEDULE_PROOF
-- DAILY_GENERATION_STATUS=HONEST_EMPTY_CURRENT_LAST_SUCCESS_2026-08-06_NO_POST_R4R21_NONEMPTY_PROOF
-- DAILY_TEAMS_E2E_STATUS=NOT_PROVEN_REQUIRES_OPERATOR_APPROVAL
-- SYSTEM_LAUNCHED=false
-
-PRODUCTION_BOUNDARIES=
-- No main merge, production Teams/SMTP/Telegram send, production workflow dispatch, repository variable/secret change, production-state write, force push, or rebase.
-- Only the dedicated WIP branch receives source/document commits and normal pushes.
-
-VERIFIERS_RUN=
-- `bash -n scripts/hdec_cross_machine_status.sh` — PASS
-- `./scripts/hdec_cross_machine_status.sh` — PASS for Git/fetch/status behavior
-- `python3 scripts/verify_naver_news_adapter.py` — origin/main-identical baseline FAIL 1; branch PASS 14
-- `python3 scripts/verify_naver_provider_operational_wiring.py` — clean origin/main baseline FAIL 2; branch PASS (all checks, temp DB, network-free provider boundaries)
-- `python3 scripts/audit_editorial_calibration.py --self-test` — PASS
-- Actual calibration audit — PASS with network_calls=0, sends=0, production_state_writes=0
-- `python3 scripts/verify_watch_executive_materiality.py` — PASS 31/31
-- `python3 scripts/verify_executive_qualification_hardening.py` — PASS 37/37
-- `python3 scripts/verify_editorial_briefings.py` — PASS 344/344
-- `python3 scripts/verify_material_ai_infra_recall.py` — PASS 25/25
-- `python3 scripts/verify_observed_false_positive_regression.py` — PASS 101/101
-- `python3 scripts/verify_teams_ai_push.py` — PASS
-- `python3 scripts/verify_teams_ai_push_production.py` — PASS 232/232
-- `python3 scripts/verify_teams_major_media_gate.py` — PASS 38/38
-- `python3 scripts/verify_teams_strict_source_gate.py` — PASS 62/62
-- `python3 scripts/verify_stock_market_hard_exclusion.py` — PASS 61/61
-- `python3 scripts/verify_editorial_review_console.py` — PASS 200/200
-- `python3 scripts/verify_daily_editor_deep_link.py` — PASS 118/118
-- `python3 scripts/verify_daily_lead_source_gate.py` — PASS 24/24
-- `python3 scripts/verify_daily_immutable_edition_manifest.py` — PASS 31/31
-- `python3 scripts/verify_primary_publisher_discovery_lane.py` — PASS 41/41
-- `python3 scripts/verify_scheduled_refresh_and_telegram.py` — PASS
-- `python3 scripts/verify_teams_ai_push_workflow_dry_run.py` — PASS
-- `python3 scripts/verify_operator_api_activation_readiness.py` — PASS
-- `python3 scripts/verify_publisher_direct_collector.py` — clean origin/main baseline FAIL 3; branch PASS 91/91
-- `python3 scripts/verify_live_news_ingestion.py` — clean origin/main baseline FAIL 2; branch PASS
-
-FAILING_VERIFIERS=
-- Production scheduled refresh #522: stale origin/main `verify_naver_news_adapter.py` allowlist, fixed only on this WIP branch pending review/merge.
-- No branch-local verifier fails with its repository environment. The system `python3` lacks Pillow, so the Editor verifier must use `.venv/bin/python`; that interpreter passed 200/200 after final origin/main integration.
-
-FILES_CHANGED=
-- `docs/handoff/HDEC_CURRENT_HANDOFF.md`
-- `docs/handoff/COMPANY_RESUME_PROMPT.md`
-- `scripts/hdec_cross_machine_status.sh`
-- `scripts/verify_naver_news_adapter.py`
-- `scripts/verify_naver_provider_operational_wiring.py`
-- `scripts/verify_publisher_direct_collector.py`
-- `scripts/verify_live_news_ingestion.py`
-- `scripts/audit_editorial_calibration.py`
-
-COMMITS_CREATED=
-- `58a1e08540b44062ed32c6514b19b391043c0fa7 chore: establish durable cross-machine handoff`
-- `0212c2a83dad4cac93130c4b5f50fa73c5e814a1 fix: align Naver discovery lane verifier contract`
-- `e9a4ab0bfb1932d1b8216f349adfd55edc8d0017 feat: add network-free calibration rejection audit`
-- `1d0ecf79278b8e49a2b52bb2c51c7b6f0149f788 fix: make Naver operational verifier deterministic`
-- `8c3339f5ab3bb1f8fcfdc74e6200ebd8a05d665c fix: zero stale ingestion verifier contracts`
-- `bb833d07d86efce6585196d13c4463f3168d1f52 Merge remote-tracking branch 'origin/main' into wip/d7ak6e-final-readiness-zeroing-handoff`
-- Final handoff seal commit pending; resolve its exact SHA with `scripts/hdec_cross_machine_status.sh`.
-
-PRODUCTION_SENDS=0
-PRODUCTION_STATE_WRITES=0
 PRODUCTION_TEAMS_SENDS=0
-SMTP_ATTEMPTS=0
-TELEGRAM_SENDS=0
+PRODUCTION_SMTP_ATTEMPTS=0
+PRODUCTION_TELEGRAM_SENDS=0
+PRODUCTION_STATE_WRITES=0
 PRODUCTION_VARIABLE_CHANGES=0
 PRODUCTION_WORKFLOW_DISPATCHES=0
 MAIN_MERGES=0
-TASK_BRANCH_MAIN_INTEGRATIONS=1
 
-VERIFIERS_PASS=26/26
-VERIFIERS_FAIL=0
-PUSH_EXECUTED=true
-DRAFT_PR_STATE=DRAFT
-REMOTE_CHECKPOINT_AVAILABLE=true
-CROSS_MACHINE_HANDOFF_READY=true
+`CODE_COMPLETE` can become true after the final post-merge verifier/remote seal. It is not launch proof. A later operator-authorized merge and real-world evidence are still required:
 
-REQUIRES_OPERATOR_APPROVAL=true
-- Required for source-tier/recall policy, Editor-only cross-lane supply changes, Operator API deployment/variables, and the first controlled non-empty Daily → Teams → exact Editor CTA proof.
+- REAL_WATCH_SEND_PASS
+- REAL_DAILY_SEND_PASS (empty or non-empty natural edition)
+- REAL_EDITOR_LINK_PASS
+- REAL_PUBLIC_DAILY_LINK_PASS
+- natural scheduled-live-refresh green proof on deployed main
 
-NEXT_SINGLE_ACTION=Operator reviews Draft PR #40 and, if approved, merges it to main; then observe the next natural scheduled refresh before separately approving any production Daily E2E.
+ARTICLE_IMPORT_UI_STATUS=DISABLED_ACCURATELY_LABELLED_API_UNCONFIGURED
+ARTICLE_IMPORT_API_STATUS=FAIL_CLOSED_NO_NEW_AUTH_DEPLOYMENT
+REQUIRES_OPERATOR_ACTION=Review and merge Draft PR #40, then observe natural production runs and validate the real Teams/Editor/dated-Daily links.
+NEXT_SINGLE_ACTION=Complete the conflict-free origin/main integration, final offline seal, branch push, and Draft PR #40 update; then hand control to the operator for review/merge.
 
-COMPANY_RESUME_COMMANDS=
+## Company-machine resume
+
+Do not modify, reset, clean, or stash the dirty company checkout. Use the existing task branch/worktree or create a separate clean worktree. The live refs and `scripts/hdec_cross_machine_status.sh` output are authoritative.
+
 ```bash
-cd /mnt/d/HDEC-Projects/AI-DesignLab-Sensor || exit 1
+cd /mnt/d/HDEC-Projects/HDEC-News-Sensor-R4OPS5 || exit 1
 git fetch origin --prune
 git status --short --branch
-git switch wip/d7ak6e-final-readiness-zeroing-handoff \
-  || git switch --track origin/wip/d7ak6e-final-readiness-zeroing-handoff
+git switch wip/d7ak6e-final-readiness-zeroing-handoff
 git pull --ff-only origin wip/d7ak6e-final-readiness-zeroing-handoff
 ./scripts/hdec_cross_machine_status.sh
-codex exec -C . - < docs/handoff/COMPANY_RESUME_PROMPT.md
 ```
-
-The live branch and commit facts printed by `scripts/hdec_cross_machine_status.sh` are authoritative. A Git commit cannot contain its own resulting SHA, so `LOCAL_HEAD` identifies the parent on which the final seal is being prepared.

@@ -293,10 +293,10 @@ def main() -> int:
         nine = [
             primary("p-nine", "정부, AI 데이터센터 전력망 투자 확정"),
             observed_techm(), observed_epnc(),
-            _article(article_key="spec-etnews",
+            _article(article_key="spec-it-chosun",
                      title="오라클, 클라우드 AI 데이터센터 신규 착공",
-                     source="전자신문",
-                     url="https://publisher.example.test/etnews/1"),
+                     source="IT조선",
+                     url="https://it.chosun.com/news/articleView.html?idxno=1"),
         ]
         nine_state = tmp / "state-one-primary.json"
         summary, rec = deliver(tmp, nine, nine_state)
