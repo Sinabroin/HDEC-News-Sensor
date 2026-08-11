@@ -1772,6 +1772,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "gs건설ls일렉트릭과손잡고ai데이터센터사업경쟁력강화"
     },
+    "https://electimes.com/news/articleView.html?idxno=371210": {
+      "article_id": "dac676b4ddcfb675",
+      "cluster_key": "title:기후환노위3대메가프로젝트현안질의전력용수공급실효성도마",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-11T18:46:45+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-11T18:46:45+09:00",
+      "normalized_url": "https://electimes.com/news/articleView.html?idxno=371210",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "전기신문",
+      "source_tier": "specialist",
+      "title_fingerprint": "기후환노위3대메가프로젝트현안질의전력용수공급실효성도마"
+    },
     "https://etnews.com/20260806000330": {
       "article_id": "718834e62668084e",
       "cluster_key": "title:통신사ai토큰배울바크다",
