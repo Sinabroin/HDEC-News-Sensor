@@ -7,17 +7,22 @@
   "sort": "date",
   "max_per_query": 10,
   "max_total": 180,
-  "_primary_publisher_lane_note": "D7-AK-6E R4-R16 — 핵심 10개 언론사(primary_10) bounded discovery lane 설정. 언론사 이름·domain은 이 JSON에 복제하지 않고 app/source_priority.py의 canonical policy(data/source_priority_rules.json)에서만 파생한다. 이 lane은 general/topic lane과 독립된 별도 query/result budget을 쓰며, 코드가 max_queries≤30·max_per_query≤2·max_total≤40으로 하드 클램프한다.",
+  "_primary_publisher_lane_note": "R4-OPS-6B — legacy primary_publisher_lane key 아래 operator Tier A 13개(primary_10+secondary_3)와 Tier B 16개(major_secondary)를 모두 대상으로 하는 bounded discovery lane. 언론사 이름·domain은 app/source_priority.py의 canonical policy에서만 파생하며 query text는 qualification evidence가 아니다. 코드가 max_queries≤58·max_per_query≤2·max_total≤80으로 하드 클램프한다.",
   "primary_publisher_lane": {
     "enabled": true,
     "topics": [
       "AI",
-      "AI 데이터센터",
-      "AI 투자"
+      "AI 데이터센터 전력",
+      "GPU HBM AI 반도체 인프라",
+      "AI 투자 계약 MOU",
+      "피지컬 AI",
+      "스마트건설 BIM 건설 로봇",
+      "현대건설 AI 건설사",
+      "국가 AI 정책 규제"
     ],
-    "max_queries": 30,
+    "max_queries": 58,
     "max_per_query": 2,
-    "max_total": 40
+    "max_total": 80
   },
   "queries": [
     "현대건설",

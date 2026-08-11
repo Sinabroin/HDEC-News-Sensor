@@ -29,7 +29,8 @@ from html import unescape
 from html.parser import HTMLParser
 
 from app import (config, global_press, lens_queries, news_access, news_coverage,
-                 publisher_direct, site_watchlist, source_quality, topic_profiles)
+                 publisher_direct, site_watchlist, source_priority, source_quality,
+                 topic_profiles)
 
 KST = timezone(timedelta(hours=9))
 
@@ -123,8 +124,22 @@ def _to_iso(pubdate: str) -> str | None:
 
 
 def _is_forbidden(*values: str) -> bool:
-    blob = " ".join(v.lower() for v in values if v)
-    return any(token in blob for token in _FORBIDDEN_HOST_TOKENS)
+    for raw in values:
+        value = str(raw or "").strip().casefold()
+        if not value:
+            continue
+        try:
+            host = (urllib.parse.urlsplit(value).hostname or "").casefold().rstrip(".")
+        except ValueError:
+            host = ""
+        if host and any(
+            host == token or host.endswith("." + token)
+            for token in _FORBIDDEN_HOST_TOKENS
+        ):
+            return True
+        if not host and value in set(_FORBIDDEN_HOST_TOKENS) | {"twitter", "x", "트위터"}:
+            return True
+    return False
 
 
 def _load_sources(path=None) -> dict:
@@ -764,21 +779,76 @@ def _publisher_host_lock(url: str) -> threading.Lock:
         return _PUBLISHER_HOST_LOCKS.setdefault(host, threading.Lock())
 
 
-def _publisher_bucket_key(row: dict) -> str:
-    """Stable publisher bucket used only to make the bounded resolver fair."""
+def _resolution_scheduling_key(row: dict) -> str:
+    """Fairness bucket hint; deliberately carries zero publisher authority.
+
+    Google RSS wrappers all share ``news.google.com``.  Their provider-supplied
+    ``<source url>`` (or, as a last resort, source display text) separates the
+    scheduling budget before decoding.  Only the later fetched canonical URL is
+    allowed to determine source identity or delivery tier.
+    """
     metadata = row.get("source_metadata")
     metadata = metadata if isinstance(metadata, dict) else {}
-    for value in (
-        metadata.get("publisher_domain"),
-        row.get("publisher_domain"),
-        row.get("source"),
-        metadata.get("discovery_provider"),
-        metadata.get("provider"),
+    publisher = publisher_direct.publisher_url(row)
+    if publisher:
+        try:
+            host = (urllib.parse.urlparse(publisher).hostname or "").casefold().rstrip(".")
+        except ValueError:
+            host = ""
+        if host:
+            return f"resolved-host:{host.removeprefix('www.')}"
+    provider = str(metadata.get("provider") or "").casefold()
+    if "google_news_rss" in provider:
+        for field in ("rss_source_home_url", "rss_source_url"):
+            try:
+                host = (
+                    urllib.parse.urlparse(str(metadata.get(field) or "")).hostname
+                    or ""
+                ).casefold().rstrip(".")
+            except ValueError:
+                host = ""
+            if host and host != "news.google.com":
+                return f"google-rss-source-host:{host.removeprefix('www.')}"
+        display = _WS_RE.sub(" ", str(row.get("source") or "")).strip().casefold()
+        if display and display != "출처 미상":
+            digest = hashlib.sha256(display.encode("utf-8")).hexdigest()[:16]
+            return f"google-rss-source-ref:{digest}"
+    for field, value in (
+        ("publisher-domain", metadata.get("publisher_domain") or row.get("publisher_domain")),
+        ("display-source", row.get("source")),
+        ("discovery-provider", metadata.get("discovery_provider")),
+        ("provider", metadata.get("provider")),
     ):
-        key = str(value or "").strip().casefold()
-        if key:
-            return key
-    return "unknown"
+        cleaned = _WS_RE.sub(" ", str(value or "")).strip().casefold()
+        if cleaned:
+            digest = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:16]
+            return f"{field}-ref:{digest}"
+    target_host = _resolution_target_host(row)
+    return f"target-host:{target_host}"
+
+
+def _resolution_scheduling_hint_tier(row: dict) -> str:
+    """Diagnostic tier of a scheduling hint; never an authority decision."""
+    metadata = row.get("source_metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    hint_url = publisher_direct.publisher_url(row)
+    if not hint_url and "google_news_rss" in str(metadata.get("provider") or ""):
+        hint_url = str(
+            metadata.get("rss_source_home_url")
+            or metadata.get("rss_source_url")
+            or ""
+        )
+    return str(
+        source_priority.publisher_delivery_tier(
+            str(row.get("source") or ""), hint_url
+        ).get("tier")
+        or "neutral"
+    )
+
+
+def _publisher_bucket_key(row: dict) -> str:
+    """Compatibility alias for the non-authoritative scheduling key."""
+    return _resolution_scheduling_key(row)
 
 
 def _round_robin_publishers(rows: list[dict]) -> list[dict]:
@@ -788,7 +858,25 @@ def _round_robin_publishers(rows: list[dict]) -> list[dict]:
             continue
         buckets.setdefault(_publisher_bucket_key(row), deque()).append(row)
     ordered: list[dict] = []
-    active = list(buckets.values())
+    tier_priority = {
+        "primary_10": 0,
+        "secondary_3": 0,
+        "major_secondary": 0,
+        "official_institution": 1,
+    }
+    indexed_buckets = list(buckets.items())
+    active = [
+        bucket
+        for _index, (_key, bucket) in sorted(
+            enumerate(indexed_buckets),
+            key=lambda item: (
+                tier_priority.get(
+                    _resolution_scheduling_hint_tier(item[1][1][0]), 2
+                ),
+                item[0],
+            ),
+        )
+    ]
     while active:
         remaining = []
         for bucket in active:
@@ -958,6 +1046,8 @@ def _new_resolution_metrics(rows: list[dict]) -> dict:
         "p95_latency_seconds": 0.0,
         "outcomes": {key: 0 for key in _RESOLUTION_OUTCOMES},
         "per_host": {},
+        "per_scheduling_bucket": {},
+        "per_scheduling_hint_tier": {},
         "per_source_lane": {},
         "per_category": {},
         "direct_fast_path_accepted": 0,
@@ -972,6 +1062,16 @@ def _new_resolution_metrics(rows: list[dict]) -> dict:
         "deadline_seconds": LINK_RESOLVE_DEADLINE,
     }
     for row in rows:
+        schedule_key = _resolution_scheduling_key(row)
+        metrics["per_scheduling_bucket"].setdefault(
+            schedule_key,
+            {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+        )["queue"] += 1
+        hint_tier = _resolution_scheduling_hint_tier(row)
+        metrics["per_scheduling_hint_tier"].setdefault(
+            hint_tier,
+            {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+        )["queue"] += 1
         lane = _resolution_source_lane(row)
         lane_metrics = metrics["per_source_lane"].setdefault(
             lane,
@@ -1132,6 +1232,7 @@ def _official_registry_feed_authority(
         source=str(row.get("source") or "").strip(),
         published_at=str(row.get("published_at") or "").strip(),
         resolution_reason=reason,
+        publisher_verification_strength="official_registry_feed",
     )
 
 
@@ -1227,6 +1328,67 @@ def _strict_publisher_authority(
                     "official_registry_page_verified+"
                     "publisher_body_attachment_only"
                 ),
+                publisher_verification_strength="structured_metadata",
+            )
+        # R4-OPS-6B: an exact configured Tier-A/B publisher page can prove its
+        # article identity without a parseable body, but never its editorial
+        # importance. The row's existing title/snippet remain the only content
+        # evidence consumed by later policy gates.
+        final_url = publisher_direct.normalize_publisher_canonical_url(
+            resolution.document.final_url
+        )
+        final_tier = source_priority.publisher_delivery_tier(
+            str(row.get("source") or ""), final_url
+        )
+        try:
+            identity = editorial_article_import.extract_article_identity(
+                resolution.document.text,
+                resolution.document.final_url,
+                resolver=resolver,
+            )
+        except editorial_article_import.ArticleImportError:
+            identity = None
+        canonical_tier = source_priority.publisher_delivery_tier(
+            str(row.get("source") or ""),
+            identity.canonical_url if identity is not None else "",
+        )
+        metadata_only_exact_host = bool(
+            exc.code == "ARTICLE_BODY_NOT_FOUND"
+            and identity is not None
+            and final_tier.get("tier") in {
+                "primary_10", "secondary_3", "major_secondary"
+            }
+            and final_tier.get("identity_evidence") == "exact_domain"
+            and canonical_tier.get("identity_evidence") == "exact_domain"
+            and canonical_tier.get("tier") == final_tier.get("tier")
+            and canonical_tier.get("publisher_identity")
+            == final_tier.get("publisher_identity")
+            and editorial_article_import.article_shaped_url(final_url)
+            and editorial_article_import.article_shaped_url(identity.canonical_url)
+            and editorial_article_import.headlines_strongly_agree(
+                row.get("title"), identity.title
+            )
+        )
+        if metadata_only_exact_host:
+            return publisher_direct.apply_publisher_authority(
+                row,
+                publisher_canonical_url=identity.canonical_url,
+                source=str(final_tier.get("publisher_identity") or row.get("source") or ""),
+                published_at=identity.published_at
+                or str(row.get("published_at") or "").strip()
+                or None,
+                resolution_reason=(
+                    "+".join(
+                        value
+                        for value in (
+                            decode_reason,
+                            resolution.portal_resolution_reason,
+                            "metadata_only_exact_host",
+                        )
+                        if value
+                    )
+                ),
+                publisher_verification_strength="metadata_only_exact_host",
             )
         return publisher_direct.quarantine_article(
             row,
@@ -1238,6 +1400,26 @@ def _strict_publisher_authority(
         return publisher_direct.quarantine_article(
             row,
             "publisher_canonical_not_direct",
+        )
+    final_url = publisher_direct.normalize_publisher_canonical_url(
+        resolution.document.final_url
+    )
+    final_identity = source_priority.publisher_delivery_tier(
+        str(row.get("source") or ""), final_url
+    )
+    canonical_identity = source_priority.publisher_delivery_tier(
+        extracted.source, extracted.canonical_url
+    )
+    if canonical_identity.get("tier") in {
+        "primary_10", "secondary_3", "major_secondary"
+    } and not (
+        final_identity.get("identity_evidence") == "exact_domain"
+        and final_identity.get("publisher_identity")
+        == canonical_identity.get("publisher_identity")
+    ):
+        return publisher_direct.quarantine_article(
+            row,
+            "publisher_canonical_identity_mismatch",
         )
     reason_parts = [
         value
@@ -1254,6 +1436,11 @@ def _strict_publisher_authority(
         source=extracted.source,
         published_at=extracted.published_at,
         resolution_reason="+".join(reason_parts),
+        publisher_verification_strength=(
+            "structured_metadata"
+            if extracted.body_source == "json_ld_article_body"
+            else "full_body"
+        ),
     )
 
 
@@ -1296,6 +1483,7 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
         skipped: dict[int, str] = {}
         seen: set[str] = set()
         per_host_selected: dict[str, int] = {}
+        scheduling_hint_tiers: dict[int, str] = {}
 
         for index, row in enumerate(rows):
             if not isinstance(row, dict):
@@ -1306,7 +1494,7 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                 skipped[index] = "skipped_duplicate"
                 continue
             seen.add(duplicate_key)
-            host = _resolution_target_host(row)
+            host = _resolution_scheduling_key(row)
             if per_host_selected.get(host, 0) >= max(1, int(per_host_max_items)):
                 skipped[index] = "skipped_per_host_limit"
                 continue
@@ -1314,12 +1502,13 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                 skipped[index] = "skipped_item_budget"
                 continue
             per_host_selected[host] = per_host_selected.get(host, 0) + 1
+            scheduling_hint_tiers[index] = _resolution_scheduling_hint_tier(row)
             scheduled.append((index, row, host, _resolution_source_lane(row)))
 
         pending = deque(scheduled)
         futures = {}
         active_hosts: dict[str, int] = {}
-        completed: dict[int, tuple[dict, float]] = {}
+        completed: dict[int, tuple[dict, float, str]] = {}
         deadline_hit = False
 
         def verify(item):
@@ -1396,7 +1585,7 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                             "publisher_verification_internal_error",
                         )
                         latency = 0.0
-                    completed[index] = (verified, latency)
+                    completed[index] = (verified, latency, host)
         finally:
             executor.shutdown(wait=True, cancel_futures=True)
 
@@ -1413,6 +1602,16 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
                     lane,
                     {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
                 )["exhausted"] += 1
+                schedule_key = _resolution_scheduling_key(row)
+                active_metrics["per_scheduling_bucket"].setdefault(
+                    schedule_key,
+                    {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+                )["exhausted"] += 1
+                hint_tier = _resolution_scheduling_hint_tier(row)
+                active_metrics["per_scheduling_hint_tier"].setdefault(
+                    hint_tier,
+                    {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+                )["exhausted"] += 1
                 for category in _coverage_categories_for_resolution(row):
                     active_metrics["per_category"].setdefault(
                         category,
@@ -1421,7 +1620,7 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
 
         resolved_count = 0
         for index in sorted(completed):
-            verified, latency = completed[index]
+            verified, latency, schedule_key = completed[index]
             row = rows[index]
             row.clear()
             row.update(verified)
@@ -1440,6 +1639,19 @@ def resolve_publisher_urls(rows: list, timeout: float = LINK_RESOLVE_TIMEOUT,
             )
             lane_metrics["attempts"] += 1
             lane_metrics["successes"] += int(succeeded)
+            schedule_metrics = active_metrics["per_scheduling_bucket"].setdefault(
+                schedule_key,
+                {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+            )
+            schedule_metrics["attempts"] += 1
+            schedule_metrics["successes"] += int(succeeded)
+            hint_tier = scheduling_hint_tiers.get(index, "neutral")
+            hint_metrics = active_metrics["per_scheduling_hint_tier"].setdefault(
+                hint_tier,
+                {"queue": 0, "attempts": 0, "successes": 0, "exhausted": 0},
+            )
+            hint_metrics["attempts"] += 1
+            hint_metrics["successes"] += int(succeeded)
             host = _resolution_target_host(row)
             host_metrics = active_metrics["per_host"].setdefault(
                 host,

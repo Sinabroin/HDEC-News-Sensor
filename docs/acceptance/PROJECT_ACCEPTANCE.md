@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.1
+**Version:** 1.2
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -272,6 +272,38 @@ Required expected result:
 The replay must keep the observed incident separate from synthetic adversarial
 metadata. Unverified historical title, source, timestamp, and article metadata
 must remain null/unknown rather than being represented as observed fact.
+
+## HDEC-DEFECT-006 — major-media discovery / verification recall collapse
+
+Production evidence from the independent R4-OPS-6A recall audit:
+
+- natural Watch and a manual canary both collected hundreds of rows;
+- content-eligible rows existed;
+- no eligible Tier-A/B copy reached Teams selection;
+- an external read-only audit confirmed qualifying Tier-A/B supply existed;
+- known major-media rows were discovered raw and then lost before policy.
+
+Required expected result:
+
+- Google News wrappers must receive a fair, bounded resolution schedule by
+  trusted provider scheduling hints rather than collapsing into one global
+  `news.google.com` publisher bucket;
+- all configured Tier-A 13 and Tier-B 16 publishers must be present in the
+  bounded targeted Naver discovery configuration;
+- exact configured Tier-A/B article pages must remain verifiable when bounded
+  structured extraction succeeds or strict exact-host article identity is
+  independently proven;
+- every alert-policy-eligible row must leave a safe categorical source-gate
+  trace, including zero-send runs.
+
+Permanent authority invariant:
+
+> Discovery metadata MAY influence scheduling/prioritisation of URL resolution,
+> but MUST NEVER confer publisher authority.
+
+Final Tier-A/B authority continues to require the resolved/canonical publisher
+URL and exact `source_priority` identity. Display aliases, query text, unknown
+child domains, portal wrappers, and unresolved URLs remain non-authoritative.
 
 ---
 
@@ -555,16 +587,14 @@ No important completed work may exist only on the current company/home machine.
 
 # 17. CURRENT CLOSURE SCOPE
 
-Do not expand R4-OPS-5 beyond:
+R4-OPS-6B is limited to:
 
-1. publisher identity correctness;
-2. A/B/C source tiering;
-3. opinion/contribution realtime hard gate;
-4. Watch recall/pacing;
-5. empty + non-empty Daily morning contract;
-6. Editor functional truthfulness;
-7. existing PR #40 verifier repairs;
-8. acceptance replay and regression coverage.
+1. major-media collector recall and fair URL-resolution scheduling;
+2. exact-host publisher extraction and bounded article-identity verification;
+3. safe zero-send observability;
+4. bounded Tier-A13 / Tier-B16 Naver targeted discovery;
+5. historical recall and precision regression coverage;
+6. this project acceptance overlay and current handoff.
 
 Do not redesign Weekly, dashboards, unrelated market integrations, or unrelated UI during this closure unless a regression directly requires it.
 

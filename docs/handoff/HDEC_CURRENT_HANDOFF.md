@@ -1,106 +1,141 @@
-# HDEC News Sensor — R4-OPS-5A/5B Final Audit Closure Handoff
+# HDEC News Sensor — R4-OPS-6B Major-Media Recall Repair Handoff
 
-## Mandatory agent startup
+## Mandatory startup
 
-Before material work, every implementation or audit agent must read and obey
-`AI_PROJECT_EXECUTION_STANDARD.md`, then read
-`docs/acceptance/PROJECT_ACCEPTANCE.md`, and state the user-visible acceptance
-matrix. Existing tests are evidence, not product authority.
+Before material work, read and obey `AI_PROJECT_EXECUTION_STANDARD.md`, then
+`docs/acceptance/PROJECT_ACCEPTANCE.md`. Existing tests are evidence, not product
+authority. Do not merge, deploy, dispatch workflows, send Teams/email/Telegram,
+or mutate production delivery state during this repair/audit.
 
 PROJECT=HDEC News Sensor
-REPO=Sinabroin/HDEC-News-Sensor
-TASK=R4-OPS-5B evidence integrity and acceptance overlay closure
-
-BASE_ORIGIN_MAIN=8e70f3921c744eaaee6b76c600bbd8fd2636db96
-FINAL_ORIGIN_MAIN=10b2ce7754d06a3a08702960c96ab94368ae422d
-TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-IMPLEMENTATION_HEAD=d33d12df1d71249525592ac9f1dc539ffa45130d
-R4_OPS_5A_IMPLEMENTATION_HEAD=3c4a3f5073709dbf4ce3ed85a248ba16543a5570
-R4_OPS_5B_HEAD=LIVE_TASK_BRANCH_REF_MATCHES_LOCAL_HEAD
-FINAL_MAIN_INTEGRATION_HEAD=590df412239fce36e4de545b2796fbc86e9b27ef
+TASK=R4-OPS-6B major-media discovery / verification recall repair
+TASK_BRANCH=fix/r4-ops-6b-major-media-recall
+BASE_SHA=e271065c3399751af15080503d4e38792154ea6b
+AUDITED_R4_OPS_5_MERGE=66ce8cea03fa64216f2b41d56fce2a2f966ba26f
+MAIN_RUNTIME_DRIFT=false
+IMPLEMENTATION_HEAD=LIVE_TASK_BRANCH_REF_MATCHES_LOCAL_HEAD
 REMOTE_BRANCH_HEAD=LIVE_TASK_BRANCH_REF_MATCHES_LOCAL_HEAD
+DRAFT_PR_NUMBER=PENDING_COMMIT_PUSH
+PR_STATE=DRAFT_REQUIRED
 
-PR_NUMBER=40
-PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
-PR_STATE=DRAFT
-
-CURRENT_STATUS=R4_OPS_5A_5B_CODE_COMPLETE_REMOTE_SEAL_VERIFIED
+CURRENT_STATUS=CODE_COMPLETE_PRODUCTION_UNPROVEN
 CODE_COMPLETE=true
+PRODUCTION_COMPLETE=false
 SYSTEM_LAUNCHED=false
-REMOTE_CHECKPOINT_AVAILABLE=true
-CROSS_MACHINE_HANDOFF_READY=true
 
-## Implemented production behavior
+## Governing acceptance contract
 
-- The exact operator-supplied common standard remains unchanged at `AI_PROJECT_EXECUTION_STANDARD.md`. The living HDEC overlay at `docs/acceptance/PROJECT_ACCEPTANCE.md` is now version 1.1 and seals HDEC-DEFECT-005, `KNOWN_AUTHORITATIVE_URL_IDENTITY > DISPLAY_SOURCE_ALIAS`, and the trailing/English realtime opinion contract. This handoff and the company resume prompt require both before material work.
-- One explicit exact-host identity table, derived from configured Tier A/B/C and never-automatic entries, now governs both `publisher_delivery_tier()` and `teams_delivery_source_policy()`. A known URL identity outranks a contradictory display alias; an unknown foreign host or unenumerated child fails below automatic authority. No substring or suffix grants authority.
-- Cross-publisher resolution now yields 조선일보/chosun.com Tier A, 조선비즈/biz.chosun.com Tier B, IT조선/it.chosun.com Tier C, and 스포츠조선/sports.chosun.com unlisted regardless of a contradictory source alias. A full configured A/B/C domain sweep reports `CROSS_PUBLISHER_ALIAS_URL_ELEVATION=0`.
-- `sbs.co.kr` and `news.sbs.co.kr` remain SBS Tier A. `premium.sbs.co.kr` is explicitly `operator_surface=editorial_analysis`, `realtime_auto_send=false`, and never Tier A. The observed production fixture now contains only the verified exact URL; unrecovered title, source, timestamp, and article metadata are null/unknown. A separate visibly labelled synthetic adversarial row proves that TOP/HDEC-direct/material/high-score/strong-query metadata still cannot rescue the surface. Both rows are REJECT. Unlisted SBS children do not inherit SBS.
-- The realtime opinion gate accepts only normalized exact publisher-section values and bracketed leading/trailing title-boundary markers. Korean and English Opinion/Editorial/Column/Commentary/Op-Ed forms reject; incidental `기고했다고 밝혔다`, `칼럼비아대`, interior markers, and summary/query/body tokens remain allowed/non-authoritative.
-- Publisher identity is exact-domain by default. `www` is the conventional apex alias; every other publication subdomain must be explicitly enumerated. Display-name aliases are exact and an authoritative sibling URL defeats a parent-publication alias.
-- `chosun.com` / `www.chosun.com` resolve to 조선일보. `it.chosun.com`, `biz.chosun.com`, and `sports.chosun.com` cannot inherit 조선일보. IT조선 is explicit Tier C; 조선비즈 is explicit Tier B; sports.chosun.com is not automatic.
-- Teams source policy is operator-explicit: Tier A is the existing 13 core publishers, Tier B is the exact 16-publisher general/economic/industrial allowlist, and the named specialist/niche publishers are Tier C. Tier B never bypasses article semantics, authority, freshness, materiality, stock/theme, dedup, or importance gates.
-- Realtime Teams deterministically excludes explicit publisher sections `칼럼/오피니언/사설/논설/기고/기고문/전문가칼럼` and equivalent bracketed title markers. Only title and publisher-section evidence are read; generated summary and provider query text are excluded.
-- Normal `important` cards are paced to the best one per rolling 60-minute window when supply exists. Unsent eligible rows remain out of the sent ledger and are reconsidered later. TOP and HDEC-direct rows bypass the pace; urgent sends do not consume the normal window. Failed SMTP never advances pacing or dedup. Filler remains zero.
-- The observed IT조선 contribution is rejected independently by the opinion gate and Tier-C standalone gate. The observed 연합뉴스 ETF and stock/theme regressions remain rejected. The 한국일보 LS일렉트릭×GS건설 직류배전 case and 서울경제 HD현대 9,560억 발전엔진 order are Tier-B eligible after substantive gates.
-- A committed deterministic mixed-provenance replay distinguishes `observed_production` from `synthetic_adversarial`. Observed rows may populate only fields declared by provenance; the SBS observed row prints unknown for unrecovered historical metadata, while the separate synthetic stress row is explicitly labelled. `SEARCH_QUERY_CAUSED_QUALIFICATION=0` is asserted.
-- Daily immutable manifests are version 2 and explicitly record `edition_status` and `article_count`. Truthful empty editions render and publish with the exact no-qualified-news status, exact dated Editor CTA, and exact dated reader CTA. Mutable latest is never a Teams action authority.
-- Daily delivery state is version 3 and records `delivery_kind=nonempty_digest|empty_status` plus article count. v1/v2 state is upgraded in memory; exact legacy claims can complete. Empty status succeeds once and retries fail before transport.
-- The real Daily publish/send orchestrator is exercised offline against the committed zero-candidate 2026-08-11 Editor bundle: temp-only publication, one fake SMTP 250, one `empty_status` success, and retry transport count unchanged.
-- Daily schedule is Review Editor 07:20 KST, Daily primary 07:50, retry 08:05, final retry 08:15. GitHub cron remains best-effort; state is duplicate authority.
-- Empty Review candidate bundles are now valid, loadable exact-edition inputs instead of operational errors. Exact-edition browser reconstruction accepts a verified version-2 empty manifest.
-- Article import remains fail-closed because no authenticated public API URL is configured. The committed exact/latest 2026-08-11 Editor and template now start visibly disabled and accurately say unavailable; configured builds explicitly re-enable the control. Edit, drag/order, preview, and exact-edition functions remain active.
-- Scheduled live refresh now runs the repaired Naver adapter, deterministic operational wiring, live-ingestion provenance, and publisher-direct verifiers before live build. The complete 36-command scheduled preflight reached all downstream gates locally.
-- PR #40's existing Naver discovery-lane, Naver operational fixture, publisher-direct pin/mutable-ledger, live-ingestion provenance, calibration CLI, and cross-machine handoff repairs are preserved.
+- `AI_PROJECT_EXECUTION_STANDARD.md` is unchanged.
+- The HDEC overlay is version 1.2 and seals HDEC-DEFECT-006.
+- Discovery/provider metadata may schedule or prioritise URL resolution, but it
+  never grants publisher authority, Tier A/B, or Teams eligibility.
+- Final source authority remains exact resolved/canonical URL identity under the
+  R4-OPS-5 source contract. Unknown children, sibling publications, aliases over
+  foreign URLs, unresolved wrappers, IT조선-as-조선일보, and SBS Premium remain
+  non-authoritative/non-realtime.
 
-## Final post-merge acceptance evidence
+## Implemented repair
 
-- `scripts/verify_r4_ops5_production_acceptance.py` — PASS 124/124; HDEC overlay v1.1 and HDEC-DEFECT-005 present; common standard unchanged; cross-publisher alias elevation 0; SBS observed incident REJECT; separate synthetic stress REJECT; provenance PASS; opinion leading/trailing/English/incidental matrix PASS; external network 0; production SMTP/Teams/state writes 0.
-- Exact replay: URL-only observed SBS Premium incident REJECT; explicitly synthetic high-materiality SBS Premium stress REJECT; IT조선 contribution REJECT; 연합뉴스 ETF REJECT; stock/theme REJECT; LS Electric×GS E&C KEEP; HD현대 Tier-B material event KEEP; specialist opinion context Editor-only; weak Tier-B publisher-alone row REJECT.
-- Scheduled-live-refresh exact offline preflight — 36/36 commands, 0 failures, from News Censor through repaired Naver/provider gates to dashboard freshness. The stale AI-market verifier remains aligned with the canonical `AI centrality + title materiality` contract; runtime semantic policy was not weakened.
-- Naver adapter PASS; Naver operational wiring PASS; live ingestion PASS; publisher-direct 91/91.
-- Watch materiality PASS; executive qualification hardening PASS; material AI infrastructure recall PASS; observed false-positive regression 100/100.
-- Teams selector PASS; Teams production 232/232; major-media gate 38/38; strict-source gate 62/62; stock-market exclusion 61/61; state/dedup PASS.
-- Required R4-OPS-5A suite: 18 verifier scripts have a latest passing run, including Teams production 232/232, major-media 38/38, strict-source 62/62, stock-market 61/61, observed false-positive 100/100, publisher-direct 91/91, editorial briefings 344/344, Editor 200/200, Daily deep link 118/118, Daily lead source 24/24, and immutable manifest 31/31. One grouped Editor invocation hit the known Windows headless-Chrome 45-second startup timeout; the immediate isolated final run passed all 200 checks with zero external requests.
-- Production ledgers remained byte-identical throughout the final post-merge verification: Teams SHA `76c5932017ff2f5f7a46917fa7b14315b29f44fed0c7d4d2fc423efaec4583f4`; Daily SHA `68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155`.
-- `VERIFIERS_FAIL=0`, `EXTERNAL_TEST_NETWORK_CALLS=0`, `PRODUCTION_SMTP_ATTEMPTS=0`, `PRODUCTION_TEAMS_SENDS=0`, and `PRODUCTION_STATE_WRITES=0` in the final accepted runs.
+- Google RSS resolution uses a non-authoritative scheduling key derived from an
+  already-resolved host, Google `<source url>`, or a hashed source reference.
+  It no longer treats every wrapper as one `news.google.com` publisher. The
+  global limit remains 60, the per-publisher hint limit remains 12, actual
+  publisher fetches retain a one-at-a-time exact-host lock, and exact configured
+  A/B hints receive scheduling priority without gaining authority.
+- Structured extraction now covers JSON-LD `articleBody` plus bounded exact-host
+  body containers for the affected A/B publisher matrix. A strict fallback can
+  prove article identity only for an exact configured A/B host, article-shaped
+  fetched URL, strongly agreeing page/feed headline, non-error page, and a
+  canonical URL that does not escape the same publication.
+- `publisher_verification_strength` is explicit:
+  `full_body`, `structured_metadata`, `metadata_only_exact_host`, or
+  `official_registry_feed`. Authority cache policy is bumped to v2 so prior
+  proof is revalidated. Metadata-only identity never supplies AI centrality,
+  materiality, executive relevance, importance, or query evidence.
+- The legacy Naver `primary_publisher_lane` configuration now targets all
+  operator Tier-A13 (`primary_10` + `secondary_3`) and Tier-B16
+  (`major_secondary`) publishers. It uses 58 bounded queries, at most 2 accepted
+  rows per query and 80 total, with exact configured destination matching only.
+  Topic coverage includes AI data centres/power, GPU/HBM infrastructure,
+  investment/contracts/MOU, physical AI, smart construction/BIM/robotics,
+  Hyundai E&C/construction peers, and national AI policy/regulation.
+- The overly broad `t.co` substring ban was corrected to exact host matching;
+  `mt.co.kr` (머니투데이) and `dt.co.kr` (디지털타임스) no longer disappear.
+- Every alert-policy-eligible Teams row now emits a safe categorical trace with
+  a non-reversible reference, sanitized display source, exact resolved identity
+  or `unresolved_or_unconfigured`, source tier, Teams lane, content state, and
+  source-gate result/reason. It never prints a URL, body, credential, or address.
+  Zero-send logs also print `QUARANTINE_REASON_COUNTS`,
+  `QUARANTINED_TIER_A_ROWS`, `QUARANTINED_TIER_B_ROWS`, and
+  `POLICY_ELIGIBLE_BY_TIER`.
+- The three recovered audit classes (동아일보 GS건설×LS일렉트릭, 조선비즈
+  NVIDIA×Wall Street AI infrastructure, 연합뉴스 canonical copy of the same
+  financing-platform event) are committed with exact observed metadata. Missing
+  resolved URLs remain null; separately labelled synthetic destinations are used
+  only for deterministic end-to-end adversarial replay.
 
-## Final integration status
+## Deterministic evidence
 
-`origin/main` advanced after the initial R4-OPS-5 fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The original implementation was committed at `d33d12df1d71249525592ac9f1dc539ffa45130d`, then current main was merged without rebase or conflict at `590df412239fce36e4de545b2796fbc86e9b27ef`. R4-OPS-5A was committed at `3c4a3f5073709dbf4ce3ed85a248ba16543a5570`. R4-OPS-5B changes only the living acceptance overlay, replay evidence/provenance verifier, and handoff evidence; runtime policy remains unchanged. The final handoff commit is pushed normally and local/remote equality is verified after push; use the live task-branch ref for its self-referential SHA.
+- `scripts/verify_r4_ops6b_major_media_recall.py`: PASS 28/28 on the final
+  implementation; 275-row Google distribution, one-publisher bound,
+  no scheduling authority leak, A13/B16 JSON-LD matrices, 12-outlet DOM matrix,
+  metadata-only bounds, all-29 Naver coverage, exact destination matching,
+  recall classes, R4-OPS-5 precision rows, and safe zero-send traces.
+- `scripts/verify_r4_ops5_production_acceptance.py`: PASS 124/124;
+  `CROSS_PUBLISHER_ALIAS_URL_ELEVATION=0`, SBS Premium realtime false, ETF and
+  stock/theme REJECT, 한국일보 LS×GS KEEP, 서울경제 HD현대 DC engine KEEP, and
+  `SEARCH_QUERY_CAUSED_QUALIFICATION=0`.
+- Publisher-direct collector: PASS 91/91. Verified-state/concurrency suite:
+  PASS 50/50. Expanded Naver discovery lane: PASS 41/41.
+- Teams major-media gate: PASS 38/38. Strict source gate: PASS 62/62. Primary
+  trace: PASS 23/23. Teams AI selector: PASS.
+- All deterministic tests used zero external network, SMTP, Teams, Telegram,
+  workflow dispatch, or production-state writes unless explicitly identified as
+  the separate GET-only live probe below.
 
-## Production boundary and remaining proof
+## GET-only live evidence (`/tmp` only)
 
+The first post-repair sample showed 328 raw candidates, 28 major-media hints,
+36 Google attempts across 38 active scheduling buckets, but only 4 major-hint
+attempts. A scheduling-priority correction raised the same-window major-hint
+attempts to 14 while keeping Google at 36 attempts and 38 active buckets.
+
+Final bounded sample:
+
+```text
+LIVE_RAW_CANDIDATES=328
+LIVE_MAJOR_MEDIA_RAW=28
+LIVE_MAJOR_MEDIA_RESOLUTION_ATTEMPTED=14
+LIVE_MAJOR_MEDIA_VERIFIED=0
+LIVE_TIER_A_VERIFIED=0
+LIVE_TIER_B_VERIFIED=0
+LIVE_POLICY_ELIGIBLE_MAJOR=0
+COLLECTION_STATUS=LIVE_HEALTHY_WITH_ARTICLES
+```
+
+Google batchexecute decoding is POST-based, so it was explicitly disabled for
+the mandated GET-only check. Consequently Google wrapper rows could exercise
+fair scheduling but could not truthfully become publisher-authoritative in that
+sample. A separate GET-only probe of three exact A/B publisher URLs recovered
+from the audit verified all 3 as `full_body` (한국경제 2, 이데일리 1), showing that
+configured major pages no longer disappear solely through body extraction.
+
+Artifacts are outside the repository:
+
+- `/tmp/r4_ops6b_live_brief_after.json`
+- `/tmp/r4_ops6b_verified_state_after.json`
+
+## Production boundary
+
+PRODUCTION_WORKFLOW_DISPATCHES=0
 PRODUCTION_TEAMS_SENDS=0
-PRODUCTION_SMTP_ATTEMPTS=0
+PRODUCTION_SMTP_SENDS=0
 PRODUCTION_TELEGRAM_SENDS=0
 PRODUCTION_STATE_WRITES=0
-PRODUCTION_VARIABLE_CHANGES=0
-PRODUCTION_WORKFLOW_DISPATCHES=0
+PRODUCTION_SECRET_VARIABLE_CHANGES=0
 MAIN_MERGES=0
 
-`CODE_COMPLETE=true` is the offline engineering verdict. It is not launch proof. A later operator-authorized merge and real-world evidence are still required:
+No live production send/canary has been performed. The next action is an
+independent focused Claude Code audit of R4-OPS-6B; keep the Draft PR unmerged.
 
-- REAL_WATCH_SEND_PASS
-- REAL_DAILY_SEND_PASS (empty or non-empty natural edition)
-- REAL_EDITOR_LINK_PASS
-- REAL_PUBLIC_DAILY_LINK_PASS
-- natural scheduled-live-refresh green proof on deployed main
-
-ARTICLE_IMPORT_UI_STATUS=DISABLED_ACCURATELY_LABELLED_API_UNCONFIGURED
-ARTICLE_IMPORT_API_STATUS=FAIL_CLOSED_NO_NEW_AUTH_DEPLOYMENT
-REQUIRES_OPERATOR_ACTION=Have Claude Code independently audit the R4-OPS-5A/5B closure checkpoint; keep Draft PR #40 unmerged until that audit passes.
-NEXT_SINGLE_ACTION=Focused Claude Code audit of the R4-OPS-5A/5B closure; verify SBS provenance separation and keep Draft PR #40 unmerged.
-
-## Company-machine resume
-
-Do not modify, reset, clean, or stash the dirty company checkout. Use the existing task branch/worktree or create a separate clean worktree. The live refs and `scripts/hdec_cross_machine_status.sh` output are authoritative.
-
-```bash
-cd /mnt/d/HDEC-Projects/HDEC-News-Sensor-R4OPS5 || exit 1
-git fetch origin --prune
-git status --short --branch
-git switch wip/d7ak6e-final-readiness-zeroing-handoff
-git pull --ff-only origin wip/d7ak6e-final-readiness-zeroing-handoff
-./scripts/hdec_cross_machine_status.sh
-```
+NEXT_SINGLE_ACTION=Independent focused Claude Code audit of R4-OPS-6B.

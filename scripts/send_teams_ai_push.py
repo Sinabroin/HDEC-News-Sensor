@@ -134,6 +134,13 @@ class FailClosed(RuntimeError):
         self.reason = reason
 
 
+def _safe_display_source(value: object) -> str:
+    cleaned = " ".join(str(value or "").split())[:160]
+    if "://" in cleaned or "@" in cleaned:
+        return "redacted_source"
+    return cleaned
+
+
 def _row_source_tier_counts(rows) -> dict[str, int]:
     """R4-R9A §11 — per-tier row counts for the Teams source-gate audit.
 
@@ -248,7 +255,9 @@ def _major_row_decision_traces(
         stock = evaluation.stock_market
         traces.append({
             "article_ref": ref,
-            "source": str(row.get("source") or row.get("display_source") or ""),
+            "source": _safe_display_source(
+                row.get("source") or row.get("display_source") or ""
+            ),
             "source_tier": tier,
             "teams_lane": str(policy["teams_lane"]),
             "publisher_rank": int(policy["publisher_rank"]),
@@ -269,6 +278,86 @@ def _major_row_decision_traces(
             "smtp_status": smtp_status,
         })
     return traces
+
+
+def _policy_eligible_row_traces(
+    *, article_rows, policy_evaluations, candidates, baseline, gate_batch
+) -> tuple[list[dict[str, Any]], dict[str, int], dict[str, int]]:
+    """Log-safe categorical trace for every alert-policy-eligible row.
+
+    No title, URL, body, address, or reversible identifier enters this shape.
+    Discovery aliases are never reported as resolved publisher identities.
+    """
+    candidate_by_ref = {
+        article_ref(candidate.article): candidate for candidate in candidates
+    }
+    dedup_by_ref = {
+        article_ref(candidate.article): decision
+        for candidate, decision in zip(candidates, baseline)
+    }
+    gate_by_ref: dict[str, tuple[str, str]] = {}
+    for item in gate_batch.rejected:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "rejected", str(item.gate.reason or "source_gate_rejected")
+        )
+    for item in gate_batch.held:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "quarantined",
+            str(item.holdback.holdback_reason if item.holdback else "specialist_held"),
+        )
+    for item in gate_batch.deferred_major:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "passed", "eligible_deferred_by_bounded_selection"
+        )
+    for item in gate_batch.selected:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "passed", str(item.gate.reason or "source_gate_passed")
+        )
+
+    traces: list[dict[str, Any]] = []
+    reason_counts: dict[str, int] = {}
+    by_tier: dict[str, int] = {}
+    for row, evaluation in zip(article_rows, policy_evaluations):
+        if not evaluation.eligible:
+            continue
+        ref = article_ref(row)
+        direct_url = publisher_direct.publisher_url(row)
+        policy = source_priority.teams_delivery_source_policy(
+            str(row.get("source") or row.get("display_source") or ""), direct_url
+        )
+        tier = str(policy.get("tier") or "neutral")
+        by_tier[tier] = by_tier.get(tier, 0) + 1
+        candidate = candidate_by_ref.get(ref)
+        if candidate is None:
+            result, reason = "not_reached", "same_event_representative_exists"
+        else:
+            dedup = dedup_by_ref.get(ref)
+            if dedup is not None and not dedup.send_allowed:
+                result, reason = "not_reached", str(dedup.reason or "ledger_blocked")
+            else:
+                result, reason = gate_by_ref.get(
+                    ref, ("not_reached", "source_gate_not_evaluated")
+                )
+        if result in {"rejected", "quarantined"}:
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        identity = (
+            str(policy.get("publisher_identity") or "")
+            if policy.get("identity_evidence") == "exact_domain"
+            else "unresolved_or_unconfigured"
+        )
+        traces.append({
+            "article_ref": ref,
+            "display_source": _safe_display_source(
+                row.get("source") or row.get("display_source") or ""
+            ),
+            "resolved_publisher_identity": identity,
+            "resolved_source_tier": tier,
+            "teams_lane": str(policy.get("teams_lane") or "never_automatic"),
+            "content_eligibility_state": "alert_policy_eligible",
+            "source_gate_result": result,
+            "source_gate_reason": reason,
+        })
+    return traces, reason_counts, by_tier
 
 
 @dataclass(frozen=True)
@@ -744,6 +833,27 @@ def deliver(
         gate_batch=gate_batch,
         records=records,
     )
+    (
+        policy_eligible_row_trace,
+        quarantine_reason_counts,
+        policy_eligible_by_tier,
+    ) = _policy_eligible_row_traces(
+        article_rows=article_rows,
+        policy_evaluations=policy_evaluations,
+        candidates=candidates,
+        baseline=baseline,
+        gate_batch=gate_batch,
+    )
+    quarantined_tier_a_rows = sum(
+        trace["resolved_source_tier"] in {"primary_10", "secondary_3"}
+        and trace["source_gate_result"] in {"rejected", "quarantined"}
+        for trace in policy_eligible_row_trace
+    )
+    quarantined_tier_b_rows = sum(
+        trace["resolved_source_tier"] == "major_secondary"
+        and trace["source_gate_result"] in {"rejected", "quarantined"}
+        for trace in policy_eligible_row_trace
+    )
     selected_source_audit = [
         {
             "article_ref": article_ref(gated.candidate.article),
@@ -895,6 +1005,11 @@ def deliver(
         # R4-R12 §1 — row-level categorical decision trace for every
         # primary_10 / secondary_3 / promoted-official row in this run.
         "major_row_decision_trace": major_row_decision_trace,
+        "policy_eligible_row_trace": policy_eligible_row_trace,
+        "quarantine_reason_counts": quarantine_reason_counts,
+        "quarantined_tier_a_rows": quarantined_tier_a_rows,
+        "quarantined_tier_b_rows": quarantined_tier_b_rows,
+        "policy_eligible_by_tier": policy_eligible_by_tier,
         "skip_reasons": {
             "already_sent": blocked,
             "deferred_due_to_cap": len(deferred),
@@ -1038,6 +1153,18 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         f"selected_promoted_official_rows={int(summary.get('selected_promoted_official_rows') or 0)}",
         f"selected_specialist_rows={int(summary.get('selected_specialist_rows') or 0)}",
         f"source_gate_rejected_rows={int(summary.get('source_gate_rejected_rows') or 0)}",
+        "quarantine_reason_counts=" + json.dumps(
+            summary.get("quarantine_reason_counts") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        f"quarantined_tier_a_rows={int(summary.get('quarantined_tier_a_rows') or 0)}",
+        f"quarantined_tier_b_rows={int(summary.get('quarantined_tier_b_rows') or 0)}",
+        "policy_eligible_by_tier=" + json.dumps(
+            summary.get("policy_eligible_by_tier") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
         f"normal_rows_selected={int(summary.get('normal_rows_selected') or 0)}",
         "normal_rows_deferred_by_pacing="
         + str(int(summary.get("normal_rows_deferred_by_pacing") or 0)),
@@ -1076,6 +1203,36 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
             f"selected={'true' if trace['final_selected'] else 'false'} "
             f"smtp={trace['smtp_status']}"
         )
+    for trace in summary.get("policy_eligible_row_trace", ()):
+        print(
+            "Teams policy-eligible trace: "
+            f"article_ref={trace['article_ref']} "
+            f"display_source={trace['display_source']} "
+            f"resolved_publisher_identity={trace['resolved_publisher_identity']} "
+            f"resolved_source_tier={trace['resolved_source_tier']} "
+            f"teams_lane={trace['teams_lane']} "
+            f"content_eligibility_state={trace['content_eligibility_state']} "
+            f"source_gate_result={trace['source_gate_result']} "
+            f"source_gate_reason={trace['source_gate_reason']}"
+        )
+    print(
+        "QUARANTINE_REASON_COUNTS="
+        + json.dumps(
+            summary.get("quarantine_reason_counts") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    print(f"QUARANTINED_TIER_A_ROWS={int(summary.get('quarantined_tier_a_rows') or 0)}")
+    print(f"QUARANTINED_TIER_B_ROWS={int(summary.get('quarantined_tier_b_rows') or 0)}")
+    print(
+        "POLICY_ELIGIBLE_BY_TIER="
+        + json.dumps(
+            summary.get("policy_eligible_by_tier") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
     for entry in summary.get("selected_source_audit", ()):
         print(
             "Teams source gate selected: "

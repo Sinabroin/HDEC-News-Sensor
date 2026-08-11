@@ -10,10 +10,12 @@ behavior can be exercised with mock resolvers/openers.
 from __future__ import annotations
 
 import base64
+import difflib
 import ipaddress
 import json
 import re
 import socket
+import unicodedata
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -109,6 +111,27 @@ _BODY_CONTAINER_RE = re.compile(
     r"news[-_]?content|story[-_]?body|post[-_]?content|content[-_]?body)",
     re.I,
 )
+# Bounded publisher body-container conventions for exact configured Tier-A/B
+# hosts.  These selectors are extraction hints only: they neither identify the
+# publisher nor grant delivery authority.  The caller must still verify the
+# resolved/canonical URL against the exact source-priority identity table.
+_PUBLISHER_BODY_SELECTOR_TOKENS: dict[str, frozenset[str]] = {
+    "imbc.com": frozenset({"news_txt", "news_text", "article_content"}),
+    "mbc.co.kr": frozenset({"news_txt", "news_text", "article_content"}),
+    "news.kbs.co.kr": frozenset({"cont_newstext", "news_text_area", "detail-body"}),
+    "kbs.co.kr": frozenset({"cont_newstext", "news_text_area", "detail-body"}),
+    "chosun.com": frozenset({"news_body_id", "article-body", "article_body"}),
+    "ytn.co.kr": frozenset({"cmadcontent", "article-content", "article_content"}),
+    "news.jtbc.co.kr": frozenset({"articlebody", "article_body", "article-content"}),
+    "jtbc.co.kr": frozenset({"articlebody", "article_body", "article-content"}),
+    "hankyung.com": frozenset({"articletxt", "article-body", "article_body"}),
+    "donga.com": frozenset({"article_txt", "article_view", "news_view"}),
+    "biz.chosun.com": frozenset({"news_body_id", "article-body", "article_body"}),
+    "news1.kr": frozenset({"articles_detail", "article_body", "article-body"}),
+    "edaily.co.kr": frozenset({"articlebody", "article_body", "news_body"}),
+    "kmib.co.kr": frozenset({"articlebody", "article_body", "article_content"}),
+    "seoul.co.kr": frozenset({"articlecontent", "article_view", "v_article"}),
+}
 _BOILERPLATE_RE = re.compile(
     r"(무단\s*전재|재배포\s*금지|저작권자|광고\s*문의|댓글|추천\s*기사|"
     r"구독\s*신청|공유하기|로그인|회원가입|copyright|all rights reserved)",
@@ -206,6 +229,18 @@ class ExtractedArticle:
     image_candidates: tuple[tuple[str, str], ...]
     title_source: str
     body_source: str
+
+
+@dataclass(frozen=True)
+class ExtractedArticleIdentity:
+    """Bounded page metadata used to verify article identity, never importance."""
+
+    canonical_url: str
+    title: str
+    source: str
+    published_at: str | None
+    description: str
+    title_source: str
 
 
 @dataclass(frozen=True)
@@ -532,8 +567,13 @@ def fetch_article_html(
 
 
 class _ArticleHTMLParser(HTMLParser):
-    def __init__(self):
+    def __init__(self, page_url: str = ""):
         super().__init__(convert_charrefs=True)
+        try:
+            page_host = (urlparse(page_url).hostname or "").casefold().rstrip(".")
+        except ValueError:
+            page_host = ""
+        self.page_host = page_host[4:] if page_host.startswith("www.") else page_host
         self.meta: dict[str, list[str]] = {}
         self.canonical_links: list[str] = []
         self.image_src_links: list[str] = []
@@ -544,12 +584,15 @@ class _ArticleHTMLParser(HTMLParser):
         self.paragraphs: list[Paragraph] = []
         self.body_images: list[str] = []
         self.jsonld_blocks: list[str] = []
+        self.publisher_body_values: list[str] = []
         self._stack: list[dict[str, object]] = []
         self._skip_depth = 0
         self._article_depth = 0
         self._main_depth = 0
         self._body_depth = 0
         self._anchor_depth = 0
+        self._publisher_body_depth = 0
+        self._publisher_body_parts: list[str] | None = None
         self._title_parts: list[str] | None = None
         self._h1_parts: list[str] | None = None
         self._paragraph: dict[str, object] | None = None
@@ -577,6 +620,15 @@ class _ArticleHTMLParser(HTMLParser):
         main_delta = int(tag == "main")
         body_delta = int(bool(_BODY_CONTAINER_RE.search(marker_text)))
         anchor_delta = int(tag == "a")
+        selector_tokens = _PUBLISHER_BODY_SELECTOR_TOKENS.get(self.page_host, frozenset())
+        marker_tokens = {
+            token.casefold()
+            for token in re.split(r"\s+", marker_text.strip())
+            if token
+        }
+        publisher_body_delta = int(
+            not entering_skip and bool(selector_tokens & marker_tokens)
+        )
         state = {
             "tag": tag,
             "skip": int(entering_skip),
@@ -584,14 +636,18 @@ class _ArticleHTMLParser(HTMLParser):
             "main": main_delta,
             "body": body_delta,
             "anchor": anchor_delta,
+            "publisher_body": publisher_body_delta,
         }
         if tag not in _VOID_TAGS:
+            if publisher_body_delta and self._publisher_body_depth == 0:
+                self._publisher_body_parts = []
             self._stack.append(state)
             self._skip_depth += int(entering_skip)
             self._article_depth += article_delta
             self._main_depth += main_delta
             self._body_depth += body_delta
             self._anchor_depth += anchor_delta
+            self._publisher_body_depth += publisher_body_delta
 
         if tag == "script" and "ld+json" in attributes.get("type", "").casefold():
             self._jsonld_parts = []
@@ -672,6 +728,8 @@ class _ArticleHTMLParser(HTMLParser):
             return
         if self._skip_depth:
             return
+        if self._publisher_body_depth and self._publisher_body_parts is not None:
+            self._publisher_body_parts.append(data)
         if self._title_parts is not None:
             self._title_parts.append(data)
         if self._h1_parts is not None:
@@ -728,6 +786,15 @@ class _ArticleHTMLParser(HTMLParser):
             self._main_depth = max(0, self._main_depth - int(state["main"]))
             self._body_depth = max(0, self._body_depth - int(state["body"]))
             self._anchor_depth = max(0, self._anchor_depth - int(state["anchor"]))
+            self._publisher_body_depth = max(
+                0,
+                self._publisher_body_depth - int(state["publisher_body"]),
+            )
+            if self._publisher_body_depth == 0 and self._publisher_body_parts is not None:
+                value = _clean_text(" ".join(self._publisher_body_parts))
+                if value:
+                    self.publisher_body_values.append(value)
+                self._publisher_body_parts = None
 
 
 def _walk_json(value: object) -> Iterable[Mapping[str, object]]:
@@ -1056,7 +1123,7 @@ def extract_article(
     *,
     resolver: Callable[..., Iterable[tuple]] | None = None,
 ) -> ExtractedArticle:
-    parser = _ArticleHTMLParser()
+    parser = _ArticleHTMLParser(page_url)
     try:
         parser.feed(str(html or ""))
         parser.close()
@@ -1100,6 +1167,9 @@ def extract_article(
     jsonld_body = _clean_text(jsonld.get("articleBody"))
     if len(jsonld_body) >= ARTICLE_BODY_MIN_CHARS:
         body, body_source = jsonld_body, "json_ld_article_body"
+    elif parser.publisher_body_values:
+        body = max(parser.publisher_body_values, key=len)
+        body_source = "publisher_exact_host_container"
     else:
         body, body_source = _paragraph_body(parser.paragraphs)
     if len(body) < ARTICLE_BODY_MIN_CHARS:
@@ -1153,6 +1223,120 @@ def extract_article(
         image_candidates=tuple(unique_images),
         title_source=title_source,
         body_source=body_source,
+    )
+
+
+_GENERIC_PAGE_TITLE_RE = re.compile(
+    r"^(?:홈|메인|뉴스|속보|전체기사|기사목록|로그인|접근\s*차단|error|not found)$",
+    re.I,
+)
+_BOT_OR_ERROR_PAGE_RE = re.compile(
+    r"(?:captcha|access denied|접근이 제한|로봇이 아닙니다|서비스 이용이 제한|"
+    r"페이지를 찾을 수 없|요청하신 페이지|temporarily unavailable|cloudflare)",
+    re.I,
+)
+
+
+def article_shaped_url(value: object) -> bool:
+    """Return whether a fetched URL has a bounded article-like path.
+
+    This is identity evidence only. It does not identify a publisher and must
+    never be used as source-tier or editorial qualification evidence.
+    """
+    try:
+        parsed = urlparse(str(value or ""))
+    except ValueError:
+        return False
+    path = parsed.path.strip("/")
+    if not path or path.casefold() in {"news", "article", "articles", "view"}:
+        return False
+    lowered = f"{parsed.path}?{parsed.query}".casefold()
+    if re.search(
+        r"(?:/article(?:s)?/|/news/(?:view|article|read)/|/view/|/read/|"
+        r"article_?id=|news_?id=|aid=|idxno=|no=)",
+        lowered,
+    ):
+        return True
+    return bool(
+        len(path) >= 8
+        and (any(character.isdigit() for character in path) or len(path.split("/")) >= 3)
+    )
+
+
+def headlines_strongly_agree(feed_title: object, page_title: object) -> bool:
+    """Bounded, symmetric headline agreement for exact-host page verification."""
+    def normalized(value: object) -> str:
+        text = unicodedata.normalize("NFKC", _clean_text(value)).casefold()
+        # Feed titles commonly append the publisher after a dash. It is safe to
+        # remove only the suffix because the result still must agree strongly.
+        text = re.sub(r"\s+[-|–—]\s+[^-|–—]{1,40}$", "", text)
+        return re.sub(r"[^0-9a-z가-힣]+", "", text)
+
+    left = normalized(feed_title)
+    right = normalized(page_title)
+    if min(len(left), len(right)) < 10:
+        return False
+    if left in right or right in left:
+        return min(len(left), len(right)) / max(len(left), len(right)) >= 0.72
+    return difflib.SequenceMatcher(None, left, right).ratio() >= 0.78
+
+
+def extract_article_identity(
+    html: str,
+    page_url: str,
+    *,
+    resolver: Callable[..., Iterable[tuple]] | None = None,
+) -> ExtractedArticleIdentity:
+    """Extract bounded identity metadata without claiming article-body proof."""
+    parser = _ArticleHTMLParser(page_url)
+    try:
+        parser.feed(str(html or ""))
+        parser.close()
+    except (ValueError, TypeError):
+        raise ArticleImportError("ARTICLE_METADATA_NOT_FOUND") from None
+    page_text = _clean_text(str(html or ""))[:20_000]
+    if _BOT_OR_ERROR_PAGE_RE.search(page_text):
+        raise ArticleImportError("ARTICLE_METADATA_NOT_FOUND")
+    jsonld = _jsonld_article(parser)
+    title = _clean_text(jsonld.get("headline"))
+    title_source = "json_ld"
+    if not title:
+        title = _meta_first(parser, "og:title")
+        title_source = "og_title"
+    if not title:
+        title = parser.document_title
+        title_source = "document_title"
+    if not title or _GENERIC_PAGE_TITLE_RE.fullmatch(title):
+        raise ArticleImportError("ARTICLE_METADATA_NOT_FOUND")
+    canonical_raw = (
+        (parser.canonical_links[0] if parser.canonical_links else "")
+        or _meta_first(parser, "og:url")
+        or page_url
+    )
+    canonical_url = validate_public_article_url(
+        urljoin(page_url, canonical_raw), resolver=resolver
+    )
+    if not is_publisher_direct_url(canonical_url):
+        raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
+    source = _jsonld_publisher(jsonld.get("publisher"))
+    if not source:
+        source = _meta_first(parser, "og:site_name", "author", "provider", "publisher")
+    published_at = _normalize_published_at(
+        jsonld.get("datePublished")
+        or _meta_first(parser, "article:published_time", "datepublished", "date")
+        or (parser.time_values[0] if parser.time_values else "")
+    )
+    description = _clean_text(
+        jsonld.get("description")
+        or _meta_first(parser, "og:description", "description", "twitter:description")
+    )[:500]
+    return ExtractedArticleIdentity(
+        canonical_url=canonical_url,
+        title=title[:500],
+        source=source[:160],
+        published_at=published_at,
+        description=description,
+        title_source=title_source,
     )
 
 

@@ -130,7 +130,7 @@ def governing_standard_contracts() -> dict[str, bool]:
 
 def project_acceptance_overlay_contracts() -> dict[str, bool]:
     text = PROJECT_ACCEPTANCE_PATH.read_text(encoding="utf-8")
-    version_updated = "**Version:** 1.1" in text
+    version_updated = "**Version:** 1.2" in text
     defect_present = (
         "HDEC-DEFECT-005 — SBS Premium realtime authority leak" in text
         and SBS_PREMIUM_OBSERVED_URL in text
@@ -153,7 +153,7 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
             "Summary,\nquery, and body text have zero authority",
         )
     )
-    check("HDEC project acceptance overlay version is 1.1", version_updated)
+    check("HDEC project acceptance overlay version is 1.2", version_updated)
     check("HDEC-DEFECT-005 is sealed in project acceptance", defect_present)
     check("publisher URL authority invariant is sealed in project acceptance", authority_invariant)
     check("trailing and English opinion contract is sealed in project acceptance", opinion_contract)

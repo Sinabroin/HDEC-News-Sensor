@@ -24,6 +24,7 @@ ALLOWED_METADATA_KEYS = (
     "discovery_url", "discovery_urls", "discovery_provider", "discovery_providers",
     "publisher_url", "publisher_domain",
     "publisher_direct", "portal_resolution_status", "portal_resolution_reason",
+    "publisher_verification_strength",
     "published_at_fallback_reason", "source_kind", "trust_tier",
     "current_run_seen", "carried_forward", "carry_forward_reason",
     "teams_newness_eligible", "discovery_run_status", "verification_cache_status",
@@ -370,6 +371,7 @@ def _run_live() -> dict:
         naver_news_provider,
         news_censor_verified_state,
         news_coverage,
+        source_priority,
         source_quality,
         thebell_watch,
     )
@@ -760,6 +762,26 @@ def _run_live() -> dict:
             or "publisher_authority_rejected"
         )
         quarantine_reason_counts[reason] = quarantine_reason_counts.get(reason, 0) + 1
+    tier_a = {"primary_10", "secondary_3"}
+    tier_b = {"major_secondary"}
+    raw_major_media_count = sum(
+        live_collector._resolution_scheduling_hint_tier(row) in tier_a | tier_b
+        for row in direct_rows + list(google_rows) + list(naver_rows)
+        if isinstance(row, dict)
+    )
+    hint_metrics = resolution_metrics.get("per_scheduling_hint_tier") or {}
+    major_resolution_attempted = sum(
+        int((hint_metrics.get(tier) or {}).get("attempts") or 0)
+        for tier in tier_a | tier_b
+    )
+    verified_tiers = [
+        source_priority.publisher_delivery_tier(
+            str(row.get("source") or ""), publisher_direct.publisher_url(row)
+        ).get("tier")
+        for row in current_verified
+    ]
+    tier_a_verified = sum(tier in tier_a for tier in verified_tiers)
+    tier_b_verified = sum(tier in tier_b for tier in verified_tiers)
     collector_health.update({
         "source_quality_passed_count": int(
             collector_health.get("raw_candidate_count") or 0
@@ -768,6 +790,11 @@ def _run_live() -> dict:
         "direct_source_row_count": len(direct_rows),
         "naver_originallink_row_count": len(naver_rows),
         "google_discovery_row_count": len(google_rows),
+        "major_media_raw_count": raw_major_media_count,
+        "major_media_resolution_attempted_count": major_resolution_attempted,
+        "major_media_verified_count": tier_a_verified + tier_b_verified,
+        "tier_a_verified_count": tier_a_verified,
+        "tier_b_verified_count": tier_b_verified,
         "publisher_resolution_input_count": len(resolvable_rows),
         "pre_resolution_duplicate_count": pre_resolution_duplicate_count,
         "publisher_direct_eligible_count": len(combined),
@@ -796,7 +823,7 @@ def _run_live() -> dict:
                     "skipped_low_priority_after_fair_scheduling",
                 )
             ),
-            "policy": "bounded_concurrent_fair_per_host_v1",
+            "policy": "bounded_concurrent_fair_scheduling_hint_v2",
         },
         "verified_state": {
             "state_contract": news_censor_verified_state.STATE_CONTRACT,

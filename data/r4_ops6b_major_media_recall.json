@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "fixture_name": "R4-OPS-6B major-media recall evidence",
+  "provenance_note": "Observed fields were recovered from the read-only R4-OPS-6A audit scratch artifacts. Missing publisher destination URLs were not invented; separately labelled synthetic destinations exist only for deterministic adversarial replay.",
+  "rows": [
+    {
+      "case_id": "donga_gs_ls_ai_datacenter_power",
+      "evidence_kind": "observed_read_only_audit",
+      "observed_title": "LS일렉트릭, GS건설과 AI데이터센터 직류 배전 사업 협력 - 동아일보",
+      "observed_source": "동아일보",
+      "observed_source_domain": "donga.com",
+      "observed_published_kst": "2026-08-10 16:28",
+      "observed_google_wrapper_url": "https://news.google.com/rss/articles/CBMiZkFVX3lxTFA0enFDVHVEWDhKazBfUHFfWFJBaFJIZ0ZMMFFZZ3BkX2dfcjVDaDYzTl9ZNnBoVXBZQktQdzlkRy1ZX3dFeVp0bkoyMVBzd1EyVHl1V216NmRaalpmcHNZN1pOTHJNQdIBZkFVX3lxTFA0enFDVHVEWDhKazBfUHFfWFJBaFJIZ0ZMMFFZZ3BkX2dfcjVDaDYzTl9ZNnBoVXBZQktQdzlkRy1ZX3dFeVp0bkoyMVBzd1EyVHl1V216NmRaalpmcHNZN1pOTHJNQQ?oc=5",
+      "observed_resolved_url": null,
+      "synthetic_adversarial_destination": "https://www.donga.com/news/Economy/article/all/20260810/000000000/1",
+      "synthetic_fields": ["synthetic_adversarial_destination"]
+    },
+    {
+      "case_id": "chosunbiz_nvidia_wall_street_ai_infra",
+      "evidence_kind": "observed_read_only_audit",
+      "observed_title": "엔비디아, 월가 투자사 6곳과 AI 인프라 투자 확대… 5000억달러 조성 - 조선비즈 - Chosunbiz",
+      "observed_source": "Chosunbiz",
+      "observed_source_domain": "biz.chosun.com",
+      "observed_published_kst": "2026-08-11 14:27",
+      "observed_google_wrapper_url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxPTkpqajZWZ0cyS0hrZzE3cjA3N3ExY3RHYjBKdmhROURfVE9uRFZ5dGd2ZElBWl9ERnZrUmgxY0RwQTljb3BaSkF0V0dQbVY4N2pDT3JnRm1OcVBLYkh4VGZHUnhONzVvclV3ZjY3UVRHRDlZS1FuLTdSdDBDRzY5Y0Z30gGWAUFVX3lxTE5Xdm94S1ppajVpUVdKXzRpeGk3VTNpNzZMeVllYXBYSlVKelZQd1dyMzI0enp3TE5hOGpGdDhNV3VMaTEwTUpoOWhncUo3X3c0MkhySzBSSTNUS3E5Mk9XNmNmUHQ0V2k4N2Rpc3NwN2hqMnRIdEN1cVNiS1lTS19TdDVMYnpKV0UtOUZxRkpJLTVvQUFTUQ?oc=5",
+      "observed_resolved_url": null,
+      "synthetic_adversarial_destination": "https://biz.chosun.com/industry/company/2026/08/11/synthetic-recall-fixture/",
+      "synthetic_fields": ["synthetic_adversarial_destination"]
+    },
+    {
+      "case_id": "yonhap_nvidia_ai_infra_financing",
+      "evidence_kind": "observed_read_only_audit",
+      "observed_title": "엔비디아, 월가 6개사와 710조원 AI인프라 금융플랫폼 구축(종합) - 연합뉴스",
+      "observed_source": "연합뉴스",
+      "observed_source_domain": "yna.co.kr",
+      "observed_published_kst": "2026-08-11 11:05",
+      "observed_google_wrapper_url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE02a2dzNGZkT2RRak5UYVg3RlBoX0tzTFBYT29JRElsQUYtTlRGSkY2VGNZeXpoU2NHM1ljUldqLWJ5VDVvYzlhekhVT200ZVdvMW5teXhrYmM4bkXSAWBBVV95cUxPdUhrR010RjNRVkN6Z19ZQ3RaMmp3UEpiSjh2XzJEZ0RGNTRDdnBJc0QxVmNwRWFDcEI1b01lbUhOZTU2WFFqMGtVNFNuWWJzLW1nckNKcHJkb2oyay11VGs?oc=5",
+      "observed_resolved_url": null,
+      "synthetic_adversarial_destination": "https://www.yna.co.kr/view/AKR20260811000000000",
+      "synthetic_fields": ["synthetic_adversarial_destination"]
+    }
+  ]
+}

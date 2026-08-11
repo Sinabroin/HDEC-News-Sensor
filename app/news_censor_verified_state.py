@@ -24,7 +24,7 @@ from app import publisher_direct
 STATE_CONTRACT = "HDEC_NEWS_CENSOR_VERIFIED_STATE_V1"
 STATE_VERSION = 1
 CANONICALIZATION_VERSION = "publisher-canonical-v1"
-PUBLISHER_AUTHORITY_POLICY_VERSION = "publisher-authority-v1"
+PUBLISHER_AUTHORITY_POLICY_VERSION = "publisher-authority-v2"
 SOURCE_QUALITY_POLICY_VERSION = "source-quality-v1"
 
 VERIFY_REUSE_TTL = timedelta(hours=24)
@@ -60,6 +60,7 @@ _ENTRY_KEYS = frozenset(
         "canonicalization_version",
         "publisher_authority_policy_version",
         "source_quality_policy_version",
+        "publisher_verification_strength",
         "image_local_path",
         "image_status",
         "image_source_kind",
@@ -82,6 +83,13 @@ _ENTRY_KEYS = frozenset(
 )
 
 _IMAGE_STATUSES = {"", "local_materialized", "deterministic_fallback"}
+_PUBLISHER_VERIFICATION_STRENGTHS = {
+    "full_body",
+    "structured_metadata",
+    "metadata_only_exact_host",
+    "official_registry_feed",
+    "legacy_unclassified",
+}
 _IMAGE_FALLBACK_REASONS = {
     "no_image_candidate",
     "publisher_blocked",
@@ -213,6 +221,11 @@ def validate_entry(raw: object) -> dict:
         for value in policy_versions.values()
     ):
         raise VerifiedStateError("verified entry policy version invalid")
+    verification_strength = str(
+        raw.get("publisher_verification_strength") or "legacy_unclassified"
+    )
+    if verification_strength not in _PUBLISHER_VERIFICATION_STRENGTHS:
+        raise VerifiedStateError("unsupported publisher verification strength")
 
     published = _parse_iso(raw.get("published_at"), "published_at")
     first_verified = _parse_iso(raw.get("first_verified_at"), "first_verified_at")
@@ -316,6 +329,7 @@ def validate_entry(raw: object) -> dict:
             raw["publisher_authority_policy_version"]
         ),
         "source_quality_policy_version": str(raw["source_quality_policy_version"]),
+        "publisher_verification_strength": verification_strength,
         "image_local_path": image_path,
         "image_status": image_status,
         "image_source_kind": str(raw.get("image_source_kind") or "")[:80],
@@ -568,6 +582,9 @@ def article_from_entry(
         "first_verified_at": str(entry["first_verified_at"]),
         "last_verified_at": str(entry["last_verified_at"]),
         "category_memberships": list(entry.get("category_memberships") or []),
+        "publisher_verification_strength": str(
+            entry.get("publisher_verification_strength") or "legacy_unclassified"
+        ),
     }
     return {
         "id": str(entry["article_id"]),
@@ -579,6 +596,9 @@ def article_from_entry(
         "publisher_url": canonical,
         "publisher_domain": str(entry["publisher_host"]),
         "publisher_direct": True,
+        "publisher_verification_strength": metadata[
+            "publisher_verification_strength"
+        ],
         "snippet": str(entry.get("snippet") or "")[:SNIPPET_MAX_CHARS],
         "portal_resolution_status": "resolved",
         "portal_resolution_reason": metadata["portal_resolution_reason"],
@@ -636,6 +656,13 @@ def verified_entry_from_article(
         "canonicalization_version": CANONICALIZATION_VERSION,
         "publisher_authority_policy_version": PUBLISHER_AUTHORITY_POLICY_VERSION,
         "source_quality_policy_version": SOURCE_QUALITY_POLICY_VERSION,
+        "publisher_verification_strength": str(
+            article.get("publisher_verification_strength")
+            or (article.get("source_metadata") or {}).get(
+                "publisher_verification_strength"
+            )
+            or "full_body"
+        ),
         "image_local_path": str(previous.get("image_local_path") or ""),
         "image_status": str(previous.get("image_status") or ""),
         "image_source_kind": str(previous.get("image_source_kind") or ""),

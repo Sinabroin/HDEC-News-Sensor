@@ -224,6 +224,7 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
             "primary_publisher_articles_collected": 0,
             "primary_10_articles_collected": 0,
             "secondary_3_articles_collected": 0,
+            "major_secondary_articles_collected": 0,
             "primary_publisher_lane_budget_exhausted": False,
         }
     naver_status = str(naver_result.get("status") or "unknown")
@@ -244,6 +245,9 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
     )
     secondary_3_articles_collected = int(
         naver_result.get("secondary_3_articles_collected") or 0
+    )
+    major_secondary_articles_collected = int(
+        naver_result.get("major_secondary_articles_collected") or 0
     )
     primary_publisher_lane_budget_exhausted = bool(
         naver_result.get("primary_publisher_lane_budget_exhausted")
@@ -307,6 +311,7 @@ def collect_live_article_bundle() -> tuple[list[dict], dict]:
         "primary_publisher_articles_collected": primary_publisher_articles_collected,
         "primary_10_articles_collected": primary_10_articles_collected,
         "secondary_3_articles_collected": secondary_3_articles_collected,
+        "major_secondary_articles_collected": major_secondary_articles_collected,
         "primary_publisher_lane_budget_exhausted": (
             primary_publisher_lane_budget_exhausted
         ),
@@ -488,6 +493,7 @@ def run_live_preview(
         "primary_publisher_articles_collected": 0,
         "primary_10_articles_collected": 0,
         "secondary_3_articles_collected": 0,
+        "major_secondary_articles_collected": 0,
         "primary_publisher_lane_budget_exhausted": False,
     }
     if collect is collect_live_articles:
