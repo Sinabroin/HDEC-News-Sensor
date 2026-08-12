@@ -255,6 +255,12 @@ def article_to_candidate(
         "image_remote_url": article.image_remote_url or article.image_url,
         "image_quality_accepted": article.image_quality_accepted,
         "image_quality_reason": article.image_quality_reason,
+        "image_download_status": article.image_download_status,
+        "image_download_content_type": article.image_download_content_type,
+        "image_download_bytes": article.image_download_bytes,
+        "image_materialization_reason": article.image_materialization_reason,
+        "image_is_category_fallback": article.image_is_category_fallback,
+        "image_real_article_photo": article.image_real_article_photo,
         # D7-AK-6E R4-R6 §11/§12 — explainable selection factors + implication
         # surfaced to the editor console and preserved through approval.
         "materiality_score": article.materiality_score,
@@ -407,6 +413,23 @@ def candidate_to_article(
         image_remote_url=_clean(candidate.get("image_remote_url") or candidate.get("image_url")),
         image_quality_accepted=bool(candidate.get("image_quality_accepted")),
         image_quality_reason=_clean(candidate.get("image_quality_reason")),
+        image_download_status=_clean(candidate.get("image_download_status")) or "not_attempted",
+        image_download_content_type=_clean(candidate.get("image_download_content_type")),
+        image_download_bytes=int(candidate.get("image_download_bytes") or 0),
+        review_asset_edition_key=_clean(candidate.get("review_asset_edition_key")),
+        review_asset_relative_path=_clean(
+            candidate.get("review_asset_relative_path")
+        ),
+        review_asset_sha256_prefix=_clean(
+            candidate.get("review_asset_sha256_prefix")
+        ),
+        image_materialization_reason=_clean(
+            candidate.get("image_materialization_reason")
+        ) or "loaded_from_review_bundle",
+        image_is_category_fallback=bool(candidate.get("image_is_category_fallback")),
+        # Never trust a serialized boolean as proof. The production publisher
+        # re-reads and validates the exact raster bytes before setting this.
+        image_real_article_photo=False,
         materiality_score=float(candidate.get("materiality_score") or 0.0),
         hdec_relevance_score=float(candidate.get("hdec_relevance_score") or 0.0),
         publisher_tier=_clean(candidate.get("publisher_tier")),
@@ -514,7 +537,13 @@ def _candidate_for_daily_render(
     candidate: Mapping[str, Any],
     edition_key: object,
 ) -> Mapping[str, Any]:
-    """Rebase a console-local image for Daily HTML in docs/editorial/daily."""
+    """Attach exact dated-Review provenance without trusting a relative URL.
+
+    Review image filenames are content-addressed with the first 24 hex
+    characters of the payload SHA-256. The Daily publisher re-resolves the
+    relative path below the exact Review edition root and revalidates the full
+    digest, raster bytes, and geometry before copying it to Daily ownership.
+    """
     image_url = _clean(candidate.get("image_url"))
     edition = _clean(edition_key)
     prefix = "assets/images/"
@@ -525,16 +554,12 @@ def _candidate_for_daily_render(
         and edition[7] == "-"
         and edition.replace("-", "").isdigit()
         and image_url.startswith(prefix)
-        and filename
-        and "/" not in filename
-        and "\\" not in filename
-        and filename not in {".", ".."}
     ):
-        rebased = dict(candidate)
-        rebased["image_url"] = (
-            f"../review/{edition}/{prefix}{filename}"
-        )
-        return rebased
+        provenanced = dict(candidate)
+        provenanced["review_asset_edition_key"] = edition
+        provenanced["review_asset_relative_path"] = image_url
+        provenanced["review_asset_sha256_prefix"] = filename.rsplit(".", 1)[0]
+        return provenanced
     return candidate
 
 

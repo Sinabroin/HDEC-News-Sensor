@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -140,6 +141,92 @@ def copy_preview_assets(source_root: Path, destination_dir: Path) -> None:
         for asset in source.iterdir():
             if asset.is_file():
                 shutil.copy2(asset, target / asset.name)
+
+
+def github_output(name: str, value: str) -> None:
+    """Expose the builder-owned exact identities to its workflow step."""
+    target = os.environ.get("GITHUB_OUTPUT", "").strip()
+    if target:
+        with Path(target).open("a", encoding="utf-8") as handle:
+            handle.write(f"{name}={value}\n")
+
+
+def write_immutable_review_snapshot(
+    edition_dir: Path,
+    *,
+    output_root: Path,
+    edition_key: str,
+) -> dict:
+    """Write one content-addressed, append-only Review Console snapshot."""
+    candidate_payload = (edition_dir / "candidates.json").read_bytes()
+    console_payload = (edition_dir / "index.html").read_bytes()
+    asset_records = []
+    asset_root = edition_dir / "assets" / "images"
+    if asset_root.is_dir():
+        for asset in sorted(path for path in asset_root.iterdir() if path.is_file()):
+            payload = asset.read_bytes()
+            asset_records.append(
+                {
+                    "relative_path": f"assets/images/{asset.name}",
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                    "byte_size": len(payload),
+                }
+            )
+    core = {
+        "version": 1,
+        "product": "editor_review_snapshot",
+        "edition_key": edition_key,
+        "candidate_bundle_sha256": hashlib.sha256(candidate_payload).hexdigest(),
+        "console_html_sha256": hashlib.sha256(console_payload).hexdigest(),
+        "assets": asset_records,
+        "generated": True,
+        "published": False,
+        "public_verified": False,
+        "claimed": False,
+        "sent": False,
+        "duplicate_skipped": False,
+        "failed": False,
+    }
+    digest = hashlib.sha256(
+        json.dumps(
+            core,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    snapshot_id = f"review-{edition_key}-{digest[:16]}"
+    snapshot_dir = output_root / "snapshots" / snapshot_id
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    files = {
+        snapshot_dir / "candidates.json": candidate_payload,
+        snapshot_dir / "index.html": console_payload,
+    }
+    for record in asset_records:
+        source = edition_dir / record["relative_path"]
+        files[snapshot_dir / record["relative_path"]] = source.read_bytes()
+    for target, payload in files.items():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists() and target.read_bytes() != payload:
+            raise RuntimeError("review snapshot collision")
+        target.write_bytes(payload)
+    snapshot_manifest = {
+        **core,
+        "review_snapshot_id": snapshot_id,
+        "integrity": {
+            "algorithm": "sha256",
+            "canonicalization": "sorted-compact-json-utf8",
+            "digest": digest,
+        },
+    }
+    manifest_payload = (
+        json.dumps(snapshot_manifest, ensure_ascii=False, indent=2) + "\n"
+    ).encode("utf-8")
+    manifest_path = snapshot_dir / "manifest.json"
+    if manifest_path.exists() and manifest_path.read_bytes() != manifest_payload:
+        raise RuntimeError("review snapshot manifest collision")
+    manifest_path.write_bytes(manifest_payload)
+    return snapshot_manifest
 
 
 # R4-R20 — bound the sanitized raw inventory so a pathological supply cannot
@@ -362,6 +449,11 @@ def main() -> int:
                 feedback_adjustment=adjustment,
             )
         )
+    image_audit = editorial_briefings.image_audit_manifest(
+        articles,
+        image_materialization_failed_count=image_counters.image_downloads_failed,
+        image_quality_rejected_count=image_counters.image_quality_rejections,
+    )
 
     # Default report order required by the editor. Human drag-and-drop may override it.
     candidates.sort(
@@ -435,6 +527,12 @@ def main() -> int:
     shutil.copyfile(edition_dir / "index.html", latest_dir / "index.html")
     copy_preview_assets(image_stage, latest_dir)
 
+    snapshot_manifest = write_immutable_review_snapshot(
+        edition_dir,
+        output_root=output_root,
+        edition_key=edition_key,
+    )
+
     manifest = {
         "version": 2,
         "edition_key": edition_key,
@@ -472,6 +570,13 @@ def main() -> int:
             collection_audit.get("primary_publisher_lane_budget_exhausted", False)
         ),
         "generated_at": generated_at,
+        "review_snapshot_id": snapshot_manifest["review_snapshot_id"],
+        "review_snapshot_manifest": (
+            f"snapshots/{snapshot_manifest['review_snapshot_id']}/manifest.json"
+        ),
+        "review_snapshot_console": (
+            f"snapshots/{snapshot_manifest['review_snapshot_id']}/index.html"
+        ),
         "edition_console": str(edition_dir / "index.html"),
         "latest_console": str(latest_dir / "index.html"),
         "network_sends": 0,
@@ -483,6 +588,7 @@ def main() -> int:
         "article_import_api_configured": bool(article_import_api_url),
         "image_network_calls": image_counters.image_download_attempts,
         **image_counters.manifest_fields(),
+        **image_audit,
     }
     (edition_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -495,6 +601,9 @@ def main() -> int:
     print(f"candidate_count={len(candidates)}")
     print("category_order=투자·산업>기업동향>기술정보")
     print(f"console={edition_dir / 'index.html'}")
+    print(f"review_snapshot_id={snapshot_manifest['review_snapshot_id']}")
+    github_output("edition", edition_key)
+    github_output("snapshot_id", snapshot_manifest["review_snapshot_id"])
     print("smtp_attempts=0")
     print("teams_sends=0")
     print("telegram_sends=0")

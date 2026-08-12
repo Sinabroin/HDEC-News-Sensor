@@ -17,10 +17,12 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime
+from dataclasses import replace
 from urllib.parse import urlsplit, urlunsplit
 from email.message import EmailMessage
 from email.utils import parseaddr
@@ -368,6 +370,244 @@ def _docs_paths(edition_type: str, key: str) -> tuple[Path, Path]:
     return directory / f"{key}.html", directory / "latest.html"
 
 
+def _existing_publication_image_bytes(
+    article,
+    *,
+    edition_type: str,
+    edition_key: str,
+    review_asset_root: Path | None,
+) -> tuple[bytes, str]:
+    """Read one explicitly provenanced exact-Review asset for Daily only.
+
+    An arbitrary candidate image_url is never a local path capability. The
+    caller supplies the exact Review edition root, and the serialized candidate
+    must carry the matching edition plus a single content-addressed filename.
+    """
+    if edition_type != "daily":
+        return b"", "exact_review_asset_not_applicable"
+    provenance_edition = str(article.review_asset_edition_key or "").strip()
+    relative = str(article.review_asset_relative_path or "").strip()
+    digest_prefix = str(article.review_asset_sha256_prefix or "").strip()
+    if not provenance_edition and not relative and not digest_prefix:
+        return b"", "exact_review_asset_provenance_missing"
+    if provenance_edition != edition_key or review_asset_root is None:
+        raise OrchestratorError("exact Review asset edition identity mismatch")
+    match = re.fullmatch(
+        r"assets/images/([0-9a-f]{24})\.(jpg|jpeg|png|webp|avif)",
+        relative,
+    )
+    if not match or digest_prefix != match.group(1):
+        raise OrchestratorError("exact Review asset path provenance invalid")
+    exact_root = review_asset_root.resolve()
+    allowed_root = (exact_root / "assets" / "images").resolve()
+    source = (exact_root / relative).resolve()
+    if source.parent != allowed_root:
+        raise OrchestratorError("exact Review asset path escaped exact edition")
+    try:
+        payload = source.read_bytes()
+    except OSError:
+        return b"", "exact_review_asset_unavailable"
+    digest = hashlib.sha256(payload).hexdigest()
+    if not digest.startswith(digest_prefix):
+        return b"", "exact_review_asset_digest_mismatch"
+    if not editorial_briefings._raster_content_type(payload):
+        return b"", "exact_review_asset_not_supported_raster"
+    verdict = editorial_briefings.assess_daily_image_asset(payload)
+    if not verdict.valid:
+        return b"", f"exact_review_asset_{verdict.reason}"
+    if (
+        article.image_width
+        and verdict.width != int(article.image_width)
+        or article.image_height
+        and verdict.height != int(article.image_height)
+    ):
+        return b"", "exact_review_asset_geometry_mismatch"
+    return payload, ""
+
+
+def prepare_publication_images(
+    articles: list,
+    *,
+    edition_type: str,
+    edition_key: str,
+    publication_dir: Path,
+    review_asset_root: Path | None = None,
+    downloader=None,
+) -> tuple[list, dict, list[dict]]:
+    """Stage immutable publication-owned real photos and return no fallbacks.
+
+    Existing dated Review assets are byte-validated before being copied. If an
+    exact Review asset is unavailable, every bounded publisher candidate is
+    retried through the existing materializer. Articles that still lack a real
+    photo are excluded; callers must fail explicitly when that would turn a
+    qualified non-empty selection into an empty edition.
+    """
+    if edition_type not in {"daily", "weekly"}:
+        raise OrchestratorError("unsupported publication image product")
+    publication_dir = publication_dir.resolve()
+    materialized: list = []
+    asset_payloads: list[dict] = []
+    failure_reasons: dict[str, str] = {}
+    materialization_failures = 0
+    quality_rejections = 0
+    seen_digests: set[str] = set()
+
+    with tempfile.TemporaryDirectory(prefix=f"r4-ops-7-{edition_type}-images-", dir="/tmp") as tmp:
+        stage_root = Path(tmp)
+        for index, article in enumerate(articles):
+            article_id = editorial_briefings.editorial_article_id(article)
+            payload, local_error = _existing_publication_image_bytes(
+                article,
+                edition_type=edition_type,
+                edition_key=edition_key,
+                review_asset_root=review_asset_root,
+            )
+            candidate = article
+            reason = local_error
+            if payload:
+                try:
+                    # The target path is publication-owned even when the source
+                    # bytes came from an immutable Review snapshot.
+                    digest = hashlib.sha256(payload).hexdigest()
+                    mime = editorial_briefings._raster_content_type(payload)
+                    extension = {
+                        "image/jpeg": ".jpg",
+                        "image/png": ".png",
+                        "image/webp": ".webp",
+                        "image/avif": ".avif",
+                    }.get(mime, "")
+                    filename = f"{digest[:24]}{extension}"
+                    local_src = f"assets/{edition_key}/{filename}"
+                    candidate = editorial_briefings.mark_real_article_photo(
+                        article,
+                        payload,
+                        local_src=local_src,
+                        local_asset=filename,
+                        materialization_reason="copied_exact_review_asset",
+                    )
+                    reason = ""
+                except editorial_briefings.EditorialError as exc:
+                    reason = str(exc).split(": ", 1)[-1]
+                    payload = b""
+
+            if not payload:
+                one_root = stage_root / f"article-{index + 1}"
+                staged, counters = editorial_briefings.materialize_preview_images(
+                    [article],
+                    one_root,
+                    html_dir=one_root / edition_type,
+                    downloader=downloader,
+                    daily=True,
+                )
+                staged_article = staged[0]
+                if staged_article.image_real_article_photo:
+                    staged_path = (
+                        one_root / "assets" / "images" / staged_article.image_local_asset
+                    )
+                    try:
+                        payload = staged_path.read_bytes()
+                    except OSError:
+                        payload = b""
+                    if payload:
+                        digest = hashlib.sha256(payload).hexdigest()
+                        mime = editorial_briefings._raster_content_type(payload)
+                        extension = {
+                            "image/jpeg": ".jpg",
+                            "image/png": ".png",
+                            "image/webp": ".webp",
+                            "image/avif": ".avif",
+                        }.get(mime, "")
+                        filename = f"{digest[:24]}{extension}"
+                        local_src = f"assets/{edition_key}/{filename}"
+                        candidate = editorial_briefings.mark_real_article_photo(
+                            staged_article,
+                            payload,
+                            local_src=local_src,
+                            local_asset=filename,
+                        )
+                        reason = ""
+                if not payload or not staged_article.image_real_article_photo:
+                    reason = (
+                        staged_article.image_materialization_reason
+                        or staged_article.image_quality_reason
+                        or reason
+                        or "image_materialization_failed"
+                    )
+                    if counters.image_quality_rejections:
+                        quality_rejections += 1
+                    else:
+                        materialization_failures += 1
+                    failure_reasons[article_id] = reason
+                    continue
+
+            digest = hashlib.sha256(payload).hexdigest()
+            if digest in seen_digests:
+                quality_rejections += 1
+                failure_reasons[article_id] = "image_duplicate_across_articles"
+                continue
+            seen_digests.add(digest)
+            target = publication_dir / "assets" / edition_key / candidate.image_local_asset
+            public_path = (
+                f"editorial/{edition_type}/assets/{edition_key}/"
+                f"{candidate.image_local_asset}"
+            )
+            asset_payloads.append(
+                {
+                    "article_id": article_id,
+                    "path": target,
+                    "relative_path": public_path,
+                    "sha256": digest,
+                    "byte_size": len(payload),
+                    "content_type": editorial_briefings._raster_content_type(payload),
+                    "image_source_kind": candidate.image_source_kind,
+                    "payload": payload,
+                }
+            )
+            materialized.append(candidate)
+
+    public_records = [
+        {key: value for key, value in asset.items() if key not in {"path", "payload"}}
+        for asset in asset_payloads
+    ]
+    audit = editorial_briefings.image_audit_manifest(
+        materialized,
+        image_materialization_failed_count=materialization_failures,
+        image_quality_rejected_count=quality_rejections,
+        failure_reasons=failure_reasons,
+        publication_assets=public_records,
+    )
+    return materialized, audit, asset_payloads
+
+
+def write_publication_image_assets(
+    *,
+    edition_type: str,
+    edition_key: str,
+    publication_dir: Path,
+    audit: dict,
+    asset_payloads: list[dict],
+) -> str:
+    """Write only the exact staged assets plus their immutable audit manifest."""
+    asset_dir = publication_dir / "assets" / edition_key
+    for asset in asset_payloads:
+        target = Path(asset["path"]).resolve()
+        if target.parent != asset_dir.resolve():
+            raise OrchestratorError("publication image asset escaped exact edition")
+        editorial_briefings.atomic_write_bytes(target, bytes(asset["payload"]))
+    manifest_path = asset_dir / "image-manifest.json"
+    manifest = {
+        "version": 1,
+        "edition_type": edition_type,
+        "edition_key": edition_key,
+        **audit,
+    }
+    editorial_briefings.atomic_write_bytes(
+        manifest_path,
+        (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+    )
+    return _publication_output_path(manifest_path)
+
+
 def _write_runtime_manifest(runtime_dir: Path, manifest: dict) -> Path:
     target = runtime_dir / RUNTIME_MANIFEST
     editorial_briefings.atomic_write_bytes(
@@ -403,6 +643,17 @@ def _load_runtime_manifest(runtime_dir: Path, edition_type: str) -> dict:
         "feedback_proposal_sha256",
         "feedback_proposal_created",
         "edition_manifest_path",
+        "image_manifest_path",
+        "image_manifest_sha256",
+        "real_article_photo_count",
+        "fallback_visual_count",
+        "image_materialization_failed_count",
+        "image_quality_rejected_count",
+        "real_photo_article_ids",
+        "fallback_article_ids",
+        "failure_reasons",
+        "publication_image_assets",
+        "production_image_gate_required",
     }
     if (
         not isinstance(value, dict)
@@ -463,6 +714,7 @@ def run_live_preview(
     run_at: datetime,
     preview_root: Path,
     fixture_root: str,
+    edition_type: str = "daily",
     collect: Callable[[], list[dict]] = collect_live_articles,
     image_page_fetcher=None,
     image_probe=None,
@@ -471,7 +723,9 @@ def run_live_preview(
     publisher_fetcher=None,
     publisher_opener=None,
 ) -> dict:
-    """Build one Daily preview from live metadata without any production side effect."""
+    """Build one Daily/Weekly live preview without any production side effect."""
+    if edition_type not in {"daily", "weekly"}:
+        raise OrchestratorError("unsupported live-preview edition type")
     output_root = _live_preview_root(preview_root)
     collection_audit = {
         "naver_provider_enabled": False,
@@ -497,11 +751,15 @@ def run_live_preview(
     counters = editorial_briefings.ImageResolutionCounters()
     publisher_counters = editorial_briefings.PublisherUrlResolutionCounters()
     selection_counters = editorial_briefings.SelectionAuditCounters()
-    coverage = editorial_briefings.daily_coverage(run_at)
+    coverage = editorial_briefings.coverage_for(edition_type, run_at)
     articles = editorial_briefings.normalize_articles(
         raw_articles,
         coverage,
-        limit=editorial_briefings.DAILY_MAX_ARTICLES,
+        limit=(
+            editorial_briefings.DAILY_MAX_ARTICLES
+            if edition_type == "daily"
+            else editorial_briefings.WEEKLY_MAX_ARTICLES
+        ),
         resolve_images=True,
         allow_image_network=True,
         image_counters=counters,
@@ -513,11 +771,13 @@ def run_live_preview(
         publisher_opener=publisher_opener,
         selection_audit=selection_counters,
         selection_mode=editorial_briefings.SELECTION_MODE_DIRECT_AWARE_DAILY,
-        edition_type="daily",
+        edition_type=edition_type,
     )
     if not articles:
-        raise OrchestratorError("live preview found no Daily articles in exact coverage")
-    output_dir = output_root / "daily"
+        raise OrchestratorError(
+            f"live preview found no {edition_type} articles in exact coverage"
+        )
+    output_dir = output_root / edition_type
     articles, materialization_counters = editorial_briefings.materialize_preview_images(
         articles,
         output_root,
@@ -526,8 +786,14 @@ def run_live_preview(
         opener=image_opener,
         daily=True,
     )
-    edition = editorial_briefings.render_daily(
-        articles, run_at=run_at, root_url=fixture_root
+    edition = (
+        editorial_briefings.render_daily(
+            articles, run_at=run_at, root_url=fixture_root
+        )
+        if edition_type == "daily"
+        else editorial_briefings.render_weekly(
+            articles, run_at=run_at, root_url=fixture_root
+        )
     )
     editorial_briefings.validate_rendered(edition)
 
@@ -548,10 +814,15 @@ def run_live_preview(
         resolved_path,
         (json.dumps(image_records, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
     )
+    image_audit = editorial_briefings.image_audit_manifest(
+        articles,
+        image_materialization_failed_count=materialization_counters.image_downloads_failed,
+        image_quality_rejected_count=materialization_counters.image_quality_rejections,
+    )
     manifest = {
         "version": 1,
         "mode": "live-preview",
-        "edition_type": "daily",
+        "edition_type": edition_type,
         "edition_key": edition.edition_key,
         "coverage_start": coverage.start.isoformat(),
         "coverage_end": coverage.end.isoformat(),
@@ -562,6 +833,7 @@ def run_live_preview(
         **publisher_counters.manifest_fields(),
         **counters.manifest_fields(),
         **materialization_counters.manifest_fields(),
+        **image_audit,
         **selection_counters.manifest_fields(),
         **collection_audit,
         "publisher_page_gets": counters.network_page_gets,
@@ -583,13 +855,20 @@ def run_live_preview(
         (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
     )
     print(
-        f"live_preview_ok edition_type=daily edition={edition.edition_key} "
+        f"live_preview_ok edition_type={edition_type} edition={edition.edition_key} "
         f"articles={len(articles)} "
         f"aggregator_page_gets={publisher_counters.aggregator_page_gets} "
         f"publisher_page_gets={counters.network_page_gets} "
         f"images_resolved_actual={manifest['images_resolved_actual']} "
         "smtp_attempts=0 teams_sends=0 telegram_calls=0 state_reads=0 "
         "state_writes=0 docs_writes=0 git_writes=0"
+    )
+    print(f"ARTICLE_COUNT={manifest['article_count']}")
+    print(f"REAL_ARTICLE_PHOTO_COUNT={manifest['real_article_photo_count']}")
+    print(f"FALLBACK_VISUAL_COUNT={manifest['fallback_visual_count']}")
+    print(
+        "IMAGE_FAILURE_COUNT="
+        f"{manifest['image_materialization_failed_count'] + manifest['image_quality_rejected_count']}"
     )
     print(f"live_preview_path={output_root}")
     return manifest
@@ -724,6 +1003,33 @@ def _skip_daily_editor_unavailable(
     return None
 
 
+def _skip_image_quality_failure(
+    edition_type: str,
+    key: str,
+    audit: dict,
+) -> None:
+    """Qualified supply existed, but no truthful non-empty photo edition did."""
+    _github_output("skipped", "true")
+    _github_output("edition", key)
+    _github_output("delivery_authorized", "false")
+    _github_output("skip_reason", "real_article_photo_gate_failed")
+    for field in (
+        "article_count",
+        "real_article_photo_count",
+        "fallback_visual_count",
+        "image_materialization_failed_count",
+        "image_quality_rejected_count",
+    ):
+        _github_output(field, str(audit.get(field, 0)))
+    print(
+        f"publish_skip edition_type={edition_type} edition={key} "
+        "reason=real_article_photo_gate_failed "
+        f"image_materialization_failed_count={audit.get('image_materialization_failed_count', 0)} "
+        f"image_quality_rejected_count={audit.get('image_quality_rejected_count', 0)}"
+    )
+    return None
+
+
 def run_publish(
     edition_type: str,
     *,
@@ -761,11 +1067,14 @@ def run_publish(
         print(f"publish_skip edition_type={edition_type} edition={key} reason={reason}")
         return None
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
+    dated_path, latest_path = _docs_paths(edition_type, key)
     review_mode = "not_applicable"
     review_decision = "not_applicable"
     selection_counters = editorial_briefings.SelectionAuditCounters()
     selection_manifest: dict = {}
     feedback_proposal: dict | None = None
+    image_audit = editorial_briefings.image_audit_manifest(())
+    publication_asset_payloads: list[dict] = []
     if edition_type == "daily":
         bundle_path = ROOT / "docs" / "editorial" / "review" / key / "candidates.json"
         review_path = ROOT / "data" / "editorial_reviews" / f"{key}.json"
@@ -780,8 +1089,36 @@ def run_publish(
             selected_articles, review_mode = editorial_review.choose_daily_articles(
                 bundle,
                 review,
-                limit=editorial_briefings.DAILY_MAX_ARTICLES,
+                limit=max(
+                    editorial_briefings.DAILY_MAX_ARTICLES,
+                    len(bundle.get("candidates") or []),
+                ),
             )
+            if review is not None:
+                # R4-OPS-7: preserve the human order first, then keep only
+                # already-qualified/recommended Review candidates as a bounded
+                # real-photo backfill pool. This never collects filler and is
+                # used only when an earlier selected row cannot materialize a
+                # truthful article photo.
+                automatic_pool, _automatic_mode = (
+                    editorial_review.choose_daily_articles(
+                        bundle,
+                        None,
+                        limit=len(bundle.get("candidates") or []),
+                    )
+                )
+                selected_urls = {article.selected_url for article in selected_articles}
+                recommended_urls = {
+                    str(candidate.get("selected_url") or "")
+                    for candidate in bundle.get("candidates") or []
+                    if candidate.get("ai_recommended") is True
+                }
+                selected_articles.extend(
+                    article
+                    for article in automatic_pool
+                    if article.selected_url not in selected_urls
+                    and article.selected_url in recommended_urls
+                )
             # R4-R10 — delivered Daily lead cards must come from locked
             # primary-ten / secondary-three / promoted-official publishers.
             # Long-tail/specialist leads (비즈트리뷴·더퍼블릭·녹색경제신문·S저널) are
@@ -809,6 +1146,48 @@ def run_publish(
                 return _skip_daily_editor_unavailable(
                     key, review_decision, "daily_editor_console_missing"
                 )
+            qualified_article_count = len(selected_articles)
+            if selected_articles:
+                selected_articles, image_audit, publication_asset_payloads = (
+                    prepare_publication_images(
+                        selected_articles,
+                        edition_type="daily",
+                        edition_key=key,
+                        publication_dir=dated_path.parent,
+                        review_asset_root=bundle_path.parent,
+                    )
+                )
+                selected_articles = selected_articles[
+                    : editorial_briefings.DAILY_MAX_ARTICLES
+                ]
+                if not selected_articles and qualified_article_count:
+                    return _skip_image_quality_failure("daily", key, image_audit)
+                # Recompute final rendered counters after optional backfill/drop,
+                # while retaining attempt failures from the complete pool.
+                selected_image_ids = {
+                    editorial_briefings.editorial_article_id(article)
+                    for article in selected_articles
+                }
+                publication_asset_payloads = [
+                    item
+                    for item in publication_asset_payloads
+                    if item["article_id"] in selected_image_ids
+                ]
+                image_audit = editorial_briefings.image_audit_manifest(
+                    selected_articles,
+                    image_materialization_failed_count=image_audit[
+                        "image_materialization_failed_count"
+                    ],
+                    image_quality_rejected_count=image_audit[
+                        "image_quality_rejected_count"
+                    ],
+                    failure_reasons=image_audit["failure_reasons"],
+                    publication_assets=[
+                        item
+                        for item in image_audit["publication_image_assets"]
+                        if item["article_id"] in selected_image_ids
+                    ],
+                )
             edition = editorial_briefings.render_daily(
                 selected_articles,
                 run_at=run_at,
@@ -817,6 +1196,7 @@ def run_publish(
                 review_decision=review_decision,
                 editor_console_available=True,
             )
+            edition = replace(edition, image_audit=image_audit)
             raw_selection_manifest = bundle.get("selection_audit")
             if isinstance(raw_selection_manifest, dict):
                 allowed_memory_fields = set(
@@ -858,27 +1238,82 @@ def run_publish(
             f"weekly_verified_carry_forward_added={verified_added} "
             "teams_newness_eligible=0 state_writes=0"
         )
-        try:
-            edition = editorial_briefings.render_edition(
-                edition_type,
-                raw_articles,
-                run_at=run_at,
-                root_url=root_url,
-                allow_image_network=False,
-                selection_mode=(
-                    editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
-                ),
-                selection_audit=selection_counters,
-            )
-        except editorial_briefings.EditorialError as exc:
-            if str(exc) != "empty edition":
-                raise
+        articles = editorial_briefings.normalize_articles(
+            raw_articles,
+            editorial_briefings.weekly_coverage(run_at),
+            limit=editorial_briefings.WEEKLY_MAX_ARTICLES * 2,
+            resolve_images=True,
+            allow_image_network=True,
+            selection_mode=(
+                editorial_briefings.SELECTION_MODE_EDITORIAL_PRIORITY
+            ),
+            selection_audit=selection_counters,
+            edition_type="weekly",
+        )
+        if not articles:
             return _skip_insufficient_quality(edition_type, key, review_decision)
+        qualified_article_count = len(articles)
+        articles, image_audit, publication_asset_payloads = prepare_publication_images(
+            articles,
+            edition_type="weekly",
+            edition_key=key,
+            publication_dir=dated_path.parent,
+        )
+        articles = articles[: editorial_briefings.WEEKLY_MAX_ARTICLES]
+        if not articles and qualified_article_count:
+            return _skip_image_quality_failure("weekly", key, image_audit)
+        selected_image_ids = {
+            editorial_briefings.editorial_article_id(article)
+            for article in articles
+        }
+        publication_asset_payloads = [
+            item
+            for item in publication_asset_payloads
+            if item["article_id"] in selected_image_ids
+        ]
+        image_audit = editorial_briefings.image_audit_manifest(
+            articles,
+            image_materialization_failed_count=image_audit[
+                "image_materialization_failed_count"
+            ],
+            image_quality_rejected_count=image_audit[
+                "image_quality_rejected_count"
+            ],
+            failure_reasons=image_audit["failure_reasons"],
+            publication_assets=[
+                item
+                for item in image_audit["publication_image_assets"]
+                if item["article_id"] in selected_image_ids
+            ],
+        )
+        edition = editorial_briefings.render_weekly(
+            articles,
+            run_at=run_at,
+            root_url=root_url,
+        )
+        edition = replace(edition, image_audit=image_audit)
     print(f"editorial_review_mode={review_mode}")
     print(f"editorial_review_decision={review_decision}")
     _github_output("review_mode", review_mode)
     _github_output("review_decision", review_decision)
     editorial_briefings.validate_rendered(edition)
+    image_gate_error = editorial_briefings.production_image_gate_error(
+        edition.image_audit
+    )
+    if edition.article_count and image_gate_error:
+        raise OrchestratorError(f"production image gate failed: {image_gate_error}")
+    rendered_image_gate_error = (
+        editorial_briefings.production_rendered_image_gate_error(
+            edition.html,
+            edition_type=edition_type,
+            edition_key=edition.edition_key,
+            manifest=edition.image_audit,
+        )
+    )
+    if edition.article_count and rendered_image_gate_error:
+        raise OrchestratorError(
+            f"production rendered image gate failed: {rendered_image_gate_error}"
+        )
     if edition_type == "daily":
         # R4-R11 §2.4 — before anything publishes, the exact-edition editor
         # must be provably reconstructable: editor deep link minted, immutable
@@ -890,7 +1325,15 @@ def run_publish(
             return _skip_daily_editor_unavailable(
                 edition.edition_key, review_decision, editor_gate_error
             )
-    dated_path, latest_path = _docs_paths(edition_type, edition.edition_key)
+    image_manifest_output = ""
+    if edition.article_count:
+        image_manifest_output = write_publication_image_assets(
+            edition_type=edition_type,
+            edition_key=edition.edition_key,
+            publication_dir=dated_path.parent,
+            audit=image_audit,
+            asset_payloads=publication_asset_payloads,
+        )
     payload = edition.html.encode("utf-8")
     editorial_briefings.atomic_write_bytes(dated_path, payload)
     editorial_briefings.atomic_write_bytes(latest_path, payload)
@@ -904,6 +1347,15 @@ def run_publish(
     manifest = editorial_briefings.manifest_for_runtime(edition, dated_path, latest_path)
     if edition_manifest_output:
         manifest["edition_manifest_path"] = edition_manifest_output
+    if image_manifest_output:
+        manifest["image_manifest_path"] = image_manifest_output
+        manifest["image_manifest_sha256"] = hashlib.sha256(
+            (ROOT / image_manifest_output).read_bytes()
+        ).hexdigest()
+    # Only the real production publisher mints this authority. Generic
+    # fixture/runtime helpers remain usable for non-production contract tests,
+    # but every publish -> verify -> claim -> send path carries and rechecks it.
+    manifest["production_image_gate_required"] = True
     if not selection_manifest:
         selection_manifest = selection_counters.manifest_fields()
     manifest.update(selection_manifest)
@@ -930,6 +1382,7 @@ def run_publish(
     _github_output("dated_path", _publication_output_path(dated_path))
     _github_output("latest_path", _publication_output_path(latest_path))
     _github_output("edition_manifest_path", edition_manifest_output)
+    _github_output("image_manifest_path", image_manifest_output)
     _github_output("delivery_authorized", str(not republish).lower())
     print(
         f"publish_ready edition_type={edition_type} edition={edition.edition_key} "
@@ -1020,6 +1473,36 @@ def verify_public_edition_manifest_once(
     return str(payload.get("edition_id") or "") == expected_edition_id
 
 
+def verify_public_image_once(
+    url: str,
+    asset: dict,
+    *,
+    opener: Callable | None = None,
+) -> bool:
+    """Verify an exact public raster by bytes and digest; extensions do not count."""
+    if not editorial_briefings.valid_http_url(url):
+        return False
+    expected_sha = str(asset.get("sha256") or "")
+    expected_size = asset.get("byte_size")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha) or type(expected_size) is not int:
+        return False
+    open_url = opener or urllib.request.urlopen
+    try:
+        response = open_url(url, timeout=15)
+        with response:
+            if _response_status(response) != 200:
+                return False
+            payload = response.read(editorial_briefings.IMAGE_DOWNLOAD_MAX_BYTES + 1)
+    except (OSError, TimeoutError, urllib.error.URLError, ValueError):
+        return False
+    return (
+        len(payload) == expected_size
+        and hashlib.sha256(payload).hexdigest() == expected_sha
+        and bool(editorial_briefings._raster_content_type(payload))
+        and editorial_briefings.assess_daily_image_asset(payload).valid
+    )
+
+
 def poll_public_edition_manifest(
     url: str,
     expected_edition_id: str,
@@ -1075,6 +1558,75 @@ def _verify_local_publication(manifest: dict) -> None:
     text = dated_bytes.decode("utf-8")
     if f'data-edition-key="{manifest["edition_key"]}"' not in text:
         raise OrchestratorError("local publication edition marker mismatch")
+    image_gate_required = manifest.get("production_image_gate_required") is True
+    image_gate_error = editorial_briefings.production_image_gate_error(manifest)
+    if article_count := int(manifest.get("article_count") or 0):
+        if not image_gate_required:
+            return
+        if image_gate_error:
+            raise OrchestratorError(f"production image gate failed: {image_gate_error}")
+        assets = manifest.get("publication_image_assets")
+        if not isinstance(assets, list) or len(assets) != article_count:
+            raise OrchestratorError("publication image asset count mismatch")
+        image_manifest_path = str(manifest.get("image_manifest_path") or "")
+        expected_manifest_path = (
+            f"docs/editorial/{manifest['edition_type']}/assets/"
+            f"{manifest['edition_key']}/image-manifest.json"
+        )
+        if image_manifest_path != expected_manifest_path:
+            raise OrchestratorError("publication image manifest path mismatch")
+        try:
+            image_manifest_bytes = (ROOT / image_manifest_path).read_bytes()
+            image_manifest = json.loads(image_manifest_bytes)
+        except (OSError, ValueError) as exc:
+            raise OrchestratorError("publication image manifest missing or malformed") from exc
+        if (
+            hashlib.sha256(image_manifest_bytes).hexdigest()
+            != manifest.get("image_manifest_sha256")
+            or image_manifest.get("edition_type") != manifest["edition_type"]
+            or image_manifest.get("edition_key") != manifest["edition_key"]
+            or image_manifest.get("publication_image_assets") != assets
+            or editorial_briefings.production_image_gate_error(image_manifest)
+        ):
+            raise OrchestratorError("publication image manifest validation failed")
+        expected_prefix = (
+            f"editorial/{manifest['edition_type']}/assets/"
+            f"{manifest['edition_key']}/"
+        )
+        for asset in assets:
+            if not isinstance(asset, dict):
+                raise OrchestratorError("publication image asset record malformed")
+            relative = str(asset.get("relative_path") or "")
+            filename = relative.removeprefix(expected_prefix)
+            if (
+                not relative.startswith(expected_prefix)
+                or not filename
+                or "/" in filename
+                or "\\" in filename
+            ):
+                raise OrchestratorError("publication image path identity mismatch")
+            image_path = dated.parent / "assets" / manifest["edition_key"] / filename
+            try:
+                image_payload = image_path.read_bytes()
+            except OSError as exc:
+                raise OrchestratorError("publication image asset missing") from exc
+            if (
+                hashlib.sha256(image_payload).hexdigest() != asset.get("sha256")
+                or len(image_payload) != asset.get("byte_size")
+                or not editorial_briefings._raster_content_type(image_payload)
+                or not editorial_briefings.assess_daily_image_asset(image_payload).valid
+            ):
+                raise OrchestratorError("publication image asset validation failed")
+        rendered_gate_error = editorial_briefings.production_rendered_image_gate_error(
+            text,
+            edition_type=manifest["edition_type"],
+            edition_key=manifest["edition_key"],
+            manifest=manifest,
+        )
+        if rendered_gate_error:
+            raise OrchestratorError(
+                f"rendered image references invalid: {rendered_gate_error}"
+            )
 
 
 def _manifest_identity(manifest: dict) -> dict:
@@ -1143,6 +1695,11 @@ def run_verify_public(
     manifest = _load_runtime_manifest(runtime_dir, edition_type)
     if manifest["edition_key"] != key:
         raise OrchestratorError("runtime edition does not match current catch-up edition")
+    if (
+        os.environ.get("GITHUB_ACTIONS") == "true"
+        and manifest.get("production_image_gate_required") is not True
+    ):
+        raise OrchestratorError("production image gate authority missing")
     _verify_local_publication(manifest)
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
@@ -1185,11 +1742,34 @@ def run_verify_public(
             sleeper=sleeper,
         ):
             _fail(SKIP_PUBLIC_RESOURCE_VERIFICATION)
+    for asset in manifest.get("publication_image_assets") or []:
+        asset_url = root_url.rstrip("/") + "/" + str(asset["relative_path"])
+        if not verify_public_image_once(asset_url, asset, opener=opener):
+            _fail("public_image_asset_verification_failed")
+    if (
+        manifest.get("article_count")
+        and manifest.get("production_image_gate_required") is True
+    ):
+        image_manifest_url = (
+            root_url.rstrip("/")
+            + "/"
+            + str(manifest["image_manifest_path"]).removeprefix("docs/")
+        )
+        expected_digest = str(manifest.get("image_manifest_sha256") or "")
+        try:
+            response = (opener or urllib.request.urlopen)(image_manifest_url, timeout=15)
+            with response:
+                public_image_manifest = response.read(2_000_000)
+        except (OSError, TimeoutError, urllib.error.URLError, ValueError):
+            _fail("public_image_manifest_verification_failed")
+        if hashlib.sha256(public_image_manifest).hexdigest() != expected_digest:
+            _fail("public_image_manifest_verification_failed")
     _github_output("resources_verified", "true")
     _github_output("edition", key)
     print(
         f"public_resources_verified edition_type={edition_type} edition={key} "
-        "dated_page=200 edition_manifest=reconstructed "
+        f"dated_page=200 publication_images={len(manifest.get('publication_image_assets') or [])} "
+        "edition_manifest=reconstructed "
         "smtp_attempts=0 teams_sends=0 telegram_calls=0 state_writes=0"
     )
     return True
@@ -1211,6 +1791,11 @@ def run_claim(
     manifest = _load_runtime_manifest(runtime_dir, edition_type)
     if manifest["edition_key"] != key:
         raise OrchestratorError("runtime edition does not match current catch-up edition")
+    if (
+        os.environ.get("GITHUB_ACTIONS") == "true"
+        and manifest.get("production_image_gate_required") is not True
+    ):
+        raise OrchestratorError("production image gate authority missing")
     _verify_local_publication(manifest)
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
@@ -1365,6 +1950,11 @@ def run_send(
     manifest = _load_runtime_manifest(runtime_dir, edition_type)
     if manifest["edition_key"] != key:
         raise OrchestratorError("runtime edition does not match current catch-up edition")
+    if (
+        os.environ.get("GITHUB_ACTIONS") == "true"
+        and manifest.get("production_image_gate_required") is not True
+    ):
+        raise OrchestratorError("production image gate authority missing")
     _verify_local_publication(manifest)
     root_url = editorial_briefings.derive_public_root(os.environ.get("REPORT_URL", ""))
     dated_url, latest_url = editorial_briefings.public_urls(root_url, edition_type, key)
@@ -1447,12 +2037,11 @@ def main(argv: list[str] | None = None) -> int:
                 fixture_profile=args.fixture_profile,
             )
         elif args.live_preview:
-            if args.edition_type != "daily":
-                raise OrchestratorError("--live-preview supports Daily only")
             run_live_preview(
                 run_at=run_at,
                 preview_root=Path(args.preview_root),
                 fixture_root=args.fixture_root,
+                edition_type=args.edition_type,
             )
         elif args.publish:
             run_publish(

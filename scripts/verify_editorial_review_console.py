@@ -1671,15 +1671,15 @@ def main() -> int:
             None,
         )
         v.check(
-            "Daily renderer path rebases to review image asset",
+            "Daily carries explicit exact-Review image provenance",
             all(
-                article.image_url.startswith(
-                    "../review/2026-07-31/assets/images/"
-                )
+                article.review_asset_edition_key == "2026-07-31"
+                and article.review_asset_relative_path.startswith("assets/images/")
+                and len(article.review_asset_sha256_prefix) == 24
                 and (
-                    output_root.parent
-                    / "daily"
-                    / article.image_url
+                    output_root
+                    / article.review_asset_edition_key
+                    / article.review_asset_relative_path
                 ).resolve().is_file()
                 for article in daily_articles
             ),
@@ -1758,8 +1758,18 @@ def main() -> int:
         "workflow_dispatch:" in workflow,
     )
     v.check(
-        "console workflow has no sender",
-        not any(
+        "console workflow independently delivers one exact Editor snapshot",
+        "run_editor_delivery.py" in workflow
+        and "--verify-public" in workflow
+        and "--claim" in workflow
+        and "--arm" in workflow
+        and "--send" in workflow
+        and "editor_delivery_state.json" in workflow
+        and "steps.arm.outputs.send_authorized == 'true'" in workflow
+        and "ambiguous_reconciliation_required" in workflow
+        and "automatic_resend=false smtp_connections=0" in workflow
+        and "if: always() && steps.claim.outputs.state_changed == 'true'" in workflow
+        and not any(
             token in workflow
             for token in (
                 "send_teams",
@@ -1768,6 +1778,16 @@ def main() -> int:
                 "run_editorial_briefing.py --send",
             )
         ),
+    )
+    editor_delivery_runner = (
+        ROOT / "scripts/run_editor_delivery.py"
+    ).read_text(encoding="utf-8")
+    v.check(
+        "armed Editor ambiguity has an explicit operator-only reconciliation path",
+        "--reconcile-mark-delivered" in editor_delivery_runner
+        and "--reconcile-release-retry" in editor_delivery_runner
+        and "EDITOR_RECONCILIATION_AUTHORIZED" in editor_delivery_runner
+        and "--operator-evidence-file" in editor_delivery_runner,
     )
     run_source = (ROOT / "scripts/run_editorial_briefing.py").read_text(
         encoding="utf-8"

@@ -80,6 +80,20 @@ DAILY_CATEGORY_FALLBACK_ASSETS = {
     "기술정보": "category-technology.png",
 }
 DAILY_CATEGORY_FALLBACK_GENERIC = "category-ai-infrastructure.png"
+APPROVED_REAL_ARTICLE_PHOTO_SOURCE_KINDS = frozenset(
+    {
+        "rss_image",
+        "media_content",
+        "media_thumbnail",
+        "enclosure",
+        "og_image",
+        "twitter_image",
+        "jsonld_image",
+        "image_src",
+        "body_image",
+        "human_supplied",
+    }
+)
 PUBLISHER_URL_MAX_LENGTH = 2048
 PUBLISHER_PAGE_MAX_BYTES = 1_000_000
 PUBLISHER_PAGE_TIMEOUT_SECONDS = 8
@@ -746,11 +760,23 @@ class EditorialArticle:
     image_download_bytes: int = 0
     image_local_asset: str = ""
     image_local_src: str = ""
+    # Exact Review assets are a separate immutable provenance domain from a
+    # Daily publication. These fields are minted only while loading the exact
+    # dated Review bundle; the publisher never treats image_url by itself as
+    # filesystem authority.
+    review_asset_edition_key: str = ""
+    review_asset_relative_path: str = ""
+    review_asset_sha256_prefix: str = ""
     image_duplicate_asset_reused: bool = False
     image_materialization_reason: str = "not_materialized"
     image_quality_accepted: bool = False
     image_quality_reason: str = ""
     image_quality_signals: tuple[str, ...] = ()
+    # R4-OPS-7: this is deliberately stricter than image_quality_accepted.
+    # Only validated raster bytes materialized to an immutable local/public
+    # publication asset may set it. A technically valid fallback visual is
+    # never a real article photo.
+    image_real_article_photo: bool = False
     # R4-R12 §3 — a category fallback is a clearly-labeled deterministic
     # neutral visual, never presented as an article photograph.
     image_is_category_fallback: bool = False
@@ -828,6 +854,7 @@ class RenderedEdition:
     edition_id: str = ""
     editor_url: str = ""
     edition_manifest: dict | None = None
+    image_audit: dict | None = None
 
     @property
     def html_sha256(self) -> str:
@@ -3771,6 +3798,194 @@ def assess_daily_image_asset(
     return DailyImageAssessment(True, "daily_image_valid", width, height)
 
 
+def _raster_content_type(payload: bytes) -> str:
+    """Return the canonical supported raster MIME from bytes, never a suffix."""
+    if payload.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if len(payload) >= 12 and payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
+        return "image/webp"
+    if len(payload) >= 12 and payload[4:8] == b"ftyp" and b"avif" in payload[8:32]:
+        return "image/avif"
+    return ""
+
+
+def real_article_photo_validation_reason(
+    article: EditorialArticle,
+    payload: bytes,
+    *,
+    local_src: str,
+) -> str:
+    """Fail-closed byte/path/source validation for one production photo.
+
+    This is the only authority used to mint ``image_real_article_photo=True``.
+    A source-kind label or a ``.jpg`` suffix alone has no authority.
+    """
+    if article.image_fallback_used:
+        return "image_fallback_used"
+    if article.image_is_category_fallback:
+        return "category_fallback_visual"
+    if article.image_source_kind not in APPROVED_REAL_ARTICLE_PHOTO_SOURCE_KINDS:
+        return "image_source_kind_not_approved"
+    if not article.image_quality_accepted:
+        return article.image_quality_reason or "image_quality_not_accepted"
+    if not local_src or local_src.startswith(("http://", "https://", "data:image/")):
+        return "image_local_public_reference_missing"
+    if not _raster_content_type(payload):
+        return "image_not_supported_raster"
+    verdict = assess_daily_image_asset(payload)
+    if not verdict.valid:
+        return verdict.reason
+    return ""
+
+
+def mark_real_article_photo(
+    article: EditorialArticle,
+    payload: bytes,
+    *,
+    local_src: str,
+    local_asset: str,
+    materialization_reason: str = "publication_asset_materialized",
+) -> EditorialArticle:
+    """Return an article with a real-photo verdict only after byte validation."""
+    reason = real_article_photo_validation_reason(
+        article,
+        payload,
+        local_src=local_src,
+    )
+    if reason:
+        raise EditorialError(f"real article photo rejected: {reason}")
+    verdict = assess_daily_image_asset(payload)
+    return replace(
+        article,
+        image_url=local_src,
+        image_local_src=local_src,
+        image_local_asset=local_asset,
+        image_width=verdict.width,
+        image_height=verdict.height,
+        image_download_status="success",
+        image_download_content_type=_raster_content_type(payload),
+        image_download_bytes=len(payload),
+        image_materialization_reason=materialization_reason,
+        image_real_article_photo=True,
+        image_is_category_fallback=False,
+    )
+
+
+def editorial_article_id(article: EditorialArticle) -> str:
+    value = "\x1f".join((article.selected_url, article.title, article.source))
+    return "article-" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
+
+
+def image_audit_manifest(
+    articles: Iterable[EditorialArticle],
+    *,
+    image_materialization_failed_count: int = 0,
+    image_quality_rejected_count: int = 0,
+    failure_reasons: Mapping[str, str] | None = None,
+    publication_assets: Iterable[Mapping[str, object]] = (),
+) -> dict:
+    rows = list(articles)
+    real_ids = [
+        editorial_article_id(article)
+        for article in rows
+        if article.image_real_article_photo
+    ]
+    fallback_ids = [
+        editorial_article_id(article)
+        for article in rows
+        if article.image_fallback_used
+        or article.image_is_category_fallback
+        or not article.image_real_article_photo
+    ]
+    return {
+        "article_count": len(rows),
+        "real_article_photo_count": len(real_ids),
+        "fallback_visual_count": len(fallback_ids),
+        "image_materialization_failed_count": int(
+            image_materialization_failed_count
+        ),
+        "image_quality_rejected_count": int(image_quality_rejected_count),
+        "real_photo_article_ids": real_ids,
+        "fallback_article_ids": fallback_ids,
+        "failure_reasons": dict(failure_reasons or {}),
+        "publication_image_assets": [dict(item) for item in publication_assets],
+    }
+
+
+def production_image_gate_error(manifest: object) -> str:
+    """Return a machine reason when a non-empty publication is not all-real."""
+    if not isinstance(manifest, Mapping):
+        return "image_manifest_missing"
+    required = {
+        "article_count",
+        "real_article_photo_count",
+        "fallback_visual_count",
+        "image_materialization_failed_count",
+        "image_quality_rejected_count",
+    }
+    if not required <= set(manifest):
+        return "image_manifest_fields_missing"
+    values = {name: manifest.get(name) for name in required}
+    if any(type(value) is not int or value < 0 for value in values.values()):
+        return "image_manifest_counter_malformed"
+    article_count = values["article_count"]
+    if article_count == 0:
+        return ""
+    if values["real_article_photo_count"] != article_count:
+        return "real_article_photo_coverage_incomplete"
+    if values["fallback_visual_count"] != 0:
+        return "fallback_visual_present"
+    return ""
+
+
+def production_rendered_image_gate_error(
+    html: str,
+    *,
+    edition_type: str,
+    edition_key: str,
+    manifest: object,
+) -> str:
+    """Bind every rendered image element to one exact publication raster."""
+    counter_error = production_image_gate_error(manifest)
+    if counter_error:
+        return counter_error
+    if not isinstance(manifest, Mapping):
+        return "image_manifest_missing"
+    article_count = int(manifest.get("article_count") or 0)
+    if article_count == 0:
+        return ""
+    if edition_type not in {"daily", "weekly"}:
+        return "image_manifest_product_malformed"
+    assets = manifest.get("publication_image_assets")
+    if not isinstance(assets, list) or len(assets) != article_count:
+        return "publication_image_asset_count_mismatch"
+    prefix = f"editorial/{edition_type}/assets/{edition_key}/"
+    expected_sources: list[str] = []
+    for asset in assets:
+        if not isinstance(asset, Mapping):
+            return "publication_image_asset_record_malformed"
+        relative = str(asset.get("relative_path") or "")
+        filename = relative.removeprefix(prefix)
+        if (
+            not relative.startswith(prefix)
+            or not filename
+            or "/" in filename
+            or "\\" in filename
+        ):
+            return "publication_image_asset_path_mismatch"
+        expected_sources.append(f"assets/{edition_key}/{filename}")
+    rendered_sources = re.findall(
+        r'<img\b[^>]*\bsrc=["\']([^"\']+)["\']',
+        str(html or ""),
+        flags=re.IGNORECASE,
+    )
+    if sorted(rendered_sources) != sorted(expected_sources):
+        return "rendered_image_asset_identity_mismatch"
+    return ""
+
+
 def daily_category_fallback_asset(category: str) -> Path:
     """Committed deterministic category visual for one Brief category."""
     name = DAILY_CATEGORY_FALLBACK_ASSETS.get(
@@ -4376,6 +4591,7 @@ def _materialize_daily_category_fallback(
         image_quality_accepted=True,
         image_quality_reason="daily_category_fallback_asset",
         image_is_category_fallback=True,
+        image_real_article_photo=False,
     )
 
 
@@ -4612,6 +4828,33 @@ def materialize_preview_images(
                         )
                     )
                     continue
+                if (
+                    candidate.source_kind
+                    not in APPROVED_REAL_ARTICLE_PHOTO_SOURCE_KINDS
+                ):
+                    last_failure = ImageDownloadError(
+                        "image_source_kind_not_approved",
+                        status=download.status,
+                        content_type=download.content_type,
+                        byte_size=len(download.payload),
+                    )
+                    counters.image_quality_rejections += 1
+                    counters.image_candidate_failures += 1
+                    quality_rejected_for_article = True
+                    attempts.append(
+                        ImageCandidateAttempt(
+                            source_kind=candidate.source_kind,
+                            host=_url_host(remote_url),
+                            status="rejected",
+                            reason="image_source_kind_not_approved",
+                            content_type=download.content_type.split(";", 1)[0].strip(),
+                            byte_size=len(download.payload),
+                            byte_validation_status="passed",
+                            quality_accepted=False,
+                            quality_rejection_reason="image_source_kind_not_approved",
+                        )
+                    )
+                    continue
                 asset_path = assets_by_digest.get(digest)
                 reused = asset_path is not None
                 if asset_path is None:
@@ -4674,6 +4917,8 @@ def materialize_preview_images(
                     image_quality_accepted=True,
                     image_quality_reason=assessment.reason,
                     image_quality_signals=assessment.logo_signals,
+                    image_real_article_photo=True,
+                    image_is_category_fallback=False,
                     image_candidate_attempts=tuple(attempts),
                 )
                 break
@@ -4775,6 +5020,7 @@ def materialize_preview_images(
                 image_materialization_reason=last_failure.reason,
                 image_quality_accepted=False,
                 image_quality_reason=last_failure.reason,
+                image_real_article_photo=False,
                 image_candidate_attempts=tuple(attempts),
             )
         )
@@ -4837,6 +5083,12 @@ def _safe_brief_image_src(article: EditorialArticle) -> str:
     candidate = str(article.image_local_src or article.image_url or "").strip()
     safe_materialized = (
         re.fullmatch(r"\.\./assets/images/[A-Za-z0-9][A-Za-z0-9._-]*", candidate)
+        is not None
+        or re.fullmatch(
+            r"assets/(?:\d{4}-\d{2}-\d{2}|\d{4}-W\d{2})/"
+            r"[A-Za-z0-9][A-Za-z0-9._-]*",
+            candidate,
+        )
         is not None
         or re.fullmatch(
             r"\.\./review/\d{4}-\d{2}-\d{2}/assets/images/"
@@ -5337,6 +5589,7 @@ def render_daily(
         edition_id=edition_id,
         editor_url=editor_url,
         edition_manifest=edition_manifest,
+        image_audit=image_audit_manifest(articles),
     )
 
 
@@ -5494,6 +5747,7 @@ def render_weekly(
     return RenderedEdition(
         "weekly", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
         mode, headline.title, len(articles),
+        image_audit=image_audit_manifest(articles),
     )
 
 
@@ -5839,6 +6093,7 @@ def fixture_articles(
 
 
 def manifest_for_runtime(edition: RenderedEdition, dated_path: Path, latest_path: Path) -> dict:
+    audit = dict(edition.image_audit or image_audit_manifest(()))
     return {
         "version": 1,
         "edition_type": edition.edition_type,
@@ -5857,6 +6112,7 @@ def manifest_for_runtime(edition: RenderedEdition, dated_path: Path, latest_path
         "article_count": edition.article_count,
         "edition_id": edition.edition_id,
         "editor_url": edition.editor_url,
+        **audit,
     }
 
 
@@ -5939,4 +6195,6 @@ def resolved_image_record(article: EditorialArticle, *, is_headline: bool = Fals
         "image_quality_accepted": article.image_quality_accepted,
         "image_quality_reason": article.image_quality_reason,
         "image_quality_signals": list(article.image_quality_signals),
+        "image_real_article_photo": article.image_real_article_photo,
+        "image_is_category_fallback": article.image_is_category_fallback,
     }
