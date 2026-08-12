@@ -25,10 +25,10 @@ from app.watch_state import normalize_url, title_fingerprint
 KST = timezone(timedelta(hours=9))
 STATE_VERSION = 1
 DEFAULT_STATE_PATH = config.DATA_DIR / "teams_push_state.json"
-# D7-AK-6E R4-R9A — optional held-specialist section. A held article is only
-# observed: it is never sent, accepted, or consumed. The key is omitted
-# entirely while no specialist is held, so existing state files stay
-# byte-identical until a hold actually occurs.
+# D7-AK-6E R4-R9A / R4-OPS-6C — optional held-secondary section. The historical
+# key name is retained for state compatibility; records are differentiated by
+# ``source_tier`` and may now contain normal Tier-B holdback observations as
+# well as specialist supporting evidence. A held article is never marked sent.
 HELD_SPECIALISTS_KEY = "held_specialists"
 
 _ENTITY_TERMS = (
@@ -509,6 +509,7 @@ def observe_held_specialist(
         "fallback_eligible": bool(fallback_eligible),
         "representative_publisher": _clean(prior.get("representative_publisher")),
         "replaced_by_major_media": _clean(prior.get("replaced_by_major_media")),
+        "replaced_by_tier_a": _clean(prior.get("replaced_by_tier_a")),
     }
     current[HELD_SPECIALISTS_KEY] = held
     return current
@@ -537,6 +538,10 @@ def mark_held_replaced_by_major(
             continue
         if _clean(entry.get("cluster_key")) != cluster:
             continue
+        # R4-OPS-6C: Tier-B replacement authority belongs only to an actual
+        # Tier-A delivery and is handled by mark_held_replaced_by_tier_a.
+        if _clean(entry.get("source_tier")) == "major_secondary":
+            continue
         if _clean(entry.get("replaced_by_major_media")):
             continue
         held[key] = {
@@ -545,6 +550,50 @@ def mark_held_replaced_by_major(
             "representative_publisher": _clean(major_source),
             "fallback_eligible": False,
             "holdback_reason": "replaced_by_major_media",
+        }
+        changed += 1
+    if changed:
+        current[HELD_SPECIALISTS_KEY] = held
+    return current, changed
+
+
+def mark_held_replaced_by_tier_a(
+    state: Mapping[str, Any],
+    cluster_key: str,
+    *,
+    tier_a_identity: str,
+    tier_a_source: str,
+) -> tuple[dict[str, Any], int]:
+    """Permanently suppress held same-event Tier-B rows after a Tier-A send.
+
+    This is intentionally narrower than :func:`mark_held_replaced_by_major`:
+    only ``major_secondary`` observations are counted, and only a caller that
+    actually delivered a Tier-A representative may invoke it. The accepted
+    cluster ledger independently prevents later duplicate delivery; this held
+    record makes the source-preference outcome observable and durable.
+    """
+    current = validate_state(state)
+    cluster = _clean(cluster_key)
+    held = dict(current.get(HELD_SPECIALISTS_KEY) or {})
+    if not cluster or not held:
+        return current, 0
+    changed = 0
+    for key, entry in held.items():
+        if not isinstance(entry, dict):
+            continue
+        if _clean(entry.get("cluster_key")) != cluster:
+            continue
+        if _clean(entry.get("source_tier")) != "major_secondary":
+            continue
+        if _clean(entry.get("replaced_by_tier_a")):
+            continue
+        held[key] = {
+            **entry,
+            "replaced_by_tier_a": _clean(tier_a_identity),
+            "replaced_by_major_media": _clean(tier_a_identity),
+            "representative_publisher": _clean(tier_a_source),
+            "fallback_eligible": False,
+            "holdback_reason": "replaced_by_tier_a",
         }
         changed += 1
     if changed:

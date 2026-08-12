@@ -221,13 +221,23 @@ def main() -> int:
         # (6) all three aged past the holdback but only IMPORTANT: selected 0.
         # Non-major confirmed event types keep importance at IMPORTANT (the
         # observed fixtures otherwise carry major-confirmed tokens → TOP).
+        # These are synthetic age/importance controls, so each supplies an
+        # explicit publisher-factual snippet with an independent hard event;
+        # the source gate, not the stronger 6C materiality floor, remains the
+        # asserted blocker.
         aged_important = [
             observed_newsworker(
-                score=4.2, shadow_confirmed_event_types=["industry_update"]),
+                score=4.2, shadow_confirmed_event_types=["industry_update"],
+                snippet="해남 국가 AI 컴퓨팅센터 착공이 확정됐다."),
             observed_techm(
-                score=4.0, shadow_confirmed_event_types=["industry_update"]),
+                score=4.0, shadow_confirmed_event_types=["industry_update"],
+                snippet="프리즈미안이 애트코어 인수 계약을 체결했다."),
             observed_epnc(
-                score=4.2, shadow_confirmed_event_types=["industry_update"]),
+                score=4.2, shadow_confirmed_event_types=["industry_update"],
+                snippet=(
+                    "엘리스그룹이 B300 AI 데이터센터 구축을 완료하고 "
+                    "정식 서비스를 개시했다."
+                )),
         ]
         aged_state = tmp / "state-aged-important.json"
         seed_holds(aged_important, AGED_FIRST_SEEN, aged_state)

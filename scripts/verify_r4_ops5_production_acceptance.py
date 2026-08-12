@@ -30,6 +30,7 @@ from app import teams_push_state  # noqa: E402
 from app.teams_ai_push import (  # noqa: E402
     IMPORTANCE_IMPORTANT,
     IMPORTANCE_TOP,
+    SOURCE_GATE_MAJOR_SECONDARY,
     TEAMS_NORMAL_PACING_MINUTES,
     apply_major_media_first_gate,
     classify_ai_topic,
@@ -130,7 +131,7 @@ def governing_standard_contracts() -> dict[str, bool]:
 
 def project_acceptance_overlay_contracts() -> dict[str, bool]:
     text = PROJECT_ACCEPTANCE_PATH.read_text(encoding="utf-8")
-    version_updated = "**Version:** 1.2" in text
+    version_updated = "**Version:** 1.3" in text
     defect_present = (
         "HDEC-DEFECT-005 — SBS Premium realtime authority leak" in text
         and SBS_PREMIUM_OBSERVED_URL in text
@@ -153,15 +154,27 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
             "Summary,\nquery, and body text have zero authority",
         )
     )
-    check("HDEC project acceptance overlay version is 1.2", version_updated)
+    r4_ops6c_contract = all(
+        token in text
+        for token in (
+            "SAME_EVENT_TIER_A_PREFERRED_OVER_TIER_B=PASS",
+            "Tier-B normal IMPORTANT rows wait 30 minutes",
+            "PROPOSAL_ONLY_REALTIME_REJECT=PASS",
+            "FINANCIAL_AI_PRODUCT_WATCH_REJECT=PASS",
+            "KDD 기업",
+        )
+    )
+    check("HDEC project acceptance overlay version is 1.3", version_updated)
     check("HDEC-DEFECT-005 is sealed in project acceptance", defect_present)
     check("publisher URL authority invariant is sealed in project acceptance", authority_invariant)
     check("trailing and English opinion contract is sealed in project acceptance", opinion_contract)
+    check("R4-OPS-6C source/materiality contract is sealed", r4_ops6c_contract)
     return {
         "version_updated": version_updated,
         "defect_present": defect_present,
         "authority_invariant": authority_invariant,
         "opinion_contract": opinion_contract,
+        "r4_ops6c_contract": r4_ops6c_contract,
     }
 
 
@@ -590,7 +603,23 @@ def replay_contracts(rows: list[dict]) -> dict[str, bool | None]:
         policy = evaluate_teams_push_policy(row)
         candidates = select_teams_push_candidates([row], max_articles=None)
         gate = evaluate_source_gate(candidates[0]) if candidates else None
-        final = bool(policy.eligible and gate is not None and gate.immediate)
+        # R4-OPS-6C keeps Tier-B material rows reachable to Watch policy while
+        # changing their delivery disposition from immediate to bounded hold.
+        # The R4-OPS-5 KEEP contract is policy precision, not a promise that
+        # every qualified publisher tier sends in the discovery minute.
+        final = bool(
+            policy.eligible
+            and gate is not None
+            and (
+                gate.immediate
+                or gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+            )
+        )
+        realtime_disposition = (
+            "KEEP" if gate is not None and gate.immediate
+            else "HOLD" if final
+            else "REJECT"
+        )
         reasons: list[str] = []
         if policy.rejection_reason:
             reasons.append(policy.rejection_reason)
@@ -644,7 +673,7 @@ def replay_contracts(rows: list[dict]) -> dict[str, bool | None]:
         print(f"IMPORTANCE={importance.level or 'not_sendable'}")
         print(f"OPINION_GATE={'REJECT' if opinion.excluded else 'PASS'}")
         print(f"TEAMS_POLICY_ELIGIBLE={str(policy.eligible).lower()}")
-        print(f"FINAL_REALTIME_DECISION={'KEEP' if final else 'REJECT'}")
+        print(f"FINAL_REALTIME_DECISION={realtime_disposition}")
         print(f"REASON={reason}")
         outcomes[row["case_id"]] = final
 
@@ -704,12 +733,23 @@ def pacing_contracts() -> None:
         now_iso_value="2026-08-11T10:00:00+09:00",
     )
     check(
-        "open normal window selects one best event and defers two",
+        "open normal window selects Tier A and holds both normal Tier B rows",
         len(first.selected) == 1
-        and len(first.deferred_major) == 2
-        and first.audit["normal_rows_deferred_by_pacing"] == 2,
+        and len(first.deferred_major) == 0
+        and first.audit["tier_b_held"] == 2,
         first.audit,
     )
+    for observation in first.holdback_observations:
+        ledger = teams_push_state.observe_held_specialist(
+            ledger,
+            observation["article"],
+            cluster_key=observation["cluster_key"],
+            source=observation["source"],
+            source_tier=observation["source_tier"],
+            holdback_reason=observation["holdback_reason"],
+            fallback_eligible=observation["fallback_eligible"],
+            now="2026-08-11T10:00:00+09:00",
+        )
     sent = first.selected[0].candidate
     ledger = teams_push_state.mark_sent_after_success(
         ledger,
@@ -728,9 +768,9 @@ def pacing_contracts() -> None:
         now_iso_value="2026-08-11T10:20:00+09:00",
     )
     check(
-        "closed rolling window sends zero normal events without dropping backlog",
+        "closed rolling window sends zero and preserves Tier-B holdback",
         len(closed.selected) == 0
-        and len(closed.deferred_major) == 2
+        and closed.audit["tier_b_held"] == 2
         and len(remaining) == 2,
         closed.audit,
     )
@@ -739,10 +779,12 @@ def pacing_contracts() -> None:
         now_iso_value="2026-08-11T11:00:00+09:00",
     )
     check(
-        "rolling 60-minute window reconsiders preserved backlog",
+        "expired Tier-B holdback uses one reopened normal pacing slot",
         TEAMS_NORMAL_PACING_MINUTES == 60
         and len(reopened.selected) == 1
-        and len(reopened.deferred_major) == 1,
+        and reopened.audit["tier_b_holdback_expired"] == 2
+        and reopened.audit["tier_b_selected_after_holdback"] == 1
+        and reopened.audit["tier_b_held"] == 1,
         reopened.audit,
     )
 
@@ -1025,14 +1067,20 @@ def daily_and_editor_contracts() -> None:
             sent_state,
         )
 
-    exact_path = ROOT / "docs" / "editorial" / "review" / "2026-08-11" / "candidates.json"
     latest_path = ROOT / "docs" / "editorial" / "review" / "latest" / "candidates.json"
-    exact_bundle = editorial_review.load_bundle(exact_path, "2026-08-11")
-    latest_bundle = editorial_review.load_bundle(latest_path, "2026-08-11")
+    latest_identity = json.loads(latest_path.read_text(encoding="utf-8"))
+    latest_edition_key = str(latest_identity.get("edition_key") or "")
+    exact_path = (
+        ROOT / "docs" / "editorial" / "review"
+        / latest_edition_key / "candidates.json"
+    )
+    exact_bundle = editorial_review.load_bundle(exact_path, latest_edition_key)
+    latest_bundle = editorial_review.load_bundle(latest_path, latest_edition_key)
     exact_articles, exact_mode = editorial_review.choose_daily_articles(exact_bundle, None)
     check(
         "exact dated and latest Editor candidate bundles load consistently",
-        exact_bundle["edition_key"] == latest_bundle["edition_key"] == "2026-08-11"
+        bool(latest_edition_key)
+        and exact_bundle["edition_key"] == latest_bundle["edition_key"] == latest_edition_key
         and exact_bundle["candidates"] == latest_bundle["candidates"]
         and (bool(exact_articles) or exact_mode == "empty_edition"),
         exact_mode,
@@ -1040,7 +1088,7 @@ def daily_and_editor_contracts() -> None:
     template = (ROOT / "templates" / "editorial_review_console.html").read_text(
         encoding="utf-8"
     )
-    exact_html = (ROOT / "docs" / "editorial" / "review" / "2026-08-11" / "index.html").read_text(
+    exact_html = (ROOT / "docs" / "editorial" / "review" / latest_edition_key / "index.html").read_text(
         encoding="utf-8"
     )
     latest_html = (ROOT / "docs" / "editorial" / "review" / "latest" / "index.html").read_text(

@@ -1,5 +1,5 @@
 {
-  "version": "r4-ops-5a-publisher-authority-v3",
+  "version": "r4-ops-6c-tier-a-primary-v1",
   "major_source_patterns": [
     "연합뉴스", "연합인포맥스", "한국경제", "매일경제", "서울경제", "조선비즈",
     "머니투데이", "이데일리", "아시아경제", "파이낸셜뉴스", "전자신문",
@@ -62,9 +62,9 @@
     {"tier": "major_secondary", "rank": 16, "name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]}
   ],
   "publisher_delivery_tier_labels": {
-    "primary_10": "핵심 10개 언론사",
-    "secondary_3": "보조 3개 언론사",
-    "major_secondary": "Tier B 주요 종합·경제·산업 언론",
+    "primary_10": "Tier A 핵심 10개 실시간 기본 언론사",
+    "secondary_3": "Tier A 추가 3개 실시간 기본 언론사",
+    "major_secondary": "Tier B 주요 보조·대체 종합·경제·산업 언론",
     "official_institution": "공식·기관",
     "specialist": "주요 전문지",
     "trusted_other": "신뢰 출처",
@@ -73,7 +73,7 @@
     "excluded": "제외 출처"
   },
   "teams_delivery_source_policy": {
-    "note": "R4-OPS-5A Teams A/B/C 정책. Tier A 13개 핵심 종합언론과 명시된 Tier B 16개 주요 종합·경제·산업 언론만 기사별 실질 게이트 통과 후 자동 발송 가능하다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 알려진 URL 호스트 신원은 표시 source alias보다 우선한다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 하며, 미열거 sibling/foreign host는 alias 권한을 상속하지 않는다.",
+    "note": "R4-OPS-6C Teams A/B/C 정책. Tier A 13개 핵심 종합언론은 기사별 실질 게이트 통과 후 실시간 기본 후보가 된다. 명시된 Tier B 16개 주요 종합·경제·산업 언론은 보조·대체 공급이며 TOP 또는 현대건설 직접 확정 물질 이벤트만 즉시 후보가 될 수 있고, 보통 IMPORTANT 이벤트는 동일 사건 Tier A를 기다리는 30분 holdback을 거친다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 알려진 URL 호스트 신원은 표시 source alias보다 우선한다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 하며, 미열거 sibling/foreign host는 alias 권한을 상속하지 않는다.",
     "major_secondary_publishers": [
       {"name": "서울경제", "aliases": ["서울경제"], "domains": ["sedaily.com"]},
       {"name": "한국일보", "aliases": ["한국일보"], "domains": ["hankookilbo.com"]},

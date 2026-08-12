@@ -764,11 +764,14 @@ def _run_live() -> dict:
         quarantine_reason_counts[reason] = quarantine_reason_counts.get(reason, 0) + 1
     tier_a = {"primary_10", "secondary_3"}
     tier_b = {"major_secondary"}
-    raw_major_media_count = sum(
-        live_collector._resolution_scheduling_hint_tier(row) in tier_a | tier_b
+    raw_hint_tiers = [
+        live_collector._resolution_scheduling_hint_tier(row)
         for row in direct_rows + list(google_rows) + list(naver_rows)
         if isinstance(row, dict)
-    )
+    ]
+    tier_a_raw = sum(tier in tier_a for tier in raw_hint_tiers)
+    tier_b_raw = sum(tier in tier_b for tier in raw_hint_tiers)
+    raw_major_media_count = tier_a_raw + tier_b_raw
     hint_metrics = resolution_metrics.get("per_scheduling_hint_tier") or {}
     major_resolution_attempted = sum(
         int((hint_metrics.get(tier) or {}).get("attempts") or 0)
@@ -791,6 +794,8 @@ def _run_live() -> dict:
         "naver_originallink_row_count": len(naver_rows),
         "google_discovery_row_count": len(google_rows),
         "major_media_raw_count": raw_major_media_count,
+        "tier_a_raw_count": tier_a_raw,
+        "tier_b_raw_count": tier_b_raw,
         "major_media_resolution_attempted_count": major_resolution_attempted,
         "major_media_verified_count": tier_a_verified + tier_b_verified,
         "tier_a_verified_count": tier_a_verified,

@@ -70,6 +70,7 @@ from app.teams_ai_push import (  # noqa: E402
     DEFAULT_TEAMS_BATCH_MAX,
     HARD_TEAMS_BATCH_MAX,
     IMPORTANCE_IMPORTANT,
+    SELECTION_MODE_AFTER_HOLDBACK,
     SELECTION_MODE_FALLBACK,
     apply_major_media_first_gate,
     evaluate_teams_push_policy,
@@ -86,6 +87,7 @@ from app.teams_push_state import (  # noqa: E402
     filter_unsent_candidates,
     load_state,
     mark_held_replaced_by_major,
+    mark_held_replaced_by_tier_a,
     observe_held_specialist,
     persist_after_success,
     resolve_state_path,
@@ -118,6 +120,11 @@ REJECTION_COUNTER_KEYS = (
     "no_confirmed_event",
     "speculation_only",
     "excluded_opinion_content",
+    "excluded_fund_product_noise",
+    "excluded_financial_ai_product",
+    "excluded_local_political_ai_false_positive",
+    "excluded_proposal_only",
+    "insufficient_executive_materiality",
     "already_sent",
     "exact_duplicate",
     "duplicate_event",
@@ -547,12 +554,13 @@ def deliver(
     resendable.
 
     D7-AK-6E R4-R9A — after the accepted-ledger filter, the major-media-first
-    source gate selects only locked primary-ten / secondary-three publishers
-    and promoted official institutions immediately. Specialist/trusted-other
-    publishers are held (120-minute holdback, at most one exceptional
-    fallback per run); neutral/low publishers are never selected. Held
-    observations persist through the existing state path in send mode only —
-    a dry run writes nothing."""
+    source gate selects Tier A and promoted official institutions immediately.
+    Tier-B TOP/HDEC-direct material events may be immediate; normal Tier-B
+    IMPORTANT rows wait 30 minutes for a same-event Tier-A representative.
+    Specialist/trusted-other publishers remain supporting evidence only;
+    neutral/low publishers are never selected. Held observations persist
+    through the existing state path in send mode only — a dry run writes
+    nothing."""
     payload = load_artifact(artifact_path)
     try:
         state = load_state(state_path)
@@ -747,7 +755,10 @@ def deliver(
             )
             state_changed = True
             state_committed += 1
-            if gated.selection_mode == SELECTION_MODE_FALLBACK:
+            if gated.selection_mode in {
+                SELECTION_MODE_FALLBACK,
+                SELECTION_MODE_AFTER_HOLDBACK,
+            }:
                 delivered_fallback_articles.append(candidate.article)
             else:
                 delivered_major_events.append((
@@ -776,6 +787,7 @@ def deliver(
     # delivered major marks same-event held specialists as supporting
     # evidence. Dry runs never reach this block, so they write nothing.
     replaced_by_major_marks = 0
+    tier_b_replaced_by_tier_a = 0
     if should_send:
         gated_state = state
         for observation in gate_batch.holdback_observations:
@@ -789,6 +801,21 @@ def deliver(
                 fallback_eligible=bool(observation["fallback_eligible"]),
                 now=gate_batch.now_iso_value,
             )
+        # Operator contract is triggered by same-event Tier-A arrival, not SMTP
+        # success. Once an authoritative Tier-A candidate reaches this gate,
+        # every already-held Tier-B copy is permanently secondary even when the
+        # Tier-A card is deferred by pacing or its transport later fails.
+        for tier_a in gate_batch.immediate:
+            if tier_a.gate.gate_class not in {"primary_10", "secondary_3"}:
+                continue
+            candidate = tier_a.candidate
+            gated_state, tier_b_marks = mark_held_replaced_by_tier_a(
+                gated_state,
+                str(candidate.cluster_key or ""),
+                tier_a_identity=f"teams_ai_push:{article_ref(candidate.article)}",
+                tier_a_source=str(candidate.article.get("source") or ""),
+            )
+            tier_b_replaced_by_tier_a += tier_b_marks
         for fallback_article in delivered_fallback_articles:
             gated_state = clear_held_record(gated_state, fallback_article)
         for cluster_key, major_identity, major_source in delivered_major_events:
@@ -921,6 +948,28 @@ def deliver(
         "verified_secondary_3_rows": verified_tier_counts["secondary_3"],
         "verified_major_secondary_rows": verified_tier_counts["major_secondary"],
         "verified_specialist_rows": verified_tier_counts["specialist"],
+        # R4-OPS-6C source-mix funnel. These are diagnostics, never quotas.
+        "discovered_tier_a": (
+            raw_tier_counts["primary_10"] + raw_tier_counts["secondary_3"]
+        ),
+        "verified_tier_a": (
+            verified_tier_counts["primary_10"]
+            + verified_tier_counts["secondary_3"]
+        ),
+        "policy_eligible_tier_a": (
+            int(policy_eligible_by_tier.get("primary_10") or 0)
+            + int(policy_eligible_by_tier.get("secondary_3") or 0)
+        ),
+        "selected_tier_a": (
+            gate_batch.audit["selected_primary_10_rows"]
+            + gate_batch.audit["selected_secondary_3_rows"]
+        ),
+        "discovered_tier_b": raw_tier_counts["major_secondary"],
+        "verified_tier_b": verified_tier_counts["major_secondary"],
+        "policy_eligible_tier_b": int(
+            policy_eligible_by_tier.get("major_secondary") or 0
+        ),
+        "selected_tier_b": gate_batch.audit["selected_major_secondary_rows"],
         "teams_immediate_major_rows": gate_batch.audit[
             "teams_immediate_major_rows"
         ],
@@ -950,6 +999,14 @@ def deliver(
             "specialist_automatic_fallback_removed"
         ],
         "teams_specialist_replaced_by_major_rows": replaced_by_major_marks,
+        "tier_b_held": gate_batch.audit["tier_b_held"],
+        "tier_b_replaced_by_tier_a": tier_b_replaced_by_tier_a,
+        "tier_b_holdback_expired": gate_batch.audit[
+            "tier_b_holdback_expired"
+        ],
+        "tier_b_selected_after_holdback": gate_batch.audit[
+            "tier_b_selected_after_holdback"
+        ],
         "selected_primary_10_rows": gate_batch.audit["selected_primary_10_rows"],
         "selected_secondary_3_rows": gate_batch.audit[
             "selected_secondary_3_rows"
@@ -1130,6 +1187,23 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         "verified_major_secondary_rows="
         + str(int(summary.get("verified_major_secondary_rows") or 0)),
         f"verified_specialist_rows={int(summary.get('verified_specialist_rows') or 0)}",
+        f"discovered_tier_a={int(summary.get('discovered_tier_a') or 0)}",
+        f"verified_tier_a={int(summary.get('verified_tier_a') or 0)}",
+        "policy_eligible_tier_a="
+        + str(int(summary.get("policy_eligible_tier_a") or 0)),
+        f"selected_tier_a={int(summary.get('selected_tier_a') or 0)}",
+        f"discovered_tier_b={int(summary.get('discovered_tier_b') or 0)}",
+        f"verified_tier_b={int(summary.get('verified_tier_b') or 0)}",
+        "policy_eligible_tier_b="
+        + str(int(summary.get("policy_eligible_tier_b") or 0)),
+        f"tier_b_held={int(summary.get('tier_b_held') or 0)}",
+        "tier_b_replaced_by_tier_a="
+        + str(int(summary.get("tier_b_replaced_by_tier_a") or 0)),
+        "tier_b_holdback_expired="
+        + str(int(summary.get("tier_b_holdback_expired") or 0)),
+        "tier_b_selected_after_holdback="
+        + str(int(summary.get("tier_b_selected_after_holdback") or 0)),
+        f"selected_tier_b={int(summary.get('selected_tier_b') or 0)}",
         f"teams_immediate_major_rows={int(summary.get('teams_immediate_major_rows') or 0)}",
         f"teams_specialist_held_rows={int(summary.get('teams_specialist_held_rows') or 0)}",
         "teams_specialist_holdback_expired_rows="
@@ -1233,6 +1307,33 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
             separators=(",", ":"),
         )
     )
+    print(f"DISCOVERED_TIER_A={int(summary.get('discovered_tier_a') or 0)}")
+    print(f"VERIFIED_TIER_A={int(summary.get('verified_tier_a') or 0)}")
+    print(
+        "POLICY_ELIGIBLE_TIER_A="
+        f"{int(summary.get('policy_eligible_tier_a') or 0)}"
+    )
+    print(f"SELECTED_TIER_A={int(summary.get('selected_tier_a') or 0)}")
+    print(f"DISCOVERED_TIER_B={int(summary.get('discovered_tier_b') or 0)}")
+    print(f"VERIFIED_TIER_B={int(summary.get('verified_tier_b') or 0)}")
+    print(
+        "POLICY_ELIGIBLE_TIER_B="
+        f"{int(summary.get('policy_eligible_tier_b') or 0)}"
+    )
+    print(f"TIER_B_HELD={int(summary.get('tier_b_held') or 0)}")
+    print(
+        "TIER_B_REPLACED_BY_TIER_A="
+        f"{int(summary.get('tier_b_replaced_by_tier_a') or 0)}"
+    )
+    print(
+        "TIER_B_HOLDBACK_EXPIRED="
+        f"{int(summary.get('tier_b_holdback_expired') or 0)}"
+    )
+    print(
+        "TIER_B_SELECTED_AFTER_HOLDBACK="
+        f"{int(summary.get('tier_b_selected_after_holdback') or 0)}"
+    )
+    print(f"SELECTED_TIER_B={int(summary.get('selected_tier_b') or 0)}")
     for entry in summary.get("selected_source_audit", ()):
         print(
             "Teams source gate selected: "

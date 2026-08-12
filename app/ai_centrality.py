@@ -135,6 +135,20 @@ _ENABLING_INFRA_TERMS: tuple[str, ...] = (
     "산업 자동화", "공장 자동화",
 )
 
+# R4-OPS-6C — a generic semiconductor/foundry/fab subject is not, by itself,
+# AI centrality.  It becomes an AI-semiconductor subject when AI is explicit in
+# the title (handled by ``title_ai``) or the factual title/lead names an actual
+# AI-compute nexus such as an AI chip, GPU, HBM, NPU, or accelerator.  This
+# prevents regional semiconductor-cluster politics from qualifying merely
+# because AI appears elsewhere in a broad project list.
+_GENERIC_SEMICONDUCTOR_TERMS: tuple[str, ...] = (
+    "반도체", "파운드리", "웨이퍼", "팹", "fab", "semiconductor", "foundry",
+)
+_AI_SEMICONDUCTOR_NEXUS_TERMS: tuple[str, ...] = (
+    "ai 반도체", "ai반도체", "ai 칩", "ai칩", "인공지능 반도체",
+    "gpu", "hbm", "npu", "ai 가속기", "ai가속기", "ai accelerator",
+)
+
 _OPINION_TITLE_MARKERS: tuple[str, ...] = (
     "[사설]", "[칼럼]", "[기고]", "[시론]", "[오피니언]", "사설]", "〈사설〉",
 )
@@ -586,7 +600,18 @@ def classify(article: object) -> AICentralityDecision:
             **common,
         )
 
-    if title_infra and (lead_ai or section_ai or ai_events):
+    generic_semiconductor_title = bool(title_infra) and all(
+        term in _GENERIC_SEMICONDUCTOR_TERMS for term in title_infra
+    )
+    semiconductor_ai_nexus = bool(
+        _has(f" {title} {lead} ", _AI_SEMICONDUCTOR_NEXUS_TERMS)
+    )
+
+    if (
+        title_infra
+        and (lead_ai or section_ai or ai_events)
+        and (not generic_semiconductor_title or semiconductor_ai_nexus)
+    ):
         return AICentralityDecision(
             LEVEL_ENABLING_INFRASTRUCTURE_CORE,
             reason="infrastructure_title_subject_with_explicit_ai_relationship",

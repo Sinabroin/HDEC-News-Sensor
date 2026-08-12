@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "fixture_name": "R4-OPS-6C exact production Watch quality replay",
+  "provenance_note": "Production delivery fields are copied from the history-preserved data/teams_push_state.json merged from origin/main. Publisher facts were recovered by read-only GET from the exact canonical pages on 2026-08-12 KST and cross-checked against data/news_censor_verified_state.json where present. Deterministic test controls are explicitly not claimed as observed production metadata.",
+  "rows": [
+    {
+      "case_id": "observed_khan_blackrock_ai_infrastructure_labor",
+      "evidence_kind": "observed_production_and_publisher_page",
+      "human_expected_watch": "KEEP",
+      "editor_daily_hard_ban": false,
+      "expected_materiality_reason_prefix": "strategic_infra_impact:",
+      "url": "https://www.khan.co.kr/article/202608120600101",
+      "title": "자산운용사 블랙록이 미국 건설노조와 손잡은 이유는?···AI 인프라 건설에 ‘네오 블루칼라’ 시대가 온다",
+      "source": "KyungHyangSinmun",
+      "publisher_section": "경제",
+      "published_at": "2026-08-12T06:00:00+09:00",
+      "author": "오동욱 기자",
+      "snippet": "데이터센터를 건설하는 한 기업 관계자는 ‘AI 데이터센터는 과거 데이터센터와 달리 무중단 전력 설비, 공조시스템 등 기술이 집적화된 시설이어서 전문적인 인력을 확보하는 데 어려움이 있는 것이 사실’이라고 말했다.",
+      "additional_observed_facts": [
+        "블랙록과 AI 인프라파트너십이 북미건설노동조합연맹과 AI·에너지 인프라 투자 관련 양해각서를 체결했다.",
+        "북미건설노동조합연맹은 숙련기능공 320만명을 대표한다.",
+        "미국 데이터센터 전력 수요는 2026년 56.1GW에서 2035년 194.3GW로 증가할 것으로 인용됐다."
+      ],
+      "production_state": {
+        "article_id": "5b202fee03c23c1f",
+        "normalized_url": "https://khan.co.kr/article/202608120600101",
+        "cluster_key": "title:자산운용사블랙록이미국건설노조와손잡은이유는ai인프라건",
+        "delivery_id": "teams_ai_push:7a80ca4d6c60",
+        "first_sent_at": "2026-08-12T06:17:21+09:00",
+        "sent_at": "2026-08-12T06:17:21+09:00",
+        "importance": "important",
+        "source": "KyungHyangSinmun",
+        "material_signature": "58d6f78a9a45cc993633d7123a7d5595548bb34ba30dbc50379cbe7cc410e5e8"
+      },
+      "deterministic_test_controls": {
+        "observed_production_metadata": false,
+        "score": 4.0,
+        "shadow_urgency_status": "confirmed",
+        "shadow_confirmed_event_types": ["mou_signed"],
+        "change_type": "new_article",
+        "current_run_seen": true
+      }
+    },
+    {
+      "case_id": "observed_fn_ai_compute_futures",
+      "evidence_kind": "observed_production_and_publisher_page",
+      "human_expected_watch": "REJECT",
+      "editor_daily_hard_ban": false,
+      "expected_policy_reason": "excluded_financial_ai_product",
+      "url": "https://www.fnnews.com/news/202608120347285467",
+      "title": "AI 연산능력, 10월부터 선물시장서 거래한다",
+      "source": "파이낸셜뉴스",
+      "publisher_section": "국제",
+      "published_at": "2026-08-12T04:22:27+09:00",
+      "author": "송경재",
+      "snippet": "거대 인공지능 데이터센터의 GPU 등 연산자원 용량에 가격을 매겨 시장에서 선물로 거래하는 장치가 오는 10월 도입된다.",
+      "additional_observed_facts": [
+        "CME가 실리콘 데이터와 제휴해 GPU 임대가격 지수 기반 선물 상품을 상장한다.",
+        "기사의 사건은 가격 변동성 헤지와 투자 노출을 위한 금융상품이며 별도 인프라 계약·투자·착공은 보도하지 않는다."
+      ],
+      "production_state": {
+        "article_id": "32c6c6ccd64378e0",
+        "normalized_url": "https://fnnews.com/news/202608120347285467",
+        "cluster_key": "title:ai연산능력10월부터선물시장서거래한다",
+        "delivery_id": "teams_ai_push:84139f34a79f",
+        "first_sent_at": "2026-08-12T04:30:42+09:00",
+        "sent_at": "2026-08-12T04:30:42+09:00",
+        "importance": "important",
+        "source": "파이낸셜뉴스",
+        "material_signature": "a0dba00fceae3d8f11a31091f7178da07e4d361bc9e7c3ed90bc09799e807636"
+      },
+      "deterministic_test_controls": {
+        "observed_production_metadata": false,
+        "score": 4.0,
+        "shadow_urgency_status": "confirmed",
+        "shadow_confirmed_event_types": ["financial_product_announced"],
+        "change_type": "new_article",
+        "current_run_seen": true
+      }
+    },
+    {
+      "case_id": "observed_etnews_regional_semiconductor_request",
+      "evidence_kind": "observed_production_and_publisher_page",
+      "human_expected_watch": "REJECT",
+      "editor_daily_hard_ban": false,
+      "expected_policy_reason": "ai_not_central_non_ai",
+      "url": "https://www.etnews.com/20260811000360",
+      "title": "민형배 전남광주시장, 국회 예결위원장 방문…호남권 반도체 클러스터 등 핵심 현안 건의",
+      "source": "미래를 보는 창 - 전자신문",
+      "publisher_section": "전국",
+      "published_at": "2026-08-11T19:10:21+09:00",
+      "author": "김한식 기자",
+      "snippet": "민형배 전남광주통합특별시장이 지역 현안 해결과 2027년도 국비 확보를 위해 국회를 찾아 지원을 요청했다.",
+      "additional_observed_facts": [
+        "호남권 반도체 클러스터 지원은 국회 면담에서 건의한 지역 현안이다.",
+        "AI 관련 사업은 국비 지원을 건의한 열 개 사업 목록 일부이며 예산 확정·최종 승인·계약·착공을 보도하지 않는다."
+      ],
+      "production_state": {
+        "article_id": "f9d7840ab7297c93",
+        "normalized_url": "https://etnews.com/20260811000360",
+        "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
+        "delivery_id": "teams_ai_push:9d6109e1a26d",
+        "first_sent_at": "2026-08-11T19:40:06+09:00",
+        "sent_at": "2026-08-11T19:40:06+09:00",
+        "importance": "important",
+        "source": "미래를 보는 창 - 전자신문",
+        "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312"
+      },
+      "deterministic_test_controls": {
+        "observed_production_metadata": false,
+        "score": 4.0,
+        "shadow_urgency_status": "confirmed",
+        "shadow_confirmed_event_types": ["meeting_held"],
+        "change_type": "new_article",
+        "current_run_seen": true
+      }
+    },
+    {
+      "case_id": "observed_fn_kdd_jeju_ai_pilot_proposal",
+      "evidence_kind": "observed_production_and_publisher_page",
+      "human_expected_watch": "REJECT",
+      "editor_daily_hard_ban": false,
+      "expected_policy_reason": "excluded_proposal_only",
+      "url": "https://www.fnnews.com/news/202608111621114292",
+      "title": "위성곤 지사, KDD 기업에 'AI 실증 제주' 제안… 관광·에너지서 협력 모색",
+      "source": "파이낸셜뉴스",
+      "publisher_section": "사회",
+      "published_at": "2026-08-11T16:38:41+09:00",
+      "author": "정용복",
+      "snippet": "위성곤 제주특별자치도지사가 국내 대표 인공지능·인공지능전환 기업에 제주를 신기술과 서비스를 시험하는 실증 거점으로 활용하자고 제안했다.",
+      "additional_observed_facts": [
+        "실증·그린 AI 데이터센터·연합캠퍼스·UN AI허브센터는 간담회에서 제시한 구상과 협력 요청이다.",
+        "기사 제목과 본문은 KDD 기업이라고 쓰며 KDDI 통신사를 보도하지 않는다.",
+        "계약·확정 투자·최종 승인·커밋된 예산은 보도하지 않는다."
+      ],
+      "production_state": {
+        "article_id": "67d8faa06b353d2f",
+        "normalized_url": "https://fnnews.com/news/202608111621114292",
+        "cluster_key": "title:위성곤지사kdd기업에ai실증제주제안관광에너지서협력모",
+        "delivery_id": "teams_ai_push:2b139a8adf74",
+        "first_sent_at": "2026-08-11T16:44:43+09:00",
+        "sent_at": "2026-08-11T16:44:43+09:00",
+        "importance": "important",
+        "source": "파이낸셜뉴스",
+        "material_signature": "ef479082494c6ccb08806860c15ae3d9fef5ad3f203cfb5180a3e17f8c07cf79"
+      },
+      "deterministic_test_controls": {
+        "observed_production_metadata": false,
+        "score": 4.0,
+        "shadow_urgency_status": "confirmed",
+        "shadow_confirmed_event_types": ["proposal_announced"],
+        "change_type": "new_article",
+        "current_run_seen": true
+      }
+    }
+  ]
+}

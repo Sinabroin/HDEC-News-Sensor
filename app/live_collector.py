@@ -75,6 +75,13 @@ GLOBAL_PRESS_GROUP_BUDGET = 12
 # additive pass를 갖는다. 그룹당 최대 8건으로 제한하며 검색 실패 시 audit만 남긴다.
 COVERAGE_MAX_PER_QUERY = 2
 COVERAGE_GROUP_BUDGET = 8
+# R4-OPS-6C: credential-free Tier-A13 discovery pass. This is a bounded
+# supply lane, never an eligibility shortcut: the query/source hint only earns
+# fair resolver scheduling, while exact publisher URL authority and every
+# article-level Watch gate still apply downstream. Two material topic queries
+# × 13 configured Tier-A publishers × at most two rows = 52-row headroom.
+TIER_A_DISCOVERY_MAX_PER_QUERY = 2
+TIER_A_DISCOVERY_GROUP_BUDGET = 52
 # 대시보드 live 수집은 설정된 렌즈 그룹이 충분히 돌도록 전역 상한의 하한을 둔다 — 여전히
 # bounded(per-group/per-query 캡 + dedup 유지)이며 cfg가 더 크면 cfg 값을 따른다(폭주 방지).
 # 공개 빌드 total은 이 값으로 고정한다: 토목(civil)은 우선순위 preflight에서 수집하므로 total을
@@ -162,6 +169,46 @@ def _build_google_news_url(query: str, cfg: dict, locale: dict | None = None) ->
         "ceid": loc.get("ceid") or cfg.get("ceid", "KR:ko"),
     })
     return f"https://news.google.com/rss/search?{params}"
+
+
+def tier_a_publisher_discovery_group() -> dict:
+    """Return the bounded credential-free Tier-A13 Google RSS query group.
+
+    Publisher names/domains come only from the canonical source-priority
+    contract. A query hit remains non-authoritative discovery metadata until
+    the normal resolver proves the exact publisher destination.
+    """
+    tiers = ("primary_10", "secondary_3")
+    domain_map = source_priority.locked_publisher_domain_map(tiers)
+    name_to_domains: dict[str, list[str]] = {}
+    for domain, name in domain_map.items():
+        name_to_domains.setdefault(name, []).append(domain)
+    queries: list[str] = []
+    publishers: list[str] = []
+    for tier in tiers:
+        for name in source_priority.locked_publisher_names(tier):
+            domains = name_to_domains.get(name) or []
+            if not domains:
+                continue
+            # Prefer the configured parent host when a publication exposes
+            # multiple exact news hosts; final exact-host authority comes later.
+            domain = min(
+                domains,
+                key=lambda value: (value.count("."), len(value), value),
+            )
+            publishers.append(name)
+            queries.extend((
+                f'"AI" site:{domain} when:1d',
+                f'"데이터센터" site:{domain} when:1d',
+            ))
+    return {
+        "name": "operator_tier_a_publishers",
+        "label": "운영자 Tier A13",
+        "queries": queries,
+        "publishers": publishers,
+        "max_per_query": TIER_A_DISCOVERY_MAX_PER_QUERY,
+        "max_total": TIER_A_DISCOVERY_GROUP_BUDGET,
+    }
 
 
 def _configured_query_groups(cfg: dict) -> list[dict]:
@@ -852,39 +899,59 @@ def _publisher_bucket_key(row: dict) -> str:
 
 
 def _round_robin_publishers(rows: list[dict]) -> list[dict]:
+    """Tier-weighted publisher round robin for the bounded resolver queue.
+
+    Tier A receives four scheduling slots, Tier B one, and all remaining
+    authority classes one per cycle. Within each lane, every publisher receives
+    one row before any publisher receives its next row. This establishes strong
+    operator source preference without turning a source hint into authority or
+    removing the per-publisher/global resolver bounds.
+    """
     buckets: dict[str, deque] = {}
     for row in rows:
         if not isinstance(row, dict):
             continue
         buckets.setdefault(_publisher_bucket_key(row), deque()).append(row)
-    ordered: list[dict] = []
-    tier_priority = {
-        "primary_10": 0,
-        "secondary_3": 0,
-        "major_secondary": 0,
-        "official_institution": 1,
+    lane_buckets: dict[str, list[deque]] = {
+        "tier_a": [], "tier_b": [], "other": [],
     }
-    indexed_buckets = list(buckets.items())
-    active = [
-        bucket
-        for _index, (_key, bucket) in sorted(
-            enumerate(indexed_buckets),
-            key=lambda item: (
-                tier_priority.get(
-                    _resolution_scheduling_hint_tier(item[1][1][0]), 2
-                ),
-                item[0],
-            ),
+    for bucket in buckets.values():
+        tier = _resolution_scheduling_hint_tier(bucket[0])
+        lane = (
+            "tier_a" if tier in {"primary_10", "secondary_3"}
+            else "tier_b" if tier == "major_secondary"
+            else "other"
         )
-    ]
-    while active:
-        remaining = []
-        for bucket in active:
+        lane_buckets[lane].append(bucket)
+
+    # Preserve the R4-OPS-6B starvation repair: seed one candidate from every
+    # configured major scheduling bucket before any neutral/long-tail bucket.
+    # Tier A seeds precede Tier B seeds; both remain hints only.
+    ordered: list[dict] = []
+    for lane in ("tier_a", "tier_b"):
+        for bucket in lane_buckets[lane]:
             if bucket:
                 ordered.append(bucket.popleft())
-            if bucket:
-                remaining.append(bucket)
-        active = remaining
+
+    lane_rows: dict[str, deque] = {}
+    for lane, active in lane_buckets.items():
+        lane_ordered: list[dict] = []
+        while active:
+            remaining = []
+            for bucket in active:
+                if bucket:
+                    lane_ordered.append(bucket.popleft())
+                if bucket:
+                    remaining.append(bucket)
+            active = remaining
+        lane_rows[lane] = deque(lane_ordered)
+
+    weights = (("tier_a", 4), ("tier_b", 1), ("other", 1))
+    while any(lane_rows.values()):
+        for lane, weight in weights:
+            for _ in range(weight):
+                if lane_rows[lane]:
+                    ordered.append(lane_rows[lane].popleft())
     return ordered
 
 
@@ -1758,9 +1825,11 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
     by_name = {g["name"]: g for g in query_groups}
     site_groups = []
     global_press_group = None
+    tier_a_discovery_group = None
     if sources_path is None:
         site_groups = site_watchlist.collection_query_groups()
         global_press_group = global_press.collection_query_group()
+        tier_a_discovery_group = tier_a_publisher_discovery_group()
     coverage_names = {group["name"] for group in news_coverage.collection_query_groups()}
     coverage_groups = [group for group in query_groups
                        if group.get("name") in coverage_names]
@@ -1768,6 +1837,7 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
         max_total
         + len(site_groups) * SITE_PREFLIGHT_GROUP_BUDGET
         + (GLOBAL_PRESS_GROUP_BUDGET if global_press_group else 0)
+        + (TIER_A_DISCOVERY_GROUP_BUDGET if tier_a_discovery_group else 0)
         + len(coverage_groups) * COVERAGE_GROUP_BUDGET
     )
 
@@ -1801,7 +1871,29 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
                 # fresh 쿼리가 없었던 경우(전부 dedup/캡)에도 그룹은 audit에 보여야 한다.
                 _emit_audit(query_audit, group, "", "skipped", 0, 0, "preflight")
 
-        # 1b) 사이트 워치리스트 preflight — 내부(env) 또는 추적 공개 목록이 있을 때(D7-AE).
+        # 1b) R4-OPS-6C Tier-A13 publisher pass — credential-free major-media
+        #     supply discovery. Query hints affect resolver fairness only.
+        if tier_a_discovery_group is not None:
+            emitted = _collect_group(
+                tier_a_discovery_group,
+                max_per_query=TIER_A_DISCOVERY_MAX_PER_QUERY,
+                group_budget=TIER_A_DISCOVERY_GROUP_BUDGET,
+                global_cap=effective_cap,
+                pass_label="tier_a_publishers",
+                **common,
+            )
+            if emitted == 0:
+                _emit_audit(
+                    query_audit,
+                    tier_a_discovery_group,
+                    "",
+                    "skipped",
+                    0,
+                    0,
+                    "tier_a_publishers",
+                )
+
+        # 1c) 사이트 워치리스트 preflight — 내부(env) 또는 추적 공개 목록이 있을 때(D7-AE).
         #     둘 다 없으면 site_groups가 비어 있어 no-op이며 audit에 site:* 그룹이 등장하지
         #     않는다(가짜로 '돌았다' 주장 안 함). 어느 목록이든 리프가 bounded로 파생한다.
         for group in site_groups:
@@ -1812,7 +1904,7 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
             if emitted == 0:
                 _emit_audit(query_audit, group, "", "skipped", 0, 0, "site")
 
-        # 1c) 해외 언론 preflight — 영어 locale(en-US) 그룹을 additive headroom으로 수집한다.
+        # 1d) 해외 언론 preflight — 영어 locale(en-US) 그룹을 additive headroom으로 수집한다.
         #     국내 렌즈 예산을 건드리지 않고(국내 audit/depth 불변), 실패/빈 결과는 audit에 남으며
         #     가짜 해외 기사를 만들지 않는다. 해외 매체 출처는 briefing 표시 레이어에서 분류한다.
         if global_press_group is not None:
@@ -1824,7 +1916,7 @@ def fetch_all(timeout: int = DEFAULT_TIMEOUT, sources_path=None,
                 _emit_audit(query_audit, global_press_group, "", "skipped", 0, 0,
                             "global_press")
 
-        # 1d) D7-AF coverage pass — 앞선 렌즈가 전역 cap을 소진해도 Weekly Brief/Deal
+        # 1e) D7-AF coverage pass — 앞선 렌즈가 전역 cap을 소진해도 Weekly Brief/Deal
         #     Watch 그룹이 실제 검색되는 구조를 보장한다. 결과 0건은 그대로 0건이다.
         for group in coverage_groups:
             emitted = _collect_group(

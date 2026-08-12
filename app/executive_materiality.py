@@ -116,6 +116,348 @@ FUND_PRODUCT_TERMS: tuple[str, ...] = (
     "etf", "상장지수펀드", "상장지수 펀드", "펀드", "리츠", "reits", "랩어카운트",
 )
 
+# R4-OPS-6C — Watch-only materiality vocabulary.  These terms are deliberately
+# separate from ``MATERIAL_ACTION_TERMS``: a generic announcement, meeting,
+# proposal, or product launch must not become an executive realtime event just
+# because AI is central.  Daily/Editor curation remains broader and continues
+# to use ``executive_qualification`` above.
+WATCH_PROPOSAL_DISCUSSION_TERMS: tuple[str, ...] = (
+    "방문", "제안", "건의", "논의", "모색", "검토", "희망", "환영",
+    "관심 표명", "협력 요청", "실증 제안",
+)
+
+WATCH_LOCAL_POLITICAL_TERMS: tuple[str, ...] = (
+    "시장", "도지사", "지사", "국회의원", "의원", "국회", "예결위원장",
+    "시의회", "도의회", "군수", "구청장", "지자체", "지방정부",
+)
+WATCH_LOCAL_ADMIN_ACTIVITY_TERMS: tuple[str, ...] = (
+    "지역 현안", "국비", "예산 확보", "예산 반영", "지역 발전", "지역사업",
+    "지역 사업", "지방 현안", "클러스터 지원",
+)
+
+WATCH_SIGNED_CONTRACT_TERMS: tuple[str, ...] = (
+    "본계약 체결", "계약 체결", "계약을 체결", "공급계약", "공급 계약",
+    "수주 계약", "사업 협약 체결", "업무협약 체결", "협약을 체결",
+    "signed contract", "contract signed", "binding agreement",
+)
+WATCH_CONFIRMED_INVESTMENT_TERMS: tuple[str, ...] = (
+    "투자 확정", "투자를 확정", "투자하기로", "투자한다", "출자 확정",
+    "출자를 확정", "출자한다", "committed investment", "will invest",
+)
+WATCH_AWARD_ORDER_TERMS: tuple[str, ...] = (
+    "수주 확정", "수주했", "수주했다", "낙찰", "발주 확정", "발주했다",
+    "우선협상대상자", "awarded", "order secured",
+)
+WATCH_CONSTRUCTION_START_TERMS: tuple[str, ...] = (
+    "착공했다", "착공한다", "착공에 들어", "착공 확정", "착공이 확정", "첫 삽을",
+    "건설에 착수", "구축에 착수", "구축 착수", "construction began",
+    "broke ground",
+)
+WATCH_FINAL_APPROVAL_TERMS: tuple[str, ...] = (
+    "최종 승인", "본승인", "사업 승인", "인허가 승인", "허가를 승인",
+    "final approval", "finally approved",
+)
+WATCH_ENACTED_REGULATION_TERMS: tuple[str, ...] = (
+    "법 시행", "규제 시행", "시행령 공포", "법안 통과", "법률 공포",
+    "발효됐다", "발효한다", "enacted", "takes effect",
+)
+WATCH_COMMITTED_BUDGET_TERMS: tuple[str, ...] = (
+    "예산 확정", "예산을 확정", "예산 배정", "예산을 배정", "국비 확정",
+    "국비 반영 확정", "committed budget", "budget approved",
+)
+WATCH_BINDING_MOU_TERMS: tuple[str, ...] = (
+    "양해각서", "mou", "memorandum of understanding",
+)
+WATCH_LAUNCH_TERMS: tuple[str, ...] = (
+    "정식 출시", "서비스 개시", "서비스를 개시", "상용화", "생산 개시",
+    "가동 시작", "가동했다", "launched", "entered production",
+)
+WATCH_LAUNCH_IMPACT_TERMS: tuple[str, ...] = (
+    "전사", "생산", "산업", "데이터센터", "데이터 센터", "전력망",
+    "스마트건설", "건설", "bim", "설계 자동화", "규제", "공공서비스",
+    "enterprise", "production",
+    "industrial", "data center", "grid",
+)
+WATCH_WORKFORCE_CONSTRAINT_TERMS: tuple[str, ...] = (
+    "인력 부족", "인력난", "숙련공 부족", "인력 확보에 어려움",
+    "인력을 확보하는 데 어려움", "인력 확보가 어렵",
+    "미충원", "workforce shortage", "labor shortage", "skills shortage",
+)
+
+WATCH_FINANCIAL_PRODUCT_TERMS: tuple[str, ...] = (
+    "선물", "옵션", "파생상품", "파생 상품", "스왑", "etf", "상장지수펀드",
+    "상장지수 펀드", "리츠", "reits", "구조화 상품", "토큰화 상품",
+    "futures", "option contract", "derivative", "swap contract",
+)
+WATCH_FINANCIAL_FRAMING_TERMS: tuple[str, ...] = (
+    "거래", "상장", "선물시장", "선물 시장", "가격 변동성", "헤지", "지수",
+    "투자자", "표준가격", "reference price", "trading", "listed", "hedge",
+    "price exposure",
+)
+WATCH_FINANCIAL_INDUSTRIAL_ACTION_TERMS: tuple[str, ...] = (
+    "epc", "건설 공급", "건설 계약", "시공 계약", "구축 계약", "구축에 착수",
+    "전력 인프라", "전력망 건설", "변전", "송전", "냉각", "용수",
+    "착공", "수주", "발주", "투자 확정", "투자를 확정",
+) + HDEC_DIRECT_TERMS
+
+WATCH_CAPACITY_RE = re.compile(
+    r"[0-9][0-9,.]*\s*(?:GW|MW|기가와트|메가와트|kW|킬로와트|"
+    r"GPU|개\s*GPU|랙|서버|가구|명|만명|만\s*명)",
+    re.IGNORECASE,
+)
+WATCH_TIMELINE_RE = re.compile(
+    r"(?:20[2-9][0-9]년|[0-9]{1,2}월\s*[0-9]{1,2}일|"
+    r"[0-9]+년\s*(?:간|내)|by\s+20[2-9][0-9])",
+    re.IGNORECASE,
+)
+WATCH_MONEY_RE = re.compile(
+    r"[0-9][0-9,.]*\s*(?:조|억|천억|백억|만)\s*(?:원|달러)|"
+    r"(?:USD|KRW|\$)\s*[0-9][0-9,.]*\s*(?:billion|million)?",
+    re.IGNORECASE,
+)
+WATCH_CAPEX_CONTEXT_TERMS: tuple[str, ...] = (
+    "투자", "출자", "자본지출", "capex", "건설비", "사업비", "investment",
+)
+
+# The live-delta contract also carries a bounded, source-derived categorical
+# event field.  It is useful corroboration, but arbitrary labels have no
+# authority: proposal/meeting/financial-product/analysis/market labels are
+# deliberately absent.  Launch categories still require strategic operating
+# context, while an MOU still requires factual scale or timeline evidence.
+WATCH_CONFIRMED_HARD_EVENT_TYPES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("signed_contract", (
+        "contract_signed", "contract_confirmed", "agreement_signed",
+        "partnership_signed",
+    )),
+    ("confirmed_investment", (
+        "investment_confirmed", "investment_committed", "funding_confirmed",
+    )),
+    ("award_or_order", (
+        "award_confirmed", "order_confirmed", "order_secured", "contract_awarded",
+    )),
+    ("construction_start", (
+        "construction_started", "groundbreaking_confirmed",
+        "national_ai_infrastructure_construction_started",
+    )),
+    ("final_government_approval", (
+        "approval_confirmed", "final_approval", "permit_approved",
+    )),
+    ("enacted_regulation", (
+        "regulation_enacted", "law_enacted", "regulation_effective",
+    )),
+    ("committed_budget", ("budget_committed", "budget_approved")),
+    ("confirmed_acquisition", (
+        "acquisition_announced", "acquisition_confirmed", "acquisition_completed",
+        "merger_confirmed", "merger_completed",
+    )),
+)
+WATCH_CONFIRMED_LAUNCH_EVENT_TYPES: tuple[str, ...] = (
+    "launch_announced", "product_available", "service_launched",
+    "production_started", "commercial_operation_started",
+)
+WATCH_CONFIRMED_MOU_EVENT_TYPES: tuple[str, ...] = (
+    "mou_signed", "binding_mou_signed",
+)
+
+
+@dataclass(frozen=True)
+class WatchMaterialityDecision:
+    """Watch-only executive materiality decision from publisher evidence."""
+
+    qualified: bool
+    reason: str
+    hard_signal: str = ""
+    proposal_discussion: bool = False
+    local_political_activity: bool = False
+    financial_product_framing: bool = False
+
+
+def _watch_zone(evidence: Mapping[str, Any]) -> tuple[str, str, str]:
+    """Return lower-cased title, factual lead, and their bounded union.
+
+    The evidence mapping is built by the Watch caller and contains only title,
+    publisher subtitle/section, and factual publisher snippet.  Search queries,
+    generated summaries, relevance explanations, and scoring metadata are not
+    accepted here.
+    """
+    title = ai_centrality.article_title(evidence).lower()
+    subtitle = ai_centrality.article_subtitle(evidence).lower()
+    lead = ai_centrality.article_lead_sentence(evidence)
+    return title, lead, " ".join(part for part in (title, subtitle, lead) if part)
+
+
+def watch_hard_material_signal(evidence: Mapping[str, Any]) -> str:
+    """Return the first independently hard Watch signal, or ``""``.
+
+    Bare proposal/discussion wording and bare monetary figures are excluded.
+    An MOU requires a meaningful capacity/scale/timeline in the same factual
+    evidence zone; product/service launch requires strategic operating impact.
+    """
+    _title, _lead, zone = _watch_zone(evidence)
+    if not zone:
+        return ""
+    raw_events = evidence.get("shadow_confirmed_event_types", ())
+    if isinstance(raw_events, str):
+        raw_events = (raw_events,)
+    if not isinstance(raw_events, (list, tuple, set, frozenset)):
+        raw_events = ()
+    confirmed_events = {
+        str(event).strip().lower() for event in raw_events if str(event).strip()
+    }
+    for label, event_types in WATCH_CONFIRMED_HARD_EVENT_TYPES:
+        if confirmed_events.intersection(event_types):
+            return label
+    groups: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("signed_contract", WATCH_SIGNED_CONTRACT_TERMS),
+        ("confirmed_investment", WATCH_CONFIRMED_INVESTMENT_TERMS),
+        ("award_or_order", WATCH_AWARD_ORDER_TERMS),
+        ("construction_start", WATCH_CONSTRUCTION_START_TERMS),
+        ("final_government_approval", WATCH_FINAL_APPROVAL_TERMS),
+        ("enacted_regulation", WATCH_ENACTED_REGULATION_TERMS),
+        ("committed_budget", WATCH_COMMITTED_BUDGET_TERMS),
+    )
+    for label, terms in groups:
+        if any(term in zone for term in terms):
+            return label
+    if WATCH_CAPACITY_RE.search(zone):
+        return "quantified_capacity"
+    if WATCH_MONEY_RE.search(zone) and any(
+        term in zone for term in WATCH_CAPEX_CONTEXT_TERMS
+    ):
+        return "quantified_capex"
+    if (
+        any(term in zone for term in WATCH_BINDING_MOU_TERMS)
+        and (
+            "체결" in zone
+            or "signed" in zone
+            or bool(confirmed_events.intersection(WATCH_CONFIRMED_MOU_EVENT_TYPES))
+        )
+        and (
+            WATCH_CAPACITY_RE.search(zone)
+            or WATCH_MONEY_RE.search(zone)
+            or WATCH_TIMELINE_RE.search(zone)
+        )
+    ):
+        return "binding_mou_with_scale_or_timeline"
+    if (
+        (
+            any(term in zone for term in WATCH_LAUNCH_TERMS)
+            or bool(confirmed_events.intersection(WATCH_CONFIRMED_LAUNCH_EVENT_TYPES))
+        )
+        and any(term in zone for term in WATCH_LAUNCH_IMPACT_TERMS)
+    ):
+        return "strategic_production_or_service_launch"
+    return ""
+
+
+def watch_executive_materiality(
+    evidence: Mapping[str, Any],
+) -> WatchMaterialityDecision:
+    """Stronger realtime Watch gate; Daily/Editor policy is unchanged.
+
+    The Watch accepts an independently hard event, a material AI security/risk
+    incident, or a strategic physical-infrastructure constraint. Proposal and
+    local-political classes require a hard signal. Financial/derivative product
+    framing is rejected unless a separate hard industrial event is present.
+    """
+    title, _lead, zone = _watch_zone(evidence)
+    hard_signal = watch_hard_material_signal(evidence)
+    proposal = any(term in zone for term in WATCH_PROPOSAL_DISCUSSION_TERMS)
+    local_political = (
+        any(term in title for term in WATCH_LOCAL_POLITICAL_TERMS)
+        and proposal
+        and any(term in zone for term in WATCH_LOCAL_ADMIN_ACTIVITY_TERMS)
+    )
+    financial_product = (
+        any(term in zone for term in WATCH_FINANCIAL_PRODUCT_TERMS)
+        and any(term in zone for term in WATCH_FINANCIAL_FRAMING_TERMS)
+    )
+    industrial_context = any(
+        term in zone for term in EXEC_STRATEGIC_DOMAIN_TERMS
+    )
+    separate_industrial_action = any(
+        term in zone for term in WATCH_FINANCIAL_INDUSTRIAL_ACTION_TERMS
+    )
+
+    if financial_product and not (
+        hard_signal and industrial_context and separate_industrial_action
+    ):
+        return WatchMaterialityDecision(
+            False,
+            "financial_ai_product_without_industrial_event",
+            hard_signal,
+            proposal,
+            local_political,
+            True,
+        )
+    if local_political and not hard_signal:
+        return WatchMaterialityDecision(
+            False,
+            "local_political_ai_without_hard_material_signal",
+            "",
+            proposal,
+            True,
+            financial_product,
+        )
+    if proposal and not hard_signal:
+        return WatchMaterialityDecision(
+            False,
+            "proposal_discussion_without_hard_material_signal",
+            "",
+            True,
+            local_political,
+            financial_product,
+        )
+    if hard_signal:
+        return WatchMaterialityDecision(
+            True,
+            f"hard_material_signal:{hard_signal}",
+            hard_signal,
+            proposal,
+            local_political,
+            financial_product,
+        )
+
+    security_hit = next(
+        (term for term in EXEC_AI_SECURITY_TERMS if term in zone), ""
+    )
+    if security_hit:
+        return WatchMaterialityDecision(
+            True,
+            f"material_ai_security:{security_hit}",
+            "",
+            proposal,
+            local_political,
+            financial_product,
+        )
+
+    domain_hit = next(
+        (term for term in EXEC_STRATEGIC_DOMAIN_TERMS if term in zone), ""
+    )
+    impact_terms = EXEC_IMPACT_SIGNAL_TERMS + WATCH_WORKFORCE_CONSTRAINT_TERMS
+    # "무중단 전력" is a reliability feature, not the negative event "중단".
+    # Remove that compound before matching the material interruption signal.
+    impact_zone = zone.replace("무중단", "")
+    impact_hit = next((term for term in impact_terms if term in impact_zone), "")
+    if domain_hit and impact_hit:
+        return WatchMaterialityDecision(
+            True,
+            f"strategic_infra_impact:{domain_hit}->{impact_hit}",
+            "",
+            proposal,
+            local_political,
+            financial_product,
+        )
+
+    return WatchMaterialityDecision(
+        False,
+        "no_independent_watch_material_signal",
+        "",
+        proposal,
+        local_political,
+        financial_product,
+    )
+
 
 @dataclass(frozen=True)
 class ExecutiveQualification:
