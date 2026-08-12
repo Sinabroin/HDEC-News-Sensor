@@ -9,7 +9,11 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: "20 22 * * *"
+    # GitHub cron is best-effort. These bounded slots recover build/publication
+    # or pre-send failures; exact snapshot/date state suppresses duplicates.
+    - cron: "20 22 * * *" # 07:20 KST primary
+    - cron: "35 22 * * *" # 07:35 KST recovery
+    - cron: "45 22 * * *" # 07:45 KST final recovery
 
 permissions:
   contents: write
@@ -56,6 +60,7 @@ jobs:
           echo "run_at=${run_at}" >> "$GITHUB_OUTPUT"
           echo "Resolved calibration_only=${CALIBRATION_ONLY}; output_root=${resolved}; run_at=${run_at}"
       - name: Build Daily Editorial Review Console
+        id: build
         env:
           OUTPUT_ROOT: ${{ steps.mode.outputs.output_root }}
           RUN_AT: ${{ steps.mode.outputs.run_at }}
@@ -69,14 +74,15 @@ jobs:
             args+=(--calibration-diagnostics)
           fi
           python3 scripts/build_editorial_review_console.py "${args[@]}"
-      - name: Verify no sender or production state mutation
+      - name: Verify console and isolated Editor delivery contracts
         run: |
           python3 scripts/verify_editorial_review_console.py
-          git diff --exit-code -- data/editorial_daily_state.json data/teams_push_state.json
+          python3 scripts/verify_r4_ops7_editor_production_gate.py
+          git diff --exit-code -- data/editor_delivery_state.json data/editorial_daily_state.json data/editorial_weekly_state.json data/teams_push_state.json
       - name: Assert calibration writes no tracked docs or production state
         if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
         run: |
-          protected="docs/editorial/review data/editorial_daily_state.json data/editorial_weekly_state.json data/teams_push_state.json data/news_censor_verified_state.json"
+          protected="docs/editorial/review data/editor_delivery_state.json data/editorial_daily_state.json data/editorial_weekly_state.json data/teams_push_state.json data/news_censor_verified_state.json"
           git diff --exit-code -- $protected
           dirty="$(git status --porcelain -- $protected)"
           if [ -n "$dirty" ]; then
@@ -98,15 +104,156 @@ jobs:
             ${{ steps.mode.outputs.output_root }}/*/manifest.json
             ${{ steps.mode.outputs.output_root }}/*/index.html
       - name: Publish candidate console only
+        id: publish
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.calibration_only) }}
+        env:
+          EDITION: ${{ steps.build.outputs.edition }}
+          SNAPSHOT_ID: ${{ steps.build.outputs.snapshot_id }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- docs/editorial/review
+          git add -- \
+            "docs/editorial/review/${EDITION}" \
+            docs/editorial/review/latest \
+            "docs/editorial/review/snapshots/${SNAPSHOT_ID}"
           if git diff --cached --quiet; then
             echo "No review console delta"
-            exit 0
+          else
+            git commit -m "chore: publish Daily editorial review console ${EDITION}"
+            for attempt in 1 2 3; do
+              git fetch origin main
+              if ! git merge --no-edit origin/main; then
+                echo "ERROR: Review Console publication merge conflict"
+                exit 1
+              fi
+              if git push origin HEAD:main; then
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "ERROR: Review Console publication push failed"
+                exit 1
+              fi
+            done
           fi
-          git commit -m "chore: publish Daily editorial review console $(date -u +%F)"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact public Editor snapshot before delivery
+        id: verify_public
+        if: success() && steps.publish.outputs.published == 'true'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/run_editor_delivery.py \
+            --snapshot-id "${{ steps.build.outputs.snapshot_id }}" \
+            --verify-public
+
+      - name: Claim exact Editor snapshot
+        id: claim
+        if: success() && steps.verify_public.outputs.public_verified == 'true'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/run_editor_delivery.py \
+            --snapshot-id "${{ steps.build.outputs.snapshot_id }}" \
+            --claim
+
+      - name: Persist exact Editor delivery claim
+        # An older armed owner is persisted as explicit reconciliation-required
+        # evidence even though the claim step intentionally fails the workflow.
+        if: always() && steps.claim.outputs.state_changed == 'true'
+        env:
+          EDITION: ${{ steps.build.outputs.edition }}
+        run: |
+          STATE_PATH="data/editor_delivery_state.json"
+          if [ -z "$(git status --porcelain -- "$STATE_PATH")" ]; then
+            echo "ERROR: Editor claim declared a change but state is unchanged"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$STATE_PATH"
+          git commit -m "chore: claim Editor notification ${EDITION}"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if ! git merge --no-edit origin/main; then exit 1; fi
+            if git push origin HEAD:main; then break; fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+          done
+
+      - name: Surface armed transport ambiguity
+        if: always() && steps.claim.outputs.delivery_status == 'ambiguous_reconciliation_required'
+        env:
+          EDITION: ${{ steps.claim.outputs.edition }}
+          SNAPSHOT_ID: ${{ steps.claim.outputs.editor_snapshot_id }}
+        run: |
+          echo "ERROR: Editor delivery requires explicit operator reconciliation"
+          echo "editor_delivery_status=ambiguous_reconciliation_required"
+          echo "edition=${EDITION} snapshot_id=${SNAPSHOT_ID} automatic_resend=false smtp_connections=0"
+          exit 1
+
+      - name: Arm claimed Editor transport before SMTP
+        id: arm
+        if: success() && steps.claim.outputs.send_authorized == 'true'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+        run: |
+          python3 scripts/run_editor_delivery.py \
+            --snapshot-id "${{ steps.build.outputs.snapshot_id }}" \
+            --arm
+
+      - name: Persist Editor transport arm before SMTP
+        if: success() && steps.arm.outputs.state_changed == 'true'
+        env:
+          EDITION: ${{ steps.build.outputs.edition }}
+        run: |
+          STATE_PATH="data/editor_delivery_state.json"
+          if [ -z "$(git status --porcelain -- "$STATE_PATH")" ]; then exit 1; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$STATE_PATH"
+          git commit -m "chore: arm Editor notification ${EDITION}"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if ! git merge --no-edit origin/main; then exit 1; fi
+            if git push origin HEAD:main; then break; fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+          done
+
+      - name: Send armed exact Editor snapshot
+        id: send
+        if: success() && steps.arm.outputs.send_authorized == 'true'
+        env:
+          EDITORIAL_PRODUCTION: "1"
+          REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          GMAIL_SMTP_USER: ${{ secrets.GMAIL_SMTP_USER }}
+          GMAIL_SMTP_APP_PASSWORD: ${{ secrets.GMAIL_SMTP_APP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          TEAMS_CHANNEL_EMAIL: ${{ secrets.TEAMS_CHANNEL_EMAIL }}
+        run: |
+          python3 scripts/run_editor_delivery.py \
+            --snapshot-id "${{ steps.build.outputs.snapshot_id }}" \
+            --send
+
+      - name: Persist exact Editor delivery result
+        if: always() && steps.send.outcome != 'skipped' && steps.send.outputs.state_changed == 'true'
+        env:
+          EDITION: ${{ steps.build.outputs.edition }}
+        run: |
+          STATE_PATH="data/editor_delivery_state.json"
+          if [ -z "$(git status --porcelain -- "$STATE_PATH")" ]; then
+            echo "ERROR: Editor success declared a change but state is unchanged"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$STATE_PATH"
+          git commit -m "chore: record Editor notification result ${EDITION}"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if ! git merge --no-edit origin/main; then exit 1; fi
+            if git push origin HEAD:main; then break; fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+          done

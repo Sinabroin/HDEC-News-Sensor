@@ -333,9 +333,11 @@ def main() -> int:
           workflow.index("--claim") < workflow.index("--send"))
     check("send step is gated on the durable claim's send authorization",
           "steps.claim.outputs.send_authorized == 'true'" in workflow)
-    check("verify-public and claim are gated on success() (no reader-only bypass)",
-          workflow.count("if: success() && steps.publish.outputs.delivery_authorized == 'true'")
-          >= 2)
+    check("verify-public and claim are explicitly chained (no reader-only bypass)",
+          "if: success() && steps.publish.outputs.delivery_authorized == 'true'"
+          in workflow
+          and "if: success() && steps.verify_public.outputs.resources_verified == 'true'"
+          in workflow)
     DAILY_CLAIM_BEFORE_SEND = not FAILURES
 
     print(f"checks={CHECKS} failures={len(FAILURES)}")

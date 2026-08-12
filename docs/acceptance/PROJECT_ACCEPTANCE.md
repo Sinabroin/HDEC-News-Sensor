@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.1
+**Version:** 1.2
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -78,6 +78,11 @@ The following are hard failures:
 - retries cause duplicate Daily sends;
 - Editor UI exposes a control that looks usable but deterministically fails because its backend is unavailable;
 - tests are reported as production proof when no real production E2E exists.
+- a deterministic verifier treats mutable production `latest` as a frozen historical fixture;
+- a fallback/category visual is counted as a real article photo;
+- an unrelated Daily/Editor fixture failure disables Watch or Scheduled Refresh;
+- Review Console generation is reported as Editor notification delivery;
+- a non-empty Daily or Weekly is delivered with incomplete real-photo coverage.
 
 ---
 
@@ -273,6 +278,72 @@ The replay must keep the observed incident separate from synthetic adversarial
 metadata. Unverified historical title, source, timestamp, and article metadata
 must remain null/unknown rather than being represented as observed fact.
 
+## HDEC-DEFECT-006 — mutable latest date rollover
+
+Observed production state: the immutable historical Review bundle remained
+`2026-08-11` while mutable `docs/editorial/review/latest` correctly advanced to
+`2026-08-12`. The deterministic R4 acceptance verifier loaded both as
+`2026-08-11` and failed on the correct rollover.
+
+Required expected result:
+
+- deterministic historical fixtures never derive authority from production `latest`;
+- exact/latest mirror tests construct an isolated temporary fixture pair;
+- a wrong edition in that isolated pair still fails closed with identity mismatch;
+- current mutable `latest` may advance without breaking historical verification.
+
+## HDEC-DEFECT-007 — fallback image false green
+
+Observed Weekly W33 rendered deterministic blue/navy fallback graphics while
+existing checks treated image-backed cards as success.
+
+Required expected result:
+
+- fallback visuals are explicit and never count as real article photos;
+- a non-empty Daily/Weekly requires one byte-validated, locally materialized,
+  immutable public raster photo per rendered article;
+- `article_count=12`, `real_article_photo_count=0`, and
+  `fallback_visual_count=12` fails production authorization even with 12 `<img>` tags;
+- fake raster suffixes, SVG/data fallbacks, hotlinks, and unavailable
+  Review-relative paths fail closed.
+
+## HDEC-DEFECT-008 — cross-workflow verifier blast radius
+
+Observed one Editorial acceptance fixture failure stopped Daily Brief, Realtime
+Watch, and Scheduled Live Refresh at their offline verifier stage.
+
+Required expected result:
+
+- Watch, Refresh, Daily, Weekly, and Editor scheduled gates are scoped to their
+  own runtime dependencies plus genuinely shared low-level invariants;
+- a Daily-only fixture failure cannot stop Watch or Refresh;
+- a Watch-only failure still blocks Watch and cannot silently permit sends;
+- the broad R4 acceptance verifier remains an integration/CI suite, not a
+  scheduled cross-product kill switch.
+
+## HDEC-DEFECT-009 — Editor generated but not delivered
+
+Observed the Review Console workflow built and published a valid console but
+did not independently notify the user; later Daily failure therefore left no
+morning Editor link.
+
+Required expected result:
+
+- Editor generation, publication, public verification, claim, send, duplicate
+  skip, and failure are separate machine-readable states;
+- the authoritative notification target is a content-addressed immutable
+  Review snapshot, never `latest` and never a guessed later Daily identity;
+- the automatic SMTP path persists delivery success only for exact SMTP DATA
+  250; explicit operator reconciliation remains a distinct evidence kind;
+- retry sends zero duplicates for the same date/snapshot;
+- an armed transport observed by a different run becomes
+  `ambiguous_reconciliation_required`, fails visibly, and performs no automatic
+  resend or SMTP connection;
+- ambiguity can be cleared only by an explicitly authorized operator who
+  either supplies evidence of delivery or authorizes a retry; the evidence
+  digest and action remain in the delivery-state audit history;
+- Editor success and Daily success remain independent truths.
+
 ---
 
 # 7. REAL-CORPUS REPLAY MATRIX
@@ -421,6 +492,35 @@ If article import backend remains unavailable:
 
 Article-import provisioning must not block unrelated core launch acceptance unless the user explicitly promotes it to a launch blocker.
 
+## Editor armed-transport reconciliation
+
+Scheduled workflows must never invoke reconciliation automatically. After
+inspecting the exact date, snapshot, GitHub run, SMTP provider evidence, and
+tracked state diff, an authorized operator may run one of the following on a
+main-branch GitHub runner (then separately review and publish the state diff):
+
+```bash
+EDITORIAL_PRODUCTION=1 GITHUB_ACTIONS=true GITHUB_REF=refs/heads/main \
+EDITOR_RECONCILIATION_AUTHORIZED=1 \
+python3 scripts/run_editor_delivery.py \
+  --snapshot-id REVIEW_SNAPSHOT_ID \
+  --reconcile-mark-delivered \
+  --authorized-by OPERATOR_ID \
+  --operator-evidence-file /path/to/nonsecret-evidence.txt
+
+EDITORIAL_PRODUCTION=1 GITHUB_ACTIONS=true GITHUB_REF=refs/heads/main \
+EDITOR_RECONCILIATION_AUTHORIZED=1 \
+python3 scripts/run_editor_delivery.py \
+  --snapshot-id REVIEW_SNAPSHOT_ID \
+  --reconcile-release-retry \
+  --authorized-by OPERATOR_ID \
+  --operator-evidence-file /path/to/nonsecret-evidence.txt
+```
+
+`mark-delivered` does not fabricate SMTP 250 evidence; it records a distinct
+operator-reconciled evidence kind. `release-retry` sends nothing itself and
+only permits a later normal claim/arm/send attempt.
+
 ---
 
 # 12. CODE-COMPLETE CONDITIONS
@@ -464,6 +564,28 @@ EDITOR_EXACT_RECONSTRUCTION=PASS
 NO_MISLEADING_IMPORT_CONTROL=PASS
 
 SCHEDULED_REFRESH_STALE_VERIFIER_REPAIRED=PASS
+
+DATE_ROLLOVER_REGRESSION=PASS
+MUTABLE_LATEST_NOT_TEST_FIXTURE=PASS
+WATCH_GATE_FAULT_ISOLATED=PASS
+REFRESH_GATE_FAULT_ISOLATED=PASS
+
+REAL_ARTICLE_PHOTO_CONTRACT=PASS
+FALLBACK_FALSE_GREEN_BLOCKED=PASS
+DAILY_REAL_PHOTO_GATE=PASS
+WEEKLY_REAL_PHOTO_GATE=PASS
+PUBLIC_IMAGE_ASSET_VERIFICATION=PASS
+
+EDITOR_INDEPENDENT_DELIVERY_PATH=PASS
+EDITOR_DELIVERY_IDEMPOTENCE=PASS
+EDITOR_EXACT_SNAPSHOT_LINK=PASS
+EDITOR_AMBIGUOUS_ARM_FAIL_CLOSED=PASS
+EDITOR_RECONCILIATION_PATH=PASS
+
+EXACT_REVIEW_ASSET_FIRST=PASS
+EXACT_REVIEW_ASSET_REMOTE_INDEPENDENCE=PASS
+REVIEW_ASSET_PATH_ESCAPE_BLOCKED=PASS
+REVIEW_ASSET_BYTES_REVALIDATED=PASS
 
 HISTORICAL_REPLAY=PASS
 ADVERSARIAL_NEIGHBOR_CASES=PASS

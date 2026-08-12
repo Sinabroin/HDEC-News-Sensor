@@ -18,6 +18,9 @@ WEEKLY_LATEST_URL = f"{PUBLIC_ROOT}/editorial/weekly/latest.html"
 # manifest's integrity digest, so a republished date mints a new id and never
 # reuses an older edition's identity.
 DAILY_EDITION_ID_RE = re.compile(r"^daily-(\d{4}-\d{2}-\d{2})-([0-9a-f]{16})$")
+EDITOR_SNAPSHOT_ID_RE = re.compile(
+    r"^review-(\d{4}-\d{2}-\d{2})-([0-9a-f]{16})$"
+)
 DAILY_EDITOR_LINK_SOURCE = "teams_daily"
 _EDITOR_SOURCE_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 
@@ -25,6 +28,19 @@ _EDITOR_SOURCE_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 def parse_daily_edition_id(edition_id: object) -> str:
     """Return the embedded edition key for a valid Daily edition id, else ""."""
     match = DAILY_EDITION_ID_RE.match(str(edition_id or ""))
+    if not match:
+        return ""
+    key = match.group(1)
+    try:
+        date.fromisoformat(key)
+    except ValueError:
+        return ""
+    return key
+
+
+def parse_editor_snapshot_id(snapshot_id: object) -> str:
+    """Return the embedded date for a content-addressed Review snapshot."""
+    match = EDITOR_SNAPSHOT_ID_RE.match(str(snapshot_id or ""))
     if not match:
         return ""
     key = match.group(1)
@@ -71,6 +87,24 @@ def daily_edition_manifest_url(edition_id: str, *, root_url: str = PUBLIC_ROOT) 
     if not root or not parse_daily_edition_id(edition_id):
         return ""
     return f"{root}/editorial/daily/editions/{edition_id}.json"
+
+
+def editor_snapshot_url(snapshot_id: str, *, root_url: str = PUBLIC_ROOT) -> str:
+    root = _validated_root(root_url)
+    if not root or not parse_editor_snapshot_id(snapshot_id):
+        return ""
+    return f"{root}/editorial/review/snapshots/{snapshot_id}/index.html"
+
+
+def editor_snapshot_manifest_url(
+    snapshot_id: str,
+    *,
+    root_url: str = PUBLIC_ROOT,
+) -> str:
+    root = _validated_root(root_url)
+    if not root or not parse_editor_snapshot_id(snapshot_id):
+        return ""
+    return f"{root}/editorial/review/snapshots/{snapshot_id}/manifest.json"
 
 
 def canonical_dashboard_url(value: object = "") -> str:
