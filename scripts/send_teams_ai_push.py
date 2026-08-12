@@ -70,6 +70,7 @@ from app.teams_ai_push import (  # noqa: E402
     DEFAULT_TEAMS_BATCH_MAX,
     HARD_TEAMS_BATCH_MAX,
     IMPORTANCE_IMPORTANT,
+    SELECTION_MODE_AFTER_HOLDBACK,
     SELECTION_MODE_FALLBACK,
     apply_major_media_first_gate,
     evaluate_teams_push_policy,
@@ -86,6 +87,7 @@ from app.teams_push_state import (  # noqa: E402
     filter_unsent_candidates,
     load_state,
     mark_held_replaced_by_major,
+    mark_held_replaced_by_tier_a,
     observe_held_specialist,
     persist_after_success,
     resolve_state_path,
@@ -118,6 +120,11 @@ REJECTION_COUNTER_KEYS = (
     "no_confirmed_event",
     "speculation_only",
     "excluded_opinion_content",
+    "excluded_fund_product_noise",
+    "excluded_financial_ai_product",
+    "excluded_local_political_ai_false_positive",
+    "excluded_proposal_only",
+    "insufficient_executive_materiality",
     "already_sent",
     "exact_duplicate",
     "duplicate_event",
@@ -132,6 +139,13 @@ class FailClosed(RuntimeError):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+def _safe_display_source(value: object) -> str:
+    cleaned = " ".join(str(value or "").split())[:160]
+    if "://" in cleaned or "@" in cleaned:
+        return "redacted_source"
+    return cleaned
 
 
 def _row_source_tier_counts(rows) -> dict[str, int]:
@@ -248,7 +262,9 @@ def _major_row_decision_traces(
         stock = evaluation.stock_market
         traces.append({
             "article_ref": ref,
-            "source": str(row.get("source") or row.get("display_source") or ""),
+            "source": _safe_display_source(
+                row.get("source") or row.get("display_source") or ""
+            ),
             "source_tier": tier,
             "teams_lane": str(policy["teams_lane"]),
             "publisher_rank": int(policy["publisher_rank"]),
@@ -269,6 +285,86 @@ def _major_row_decision_traces(
             "smtp_status": smtp_status,
         })
     return traces
+
+
+def _policy_eligible_row_traces(
+    *, article_rows, policy_evaluations, candidates, baseline, gate_batch
+) -> tuple[list[dict[str, Any]], dict[str, int], dict[str, int]]:
+    """Log-safe categorical trace for every alert-policy-eligible row.
+
+    No title, URL, body, address, or reversible identifier enters this shape.
+    Discovery aliases are never reported as resolved publisher identities.
+    """
+    candidate_by_ref = {
+        article_ref(candidate.article): candidate for candidate in candidates
+    }
+    dedup_by_ref = {
+        article_ref(candidate.article): decision
+        for candidate, decision in zip(candidates, baseline)
+    }
+    gate_by_ref: dict[str, tuple[str, str]] = {}
+    for item in gate_batch.rejected:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "rejected", str(item.gate.reason or "source_gate_rejected")
+        )
+    for item in gate_batch.held:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "quarantined",
+            str(item.holdback.holdback_reason if item.holdback else "specialist_held"),
+        )
+    for item in gate_batch.deferred_major:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "passed", "eligible_deferred_by_bounded_selection"
+        )
+    for item in gate_batch.selected:
+        gate_by_ref[article_ref(item.candidate.article)] = (
+            "passed", str(item.gate.reason or "source_gate_passed")
+        )
+
+    traces: list[dict[str, Any]] = []
+    reason_counts: dict[str, int] = {}
+    by_tier: dict[str, int] = {}
+    for row, evaluation in zip(article_rows, policy_evaluations):
+        if not evaluation.eligible:
+            continue
+        ref = article_ref(row)
+        direct_url = publisher_direct.publisher_url(row)
+        policy = source_priority.teams_delivery_source_policy(
+            str(row.get("source") or row.get("display_source") or ""), direct_url
+        )
+        tier = str(policy.get("tier") or "neutral")
+        by_tier[tier] = by_tier.get(tier, 0) + 1
+        candidate = candidate_by_ref.get(ref)
+        if candidate is None:
+            result, reason = "not_reached", "same_event_representative_exists"
+        else:
+            dedup = dedup_by_ref.get(ref)
+            if dedup is not None and not dedup.send_allowed:
+                result, reason = "not_reached", str(dedup.reason or "ledger_blocked")
+            else:
+                result, reason = gate_by_ref.get(
+                    ref, ("not_reached", "source_gate_not_evaluated")
+                )
+        if result in {"rejected", "quarantined"}:
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        identity = (
+            str(policy.get("publisher_identity") or "")
+            if policy.get("identity_evidence") == "exact_domain"
+            else "unresolved_or_unconfigured"
+        )
+        traces.append({
+            "article_ref": ref,
+            "display_source": _safe_display_source(
+                row.get("source") or row.get("display_source") or ""
+            ),
+            "resolved_publisher_identity": identity,
+            "resolved_source_tier": tier,
+            "teams_lane": str(policy.get("teams_lane") or "never_automatic"),
+            "content_eligibility_state": "alert_policy_eligible",
+            "source_gate_result": result,
+            "source_gate_reason": reason,
+        })
+    return traces, reason_counts, by_tier
 
 
 @dataclass(frozen=True)
@@ -458,12 +554,13 @@ def deliver(
     resendable.
 
     D7-AK-6E R4-R9A — after the accepted-ledger filter, the major-media-first
-    source gate selects only locked primary-ten / secondary-three publishers
-    and promoted official institutions immediately. Specialist/trusted-other
-    publishers are held (120-minute holdback, at most one exceptional
-    fallback per run); neutral/low publishers are never selected. Held
-    observations persist through the existing state path in send mode only —
-    a dry run writes nothing."""
+    source gate selects Tier A and promoted official institutions immediately.
+    Tier-B TOP/HDEC-direct material events may be immediate; normal Tier-B
+    IMPORTANT rows wait 30 minutes for a same-event Tier-A representative.
+    Specialist/trusted-other publishers remain supporting evidence only;
+    neutral/low publishers are never selected. Held observations persist
+    through the existing state path in send mode only — a dry run writes
+    nothing."""
     payload = load_artifact(artifact_path)
     try:
         state = load_state(state_path)
@@ -658,7 +755,10 @@ def deliver(
             )
             state_changed = True
             state_committed += 1
-            if gated.selection_mode == SELECTION_MODE_FALLBACK:
+            if gated.selection_mode in {
+                SELECTION_MODE_FALLBACK,
+                SELECTION_MODE_AFTER_HOLDBACK,
+            }:
                 delivered_fallback_articles.append(candidate.article)
             else:
                 delivered_major_events.append((
@@ -687,6 +787,7 @@ def deliver(
     # delivered major marks same-event held specialists as supporting
     # evidence. Dry runs never reach this block, so they write nothing.
     replaced_by_major_marks = 0
+    tier_b_replaced_by_tier_a = 0
     if should_send:
         gated_state = state
         for observation in gate_batch.holdback_observations:
@@ -700,6 +801,21 @@ def deliver(
                 fallback_eligible=bool(observation["fallback_eligible"]),
                 now=gate_batch.now_iso_value,
             )
+        # Operator contract is triggered by same-event Tier-A arrival, not SMTP
+        # success. Once an authoritative Tier-A candidate reaches this gate,
+        # every already-held Tier-B copy is permanently secondary even when the
+        # Tier-A card is deferred by pacing or its transport later fails.
+        for tier_a in gate_batch.immediate:
+            if tier_a.gate.gate_class not in {"primary_10", "secondary_3"}:
+                continue
+            candidate = tier_a.candidate
+            gated_state, tier_b_marks = mark_held_replaced_by_tier_a(
+                gated_state,
+                str(candidate.cluster_key or ""),
+                tier_a_identity=f"teams_ai_push:{article_ref(candidate.article)}",
+                tier_a_source=str(candidate.article.get("source") or ""),
+            )
+            tier_b_replaced_by_tier_a += tier_b_marks
         for fallback_article in delivered_fallback_articles:
             gated_state = clear_held_record(gated_state, fallback_article)
         for cluster_key, major_identity, major_source in delivered_major_events:
@@ -743,6 +859,27 @@ def deliver(
         baseline=baseline,
         gate_batch=gate_batch,
         records=records,
+    )
+    (
+        policy_eligible_row_trace,
+        quarantine_reason_counts,
+        policy_eligible_by_tier,
+    ) = _policy_eligible_row_traces(
+        article_rows=article_rows,
+        policy_evaluations=policy_evaluations,
+        candidates=candidates,
+        baseline=baseline,
+        gate_batch=gate_batch,
+    )
+    quarantined_tier_a_rows = sum(
+        trace["resolved_source_tier"] in {"primary_10", "secondary_3"}
+        and trace["source_gate_result"] in {"rejected", "quarantined"}
+        for trace in policy_eligible_row_trace
+    )
+    quarantined_tier_b_rows = sum(
+        trace["resolved_source_tier"] == "major_secondary"
+        and trace["source_gate_result"] in {"rejected", "quarantined"}
+        for trace in policy_eligible_row_trace
     )
     selected_source_audit = [
         {
@@ -811,6 +948,28 @@ def deliver(
         "verified_secondary_3_rows": verified_tier_counts["secondary_3"],
         "verified_major_secondary_rows": verified_tier_counts["major_secondary"],
         "verified_specialist_rows": verified_tier_counts["specialist"],
+        # R4-OPS-6C source-mix funnel. These are diagnostics, never quotas.
+        "discovered_tier_a": (
+            raw_tier_counts["primary_10"] + raw_tier_counts["secondary_3"]
+        ),
+        "verified_tier_a": (
+            verified_tier_counts["primary_10"]
+            + verified_tier_counts["secondary_3"]
+        ),
+        "policy_eligible_tier_a": (
+            int(policy_eligible_by_tier.get("primary_10") or 0)
+            + int(policy_eligible_by_tier.get("secondary_3") or 0)
+        ),
+        "selected_tier_a": (
+            gate_batch.audit["selected_primary_10_rows"]
+            + gate_batch.audit["selected_secondary_3_rows"]
+        ),
+        "discovered_tier_b": raw_tier_counts["major_secondary"],
+        "verified_tier_b": verified_tier_counts["major_secondary"],
+        "policy_eligible_tier_b": int(
+            policy_eligible_by_tier.get("major_secondary") or 0
+        ),
+        "selected_tier_b": gate_batch.audit["selected_major_secondary_rows"],
         "teams_immediate_major_rows": gate_batch.audit[
             "teams_immediate_major_rows"
         ],
@@ -840,6 +999,14 @@ def deliver(
             "specialist_automatic_fallback_removed"
         ],
         "teams_specialist_replaced_by_major_rows": replaced_by_major_marks,
+        "tier_b_held": gate_batch.audit["tier_b_held"],
+        "tier_b_replaced_by_tier_a": tier_b_replaced_by_tier_a,
+        "tier_b_holdback_expired": gate_batch.audit[
+            "tier_b_holdback_expired"
+        ],
+        "tier_b_selected_after_holdback": gate_batch.audit[
+            "tier_b_selected_after_holdback"
+        ],
         "selected_primary_10_rows": gate_batch.audit["selected_primary_10_rows"],
         "selected_secondary_3_rows": gate_batch.audit[
             "selected_secondary_3_rows"
@@ -895,6 +1062,11 @@ def deliver(
         # R4-R12 §1 — row-level categorical decision trace for every
         # primary_10 / secondary_3 / promoted-official row in this run.
         "major_row_decision_trace": major_row_decision_trace,
+        "policy_eligible_row_trace": policy_eligible_row_trace,
+        "quarantine_reason_counts": quarantine_reason_counts,
+        "quarantined_tier_a_rows": quarantined_tier_a_rows,
+        "quarantined_tier_b_rows": quarantined_tier_b_rows,
+        "policy_eligible_by_tier": policy_eligible_by_tier,
         "skip_reasons": {
             "already_sent": blocked,
             "deferred_due_to_cap": len(deferred),
@@ -1015,6 +1187,23 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         "verified_major_secondary_rows="
         + str(int(summary.get("verified_major_secondary_rows") or 0)),
         f"verified_specialist_rows={int(summary.get('verified_specialist_rows') or 0)}",
+        f"discovered_tier_a={int(summary.get('discovered_tier_a') or 0)}",
+        f"verified_tier_a={int(summary.get('verified_tier_a') or 0)}",
+        "policy_eligible_tier_a="
+        + str(int(summary.get("policy_eligible_tier_a") or 0)),
+        f"selected_tier_a={int(summary.get('selected_tier_a') or 0)}",
+        f"discovered_tier_b={int(summary.get('discovered_tier_b') or 0)}",
+        f"verified_tier_b={int(summary.get('verified_tier_b') or 0)}",
+        "policy_eligible_tier_b="
+        + str(int(summary.get("policy_eligible_tier_b") or 0)),
+        f"tier_b_held={int(summary.get('tier_b_held') or 0)}",
+        "tier_b_replaced_by_tier_a="
+        + str(int(summary.get("tier_b_replaced_by_tier_a") or 0)),
+        "tier_b_holdback_expired="
+        + str(int(summary.get("tier_b_holdback_expired") or 0)),
+        "tier_b_selected_after_holdback="
+        + str(int(summary.get("tier_b_selected_after_holdback") or 0)),
+        f"selected_tier_b={int(summary.get('selected_tier_b') or 0)}",
         f"teams_immediate_major_rows={int(summary.get('teams_immediate_major_rows') or 0)}",
         f"teams_specialist_held_rows={int(summary.get('teams_specialist_held_rows') or 0)}",
         "teams_specialist_holdback_expired_rows="
@@ -1038,6 +1227,18 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         f"selected_promoted_official_rows={int(summary.get('selected_promoted_official_rows') or 0)}",
         f"selected_specialist_rows={int(summary.get('selected_specialist_rows') or 0)}",
         f"source_gate_rejected_rows={int(summary.get('source_gate_rejected_rows') or 0)}",
+        "quarantine_reason_counts=" + json.dumps(
+            summary.get("quarantine_reason_counts") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        f"quarantined_tier_a_rows={int(summary.get('quarantined_tier_a_rows') or 0)}",
+        f"quarantined_tier_b_rows={int(summary.get('quarantined_tier_b_rows') or 0)}",
+        "policy_eligible_by_tier=" + json.dumps(
+            summary.get("policy_eligible_by_tier") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
         f"normal_rows_selected={int(summary.get('normal_rows_selected') or 0)}",
         "normal_rows_deferred_by_pacing="
         + str(int(summary.get("normal_rows_deferred_by_pacing") or 0)),
@@ -1076,6 +1277,63 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
             f"selected={'true' if trace['final_selected'] else 'false'} "
             f"smtp={trace['smtp_status']}"
         )
+    for trace in summary.get("policy_eligible_row_trace", ()):
+        print(
+            "Teams policy-eligible trace: "
+            f"article_ref={trace['article_ref']} "
+            f"display_source={trace['display_source']} "
+            f"resolved_publisher_identity={trace['resolved_publisher_identity']} "
+            f"resolved_source_tier={trace['resolved_source_tier']} "
+            f"teams_lane={trace['teams_lane']} "
+            f"content_eligibility_state={trace['content_eligibility_state']} "
+            f"source_gate_result={trace['source_gate_result']} "
+            f"source_gate_reason={trace['source_gate_reason']}"
+        )
+    print(
+        "QUARANTINE_REASON_COUNTS="
+        + json.dumps(
+            summary.get("quarantine_reason_counts") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    print(f"QUARANTINED_TIER_A_ROWS={int(summary.get('quarantined_tier_a_rows') or 0)}")
+    print(f"QUARANTINED_TIER_B_ROWS={int(summary.get('quarantined_tier_b_rows') or 0)}")
+    print(
+        "POLICY_ELIGIBLE_BY_TIER="
+        + json.dumps(
+            summary.get("policy_eligible_by_tier") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    print(f"DISCOVERED_TIER_A={int(summary.get('discovered_tier_a') or 0)}")
+    print(f"VERIFIED_TIER_A={int(summary.get('verified_tier_a') or 0)}")
+    print(
+        "POLICY_ELIGIBLE_TIER_A="
+        f"{int(summary.get('policy_eligible_tier_a') or 0)}"
+    )
+    print(f"SELECTED_TIER_A={int(summary.get('selected_tier_a') or 0)}")
+    print(f"DISCOVERED_TIER_B={int(summary.get('discovered_tier_b') or 0)}")
+    print(f"VERIFIED_TIER_B={int(summary.get('verified_tier_b') or 0)}")
+    print(
+        "POLICY_ELIGIBLE_TIER_B="
+        f"{int(summary.get('policy_eligible_tier_b') or 0)}"
+    )
+    print(f"TIER_B_HELD={int(summary.get('tier_b_held') or 0)}")
+    print(
+        "TIER_B_REPLACED_BY_TIER_A="
+        f"{int(summary.get('tier_b_replaced_by_tier_a') or 0)}"
+    )
+    print(
+        "TIER_B_HOLDBACK_EXPIRED="
+        f"{int(summary.get('tier_b_holdback_expired') or 0)}"
+    )
+    print(
+        "TIER_B_SELECTED_AFTER_HOLDBACK="
+        f"{int(summary.get('tier_b_selected_after_holdback') or 0)}"
+    )
+    print(f"SELECTED_TIER_B={int(summary.get('selected_tier_b') or 0)}")
     for entry in summary.get("selected_source_audit", ()):
         print(
             "Teams source gate selected: "

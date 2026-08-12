@@ -1,106 +1,150 @@
-# HDEC News Sensor — R4-OPS-5A/5B Final Audit Closure Handoff
+# HDEC News Sensor — R4-OPS-6C Final Watch Quality Handoff
 
-## Mandatory agent startup
+## Mandatory startup
 
-Before material work, every implementation or audit agent must read and obey
-`AI_PROJECT_EXECUTION_STANDARD.md`, then read
-`docs/acceptance/PROJECT_ACCEPTANCE.md`, and state the user-visible acceptance
-matrix. Existing tests are evidence, not product authority.
+Before material work, read and obey `AI_PROJECT_EXECUTION_STANDARD.md`, then
+`docs/acceptance/PROJECT_ACCEPTANCE.md`. Tests are evidence; operator-visible
+article quality is acceptance. Do not merge, deploy, dispatch workflows, send
+Teams/email/Telegram, or mutate production delivery state during this audit.
 
+```text
 PROJECT=HDEC News Sensor
-REPO=Sinabroin/HDEC-News-Sensor
-TASK=R4-OPS-5B evidence integrity and acceptance overlay closure
-
-BASE_ORIGIN_MAIN=8e70f3921c744eaaee6b76c600bbd8fd2636db96
-FINAL_ORIGIN_MAIN=10b2ce7754d06a3a08702960c96ab94368ae422d
-TASK_BRANCH=wip/d7ak6e-final-readiness-zeroing-handoff
-IMPLEMENTATION_HEAD=d33d12df1d71249525592ac9f1dc539ffa45130d
-R4_OPS_5A_IMPLEMENTATION_HEAD=3c4a3f5073709dbf4ce3ed85a248ba16543a5570
-R4_OPS_5B_HEAD=LIVE_TASK_BRANCH_REF_MATCHES_LOCAL_HEAD
-FINAL_MAIN_INTEGRATION_HEAD=590df412239fce36e4de545b2796fbc86e9b27ef
-REMOTE_BRANCH_HEAD=LIVE_TASK_BRANCH_REF_MATCHES_LOCAL_HEAD
-
-PR_NUMBER=40
-PR_URL=https://github.com/Sinabroin/HDEC-News-Sensor/pull/40
+TASK=R4-OPS-6C final Watch quality + R4-OPS-6B restack
+TASK_BRANCH=fix/r4-ops-6b-major-media-recall
+ORIGINAL_R4_OPS_6B_HEAD=40f4997302cdb95085e4d51a19ab94af5f914d01
+CURRENT_ORIGIN_MAIN=ad9568c905e5f7519c457d127a053c1124728525
+FINAL_RESTACK_MERGE=75eca815546f34ebb041682d36a73baf98b07fcc
+MAIN_RUNTIME_POLICY_DRIFT=false
+DELIVERY_HEAD=COMMIT_CONTAINING_THIS_HANDOFF
+DRAFT_PR_NUMBER=41
 PR_STATE=DRAFT
 
-CURRENT_STATUS=R4_OPS_5A_5B_CODE_COMPLETE_REMOTE_SEAL_VERIFIED
+CURRENT_STATUS=CODE_COMPLETE_PRODUCTION_UNPROVEN
 CODE_COMPLETE=true
+PRODUCTION_COMPLETE=false
 SYSTEM_LAUNCHED=false
-REMOTE_CHECKPOINT_AVAILABLE=true
-CROSS_MACHINE_HANDOFF_READY=true
+```
 
-## Implemented production behavior
+## Restack truth
 
-- The exact operator-supplied common standard remains unchanged at `AI_PROJECT_EXECUTION_STANDARD.md`. The living HDEC overlay at `docs/acceptance/PROJECT_ACCEPTANCE.md` is now version 1.1 and seals HDEC-DEFECT-005, `KNOWN_AUTHORITATIVE_URL_IDENTITY > DISPLAY_SOURCE_ALIAS`, and the trailing/English realtime opinion contract. This handoff and the company resume prompt require both before material work.
-- One explicit exact-host identity table, derived from configured Tier A/B/C and never-automatic entries, now governs both `publisher_delivery_tier()` and `teams_delivery_source_policy()`. A known URL identity outranks a contradictory display alias; an unknown foreign host or unenumerated child fails below automatic authority. No substring or suffix grants authority.
-- Cross-publisher resolution now yields 조선일보/chosun.com Tier A, 조선비즈/biz.chosun.com Tier B, IT조선/it.chosun.com Tier C, and 스포츠조선/sports.chosun.com unlisted regardless of a contradictory source alias. A full configured A/B/C domain sweep reports `CROSS_PUBLISHER_ALIAS_URL_ELEVATION=0`.
-- `sbs.co.kr` and `news.sbs.co.kr` remain SBS Tier A. `premium.sbs.co.kr` is explicitly `operator_surface=editorial_analysis`, `realtime_auto_send=false`, and never Tier A. The observed production fixture now contains only the verified exact URL; unrecovered title, source, timestamp, and article metadata are null/unknown. A separate visibly labelled synthetic adversarial row proves that TOP/HDEC-direct/material/high-score/strong-query metadata still cannot rescue the surface. Both rows are REJECT. Unlisted SBS children do not inherit SBS.
-- The realtime opinion gate accepts only normalized exact publisher-section values and bracketed leading/trailing title-boundary markers. Korean and English Opinion/Editorial/Column/Commentary/Op-Ed forms reject; incidental `기고했다고 밝혔다`, `칼럼비아대`, interior markers, and summary/query/body tokens remain allowed/non-authoritative.
-- Publisher identity is exact-domain by default. `www` is the conventional apex alias; every other publication subdomain must be explicitly enumerated. Display-name aliases are exact and an authoritative sibling URL defeats a parent-publication alias.
-- `chosun.com` / `www.chosun.com` resolve to 조선일보. `it.chosun.com`, `biz.chosun.com`, and `sports.chosun.com` cannot inherit 조선일보. IT조선 is explicit Tier C; 조선비즈 is explicit Tier B; sports.chosun.com is not automatic.
-- Teams source policy is operator-explicit: Tier A is the existing 13 core publishers, Tier B is the exact 16-publisher general/economic/industrial allowlist, and the named specialist/niche publishers are Tier C. Tier B never bypasses article semantics, authority, freshness, materiality, stock/theme, dedup, or importance gates.
-- Realtime Teams deterministically excludes explicit publisher sections `칼럼/오피니언/사설/논설/기고/기고문/전문가칼럼` and equivalent bracketed title markers. Only title and publisher-section evidence are read; generated summary and provider query text are excluded.
-- Normal `important` cards are paced to the best one per rolling 60-minute window when supply exists. Unsent eligible rows remain out of the sent ledger and are reconsidered later. TOP and HDEC-direct rows bypass the pace; urgent sends do not consume the normal window. Failed SMTP never advances pacing or dedup. Filler remains zero.
-- The observed IT조선 contribution is rejected independently by the opinion gate and Tier-C standalone gate. The observed 연합뉴스 ETF and stock/theme regressions remain rejected. The 한국일보 LS일렉트릭×GS건설 직류배전 case and 서울경제 HD현대 9,560억 발전엔진 order are Tier-B eligible after substantive gates.
-- A committed deterministic mixed-provenance replay distinguishes `observed_production` from `synthetic_adversarial`. Observed rows may populate only fields declared by provenance; the SBS observed row prints unknown for unrecovered historical metadata, while the separate synthetic stress row is explicitly labelled. `SEARCH_QUERY_CAUSED_QUALIFICATION=0` is asserted.
-- Daily immutable manifests are version 2 and explicitly record `edition_status` and `article_count`. Truthful empty editions render and publish with the exact no-qualified-news status, exact dated Editor CTA, and exact dated reader CTA. Mutable latest is never a Teams action authority.
-- Daily delivery state is version 3 and records `delivery_kind=nonempty_digest|empty_status` plus article count. v1/v2 state is upgraded in memory; exact legacy claims can complete. Empty status succeeds once and retries fail before transport.
-- The real Daily publish/send orchestrator is exercised offline against the committed zero-candidate 2026-08-11 Editor bundle: temp-only publication, one fake SMTP 250, one `empty_status` success, and retry transport count unchanged.
-- Daily schedule is Review Editor 07:20 KST, Daily primary 07:50, retry 08:05, final retry 08:15. GitHub cron remains best-effort; state is duplicate authority.
-- Empty Review candidate bundles are now valid, loadable exact-edition inputs instead of operational errors. Exact-edition browser reconstruction accepts a verified version-2 empty manifest.
-- Article import remains fail-closed because no authenticated public API URL is configured. The committed exact/latest 2026-08-11 Editor and template now start visibly disabled and accurately say unavailable; configured builds explicitly re-enable the control. Edit, drag/order, preview, and exact-edition functions remain active.
-- Scheduled live refresh now runs the repaired Naver adapter, deterministic operational wiring, live-ingestion provenance, and publisher-direct verifiers before live build. The complete 36-command scheduled preflight reached all downstream gates locally.
-- PR #40's existing Naver discovery-lane, Naver operational fixture, publisher-direct pin/mutable-ledger, live-ingestion provenance, calibration CLI, and cross-machine handoff repairs are preserved.
+- Current `origin/main` was merged into the task branch twice as main advanced;
+  no reset/rebase/force operation was used.
+- Every intervening main commit was authored by `github-actions[bot]` and
+  changed only generated state/public Daily/Weekly artifacts.
+- No non-bot runtime or policy drift appeared on main.
+- Main's production-generated state/public artifacts are byte-identical to
+  `origin/main` after the final merge. R4-OPS-6B runtime changes remain on the
+  task branch.
 
-## Final post-merge acceptance evidence
+## R4-OPS-6C product contract
 
-- `scripts/verify_r4_ops5_production_acceptance.py` — PASS 124/124; HDEC overlay v1.1 and HDEC-DEFECT-005 present; common standard unchanged; cross-publisher alias elevation 0; SBS observed incident REJECT; separate synthetic stress REJECT; provenance PASS; opinion leading/trailing/English/incidental matrix PASS; external network 0; production SMTP/Teams/state writes 0.
-- Exact replay: URL-only observed SBS Premium incident REJECT; explicitly synthetic high-materiality SBS Premium stress REJECT; IT조선 contribution REJECT; 연합뉴스 ETF REJECT; stock/theme REJECT; LS Electric×GS E&C KEEP; HD현대 Tier-B material event KEEP; specialist opinion context Editor-only; weak Tier-B publisher-alone row REJECT.
-- Scheduled-live-refresh exact offline preflight — 36/36 commands, 0 failures, from News Censor through repaired Naver/provider gates to dashboard freshness. The stale AI-market verifier remains aligned with the canonical `AI centrality + title materiality` contract; runtime semantic policy was not weakened.
-- Naver adapter PASS; Naver operational wiring PASS; live ingestion PASS; publisher-direct 91/91.
-- Watch materiality PASS; executive qualification hardening PASS; material AI infrastructure recall PASS; observed false-positive regression 100/100.
-- Teams selector PASS; Teams production 232/232; major-media gate 38/38; strict-source gate 62/62; stock-market exclusion 61/61; state/dedup PASS.
-- Required R4-OPS-5A suite: 18 verifier scripts have a latest passing run, including Teams production 232/232, major-media 38/38, strict-source 62/62, stock-market 61/61, observed false-positive 100/100, publisher-direct 91/91, editorial briefings 344/344, Editor 200/200, Daily deep link 118/118, Daily lead source 24/24, and immutable manifest 31/31. One grouped Editor invocation hit the known Windows headless-Chrome 45-second startup timeout; the immediate isolated final run passed all 200 checks with zero external requests.
-- Production ledgers remained byte-identical throughout the final post-merge verification: Teams SHA `76c5932017ff2f5f7a46917fa7b14315b29f44fed0c7d4d2fc423efaec4583f4`; Daily SHA `68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155`.
-- `VERIFIERS_FAIL=0`, `EXTERNAL_TEST_NETWORK_CALLS=0`, `PRODUCTION_SMTP_ATTEMPTS=0`, `PRODUCTION_TEAMS_SENDS=0`, and `PRODUCTION_STATE_WRITES=0` in the final accepted runs.
+- Tier A13 is the primary realtime default after substantive gates.
+- Tier B16 is bounded secondary supply: TOP or confirmed HDEC-direct material
+  events may be immediate; normal IMPORTANT rows wait 30 minutes.
+- A same-event Tier-A arrival permanently replaces a held Tier-B copy. Tier B
+  cannot fill unused capacity. Tier C remains non-sendable standalone supply.
+- The sender exposes the complete Tier-A/B source funnel plus
+  `tier_b_held`, `tier_b_replaced_by_tier_a`, `tier_b_holdback_expired`, and
+  `tier_b_selected_after_holdback`.
+- Proposal/discussion/local-political activity requires a separate hard factual
+  material signal. Generic semiconductor is not AI centrality.
+- AI financial/derivative products are Watch-rejected unless publisher evidence
+  proves a separate physical/industrial business event; Editor/Daily remains
+  available.
+- Generated relevance/category/query text cannot manufacture executive
+  materiality or IMPORTANT status.
 
-## Final integration status
+## Exact production replay
 
-`origin/main` advanced after the initial R4-OPS-5 fetch only through state commit `10b2ce7754d06a3a08702960c96ab94368ae422d` (`data/teams_push_state.json`). The original implementation was committed at `d33d12df1d71249525592ac9f1dc539ffa45130d`, then current main was merged without rebase or conflict at `590df412239fce36e4de545b2796fbc86e9b27ef`. R4-OPS-5A was committed at `3c4a3f5073709dbf4ce3ed85a248ba16543a5570`. R4-OPS-5B changes only the living acceptance overlay, replay evidence/provenance verifier, and handoff evidence; runtime policy remains unchanged. The final handoff commit is pushed normally and local/remote equality is verified after push; use the live task-branch ref for its self-referential SHA.
+Permanent evidence: `data/r4_ops6c_production_watch_replay.json`.
 
-## Production boundary and remaining proof
+```text
+KHAN 5b202fee03c23c1f 2026-08-12T06:17:21+09:00 KEEP
+  BlackRock + construction labor + material AI-infrastructure capacity/workforce
+FN   32c6c6ccd64378e0 2026-08-12T04:30:42+09:00 WATCH_REJECT
+  AI-compute futures; excluded_financial_ai_product; Editor/Daily allowed
+ET   f9d7840ab7297c93 2026-08-11T19:40:06+09:00 WATCH_REJECT
+  regional semiconductor-cluster support request; AI not central/no hard event
+FN   67d8faa06b353d2f 2026-08-11T16:44:43+09:00 WATCH_REJECT
+  제주지사 KDD 기업 AI-pilot proposal; excluded_proposal_only
+```
 
+The fourth publisher page says `KDD 기업`, not KDDI. Observed production/page
+facts and deterministic test controls are explicitly separated; unknown
+production metadata is not invented.
+
+## Preserved acceptance evidence
+
+```text
+R4_OPS_6C=PASS 42/42
+R4_OPS_6B=PASS 28/28
+R4_OPS_5=PASS 125/125
+PUBLISHER_DIRECT=PASS 91/91
+VERIFIED_STATE=PASS 50/50
+NAVER_ADAPTER_AND_TARGETED_DISCOVERY=PASS
+TEAMS_MAJOR_MEDIA=PASS 38/38
+TEAMS_STRICT_SOURCE=PASS 62/62
+TEAMS_SENDER_DRY_RUN=PASS
+TEAMS_PRODUCTION_SENDER_VERIFIER=PASS 232/232
+```
+
+Permanent preserved invariants include:
+
+```text
+GOOGLE_RESOLUTION_GLOBAL_STARVATION=0
+GOOGLE_RESOLUTION_PER_PUBLISHER_BOUND=PASS
+SCHEDULING_HINT_AUTHORITY_LEAK=0
+DONGA_KEEP_CLASS_REACHABLE_TO_POLICY=PASS
+CHOSUNBIZ_KEEP_CLASS_REACHABLE_TO_POLICY=PASS
+YONHAP_AI_INFRA_KEEP_CLASS_REACHABLE_TO_POLICY=PASS
+CROSS_PUBLISHER_ALIAS_URL_ELEVATION=0
+SBS_PREMIUM_REALTIME_AUTO_SEND=false
+SPECIALIST_STANDALONE_SENDS=0
+SEARCH_QUERY_CAUSED_QUALIFICATION=0
+```
+
+## Live read-only reality check
+
+The final sensor run used the production bounded public resolver path with its
+artifact and verified-state under `/tmp`. A credential-free Tier-A13 discovery
+pass is derived from canonical source policy; its hints affect scheduling only,
+never authority. The resolver remains capped at 60 global attempts and 12 per
+publisher. A separate GET-only 24-hour Tier-A sweep returned 260 raw rows across
+13 publishers; 17 normalized titles overlapped the sensor's verified Tier-A
+surface.
+
+```text
+LIVE_TIER_A_DISCOVERED=48
+LIVE_TIER_A_VERIFIED=23
+LIVE_TIER_A_POLICY_ELIGIBLE=0
+LIVE_TIER_B_DISCOVERED=16
+LIVE_TIER_B_VERIFIED=11
+LIVE_TIER_B_HELD=0
+LIVE_TIER_B_SELECTED=0
+COLLECTION_STATUS=LIVE_HEALTHY_WITH_ARTICLES
+```
+
+Zero selection was correct for that window: no verified row passed the stronger
+Watch materiality/importance contract. Weak Tier-B proposal/political supply did
+not reach policy. Live artifacts remain outside the repository:
+
+- `/tmp/r4_ops6c_live_run3.json`
+- `/tmp/r4_ops6c_verified_run3.json`
+- `/tmp/r4_ops6c_external_run1.json`
+- `/tmp/r4_ops6c_live_report_final.txt`
+
+## Production boundary
+
+```text
+PRODUCTION_WORKFLOW_DISPATCHES=0
 PRODUCTION_TEAMS_SENDS=0
-PRODUCTION_SMTP_ATTEMPTS=0
+PRODUCTION_SMTP_SENDS=0
 PRODUCTION_TELEGRAM_SENDS=0
 PRODUCTION_STATE_WRITES=0
-PRODUCTION_VARIABLE_CHANGES=0
-PRODUCTION_WORKFLOW_DISPATCHES=0
+PRODUCTION_SECRET_VARIABLE_CHANGES=0
 MAIN_MERGES=0
-
-`CODE_COMPLETE=true` is the offline engineering verdict. It is not launch proof. A later operator-authorized merge and real-world evidence are still required:
-
-- REAL_WATCH_SEND_PASS
-- REAL_DAILY_SEND_PASS (empty or non-empty natural edition)
-- REAL_EDITOR_LINK_PASS
-- REAL_PUBLIC_DAILY_LINK_PASS
-- natural scheduled-live-refresh green proof on deployed main
-
-ARTICLE_IMPORT_UI_STATUS=DISABLED_ACCURATELY_LABELLED_API_UNCONFIGURED
-ARTICLE_IMPORT_API_STATUS=FAIL_CLOSED_NO_NEW_AUTH_DEPLOYMENT
-REQUIRES_OPERATOR_ACTION=Have Claude Code independently audit the R4-OPS-5A/5B closure checkpoint; keep Draft PR #40 unmerged until that audit passes.
-NEXT_SINGLE_ACTION=Focused Claude Code audit of the R4-OPS-5A/5B closure; verify SBS provenance separation and keep Draft PR #40 unmerged.
-
-## Company-machine resume
-
-Do not modify, reset, clean, or stash the dirty company checkout. Use the existing task branch/worktree or create a separate clean worktree. The live refs and `scripts/hdec_cross_machine_status.sh` output are authoritative.
-
-```bash
-cd /mnt/d/HDEC-Projects/HDEC-News-Sensor-R4OPS5 || exit 1
-git fetch origin --prune
-git status --short --branch
-git switch wip/d7ak6e-final-readiness-zeroing-handoff
-git pull --ff-only origin wip/d7ak6e-final-readiness-zeroing-handoff
-./scripts/hdec_cross_machine_status.sh
 ```
+
+No production canary was run. Keep Draft PR #41 unmerged.
+
+`NEXT_SINGLE_ACTION=Independent Claude Code audit, then merge + real production canary.`

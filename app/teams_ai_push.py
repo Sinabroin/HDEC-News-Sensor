@@ -48,6 +48,10 @@ HARD_TEAMS_BATCH_MAX = 5
 # specialist-only delivery.  The 120-minute window survives only as
 # operator/audit metadata (age is still computed) — it can never select.
 TEAMS_SPECIALIST_HOLDBACK_MINUTES = 120
+# R4-OPS-6C — normal Tier-B IMPORTANT rows are bounded secondary supply.  They
+# wait 30 minutes for a same-event Tier-A representative before they can be
+# selected. TOP or confirmed HDEC-direct material Tier-B rows may be immediate.
+TEAMS_TIER_B_HOLDBACK_MINUTES = 30
 # R4-R9D: 0 — automatic specialist fallback removed. Selection hard-clamps this
 # to 0 regardless of any caller-supplied override (see apply_major_media_first_gate).
 TEAMS_SPECIALIST_MAX_PER_BATCH = 0
@@ -62,6 +66,7 @@ SOURCE_GATE_NEVER_AUTOMATIC = "never_automatic"
 
 SELECTION_MODE_IMMEDIATE = "immediate"
 SELECTION_MODE_FALLBACK = "fallback"
+SELECTION_MODE_AFTER_HOLDBACK = "after_holdback"
 
 IMPORTANCE_TOP = "top"
 IMPORTANCE_IMPORTANT = "important"
@@ -1389,7 +1394,18 @@ def map_importance(article: object, topic: TopicDecision | None = None) -> Impor
         for event_type in confirmed_types
         for token in _MAJOR_CONFIRMED_EVENT_TOKENS
     )
-    has_confirmed_action = _has_confirmed_action(article, f" {_article_text(article)} ")
+    # Confirmation authority is factual publisher evidence plus the bounded
+    # live-delta event categories. Generated why-it-matters/category/relevance
+    # text must never manufacture an IMPORTANT Watch event (R4-OPS-6C).
+    factual_evidence = _watch_executive_evidence(article)
+    factual_action_text = " ".join(
+        _lower(factual_evidence.get(key))
+        for key in ("title", "subtitle", "snippet")
+        if _clean(factual_evidence.get(key))
+    )
+    has_confirmed_action = _has_confirmed_action(
+        article, f" {factual_action_text} "
+    )
     is_material_update = _lower(_value(article, "change_type")) == "material_content_update"
 
     # 최우선(TOP): 기존 INSTANT 이상 · 현대건설 직접 영향 · confirmed 대형 이벤트 · 중대한 material update
@@ -1564,12 +1580,12 @@ def _stock_neutralized_article(article: Mapping[str, Any]) -> dict[str, Any]:
 def _watch_executive_evidence(article: Mapping[str, Any]) -> dict:
     """R4-OPS-2 — allowed factual evidence for the executive-materiality floor.
 
-    Mirrors the Daily gate's evidence contract exactly: title, publisher
-    subtitle, and the first factual snippet sentence only. The generated
-    summary/why-it-matters and the provider query string are deliberately
-    excluded (no ``summary`` key is passed), so no generated text or
-    search-query metadata can qualify a Watch article for send
-    (SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0)."""
+    Uses title, publisher subtitle, the first factual snippet sentence, and
+    the bounded source-derived confirmed-event categories already required by
+    the live-delta schema. The generated summary/why-it-matters and provider
+    query string are deliberately excluded (no ``summary`` key is passed), so
+    no generated text or search-query metadata can qualify a Watch article for
+    send (SEARCH_QUERY_CAUSED_WATCH_QUALIFICATION=0)."""
     after = _mapping(article, "after")
 
     def _pick(*keys: str) -> str:
@@ -1585,6 +1601,7 @@ def _watch_executive_evidence(article: Mapping[str, Any]) -> dict:
         "snippet": _pick("snippet"),
         "subtitle": _pick("subtitle", "publisher_subtitle"),
         "publisher_section": _pick("publisher_section", "section"),
+        "shadow_confirmed_event_types": list(_confirmed_event_types(article)),
     }
 
 
@@ -1616,6 +1633,9 @@ def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
     evidence = _watch_executive_evidence(article)
     if executive_materiality.is_fund_product_launch_noise(evidence):
         return True, "fund_product_launch_without_material_event"
+    materiality = executive_materiality.watch_executive_materiality(evidence)
+    if not materiality.qualified:
+        return True, materiality.reason
     return False, ""
 
 
@@ -1808,19 +1828,35 @@ def evaluate_teams_push_policy(
             stock_market=stock_gate,
         )
 
-    # R4-OPS-2 — executive-materiality noise floor. An AI-central, HDEC-relevant
-    # article is still not sent to executives if it is executive noise: an
-    # ETF/fund/REIT product-launch story with no independent material industrial
-    # event. This closes the observed production leak (연합뉴스 "…전략산업 ETF
-    # 출시", 2026-08-10) the importance path admitted via a bare "출시" confirmed
-    # action, while keeping the Watch broader than the Daily digest for genuine
-    # real-time AI events (D7-AK-6C §8 recall preserved).
+    # R4-OPS-2 / R4-OPS-6C — executive-materiality floor. AI centrality,
+    # publisher rank, generated relevance, generic action wording, and search
+    # query text cannot manufacture a realtime executive event. Proposal-only,
+    # local-political keyword matches, and financial/derivative AI products are
+    # rejected unless independent factual materiality is proven. Daily/Editor
+    # curation remains broader.
     is_noise, noise_reason = is_watch_send_noise(article)
     if is_noise:
+        rejection_reason = {
+            "fund_product_launch_without_material_event": (
+                "excluded_fund_product_noise"
+            ),
+            "financial_ai_product_without_industrial_event": (
+                "excluded_financial_ai_product"
+            ),
+            "local_political_ai_without_hard_material_signal": (
+                "excluded_local_political_ai_false_positive"
+            ),
+            "proposal_discussion_without_hard_material_signal": (
+                "excluded_proposal_only"
+            ),
+            "no_independent_watch_material_signal": (
+                "insufficient_executive_materiality"
+            ),
+        }.get(noise_reason, "insufficient_executive_materiality")
         return TeamsPolicyEvaluation(
             article, topic, True,
             ImportanceDecision(False, reason=noise_reason),
-            True, False, "excluded_fund_product_noise",
+            True, False, rejection_reason,
             stock_market=stock_gate,
         )
 
@@ -2181,6 +2217,41 @@ def evaluate_source_gate(candidate: TeamsPushCandidate) -> SourceGateDecision:
             immediate=True,
             reason=f"immediate_{tier}",
         )
+    if lane == source_priority.TEAMS_LANE_MAJOR_SECONDARY_HOLDBACK:
+        if tier != "major_secondary":
+            return SourceGateDecision(
+                gate_class=SOURCE_GATE_NEVER_AUTOMATIC,
+                tier=tier,
+                tier_rank=tier_rank,
+                publisher_rank=publisher_rank,
+                immediate=False,
+                reason="unrecognized_major_secondary_holdback_tier",
+            )
+        hdec_material = bool(_hdec_direct_material_event(article))
+        if (
+            candidate.importance.level == IMPORTANCE_TOP
+            or hdec_material
+        ):
+            return SourceGateDecision(
+                gate_class=SOURCE_GATE_MAJOR_SECONDARY,
+                tier=tier,
+                tier_rank=tier_rank,
+                publisher_rank=publisher_rank,
+                immediate=True,
+                reason=(
+                    "tier_b_top_immediate"
+                    if candidate.importance.level == IMPORTANCE_TOP
+                    else "tier_b_hdec_direct_material_immediate"
+                ),
+            )
+        return SourceGateDecision(
+            gate_class=SOURCE_GATE_MAJOR_SECONDARY,
+            tier=tier,
+            tier_rank=tier_rank,
+            publisher_rank=publisher_rank,
+            immediate=False,
+            reason="tier_b_normal_holdback",
+        )
     if lane == source_priority.TEAMS_LANE_SPECIALIST_HOLDBACK:
         fallback_blocked = bool(policy["fallback_blocked"])
         return SourceGateDecision(
@@ -2219,6 +2290,7 @@ def apply_major_media_first_gate(
     run_cap: int,
     now_iso_value: str = "",
     holdback_minutes: int = TEAMS_SPECIALIST_HOLDBACK_MINUTES,
+    tier_b_holdback_minutes: int = TEAMS_TIER_B_HOLDBACK_MINUTES,
     max_specialist_per_batch: int = TEAMS_SPECIALIST_MAX_PER_BATCH,
 ) -> SourceGateBatchResult:
     """Partition the ledger-filtered ranked batch by the Teams source gate.
@@ -2227,14 +2299,12 @@ def apply_major_media_first_gate(
     (production sender) applies ``holdback_observations`` through
     ``app.teams_push_state`` in send mode only, so a dry run changes nothing.
 
-    Selection: immediate-class candidates (locked primary ten, secondary
-    three, promoted official institutions) fill the batch in existing rank
-    order; a specialist/trusted-other candidate is selected only through the
-    §6 exceptional fallback (holdback expired · unique TOP event · direct
-    HDEC or independently proven material strategic relevance · no filler ·
-    publisher not fallback-blocked), capped at
-    :data:`TEAMS_SPECIALIST_MAX_PER_BATCH` and never displacing an available
-    major candidate. Ordinary specialist supply never fills unused capacity.
+    Selection: Tier A and promoted official rows are immediate after every
+    substantive gate. Tier-B TOP or confirmed HDEC-direct material rows may be
+    immediate; normal Tier-B IMPORTANT rows wait 30 minutes and may then supply
+    at most the normal pacing slot when no same-event Tier-A row exists.
+    Specialist/trusted-other rows remain supporting evidence only and are never
+    automatically selected. No lane manufactures filler to consume capacity.
     """
     from app import teams_push_state as push_state
 
@@ -2247,7 +2317,8 @@ def apply_major_media_first_gate(
     }
 
     immediate: list[GatedCandidate] = []
-    holdback_lane: list[GatedCandidate] = []
+    tier_b_holdback_lane: list[GatedCandidate] = []
+    specialist_holdback_lane: list[GatedCandidate] = []
     rejected: list[GatedCandidate] = []
     stock_gate_rejected = 0
     for candidate in accepted:
@@ -2278,8 +2349,10 @@ def apply_major_media_first_gate(
         item = GatedCandidate(candidate=candidate, gate=gate)
         if gate.immediate:
             immediate.append(item)
+        elif gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY:
+            tier_b_holdback_lane.append(item)
         elif gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK:
-            holdback_lane.append(item)
+            specialist_holdback_lane.append(item)
         else:
             rejected.append(item)
 
@@ -2317,30 +2390,63 @@ def apply_major_media_first_gate(
         for item in immediate_selected
         if _clean(item.candidate.cluster_key)
     }
+    tier_a_available_clusters = {
+        _clean(item.candidate.cluster_key)
+        for item in immediate
+        if item.gate.gate_class in {
+            SOURCE_GATE_PRIMARY_10, SOURCE_GATE_SECONDARY_3
+        }
+        and _clean(item.candidate.cluster_key)
+    }
 
     evaluated: list[GatedCandidate] = []
-    for item in holdback_lane:
+    for item in tier_b_holdback_lane + specialist_holdback_lane:
         candidate = item.candidate
         prior = push_state.get_held_record(state_map, candidate.article) or {}
         first_seen = _clean(prior.get("first_seen_at")) or now_value
         age_minutes = max(
             0.0, push_state.minutes_between(first_seen, now_value)
         )
-        holdback_expired = age_minutes >= float(holdback_minutes)
-        importance_top = candidate.importance.level == IMPORTANCE_TOP
-        material_relevance = bool(
-            candidate.importance.hdec_direct
-        ) or _has_strong_ai_strategic_override(
-            f" {_core_article_text(candidate.article)} "
+        is_tier_b = item.gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+        required_holdback = (
+            tier_b_holdback_minutes if is_tier_b else holdback_minutes
         )
+        holdback_expired = age_minutes >= float(required_holdback)
+        importance_top = candidate.importance.level == IMPORTANCE_TOP
+        material_relevance = not is_watch_send_noise(candidate.article)[0]
         filler_reason = _specialist_fallback_filler_reason(candidate.article)
         replaced_by = _clean(prior.get("replaced_by_major_media"))
         cluster = _clean(candidate.cluster_key)
-        same_event_major_available = bool(
-            cluster
-            and (cluster in selected_clusters or cluster in ledger_clusters)
-        ) or bool(replaced_by)
-        if item.gate.fallback_blocked:
+        if is_tier_b:
+            same_event_cluster_available = bool(
+                cluster
+                and (
+                    cluster in tier_a_available_clusters
+                    or cluster in ledger_clusters
+                )
+            )
+        else:
+            same_event_cluster_available = bool(
+                cluster
+                and (
+                    cluster in selected_clusters
+                    or cluster in ledger_clusters
+                )
+            )
+        same_event_major_available = (
+            same_event_cluster_available or bool(replaced_by)
+        )
+        if is_tier_b and same_event_major_available:
+            block_reason = "same_event_tier_a_available"
+        elif is_tier_b and not holdback_expired:
+            block_reason = "tier_b_holdback_active"
+        elif is_tier_b and not material_relevance:
+            block_reason = "no_material_relevance"
+        elif is_tier_b and filler_reason:
+            block_reason = filler_reason
+        elif is_tier_b:
+            block_reason = ""
+        elif item.gate.fallback_blocked:
             block_reason = "fallback_blocked_publisher"
         elif same_event_major_available:
             block_reason = "same_event_major_available"
@@ -2377,24 +2483,27 @@ def apply_major_media_first_gate(
             )
         )
 
-    # R4-R9D — automatic specialist fallback removed. No specialist/trusted-other
-    # article is ever selected for automatic Teams delivery, regardless of
-    # holdback age, TOP importance, direct Hyundai E&C relevance, or any
-    # caller-supplied ``max_specialist_per_batch`` override (retained only for
-    # signature back-compatibility). Every holdback-lane row stays held —
-    # available as supporting evidence / Daily/Weekly review, never sent or
-    # accepted. The system prefers zero delivery over a specialist-only card.
-    fallback_room = 0
+    # R4-OPS-6C / R4-R9D — an expired normal Tier-B row may consume the single
+    # normal pacing slot after immediate Tier-A/urgent selection. Specialist
+    # fallback remains removed regardless of age or caller override.
+    normal_selected_immediate = any(
+        item.candidate.importance.level == IMPORTANCE_IMPORTANT
+        for item in immediate_selected
+    )
+    fallback_room = max(0, cap - len(immediate_selected))
+    tier_b_normal_slot_open = normal_window_open and not normal_selected_immediate
     fallback_selected: list[GatedCandidate] = []
     held: list[GatedCandidate] = []
     for item in evaluated:
         if (
-            len(fallback_selected) < fallback_room
+            item.gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+            and tier_b_normal_slot_open
+            and len(fallback_selected) < min(1, fallback_room)
             and item.holdback is not None
             and item.holdback.fallback_eligible
         ):
             fallback_selected.append(
-                replace(item, selection_mode=SELECTION_MODE_FALLBACK)
+                replace(item, selection_mode=SELECTION_MODE_AFTER_HOLDBACK)
             )
         else:
             held.append(item)
@@ -2420,7 +2529,8 @@ def apply_major_media_first_gate(
 
     selected = tuple(immediate_selected) + tuple(fallback_selected)
     specialist_rows_automatic_rejected = sum(
-        bool(item.holdback and not item.holdback.same_event_major_available)
+        item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
+        and bool(item.holdback and not item.holdback.same_event_major_available)
         for item in held
     )
     # R4-R10 — the "specialist or neutral" rejection family the strict source
@@ -2442,28 +2552,46 @@ def apply_major_media_first_gate(
     )
     audit = {
         "teams_immediate_major_rows": len(immediate),
-        "teams_specialist_held_rows": len(held),
+        "teams_specialist_held_rows": sum(
+            item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
+            for item in held
+        ),
         "teams_specialist_holdback_expired_rows": sum(
-            bool(item.holdback and item.holdback.holdback_expired)
+            item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
+            and bool(item.holdback and item.holdback.holdback_expired)
             for item in evaluated
         ),
         "teams_specialist_fallback_eligible_rows": sum(
-            bool(item.holdback and item.holdback.fallback_eligible)
+            item.gate.gate_class == SOURCE_GATE_SPECIALIST_HOLDBACK
+            and bool(item.holdback and item.holdback.fallback_eligible)
             for item in evaluated
         ),
-        "teams_specialist_selected_rows": len(fallback_selected),
+        "teams_specialist_selected_rows": 0,
+        "tier_b_held": sum(
+            item.gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+            for item in held
+        ),
+        "tier_b_holdback_expired": sum(
+            item.gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+            and bool(item.holdback and item.holdback.holdback_expired)
+            for item in evaluated
+        ),
+        "tier_b_selected_after_holdback": sum(
+            item.gate.gate_class == SOURCE_GATE_MAJOR_SECONDARY
+            for item in fallback_selected
+        ),
         # R4-R9D strict-source-gate audit counters. specialist_rows_selected is
         # the authoritative invariant and is always 0 (automatic specialist
         # fallback removed). "supporting_evidence" = held specialist rows that
         # back a same-event major/official card; "automatic_rejected" = the
         # specialist-only rows the gate refuses to auto-send (prefer zero).
-        "specialist_rows_seen": len(holdback_lane),
+        "specialist_rows_seen": len(specialist_holdback_lane),
         "specialist_rows_supporting_evidence": sum(
             bool(item.holdback and item.holdback.same_event_major_available)
             for item in held
         ),
         "specialist_rows_automatic_rejected": specialist_rows_automatic_rejected,
-        "specialist_rows_selected": len(fallback_selected),
+        "specialist_rows_selected": 0,
         "specialist_automatic_fallback_removed": True,
         "source_gate_rejected_rows": len(rejected),
         # R4-R10 — neutral/low + explicitly-excluded publisher rejections, and

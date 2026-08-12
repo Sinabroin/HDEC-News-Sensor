@@ -372,16 +372,19 @@ def surface_minimum(surface: str, limit: int) -> int:
 # D7-AK-6E R4-R9A — Teams-only delivery source-gate lanes.
 #
 # For the Teams push surface, source priority is an ELIGIBILITY input, not only
-# a sort order: the locked primary ten / secondary three are immediately
-# sendable, a verified official institution stays subject to the caller-owned
-# material-promotion decision, specialist/trusted-other publishers enter a
-# holdback lane, and neutral/low/excluded publishers are never automatically
-# sendable. Explicit per-publisher Teams policy (specialist membership and
+# a sort order: the locked primary ten / secondary three together form the
+# operator Tier A13 and are immediately sendable. Explicit Tier B16 publishers
+# enter a bounded secondary holdback lane; a verified official institution
+# stays subject to the caller-owned material-promotion decision;
+# specialist/trusted-other publishers enter a non-sendable evidence lane, and
+# neutral/low/excluded publishers are never automatically sendable. Explicit
+# per-publisher Teams policy (specialist membership and
 # fallback blocking) lives in ``data/source_priority_rules.json`` under
 # ``teams_delivery_source_policy``. These lanes apply to Teams delivery only —
 # Daily / Weekly / News-Censor / operator-review eligibility never reads them.
 
 TEAMS_LANE_IMMEDIATE_MAJOR = "immediate_major"
+TEAMS_LANE_MAJOR_SECONDARY_HOLDBACK = "major_secondary_holdback"
 TEAMS_LANE_OFFICIAL_INSTITUTION = "official_institution_review"
 TEAMS_LANE_SPECIALIST_HOLDBACK = "specialist_holdback"
 TEAMS_LANE_NEVER_AUTOMATIC = "never_automatic"
@@ -456,7 +459,7 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
             explicit_never_automatic = explicit_never_automatic or name
             continue
         if kind == "major_secondary":
-            # Tier B is an explicit allowlist. It is immediate only after all
+            # Tier B is an explicit allowlist. It enters bounded holdback after
             # article-level substantive gates have passed in teams_ai_push.
             explicit_major_secondary = explicit_major_secondary or name
             continue
@@ -472,8 +475,14 @@ def teams_delivery_source_policy(source: str, selected_url: str = "") -> dict[st
         lane = TEAMS_LANE_NEVER_AUTOMATIC
     elif fallback_blocked:
         lane = TEAMS_LANE_SPECIALIST_HOLDBACK
-    elif tier in TEAMS_IMMEDIATE_TIERS or explicit_major_secondary or tier == "major_secondary":
+    elif tier in TEAMS_IMMEDIATE_TIERS:
         lane = TEAMS_LANE_IMMEDIATE_MAJOR
+    elif explicit_major_secondary or tier == "major_secondary":
+        # R4-OPS-6C: Tier B is bounded secondary/fallback supply. Candidate
+        # importance/materiality is evaluated later by app.teams_ai_push, where
+        # TOP or confirmed HDEC-direct material rows may bypass the normal
+        # 30-minute holdback. Source identity alone is never immediate.
+        lane = TEAMS_LANE_MAJOR_SECONDARY_HOLDBACK
     elif tier == "official_institution":
         lane = TEAMS_LANE_OFFICIAL_INSTITUTION
     elif explicit_specialist or tier in TEAMS_SPECIALIST_LANE_TIERS:

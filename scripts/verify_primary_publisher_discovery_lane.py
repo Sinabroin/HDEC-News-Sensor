@@ -104,8 +104,15 @@ PRODUCTION_STATE_FILES = (
 )
 
 PRIMARY_NAMES = list(source_priority.locked_publisher_names("primary_10"))
-# domain -> canonical name (primary only); pick one representative domain per name.
-_PRIMARY_DOMAIN_MAP = source_priority.locked_publisher_domain_map(("primary_10",))
+TARGET_NAMES = [
+    name
+    for tier in nn.TARGETED_PUBLISHER_TIERS
+    for name in source_priority.locked_publisher_names(tier)
+]
+# domain -> canonical name (all targeted A/B publishers); pick one representative.
+_PRIMARY_DOMAIN_MAP = source_priority.locked_publisher_domain_map(
+    nn.TARGETED_PUBLISHER_TIERS
+)
 NAME_TO_DOMAIN: dict[str, str] = {}
 for _domain, _name in _PRIMARY_DOMAIN_MAP.items():
     NAME_TO_DOMAIN.setdefault(_name, _domain)
@@ -188,8 +195,11 @@ def run_fetch(cfg_dict: dict, router):
 
 
 def _publisher_name_of_query(query: str) -> str:
-    head = query.split(" ", 1)[0]
-    return head if head in PRIMARY_NAMES else ""
+    return next(
+        (name for name in sorted(TARGET_NAMES, key=len, reverse=True)
+         if query == name or query.startswith(name + " ")),
+        "",
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -218,11 +228,11 @@ def canonical_policy_checks() -> int:
     # Six previously-missing publishers must now normalize to a canonical domain.
     missing_before = {
         "MBC": ("imbc.com", "mbc.co.kr"),
-        "KBS": ("kbs.co.kr",),
+        "KBS": ("kbs.co.kr", "news.kbs.co.kr"),
         "YTN": ("ytn.co.kr",),
-        "JTBC": ("jtbc.co.kr",),
+        "JTBC": ("jtbc.co.kr", "news.jtbc.co.kr"),
         "중앙일보": ("joongang.co.kr",),
-        "SBS": ("sbs.co.kr",),
+        "SBS": ("sbs.co.kr", "news.sbs.co.kr"),
     }
     for name, domains in missing_before.items():
         mapped = {domain for domain, value in both.items() if value == name}
@@ -271,38 +281,41 @@ def canonical_policy_checks() -> int:
 
 def clamp_and_spec_checks() -> None:
     check(
-        "code-level ceilings are 30 / 2 / 40",
-        nn.PRIMARY_PUBLISHER_MAX_QUERIES == 30
+        "code-level ceilings are 58 / 2 / 80",
+        nn.PRIMARY_PUBLISHER_MAX_QUERIES == 58
         and nn.PRIMARY_PUBLISHER_MAX_PER_QUERY == 2
-        and nn.PRIMARY_PUBLISHER_MAX_TOTAL == 40,
+        and nn.PRIMARY_PUBLISHER_MAX_TOTAL == 80,
     )
     specs_full = nn.primary_publisher_query_specs(
         ["AI", "AI 데이터센터", "AI 투자"], max_queries=999
     )
     check(
-        "10 publishers × 3 topics yields exactly 30 query specs (query cap 30)",
-        len(specs_full) == 30
+        "29 Tier-A/B publishers receive two bounded targeted queries",
+        len(specs_full) == 58
         and all(spec["query"] == f"{spec['publisher']} {spec['topic']}" for spec in specs_full)
-        and {spec["publisher"] for spec in specs_full} == set(PRIMARY_NAMES),
+        and {spec["publisher"] for spec in specs_full} == set(TARGET_NAMES),
     )
     check(
         "a lower configured max_queries lowers the spec count",
         len(nn.primary_publisher_query_specs(["AI", "AI 데이터센터"], max_queries=5)) == 5,
     )
     check(
-        "at most three topics are combined even if more are configured",
+        "bounded supplemental topics are distributed without cross product",
         {
             spec["topic"]
             for spec in nn.primary_publisher_query_specs(
                 ["t1", "t2", "t3", "t4", "t5"], max_queries=999
             )
         }
-        == {"t1", "t2", "t3"},
+        == {"t1", "t2", "t3", "t4", "t5"}
+        and len(nn.primary_publisher_query_specs(
+            ["t1", "t2", "t3", "t4", "t5"], max_queries=999
+        )) == 58,
     )
     check(
         "each spec preserves expected publisher identity/rank and canonical domains",
         all(
-            spec["rank"] == PRIMARY_NAMES.index(spec["publisher"]) + 1
+            spec["rank"] == list(source_priority.locked_publisher_names(spec["tier"])).index(spec["publisher"]) + 1
             and spec["domains"]
             and all(dom in _PRIMARY_DOMAIN_MAP for dom in spec["domains"])
             for spec in specs_full
@@ -351,7 +364,7 @@ def acceptance_unit_checks() -> bool:
 
 
 def budget_and_counter_checks() -> tuple[bool, bool]:
-    # ---- accurate 6 counters (10 pubs × 1 topic, one direct row each) --------
+    # ---- accurate counters (29 configured Tier-A/B publishers) ---------------
     def one_each_router(query: str):
         name = _publisher_name_of_query(query)
         if name:
@@ -360,29 +373,31 @@ def budget_and_counter_checks() -> tuple[bool, bool]:
         return {"items": [_item("현대건설 일반 동향", "https://www.donga.com/news/2026080699")]}
 
     result, calls = run_fetch(
-        _sources({"enabled": True, "topics": ["AI"], "max_queries": 30,
-                  "max_per_query": 2, "max_total": 40}),
+        _sources({"enabled": True, "topics": ["AI"], "max_queries": 58,
+                  "max_per_query": 2, "max_total": 80}),
         one_each_router,
     )
     check(
         "audit counters are accurate (attempted/ok/collected/tiers/exhausted)",
-        result["primary_publisher_queries_attempted"] == 10
-        and result["primary_publisher_queries_ok"] == 10
-        and result["primary_publisher_articles_collected"] == 10
+        result["primary_publisher_queries_attempted"] == 29
+        and result["primary_publisher_queries_ok"] == 29
+        and result["primary_publisher_articles_collected"] == 29
         and result["primary_10_articles_collected"] == 10
-        and result["secondary_3_articles_collected"] == 1
+        and result["secondary_3_articles_collected"] == 4
+        and result["major_secondary_articles_collected"] == 16
         and result["primary_publisher_lane_budget_exhausted"] is False,
         json.dumps({k: result[k] for k in (
             "primary_publisher_queries_attempted", "primary_publisher_queries_ok",
             "primary_publisher_articles_collected", "primary_10_articles_collected",
-            "secondary_3_articles_collected", "primary_publisher_lane_budget_exhausted",
+            "secondary_3_articles_collected", "major_secondary_articles_collected",
+            "primary_publisher_lane_budget_exhausted",
         )}),
     )
     check(
         "existing provider return fields are preserved",
         result["provider"] == nn.PROVIDER
         and result["status"] == nn.STATUS_ACTIVE
-        and result["raw_count"] == len(result["articles"]) == 11
+        and result["raw_count"] == len(result["articles"]) == 30
         and result["queries_attempted"] == 1
         and "credentials_present" in result,
     )
@@ -413,7 +428,7 @@ def budget_and_counter_checks() -> tuple[bool, bool]:
         f"collected={per_query['primary_publisher_articles_collected']}",
     )
 
-    # ---- query-count cap 30 (10 publishers × 3 topics), total not force-reached
+    # ---- query-count cap 58 (29 publishers × two passes) ----------------------
     def one_unique_router(query: str):
         name = _publisher_name_of_query(query)
         if not name:
@@ -429,15 +444,15 @@ def budget_and_counter_checks() -> tuple[bool, bool]:
         one_unique_router,
     )
     check(
-        "query attempts are bounded to 30 with one unique row per query",
-        query_cap["primary_publisher_queries_attempted"] == 30
-        and query_cap["primary_publisher_articles_collected"] == 30
+        "query attempts are bounded to 58 with one unique row per query",
+        query_cap["primary_publisher_queries_attempted"] == 58
+        and query_cap["primary_publisher_articles_collected"] == 58
         and query_cap["primary_publisher_lane_budget_exhausted"] is False,
         f"attempted={query_cap['primary_publisher_queries_attempted']} "
         f"collected={query_cap['primary_publisher_articles_collected']}",
     )
 
-    # ---- total cap clamps to 40 even when config asks 999 --------------------
+    # ---- total cap clamps to 80 even when config asks 999 --------------------
     def three_unique_router(query: str):
         name = _publisher_name_of_query(query)
         if not name:
@@ -456,9 +471,8 @@ def budget_and_counter_checks() -> tuple[bool, bool]:
         three_unique_router,
     )
     check(
-        "total cap clamps to 40 even when config asks 999",
-        total_cap["primary_publisher_articles_collected"] == 40
-        and total_cap["primary_10_articles_collected"] == 40
+        "total cap clamps to 80 even when config asks 999",
+        total_cap["primary_publisher_articles_collected"] == 80
         and total_cap["primary_publisher_lane_budget_exhausted"] is True,
         f"collected={total_cap['primary_publisher_articles_collected']}",
     )
@@ -512,7 +526,7 @@ def budget_and_counter_checks() -> tuple[bool, bool]:
     general_contributed = gen_cap["raw_count"] - gen_cap["primary_publisher_articles_collected"]
     general_independent = check(
         "general budget exhausted (cap 1) ⇒ publisher lane still runs fully",
-        gen_cap["primary_publisher_articles_collected"] == 10
+        gen_cap["primary_publisher_articles_collected"] == 29
         and general_contributed == 1,
         f"pub={gen_cap['primary_publisher_articles_collected']} general={general_contributed}",
     )
@@ -562,6 +576,7 @@ def manifest_propagation_checks() -> None:
         "primary_publisher_articles_collected",
         "primary_10_articles_collected",
         "secondary_3_articles_collected",
+        "major_secondary_articles_collected",
         "primary_publisher_lane_budget_exhausted",
     )
     check(

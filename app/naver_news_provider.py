@@ -86,8 +86,22 @@ def _to_iso(pubdate: str) -> str | None:
 
 
 def _is_forbidden(*values: str) -> bool:
-    blob = " ".join(v.lower() for v in values if v)
-    return any(token in blob for token in _FORBIDDEN_HOST_TOKENS)
+    for raw in values:
+        value = str(raw or "").strip().casefold()
+        if not value:
+            continue
+        try:
+            host = (urllib.parse.urlsplit(value).hostname or "").casefold().rstrip(".")
+        except ValueError:
+            host = ""
+        if host and any(
+            host == token or host.endswith("." + token)
+            for token in _FORBIDDEN_HOST_TOKENS
+        ):
+            return True
+        if not host and value in set(_FORBIDDEN_HOST_TOKENS) | {"twitter", "x", "트위터"}:
+            return True
+    return False
 
 
 def _host_of(url: str) -> str:
@@ -108,7 +122,8 @@ def _source_from_url(url: str, host_map: dict) -> str:
     if not host:
         return "출처 미상"
     for key in sorted(host_map or {}, key=len, reverse=True):
-        if key and key.lower() in host:
+        normalized = str(key or "").casefold().rstrip(".").removeprefix("www.")
+        if normalized and normalized == host:
             return host_map[key]
     return host
 
@@ -250,7 +265,7 @@ def parse_response(payload: dict, query: str, collected_at: str, host_map: dict,
 
 
 # ---------------------------------------------------------------------------
-# D7-AK-6E R4-R16 — primary-publisher bounded discovery lane.
+# R4-OPS-6B — bounded configured-major publisher discovery lane.
 #
 # The Review lane surfaced primary_10=0 / secondary_3=0 / official=0 for a
 # coverage window where the same-window News Censor had primary_10=2 / official=2
@@ -258,22 +273,23 @@ def parse_response(payload: dict, query: str, collected_at: str, host_map: dict,
 # carried 0 publisher-targeted queries and the host map covered only 4/10 core
 # publishers, so core-publisher AI coverage was never discovered.
 #
-# This lane derives the ten canonical primary publishers from the operator-locked
+# This lane derives all Tier-A13 and Tier-B16 publishers from the operator-locked
 # policy (app/source_priority.locked_publisher_*), combines each with a small
 # bounded topic set, and runs BEFORE the general/topic lane with its own separate
 # query/result budget. The fact that a Naver query text contains a publisher name
 # is never treated as publisher authority: every response row is normalized and
 # then post-filtered by its publisher-direct URL and
 # source_priority.publisher_delivery_tier(). Only a result that actually resolves
-# to the expected primary_10 target publisher is accepted; any other primary
-# publisher (cross-publisher), or a secondary_3 / neutral / specialist / official
-# result, is rejected from the publisher query it arrived on.
+# to the exact expected publication and configured tier is accepted; every
+# cross-publisher, neutral, specialist, official, portal, and child-domain result
+# is rejected from the publisher query it arrived on.
 
 # Hard code-level ceilings — config may lower these, never raise them.
-PRIMARY_PUBLISHER_MAX_QUERIES = 30
+PRIMARY_PUBLISHER_MAX_QUERIES = 58
 PRIMARY_PUBLISHER_MAX_PER_QUERY = 2
-PRIMARY_PUBLISHER_MAX_TOTAL = 40
-PRIMARY_PUBLISHER_MAX_TOPICS = 3
+PRIMARY_PUBLISHER_MAX_TOTAL = 80
+PRIMARY_PUBLISHER_MAX_TOPICS = 8
+TARGETED_PUBLISHER_TIERS = ("primary_10", "secondary_3", "major_secondary")
 
 
 def _dedup_key(url: str) -> str:
@@ -298,14 +314,14 @@ def _mark_discovery_lane(row: dict, lane: str) -> dict:
 def primary_publisher_query_specs(
     topics, *, max_queries: int = PRIMARY_PUBLISHER_MAX_QUERIES
 ) -> list[dict]:
-    """Bounded (publisher, topic) query specs from the canonical primary_10 policy.
+    """Bounded query specs for all canonical operator Tier-A/B publishers.
 
     Publishers are derived only from ``source_priority`` (whose single source is
     ``data/source_priority_rules.json``) — no publisher name or domain is read
     from the Naver sources file. Each spec preserves the expected publisher
     identity/rank and canonical domains so an accepted row can be verified
-    against the exact target publisher. At most three topics combine with the ten
-    publishers for at most thirty query specs.
+    against the exact target publisher. Each publisher gets the broad first topic
+    and one round-robin material-event topic, bounded to 58 total query specs.
     """
     clean_topics: list[str] = []
     for topic in topics or []:
@@ -317,21 +333,30 @@ def primary_publisher_query_specs(
     limit = max(0, min(int(max_queries), PRIMARY_PUBLISHER_MAX_QUERIES))
     if limit <= 0 or not clean_topics:
         return []
-    names = source_priority.locked_publisher_names("primary_10")
-    domain_map = source_priority.locked_publisher_domain_map(("primary_10",))
+    domain_map = source_priority.locked_publisher_domain_map(TARGETED_PUBLISHER_TIERS)
     name_to_domains: dict[str, list[str]] = {}
     for domain, name in domain_map.items():
         name_to_domains.setdefault(name, []).append(domain)
     specs: list[dict] = []
-    for rank, name in enumerate(names, start=1):
-        domains = tuple(sorted(name_to_domains.get(name, ())))
-        if not domains:
-            continue
-        for topic in clean_topics:
+    publishers: list[tuple[str, str, int, tuple[str, ...]]] = []
+    for tier in TARGETED_PUBLISHER_TIERS:
+        for rank, name in enumerate(source_priority.locked_publisher_names(tier), start=1):
+            domains = tuple(sorted(name_to_domains.get(name, ())))
+            if domains:
+                publishers.append((tier, name, rank, domains))
+    # Every configured publisher receives the broad AI query. A second query is
+    # allocated round-robin across the bounded material-event topics so coverage
+    # grows without a 29×8 combinatorial request explosion.
+    for pass_index in range(2 if len(clean_topics) > 1 else 1):
+        for publisher_index, (tier, name, rank, domains) in enumerate(publishers):
             if len(specs) >= limit:
                 return specs
+            topic = clean_topics[0] if pass_index == 0 else clean_topics[
+                1 + (publisher_index % max(1, len(clean_topics) - 1))
+            ] if len(clean_topics) > 1 else clean_topics[0]
             specs.append({
                 "publisher": name,
+                "tier": tier,
                 "rank": rank,
                 "domains": domains,
                 "topic": topic,
@@ -341,13 +366,13 @@ def primary_publisher_query_specs(
 
 
 def _publisher_lane_accepts(row: dict, spec: dict) -> bool:
-    """Accept a normalized row only as its expected primary_10 target publisher.
+    """Accept a normalized row only as its exact expected configured publisher.
 
     The Naver query text (which contains the publisher name) is never authority.
     A row is accepted iff it is publisher-direct, its canonical host matches the
     expected publisher's locked domains, and ``publisher_delivery_tier`` resolves
-    it to ``primary_10`` — rejecting cross-publisher, secondary_3, neutral,
-    specialist, and official results.
+    it to the spec's exact Tier-A/B class — rejecting cross-publisher, neutral,
+    specialist, official, portal, and unlisted-child results.
     """
     url = str(row.get("url") or "")
     direct = publisher_direct.normalize_publisher_canonical_url(url)
@@ -357,10 +382,14 @@ def _publisher_lane_accepts(row: dict, spec: dict) -> bool:
     if not host:
         return False
     expected = spec.get("domains") or ()
-    if not any(host == domain or host.endswith("." + domain) for domain in expected):
+    if not any(host == str(domain).casefold().removeprefix("www.") for domain in expected):
         return False
     tier = source_priority.publisher_delivery_tier(str(row.get("source") or ""), url)
-    return tier.get("tier") == "primary_10"
+    return bool(
+        tier.get("tier") == spec.get("tier")
+        and tier.get("identity_evidence") == "exact_domain"
+        and tier.get("publisher_identity") == spec.get("publisher")
+    )
 
 
 def _run_primary_publisher_lane(
@@ -458,6 +487,7 @@ def _status_only(status: str, attempted: int = 0,
             "primary_publisher_articles_collected": 0,
             "primary_10_articles_collected": 0,
             "secondary_3_articles_collected": 0,
+            "major_secondary_articles_collected": 0,
             "primary_publisher_lane_budget_exhausted": False}
 
 
@@ -508,7 +538,7 @@ def fetch(timeout: int | None = None, sources_path=None,
     # specialist / official manual mappings are preserved.
     manual_host_map = cfg.get("host_source_map") or {}
     canonical_host_map = source_priority.locked_publisher_domain_map(
-        ("primary_10", "secondary_3")
+        TARGETED_PUBLISHER_TIERS
     )
     host_map = {**manual_host_map, **canonical_host_map}
     display = int(cfg.get("display", 10))
@@ -579,6 +609,7 @@ def fetch(timeout: int | None = None, sources_path=None,
     results = publisher_results + general_results
     primary_10_collected = 0
     secondary_3_collected = 0
+    major_secondary_collected = 0
     for row in results:
         tier = source_priority.publisher_delivery_tier(
             str(row.get("source") or ""), str(row.get("url") or "")
@@ -587,6 +618,8 @@ def fetch(timeout: int | None = None, sources_path=None,
             primary_10_collected += 1
         elif tier == "secondary_3":
             secondary_3_collected += 1
+        elif tier == "major_secondary":
+            major_secondary_collected += 1
 
     status = STATUS_ACTIVE if (queries_ok or publisher_stats["queries_ok"]) else STATUS_ERROR
     return {"provider": PROVIDER, "source_label": SOURCE_LABEL, "status": status,
@@ -598,4 +631,5 @@ def fetch(timeout: int | None = None, sources_path=None,
             "primary_publisher_articles_collected": publisher_stats["articles_collected"],
             "primary_10_articles_collected": primary_10_collected,
             "secondary_3_articles_collected": secondary_3_collected,
+            "major_secondary_articles_collected": major_secondary_collected,
             "primary_publisher_lane_budget_exhausted": publisher_stats["budget_exhausted"]}

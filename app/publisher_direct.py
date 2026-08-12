@@ -403,6 +403,7 @@ def apply_publisher_authority(
     source: str,
     published_at: str | None,
     resolution_reason: str,
+    publisher_verification_strength: str = "full_body",
 ) -> dict:
     """Return an article whose delivery URL is the verified publisher canonical."""
     normalized = normalize_publisher_canonical_url(publisher_canonical_url)
@@ -426,6 +427,7 @@ def apply_publisher_authority(
             "publisher_direct": True,
             "portal_resolution_status": "resolved",
             "portal_resolution_reason": resolution_reason,
+            "publisher_verification_strength": publisher_verification_strength,
         }
     )
     output.update(
@@ -439,6 +441,7 @@ def apply_publisher_authority(
             "discovery_provider": provider,
             "portal_resolution_status": "resolved",
             "portal_resolution_reason": resolution_reason,
+            "publisher_verification_strength": publisher_verification_strength,
             "quarantine": False,
             "status": "collected",
             "source": str(source or output.get("source") or "").strip(),

@@ -468,6 +468,9 @@ def main() -> int:
         "secondary_3_articles_collected": int(
             collection_audit.get("secondary_3_articles_collected", 0) or 0
         ),
+        "major_secondary_articles_collected": int(
+            collection_audit.get("major_secondary_articles_collected", 0) or 0
+        ),
         "primary_publisher_lane_budget_exhausted": bool(
             collection_audit.get("primary_publisher_lane_budget_exhausted", False)
         ),

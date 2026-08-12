@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.1
+**Version:** 1.3
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -71,6 +71,10 @@ The following are hard failures:
 - `premium.sbs.co.kr` inherits SBS Tier-A realtime authority or sends a standalone realtime Teams card;
 - opinion/column/contributed pieces auto-send as realtime Watch news;
 - ETF/fund/theme-stock articles auto-send merely because they mention AI;
+- an AI-capacity financial/derivative product auto-sends merely because its
+  underlying subject is AI;
+- proposal, discussion, visit, request, or generic local-political activity
+  becomes realtime materiality without an independent hard event;
 - weak specialist/trusted sources fill unused Teams capacity;
 - publisher reputation alone creates qualification;
 - search query text creates qualification;
@@ -96,9 +100,10 @@ sibling subdomains do not inherit parent-publication authority. Exact configured
 hosts and bounded exact aliases are permitted; broad substring or suffix
 matching must never elevate authority.
 
-## Tier A — Core Major
+## Tier A — Primary Realtime Default
 
 Immediate consideration is allowed only after all substantive gates pass.
+For the same event, Tier A is the preferred representative over Tier B.
 
 - 연합뉴스
 - MBC
@@ -116,9 +121,9 @@ Immediate consideration is allowed only after all substantive gates pass.
 
 Tier A is a quality prior, not a qualification bypass.
 
-## Tier B — Major General / Economic / Industrial
+## Tier B — Major Secondary / Fallback
 
-Explicitly allowed for automatic Teams consideration when substantive gates pass:
+Explicitly allowed as bounded secondary supply when substantive gates pass:
 
 - 서울경제
 - 한국일보
@@ -139,6 +144,19 @@ Explicitly allowed for automatic Teams consideration when substantive gates pass
 
 Tier B must remain an explicit allowlist.
 Do not auto-promote all `trusted_other` publishers.
+
+Tier-B delivery behavior is:
+
+- TOP or confirmed HDEC-direct material event: may be immediate;
+- normal IMPORTANT event: enter a 30-minute holdback;
+- same-event Tier A during holdback: Tier A wins and Tier B never later re-sends;
+- no same-event Tier A after 30 minutes: Tier B may become eligible only after
+  every substantive/materiality gate passes and the normal pacing slot is open;
+- unused capacity never authorizes Tier-B filler.
+
+Permanent invariant:
+
+> `SAME_EVENT_TIER_A_PREFERRED_OVER_TIER_B=PASS`
 
 ## Tier C — Specialist / Niche
 
@@ -178,6 +196,25 @@ Realtime Teams eligibility must continue to require the relevant combination of:
 - already-sent state/ledger checks.
 
 `SEARCH_QUERY_CAUSED_QUALIFICATION=0` is a permanent invariant.
+
+## Realtime executive-materiality contract
+
+AI centrality plus generic action wording is not sufficient. Proposal and
+discussion classes (`방문`, `제안`, `건의`, `논의`, `모색`, `검토`, `희망`,
+`환영`, `관심 표명`, `협력 요청`, `실증 제안`) require an independent hard
+material signal such as a signed contract, confirmed investment, award/order,
+construction start, final government approval, enacted regulation, committed
+budget, quantified capacity or CapEx, a binding MOU with meaningful scale or
+timeline, or a production/service launch with strategic operating impact.
+
+Generic regional political/administrative activity does not qualify merely
+because AI, semiconductor, cluster, or data-center words occur. Semiconductor
+alone is not AI centrality.
+
+Financial-product/derivative framing around AI capacity is a bounded Watch
+noise class. It is rejected from realtime Watch unless the publisher evidence
+also proves a separate concrete HDEC-relevant industrial/business event.
+Editor/Daily use is not globally banned by this Watch rule.
 
 ## Realtime opinion contract
 
@@ -273,6 +310,67 @@ The replay must keep the observed incident separate from synthetic adversarial
 metadata. Unverified historical title, source, timestamp, and article metadata
 must remain null/unknown rather than being represented as observed fact.
 
+## HDEC-DEFECT-006 — major-media discovery / verification recall collapse
+
+Production evidence from the independent R4-OPS-6A recall audit:
+
+- natural Watch and a manual canary both collected hundreds of rows;
+- content-eligible rows existed;
+- no eligible Tier-A/B copy reached Teams selection;
+- an external read-only audit confirmed qualifying Tier-A/B supply existed;
+- known major-media rows were discovered raw and then lost before policy.
+
+Required expected result:
+
+- Google News wrappers must receive a fair, bounded resolution schedule by
+  trusted provider scheduling hints rather than collapsing into one global
+  `news.google.com` publisher bucket;
+- all configured Tier-A 13 and Tier-B 16 publishers must be present in the
+  bounded targeted Naver discovery configuration;
+- exact configured Tier-A/B article pages must remain verifiable when bounded
+  structured extraction succeeds or strict exact-host article identity is
+  independently proven;
+- every alert-policy-eligible row must leave a safe categorical source-gate
+  trace, including zero-send runs.
+
+Permanent authority invariant:
+
+> Discovery metadata MAY influence scheduling/prioritisation of URL resolution,
+> but MUST NEVER confer publisher authority.
+
+Final Tier-A/B authority continues to require the resolved/canonical publisher
+URL and exact `source_priority` identity. Display aliases, query text, unknown
+child domains, portal wrappers, and unresolved URLs remain non-authoritative.
+
+## HDEC-DEFECT-007 — broad Watch materiality and flat A/B priority
+
+Exact post-2026-08-11 production deliveries preserved in
+`data/r4_ops6c_production_watch_replay.json`:
+
+1. 경향신문 / `KyungHyangSinmun`, article id `5b202fee03c23c1f`,
+   `https://www.khan.co.kr/article/202608120600101`, sent
+   `2026-08-12T06:17:21+09:00`: BlackRock + construction labor + AI
+   infrastructure. Expected Watch: KEEP, because the publisher evidence proves
+   material AI-infrastructure capacity/workforce implications.
+2. 파이낸셜뉴스, article id `32c6c6ccd64378e0`,
+   `https://www.fnnews.com/news/202608120347285467`, sent
+   `2026-08-12T04:30:42+09:00`: AI compute-capacity futures. Expected Watch:
+   REJECT (`excluded_financial_ai_product`); Editor/Daily remains allowed.
+3. 전자신문 / `미래를 보는 창 - 전자신문`, article id
+   `f9d7840ab7297c93`, `https://www.etnews.com/20260811000360`, sent
+   `2026-08-11T19:40:06+09:00`: regional semiconductor-cluster budget/support
+   request. Expected Watch: REJECT because AI is not central and no new hard
+   executive event is confirmed.
+4. 파이낸셜뉴스, article id `67d8faa06b353d2f`,
+   `https://www.fnnews.com/news/202608111621114292`, sent
+   `2026-08-11T16:44:43+09:00`: 제주지사의 `KDD 기업` AI-pilot proposal.
+   Expected Watch: REJECT (`excluded_proposal_only`). The publisher article says
+   `KDD 기업`; it must not be misreported as KDDI.
+
+The replay must distinguish production-ledger/page facts from explicitly
+labelled deterministic test controls. Unknown production fields must not be
+invented.
+
 ---
 
 # 7. REAL-CORPUS REPLAY MATRIX
@@ -288,6 +386,9 @@ The acceptance replay must contain at least:
 5. weak Tier-C specialist article with no independently sufficient event
 6. observed SBS Premium incident URL with only verified provenance
 7. explicitly synthetic high-materiality SBS Premium authority stress case
+8. 파이낸셜뉴스 — AI 연산능력 선물시장 거래
+9. 전자신문 — 호남권 반도체 클러스터 지역 현안 건의
+10. 파이낸셜뉴스 — 제주지사의 KDD 기업 AI 실증 제안
 
 ### MUST BE CAPABLE OF TEAMS ELIGIBILITY
 
@@ -296,6 +397,7 @@ The acceptance replay must contain at least:
 3. qualifying Tier-A major-media event
 4. HDEC-direct material event
 5. TOP critical event
+6. 경향신문 — BlackRock/건설노조 AI 인프라 material event
 
 ### EDITOR-ONLY / SUPPORTING
 
@@ -330,6 +432,22 @@ All mandatory rows must have `MATCH=true` before `CODE_COMPLETE=true`.
 
 Both sides must be explicitly measured.
 
+Live-window source-mix diagnostics must expose:
+
+```text
+discovered_tier_a=
+verified_tier_a=
+policy_eligible_tier_a=
+selected_tier_a=
+discovered_tier_b=
+verified_tier_b=
+policy_eligible_tier_b=
+tier_b_held=
+selected_tier_b=
+```
+
+These are diagnostics, never source quotas. A zero-send window is valid.
+
 Required final fields:
 
 ```text
@@ -349,6 +467,9 @@ A Watch that sends weak source/opinion/theme content to increase volume is also 
 For normal important events:
 
 - target roughly one best article per rolling 60-minute window when qualified supply exists;
+- Tier-A substantive rows are immediate candidates;
+- Tier-B normal IMPORTANT rows wait 30 minutes;
+- same-event Tier A permanently supersedes held Tier B;
 - do not send filler;
 - preserve still-current eligible backlog for later consideration;
 - do not silently discard qualified rows because the current window is occupied.
@@ -446,6 +567,13 @@ TIER_C_STANDALONE_AUTO_SEND_ZERO=PASS
 TIER_B_MATERIAL_EVENT_ELIGIBLE=PASS
 LS_ELECTRIC_GS_EC_REPLAY=PASS
 PUBLISHER_ALONE_NEVER_QUALIFIES=PASS
+SAME_EVENT_TIER_A_PREFERRED_OVER_TIER_B=PASS
+TIER_B_NORMAL_HOLDBACK_MINUTES=30
+TIER_B_TOP_HDEC_IMMEDIATE_RULE=PASS
+
+PROPOSAL_ONLY_REALTIME_REJECT=PASS
+LOCAL_POLITICAL_AI_FALSE_POSITIVE_REJECT=PASS
+FINANCIAL_AI_PRODUCT_WATCH_REJECT=PASS
 
 NORMAL_PACING=PASS
 TOP_HDEC_BYPASS=PASS
@@ -555,16 +683,14 @@ No important completed work may exist only on the current company/home machine.
 
 # 17. CURRENT CLOSURE SCOPE
 
-Do not expand R4-OPS-5 beyond:
+R4-OPS-6C is limited to:
 
-1. publisher identity correctness;
-2. A/B/C source tiering;
-3. opinion/contribution realtime hard gate;
-4. Watch recall/pacing;
-5. empty + non-empty Daily morning contract;
-6. Editor functional truthfulness;
-7. existing PR #40 verifier repairs;
-8. acceptance replay and regression coverage.
+1. preserve the R4-OPS-6B collector recall and R4-OPS-5 precision repairs;
+2. Tier-A-primary / Tier-B-30-minute structural source preference;
+3. stronger proposal, local-political, and financial-product Watch materiality;
+4. exact four-article production replay evidence;
+5. safe source-mix observability and a bounded read-only live reality check;
+6. this project acceptance overlay and current handoff.
 
 Do not redesign Weekly, dashboards, unrelated market integrations, or unrelated UI during this closure unless a regression directly requires it.
 
