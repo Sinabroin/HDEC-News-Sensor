@@ -310,6 +310,16 @@
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
     },
+    "92baa5a958c3d24e": {
+      "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
+      "delivery_id": "teams_ai_push:f7205365bd29",
+      "first_sent_at": "2026-08-14T05:11:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e2b5ed9072fe8f2525ce6fc7fac861e51367b0ee4352c3ebb1799556c37bc142",
+      "sent_at": "2026-08-14T05:11:53+09:00",
+      "source": "세계일보"
+    },
     "9c862b74fb8e8209": {
       "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
       "delivery_id": "teams_ai_push:5b97f9681df3",
@@ -1622,6 +1632,16 @@
       "sent_at": "2026-08-05T12:42:15+09:00",
       "source": "초이스경제"
     },
+    "title:탱크데이논란스벅2분기적자전환외": {
+      "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
+      "delivery_id": "teams_ai_push:f7205365bd29",
+      "first_sent_at": "2026-08-14T05:11:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e2b5ed9072fe8f2525ce6fc7fac861e51367b0ee4352c3ebb1799556c37bc142",
+      "sent_at": "2026-08-14T05:11:53+09:00",
+      "source": "세계일보"
+    },
     "title:통신3사si기업들국내ai데이터센터전방위구축본격화": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
       "delivery_id": "teams_ai_push:eaac50fef721",
@@ -2593,8 +2613,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-14T03:13:01+09:00",
-  "last_successful_send_at": "2026-08-14T03:13:01+09:00",
+  "last_normal_send_at": "2026-08-14T05:11:53+09:00",
+  "last_successful_send_at": "2026-08-14T05:11:53+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2915,6 +2935,16 @@
       "material_signature": "4360933e2e64d2481fe4d3305d3cf0f43878710e870eca297a2d2ccf07fb4e9f",
       "sent_at": "2026-08-13T19:33:41+09:00",
       "source": "서울경제"
+    },
+    "https://segye.com/newsView/20260813519823": {
+      "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
+      "delivery_id": "teams_ai_push:f7205365bd29",
+      "first_sent_at": "2026-08-14T05:11:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e2b5ed9072fe8f2525ce6fc7fac861e51367b0ee4352c3ebb1799556c37bc142",
+      "sent_at": "2026-08-14T05:11:53+09:00",
+      "source": "세계일보"
     },
     "https://slownews.kr/163961": {
       "cluster_key": "title:메가프로젝트발전소짓는것보다더시급한게있다",
@@ -4207,6 +4237,16 @@
       "material_signature": "9b662acf78fa3a9602210a048813a8d06ed26d270e01a67aab9e1cd09d0ec241",
       "sent_at": "2026-08-05T12:42:15+09:00",
       "source": "초이스경제"
+    },
+    "탱크데이논란스벅2분기적자전환외": {
+      "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
+      "delivery_id": "teams_ai_push:f7205365bd29",
+      "first_sent_at": "2026-08-14T05:11:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e2b5ed9072fe8f2525ce6fc7fac861e51367b0ee4352c3ebb1799556c37bc142",
+      "sent_at": "2026-08-14T05:11:53+09:00",
+      "source": "세계일보"
     },
     "통신3사si기업들국내ai데이터센터전방위구축본격화": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
