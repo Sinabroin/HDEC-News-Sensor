@@ -1331,15 +1331,19 @@ def check_workflow() -> None:
 
     check("watch runs this verifier in its gate",
           watch.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
-    check("scheduled-live-refresh still runs this verifier in its gate",
-          scheduled.count("python3 scripts/verify_teams_ai_push_production.py") == 1)
+    check("scheduled-live-refresh does not depend on the Watch verifier",
+          "python3 scripts/verify_teams_ai_push_production.py" not in scheduled)
     semantic_command = (
         "python3 scripts/verify_teams_validated_brief_semantic_equivalence.py"
     )
     check("watch gates on validated-Brief semantic equivalence",
           watch.count(semantic_command) == 1)
-    check("scheduled refresh gates on validated-Brief semantic equivalence",
-          scheduled.count(semantic_command) == 1)
+    check("scheduled refresh does not depend on Watch semantic fixtures",
+          semantic_command not in scheduled)
+    check("scheduled refresh runs its isolated production gate",
+          scheduled.count(
+              "python3 scripts/verify_r4_ops7_refresh_production_gate.py"
+          ) == 1)
 
 
 def check_source_gate(tmp: Path) -> None:

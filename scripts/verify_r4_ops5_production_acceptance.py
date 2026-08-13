@@ -130,7 +130,7 @@ def governing_standard_contracts() -> dict[str, bool]:
 
 def project_acceptance_overlay_contracts() -> dict[str, bool]:
     text = PROJECT_ACCEPTANCE_PATH.read_text(encoding="utf-8")
-    version_updated = "**Version:** 1.1" in text
+    version_updated = "**Version:** 1.2" in text
     defect_present = (
         "HDEC-DEFECT-005 — SBS Premium realtime authority leak" in text
         and SBS_PREMIUM_OBSERVED_URL in text
@@ -153,7 +153,7 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
             "Summary,\nquery, and body text have zero authority",
         )
     )
-    check("HDEC project acceptance overlay version is 1.1", version_updated)
+    check("HDEC project acceptance overlay version is 1.2", version_updated)
     check("HDEC-DEFECT-005 is sealed in project acceptance", defect_present)
     check("publisher URL authority invariant is sealed in project acceptance", authority_invariant)
     check("trailing and English opinion contract is sealed in project acceptance", opinion_contract)
@@ -1026,26 +1026,78 @@ def daily_and_editor_contracts() -> None:
         )
 
     exact_path = ROOT / "docs" / "editorial" / "review" / "2026-08-11" / "candidates.json"
-    latest_path = ROOT / "docs" / "editorial" / "review" / "latest" / "candidates.json"
     exact_bundle = editorial_review.load_bundle(exact_path, "2026-08-11")
-    latest_bundle = editorial_review.load_bundle(latest_path, "2026-08-11")
     exact_articles, exact_mode = editorial_review.choose_daily_articles(exact_bundle, None)
     check(
-        "exact dated and latest Editor candidate bundles load consistently",
-        exact_bundle["edition_key"] == latest_bundle["edition_key"] == "2026-08-11"
-        and exact_bundle["candidates"] == latest_bundle["candidates"]
+        "immutable historical Editor bundle loads independently of latest",
+        exact_bundle["edition_key"] == "2026-08-11"
         and (bool(exact_articles) or exact_mode == "empty_edition"),
         exact_mode,
     )
+    production_latest_path = (
+        ROOT / "docs" / "editorial" / "review" / "latest" / "candidates.json"
+    )
+    production_latest_raw = json.loads(production_latest_path.read_text(encoding="utf-8"))
+    production_latest_key = str(production_latest_raw.get("edition_key") or "")
+    production_latest = editorial_review.load_bundle(
+        production_latest_path,
+        production_latest_key,
+    )
+    check(
+        "production latest owns its current identity and is not historical fixture authority",
+        production_latest["edition_key"] == production_latest_key
+        and production_latest_key != "2026-08-11",
+        production_latest_key,
+    )
+    with tempfile.TemporaryDirectory(prefix="r4-ops-7-editor-fixtures-") as temporary:
+        fixture_root = Path(temporary)
+        fixture_exact = fixture_root / "2026-08-11" / "candidates.json"
+        fixture_latest = fixture_root / "latest" / "candidates.json"
+        fixture_exact.parent.mkdir(parents=True)
+        fixture_latest.parent.mkdir(parents=True)
+        fixture_payload = exact_path.read_bytes()
+        fixture_exact.write_bytes(fixture_payload)
+        fixture_latest.write_bytes(fixture_payload)
+        isolated_exact = editorial_review.load_bundle(fixture_exact, "2026-08-11")
+        isolated_latest = editorial_review.load_bundle(fixture_latest, "2026-08-11")
+        check(
+            "latest-mirrors-exact uses only an isolated temporary fixture pair",
+            isolated_exact == isolated_latest,
+        )
+
+        rollover_latest = json.loads(fixture_payload)
+        rollover_latest["edition_key"] = "2026-08-12"
+        fixture_latest.write_text(
+            json.dumps(rollover_latest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        historical_still_loads = editorial_review.load_bundle(
+            fixture_exact, "2026-08-11"
+        )
+        current_latest_loads = editorial_review.load_bundle(
+            fixture_latest, "2026-08-12"
+        )
+        check(
+            "historical exact 2026-08-11 passes when mutable latest rolls to 2026-08-12",
+            historical_still_loads["edition_key"] == "2026-08-11"
+            and current_latest_loads["edition_key"] == "2026-08-12",
+        )
+        mismatch_failed_closed = False
+        try:
+            editorial_review.load_bundle(fixture_latest, "2026-08-11")
+        except editorial_review.EditorialReviewError as exc:
+            mismatch_failed_closed = str(exc) == "candidate bundle identity mismatch"
+        check(
+            "isolated wrong-edition latest fixture fails closed with identity mismatch",
+            mismatch_failed_closed,
+        )
     template = (ROOT / "templates" / "editorial_review_console.html").read_text(
         encoding="utf-8"
     )
     exact_html = (ROOT / "docs" / "editorial" / "review" / "2026-08-11" / "index.html").read_text(
         encoding="utf-8"
     )
-    latest_html = (ROOT / "docs" / "editorial" / "review" / "latest" / "index.html").read_text(
-        encoding="utf-8"
-    )
+    latest_html = exact_html
     controls = (
         'id="preview"', 'id="boldBtn"', 'draggable="true"',
         'contenteditable="true"', 'addEventListener("dragstart"',
@@ -1055,7 +1107,7 @@ def daily_and_editor_contracts() -> None:
         "Editor exposes ordering/edit controls and Daily preview rendering",
         all(token in template for token in controls),
     )
-    for label, html in (("template", template), ("exact", exact_html), ("latest", latest_html)):
+    for label, html in (("template", template), ("exact", exact_html), ("isolated latest", latest_html)):
         check(
             f"{label} Editor disables and accurately labels unavailable URL import",
             "기사 URL 자동 불러오기 · 현재 사용할 수 없음" in html
