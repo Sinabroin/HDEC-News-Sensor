@@ -10,6 +10,16 @@
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
     },
+    "0a1a2a12e0fa0dab": {
+      "cluster_key": "title:hbmasic암호같은이름알면반도체투자가보인다",
+      "delivery_id": "teams_ai_push:c7fb164cefbe",
+      "first_sent_at": "2026-08-13T18:12:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
+      "sent_at": "2026-08-13T18:12:43+09:00",
+      "source": "매일경제"
+    },
     "0b23a184e967af18": {
       "cluster_key": "title:배재규방향과시간에투자한투운용전략산업etf출시",
       "delivery_id": "teams_ai_push:ec619304f7a9",
@@ -1011,6 +1021,16 @@
       "material_signature": "fdf59a0e50f3e7ff8c20c49b77d745e2287f3cc77f4b550c7eadfcc984447b7b",
       "sent_at": "2026-07-29T15:17:40+09:00",
       "source": "cbci.co.kr"
+    },
+    "title:hbmasic암호같은이름알면반도체투자가보인다": {
+      "cluster_key": "title:hbmasic암호같은이름알면반도체투자가보인다",
+      "delivery_id": "teams_ai_push:c7fb164cefbe",
+      "first_sent_at": "2026-08-13T18:12:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
+      "sent_at": "2026-08-13T18:12:43+09:00",
+      "source": "매일경제"
     },
     "title:oci홀딩스14조증설승부수차입5000억시": {
       "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
@@ -2533,8 +2553,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-12T06:17:21+09:00",
-  "last_successful_send_at": "2026-08-12T06:17:21+09:00",
+  "last_normal_send_at": "2026-08-13T18:12:43+09:00",
+  "last_successful_send_at": "2026-08-13T18:12:43+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2774,6 +2794,16 @@
       "last_material_update_at": null,
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
+      "source": "매일경제"
+    },
+    "https://mk.co.kr/news/business/12126910": {
+      "cluster_key": "title:hbmasic암호같은이름알면반도체투자가보인다",
+      "delivery_id": "teams_ai_push:c7fb164cefbe",
+      "first_sent_at": "2026-08-13T18:12:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
+      "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
     },
     "https://news.bizwatch.co.kr/article/mobile/2026/07/28/0025": {
@@ -3537,6 +3567,16 @@
       "material_signature": "fdf59a0e50f3e7ff8c20c49b77d745e2287f3cc77f4b550c7eadfcc984447b7b",
       "sent_at": "2026-07-29T15:17:40+09:00",
       "source": "cbci.co.kr"
+    },
+    "hbmasic암호같은이름알면반도체투자가보인다": {
+      "cluster_key": "title:hbmasic암호같은이름알면반도체투자가보인다",
+      "delivery_id": "teams_ai_push:c7fb164cefbe",
+      "first_sent_at": "2026-08-13T18:12:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
+      "sent_at": "2026-08-13T18:12:43+09:00",
+      "source": "매일경제"
     },
     "oci홀딩스14조증설승부수차입5000억시": {
       "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
