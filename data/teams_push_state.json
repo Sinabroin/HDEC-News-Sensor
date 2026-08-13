@@ -450,6 +450,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "dae33e75888af074": {
+      "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
+      "delivery_id": "teams_ai_push:3b0f9fef1dac",
+      "first_sent_at": "2026-08-14T03:13:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25e98ab23eeabd627e8f870dd54646deba0d901526ee922459bef9b5ba7ea67e",
+      "sent_at": "2026-08-14T03:13:01+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "dcf282f21cb86661": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
       "delivery_id": "teams_ai_push:491a7d818ca9",
@@ -881,6 +891,16 @@
       "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
+    },
+    "title:47ai공장의불을켜라ai패권의진짜전": {
+      "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
+      "delivery_id": "teams_ai_push:3b0f9fef1dac",
+      "first_sent_at": "2026-08-14T03:13:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25e98ab23eeabd627e8f870dd54646deba0d901526ee922459bef9b5ba7ea67e",
+      "sent_at": "2026-08-14T03:13:01+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
       "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
@@ -2573,8 +2593,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-13T19:33:41+09:00",
-  "last_successful_send_at": "2026-08-13T19:33:41+09:00",
+  "last_normal_send_at": "2026-08-14T03:13:01+09:00",
+  "last_successful_send_at": "2026-08-14T03:13:01+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2704,6 +2724,16 @@
       "last_material_update_at": null,
       "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
       "sent_at": "2026-08-11T19:40:06+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
+    "https://etnews.com/20260813000029": {
+      "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
+      "delivery_id": "teams_ai_push:3b0f9fef1dac",
+      "first_sent_at": "2026-08-14T03:13:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25e98ab23eeabd627e8f870dd54646deba0d901526ee922459bef9b5ba7ea67e",
+      "sent_at": "2026-08-14T03:13:01+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
     "https://fnnews.com/news/202608111621114292": {
@@ -3447,6 +3477,16 @@
       "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
+    },
+    "47ai공장의불을켜라ai패권의진짜전": {
+      "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
+      "delivery_id": "teams_ai_push:3b0f9fef1dac",
+      "first_sent_at": "2026-08-14T03:13:01+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25e98ab23eeabd627e8f870dd54646deba0d901526ee922459bef9b5ba7ea67e",
+      "sent_at": "2026-08-14T03:13:01+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "5일중국증시ai랠리훈풍이어질까순환매장세지속주": {
       "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
