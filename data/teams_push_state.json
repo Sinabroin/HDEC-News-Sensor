@@ -510,6 +510,16 @@
       "sent_at": "2026-08-05T05:25:09+09:00",
       "source": "녹색경제신문"
     },
+    "f50b3c9dd4fcd62c": {
+      "cluster_key": "title:ai인프라특화속도신성장모터장착하는전통제조사들biz플",
+      "delivery_id": "teams_ai_push:5a1967eedbf8",
+      "first_sent_at": "2026-08-14T08:56:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
+      "sent_at": "2026-08-14T08:56:29+09:00",
+      "source": "서울경제"
+    },
     "f9d7840ab7297c93": {
       "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
       "delivery_id": "teams_ai_push:9d6109e1a26d",
@@ -1051,6 +1061,16 @@
       "material_signature": "449fd27217c8f6f7647c7faff2733d5ea1380423921629030a9188510f31a39f",
       "sent_at": "2026-08-09T13:19:12+09:00",
       "source": "IT조선"
+    },
+    "title:ai인프라특화속도신성장모터장착하는전통제조사들biz플": {
+      "cluster_key": "title:ai인프라특화속도신성장모터장착하는전통제조사들biz플",
+      "delivery_id": "teams_ai_push:5a1967eedbf8",
+      "first_sent_at": "2026-08-14T08:56:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
+      "sent_at": "2026-08-14T08:56:29+09:00",
+      "source": "서울경제"
     },
     "title:ai투자칩넘어전력건설장비로마이크론78soxl20": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
@@ -2282,6 +2302,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "엔비디아칩넘어ai금융까지손대는이유는"
     },
+    "https://news.einfomax.co.kr/news/articleView.html?idxno=4430101": {
+      "article_id": "f8f5505e53664b8d",
+      "cluster_key": "title:왜지금lg인가모건스탠리가꼽은로봇주변신5가지이유",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-14T08:56:27+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-14T08:56:27+09:00",
+      "normalized_url": "https://news.einfomax.co.kr/news/articleView.html?idxno=4430101",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "연합인포맥스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "왜지금lg인가모건스탠리가꼽은로봇주변신5가지이유"
+    },
     "https://newsis.com/view/NISX20260805_0003737877": {
       "article_id": "261d8330dbfa66ec",
       "cluster_key": "title:한국판팔란티어꿈꾼다네이버가국방ai사업에진심인이유",
@@ -2633,8 +2667,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-14T07:04:55+09:00",
-  "last_successful_send_at": "2026-08-14T07:04:55+09:00",
+  "last_normal_send_at": "2026-08-14T08:56:29+09:00",
+  "last_successful_send_at": "2026-08-14T08:56:29+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2954,6 +2988,16 @@
       "last_material_update_at": null,
       "material_signature": "4360933e2e64d2481fe4d3305d3cf0f43878710e870eca297a2d2ccf07fb4e9f",
       "sent_at": "2026-08-13T19:33:41+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20079265": {
+      "cluster_key": "title:ai인프라특화속도신성장모터장착하는전통제조사들biz플",
+      "delivery_id": "teams_ai_push:5a1967eedbf8",
+      "first_sent_at": "2026-08-14T08:56:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
+      "sent_at": "2026-08-14T08:56:29+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -3677,6 +3721,16 @@
       "material_signature": "449fd27217c8f6f7647c7faff2733d5ea1380423921629030a9188510f31a39f",
       "sent_at": "2026-08-09T13:19:12+09:00",
       "source": "IT조선"
+    },
+    "ai인프라특화속도신성장모터장착하는전통제조사들biz플": {
+      "cluster_key": "title:ai인프라특화속도신성장모터장착하는전통제조사들biz플",
+      "delivery_id": "teams_ai_push:5a1967eedbf8",
+      "first_sent_at": "2026-08-14T08:56:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
+      "sent_at": "2026-08-14T08:56:29+09:00",
+      "source": "서울경제"
     },
     "ai투자칩넘어전력건설장비로마이크론78soxl20": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
