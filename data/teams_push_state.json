@@ -250,6 +250,16 @@
       "sent_at": "2026-08-04T10:12:23+09:00",
       "source": "뉴스워커"
     },
+    "643f3711b6d2cfaf": {
+      "cluster_key": "title:돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼",
+      "delivery_id": "teams_ai_push:e13e1e26f3c8",
+      "first_sent_at": "2026-08-14T11:58:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4bd623d929d0bb7a4339fbfe42d65d55c3e2070d6758daf8548e7f9e7e55fae",
+      "sent_at": "2026-08-14T11:58:24+09:00",
+      "source": "연합뉴스"
+    },
     "6459abd581ed3d06": {
       "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
       "delivery_id": "teams_ai_push:23dadd9efafe",
@@ -1291,6 +1301,16 @@
       "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
       "sent_at": "2026-08-06T03:58:57+09:00",
       "source": "강원일보"
+    },
+    "title:돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼": {
+      "cluster_key": "title:돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼",
+      "delivery_id": "teams_ai_push:e13e1e26f3c8",
+      "first_sent_at": "2026-08-14T11:58:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4bd623d929d0bb7a4339fbfe42d65d55c3e2070d6758daf8548e7f9e7e55fae",
+      "sent_at": "2026-08-14T11:58:24+09:00",
+      "source": "연합뉴스"
     },
     "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2667,8 +2687,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-14T08:56:29+09:00",
-  "last_successful_send_at": "2026-08-14T08:56:29+09:00",
+  "last_normal_send_at": "2026-08-14T11:58:24+09:00",
+  "last_successful_send_at": "2026-08-14T11:58:24+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3559,6 +3579,16 @@
       "material_signature": "433bf10ec6ff960e68d57d7aa1f80598a19276d88d3934c9aff5955288c98c32",
       "sent_at": "2026-08-10T13:18:59+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260814053800527": {
+      "cluster_key": "title:돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼",
+      "delivery_id": "teams_ai_push:e13e1e26f3c8",
+      "first_sent_at": "2026-08-14T11:58:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4bd623d929d0bb7a4339fbfe42d65d55c3e2070d6758daf8548e7f9e7e55fae",
+      "sent_at": "2026-08-14T11:58:24+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -3951,6 +3981,16 @@
       "material_signature": "c4a66b1c79787f5e8f8004cc60070d6c9c1dc55ed61d34de4a67b0ae33f5d9cf",
       "sent_at": "2026-08-06T03:58:57+09:00",
       "source": "강원일보"
+    },
+    "돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼": {
+      "cluster_key": "title:돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼",
+      "delivery_id": "teams_ai_push:e13e1e26f3c8",
+      "first_sent_at": "2026-08-14T11:58:24+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c4bd623d929d0bb7a4339fbfe42d65d55c3e2070d6758daf8548e7f9e7e55fae",
+      "sent_at": "2026-08-14T11:58:24+09:00",
+      "source": "연합뉴스"
     },
     "두산에너빌리티라이양원전56호기핵심소재공급계약체결": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
