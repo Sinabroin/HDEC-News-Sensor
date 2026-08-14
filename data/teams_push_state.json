@@ -2745,6 +2745,20 @@
       "source": "대전MBC",
       "source_tier": "trusted_other",
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
+    },
+    "https://tjmbc.co.kr/NewsArticle/856860": {
+      "article_id": "77858638bba979c0",
+      "cluster_key": "title:충남대네이버클라우드충남대병원중부권ai거점센터추진",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-14T20:59:22+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-14T20:59:22+09:00",
+      "normalized_url": "https://tjmbc.co.kr/NewsArticle/856860",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "대전MBC",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
   "last_normal_send_at": "2026-08-14T19:00:42+09:00",
