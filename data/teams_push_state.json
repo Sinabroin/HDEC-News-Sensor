@@ -570,6 +570,16 @@
       "sent_at": "2026-08-11T19:40:06+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "fa16ce2532852aa5": {
+      "cluster_key": "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유",
+      "delivery_id": "teams_ai_push:4b55e08bf785",
+      "first_sent_at": "2026-08-15T00:29:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "303660d4e69ae09b0057a222004e114e7ce966be13e2039ec3e2aee46fc4c3a1",
+      "sent_at": "2026-08-15T00:29:43+09:00",
+      "source": "뉴시스"
+    },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -1031,6 +1041,16 @@
       "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
       "sent_at": "2026-08-06T08:07:51+09:00",
       "source": "대한경제"
+    },
+    "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유": {
+      "cluster_key": "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유",
+      "delivery_id": "teams_ai_push:4b55e08bf785",
+      "first_sent_at": "2026-08-15T00:29:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "303660d4e69ae09b0057a222004e114e7ce966be13e2039ec3e2aee46fc4c3a1",
+      "sent_at": "2026-08-15T00:29:43+09:00",
+      "source": "뉴시스"
     },
     "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
@@ -2761,8 +2781,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-14T19:00:42+09:00",
-  "last_successful_send_at": "2026-08-14T19:00:42+09:00",
+  "last_normal_send_at": "2026-08-15T00:29:43+09:00",
+  "last_successful_send_at": "2026-08-15T00:29:43+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3102,6 +3122,16 @@
       "last_material_update_at": null,
       "material_signature": "ef4a9221d63494e750b0d16f29089042dcc3b123088badecf7f5f640fc9eebec",
       "sent_at": "2026-08-14T19:00:42+09:00",
+      "source": "뉴시스"
+    },
+    "https://newsis.com/view/NISX20260814_0003749928": {
+      "cluster_key": "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유",
+      "delivery_id": "teams_ai_push:4b55e08bf785",
+      "first_sent_at": "2026-08-15T00:29:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "303660d4e69ae09b0057a222004e114e7ce966be13e2039ec3e2aee46fc4c3a1",
+      "sent_at": "2026-08-15T00:29:43+09:00",
       "source": "뉴시스"
     },
     "https://sedaily.com/article/20079249": {
@@ -3785,6 +3815,16 @@
       "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
       "sent_at": "2026-08-06T08:07:51+09:00",
       "source": "대한경제"
+    },
+    "ai돌릴수록돈된다통신사가aidc에꽂힌이유": {
+      "cluster_key": "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유",
+      "delivery_id": "teams_ai_push:4b55e08bf785",
+      "first_sent_at": "2026-08-15T00:29:43+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "303660d4e69ae09b0057a222004e114e7ce966be13e2039ec3e2aee46fc4c3a1",
+      "sent_at": "2026-08-15T00:29:43+09:00",
+      "source": "뉴시스"
     },
     "ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
