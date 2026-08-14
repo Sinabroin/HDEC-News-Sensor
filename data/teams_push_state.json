@@ -510,6 +510,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "d93b842b2bc12685": {
+      "cluster_key": "title:스페이스x코딩스타트업커서85조원에인수완료",
+      "delivery_id": "teams_ai_push:296246d8a87e",
+      "first_sent_at": "2026-08-15T03:32:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25446b6e963644d433f37bf9eec97143d6d820404765029e0b21fd05780268ba",
+      "sent_at": "2026-08-15T03:32:29+09:00",
+      "source": "연합뉴스"
+    },
     "dae33e75888af074": {
       "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
       "delivery_id": "teams_ai_push:3b0f9fef1dac",
@@ -1571,6 +1581,16 @@
       "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
       "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
+    },
+    "title:스페이스x코딩스타트업커서85조원에인수완료": {
+      "cluster_key": "title:스페이스x코딩스타트업커서85조원에인수완료",
+      "delivery_id": "teams_ai_push:296246d8a87e",
+      "first_sent_at": "2026-08-15T03:32:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25446b6e963644d433f37bf9eec97143d6d820404765029e0b21fd05780268ba",
+      "sent_at": "2026-08-15T03:32:29+09:00",
+      "source": "연합뉴스"
     },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
@@ -2781,8 +2801,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T00:29:43+09:00",
-  "last_successful_send_at": "2026-08-15T00:29:43+09:00",
+  "last_normal_send_at": "2026-08-15T03:32:29+09:00",
+  "last_successful_send_at": "2026-08-15T03:32:29+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3723,6 +3743,16 @@
       "material_signature": "c4bd623d929d0bb7a4339fbfe42d65d55c3e2070d6758daf8548e7f9e7e55fae",
       "sent_at": "2026-08-14T11:58:24+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260815002300091": {
+      "cluster_key": "title:스페이스x코딩스타트업커서85조원에인수완료",
+      "delivery_id": "teams_ai_push:296246d8a87e",
+      "first_sent_at": "2026-08-15T03:32:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25446b6e963644d433f37bf9eec97143d6d820404765029e0b21fd05780268ba",
+      "sent_at": "2026-08-15T03:32:29+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -4345,6 +4375,16 @@
       "material_signature": "2293ecdc156a065a6c23612c52675c27bb1081a54d480369ef00e5c0da9ccad0",
       "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
+    },
+    "스페이스x코딩스타트업커서85조원에인수완료": {
+      "cluster_key": "title:스페이스x코딩스타트업커서85조원에인수완료",
+      "delivery_id": "teams_ai_push:296246d8a87e",
+      "first_sent_at": "2026-08-15T03:32:29+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "25446b6e963644d433f37bf9eec97143d6d820404765029e0b21fd05780268ba",
+      "sent_at": "2026-08-15T03:32:29+09:00",
+      "source": "연합뉴스"
     },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
