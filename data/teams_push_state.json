@@ -490,6 +490,16 @@
       "sent_at": "2026-08-09T11:53:41+09:00",
       "source": "IT조선"
     },
+    "ce38c686ed064873": {
+      "cluster_key": "title:스페이스xai코딩커서품었다600억달러빅딜",
+      "delivery_id": "teams_ai_push:6250681da51d",
+      "first_sent_at": "2026-08-15T05:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a9d780c566e02333e8418bcfd18e2dcca01c2ff41638eedf1e1eea771d2fea1d",
+      "sent_at": "2026-08-15T05:11:51+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "ce4967d2f47ff405": {
       "cluster_key": "title:프리즈미안전기자재업체애트코어인수추진북미전력",
       "delivery_id": "teams_ai_push:6f167df94e8c",
@@ -1570,6 +1580,16 @@
       "last_material_update_at": null,
       "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
       "sent_at": "2026-08-14T13:21:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "title:스페이스xai코딩커서품었다600억달러빅딜": {
+      "cluster_key": "title:스페이스xai코딩커서품었다600억달러빅딜",
+      "delivery_id": "teams_ai_push:6250681da51d",
+      "first_sent_at": "2026-08-15T05:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a9d780c566e02333e8418bcfd18e2dcca01c2ff41638eedf1e1eea771d2fea1d",
+      "sent_at": "2026-08-15T05:11:51+09:00",
       "source": "파이낸셜뉴스"
     },
     "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
@@ -2801,8 +2821,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T03:32:29+09:00",
-  "last_successful_send_at": "2026-08-15T03:32:29+09:00",
+  "last_normal_send_at": "2026-08-15T05:11:51+09:00",
+  "last_successful_send_at": "2026-08-15T05:11:51+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2982,6 +3002,16 @@
       "last_material_update_at": null,
       "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
       "sent_at": "2026-08-14T13:21:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202608150424589630": {
+      "cluster_key": "title:스페이스xai코딩커서품었다600억달러빅딜",
+      "delivery_id": "teams_ai_push:6250681da51d",
+      "first_sent_at": "2026-08-15T05:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a9d780c566e02333e8418bcfd18e2dcca01c2ff41638eedf1e1eea771d2fea1d",
+      "sent_at": "2026-08-15T05:11:51+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hbnpress.com/news/view/1065599489272731": {
@@ -4364,6 +4394,16 @@
       "last_material_update_at": null,
       "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
       "sent_at": "2026-08-14T13:21:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "스페이스xai코딩커서품었다600억달러빅딜": {
+      "cluster_key": "title:스페이스xai코딩커서품었다600억달러빅딜",
+      "delivery_id": "teams_ai_push:6250681da51d",
+      "first_sent_at": "2026-08-15T05:11:51+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a9d780c566e02333e8418bcfd18e2dcca01c2ff41638eedf1e1eea771d2fea1d",
+      "sent_at": "2026-08-15T05:11:51+09:00",
       "source": "파이낸셜뉴스"
     },
     "스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
