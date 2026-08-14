@@ -130,6 +130,16 @@
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
     },
+    "309d188e95fa978c": {
+      "cluster_key": "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑",
+      "delivery_id": "teams_ai_push:2f228e99ffd4",
+      "first_sent_at": "2026-08-14T13:21:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
+      "sent_at": "2026-08-14T13:21:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "32ac15c8cb6ede93": {
       "cluster_key": "title:정부smr국가전략기술지정경남원전업계세제혜택기대",
       "delivery_id": "teams_ai_push:c84ea5925f92",
@@ -1482,6 +1492,16 @@
       "sent_at": "2026-08-05T20:35:03+09:00",
       "source": "신아일보"
     },
+    "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑": {
+      "cluster_key": "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑",
+      "delivery_id": "teams_ai_push:2f228e99ffd4",
+      "first_sent_at": "2026-08-14T13:21:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
+      "sent_at": "2026-08-14T13:21:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
       "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
       "delivery_id": "teams_ai_push:8aea2a01d24a",
@@ -2687,8 +2707,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-14T11:58:24+09:00",
-  "last_successful_send_at": "2026-08-14T11:58:24+09:00",
+  "last_normal_send_at": "2026-08-14T13:21:42+09:00",
+  "last_successful_send_at": "2026-08-14T13:21:42+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2848,6 +2868,16 @@
       "last_material_update_at": null,
       "material_signature": "a0dba00fceae3d8f11a31091f7178da07e4d361bc9e7c3ed90bc09799e807636",
       "sent_at": "2026-08-12T04:30:42+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202608141308449417": {
+      "cluster_key": "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑",
+      "delivery_id": "teams_ai_push:2f228e99ffd4",
+      "first_sent_at": "2026-08-14T13:21:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
+      "sent_at": "2026-08-14T13:21:42+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hbnpress.com/news/view/1065599489272731": {
@@ -4161,6 +4191,16 @@
       "material_signature": "f7dd61f7f3440a318cead209c3a51e9bbf4deebe9a6279220c8c2bdd9b1924a1",
       "sent_at": "2026-08-05T20:35:03+09:00",
       "source": "신아일보"
+    },
+    "스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑": {
+      "cluster_key": "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑",
+      "delivery_id": "teams_ai_push:2f228e99ffd4",
+      "first_sent_at": "2026-08-14T13:21:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ebaeefcc2833ae55e6bf2f062bc2d16381bd2e3c63590ed764a350ad9007cf5b",
+      "sent_at": "2026-08-14T13:21:42+09:00",
+      "source": "파이낸셜뉴스"
     },
     "스페이스x상장후첫실적발표d1숫자보다더관심쏠": {
       "cluster_key": "title:스페이스x상장후첫실적발표d1숫자보다더관심쏠",
