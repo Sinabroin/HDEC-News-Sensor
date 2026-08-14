@@ -220,6 +220,16 @@
       "sent_at": "2026-08-04T03:19:18+09:00",
       "source": "뉴스투데이"
     },
+    "57863506a87ea169": {
+      "cluster_key": "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광",
+      "delivery_id": "teams_ai_push:a73454feddc3",
+      "first_sent_at": "2026-08-15T07:22:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
+      "sent_at": "2026-08-15T07:22:53+09:00",
+      "source": "서울경제"
+    },
     "580dc9643056c71d": {
       "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
       "delivery_id": "teams_ai_push:40bcf7d09771",
@@ -1021,6 +1031,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광": {
+      "cluster_key": "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광",
+      "delivery_id": "teams_ai_push:a73454feddc3",
+      "first_sent_at": "2026-08-15T07:22:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
+      "sent_at": "2026-08-15T07:22:53+09:00",
+      "source": "서울경제"
     },
     "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
       "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
@@ -2821,8 +2841,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T05:11:51+09:00",
-  "last_successful_send_at": "2026-08-15T05:11:51+09:00",
+  "last_normal_send_at": "2026-08-15T07:22:53+09:00",
+  "last_successful_send_at": "2026-08-15T07:22:53+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3202,6 +3222,16 @@
       "last_material_update_at": null,
       "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
       "sent_at": "2026-08-14T08:56:29+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20079610": {
+      "cluster_key": "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광",
+      "delivery_id": "teams_ai_push:a73454feddc3",
+      "first_sent_at": "2026-08-15T07:22:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
+      "sent_at": "2026-08-15T07:22:53+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -3835,6 +3865,16 @@
       "material_signature": "b77ccf24acdad3b2692d60025cd2c1af4c9e5d3bc8da83d28905fb6d601d2cee",
       "sent_at": "2026-07-29T09:11:13+09:00",
       "source": "bloter.net"
+    },
+    "800조호남권반도체투자광주넘어전남권으로확대되나전남광": {
+      "cluster_key": "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광",
+      "delivery_id": "teams_ai_push:a73454feddc3",
+      "first_sent_at": "2026-08-15T07:22:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
+      "sent_at": "2026-08-15T07:22:53+09:00",
+      "source": "서울경제"
     },
     "ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
       "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
