@@ -310,6 +310,16 @@
       "sent_at": "2026-08-04T08:46:32+09:00",
       "source": "뉴스핌"
     },
+    "7740ea0f4961c5a6": {
+      "cluster_key": "title:김정관빌게이츠만나smr협력논의원전기업참여확대",
+      "delivery_id": "teams_ai_push:e8eca210df9b",
+      "first_sent_at": "2026-08-14T17:51:55+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "ec2ae582ba76996d101af3d538d42692af2feba8a53e279b9816b6c89528b623",
+      "sent_at": "2026-08-14T17:51:55+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "8318ec15e0c03e51": {
       "cluster_key": "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것",
       "delivery_id": "teams_ai_push:d64cd9196c53",
@@ -1231,6 +1241,16 @@
       "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
       "sent_at": "2026-07-30T00:22:54+09:00",
       "source": "pressian.com"
+    },
+    "title:김정관빌게이츠만나smr협력논의원전기업참여확대": {
+      "cluster_key": "title:김정관빌게이츠만나smr협력논의원전기업참여확대",
+      "delivery_id": "teams_ai_push:e8eca210df9b",
+      "first_sent_at": "2026-08-14T17:51:55+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "ec2ae582ba76996d101af3d538d42692af2feba8a53e279b9816b6c89528b623",
+      "sent_at": "2026-08-14T17:51:55+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
@@ -2708,7 +2728,7 @@
     }
   },
   "last_normal_send_at": "2026-08-14T13:21:42+09:00",
-  "last_successful_send_at": "2026-08-14T13:21:42+09:00",
+  "last_successful_send_at": "2026-08-14T17:51:55+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2848,6 +2868,16 @@
       "last_material_update_at": null,
       "material_signature": "25e98ab23eeabd627e8f870dd54646deba0d901526ee922459bef9b5ba7ea67e",
       "sent_at": "2026-08-14T03:13:01+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
+    "https://etnews.com/20260814000287": {
+      "cluster_key": "title:김정관빌게이츠만나smr협력논의원전기업참여확대",
+      "delivery_id": "teams_ai_push:e8eca210df9b",
+      "first_sent_at": "2026-08-14T17:51:55+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "ec2ae582ba76996d101af3d538d42692af2feba8a53e279b9816b6c89528b623",
+      "sent_at": "2026-08-14T17:51:55+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
     "https://fnnews.com/news/202608111621114292": {
@@ -3931,6 +3961,16 @@
       "material_signature": "cd015f8e5565b5f2187464355fb93e681b4f448d2659b26a32b37931cdccda91",
       "sent_at": "2026-07-30T00:22:54+09:00",
       "source": "pressian.com"
+    },
+    "김정관빌게이츠만나smr협력논의원전기업참여확대": {
+      "cluster_key": "title:김정관빌게이츠만나smr협력논의원전기업참여확대",
+      "delivery_id": "teams_ai_push:e8eca210df9b",
+      "first_sent_at": "2026-08-14T17:51:55+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "ec2ae582ba76996d101af3d538d42692af2feba8a53e279b9816b6c89528b623",
+      "sent_at": "2026-08-14T17:51:55+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "네이버3대주주된엔비디아세종ai데이터센터함께짓는다": {
       "cluster_key": "title:네이버3대주주된엔비디아세종ai데이터센터함께짓는다",
