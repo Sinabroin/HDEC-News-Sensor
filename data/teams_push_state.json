@@ -40,6 +40,16 @@
       "sent_at": "2026-08-09T03:56:49+09:00",
       "source": "연합뉴스"
     },
+    "0f2a215a70a40a23": {
+      "cluster_key": "title:빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점",
+      "delivery_id": "teams_ai_push:862e98a286ca",
+      "first_sent_at": "2026-08-14T19:00:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ef4a9221d63494e750b0d16f29089042dcc3b123088badecf7f5f640fc9eebec",
+      "sent_at": "2026-08-14T19:00:42+09:00",
+      "source": "뉴시스"
+    },
     "10339e80685fa8af": {
       "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
       "delivery_id": "teams_ai_push:d5adcfcc4fb0",
@@ -1482,6 +1492,16 @@
       "sent_at": "2026-07-30T08:12:27+09:00",
       "source": "econovill.com"
     },
+    "title:빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점": {
+      "cluster_key": "title:빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점",
+      "delivery_id": "teams_ai_push:862e98a286ca",
+      "first_sent_at": "2026-08-14T19:00:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ef4a9221d63494e750b0d16f29089042dcc3b123088badecf7f5f640fc9eebec",
+      "sent_at": "2026-08-14T19:00:42+09:00",
+      "source": "뉴시스"
+    },
     "title:빌게이츠이르면내달방한ai차세대원전논의할듯": {
       "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
       "delivery_id": "teams_ai_push:aa57ec6a2dac",
@@ -2727,8 +2747,8 @@
       "title_fingerprint": "ai심장데이터센터사활거는이유는"
     }
   },
-  "last_normal_send_at": "2026-08-14T13:21:42+09:00",
-  "last_successful_send_at": "2026-08-14T17:51:55+09:00",
+  "last_normal_send_at": "2026-08-14T19:00:42+09:00",
+  "last_successful_send_at": "2026-08-14T19:00:42+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3059,6 +3079,16 @@
       "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
       "sent_at": "2026-08-11T09:03:13+09:00",
       "source": "SBS 뉴스"
+    },
+    "https://newsis.com/view/NISX20260814_0003749732": {
+      "cluster_key": "title:빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점",
+      "delivery_id": "teams_ai_push:862e98a286ca",
+      "first_sent_at": "2026-08-14T19:00:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ef4a9221d63494e750b0d16f29089042dcc3b123088badecf7f5f640fc9eebec",
+      "sent_at": "2026-08-14T19:00:42+09:00",
+      "source": "뉴시스"
     },
     "https://sedaily.com/article/20079249": {
       "cluster_key": "title:철강석화ai반도체특수로불황뚫었다",
@@ -4201,6 +4231,16 @@
       "material_signature": "f64d193e5a92d56bbc8667aad97a80ebd5cc8f91cb2a66ed1de5e4465579b75f",
       "sent_at": "2026-07-30T08:12:27+09:00",
       "source": "econovill.com"
+    },
+    "빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점": {
+      "cluster_key": "title:빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점",
+      "delivery_id": "teams_ai_push:862e98a286ca",
+      "first_sent_at": "2026-08-14T19:00:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ef4a9221d63494e750b0d16f29089042dcc3b123088badecf7f5f640fc9eebec",
+      "sent_at": "2026-08-14T19:00:42+09:00",
+      "source": "뉴시스"
     },
     "빌게이츠이르면내달방한ai차세대원전논의할듯": {
       "cluster_key": "title:빌게이츠이르면내달방한ai차세대원전논의할듯",
