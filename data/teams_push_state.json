@@ -390,6 +390,16 @@
       "sent_at": "2026-08-14T05:11:53+09:00",
       "source": "세계일보"
     },
+    "98d13fa3500f22c5": {
+      "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
+      "delivery_id": "teams_ai_push:037fa966231a",
+      "first_sent_at": "2026-08-15T12:53:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
+      "sent_at": "2026-08-15T12:53:06+09:00",
+      "source": "서울경제"
+    },
     "9c862b74fb8e8209": {
       "cluster_key": "title:최태원hbm으로빅테크묶었다5000억달러ai동맹skt까지확장",
       "delivery_id": "teams_ai_push:5b97f9681df3",
@@ -1311,6 +1321,16 @@
       "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
+    },
+    "title:군웅할거ai모델자본경쟁으로선별시동": {
+      "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
+      "delivery_id": "teams_ai_push:037fa966231a",
+      "first_sent_at": "2026-08-15T12:53:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
+      "sent_at": "2026-08-15T12:53:06+09:00",
+      "source": "서울경제"
     },
     "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
@@ -2861,8 +2881,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T11:00:41+09:00",
-  "last_successful_send_at": "2026-08-15T11:00:41+09:00",
+  "last_normal_send_at": "2026-08-15T12:53:06+09:00",
+  "last_successful_send_at": "2026-08-15T12:53:06+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3262,6 +3282,16 @@
       "last_material_update_at": null,
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20079815": {
+      "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
+      "delivery_id": "teams_ai_push:037fa966231a",
+      "first_sent_at": "2026-08-15T12:53:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
+      "sent_at": "2026-08-15T12:53:06+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -4165,6 +4195,16 @@
       "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
+    },
+    "군웅할거ai모델자본경쟁으로선별시동": {
+      "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
+      "delivery_id": "teams_ai_push:037fa966231a",
+      "first_sent_at": "2026-08-15T12:53:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
+      "sent_at": "2026-08-15T12:53:06+09:00",
+      "source": "서울경제"
     },
     "김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
