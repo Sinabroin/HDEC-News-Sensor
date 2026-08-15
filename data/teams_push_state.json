@@ -380,6 +380,16 @@
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
     },
+    "87b15f2b48bf20fa": {
+      "cluster_key": "title:반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의",
+      "delivery_id": "teams_ai_push:8cada06ac9df",
+      "first_sent_at": "2026-08-15T20:31:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd71d749ee228a331ae5bf1ddac9a111632859230f7b1763c261da8f05ada016",
+      "sent_at": "2026-08-15T20:31:09+09:00",
+      "source": "서울경제"
+    },
     "92baa5a958c3d24e": {
       "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
       "delivery_id": "teams_ai_push:f7205365bd29",
@@ -1561,6 +1571,16 @@
       "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
       "sent_at": "2026-08-11T19:40:06+09:00",
       "source": "미래를 보는 창 - 전자신문"
+    },
+    "title:반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의": {
+      "cluster_key": "title:반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의",
+      "delivery_id": "teams_ai_push:8cada06ac9df",
+      "first_sent_at": "2026-08-15T20:31:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd71d749ee228a331ae5bf1ddac9a111632859230f7b1763c261da8f05ada016",
+      "sent_at": "2026-08-15T20:31:09+09:00",
+      "source": "서울경제"
     },
     "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
@@ -2957,8 +2977,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T18:12:58+09:00",
-  "last_successful_send_at": "2026-08-15T18:12:58+09:00",
+  "last_normal_send_at": "2026-08-15T20:31:09+09:00",
+  "last_successful_send_at": "2026-08-15T20:31:09+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3368,6 +3388,16 @@
       "last_material_update_at": null,
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20079812": {
+      "cluster_key": "title:반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의",
+      "delivery_id": "teams_ai_push:8cada06ac9df",
+      "first_sent_at": "2026-08-15T20:31:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd71d749ee228a331ae5bf1ddac9a111632859230f7b1763c261da8f05ada016",
+      "sent_at": "2026-08-15T20:31:09+09:00",
       "source": "서울경제"
     },
     "https://sedaily.com/article/20079815": {
@@ -4511,6 +4541,16 @@
       "material_signature": "fd7415a395ab10660b4280b9366d3dc1ae319289aa517bdd7951ea5c29a18312",
       "sent_at": "2026-08-11T19:40:06+09:00",
       "source": "미래를 보는 창 - 전자신문"
+    },
+    "반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의": {
+      "cluster_key": "title:반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의",
+      "delivery_id": "teams_ai_push:8cada06ac9df",
+      "first_sent_at": "2026-08-15T20:31:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "cd71d749ee228a331ae5bf1ddac9a111632859230f7b1763c261da8f05ada016",
+      "sent_at": "2026-08-15T20:31:09+09:00",
+      "source": "서울경제"
     },
     "배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지": {
       "cluster_key": "title:배경훈부총리겸과학기술정보통신부장관5ai6gsmr까지",
