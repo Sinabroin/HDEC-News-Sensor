@@ -320,6 +320,16 @@
       "sent_at": "2026-08-05T20:35:03+09:00",
       "source": "신아일보"
     },
+    "7090202f5dcdecd6": {
+      "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
+      "delivery_id": "teams_ai_push:0e7d6491d9c1",
+      "first_sent_at": "2026-08-15T11:00:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6c26e710c36f48114c87c417e3d74d7172986d36ff156299742409dc442e34a1",
+      "sent_at": "2026-08-15T11:00:41+09:00",
+      "source": "아시아경제"
+    },
     "746826e161f73c48": {
       "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
       "delivery_id": "teams_ai_push:8b636aa3ff8e",
@@ -1421,6 +1431,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주": {
+      "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
+      "delivery_id": "teams_ai_push:0e7d6491d9c1",
+      "first_sent_at": "2026-08-15T11:00:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6c26e710c36f48114c87c417e3d74d7172986d36ff156299742409dc442e34a1",
+      "sent_at": "2026-08-15T11:00:41+09:00",
+      "source": "아시아경제"
     },
     "title:로봇이움직이고팔런티어가판단하며sap": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
@@ -2841,8 +2861,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T07:22:53+09:00",
-  "last_successful_send_at": "2026-08-15T07:22:53+09:00",
+  "last_normal_send_at": "2026-08-15T11:00:41+09:00",
+  "last_successful_send_at": "2026-08-15T11:00:41+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -2913,6 +2933,16 @@
       "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
       "sent_at": "2026-08-05T18:14:03+09:00",
       "source": "퍼블릭뉴스통신(Public news-network for TTL)"
+    },
+    "https://asiae.co.kr/article/2026081316021922649": {
+      "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
+      "delivery_id": "teams_ai_push:0e7d6491d9c1",
+      "first_sent_at": "2026-08-15T11:00:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6c26e710c36f48114c87c417e3d74d7172986d36ff156299742409dc442e34a1",
+      "sent_at": "2026-08-15T11:00:41+09:00",
+      "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
@@ -4255,6 +4285,16 @@
       "material_signature": "f1025db306271f3ef6f16791381b6e19ed5ff2b34c3a708a262a9d21c1d1ed48",
       "sent_at": "2026-07-29T00:36:38+09:00",
       "source": "biztribune.co.kr"
+    },
+    "딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주": {
+      "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
+      "delivery_id": "teams_ai_push:0e7d6491d9c1",
+      "first_sent_at": "2026-08-15T11:00:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6c26e710c36f48114c87c417e3d74d7172986d36ff156299742409dc442e34a1",
+      "sent_at": "2026-08-15T11:00:41+09:00",
+      "source": "아시아경제"
     },
     "로봇이움직이고팔런티어가판단하며sap": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
