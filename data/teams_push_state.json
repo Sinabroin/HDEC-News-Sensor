@@ -2474,6 +2474,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "스페이스xai코딩스타트업커서85조원에인수완료"
     },
+    "https://it.chosun.com/news/articleView.html?idxno=2023092168266": {
+      "article_id": "80d1fed6497c5e0f",
+      "cluster_key": "ai_event:c634e590b62c88a3ea9b4e05",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-15T17:00:10+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-15T17:00:10+09:00",
+      "normalized_url": "https://it.chosun.com/news/articleView.html?idxno=2023092168266",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "IT조선",
+      "source_tier": "specialist",
+      "title_fingerprint": "엔비디아오픈ai데이터센터채무보증규모절반축소"
+    },
     "https://munhwa.com/article/11608171": {
       "article_id": "1bdd4bdadac4a3fd",
       "cluster_key": "title:생각지도못한ai데이터센터난제화재시보상은보험도감당",
@@ -2536,7 +2550,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-15T16:36:25+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-15T16:36:25+09:00",
+      "last_seen_at": "2026-08-15T17:00:10+09:00",
       "normalized_url": "https://news.einfomax.co.kr/news/articleView.html?idxno=4430336",
       "replaced_by_major_media": "",
       "representative_publisher": "",
