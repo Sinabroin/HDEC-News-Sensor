@@ -420,6 +420,16 @@
       "sent_at": "2026-08-05T12:42:15+09:00",
       "source": "초이스경제"
     },
+    "a4bd177edb4b7594": {
+      "cluster_key": "title:ai대전구글아마존ms이제는비용버티기승부",
+      "delivery_id": "teams_ai_push:9bda4e5f6057",
+      "first_sent_at": "2026-08-15T18:12:58+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3daaca998c56cf2c99ee9ee1bea82bfe3a070b33629628617c7c00583df37be6",
+      "sent_at": "2026-08-15T18:12:58+09:00",
+      "source": "아시아경제"
+    },
     "a65de9a3ca0495dd": {
       "cluster_key": "title:원전8기추가승인더이상머뭇거릴때아니다",
       "delivery_id": "teams_ai_push:96069100b0f3",
@@ -1081,6 +1091,16 @@
       "material_signature": "37b37561fb2e595750d309ec4a9fc91a88e65b28908ffa648af07e1a7aecd6e8",
       "sent_at": "2026-08-09T16:28:29+09:00",
       "source": "KyungHyangSinmun"
+    },
+    "title:ai대전구글아마존ms이제는비용버티기승부": {
+      "cluster_key": "title:ai대전구글아마존ms이제는비용버티기승부",
+      "delivery_id": "teams_ai_push:9bda4e5f6057",
+      "first_sent_at": "2026-08-15T18:12:58+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3daaca998c56cf2c99ee9ee1bea82bfe3a070b33629628617c7c00583df37be6",
+      "sent_at": "2026-08-15T18:12:58+09:00",
+      "source": "아시아경제"
     },
     "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증": {
       "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
@@ -2480,7 +2500,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-15T17:00:10+09:00",
       "holdback_reason": "holdback_active",
-      "last_seen_at": "2026-08-15T17:45:21+09:00",
+      "last_seen_at": "2026-08-15T18:12:57+09:00",
       "normalized_url": "https://it.chosun.com/news/articleView.html?idxno=2023092168266",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -2937,8 +2957,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-15T12:53:06+09:00",
-  "last_successful_send_at": "2026-08-15T12:53:06+09:00",
+  "last_normal_send_at": "2026-08-15T18:12:58+09:00",
+  "last_successful_send_at": "2026-08-15T18:12:58+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3009,6 +3029,16 @@
       "material_signature": "2fe87045030c2e848279ed5930f5d2828b795bd832436137028e992b928a6ffd",
       "sent_at": "2026-08-05T18:14:03+09:00",
       "source": "퍼블릭뉴스통신(Public news-network for TTL)"
+    },
+    "https://asiae.co.kr/article/2026081315350228917": {
+      "cluster_key": "title:ai대전구글아마존ms이제는비용버티기승부",
+      "delivery_id": "teams_ai_push:9bda4e5f6057",
+      "first_sent_at": "2026-08-15T18:12:58+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3daaca998c56cf2c99ee9ee1bea82bfe3a070b33629628617c7c00583df37be6",
+      "sent_at": "2026-08-15T18:12:58+09:00",
+      "source": "아시아경제"
     },
     "https://asiae.co.kr/article/2026081316021922649": {
       "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
@@ -4011,6 +4041,16 @@
       "material_signature": "37b37561fb2e595750d309ec4a9fc91a88e65b28908ffa648af07e1a7aecd6e8",
       "sent_at": "2026-08-09T16:28:29+09:00",
       "source": "KyungHyangSinmun"
+    },
+    "ai대전구글아마존ms이제는비용버티기승부": {
+      "cluster_key": "title:ai대전구글아마존ms이제는비용버티기승부",
+      "delivery_id": "teams_ai_push:9bda4e5f6057",
+      "first_sent_at": "2026-08-15T18:12:58+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3daaca998c56cf2c99ee9ee1bea82bfe3a070b33629628617c7c00583df37be6",
+      "sent_at": "2026-08-15T18:12:58+09:00",
+      "source": "아시아경제"
     },
     "ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증": {
       "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
