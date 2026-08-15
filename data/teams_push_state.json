@@ -100,6 +100,16 @@
       "sent_at": "2026-08-05T03:49:29+09:00",
       "source": "뉴스퀘스트"
     },
+    "21665955e2407d5b": {
+      "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
+      "delivery_id": "teams_ai_push:19cb31baba15",
+      "first_sent_at": "2026-08-16T08:30:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0d59a7f5192b670ba159dd44f9c175c2503c27fa8b0cb406342c6bbed5a68cf8",
+      "sent_at": "2026-08-16T08:30:15+09:00",
+      "source": "서울경제"
+    },
     "2329152e1231f37d": {
       "cluster_key": "title:구광모내주실리콘밸리행젠슨황만나피지컬ai협력",
       "delivery_id": "teams_ai_push:c04e02143049",
@@ -1261,6 +1271,16 @@
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
+    },
+    "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까": {
+      "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
+      "delivery_id": "teams_ai_push:19cb31baba15",
+      "first_sent_at": "2026-08-16T08:30:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0d59a7f5192b670ba159dd44f9c175c2503c27fa8b0cb406342c6bbed5a68cf8",
+      "sent_at": "2026-08-16T08:30:15+09:00",
+      "source": "서울경제"
     },
     "title:oci홀딩스14조증설승부수차입5000억시": {
       "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
@@ -2512,7 +2532,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-16T07:58:43+09:00",
+      "last_seen_at": "2026-08-16T08:30:13+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3011,8 +3031,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-16T05:21:29+09:00",
-  "last_successful_send_at": "2026-08-16T05:21:29+09:00",
+  "last_normal_send_at": "2026-08-16T08:30:15+09:00",
+  "last_successful_send_at": "2026-08-16T08:30:15+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3432,6 +3452,16 @@
       "last_material_update_at": null,
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20079639": {
+      "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
+      "delivery_id": "teams_ai_push:19cb31baba15",
+      "first_sent_at": "2026-08-16T08:30:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0d59a7f5192b670ba159dd44f9c175c2503c27fa8b0cb406342c6bbed5a68cf8",
+      "sent_at": "2026-08-16T08:30:15+09:00",
       "source": "서울경제"
     },
     "https://sedaily.com/article/20079812": {
@@ -4265,6 +4295,16 @@
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
+    },
+    "lgskt에도전장낸스타트업국가대표ai4파전누가웃을까": {
+      "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
+      "delivery_id": "teams_ai_push:19cb31baba15",
+      "first_sent_at": "2026-08-16T08:30:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0d59a7f5192b670ba159dd44f9c175c2503c27fa8b0cb406342c6bbed5a68cf8",
+      "sent_at": "2026-08-16T08:30:15+09:00",
+      "source": "서울경제"
     },
     "oci홀딩스14조증설승부수차입5000억시": {
       "cluster_key": "title:oci홀딩스14조증설승부수차입5000억시",
