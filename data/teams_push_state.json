@@ -2530,6 +2530,20 @@
       "source_tier": "trusted_other",
       "title_fingerprint": "왜지금lg인가모건스탠리가꼽은로봇주변신5가지이유"
     },
+    "https://news.einfomax.co.kr/news/articleView.html?idxno=4430336": {
+      "article_id": "3bccfb543a4c9b4d",
+      "cluster_key": "title:정부애플에중국산메모리반도체구매자제촉구",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-15T16:36:25+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-15T16:36:25+09:00",
+      "normalized_url": "https://news.einfomax.co.kr/news/articleView.html?idxno=4430336",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "연합인포맥스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "정부애플에중국산메모리반도체구매자제촉구"
+    },
     "https://newsis.com/view/NISX20260805_0003737877": {
       "article_id": "261d8330dbfa66ec",
       "cluster_key": "title:한국판팔란티어꿈꾼다네이버가국방ai사업에진심인이유",
