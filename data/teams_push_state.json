@@ -490,6 +490,16 @@
       "sent_at": "2026-08-06T06:57:47+09:00",
       "source": "대한경제"
     },
+    "b1b01f3b66545dbf": {
+      "cluster_key": "title:통신보다ai가더큰다이통3사성장축바꾼데이터센터통신ai베팅1",
+      "delivery_id": "teams_ai_push:cb208cd51072",
+      "first_sent_at": "2026-08-16T13:22:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c64b8599ff144a00463f0e5f63ce760a9baa6f2bf080a2e234c8c786e8880232",
+      "sent_at": "2026-08-16T13:22:49+09:00",
+      "source": "뉴시스"
+    },
     "b64be0b5da1fca3b": {
       "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
       "delivery_id": "teams_ai_push:d8891c057abf",
@@ -1992,6 +2002,16 @@
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
     },
+    "title:통신보다ai가더큰다이통3사성장축바꾼데이터센터통신ai베팅1": {
+      "cluster_key": "title:통신보다ai가더큰다이통3사성장축바꾼데이터센터통신ai베팅1",
+      "delivery_id": "teams_ai_push:cb208cd51072",
+      "first_sent_at": "2026-08-16T13:22:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c64b8599ff144a00463f0e5f63ce760a9baa6f2bf080a2e234c8c786e8880232",
+      "sent_at": "2026-08-16T13:22:49+09:00",
+      "source": "뉴시스"
+    },
     "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것": {
       "cluster_key": "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것",
       "delivery_id": "teams_ai_push:d64cd9196c53",
@@ -2552,7 +2572,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-16T12:36:58+09:00",
+      "last_seen_at": "2026-08-16T13:22:46+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3051,8 +3071,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-16T11:42:57+09:00",
-  "last_successful_send_at": "2026-08-16T11:42:57+09:00",
+  "last_normal_send_at": "2026-08-16T13:22:49+09:00",
+  "last_successful_send_at": "2026-08-16T13:22:49+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3423,6 +3443,16 @@
       "material_signature": "40467378efb04a7f64c723ad4fd7f96c1ca18b8773132c24f1dcad4beadbb8f5",
       "sent_at": "2026-08-16T11:42:57+09:00",
       "source": "뉴스1"
+    },
+    "https://newsis.com/view/NISX20260813_0003748290": {
+      "cluster_key": "title:통신보다ai가더큰다이통3사성장축바꾼데이터센터통신ai베팅1",
+      "delivery_id": "teams_ai_push:cb208cd51072",
+      "first_sent_at": "2026-08-16T13:22:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c64b8599ff144a00463f0e5f63ce760a9baa6f2bf080a2e234c8c786e8880232",
+      "sent_at": "2026-08-16T13:22:49+09:00",
+      "source": "뉴시스"
     },
     "https://newsis.com/view/NISX20260814_0003749732": {
       "cluster_key": "title:빌게이츠방한으로본ai전력전쟁빅테크차세대원전선점",
@@ -5035,6 +5065,16 @@
       "material_signature": "432781d2a7d4df71b69d5dcac6e7a2f31a19decb22a049fe3c145b8eebb9de10",
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
+    },
+    "통신보다ai가더큰다이통3사성장축바꾼데이터센터통신ai베팅1": {
+      "cluster_key": "title:통신보다ai가더큰다이통3사성장축바꾼데이터센터통신ai베팅1",
+      "delivery_id": "teams_ai_push:cb208cd51072",
+      "first_sent_at": "2026-08-16T13:22:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c64b8599ff144a00463f0e5f63ce760a9baa6f2bf080a2e234c8c786e8880232",
+      "sent_at": "2026-08-16T13:22:49+09:00",
+      "source": "뉴시스"
     },
     "트럼프중국의ai암호화폐장악안돼시진핑과논의할것": {
       "cluster_key": "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것",
