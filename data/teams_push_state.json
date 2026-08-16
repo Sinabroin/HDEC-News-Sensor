@@ -370,6 +370,16 @@
       "sent_at": "2026-08-15T11:00:41+09:00",
       "source": "아시아경제"
     },
+    "7293c2e9f3a01c80": {
+      "cluster_key": "title:ai패권다투는중국도녹색기준한국은데이터센터속도전만",
+      "delivery_id": "teams_ai_push:3fcc72529279",
+      "first_sent_at": "2026-08-17T07:22:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
+      "sent_at": "2026-08-17T07:22:42+09:00",
+      "source": "한겨레"
+    },
     "746826e161f73c48": {
       "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
       "delivery_id": "teams_ai_push:8b636aa3ff8e",
@@ -1331,6 +1341,16 @@
       "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
       "sent_at": "2026-08-05T05:25:09+09:00",
       "source": "녹색경제신문"
+    },
+    "title:ai패권다투는중국도녹색기준한국은데이터센터속도전만": {
+      "cluster_key": "title:ai패권다투는중국도녹색기준한국은데이터센터속도전만",
+      "delivery_id": "teams_ai_push:3fcc72529279",
+      "first_sent_at": "2026-08-17T07:22:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
+      "sent_at": "2026-08-17T07:22:42+09:00",
+      "source": "한겨레"
     },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -2652,7 +2672,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-17T06:55:28+09:00",
+      "last_seen_at": "2026-08-17T07:22:41+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3165,8 +3185,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-16T18:48:22+09:00",
-  "last_successful_send_at": "2026-08-16T18:48:22+09:00",
+  "last_normal_send_at": "2026-08-17T07:22:42+09:00",
+  "last_successful_send_at": "2026-08-17T07:22:42+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3397,6 +3417,16 @@
       "material_signature": "f776eeeb45bb2b162a6f205a206d8f30bd440f2b0477909742cfdfae65cdc18a",
       "sent_at": "2026-08-16T18:48:22+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "https://hani.co.kr/arti/economy/it/1273187.html": {
+      "cluster_key": "title:ai패권다투는중국도녹색기준한국은데이터센터속도전만",
+      "delivery_id": "teams_ai_push:3fcc72529279",
+      "first_sent_at": "2026-08-17T07:22:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
+      "sent_at": "2026-08-17T07:22:42+09:00",
+      "source": "한겨레"
     },
     "https://hankookilbo.com/news/article/A2026081615470005737": {
       "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
@@ -4489,6 +4519,16 @@
       "material_signature": "87eacd904213bd3a6fa807b92e95e747c1d5ea7b56fa9c140ba97930f22a54f3",
       "sent_at": "2026-08-05T05:25:09+09:00",
       "source": "녹색경제신문"
+    },
+    "ai패권다투는중국도녹색기준한국은데이터센터속도전만": {
+      "cluster_key": "title:ai패권다투는중국도녹색기준한국은데이터센터속도전만",
+      "delivery_id": "teams_ai_push:3fcc72529279",
+      "first_sent_at": "2026-08-17T07:22:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
+      "sent_at": "2026-08-17T07:22:42+09:00",
+      "source": "한겨레"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
