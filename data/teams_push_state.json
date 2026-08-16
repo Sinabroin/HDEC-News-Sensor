@@ -220,6 +220,16 @@
       "sent_at": "2026-08-06T02:15:06+09:00",
       "source": "포춘코리아"
     },
+    "44793f748522637c": {
+      "cluster_key": "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략",
+      "delivery_id": "teams_ai_push:7dcf3d5e4a24",
+      "first_sent_at": "2026-08-16T14:40:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "880b2c86f41b5d40731cf13ac12e3daaecb5dcfcad9407b9d32c32462541b7c5",
+      "sent_at": "2026-08-16T14:40:57+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
       "delivery_id": "teams_ai_push:cda34e0b7d63",
@@ -1422,6 +1432,16 @@
       "sent_at": "2026-08-15T12:53:06+09:00",
       "source": "서울경제"
     },
+    "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략": {
+      "cluster_key": "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략",
+      "delivery_id": "teams_ai_push:7dcf3d5e4a24",
+      "first_sent_at": "2026-08-16T14:40:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "880b2c86f41b5d40731cf13ac12e3daaecb5dcfcad9407b9d32c32462541b7c5",
+      "sent_at": "2026-08-16T14:40:57+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
       "delivery_id": "teams_ai_push:3d7f0fda4114",
@@ -2572,7 +2592,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-16T14:02:58+09:00",
+      "last_seen_at": "2026-08-16T14:40:55+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3071,8 +3091,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-16T13:22:49+09:00",
-  "last_successful_send_at": "2026-08-16T13:22:49+09:00",
+  "last_normal_send_at": "2026-08-16T14:40:57+09:00",
+  "last_successful_send_at": "2026-08-16T14:40:57+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3232,6 +3252,16 @@
       "last_material_update_at": null,
       "material_signature": "25e98ab23eeabd627e8f870dd54646deba0d901526ee922459bef9b5ba7ea67e",
       "sent_at": "2026-08-14T03:13:01+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
+    "https://etnews.com/20260813000172": {
+      "cluster_key": "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략",
+      "delivery_id": "teams_ai_push:7dcf3d5e4a24",
+      "first_sent_at": "2026-08-16T14:40:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "880b2c86f41b5d40731cf13ac12e3daaecb5dcfcad9407b9d32c32462541b7c5",
+      "sent_at": "2026-08-16T14:40:57+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
     "https://etnews.com/20260814000287": {
@@ -4485,6 +4515,16 @@
       "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
       "sent_at": "2026-08-15T12:53:06+09:00",
       "source": "서울경제"
+    },
+    "그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략": {
+      "cluster_key": "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략",
+      "delivery_id": "teams_ai_push:7dcf3d5e4a24",
+      "first_sent_at": "2026-08-16T14:40:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "880b2c86f41b5d40731cf13ac12e3daaecb5dcfcad9407b9d32c32462541b7c5",
+      "sent_at": "2026-08-16T14:40:57+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "김민석3대메가프로젝트2차3차도있어송영길현대차9조원900": {
       "cluster_key": "title:김민석3대메가프로젝트2차3차도있어송영길현대차9조원900",
