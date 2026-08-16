@@ -490,6 +490,16 @@
       "sent_at": "2026-08-04T01:25:20+09:00",
       "source": "서울경제"
     },
+    "a712a8c1d41d18dd": {
+      "cluster_key": "title:aidc판키우는통신3사통신이을수익원으로키운다",
+      "delivery_id": "teams_ai_push:9a44149b940a",
+      "first_sent_at": "2026-08-16T15:59:10+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e122b0e6ff6d30e7ec6edb02469753c66da9335297233d092c30c0239e613966",
+      "sent_at": "2026-08-16T15:59:10+09:00",
+      "source": "뉴시스"
+    },
     "ae27a34651878da5": {
       "cluster_key": "title:pc면진장치결합하중진동잡는",
       "delivery_id": "teams_ai_push:76697f99cb86",
@@ -1131,6 +1141,16 @@
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
       "source": "서울경제"
+    },
+    "title:aidc판키우는통신3사통신이을수익원으로키운다": {
+      "cluster_key": "title:aidc판키우는통신3사통신이을수익원으로키운다",
+      "delivery_id": "teams_ai_push:9a44149b940a",
+      "first_sent_at": "2026-08-16T15:59:10+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e122b0e6ff6d30e7ec6edb02469753c66da9335297233d092c30c0239e613966",
+      "sent_at": "2026-08-16T15:59:10+09:00",
+      "source": "뉴시스"
     },
     "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
       "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
@@ -2592,7 +2612,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-16T15:05:44+09:00",
+      "last_seen_at": "2026-08-16T15:59:07+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3091,8 +3111,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-16T14:40:57+09:00",
-  "last_successful_send_at": "2026-08-16T14:40:57+09:00",
+  "last_normal_send_at": "2026-08-16T15:59:10+09:00",
+  "last_successful_send_at": "2026-08-16T15:59:10+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3512,6 +3532,16 @@
       "last_material_update_at": null,
       "material_signature": "4b4abee18f26ae4bdadb2eda9a1990a6271ad033dac8c498a3c8297b653e05a8",
       "sent_at": "2026-08-16T05:21:29+09:00",
+      "source": "뉴시스"
+    },
+    "https://newsis.com/view/NISX20260814_0003750210": {
+      "cluster_key": "title:aidc판키우는통신3사통신이을수익원으로키운다",
+      "delivery_id": "teams_ai_push:9a44149b940a",
+      "first_sent_at": "2026-08-16T15:59:10+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e122b0e6ff6d30e7ec6edb02469753c66da9335297233d092c30c0239e613966",
+      "sent_at": "2026-08-16T15:59:10+09:00",
       "source": "뉴시스"
     },
     "https://sedaily.com/article/20079249": {
@@ -4215,6 +4245,16 @@
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
       "source": "서울경제"
+    },
+    "aidc판키우는통신3사통신이을수익원으로키운다": {
+      "cluster_key": "title:aidc판키우는통신3사통신이을수익원으로키운다",
+      "delivery_id": "teams_ai_push:9a44149b940a",
+      "first_sent_at": "2026-08-16T15:59:10+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e122b0e6ff6d30e7ec6edb02469753c66da9335297233d092c30c0239e613966",
+      "sent_at": "2026-08-16T15:59:10+09:00",
+      "source": "뉴시스"
     },
     "ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까": {
       "cluster_key": "title:ai경쟁뒤처진애플도대체애플은뭘믿고있는걸까",
