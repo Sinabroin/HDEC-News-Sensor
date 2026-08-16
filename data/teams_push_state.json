@@ -520,6 +520,16 @@
       "sent_at": "2026-08-16T13:22:49+09:00",
       "source": "뉴시스"
     },
+    "b5a12df626131501": {
+      "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
+      "delivery_id": "teams_ai_push:ece8b1665f2f",
+      "first_sent_at": "2026-08-16T17:05:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
+      "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
+    },
     "b64be0b5da1fca3b": {
       "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
       "delivery_id": "teams_ai_push:d8891c057abf",
@@ -1812,6 +1822,16 @@
       "sent_at": "2026-08-15T03:32:29+09:00",
       "source": "연합뉴스"
     },
+    "title:양다리안돼한국등동맹에ai기구가입금지최후통첩": {
+      "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
+      "delivery_id": "teams_ai_push:ece8b1665f2f",
+      "first_sent_at": "2026-08-16T17:05:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
+      "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
+    },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -2612,7 +2632,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-16T16:40:48+09:00",
+      "last_seen_at": "2026-08-16T17:05:33+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3111,8 +3131,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-16T15:59:10+09:00",
-  "last_successful_send_at": "2026-08-16T15:59:10+09:00",
+  "last_normal_send_at": "2026-08-16T17:05:35+09:00",
+  "last_successful_send_at": "2026-08-16T17:05:35+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3333,6 +3353,16 @@
       "material_signature": "a9d780c566e02333e8418bcfd18e2dcca01c2ff41638eedf1e1eea771d2fea1d",
       "sent_at": "2026-08-15T05:11:51+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "https://hankookilbo.com/news/article/A2026081615470005737": {
+      "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
+      "delivery_id": "teams_ai_push:ece8b1665f2f",
+      "first_sent_at": "2026-08-16T17:05:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
+      "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
     },
     "https://hbnpress.com/news/view/1065599489272731": {
       "cluster_key": "title:경기도의회국민의힘ai국업무보고받아",
@@ -4915,6 +4945,16 @@
       "material_signature": "25446b6e963644d433f37bf9eec97143d6d820404765029e0b21fd05780268ba",
       "sent_at": "2026-08-15T03:32:29+09:00",
       "source": "연합뉴스"
+    },
+    "양다리안돼한국등동맹에ai기구가입금지최후통첩": {
+      "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
+      "delivery_id": "teams_ai_push:ece8b1665f2f",
+      "first_sent_at": "2026-08-16T17:05:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
+      "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
     },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
