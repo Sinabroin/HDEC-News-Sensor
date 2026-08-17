@@ -2832,7 +2832,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-17T23:44:05+09:00",
+      "last_seen_at": "2026-08-18T00:12:27+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3007,6 +3007,20 @@
       "source": "연합인포맥스",
       "source_tier": "trusted_other",
       "title_fingerprint": "ai가연예약매출삼전닉스넘어산업전반확산"
+    },
+    "https://news.einfomax.co.kr/news/articleView.html?idxno=4430412": {
+      "article_id": "52a9bfe6f5d4274c",
+      "cluster_key": "title:엔비디아오픈ai오하이오데이터센터임차계약에1천50억달러보증",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-18T00:12:27+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-18T00:12:27+09:00",
+      "normalized_url": "https://news.einfomax.co.kr/news/articleView.html?idxno=4430412",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "연합인포맥스",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "엔비디아오픈ai오하이오데이터센터임차계약에1천50억달러보증"
     },
     "https://newsis.com/view/NISX20260805_0003737877": {
       "article_id": "261d8330dbfa66ec",
