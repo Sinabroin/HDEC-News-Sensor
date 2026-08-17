@@ -630,6 +630,16 @@
       "sent_at": "2026-08-06T22:25:27+09:00",
       "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
     },
+    "bc472dfd8ae89dd9": {
+      "cluster_key": "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대",
+      "delivery_id": "teams_ai_push:9a63f7d7c037",
+      "first_sent_at": "2026-08-17T18:43:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4c11052e60af012dd252bacebd72a246eb4ca6b7268de654c4623fa5eea64ad9",
+      "sent_at": "2026-08-17T18:43:29+09:00",
+      "source": "문화일보"
+    },
     "be78a660fee97ba4": {
       "cluster_key": "title:5일중국증시ai랠리훈풍이어질까순환매장세지속주",
       "delivery_id": "teams_ai_push:860f1b41957d",
@@ -1431,6 +1441,16 @@
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
+    },
+    "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대": {
+      "cluster_key": "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대",
+      "delivery_id": "teams_ai_push:9a63f7d7c037",
+      "first_sent_at": "2026-08-17T18:43:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4c11052e60af012dd252bacebd72a246eb4ca6b7268de654c4623fa5eea64ad9",
+      "sent_at": "2026-08-17T18:43:29+09:00",
+      "source": "문화일보"
     },
     "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까": {
       "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
@@ -3328,7 +3348,7 @@
     }
   },
   "last_normal_send_at": "2026-08-17T17:56:03+09:00",
-  "last_successful_send_at": "2026-08-17T17:56:03+09:00",
+  "last_successful_send_at": "2026-08-17T18:43:29+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3699,6 +3719,16 @@
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
+    },
+    "https://munhwa.com/article/11609935": {
+      "cluster_key": "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대",
+      "delivery_id": "teams_ai_push:9a63f7d7c037",
+      "first_sent_at": "2026-08-17T18:43:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4c11052e60af012dd252bacebd72a246eb4ca6b7268de654c4623fa5eea64ad9",
+      "sent_at": "2026-08-17T18:43:29+09:00",
+      "source": "문화일보"
     },
     "https://news.bizwatch.co.kr/article/mobile/2026/07/28/0025": {
       "cluster_key": "title:청사진에서실행으로네이버sktai인프라베팅본격화",
@@ -4751,6 +4781,16 @@
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
+    },
+    "hd현대현대건설테라파워와손잡고미국smr시장진출확대": {
+      "cluster_key": "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대",
+      "delivery_id": "teams_ai_push:9a63f7d7c037",
+      "first_sent_at": "2026-08-17T18:43:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4c11052e60af012dd252bacebd72a246eb4ca6b7268de654c4623fa5eea64ad9",
+      "sent_at": "2026-08-17T18:43:29+09:00",
+      "source": "문화일보"
     },
     "lgskt에도전장낸스타트업국가대표ai4파전누가웃을까": {
       "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
