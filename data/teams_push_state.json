@@ -40,6 +40,16 @@
       "sent_at": "2026-08-17T15:58:02+09:00",
       "source": "한겨레"
     },
+    "0db078549dfff70c": {
+      "cluster_key": "title:그록몸값반토막엔비디아경쟁대신데이터센터로전환",
+      "delivery_id": "teams_ai_push:98e3aba47aba",
+      "first_sent_at": "2026-08-18T01:05:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1e43c6a11ae9bbcfc40518f658a221d9a3867097047f3ed7c171f1750e1a4271",
+      "sent_at": "2026-08-18T01:05:40+09:00",
+      "source": "아시아경제"
+    },
     "0e948b03d2ed7816": {
       "cluster_key": "title:ai인프라에주목하는엔비디아전력업체랜시엄에4조원투자",
       "delivery_id": "teams_ai_push:47f0f79edf16",
@@ -1592,6 +1602,16 @@
       "sent_at": "2026-08-15T12:53:06+09:00",
       "source": "서울경제"
     },
+    "title:그록몸값반토막엔비디아경쟁대신데이터센터로전환": {
+      "cluster_key": "title:그록몸값반토막엔비디아경쟁대신데이터센터로전환",
+      "delivery_id": "teams_ai_push:98e3aba47aba",
+      "first_sent_at": "2026-08-18T01:05:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1e43c6a11ae9bbcfc40518f658a221d9a3867097047f3ed7c171f1750e1a4271",
+      "sent_at": "2026-08-18T01:05:40+09:00",
+      "source": "아시아경제"
+    },
     "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략": {
       "cluster_key": "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략",
       "delivery_id": "teams_ai_push:7dcf3d5e4a24",
@@ -2832,7 +2852,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-18T00:45:57+09:00",
+      "last_seen_at": "2026-08-18T01:05:39+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3401,8 +3421,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-17T21:41:35+09:00",
-  "last_successful_send_at": "2026-08-17T21:41:35+09:00",
+  "last_normal_send_at": "2026-08-18T01:05:40+09:00",
+  "last_successful_send_at": "2026-08-18T01:05:40+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3492,6 +3512,16 @@
       "last_material_update_at": null,
       "material_signature": "6c26e710c36f48114c87c417e3d74d7172986d36ff156299742409dc442e34a1",
       "sent_at": "2026-08-15T11:00:41+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026081800504693997": {
+      "cluster_key": "title:그록몸값반토막엔비디아경쟁대신데이터센터로전환",
+      "delivery_id": "teams_ai_push:98e3aba47aba",
+      "first_sent_at": "2026-08-18T01:05:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1e43c6a11ae9bbcfc40518f658a221d9a3867097047f3ed7c171f1750e1a4271",
+      "sent_at": "2026-08-18T01:05:40+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -4985,6 +5015,16 @@
       "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
       "sent_at": "2026-08-15T12:53:06+09:00",
       "source": "서울경제"
+    },
+    "그록몸값반토막엔비디아경쟁대신데이터센터로전환": {
+      "cluster_key": "title:그록몸값반토막엔비디아경쟁대신데이터센터로전환",
+      "delivery_id": "teams_ai_push:98e3aba47aba",
+      "first_sent_at": "2026-08-18T01:05:40+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "1e43c6a11ae9bbcfc40518f658a221d9a3867097047f3ed7c171f1750e1a4271",
+      "sent_at": "2026-08-18T01:05:40+09:00",
+      "source": "아시아경제"
     },
     "그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략": {
       "cluster_key": "title:그리드위즈알엑스smr전력망유연성으로ai데이터센터공동공략",
