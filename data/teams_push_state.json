@@ -680,6 +680,16 @@
       "sent_at": "2026-08-15T03:32:29+09:00",
       "source": "연합뉴스"
     },
+    "da121152a0edbc9b": {
+      "cluster_key": "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린",
+      "delivery_id": "teams_ai_push:210b8bcad885",
+      "first_sent_at": "2026-08-17T11:37:08+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "03c17e3ec807f9de00c7218f3f6cb2dff6a597edf8824c16c4b24cb33f5071d6",
+      "sent_at": "2026-08-17T11:37:08+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "dae33e75888af074": {
       "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
       "delivery_id": "teams_ai_push:3b0f9fef1dac",
@@ -1902,6 +1912,16 @@
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
     },
+    "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린": {
+      "cluster_key": "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린",
+      "delivery_id": "teams_ai_push:210b8bcad885",
+      "first_sent_at": "2026-08-17T11:37:08+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "03c17e3ec807f9de00c7218f3f6cb2dff6a597edf8824c16c4b24cb33f5071d6",
+      "sent_at": "2026-08-17T11:37:08+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
     "title:영업익8190억포스코웃을때현대제철어닝쇼크": {
       "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
       "delivery_id": "teams_ai_push:830fe42c7d3e",
@@ -2692,7 +2712,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-17T08:54:35+09:00",
+      "last_seen_at": "2026-08-17T11:37:07+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3233,8 +3253,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-17T10:11:23+09:00",
-  "last_successful_send_at": "2026-08-17T10:11:23+09:00",
+  "last_normal_send_at": "2026-08-17T11:37:08+09:00",
+  "last_successful_send_at": "2026-08-17T11:37:08+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3414,6 +3434,16 @@
       "last_material_update_at": null,
       "material_signature": "ec2ae582ba76996d101af3d538d42692af2feba8a53e279b9816b6c89528b623",
       "sent_at": "2026-08-14T17:51:55+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
+    "https://etnews.com/20260817000072": {
+      "cluster_key": "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린",
+      "delivery_id": "teams_ai_push:210b8bcad885",
+      "first_sent_at": "2026-08-17T11:37:08+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "03c17e3ec807f9de00c7218f3f6cb2dff6a597edf8824c16c4b24cb33f5071d6",
+      "sent_at": "2026-08-17T11:37:08+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
     "https://fnnews.com/news/202608111621114292": {
@@ -5127,6 +5157,16 @@
       "material_signature": "bb9d6a3bc1dee021b357af381dd41fa705ca3db1c572e059681fec84bec76b4e",
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
+    },
+    "연1080억달러인프라부족한아프리카전력용수ai투자시장열린": {
+      "cluster_key": "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린",
+      "delivery_id": "teams_ai_push:210b8bcad885",
+      "first_sent_at": "2026-08-17T11:37:08+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "03c17e3ec807f9de00c7218f3f6cb2dff6a597edf8824c16c4b24cb33f5071d6",
+      "sent_at": "2026-08-17T11:37:08+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "영업익8190억포스코웃을때현대제철어닝쇼크": {
       "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
