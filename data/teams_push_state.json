@@ -180,6 +180,16 @@
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
     },
+    "2e3e4e0769ba0e90": {
+      "cluster_key": "title:통신3사ai인프라기업부상aidc로승부건다",
+      "delivery_id": "teams_ai_push:629a4a900779",
+      "first_sent_at": "2026-08-17T19:54:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff8603372e8e22172b04a9be1f1869472f8e35fee41484fb8efec6b86b9da0ec",
+      "sent_at": "2026-08-17T19:54:16+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "2f6b9a0bcd868d55": {
       "cluster_key": "title:물가낮춘다던ai올해는거꾸로밀어올린다최대04p계산나왔다",
       "delivery_id": "teams_ai_push:9de724a1a989",
@@ -2212,6 +2222,16 @@
       "sent_at": "2026-08-14T05:11:53+09:00",
       "source": "세계일보"
     },
+    "title:통신3사ai인프라기업부상aidc로승부건다": {
+      "cluster_key": "title:통신3사ai인프라기업부상aidc로승부건다",
+      "delivery_id": "teams_ai_push:629a4a900779",
+      "first_sent_at": "2026-08-17T19:54:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff8603372e8e22172b04a9be1f1869472f8e35fee41484fb8efec6b86b9da0ec",
+      "sent_at": "2026-08-17T19:54:16+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "title:통신3사si기업들국내ai데이터센터전방위구축본격화": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
       "delivery_id": "teams_ai_push:eaac50fef721",
@@ -3347,8 +3367,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-17T17:56:03+09:00",
-  "last_successful_send_at": "2026-08-17T18:43:29+09:00",
+  "last_normal_send_at": "2026-08-17T19:54:16+09:00",
+  "last_successful_send_at": "2026-08-17T19:54:16+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3588,6 +3608,16 @@
       "last_material_update_at": null,
       "material_signature": "f776eeeb45bb2b162a6f205a206d8f30bd440f2b0477909742cfdfae65cdc18a",
       "sent_at": "2026-08-16T18:48:22+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202608171832257077": {
+      "cluster_key": "title:통신3사ai인프라기업부상aidc로승부건다",
+      "delivery_id": "teams_ai_push:629a4a900779",
+      "first_sent_at": "2026-08-17T19:54:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff8603372e8e22172b04a9be1f1869472f8e35fee41484fb8efec6b86b9da0ec",
+      "sent_at": "2026-08-17T19:54:16+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hani.co.kr/arti/economy/it/1273187.html": {
@@ -5551,6 +5581,16 @@
       "material_signature": "e2b5ed9072fe8f2525ce6fc7fac861e51367b0ee4352c3ebb1799556c37bc142",
       "sent_at": "2026-08-14T05:11:53+09:00",
       "source": "세계일보"
+    },
+    "통신3사ai인프라기업부상aidc로승부건다": {
+      "cluster_key": "title:통신3사ai인프라기업부상aidc로승부건다",
+      "delivery_id": "teams_ai_push:629a4a900779",
+      "first_sent_at": "2026-08-17T19:54:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff8603372e8e22172b04a9be1f1869472f8e35fee41484fb8efec6b86b9da0ec",
+      "sent_at": "2026-08-17T19:54:16+09:00",
+      "source": "파이낸셜뉴스"
     },
     "통신3사si기업들국내ai데이터센터전방위구축본격화": {
       "cluster_key": "title:통신3사si기업들국내ai데이터센터전방위구축본격화",
