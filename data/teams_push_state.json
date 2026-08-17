@@ -820,6 +820,16 @@
       "sent_at": "2026-08-14T08:56:29+09:00",
       "source": "서울경제"
     },
+    "f8ce671e4a3806c6": {
+      "cluster_key": "title:무디스한국성장률35로깜짝상향반도체호황계속",
+      "delivery_id": "teams_ai_push:11ea3ce09418",
+      "first_sent_at": "2026-08-18T08:02:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d696caa0b053b33004595474d7918eeabb725f2b9211e6c38fb913aed68f10f4",
+      "sent_at": "2026-08-18T08:02:02+09:00",
+      "source": "KyungHyangSinmun"
+    },
     "f9d7840ab7297c93": {
       "cluster_key": "title:민형배전남광주시장국회예결위원장방문호남권반도체클러스터",
       "delivery_id": "teams_ai_push:9d6109e1a26d",
@@ -1831,6 +1841,16 @@
       "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
       "sent_at": "2026-07-30T01:45:53+09:00",
       "source": "news.google.com"
+    },
+    "title:무디스한국성장률35로깜짝상향반도체호황계속": {
+      "cluster_key": "title:무디스한국성장률35로깜짝상향반도체호황계속",
+      "delivery_id": "teams_ai_push:11ea3ce09418",
+      "first_sent_at": "2026-08-18T08:02:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d696caa0b053b33004595474d7918eeabb725f2b9211e6c38fb913aed68f10f4",
+      "sent_at": "2026-08-18T08:02:02+09:00",
+      "source": "KyungHyangSinmun"
     },
     "title:물가낮춘다던ai올해는거꾸로밀어올린다최대04p계산나왔다": {
       "cluster_key": "title:물가낮춘다던ai올해는거꾸로밀어올린다최대04p계산나왔다",
@@ -2906,7 +2926,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-18T07:39:58+09:00",
+      "last_seen_at": "2026-08-18T08:02:00+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3475,8 +3495,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-18T06:46:34+09:00",
-  "last_successful_send_at": "2026-08-18T06:46:34+09:00",
+  "last_normal_send_at": "2026-08-18T08:02:02+09:00",
+  "last_successful_send_at": "2026-08-18T08:02:02+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3846,6 +3866,16 @@
       "last_material_update_at": null,
       "material_signature": "58d6f78a9a45cc993633d7123a7d5595548bb34ba30dbc50379cbe7cc410e5e8",
       "sent_at": "2026-08-12T06:17:21+09:00",
+      "source": "KyungHyangSinmun"
+    },
+    "https://khan.co.kr/article/202608180741001": {
+      "cluster_key": "title:무디스한국성장률35로깜짝상향반도체호황계속",
+      "delivery_id": "teams_ai_push:11ea3ce09418",
+      "first_sent_at": "2026-08-18T08:02:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d696caa0b053b33004595474d7918eeabb725f2b9211e6c38fb913aed68f10f4",
+      "sent_at": "2026-08-18T08:02:02+09:00",
       "source": "KyungHyangSinmun"
     },
     "https://mk.co.kr/news/business/12113296": {
@@ -5299,6 +5329,16 @@
       "material_signature": "b3475af1a345ff96825c607b56254a8b1f1f5905180806877cd2dcf5a220630a",
       "sent_at": "2026-07-30T01:45:53+09:00",
       "source": "news.google.com"
+    },
+    "무디스한국성장률35로깜짝상향반도체호황계속": {
+      "cluster_key": "title:무디스한국성장률35로깜짝상향반도체호황계속",
+      "delivery_id": "teams_ai_push:11ea3ce09418",
+      "first_sent_at": "2026-08-18T08:02:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d696caa0b053b33004595474d7918eeabb725f2b9211e6c38fb913aed68f10f4",
+      "sent_at": "2026-08-18T08:02:02+09:00",
+      "source": "KyungHyangSinmun"
     },
     "물가낮춘다던ai올해는거꾸로밀어올린다최대04p계산나왔다": {
       "cluster_key": "title:물가낮춘다던ai올해는거꾸로밀어올린다최대04p계산나왔다",
