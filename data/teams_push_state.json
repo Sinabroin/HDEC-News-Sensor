@@ -810,6 +810,16 @@
       "sent_at": "2026-08-15T00:29:43+09:00",
       "source": "뉴시스"
     },
+    "fc140292c90842fc": {
+      "cluster_key": "title:여의도22배사막의발전단지ess시장급성장",
+      "delivery_id": "teams_ai_push:49d0e7214b45",
+      "first_sent_at": "2026-08-17T21:41:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "30fc73e82e7879f508b0ff38a84b6adb650c93ad08cf52efe11237e29eddf1b7",
+      "sent_at": "2026-08-17T21:41:35+09:00",
+      "source": "SBS 뉴스"
+    },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -1992,6 +2002,16 @@
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
     },
+    "title:여의도22배사막의발전단지ess시장급성장": {
+      "cluster_key": "title:여의도22배사막의발전단지ess시장급성장",
+      "delivery_id": "teams_ai_push:49d0e7214b45",
+      "first_sent_at": "2026-08-17T21:41:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "30fc73e82e7879f508b0ff38a84b6adb650c93ad08cf52efe11237e29eddf1b7",
+      "sent_at": "2026-08-17T21:41:35+09:00",
+      "source": "SBS 뉴스"
+    },
     "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린": {
       "cluster_key": "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린",
       "delivery_id": "teams_ai_push:210b8bcad885",
@@ -2812,7 +2832,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-17T20:53:00+09:00",
+      "last_seen_at": "2026-08-17T21:41:33+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3367,8 +3387,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-17T19:54:16+09:00",
-  "last_successful_send_at": "2026-08-17T19:54:16+09:00",
+  "last_normal_send_at": "2026-08-17T21:41:35+09:00",
+  "last_successful_send_at": "2026-08-17T21:41:35+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3808,6 +3828,16 @@
       "last_material_update_at": null,
       "material_signature": "79933cb34130117381d249669d1e2af52ee464e308e1b3c158e84d6f129b0b0d",
       "sent_at": "2026-08-11T09:03:13+09:00",
+      "source": "SBS 뉴스"
+    },
+    "https://news.sbs.co.kr/news/endPage.do?news_id=N1008708588": {
+      "cluster_key": "title:여의도22배사막의발전단지ess시장급성장",
+      "delivery_id": "teams_ai_push:49d0e7214b45",
+      "first_sent_at": "2026-08-17T21:41:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "30fc73e82e7879f508b0ff38a84b6adb650c93ad08cf52efe11237e29eddf1b7",
+      "sent_at": "2026-08-17T21:41:35+09:00",
       "source": "SBS 뉴스"
     },
     "https://news1.kr/industry/sb-founded/6259527": {
@@ -5351,6 +5381,16 @@
       "material_signature": "bb9d6a3bc1dee021b357af381dd41fa705ca3db1c572e059681fec84bec76b4e",
       "sent_at": "2026-08-04T16:23:02+09:00",
       "source": "테크월드"
+    },
+    "여의도22배사막의발전단지ess시장급성장": {
+      "cluster_key": "title:여의도22배사막의발전단지ess시장급성장",
+      "delivery_id": "teams_ai_push:49d0e7214b45",
+      "first_sent_at": "2026-08-17T21:41:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "30fc73e82e7879f508b0ff38a84b6adb650c93ad08cf52efe11237e29eddf1b7",
+      "sent_at": "2026-08-17T21:41:35+09:00",
+      "source": "SBS 뉴스"
     },
     "연1080억달러인프라부족한아프리카전력용수ai투자시장열린": {
       "cluster_key": "title:연1080억달러인프라부족한아프리카전력용수ai투자시장열린",
