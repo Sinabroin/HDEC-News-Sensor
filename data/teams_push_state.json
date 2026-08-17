@@ -30,6 +30,16 @@
       "sent_at": "2026-08-10T13:18:59+09:00",
       "source": "연합뉴스"
     },
+    "0d3d73b1da2b4a5f": {
+      "cluster_key": "title:ai데이터센터부지론안팔아375억거절한미국시골모녀",
+      "delivery_id": "teams_ai_push:a4772f4334f0",
+      "first_sent_at": "2026-08-17T15:58:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "32a914eafc9ca05170bd590db7eab85558b41f65ba268a8c78b184bcfacd16f7",
+      "sent_at": "2026-08-17T15:58:02+09:00",
+      "source": "한겨레"
+    },
     "0e948b03d2ed7816": {
       "cluster_key": "title:ai인프라에주목하는엔비디아전력업체랜시엄에4조원투자",
       "delivery_id": "teams_ai_push:47f0f79edf16",
@@ -1261,6 +1271,16 @@
       "material_signature": "40467378efb04a7f64c723ad4fd7f96c1ca18b8773132c24f1dcad4beadbb8f5",
       "sent_at": "2026-08-16T11:42:57+09:00",
       "source": "뉴스1"
+    },
+    "title:ai데이터센터부지론안팔아375억거절한미국시골모녀": {
+      "cluster_key": "title:ai데이터센터부지론안팔아375억거절한미국시골모녀",
+      "delivery_id": "teams_ai_push:a4772f4334f0",
+      "first_sent_at": "2026-08-17T15:58:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "32a914eafc9ca05170bd590db7eab85558b41f65ba268a8c78b184bcfacd16f7",
+      "sent_at": "2026-08-17T15:58:02+09:00",
+      "source": "한겨레"
     },
     "title:ai데이터센터속도전쟁혁신병기": {
       "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
@@ -3287,8 +3307,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-17T13:25:59+09:00",
-  "last_successful_send_at": "2026-08-17T13:25:59+09:00",
+  "last_normal_send_at": "2026-08-17T15:58:02+09:00",
+  "last_successful_send_at": "2026-08-17T15:58:02+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3538,6 +3558,16 @@
       "last_material_update_at": null,
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
+      "source": "한겨레"
+    },
+    "https://hani.co.kr/arti/international/international_general/1273232.html": {
+      "cluster_key": "title:ai데이터센터부지론안팔아375억거절한미국시골모녀",
+      "delivery_id": "teams_ai_push:a4772f4334f0",
+      "first_sent_at": "2026-08-17T15:58:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "32a914eafc9ca05170bd590db7eab85558b41f65ba268a8c78b184bcfacd16f7",
+      "sent_at": "2026-08-17T15:58:02+09:00",
       "source": "한겨레"
     },
     "https://hankookilbo.com/news/article/A2026081615470005737": {
@@ -4541,6 +4571,16 @@
       "material_signature": "40467378efb04a7f64c723ad4fd7f96c1ca18b8773132c24f1dcad4beadbb8f5",
       "sent_at": "2026-08-16T11:42:57+09:00",
       "source": "뉴스1"
+    },
+    "ai데이터센터부지론안팔아375억거절한미국시골모녀": {
+      "cluster_key": "title:ai데이터센터부지론안팔아375억거절한미국시골모녀",
+      "delivery_id": "teams_ai_push:a4772f4334f0",
+      "first_sent_at": "2026-08-17T15:58:02+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "32a914eafc9ca05170bd590db7eab85558b41f65ba268a8c78b184bcfacd16f7",
+      "sent_at": "2026-08-17T15:58:02+09:00",
+      "source": "한겨레"
     },
     "ai데이터센터속도전쟁혁신병기": {
       "cluster_key": "title:ai데이터센터속도전쟁혁신병기",
