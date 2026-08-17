@@ -240,6 +240,16 @@
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
     },
+    "431b66da45af413a": {
+      "cluster_key": "title:오픈소스ai위협적인내자본우수인재확보서둘",
+      "delivery_id": "teams_ai_push:495321a450c7",
+      "first_sent_at": "2026-08-17T17:56:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0a44317d08f3fa112590605fa5e4ef7d8224f8bc911a50a1f50e8816a262e80e",
+      "sent_at": "2026-08-17T17:56:03+09:00",
+      "source": "서울경제"
+    },
     "446333f3356c0838": {
       "cluster_key": "title:미국시장깃발꽂은두산가스터빈무탄소친환경으로영토확장",
       "delivery_id": "teams_ai_push:9b6185be5ded",
@@ -1972,6 +1982,16 @@
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
     },
+    "title:오픈소스ai위협적인내자본우수인재확보서둘": {
+      "cluster_key": "title:오픈소스ai위협적인내자본우수인재확보서둘",
+      "delivery_id": "teams_ai_push:495321a450c7",
+      "first_sent_at": "2026-08-17T17:56:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0a44317d08f3fa112590605fa5e4ef7d8224f8bc911a50a1f50e8816a262e80e",
+      "sent_at": "2026-08-17T17:56:03+09:00",
+      "source": "서울경제"
+    },
     "title:온세미3분기가이던스기대치상회시간외6반등": {
       "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
       "delivery_id": "teams_ai_push:8b636aa3ff8e",
@@ -3307,8 +3327,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-17T15:58:02+09:00",
-  "last_successful_send_at": "2026-08-17T15:58:02+09:00",
+  "last_normal_send_at": "2026-08-17T17:56:03+09:00",
+  "last_successful_send_at": "2026-08-17T17:56:03+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3858,6 +3878,16 @@
       "last_material_update_at": null,
       "material_signature": "ad586584432b40a9c0ddb915f81d10fce5cc48653468e0b3171d2003a1e3fea5",
       "sent_at": "2026-08-15T12:53:06+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20080103": {
+      "cluster_key": "title:오픈소스ai위협적인내자본우수인재확보서둘",
+      "delivery_id": "teams_ai_push:495321a450c7",
+      "first_sent_at": "2026-08-17T17:56:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0a44317d08f3fa112590605fa5e4ef7d8224f8bc911a50a1f50e8816a262e80e",
+      "sent_at": "2026-08-17T17:56:03+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -5271,6 +5301,16 @@
       "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
+    },
+    "오픈소스ai위협적인내자본우수인재확보서둘": {
+      "cluster_key": "title:오픈소스ai위협적인내자본우수인재확보서둘",
+      "delivery_id": "teams_ai_push:495321a450c7",
+      "first_sent_at": "2026-08-17T17:56:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0a44317d08f3fa112590605fa5e4ef7d8224f8bc911a50a1f50e8816a262e80e",
+      "sent_at": "2026-08-17T17:56:03+09:00",
+      "source": "서울경제"
     },
     "온세미3분기가이던스기대치상회시간외6반등": {
       "cluster_key": "title:온세미3분기가이던스기대치상회시간외6반등",
