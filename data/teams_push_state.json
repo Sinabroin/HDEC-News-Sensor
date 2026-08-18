@@ -2700,6 +2700,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "기후환노위3대메가프로젝트현안질의전력용수공급실효성도마"
     },
+    "https://epnc.co.kr/news/articleView.html?idxno=405700": {
+      "article_id": "6ad54b2053a5e357",
+      "cluster_key": "title:ai수요에투자주기빨라졌다알리바바클라우드인프라에이전트",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-18T17:50:10+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-18T17:50:10+09:00",
+      "normalized_url": "https://epnc.co.kr/news/articleView.html?idxno=405700",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "테크월드",
+      "source_tier": "specialist",
+      "title_fingerprint": "ai수요에투자주기빨라졌다알리바바클라우드인프라에이전트"
+    },
     "https://etnews.com/20260806000330": {
       "article_id": "718834e62668084e",
       "cluster_key": "title:통신사ai토큰배울바크다",
