@@ -913,14 +913,41 @@ def derive_public_root(report_url: str) -> str:
         parsed = urlparse(value)
     except ValueError as exc:
         raise EditorialError("REPORT_URL is invalid") from exc
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise EditorialError("REPORT_URL must use http/https")
-    if parsed.params or parsed.query or parsed.fragment or not parsed.path.endswith(
-        DAILY_REPORT_SUFFIX
+    try:
+        parsed_port = parsed.port
+    except ValueError as exc:
+        raise EditorialError("REPORT_URL is invalid") from exc
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or "\\" in value
+        or any(character.isspace() for character in value)
     ):
+        raise EditorialError("REPORT_URL must use http/https")
+    if parsed.params or parsed.query or parsed.fragment:
         raise EditorialError("REPORT_URL suffix contract mismatch")
-    root_path = parsed.path[: -len(DAILY_REPORT_SUFFIX)].rstrip("/")
-    return f"{parsed.scheme}://{parsed.netloc}{root_path}"
+    canonical_root_path = urlparse(public_url_contract.PUBLIC_ROOT).path.rstrip("/")
+    accepted_paths = {
+        canonical_root_path,
+        canonical_root_path + DAILY_REPORT_SUFFIX,
+        urlparse(public_url_contract.CANONICAL_DASHBOARD_URL).path,
+        urlparse(public_url_contract.COMPATIBILITY_DASHBOARD_URL).path,
+        urlparse(public_url_contract.DAILY_LATEST_URL).path,
+    }
+    candidate_path = parsed.path
+    if candidate_path.endswith("/") and candidate_path.rstrip("/") == canonical_root_path:
+        candidate_path = candidate_path.rstrip("/")
+    if candidate_path not in accepted_paths:
+        raise EditorialError("REPORT_URL suffix contract mismatch")
+    netloc = (parsed.hostname or "").lower()
+    if parsed_port is not None:
+        default_port = 443 if parsed.scheme == "https" else 80
+        if parsed_port != default_port:
+            netloc = f"{netloc}:{parsed_port}"
+    return f"{parsed.scheme}://{netloc}{canonical_root_path}"
 
 
 def _validate_fixture_root(root_url: str) -> str:

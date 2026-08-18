@@ -29,8 +29,10 @@ DAILY_CLAIM_BEFORE_SEND, DAILY_EDITOR_CTA_FROM_MANIFEST, DAILY_READER_ONLY_SEND_
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
+import shutil
 import socket
 import sys
 import tempfile
@@ -44,6 +46,7 @@ for _p in (str(ROOT), str(ROOT / "scripts")):
         sys.path.insert(0, _p)
 
 from app import ai_centrality  # noqa: E402
+from app import editorial_briefing_state  # noqa: E402
 from app import daily_publication  # noqa: E402
 from app import editorial_briefings as eb  # noqa: E402
 from app import public_urls as public_url_contract  # noqa: E402
@@ -51,7 +54,7 @@ import run_editorial_briefing as runner  # noqa: E402
 
 KST = eb.KST
 ROOT_URL = "https://preview.fixture.test/HDEC-News-Sensor"
-REPORT_URL = f"{ROOT_URL}/daily/latest.html"
+REPORT_URL = f"{ROOT_URL}/daily/dashboard-latest.html"
 RUN_AT = datetime(2026, 8, 6, 7, 20, tzinfo=KST)
 
 CHECKS = 0
@@ -77,9 +80,9 @@ def check(name: str, ok: object, detail: object = "") -> None:
 
 
 class _FakeResp:
-    def __init__(self, status: int, body: str) -> None:
+    def __init__(self, status: int, body: str | bytes) -> None:
         self.status = status
-        self._body = body.encode("utf-8")
+        self._body = body.encode("utf-8") if isinstance(body, str) else body
 
     def read(self, _n: int = -1) -> bytes:
         return self._body
@@ -89,6 +92,39 @@ class _FakeResp:
 
     def __exit__(self, *_exc) -> bool:
         return False
+
+
+class _SMTPRecorder:
+    def __init__(self) -> None:
+        self.attempts = 0
+
+    def __call__(self, *_args, **_kwargs):
+        self.attempts += 1
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc) -> bool:
+        return False
+
+    def ehlo(self):
+        return 250, b"offline"
+
+    def starttls(self, **_kwargs):
+        return 220, b"offline"
+
+    def login(self, *_args):
+        return 235, b"offline"
+
+    def mail(self, *_args):
+        return 250, b"offline"
+
+    def rcpt(self, *_args):
+        return 250, b"offline"
+
+    def data(self, *_args):
+        return 250, b"accepted"
 
 
 def article(title: str, url: str) -> eb.EditorialArticle:
@@ -127,10 +163,15 @@ def production_env(github_output: Path):
     values = {
         "EDITORIAL_PRODUCTION": "1",
         "GITHUB_REF": "refs/heads/main",
+        "GITHUB_ACTIONS": "true",
         "GITHUB_RUN_ID": "8100",
         "GITHUB_RUN_ATTEMPT": "1",
         "REPORT_URL": REPORT_URL,
         "GITHUB_OUTPUT": str(github_output),
+        "GMAIL_SMTP_USER": "offline-sender@example.test",
+        "GMAIL_SMTP_APP_PASSWORD": "offline-password",
+        "ALERT_EMAIL_FROM": "offline-sender@example.test",
+        "TEAMS_CHANNEL_EMAIL": "offline-channel@example.test",
     }
     for key, value in values.items():
         previous[key] = os.environ.get(key)
@@ -146,6 +187,16 @@ def production_env(github_output: Path):
 
 
 def main() -> int:
+    valid_image_authority_accepted = False
+    image_authority_rejected = {
+        "missing": False,
+        "false": False,
+        "malformed": False,
+    }
+    today_daily_rehearsal = False
+    today_daily_fake_sends = 0
+    today_daily_duplicate_resend = -1
+    today_daily_production_writes = -1
     edition = render()
     manifest = edition.edition_manifest or {}
     edition_id = edition.edition_id
@@ -227,38 +278,64 @@ def main() -> int:
     # ---- §6.10-11 run_verify_public executed end-to-end (before claim) -------- #
     with tempfile.TemporaryDirectory(prefix="r4r12-verifypublic-") as raw:
         tmp = Path(raw)
-        dated_path = tmp / f"{edition.edition_key}.html"
+        verification_edition = eb.render_daily(
+            [],
+            run_at=RUN_AT,
+            root_url=ROOT_URL,
+            editor_console_available=True,
+        )
+        eb.validate_rendered(verification_edition)
+        verification_manifest = verification_edition.edition_manifest or {}
+        verification_manifest_url = public_url_contract.daily_edition_manifest_url(
+            verification_edition.edition_id,
+            root_url=ROOT_URL,
+        )
+        verification_dated_url = verification_edition.public_dated_url
+        dated_path = tmp / f"{verification_edition.edition_key}.html"
         latest_path = tmp / "latest.html"
-        payload = edition.html.encode("utf-8")
+        payload = verification_edition.html.encode("utf-8")
         dated_path.write_bytes(payload)
         latest_path.write_bytes(payload)
         runtime_dir = tmp / "runtime"
         runtime_dir.mkdir()
-        runtime_manifest = eb.manifest_for_runtime(edition, dated_path, latest_path)
+        runtime_manifest = eb.manifest_for_runtime(
+            verification_edition,
+            dated_path,
+            latest_path,
+        )
+        # Mirror the authority minted by the real run_publish() path. The
+        # verifier must exercise the exact GitHub Actions gate, not bypass it
+        # merely because a local shell lacks GITHUB_ACTIONS.
+        runtime_manifest["production_image_gate_required"] = True
         runner._write_runtime_manifest(runtime_dir, runtime_manifest)
         github_output = tmp / "gh-output.txt"
         github_output.touch()
 
         def resolving_opener(url, *_a, **_k):
-            if url == dated_url:
-                return _FakeResp(200, edition.html)
-            if url == manifest_url:
-                return _FakeResp(200, json.dumps(manifest))
+            if url == verification_dated_url:
+                return _FakeResp(200, verification_edition.html)
+            if url == verification_manifest_url:
+                return _FakeResp(200, json.dumps(verification_manifest))
             return _FakeResp(404, "")
 
         def manifest_missing_opener(url, *_a, **_k):
-            if url == dated_url:
-                return _FakeResp(200, edition.html)
+            if url == verification_dated_url:
+                return _FakeResp(200, verification_edition.html)
             return _FakeResp(404, "")
 
         original_docs_paths = runner._docs_paths
         runner._docs_paths = lambda _t, _k: (dated_path, latest_path)
         try:
             with production_env(github_output):
+                check(
+                    "run_verify_public positive path explicitly uses GitHub Actions semantics",
+                    os.environ.get("GITHUB_ACTIONS") == "true",
+                )
                 verified = runner.run_verify_public(
                     "daily", run_at=RUN_AT, runtime_dir=runtime_dir,
                     opener=resolving_opener, publication_timeout_seconds=0,
                 )
+            valid_image_authority_accepted = bool(verified)
             check("run_verify_public passes when both resources reconstruct", verified)
             outputs = dict(
                 line.split("=", 1)
@@ -267,6 +344,40 @@ def main() -> int:
             )
             check("run_verify_public emits resources_verified=true",
                   outputs.get("resources_verified") == "true")
+
+            for label, authority in (
+                ("missing", None),
+                ("false", False),
+                ("malformed", "true"),
+            ):
+                invalid_manifest = dict(runtime_manifest)
+                if label == "missing":
+                    invalid_manifest.pop("production_image_gate_required", None)
+                else:
+                    invalid_manifest["production_image_gate_required"] = authority
+                runner._write_runtime_manifest(runtime_dir, invalid_manifest)
+                with production_env(github_output):
+                    try:
+                        runner.run_verify_public(
+                            "daily",
+                            run_at=RUN_AT,
+                            runtime_dir=runtime_dir,
+                            opener=_network_blocked,
+                            publication_timeout_seconds=0,
+                        )
+                    except runner.OrchestratorError as exc:
+                        gate_failure = str(exc)
+                    else:
+                        gate_failure = ""
+                image_authority_rejected[label] = (
+                    gate_failure == "production image gate authority missing"
+                )
+                check(
+                    f"GitHub Actions rejects {label} production image authority",
+                    image_authority_rejected[label],
+                    gate_failure,
+                )
+            runner._write_runtime_manifest(runtime_dir, runtime_manifest)
 
             github_output.write_text("", encoding="utf-8")
             with production_env(github_output):
@@ -292,6 +403,133 @@ def main() -> int:
             runner._docs_paths = original_docs_paths
     DAILY_PUBLIC_VERIFY_BEFORE_CLAIM = not FAILURES
 
+    # ---- R4-OPS-9 exact 2026-08-18 offline recovery rehearsal ---------------- #
+    production_state_path = ROOT / "data" / "editorial_daily_state.json"
+    production_state_before = hashlib.sha256(
+        production_state_path.read_bytes()
+    ).hexdigest()
+    with tempfile.TemporaryDirectory(prefix="r4-ops-9-today-daily-") as raw:
+        isolated_root = Path(raw)
+        isolated_review = (
+            isolated_root / "docs" / "editorial" / "review" / "2026-08-18"
+        )
+        isolated_review.parent.mkdir(parents=True)
+        shutil.copytree(
+            ROOT / "docs" / "editorial" / "review" / "2026-08-18",
+            isolated_review,
+        )
+        observed_review_manifest = json.loads(
+            (isolated_review / "manifest.json").read_text(encoding="utf-8")
+        )
+        runtime_dir = isolated_root / "runtime"
+        state_path = isolated_root / "daily-state.json"
+        github_output = isolated_root / "gh-output.txt"
+        github_output.touch()
+        original_runner_root = runner.ROOT
+        original_load_state = runner.editorial_briefing_state.load_state
+        today_run_at = datetime.fromisoformat("2026-08-18T07:50:00+09:00")
+        smtp = _SMTPRecorder()
+        try:
+            runner.ROOT = isolated_root
+            runner.editorial_briefing_state.load_state = (
+                lambda edition_type, path=None: editorial_briefing_state.empty_state(
+                    edition_type
+                )
+            )
+            with production_env(github_output):
+                os.environ["REPORT_URL"] = public_url_contract.CANONICAL_DASHBOARD_URL
+                published = runner.run_publish(
+                    "daily",
+                    run_at=today_run_at,
+                    runtime_dir=runtime_dir,
+                )
+            runner.editorial_briefing_state.load_state = original_load_state
+            if published is None:
+                raise AssertionError("2026-08-18 Daily did not publish in isolation")
+
+            dated_path, _latest_path = runner._docs_paths("daily", "2026-08-18")
+            edition_manifest_path = isolated_root / published["edition_manifest_path"]
+            edition_manifest_url = public_url_contract.daily_edition_manifest_url(
+                published["edition_id"],
+                root_url=public_url_contract.PUBLIC_ROOT,
+            )
+            public_resources = {
+                published["public_dated_url"]: dated_path.read_bytes(),
+                edition_manifest_url: edition_manifest_path.read_bytes(),
+            }
+
+            def today_opener(request, *_args, **_kwargs):
+                url = request if isinstance(request, str) else request.full_url
+                if url not in public_resources:
+                    raise OSError("unexpected 2026-08-18 Daily public URL")
+                return _FakeResp(200, public_resources[url])
+
+            with production_env(github_output):
+                os.environ["REPORT_URL"] = public_url_contract.CANONICAL_DASHBOARD_URL
+                public_verified = runner.run_verify_public(
+                    "daily",
+                    run_at=today_run_at,
+                    runtime_dir=runtime_dir,
+                    opener=today_opener,
+                    publication_timeout_seconds=0,
+                )
+                claimed = runner.run_claim(
+                    "daily",
+                    run_at=today_run_at,
+                    runtime_dir=runtime_dir,
+                    opener=today_opener,
+                    state_path=state_path,
+                    publication_timeout_seconds=0,
+                )
+                sent = runner.run_send(
+                    "daily",
+                    run_at=today_run_at,
+                    runtime_dir=runtime_dir,
+                    state_path=state_path,
+                    smtp_factory=smtp,
+                )
+                retry_blocked = False
+                try:
+                    runner.run_send(
+                        "daily",
+                        run_at=today_run_at,
+                        runtime_dir=runtime_dir,
+                        state_path=state_path,
+                        smtp_factory=smtp,
+                    )
+                except editorial_briefing_state.StateError:
+                    retry_blocked = True
+        finally:
+            runner.ROOT = original_runner_root
+            runner.editorial_briefing_state.load_state = original_load_state
+
+        today_daily_fake_sends = smtp.attempts
+        today_daily_duplicate_resend = max(0, smtp.attempts - 1)
+        today_daily_production_writes = int(
+            hashlib.sha256(production_state_path.read_bytes()).hexdigest()
+            != production_state_before
+        )
+        today_daily_rehearsal = bool(
+            observed_review_manifest.get("review_snapshot_id")
+            == "review-2026-08-18-0752211bdb36c38e"
+            and public_verified
+            and claimed is not None
+            and sent is not None
+            and published.get("edition_key") == "2026-08-18"
+            and published.get("article_count") == 0
+            and published.get("issue_mode") == "daily_empty_status"
+            and published.get("production_image_gate_required") is True
+            and retry_blocked
+            and today_daily_fake_sends == 1
+            and today_daily_duplicate_resend == 0
+            and today_daily_production_writes == 0
+        )
+        check(
+            "2026-08-18 exact Review artifacts reach truthful Daily claim/send once",
+            today_daily_rehearsal,
+            published,
+        )
+
     # ---- §6.5-7 production source wiring -------------------------------------- #
     runner_source = Path(runner.__file__).read_text(encoding="utf-8")
     check("run_publish calls the immutable manifest builder",
@@ -312,6 +550,13 @@ def main() -> int:
           "require_claim_owner(" in runner_source
           and runner_source.index("def run_claim(")
           < runner_source.index("def run_send("))
+    image_gate_weakened = not (
+        'manifest.get("production_image_gate_required") is not True'
+        in runner_source
+        and 'raise OrchestratorError("production image gate authority missing")'
+        in runner_source
+    )
+    check("production image authority gate remains fail-closed", not image_gate_weakened)
     check("no reader-only live-collection fallback path exists",
           'review_mode = "live_collection_fallback"' not in runner_source
           and "daily_reader_only_send_allowed" in runner_source)
@@ -342,6 +587,38 @@ def main() -> int:
 
     print(f"checks={CHECKS} failures={len(FAILURES)}")
     ok = not FAILURES
+    github_actions_parity = (
+        valid_image_authority_accepted
+        and all(image_authority_rejected.values())
+    )
+    print(
+        "DAILY_GITHUB_ACTIONS_PARITY="
+        + ("PASS" if github_actions_parity and ok else "FAIL")
+    )
+    print(
+        "DAILY_VALID_IMAGE_AUTHORITY_ACCEPTED="
+        + ("PASS" if valid_image_authority_accepted and ok else "FAIL")
+    )
+    print(
+        "DAILY_MISSING_IMAGE_AUTHORITY_REJECTED="
+        + ("PASS" if image_authority_rejected["missing"] and ok else "FAIL")
+    )
+    print(
+        "DAILY_FALSE_IMAGE_AUTHORITY_REJECTED="
+        + ("PASS" if image_authority_rejected["false"] and ok else "FAIL")
+    )
+    print(
+        "DAILY_MALFORMED_IMAGE_AUTHORITY_REJECTED="
+        + ("PASS" if image_authority_rejected["malformed"] and ok else "FAIL")
+    )
+    print("DAILY_IMAGE_GATE_WEAKENED=" + str(image_gate_weakened).lower())
+    print(
+        "TODAY_DAILY_REHEARSAL="
+        + ("PASS" if today_daily_rehearsal and ok else "FAIL")
+    )
+    print(f"TODAY_DAILY_FAKE_SMTP_SENDS={today_daily_fake_sends}")
+    print(f"TODAY_DAILY_DUPLICATE_RESEND={today_daily_duplicate_resend}")
+    print(f"TODAY_DAILY_REAL_PRODUCTION_WRITES={today_daily_production_writes}")
     print(
         "daily_immutable_manifest_production_wiring="
         + ("PASS" if ok else "FAIL")

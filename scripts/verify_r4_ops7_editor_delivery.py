@@ -20,6 +20,8 @@ from scripts import run_editor_delivery as runner
 
 
 KST_NOW = datetime.fromisoformat("2026-08-12T07:20:00+09:00")
+TODAY_NOW = datetime.fromisoformat("2026-08-18T07:52:00+09:00")
+TODAY_SNAPSHOT_ID = "review-2026-08-18-0752211bdb36c38e"
 
 
 class FakeResponse:
@@ -131,6 +133,12 @@ def fixture(root: Path) -> tuple[str, dict, dict[str, bytes]]:
 
 
 def main() -> int:
+    production_state_path = ROOT / "data" / "editor_delivery_state.json"
+    production_state_before = (
+        hashlib.sha256(production_state_path.read_bytes()).hexdigest()
+        if production_state_path.is_file()
+        else "absent"
+    )
     env = {
         "EDITORIAL_PRODUCTION": "1",
         "GITHUB_ACTIONS": "true",
@@ -368,6 +376,110 @@ def main() -> int:
             if not editor_failure or daily_success:
                 raise AssertionError("Editor failure falsely marked Daily success")
 
+            # R4-OPS-9: replay the exact 2026-08-18 production snapshot through
+            # public verification, claim, arm, fake SMTP 250, and duplicate skip.
+            os.environ["GITHUB_RUN_ID"] = "7018"
+            today_root_url = runner.resolve_editor_public_root(
+                public_urls.CANONICAL_DASHBOARD_URL
+            )
+            snapshot_dir = (
+                ROOT / "docs" / "editorial" / "review" / "snapshots"
+                / TODAY_SNAPSHOT_ID
+            )
+            today_manifest = json.loads(
+                (snapshot_dir / "manifest.json").read_text(encoding="utf-8")
+            )
+            today_base_url = public_urls.editor_snapshot_url(
+                TODAY_SNAPSHOT_ID,
+                root_url=today_root_url,
+            ).rsplit("/", 1)[0]
+            today_public = {
+                today_base_url + "/index.html": (snapshot_dir / "index.html").read_bytes(),
+                today_base_url + "/manifest.json": (
+                    snapshot_dir / "manifest.json"
+                ).read_bytes(),
+                today_base_url + "/candidates.json": (
+                    snapshot_dir / "candidates.json"
+                ).read_bytes(),
+            }
+            for asset in today_manifest["assets"]:
+                today_public[today_base_url + "/" + asset["relative_path"]] = (
+                    snapshot_dir / asset["relative_path"]
+                ).read_bytes()
+
+            def today_opener(request, **_kwargs):
+                url = request if isinstance(request, str) else request.full_url
+                if url not in today_public:
+                    raise OSError("unexpected observed-snapshot URL")
+                return FakeResponse(today_public[url])
+
+            _today_manifest, today_identity = runner.load_identity(
+                TODAY_SNAPSHOT_ID,
+                root_url=today_root_url,
+                root=ROOT,
+            )
+            expected_today_url = (
+                public_urls.PUBLIC_ROOT
+                + "/editorial/review/snapshots/"
+                + TODAY_SNAPSHOT_ID
+                + "/index.html"
+            )
+            if (
+                today_identity["edition_key"] != "2026-08-18"
+                or today_identity["review_snapshot_id"] != TODAY_SNAPSHOT_ID
+                or today_identity["editor_public_url"] != expected_today_url
+            ):
+                raise AssertionError("2026-08-18 Editor identity reconstruction failed")
+            today_state_path = root / "today-editor-state.json"
+            _claimed, today_authorized, today_status = runner.run_claim(
+                TODAY_SNAPSHOT_ID,
+                root_url=today_root_url,
+                state_path=today_state_path,
+                opener=today_opener,
+                root=ROOT,
+                now=TODAY_NOW,
+                timeout_seconds=0,
+            )
+            if not today_authorized or today_status != "claimed":
+                raise AssertionError("2026-08-18 Editor claim was not authorized")
+            runner.run_arm(
+                TODAY_SNAPSHOT_ID,
+                root_url=today_root_url,
+                state_path=today_state_path,
+                root=ROOT,
+                now=TODAY_NOW,
+            )
+            today_smtp = SMTPRecorder(True)
+            today_sent = runner.run_send(
+                TODAY_SNAPSHOT_ID,
+                root_url=today_root_url,
+                state_path=today_state_path,
+                smtp_factory=today_smtp,
+                root=ROOT,
+                now=TODAY_NOW,
+            )
+            today_retry = runner.run_send(
+                TODAY_SNAPSHOT_ID,
+                root_url=today_root_url,
+                state_path=today_state_path,
+                smtp_factory=today_smtp,
+                root=ROOT,
+                now=TODAY_NOW,
+            )
+            if (
+                today_smtp.attempts != 1
+                or today_retry != today_sent
+                or not editor_delivery.has_success(today_sent, "2026-08-18")
+            ):
+                raise AssertionError("2026-08-18 Editor retry idempotence failed")
+            production_state_after = (
+                hashlib.sha256(production_state_path.read_bytes()).hexdigest()
+                if production_state_path.is_file()
+                else "absent"
+            )
+            if production_state_after != production_state_before:
+                raise AssertionError("Editor rehearsal mutated production state")
+
             print("VALID_EXACT_EDITOR_SNAPSHOT=AUTHORIZED")
             print("EDITOR_SMTP_250_SUCCESS_PERSISTED=PASS")
             print("EDITOR_SAME_SNAPSHOT_RETRY_SMTP_ATTEMPTS=0")
@@ -382,6 +494,15 @@ def main() -> int:
             print("MUTABLE_LATEST_EDITOR_TARGET=BLOCKED")
             print("EDITOR_SUCCESS_DAILY_FAILURE_ORTHOGONAL=PASS")
             print("EDITOR_FAILURE_DAILY_SUCCESS_FALSE=PASS")
+            print("EDITOR_EXACT_SNAPSHOT_IDENTITY=PASS")
+            print("EDITOR_PUBLIC_VERIFY_BEFORE_CLAIM=PASS")
+            print("EDITOR_CLAIM_BEFORE_ARM=PASS")
+            print("EDITOR_ARM_BEFORE_SMTP=PASS")
+            print("EDITOR_AT_MOST_ONCE=PASS")
+            print("TODAY_EDITOR_IDENTITY_REHEARSAL=PASS")
+            print("TODAY_EDITOR_FAKE_SMTP_SENDS=1")
+            print("TODAY_EDITOR_DUPLICATE_RESEND=0")
+            print("TODAY_EDITOR_PRODUCTION_STATE_WRITES=0")
             print("REAL_SMTP_CONNECTIONS=0")
     finally:
         for key, value in original_env.items():
