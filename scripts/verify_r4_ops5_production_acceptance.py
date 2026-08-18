@@ -130,7 +130,10 @@ def governing_standard_contracts() -> dict[str, bool]:
 
 def project_acceptance_overlay_contracts() -> dict[str, bool]:
     text = PROJECT_ACCEPTANCE_PATH.read_text(encoding="utf-8")
-    version_updated = "**Version:** 1.2" in text
+    normalized_text = " ".join(text.split())
+    version_updated = bool(
+        re.search(r"(?m)^\*\*Version:\*\* 1\.3\s*$", text)
+    )
     defect_present = (
         "HDEC-DEFECT-005 — SBS Premium realtime authority leak" in text
         and SBS_PREMIUM_OBSERVED_URL in text
@@ -153,15 +156,49 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
             "Summary,\nquery, and body text have zero authority",
         )
     )
-    check("HDEC project acceptance overlay version is 1.2", version_updated)
+    r4_ops8_defect_classes = all(
+        f"## HDEC-DEFECT-{number}" in text
+        for number in ("010", "011", "012", "013", "014")
+    )
+    r4_ops8_semantic_contract = all(
+        token in normalized_text
+        for token in (
+            "investor audience, stock-selection, valuation, portfolio, or market-guidance",
+            "bare word `투자` is never globally blocked",
+            "distinct newly confirmed material AI action/event",
+            "literal `외` is not a blanket ban",
+            "query text, generated summary/implication/category, and publisher prestige",
+            "actor bridge must prove a material AI target or AI-infrastructure nexus",
+        )
+    )
+    groundbreaking_contract = all(
+        token in normalized_text
+        for token in (
+            "AI-infrastructure groundbreaking idiom over-filtered",
+            "`첫 삽`, `첫삽`, `기공`, `기공식`, and `착공식`",
+            "never as unconditional qualification",
+            "independently confirms a current action",
+            "speculative groundbreaking review",
+            "historical groundbreaking reference",
+            "non-AI construction event",
+            "all established Watch gates still apply",
+        )
+    )
+    check("HDEC project acceptance overlay version is exactly 1.3", version_updated)
     check("HDEC-DEFECT-005 is sealed in project acceptance", defect_present)
     check("publisher URL authority invariant is sealed in project acceptance", authority_invariant)
     check("trailing and English opinion contract is sealed in project acceptance", opinion_contract)
+    check("R4-OPS-8 defect classes 010-014 are sealed", r4_ops8_defect_classes)
+    check("R4-OPS-8 semantic precision contract is sealed", r4_ops8_semantic_contract)
+    check("AI-infrastructure groundbreaking recall contract is sealed", groundbreaking_contract)
     return {
         "version_updated": version_updated,
         "defect_present": defect_present,
         "authority_invariant": authority_invariant,
         "opinion_contract": opinion_contract,
+        "r4_ops8_defect_classes": r4_ops8_defect_classes,
+        "r4_ops8_semantic_contract": r4_ops8_semantic_contract,
+        "groundbreaking_contract": groundbreaking_contract,
     }
 
 
@@ -1157,6 +1194,9 @@ def main() -> int:
     print(f"PROJECT_ACCEPTANCE_CONTRACT_PRESENT={str(governance['project_present']).lower()}")
     print(f"HDEC_PROJECT_ACCEPTANCE_UPDATED={str(overlay['version_updated']).lower()}")
     print(f"HDEC_DEFECT_005_PRESENT={str(overlay['defect_present']).lower()}")
+    print(f"R4_OPS8_DEFECT_CLASSES_PRESENT={str(overlay['r4_ops8_defect_classes']).lower()}")
+    print(f"R4_OPS8_SEMANTIC_CONTRACT_PRESENT={str(overlay['r4_ops8_semantic_contract']).lower()}")
+    print(f"AI_INFRA_GROUNDBREAKING_CONTRACT_PRESENT={str(overlay['groundbreaking_contract']).lower()}")
     print(f"PUBLISHER_AUTHORITY_INVARIANT_PRESENT={str(overlay['authority_invariant']).lower()}")
     print(f"CROSS_PUBLISHER_ALIAS_URL_ELEVATION={source_contract['cross_publisher_alias_url_elevation']}")
     print("PUBLISHER_URL_AUTHORITY_VERDICT=" + ("PASS" if source_contract["cross_publisher_alias_url_elevation"] == 0 else "FAIL"))

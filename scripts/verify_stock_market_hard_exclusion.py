@@ -66,8 +66,9 @@ NEWSPIM_URL = "https://www.newspim.com/news/view/20260805000052"
 NEWSPIM_TITLE = "[5일 중국증시] AI 랠리 훈풍 이어질까…순환매 장세 지속 전망"
 
 #: §7 — the ten observed production deliveries (publisher, canonical URL,
-#: deterministic AI-relevant fixture title).  Only NewsPim is stock-market
-#: dominant; the other nine fail on the source gate / holdback alone.
+#: deterministic AI-relevant fixture title). NewsPim is stock-market dominant;
+#: the exact TechM title is independently rejected by the R4-OPS-8 bounded
+#: semantic gate; the remaining source-ineligible rows never auto-send.
 OBSERVED_DELIVERIES = (
     ("녹색경제신문", "https://www.greened.kr/news/articleView.html?idxno=346822",
      "국내 그룹사, AI 데이터센터 전력 설비 증설 확정"),
@@ -527,8 +528,8 @@ def verify_observed_deliveries(tmp: Path) -> None:
             "teams_immediate_major_rows", "deferred_due_to_cap")}),
     )
     check(
-        "observed batch: only non-hard-rejected specialists enter holdback",
-        summary["teams_specialist_held_rows"] == 3
+        "observed batch: only semantic-qualified specialists enter holdback",
+        summary["teams_specialist_held_rows"] == 2
         and summary["teams_specialist_selected_rows"] == 0,
         repr({k: summary[k] for k in (
             "teams_specialist_held_rows", "teams_specialist_selected_rows")}),

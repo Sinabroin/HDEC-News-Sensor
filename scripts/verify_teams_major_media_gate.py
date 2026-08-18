@@ -11,8 +11,11 @@ deliveries that motivated the repair:
 
 The three URLs are publisher-direct and safe; the defect was editorial — Teams
 delivered specialist-only supply instead of prioritizing major media. Under
-the gate they are captured as regression fixtures and must never again be
-immediately selected. All delivery runs reuse the production sender
+the current Watch contract they must never again be immediately selected. The
+exact TechM title now also fails the bounded R4-OPS-8 semantic gate because AI
+appears outside its title and first factual publisher lead; a visibly synthetic
+AI-material TechM neighbor below retains independent source-gate coverage. All
+delivery runs reuse the production sender
 ``deliver()`` with the injected fake SMTP recorder from the production
 verifier, temp state files only.
 """
@@ -80,7 +83,9 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 # Observed-production regression fixtures (§2). Metadata resolved from the
 # committed accepted ledger (data/teams_push_state.json as of 2026-08-04):
 # normalized publisher, canonical URL, importance, and event identity. These
-# articles pass every pre-gate hard gate — only the source gate stops them.
+# NewsWorker and TechWorld pass every pre-gate hard gate. The exact TechM row
+# is now independently rejected by R4-OPS-8; missing historical provider fields
+# are not fabricated to force it through the semantic gate.
 # ---------------------------------------------------------------------------
 def observed_newsworker(**overrides):
     base = _article(
@@ -107,6 +112,20 @@ def observed_techm(**overrides):
         url="https://www.techm.kr/news/articleView.html?idxno=153960",
         score=4.0,
         shadow_confirmed_event_types=["acquisition_announced"],
+    )
+    base.update(overrides)
+    return base
+
+
+def synthetic_techm_material(**overrides):
+    """Explicit synthetic neighbor isolating TechM source-gate ownership."""
+    base = observed_techm(
+        article_key="synthetic-techm-material",
+        title="프리즈미안, AI 데이터센터 전력망 대응 애트코어 인수 확정",
+        summary="AI 데이터센터 전력망 기자재 기업 인수를 확정했다.",
+        snippet="AI 데이터센터 전력망 기자재 기업 인수를 확정했다.",
+        url="https://www.techm.kr/news/articleView.html?idxno=9999991",
+        evidence_provenance="synthetic_neighbor",
     )
     base.update(overrides)
     return base
@@ -192,31 +211,41 @@ def main() -> int:
         trio = [observed_newsworker(), observed_techm(), observed_epnc()]
         state = tmp / "state-observed-trio.json"
         summary, rec = deliver(tmp, trio, state)
-        check("observed trio: every article passes the pre-gate policy",
-              summary["alert_policy_eligible"] == 3, str(summary))
+        check("observed trio: two material rows pass; exact TechM is semantically rejected",
+              summary["alert_policy_eligible"] == 2, str(summary))
         check("observed trio: immediate selected is zero",
               summary["selected"] == 0 and rec.attempts == [], str(summary))
-        check("observed trio: all three are held by the source gate",
-              summary["teams_specialist_held_rows"] == 3
+        check("observed trio: both policy-eligible rows are held by the source gate",
+              summary["teams_specialist_held_rows"] == 2
               and summary["teams_specialist_selected_rows"] == 0, str(summary))
         check("observed trio: counters reconcile",
               summary["counters_reconciled"] is True)
         saved = load_state(state)
         held = saved.get(HELD_SPECIALISTS_KEY) or {}
         check("observed trio: held records exist without any ledger entry",
-              len(held) == 3 and not saved["article_ids"], str(sorted(held)))
+              len(held) == 2 and not saved["article_ids"], str(sorted(held)))
 
         # (2)(3)(4) single-publisher supplies: immediate selected 0 each.
-        for label, fixture in (
-            ("newsworker", observed_newsworker()),
-            ("techm", observed_techm()),
-            ("epnc", observed_epnc()),
+        for label, fixture, expected_holds in (
+            ("newsworker", observed_newsworker(), 1),
+            ("techm", observed_techm(), 0),
+            ("epnc", observed_epnc(), 1),
         ):
             solo_state = tmp / f"state-solo-{label}.json"
             summary, rec = deliver(tmp, [fixture], solo_state)
             check(f"{label}-only supply: immediate selected 0",
                   summary["selected"] == 0 and rec.attempts == []
-                  and summary["teams_specialist_held_rows"] == 1, str(summary))
+                  and summary["teams_specialist_held_rows"] == expected_holds,
+                  str(summary))
+
+        synthetic_tm_state = tmp / "state-synthetic-techm.json"
+        summary, rec = deliver(
+            tmp, [synthetic_techm_material()], synthetic_tm_state
+        )
+        check("synthetic material TechM neighbor reaches and is held by source gate",
+              summary["alert_policy_eligible"] == 1
+              and summary["teams_specialist_held_rows"] == 1
+              and summary["selected"] == 0 and rec.attempts == [], str(summary))
 
         # (6) all three aged past the holdback but only IMPORTANT: selected 0.
         # Non-major confirmed event types keep importance at IMPORTANT (the
@@ -224,7 +253,7 @@ def main() -> int:
         aged_important = [
             observed_newsworker(
                 score=4.2, shadow_confirmed_event_types=["industry_update"]),
-            observed_techm(
+            synthetic_techm_material(
                 score=4.0, shadow_confirmed_event_types=["industry_update"]),
             observed_epnc(
                 score=4.2, shadow_confirmed_event_types=["industry_update"]),
@@ -301,7 +330,7 @@ def main() -> int:
         # (9) one primary + three specialists: primary selected, specialists 0.
         nine = [
             primary("p-nine", "정부, AI 데이터센터 전력망 투자 확정"),
-            observed_techm(), observed_epnc(),
+            synthetic_techm_material(), observed_epnc(),
             _article(article_key="spec-it-chosun",
                      title="오라클, 클라우드 AI 데이터센터 신규 착공",
                      source="IT조선",
@@ -340,7 +369,7 @@ def main() -> int:
 
         # (11) specialist first, same-event primary later: primary wins and
         # the held specialist becomes supporting evidence.
-        event_specialist = observed_techm(
+        event_specialist = synthetic_techm_material(
             article_key="evt-spec",
             cluster_key="evt-shared-1",
         )
@@ -435,7 +464,7 @@ def main() -> int:
               and summary["SMTP_attempted"] == 0 and rec.attempts == []
               and not dry_state.exists(), str(summary))
         check("dry-run still reports the gate partition",
-              summary["teams_specialist_held_rows"] == 3
+              summary["teams_specialist_held_rows"] == 2
               and summary["source_gate_rejected_rows"] == 0)
 
         # (16) R4-R9D — a held TOP specialist is never selected, so there is no
@@ -463,8 +492,8 @@ def main() -> int:
             primary("mx-p1", "연합뉴스: AI 데이터센터 투자 확정", "연합뉴스"),
             primary("mx-s1", "동아일보: AI 전력망 투자 계약 체결", "동아일보"),
             observed_newsworker(article_key="mx-nw"),
-            observed_techm(article_key="mx-tm",
-                           url="https://www.techm.kr/news/articleView.html?idxno=880013"),
+            synthetic_techm_material(article_key="mx-tm",
+                                     url="https://www.techm.kr/news/articleView.html?idxno=880013"),
             _article(article_key="mx-neutral",
                      title="블룸버그: OpenAI, AI 데이터센터 투자 확정",
                      source="블룸버그",
