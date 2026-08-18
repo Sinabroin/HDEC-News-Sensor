@@ -26,6 +26,7 @@ from app import (
     public_institution_routing,
     publisher_direct,
     source_priority,
+    watch_semantic_precision,
 )
 from app.public_urls import CANONICAL_DASHBOARD_URL
 from app.scoring import DAILY_THRESHOLD, INSTANT_THRESHOLD
@@ -628,6 +629,12 @@ class TeamsPolicyEvaluation:
     # early rejections (carry-forward / freshness / authority / malformed)
     # that never reach any delivery lane.
     stock_market: StockMarketGateDecision | None = None
+    # R4-OPS-8 — Watch-only dominant-subject precision verdict.  None only for
+    # transport/authority/schema/opinion early exits that precede article
+    # semantic evaluation.
+    semantic_precision: (
+        watch_semantic_precision.WatchSemanticPrecisionDecision | None
+    ) = None
 
 
 def _value(obj: object, key: str, default: Any = "") -> Any:
@@ -1733,6 +1740,13 @@ def evaluate_teams_push_policy(
             "excluded_opinion_content",
         )
 
+    # R4-OPS-8 — compute the bounded dominant-subject verdict now so every
+    # downstream semantic audit can see it.  Established opinion, stock, AI
+    # topic, relevance, and fund-product gates retain ownership of their
+    # historical reason/counter classes; this new verdict is enforced after
+    # those gates and before importance, publisher priority, ranking, or state.
+    semantic_precision = watch_semantic_precision.classify(article)
+
     # R4-R9B §4 — the stock-market hard gate is decided before topic
     # classification, ranking, the ledger, the major-media source gate, the
     # specialist holdback, and every fallback: a hard-rejected article never
@@ -1787,6 +1801,7 @@ def evaluate_teams_push_policy(
             ImportanceDecision(False, reason=topic.exclusion_reason),
             True, False, reason,
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     if not stock_gate.eligible:
@@ -1797,6 +1812,7 @@ def evaluate_teams_push_policy(
             ImportanceDecision(False, reason=STOCK_MARKET_EXCLUSION_REASON),
             True, False, "excluded_stock_market_dominant",
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     hdec_relevant = is_executive_relevant_for_push(article, topic)
@@ -1806,6 +1822,7 @@ def evaluate_teams_push_policy(
             ImportanceDecision(False, reason="insufficient_executive_relevance"),
             True, False, "insufficient_hdec_relevance",
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     # R4-OPS-2 — executive-materiality noise floor. An AI-central, HDEC-relevant
@@ -1822,6 +1839,35 @@ def evaluate_teams_push_policy(
             ImportanceDecision(False, reason=noise_reason),
             True, False, "excluded_fund_product_noise",
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
+        )
+
+    # The dominant-subject gate is Watch-scoped and reads only title,
+    # publisher subtitle, and the first factual publisher snippet sentence.
+    # Query/generated text/source prestige therefore cannot rescue a reject.
+    if not semantic_precision.eligible:
+        reason_by_class = {
+            watch_semantic_precision.INVESTOR_MARKET_COMMENTARY:
+                "excluded_investor_market_commentary",
+            watch_semantic_precision.GENERIC_INDUSTRY_AI_TAILWIND:
+                "excluded_generic_industry_ai_tailwind",
+            watch_semantic_precision.ROUNDUP_MULTI_TOPIC:
+                "excluded_roundup_multi_topic",
+            watch_semantic_precision.AI_INCIDENTAL:
+                "excluded_ai_incidental",
+            watch_semantic_precision.OTHER_NONEXECUTIVE:
+                "excluded_other_nonexecutive",
+        }
+        return TeamsPolicyEvaluation(
+            article,
+            topic,
+            True,
+            ImportanceDecision(False, reason=semantic_precision.reason),
+            True,
+            False,
+            reason_by_class[semantic_precision.semantic_class],
+            stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     importance = map_importance(article, topic)
@@ -1834,6 +1880,7 @@ def evaluate_teams_push_policy(
             article, topic, True, importance, True, False,
             reason_map.get(importance.reason, "other_policy_reason"),
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     # R4-R6 §7 — an article cannot be sent with a category whose evidence is
@@ -1846,6 +1893,7 @@ def evaluate_teams_push_policy(
             article, topic, True, importance, True, False,
             "no_evidenced_delivery_category",
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     # R4-R8: authority is not priority. A verified official article is a
@@ -1864,6 +1912,7 @@ def evaluate_teams_push_policy(
             delivery_category=category,
             public_routing=public_route,
             stock_market=stock_gate,
+            semantic_precision=semantic_precision,
         )
 
     return TeamsPolicyEvaluation(
@@ -1871,6 +1920,7 @@ def evaluate_teams_push_policy(
         delivery_category=category,
         public_routing=public_route,
         stock_market=stock_gate,
+        semantic_precision=semantic_precision,
     )
 
 

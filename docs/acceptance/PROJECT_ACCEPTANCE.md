@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.2
+**Version:** 1.3
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -30,6 +30,9 @@ Expected behavior:
 
 - major-media-first;
 - article substance must independently qualify;
+- the bounded publisher title/subtitle/factual lead must make a material AI
+  corporate, industrial, infrastructure, regulation, or risk event the
+  dominant subject;
 - normal meaningful flow target: roughly one strong article per rolling hour when sufficient qualified supply exists;
 - TOP / HDEC-direct / critical material events may send immediately;
 - no filler when nothing qualifies;
@@ -74,6 +77,14 @@ The following are hard failures:
 - weak specialist/trusted sources fill unused Teams capacity;
 - publisher reputation alone creates qualification;
 - search query text creates qualification;
+- investor-audience guidance, stock selection, valuation, or market strategy
+  becomes a realtime AI event merely because it mentions AI/HBM/GPU;
+- generic sector earnings or business tailwind commentary becomes a realtime
+  AI event merely because AI demand is described as the cause;
+- a non-AI roundup title becomes a realtime AI event because a secondary
+  bundled item or snippet contains AI vocabulary;
+- incidental AI/HBM/GPU/semiconductor vocabulary creates qualification without
+  a bounded, materially relevant AI event;
 - empty Daily produces silence that is indistinguishable from workflow failure;
 - retries cause duplicate Daily sends;
 - Editor UI exposes a control that looks usable but deterministically fails because its backend is unavailable;
@@ -344,6 +355,100 @@ Required expected result:
   digest and action remain in the delivery-state audit history;
 - Editor success and Daily success remain independent truths.
 
+## HDEC-DEFECT-010 — investor-guidance dominant subject leaked to Watch
+
+Observed production send:
+
+- 매일경제
+- `https://www.mk.co.kr/news/business/12126910`
+- `HBM·ASIC…암호같은 이름 알면 반도체 투자가 보인다 [반도체플러스]`
+
+Required expected result:
+
+- final realtime decision: REJECT;
+- investor audience, stock-selection, valuation, portfolio, or market-guidance
+  dominance is not a material AI industrial event;
+- the bare word `투자` is never globally blocked;
+- a confirmed corporate AI infrastructure investment, supply contract,
+  capacity expansion, or construction event remains eligible to continue.
+
+## HDEC-DEFECT-011 — generic AI tailwind admitted as a new AI event
+
+Observed production send:
+
+- 서울경제
+- `https://www.sedaily.com/article/20079249`
+- `철강·석화 ‘AI·반도체 특수’로 불황 뚫었다`
+
+Required expected result:
+
+- final realtime decision: REJECT unless bounded publisher evidence proves a
+  distinct newly confirmed material AI action/event;
+- earnings, utilization, sector outlook, price, or business-performance
+  commentary does not qualify merely because AI demand is the cause or
+  tailwind;
+- a confirmed material AI infrastructure project, CAPEX, contract, regulation,
+  acquisition, security incident, or comparable industrial event remains
+  eligible to continue.
+
+## HDEC-DEFECT-012 — non-AI roundup contaminated by a secondary AI item
+
+Observed production send:
+
+- 세계일보
+- `https://www.segye.com/newsView/20260813519823`
+- `[경제 단신] ‘탱크데이’ 논란…스벅 2분기 적자전환 외`
+
+Required expected result:
+
+- final realtime decision: REJECT when the title's dominant item is non-AI and
+  AI appears only in another bundled item/snippet;
+- literal `외` is not a blanket ban;
+- an AI-dominant title using harmless roundup-like punctuation remains eligible
+  to continue when all other gates pass.
+
+## HDEC-DEFECT-013 — incidental AI inference without bounded evidence
+
+Observed production-window class includes articles whose publisher title,
+subtitle, and factual lead establish a different industrial or market subject,
+while AI/HBM/GPU/semiconductor vocabulary appears only incidentally or through
+non-authoritative metadata.
+
+Required expected result:
+
+- final realtime decision: REJECT when bounded publisher evidence contains no
+  central, materially relevant AI event;
+- query text, generated summary/implication/category, and publisher prestige
+  each have zero qualification authority;
+- a known corporate actor plus a generic launch/groundbreaking/completion does
+  not create qualification when AI appears only as an incidental product or
+  facility feature in the factual lead;
+- an actor bridge must prove a material AI target or AI-infrastructure nexus in
+  the bounded factual publisher lead;
+- a material AI event proven by bounded publisher evidence remains eligible to
+  continue through all established Watch gates.
+
+## HDEC-DEFECT-014 — AI-infrastructure groundbreaking idiom over-filtered
+
+Observed acceptance fixture:
+
+- `과기정통부, 국가AI컴퓨팅센터 첫 삽`
+- factual publisher lead: `국가 AI 컴퓨팅센터 건설을 착공해 GPU 인프라 구축을 시작했다.`
+
+Required expected result:
+
+- `첫 삽`, `첫삽`, `기공`, `기공식`, and `착공식` are recognized as
+  construction-start headline cues, never as unconditional qualification
+  tokens;
+- eligibility requires an AI/AI-infrastructure-aligned title and a bounded
+  factual publisher lead that independently confirms a current action such as
+  착공, 건설·구축 착수, 기공식 개최, or 공사 시작;
+- speculative groundbreaking review, a historical groundbreaking reference
+  without a new material event, and a non-AI construction event with only an
+  incidental AI feature remain realtime REJECT;
+- government/public-institution and HDEC/competitor actors use the same
+  semantic requirements, and all established Watch gates still apply.
+
 ---
 
 # 7. REAL-CORPUS REPLAY MATRIX
@@ -359,6 +464,12 @@ The acceptance replay must contain at least:
 5. weak Tier-C specialist article with no independently sufficient event
 6. observed SBS Premium incident URL with only verified provenance
 7. explicitly synthetic high-materiality SBS Premium authority stress case
+8. observed investor-guidance dominant article with AI/HBM vocabulary
+9. observed generic AI-demand earnings/tailwind commentary with no new event
+10. observed non-AI roundup with an AI secondary item
+11. incidental AI/HBM/GPU vocabulary without a material AI event
+12. non-AI apartment/factory/product event with only an incidental AI feature
+13. speculative or historical groundbreaking context without a new event
 
 ### MUST BE CAPABLE OF TEAMS ELIGIBILITY
 
@@ -367,6 +478,12 @@ The acceptance replay must contain at least:
 3. qualifying Tier-A major-media event
 4. HDEC-direct material event
 5. TOP critical event
+6. confirmed corporate AI infrastructure investment with a concrete amount
+7. AI semiconductor supply/capacity contract
+8. material AI regulation or security/risk event
+9. AI-dominant title with harmless `…외` formatting
+10. AI-computing/data-center `첫 삽` with publisher-lead proof of current 착공
+11. AI-infrastructure `기공식` with publisher-lead proof construction started
 
 ### EDITOR-ONLY / SUPPORTING
 
@@ -379,11 +496,18 @@ For every replay row output:
 ```text
 TITLE=
 SOURCE=
+URL=
+PROVENANCE=
 RESOLVED_PUBLISHER_IDENTITY=
 SOURCE_TIER=
+SEMANTIC_CLASS=
 AI_CENTRAL=
 EXECUTIVE_RELEVANT=
 MATERIAL=
+STOCK_MARKET=
+FUND_PRODUCT=
+ROUNDUP=
+INVESTOR_DOMINANT=
 IMPORTANCE=
 OPINION_GATE=
 TEAMS_POLICY_ELIGIBLE=

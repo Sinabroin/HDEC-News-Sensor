@@ -326,6 +326,10 @@ def main() -> int:
         == "insufficient_executive_relevance"
     )
 
+    # Historical manager-strategy fixtures. R4-OPS-8 keeps the nine titles
+    # that independently prove a material action/risk, while five rows whose
+    # only action is in the non-authoritative generated ``summary`` remain
+    # editorial context and are rejected from realtime Watch.
     manager_strategy_gold = (
         (
             "구글, AI 투자 2050억달러로 확대",
@@ -385,6 +389,7 @@ def main() -> int:
         ),
     )
 
+    generated_summary_only_context = {3, 4, 6, 9, 11}
     for index, (title, summary) in enumerate(manager_strategy_gold):
         fixture = article(
             article_key=f"manager-strategy-gold-{index}",
@@ -424,9 +429,10 @@ def main() -> int:
             fixture,
             fixture_topic,
         ).sendable
-        assert len(
-            select_teams_push_candidates([fixture])
-        ) == 1
+        selected_count = len(select_teams_push_candidates([fixture]))
+        assert selected_count == (
+            0 if index in generated_summary_only_context else 1
+        ), (index, title, selected_count)
 
     manager_dashboard_references = (
         (
@@ -968,6 +974,7 @@ def main() -> int:
     )
 
     print("R4_STRONG_STRATEGIC_GOLD_SET=PASS")
+    print("R4_GENERATED_SUMMARY_ONLY_CONTEXT_REJECTED=PASS")
     print("RESULT=D7-AK-6C_TEAMS_AI_PUSH_VERIFIER_PASS")
     print(f"policy_batch_ceiling={MAX_TEAMS_ARTICLES} ranked_candidates={len(candidates)} "
           f"top={sum(c.importance.level == IMPORTANCE_TOP for c in candidates)}")

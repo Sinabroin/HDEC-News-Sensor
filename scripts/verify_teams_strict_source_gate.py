@@ -197,15 +197,33 @@ def sjournal(**overrides):
 
 
 def ttlnews(url: str = TTL_URL_HTTP, **overrides):
-    """The exact TTL production article (verbatim title / source label / URL)
-    framed as a confirmed HDEC contract event so every pre-gate (AI topic,
-    importance, stock lane) passes and ONLY the source gate can stop it."""
+    """Exact TTL production identity plus adversarial generated metadata.
+
+    R4-OPS-8 correctly rejects the verbatim earnings/tailwind title. The
+    synthetic ``summary``/HDEC implication below must not rescue it.
+    """
     base = specialist_article(
         "obs-ttl-3131687", TTL_SOURCE, url,
         title=TTL_TITLE,
         summary="현대건설이 AI 데이터센터 전력 인프라 계약을 체결했다.",
         hdec_relevance="현대건설 직접 영향(AI 데이터센터 전력 인프라)",
         shadow_confirmed_event_types=["contract_signed"],
+    )
+    base.update(overrides)
+    return base
+
+
+def ttl_material_neighbor(**overrides):
+    """Explicit synthetic material event isolating TTL source-gate behavior."""
+    base = specialist_article(
+        "synthetic-ttl-material",
+        TTL_SOURCE,
+        "https://www.ttlnews.com/news/articleView.html?idxno=9999991",
+        title="SK텔레콤, AI 데이터센터 전력 공급계약 체결",
+        summary="SK텔레콤이 AI 데이터센터 전력 공급계약을 체결했다.",
+        snippet="SK텔레콤이 AI 데이터센터 전력 공급계약을 체결했다.",
+        hdec_relevance="AI 데이터센터 전력 인프라 공급망 영향",
+        evidence_provenance="synthetic_neighbor",
     )
     base.update(overrides)
     return base
@@ -620,8 +638,9 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="hdec-r4r11-ttl-") as raw:
         tmp = Path(raw)
         # (e) exact article through the production sender, http and https:
-        # selected 0, accepted/delivered 0, sent 0, never_automatic_rejected 1,
-        # specialist_or_neutral_rejected 1.
+        # selected 0, accepted/delivered 0, sent 0. R4-OPS-8 now rejects this
+        # exact generic earnings/tailwind framing before the source gate, so
+        # source-gate counters remain zero rather than receiving false credit.
         for label, url in (("http", TTL_URL_HTTP), ("https", TTL_URL_HTTPS)):
             st = tmp / f"ttl-exact-{label}.json"
             summary, rec = deliver(tmp, [ttlnews(url)], st)
@@ -629,20 +648,23 @@ def main() -> int:
                   summary["selected"] == 0 and rec.attempts == []
                   and summary["delivered_count"] == 0
                   and summary["smtp_attempted_rows"] == 0, str(summary))
-            check(f"§10 exact TTL article ({label}): never_automatic_rejected_rows == 1 "
-                  "and specialist_or_neutral_rejected_rows == 1",
-                  summary["never_automatic_rejected_rows"] == 1
-                  and summary["specialist_or_neutral_rejected_rows"] == 1
-                  and summary["source_gate_rejected_rows"] == 1, str(summary))
-        cand = select_teams_push_candidates([ttlnews()], max_articles=None)
-        check("§10 TTL candidate passes every pre-gate yet the source gate refuses it",
+            check(f"§10 exact TTL article ({label}): semantic gate owns the reject",
+                  summary["alert_policy_eligible"] == 0
+                  and summary["never_automatic_rejected_rows"] == 0
+                  and summary["specialist_or_neutral_rejected_rows"] == 0
+                  and summary["source_gate_rejected_rows"] == 0, str(summary))
+        check("§10 adversarial generated HDEC contract summary cannot rescue tailwind title",
+              len(select_teams_push_candidates([ttlnews()], max_articles=None)) == 0)
+        cand = select_teams_push_candidates(
+            [ttl_material_neighbor()], max_articles=None
+        )
+        check("§10 synthetic material TTL neighbor reaches source gate and is refused",
               len(cand) == 1
               and evaluate_source_gate(cand[0]).gate_class == SOURCE_GATE_NEVER_AUTOMATIC
               and evaluate_source_gate(cand[0]).reason
               == "explicit_never_automatic_publisher", str(cand))
         # (f) the verbatim production framing (earnings summary, no confirmed
-        # material event) is additionally stopped by the stock-market hard
-        # lane — two independent gates now reject the observed send.
+        # material event) is stopped by the R4-OPS-8 generic-tailwind gate.
         st = tmp / "ttl-verbatim.json"
         summary, rec = deliver(
             tmp,
@@ -651,7 +673,7 @@ def main() -> int:
                      shadow_confirmed_event_types=["earnings_update"])],
             st,
         )
-        check("§10 verbatim earnings framing is also blocked (stock lane, selected 0)",
+        check("§10 verbatim earnings framing is blocked (semantic lane, selected 0)",
               summary["selected"] == 0 and rec.attempts == []
               and summary["delivered_count"] == 0, str(summary))
         # (g) TTL + a same-event primary-ten card: the primary is the only
@@ -659,8 +681,8 @@ def main() -> int:
         st = tmp / "ttl-plus-primary.json"
         summary, rec = deliver(
             tmp,
-            [ttlnews(cluster_key="evt-ttl"),
-             primary("p-ttl", "연합뉴스: SK텔레콤 AI 데이터센터 실적 공식 발표",
+            [ttl_material_neighbor(cluster_key="evt-ttl"),
+             primary("p-ttl", "연합뉴스: SK텔레콤 AI 데이터센터 전력 공급계약 체결",
                      "연합뉴스", cluster_key="evt-ttl",
                      hdec_relevance="현대건설 직접 영향",
                      shadow_confirmed_event_types=["contract_signed"])],

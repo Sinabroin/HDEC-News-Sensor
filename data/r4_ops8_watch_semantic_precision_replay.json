@@ -1,0 +1,503 @@
+{
+  "schema_version": 1,
+  "fixture_contract": "R4_OPS8_WATCH_SEMANTIC_PRECISION_REPLAY_V1",
+  "evidence_contract": "Observed rows preserve committed ledger facts and publisher-recovered bounded evidence. Missing historical provider snippets, scores, queries, and generated metadata remain unknown. Synthetic rows are explicitly separated.",
+  "production_window": {
+    "start_kst": "2026-08-13T00:00:00+09:00",
+    "end_kst": "2026-08-18T23:59:59+09:00",
+    "deduplicated_ledger_sends": 39,
+    "user_supplied_suspect_urls": 32,
+    "suspect_urls_recovered": 32
+  },
+  "rows": [
+    {
+      "case_id": "r4ops8_fp1_mk_investor_guidance",
+      "provenance": "user_confirmed",
+      "corpus_role": "confirmed_anchor",
+      "title": "HBM·ASIC…암호같은 이름 알면 반도체 투자가 보인다 [반도체플러스]",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/business/12126910",
+      "published_at": "2026-08-13T18:06:28+09:00",
+      "ledger_sent_at": "2026-08-13T18:12:43+09:00",
+      "snippet": "반도체 제품으로 보는 메모리시장 방향성. AI데이터센터 도입에 D램에서는 HBM, 낸드에서는 CMX 같은 AIDC 특화 메모리가 등장한다.",
+      "evidence_status": "ledger_send_and_publisher_title_subtitle_body_lead_recovered",
+      "unknown_fields": ["historical_provider_snippet", "historical_score", "historical_query", "historical_generated_summary"],
+      "expected_semantic_class": "INVESTOR_MARKET_COMMENTARY",
+      "human_expected": "REJECT",
+      "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "r4ops8_fp2_sedaily_generic_tailwind",
+      "provenance": "user_confirmed",
+      "corpus_role": "confirmed_anchor",
+      "title": "철강·석화 ‘AI·반도체 특수’로 불황 뚫었다",
+      "source": "서울경제",
+      "url": "https://www.sedaily.com/article/20079249",
+      "published_at": "2026-08-13T19:06:27+09:00",
+      "ledger_sent_at": "2026-08-13T19:33:41+09:00",
+      "snippet": "업황 부진과 중국산 공급 과잉 등 이중고에 시달리던 국내 철강·석유화학 업계가 폭발적으로 증가하는 글로벌 인공지능(AI) 인프라 수요를 발판 삼아 재도약을 꾀하고 있다.",
+      "evidence_status": "ledger_send_and_publisher_title_lead_recovered",
+      "unknown_fields": ["historical_provider_snippet", "historical_score", "historical_query", "historical_generated_summary"],
+      "expected_semantic_class": "GENERIC_INDUSTRY_AI_TAILWIND",
+      "human_expected": "REJECT",
+      "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "r4ops8_fp3_segye_roundup_contamination",
+      "provenance": "user_confirmed",
+      "corpus_role": "confirmed_anchor",
+      "title": "[경제 단신] ‘탱크데이’ 논란…스벅 2분기 적자전환 외",
+      "source": "세계일보",
+      "url": "https://www.segye.com/newsView/20260813519823",
+      "published_at": "2026-08-14T05:00:00+09:00",
+      "ledger_sent_at": "2026-08-14T05:11:53+09:00",
+      "snippet": "삼성전자가 인도에 플랙트그룹의 신규 냉난방공조 생산라인을 준공하고 인도와 아시아·태평양 지역의 인공지능(AI) 데이터센터 시장 공략을 강화한다.",
+      "snippet_role": "publisher_secondary_item_recovered_not_historical_provider_snippet",
+      "evidence_status": "ledger_send_and_publisher_roundup_items_recovered",
+      "unknown_fields": ["historical_provider_snippet", "historical_score", "historical_query", "historical_generated_summary"],
+      "expected_semantic_class": "ROUNDUP_MULTI_TOPIC",
+      "human_expected": "REJECT",
+      "expected_realtime": "REJECT"
+    },
+
+    {
+      "case_id": "suspect_01_segye_naver_floating_dc_investment",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "네이버 ‘바다 위 데이터센터’ 스타트업 투자", "source": "세계일보",
+      "url": "https://www.segye.com/newsView/20260813519804", "published_at": "2026-08-14T06:00:00+09:00", "ledger_sent_at": "2026-08-14T07:04:55+09:00",
+      "snippet": "네이버가 파력 발전을 활용한 부유식 인공지능(AI) 데이터센터 개발 기업 판탈라사에 투자했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_02_sedaily_traditional_manufacturer_tailwind",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "‘AI 인프라’ 특화 속도…신성장 모터 장착하는 전통 제조사들", "source": "서울경제",
+      "url": "https://www.sedaily.com/article/20079265", "published_at": "2026-08-14T07:00:00+09:00", "ledger_sent_at": "2026-08-14T08:56:29+09:00",
+      "snippet": "중국산 저가 물량 공세와 전방 산업 침체로 불황을 겪던 전통 제조업계가 인공지능(AI) 인프라 투자 열풍을 타고 업황 반전의 기회를 모색하고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_03_yna_datacenter_land_human_interest",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "'돼지농장주 벼락부자로'…데이터센터 갈등의 열쇠는 [이광빈의 플랫폼S]", "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260814053800527", "published_at": "2026-08-14T10:58:55+09:00", "ledger_sent_at": "2026-08-14T11:58:24+09:00",
+      "snippet": "지속가능한 사회를 위한 이야기들을 담아낸 플랫폼S입니다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_04_fnnews_research_earnings_expectation",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "스터닝밸류 크린앤사이언스, AI데이터센터 필터 특수…3년만의 연간 흑자 기대", "source": "파이낸셜뉴스",
+      "url": "https://www.fnnews.com/news/202608141308449417", "published_at": "2026-08-14T13:14:01+09:00", "ledger_sent_at": "2026-08-14T13:21:42+09:00",
+      "snippet": "스터닝밸류리서치는 크린앤사이언스가 국내 필터업체 최초로 인공지능 데이터센터 공조 시스템에 진입하면서 새로운 성장동력을 확보했다고 분석했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_05_newsis_ai_power_war_analysis",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "빌 게이츠 방한으로 본 'AI 전력전쟁'…빅테크 차세대 원전 선점", "source": "뉴시스",
+      "url": "https://www.newsis.com/view/NISX20260814_0003749732", "published_at": "2026-08-14T15:56:26+09:00", "ledger_sent_at": "2026-08-14T19:00:42+09:00",
+      "snippet": "인공지능(AI) 인프라 경쟁이 그래픽처리장치 확보를 넘어 전력 선점 경쟁으로 확산하고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "BORDERLINE", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_06_yna_cursor_acquisition",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "스페이스X, 코딩 스타트업 '커서' 85조원에 인수 완료", "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260815002300091", "published_at": "2026-08-15T02:46:46+09:00", "ledger_sent_at": "2026-08-15T03:32:29+09:00",
+      "snippet": "스페이스X가 인공지능(AI) 코딩 스타트업 커서의 인수를 마무리 지었다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_07_fnnews_cursor_acquisition",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "스페이스X, AI 코딩 '커서' 품었다…600억달러 빅딜", "source": "파이낸셜뉴스",
+      "url": "https://www.fnnews.com/news/202608150424589630", "published_at": "2026-08-15T04:36:58+09:00", "ledger_sent_at": "2026-08-15T05:11:51+09:00",
+      "snippet": "스페이스X가 인공지능 코딩 스타트업 커서 인수를 마무리했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_08_asiae_weekend_money_ai_stock",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "AI주 너무 비싼 거 아냐?…딥시크 가격 인상 뜯어보니 '반전'[주末머니]", "source": "아시아경제",
+      "url": "https://www.asiae.co.kr/article/2026081316021922649", "published_at": "2026-08-15T10:42:00+09:00", "ledger_sent_at": "2026-08-15T11:00:41+09:00",
+      "snippet": "중국 인공지능(AI) 기업 딥시크가 가격 인상을 예고했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_09_sedaily_ai_model_capital_commentary",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "AI 모델 ‘군웅할거’에 자본이 낙오자 거를 수도", "source": "서울경제",
+      "url": "https://www.sedaily.com/article/20079815", "published_at": "2026-08-15T12:10:54+09:00", "ledger_sent_at": "2026-08-15T12:53:06+09:00",
+      "snippet": "오픈AI가 챗GPT를 출시한 뒤 생성형 인공지능(AI) 모델 시장이 춘추전국시대를 맞았다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_10_asiae_ai_cost_endurance_commentary",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "'AI 대전' 구글·아마존·MS…이제는 '비용 버티기' 승부[주末머니]", "source": "아시아경제",
+      "url": "https://www.asiae.co.kr/article/2026081315350228917", "published_at": "2026-08-15T18:05:00+09:00", "ledger_sent_at": "2026-08-15T18:12:58+09:00",
+      "snippet": "인공지능(AI)이 세상을 바꿀 것이라는 기대는 여전히 유효하지만 그 길에는 막대한 비용이 든다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_11_sedaily_musk_manufacturing_projects",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "반도체 24조·태양광 14조…머스크의 거침없는 ‘쩐의 전쟁’", "source": "서울경제",
+      "url": "https://www.sedaily.com/article/20079812", "published_at": "2026-08-15T20:00:00+09:00", "ledger_sent_at": "2026-08-15T20:31:09+09:00",
+      "snippet": "일론 머스크가 최소 168억 달러가 투입되는 반도체 생산 프로젝트 테라팹에 이어 태양광 공장 프로젝트를 구체화하고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "BORDERLINE", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_12_newsis_ai_substrate_utilization",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "카메라보다 잘 남는다…LG이노텍·삼성전기, AI 기판 가동률 90% 안팎", "source": "뉴시스",
+      "url": "https://www.newsis.com/view/NISX20260814_0003750174", "published_at": "2026-08-16T06:42:23+09:00", "ledger_sent_at": "2026-08-16T05:21:29+09:00",
+      "snippet": "LG이노텍과 삼성전기의 반도체 패키지기판 생산라인이 90% 안팎의 가동률을 기록했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered_timestamp_conflict_preserved", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_13_sedaily_national_ai_competition_preview",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "LG·SKT에 도전장 낸 스타트업…‘국가대표 AI’ 4파전 누가 웃을까", "source": "서울경제",
+      "url": "https://www.sedaily.com/article/20079639", "published_at": "2026-08-16T08:00:00+09:00", "ledger_sent_at": "2026-08-16T08:30:15+09:00",
+      "snippet": "정부의 독자 AI 파운데이션 모델 프로젝트 2차 단계평가가 다가오면서 네 팀의 경쟁이 막판으로 치닫고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "BORDERLINE", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_14_newsis_telco_earnings_series",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "통신보다 AI가 더 큰다…이통3사 성장축 바꾼 데이터센터[통신 AI베팅①]", "source": "뉴시스",
+      "url": "https://www.newsis.com/view/NISX20260813_0003748290", "published_at": "2026-08-16T13:02:24+09:00", "ledger_sent_at": "2026-08-16T13:22:49+09:00",
+      "snippet": "이동통신사의 실적을 설명하는 숫자가 달라지고 있으며 인공지능데이터센터와 클라우드 사업 성장세가 화두로 올라섰다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_15_news1_government_sme_megaproject_policy",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "AI 데이터센터 메가프로젝트에 中企 참여 확대…K-소부장 키운다", "source": "뉴스1",
+      "url": "https://www.news1.kr/industry/sb-founded/6259527", "published_at": "2026-08-16T06:20:00+09:00", "ledger_sent_at": "2026-08-16T11:42:57+09:00",
+      "snippet": "정부가 인공지능(AI) 데이터센터 등 대규모 프로젝트에 중소기업의 참여를 확대한다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_16_etnews_smr_grid_mou",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "그리드위즈-알엑스, SMR·전력망 유연성으로 AI 데이터센터 공동 공략", "source": "전자신문",
+      "url": "https://www.etnews.com/20260813000172", "published_at": "2026-08-13T11:28:34+09:00", "ledger_sent_at": "2026-08-16T14:40:57+09:00",
+      "snippet": "그리드위즈는 알엑스와 인공지능(AI) 데이터센터용 통합 전력·냉각 솔루션 사업 개발 업무협약을 맺었다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_17_newsis_telco_aidc_investment_series",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "AIDC 판 키우는 통신3사…통신 이을 수익원으로 키운다[통신 AI베팅③]", "source": "뉴시스",
+      "url": "https://www.newsis.com/view/NISX20260814_0003750210", "published_at": "2026-08-16T15:00:00+09:00", "ledger_sent_at": "2026-08-16T15:59:10+09:00",
+      "snippet": "국내 통신3사의 인공지능데이터센터 경쟁이 시장 선점을 위한 장기 투자전으로 번지고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_18_hankookilbo_us_ai_alliance_demand",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "양다리 안 돼…美, 한국 등 동맹에 中 AI 기구 가입 금지 최후통첩", "source": "한국일보",
+      "url": "https://www.hankookilbo.com/News/Read/A2026081615470005737", "published_at": "2026-08-16T16:20:00+09:00", "ledger_sent_at": "2026-08-16T17:05:35+09:00",
+      "snippet": "미국이 한국 등 AI 동맹국에 중국 주도 AI 협력체 참여 자제를 요구했다.",
+      "evidence_status": "ledger_canonical_path_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_19_fnnews_semiconductor_orders_revenue",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "잇단 반도체 장비 수주…파크시스템스 매출 반등", "source": "파이낸셜뉴스",
+      "url": "https://www.fnnews.com/news/202608161829005443", "published_at": "2026-08-16T18:29:45+09:00", "ledger_sent_at": "2026-08-16T18:48:22+09:00",
+      "snippet": "반도체 계측장비에 주력하는 파크시스템스가 2분기 매출 반등을 일궜다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_20_hani_green_datacenter_comparison",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "AI 패권 다투는 중국도 ‘녹색 기준’…한국은 데이터센터 속도전만", "source": "한겨레",
+      "url": "https://www.hani.co.kr/arti/economy/it/1273187.html", "published_at": "2026-08-17T07:00:00+09:00", "ledger_sent_at": "2026-08-17T07:22:42+09:00",
+      "snippet": "에이아이 데이터센터의 전기와 물 사용, 경관 훼손, 지역 혜택을 둘러싼 여론을 비교한다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "BORDERLINE", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_21_yna_datacenter_emissions_projection",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "미 건설중 데이터센터 모두 가동시 연 1억t 탄소 추가 배출", "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260817023500009", "published_at": "2026-08-17T09:56:14+09:00", "ledger_sent_at": "2026-08-17T10:11:23+09:00",
+      "snippet": "빅테크 기업들의 인공지능(AI) 데이터센터 건설 붐이 화석연료 발전 확대를 부추겨 신규 탄소 배출원이 될 수 있다는 분석이다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "BORDERLINE", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_22_etnews_africa_investment_market",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "연 1080억달러 인프라 부족한 아프리카…전력·용수·AI 투자시장 열린다", "source": "전자신문",
+      "url": "https://www.etnews.com/20260817000072", "published_at": "2026-08-17T10:45:22+09:00", "ledger_sent_at": "2026-08-17T11:37:08+09:00",
+      "snippet": "아프리카가 전력망과 용수, 인공지능(AI)·디지털 인프라 부족으로 산업 전환에 어려움을 겪고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_23_newsis_ai_inflation_commentary",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "물가 낮춘다던 AI, 올해는 거꾸로 밀어올린다…최대 0.4%p 계산 나왔다", "source": "뉴시스",
+      "url": "https://www.newsis.com/view/NISX20260817_0003751159", "published_at": "2026-08-17T08:42:24+09:00", "ledger_sent_at": "2026-08-17T13:25:59+09:00",
+      "snippet": "생산성을 높여 물가를 낮출 것으로 기대됐던 인공지능(AI)이 미국에서는 단기 물가 압력을 키우고 있다는 분석이 나왔다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_24_hani_datacenter_land_human_interest",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "375억 줘도 땅 안 팔아…AI 데이터센터 제안 거절한 시골 모녀", "source": "한겨레",
+      "url": "https://www.hani.co.kr/arti/international/international_general/1273232.html", "published_at": "2026-08-17T15:24:00+09:00", "ledger_sent_at": "2026-08-17T15:58:02+09:00",
+      "snippet": "미국에서 인공지능(AI) 데이터센터 부지 매입 제안을 거절한 모녀가 반대 진영의 리더로 떠올랐다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_25_sedaily_open_source_ai_interview",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "中 오픈소스 AI 위협적…인내 자본·우수 인재 확보 서둘러야", "source": "서울경제",
+      "url": "https://www.sedaily.com/article/20080103", "published_at": "2026-08-17T17:47:59+09:00", "ledger_sent_at": "2026-08-17T17:56:03+09:00",
+      "snippet": "세계 주요국들이 국가 명운을 건 인공지능(AI) 패권 경쟁을 벌이고 있다는 진단이다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_26_munhwa_hdec_terrapower_smr",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "HD현대·현대건설, 美 테라파워와 손잡고 미국 SMR 시장 진출 확대", "source": "문화일보",
+      "url": "https://www.munhwa.com/article/11609935", "published_at": "2026-08-17T18:01:13+09:00", "ledger_sent_at": "2026-08-17T18:43:29+09:00",
+      "snippet": "최근 미국 내 인공지능(AI)발 데이터센터 증가로 전력 수요가 급증하며 원자력 발전 수요가 높아지고 있고 현대건설은 테라파워와 협력체계를 구축했다.",
+      "snippet_role": "publisher_body_ai_nexus_recovered_not_historical_provider_snippet",
+      "evidence_status": "ledger_and_publisher_body_evidence_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_27_fnnews_telco_ai_infra_strategy",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "통신 3사 'AI인프라 기업' 부상…AIDC로 승부 건다", "source": "파이낸셜뉴스",
+      "url": "https://www.fnnews.com/news/202608171832257077", "published_at": "2026-08-17T18:32:27+09:00", "ledger_sent_at": "2026-08-17T19:54:16+09:00",
+      "snippet": "이동통신 3사가 인공지능 데이터센터를 새로운 성장축으로 키우며 AI 인프라 사업자로 체질을 바꾸고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_28_sbs_ai_power_project",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "'여의도 22배' 사막의 발전 단지…ESS 시장 '급성장'", "source": "SBS",
+      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008708588", "published_at": "2026-08-17T21:07:00+09:00", "ledger_sent_at": "2026-08-17T21:41:35+09:00",
+      "snippet": "인공지능과 데이터센터의 전력 수요를 감당하기 위해 미국 사막에 초대형 발전단지가 지어지고 있다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_29_asiae_groq_funding_pivot",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "그록, 몸값 반토막…엔비디아 경쟁 대신 데이터센터로 전환", "source": "아시아경제",
+      "url": "https://www.asiae.co.kr/article/2026081800504693997", "published_at": "2026-08-18T00:50:46+09:00", "ledger_sent_at": "2026-08-18T01:05:40+09:00",
+      "snippet": "인공지능(AI) 반도체 스타트업 그록이 3억5000만달러의 신규 자금을 조달했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_30_fnnews_nvidia_ohio_dc_credit",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "오하이오에 세계 최대 AI 데이터센터…엔비디아 1050억달러 뒷받침", "source": "파이낸셜뉴스",
+      "url": "https://www.fnnews.com/news/202608180412004076", "published_at": "2026-08-18T04:25:32+09:00", "ledger_sent_at": "2026-08-18T04:49:11+09:00",
+      "snippet": "엔비디아가 오픈AI의 초대형 인공지능 데이터센터 건설에 최대 1050억달러의 신용지원을 제공한다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "suspect_31_yna_new_york_stock_market",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "뉴욕증시, 국제유가 상승에 일제히 하락…다우 0.5%↓", "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260818006451072", "published_at": "2026-08-18T06:34:30+09:00", "ledger_sent_at": "2026-08-18T06:46:34+09:00",
+      "snippet": "미국 뉴욕증시는 국제유가 상승과 미 국채금리 급등 여파로 하락했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "suspect_32_khan_macro_semiconductor_outlook",
+      "provenance": "observed_production", "corpus_role": "suspect",
+      "title": "무디스, 한국 성장률 3.5%로 ‘깜짝’ 상향…반도체 호황 계속", "source": "경향신문",
+      "url": "https://www.khan.co.kr/article/202608180741001", "published_at": "2026-08-18T07:41:00+09:00", "ledger_sent_at": "2026-08-18T08:02:02+09:00",
+      "snippet": "무디스가 한국 성장률 전망치를 올리고 반도체 호황이 이어질 것으로 전망했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+
+    {
+      "case_id": "window_extra_01_etnews_ai_power_opinion", "provenance": "observed_production", "corpus_role": "window_audit",
+      "title": "[최은수의 AI와 뉴비즈] AI 공장의 불을 켜라…AI 패권의 진짜 전쟁터 '전력'", "source": "전자신문", "url": "https://www.etnews.com/20260813000029", "ledger_sent_at": "2026-08-14T03:13:01+09:00",
+      "snippet": "텍사스 당국이 전력망 안정성을 이유로 신규 데이터센터 전력망 연결 승인 절차를 감사 종료 때까지 중단했다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "BORDERLINE", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "window_extra_02_etnews_smr_ai_incidental", "provenance": "observed_production", "corpus_role": "window_audit",
+      "title": "김정관, 빌 게이츠 만나 SMR 협력 논의…韓 원전기업 참여 확대", "source": "전자신문", "url": "https://www.etnews.com/20260814000287", "ledger_sent_at": "2026-08-14T17:51:55+09:00",
+      "snippet": "한국 원전 기업의 테라파워 소형모듈원자로 공급망 진입이 확대된다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "window_extra_03_newsis_telco_tailwind", "provenance": "observed_production", "corpus_role": "window_audit",
+      "title": "AI 돌릴수록 돈 된다…통신사가 AIDC에 꽂힌 이유", "source": "뉴시스", "url": "https://www.newsis.com/view/NISX20260814_0003749928", "ledger_sent_at": "2026-08-15T00:29:43+09:00",
+      "snippet": null, "evidence_status": "ledger_title_recovered_publisher_lead_unavailable", "unknown_fields": ["publisher_lead", "historical_provider_snippet"],
+      "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "window_extra_04_sedaily_speculative_semiconductor_investment", "provenance": "observed_production", "corpus_role": "window_audit",
+      "title": "‘800조+@’ 호남권 반도체 투자 광주 넘어 전남권으로 확대되나", "source": "서울경제", "url": "https://www.sedaily.com/article/20079610", "ledger_sent_at": "2026-08-15T07:22:53+09:00",
+      "snippet": "호남권 반도체 클러스터 사업 규모가 광주권에서 전남권으로 확대될 가능성이 제기됐다.",
+      "evidence_status": "ledger_and_publisher_metadata_recovered", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+
+    {
+      "case_id": "neighbor_investor_guidance", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "AI 반도체, 무엇에 투자해야 하나…추천 종목과 목표주가", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_001",
+      "snippet": "투자자가 살펴야 할 포트폴리오와 밸류에이션을 설명한다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "INVESTOR_MARKET_COMMENTARY", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_bare_corporate_investment", "provenance": "synthetic_neighbor", "corpus_role": "positive_neighbor",
+      "title": "기업, AI 데이터센터에 5조원 투자한다", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_002",
+      "snippet": "기업이 신규 AI 인프라 건설에 5조원을 투자하기로 확정했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_corporate_investment_without_ai_title", "provenance": "synthetic_neighbor", "corpus_role": "positive_neighbor",
+      "title": "엔비디아, 전력업체에 4조원 투자 확정", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_003",
+      "snippet": "엔비디아가 AI 데이터센터 전력 공급을 위해 4조원을 투자하기로 했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_generic_ai_tailwind", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "철강업계, AI 반도체 수요 특수로 실적 반등", "source": "서울경제", "url": "https://www.sedaily.com/article/SYNTHETIC_R4OPS8_004",
+      "snippet": "AI 수요 증가로 업종 영업이익이 좋아졌다는 분석이다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "GENERIC_INDUSTRY_AI_TAILWIND", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_tailwind_action_noun_not_event", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "AI 데이터센터 구축 수혜로 철강사 실적 개선", "source": "서울경제", "url": "https://www.sedaily.com/article/SYNTHETIC_R4OPS8_004B",
+      "snippet": "AI 인프라 수요에 힘입어 업종 영업이익이 좋아졌다는 분석이다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "GENERIC_INDUSTRY_AI_TAILWIND", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_tailwind_with_material_event", "provenance": "synthetic_neighbor", "corpus_role": "positive_neighbor",
+      "title": "AI 수요 특수에 반도체 공장 증설 확정", "source": "서울경제", "url": "https://www.sedaily.com/article/SYNTHETIC_R4OPS8_005",
+      "snippet": "회사가 AI 반도체 생산 공장 증설을 확정했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_non_ai_roundup_ai_secondary", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "[경제 단신] 커피업체 적자전환 외", "source": "세계일보", "url": "https://www.segye.com/newsView/SYNTHETIC_R4OPS8_006",
+      "snippet": "삼성전자가 AI 데이터센터 공조 생산라인을 준공했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "ROUNDUP_MULTI_TOPIC", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_ai_dominant_roundup_format", "provenance": "synthetic_neighbor", "corpus_role": "positive_neighbor",
+      "title": "[산업 단신] AI 데이터센터 5조원 투자 확정 외", "source": "세계일보", "url": "https://www.segye.com/newsView/SYNTHETIC_R4OPS8_007",
+      "snippet": "기업이 AI 데이터센터 건설에 착수했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_single_topic_roundup_punctuation", "provenance": "synthetic_neighbor", "corpus_role": "positive_neighbor",
+      "title": "AI 데이터센터…전력망 연결 승인", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_008",
+      "snippet": "당국이 AI 데이터센터 전력망 연결을 승인했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_title_ai_absent_secondary_contamination", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "유통업체 2분기 적자전환", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_009",
+      "snippet": "별도 항목에서 기업의 AI 데이터센터 착공 소식을 전했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_INCIDENTAL", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_incidental_ai_buzzword", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "가전업계 하반기 판매 전망", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_010",
+      "snippet": "AI라는 표현이 마케팅 문구에 한 차례 등장했을 뿐 새 산업 사건은 없다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_INCIDENTAL", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_ls_electric_gs_ec_recall", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "LS일렉트릭, GS건설과 AI 데이터센터 직류배전 사업 협력", "source": "한국일보", "url": "https://www.hankookilbo.com/news/article/A2026081017370001610",
+      "snippet": "양사가 AI 데이터센터 공동 사업 협약을 체결했다.", "evidence_status": "historical_positive_neighbor",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_material_ai_infra_contract", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "GPU 공급계약 체결…AI 반도체 생산능력 증설", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_011",
+      "snippet": "기업이 AI 반도체용 GPU 공급계약을 체결하고 공장을 증설한다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_hdec_direct_material", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "현대건설, AI 데이터센터 EPC 본계약 체결", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_012",
+      "snippet": "현대건설이 AI 데이터센터 설계·조달·시공 본계약을 체결했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_major_competitor_material", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "GS건설, AI 데이터센터 전력 프로젝트 착공", "source": "한국일보", "url": "https://www.hankookilbo.com/news/article/SYNTHETIC_R4OPS8_013",
+      "snippet": "GS건설이 AI 데이터센터 전력 인프라 프로젝트를 착공했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_ai_regulation_effective", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "AI 기본법 내년 발효…안전 의무화", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_014",
+      "snippet": "AI 기본법이 내년 발효돼 안전 조치가 의무화된다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_ai_security_incident", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "AI 플랫폼 해킹…고객정보 대규모 유출", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_015",
+      "snippet": "AI 플랫폼 침해 사고로 고객 정보가 유출됐다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_ai_dc_first_shovel", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "국가 AI 컴퓨팅센터 첫 삽", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_016",
+      "snippet": "정부가 국가 AI 컴퓨팅센터 건설을 착공해 GPU 인프라 구축을 시작했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_ai_dc_groundbreaking", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "정부, 국가 AI 컴퓨팅센터 기공식 개최", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_017",
+      "snippet": "정부가 기공식을 개최하고 국가 AI 컴퓨팅센터 건설에 착수했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_hdec_ai_dc_first_shovel", "provenance": "synthetic_neighbor", "corpus_role": "positive_recall",
+      "title": "현대건설, AI 데이터센터 첫 삽", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_018",
+      "snippet": "현대건설이 AI 데이터센터 프로젝트를 착공하고 기반시설 구축을 시작했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_MATERIAL_EVENT", "human_expected": "KEEP", "expected_realtime": "KEEP"
+    },
+    {
+      "case_id": "neighbor_non_ai_first_shovel_incidental_ai", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "건설사, 일반 아파트 첫 삽", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_019",
+      "snippet": "일반 아파트 입주민 서비스에는 AI 챗봇과 스마트 안내 기능을 도입한다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_INCIDENTAL", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_speculative_groundbreaking", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "AI 데이터센터 기공식 가능성 검토", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_020",
+      "snippet": "사업자는 AI 데이터센터 기공식 개최 가능성을 검토 중이며 착공 일정은 확정하지 않았다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "OTHER_NONEXECUTIVE", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_historical_groundbreaking", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "지난해 첫 삽 뜬 AI센터 효과 분석", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_021",
+      "snippet": "AI 센터는 지난해 착공했으며 현재 지역경제 효과를 분석한 내용이다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "OTHER_NONEXECUTIVE", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_actor_bridge_suv_incidental_ai", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "현대차 SUV 출시", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_022",
+      "snippet": "신형 SUV는 편의 기능으로 AI 음성 비서를 탑재했다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_INCIDENTAL", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_actor_bridge_apartment_incidental_ai", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "포스코이앤씨 일반 아파트 착공", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_023",
+      "snippet": "일반 아파트 단지는 입주민 문의를 위한 AI 챗봇 서비스를 제공한다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_INCIDENTAL", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    },
+    {
+      "case_id": "neighbor_actor_bridge_refinery_incidental_ai", "provenance": "synthetic_neighbor", "corpus_role": "negative_neighbor",
+      "title": "현대건설 정유공장 준공", "source": "연합뉴스", "url": "https://www.yna.co.kr/view/SYNTHETIC_R4OPS8_024",
+      "snippet": "정유공장 운영에는 AI 예측 정비 기능을 적용한다.", "evidence_status": "synthetic_adversarial",
+      "expected_semantic_class": "AI_INCIDENTAL", "human_expected": "REJECT", "expected_realtime": "REJECT"
+    }
+  ]
+}
