@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.3
+**Version:** 1.4
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -449,6 +449,48 @@ Required expected result:
 - government/public-institution and HDEC/competitor actors use the same
   semantic requirements, and all established Watch gates still apply.
 
+## HDEC-DEFECT-015 — Editor report-page URL used as immutable public root
+
+Observed production failure on `2026-08-18`:
+
+- Review snapshot `review-2026-08-18-0752211bdb36c38e` built and published;
+- Editor public verification failed with
+  `EditorDeliveryRunnerError: immutable Editor public URL is invalid`;
+- claim, transport arm, and SMTP delivery were therefore skipped.
+
+Required expected result:
+
+- the Editor production runner derives the canonical HDEC public root through
+  the same authority used by Daily, whether `REPORT_URL` is the canonical root
+  or a supported project report/dashboard/latest page;
+- the exact immutable URL is
+  `/editorial/review/snapshots/<review_snapshot_id>/index.html` under that root;
+- no mutable `/latest` component may leak into Editor delivery authority;
+- malformed, external, and wrong-product roots fail closed;
+- snapshot id, edition, manifest digest, public-resource verification,
+  claim-before-arm-before-SMTP ordering, and at-most-once behavior are unchanged.
+
+## HDEC-DEFECT-016 — Daily Actions verifier lacked image-gate authority parity
+
+Observed production failure on `2026-08-18`:
+
+- `editorial-daily-brief.yml` failed in the offline contract verifier before
+  Daily build;
+- `run_verify_public()` correctly raised
+  `OrchestratorError: production image gate authority missing` because the
+  verifier's synthetic runtime manifest lacked the authority required under
+  `GITHUB_ACTIONS=true`.
+
+Required expected result:
+
+- the deterministic verifier explicitly runs the real GitHub Actions branch;
+- its valid production-like runtime manifest carries
+  `production_image_gate_required: true`, matching the production publisher;
+- missing, false, or malformed authority still fails closed with the exact
+  production exception;
+- the product image/public/identity gates are never patched out or weakened;
+- local and GitHub Actions verifier runs exercise equivalent semantics.
+
 ---
 
 # 7. REAL-CORPUS REPLAY MATRIX
@@ -567,6 +609,10 @@ The operational target is around 08:00 KST, acknowledging GitHub schedule best-e
 The ordering should ensure the Editor normally precedes Daily generation.
 
 The workflow must be state-idempotent across retries.
+
+Morning operation is not successful unless exact Editor access is actually
+delivered and the exact Daily reader/editor actions are actually delivered
+according to the production contract. Offline tests do not prove either send.
 
 ## Non-empty edition
 
@@ -705,6 +751,20 @@ EDITOR_DELIVERY_IDEMPOTENCE=PASS
 EDITOR_EXACT_SNAPSHOT_LINK=PASS
 EDITOR_AMBIGUOUS_ARM_FAIL_CLOSED=PASS
 EDITOR_RECONCILIATION_PATH=PASS
+
+EDITOR_REPORT_PAGE_TO_ROOT=PASS
+EDITOR_CANONICAL_ROOT_INPUT=PASS
+EDITOR_IMMUTABLE_SNAPSHOT_URL=PASS
+EDITOR_UNSAFE_ROOT_FAIL_CLOSED=PASS
+
+DAILY_GITHUB_ACTIONS_PARITY=PASS
+DAILY_VALID_IMAGE_AUTHORITY_ACCEPTED=PASS
+DAILY_MISSING_IMAGE_AUTHORITY_REJECTED=PASS
+DAILY_FALSE_IMAGE_AUTHORITY_REJECTED=PASS
+DAILY_IMAGE_GATE_WEAKENED=false
+
+TODAY_EDITOR_IDENTITY_REHEARSAL=PASS
+TODAY_DAILY_REHEARSAL=PASS
 
 EXACT_REVIEW_ASSET_FIRST=PASS
 EXACT_REVIEW_ASSET_REMOTE_INDEPENDENCE=PASS

@@ -24,7 +24,7 @@ for path in (ROOT, SCRIPTS):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from app import editor_delivery, public_urls  # noqa: E402
+from app import editor_delivery, editorial_briefings, public_urls  # noqa: E402
 from app.editorial_briefings import KST, valid_http_url  # noqa: E402
 
 
@@ -59,6 +59,18 @@ def _claim_owner() -> str:
     if not re.fullmatch(r"github-run:[1-9][0-9]*:attempt:[1-9][0-9]*", owner):
         raise EditorDeliveryRunnerError("GitHub claim identity is missing")
     return owner
+
+
+def resolve_editor_public_root(report_url: str | None) -> str:
+    """Resolve production REPORT_URL through the shared Daily root contract."""
+    configured = public_urls.PUBLIC_ROOT if report_url is None else report_url
+    try:
+        root_url = editorial_briefings.derive_public_root(configured)
+    except editorial_briefings.EditorialError as exc:
+        raise EditorDeliveryRunnerError("Editor public root is invalid") from exc
+    if root_url != public_urls.PUBLIC_ROOT:
+        raise EditorDeliveryRunnerError("Editor public root is not canonical")
+    return root_url
 
 
 def snapshot_manifest_path(snapshot_id: str, *, root: Path = ROOT) -> Path:
@@ -484,7 +496,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     _require_production_gate()
-    root_url = os.environ.get("REPORT_URL", public_urls.PUBLIC_ROOT).strip().rstrip("/")
+    root_url = resolve_editor_public_root(os.environ.get("REPORT_URL"))
     if args.verify_public:
         if not verify_public_snapshot(args.snapshot_id, root_url=root_url):
             raise EditorDeliveryRunnerError("exact Editor snapshot public verification failed")
