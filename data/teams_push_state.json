@@ -370,6 +370,16 @@
       "sent_at": "2026-08-09T13:19:12+09:00",
       "source": "IT조선"
     },
+    "613b553be657a69f": {
+      "cluster_key": "title:오픈ai자체ai칩할라페뇨공개블랙웰tpu와대등성능",
+      "delivery_id": "teams_ai_push:c5e8a270288d",
+      "first_sent_at": "2026-08-18T10:45:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff0f7838e6ce671265d5db2480bc8688a3669cde07ba2ac6451b48ce6acb179d",
+      "sent_at": "2026-08-18T10:45:53+09:00",
+      "source": "연합뉴스"
+    },
     "62dafdf4ef4db402": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
       "delivery_id": "teams_ai_push:f6027793a32b",
@@ -2102,6 +2112,16 @@
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
     },
+    "title:오픈ai자체ai칩할라페뇨공개블랙웰tpu와대등성능": {
+      "cluster_key": "title:오픈ai자체ai칩할라페뇨공개블랙웰tpu와대등성능",
+      "delivery_id": "teams_ai_push:c5e8a270288d",
+      "first_sent_at": "2026-08-18T10:45:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff0f7838e6ce671265d5db2480bc8688a3669cde07ba2ac6451b48ce6acb179d",
+      "sent_at": "2026-08-18T10:45:53+09:00",
+      "source": "연합뉴스"
+    },
     "title:오픈소스ai위협적인내자본우수인재확보서둘": {
       "cluster_key": "title:오픈소스ai위협적인내자본우수인재확보서둘",
       "delivery_id": "teams_ai_push:495321a450c7",
@@ -2926,7 +2946,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-08-11T16:44:41+09:00",
       "holdback_reason": "importance_not_top",
-      "last_seen_at": "2026-08-18T08:59:25+09:00",
+      "last_seen_at": "2026-08-18T10:45:51+09:00",
       "normalized_url": "https://investchosun.com/site/data/html_dir/2026/08/07/2026080780110.html",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -3495,8 +3515,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-18T08:02:02+09:00",
-  "last_successful_send_at": "2026-08-18T08:02:02+09:00",
+  "last_normal_send_at": "2026-08-18T10:45:53+09:00",
+  "last_successful_send_at": "2026-08-18T10:45:53+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4638,6 +4658,16 @@
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
     },
+    "https://yna.co.kr/view/AKR20260625003200091": {
+      "cluster_key": "title:오픈ai자체ai칩할라페뇨공개블랙웰tpu와대등성능",
+      "delivery_id": "teams_ai_push:c5e8a270288d",
+      "first_sent_at": "2026-08-18T10:45:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff0f7838e6ce671265d5db2480bc8688a3669cde07ba2ac6451b48ce6acb179d",
+      "sent_at": "2026-08-18T10:45:53+09:00",
+      "source": "연합뉴스"
+    },
     "https://yna.co.kr/view/AKR20260806144700083": {
       "cluster_key": "title:북부네이멍구에축구장20개크기ai데이터센터가동",
       "delivery_id": "teams_ai_push:3d5b573895b4",
@@ -5589,6 +5619,16 @@
       "material_signature": "639bbb568dad9b235fd439e991a7b86312f89a37a2120ecbc118c0094aa681ee",
       "sent_at": "2026-08-04T06:21:52+09:00",
       "source": "브릿지경제"
+    },
+    "오픈ai자체ai칩할라페뇨공개블랙웰tpu와대등성능": {
+      "cluster_key": "title:오픈ai자체ai칩할라페뇨공개블랙웰tpu와대등성능",
+      "delivery_id": "teams_ai_push:c5e8a270288d",
+      "first_sent_at": "2026-08-18T10:45:53+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ff0f7838e6ce671265d5db2480bc8688a3669cde07ba2ac6451b48ce6acb179d",
+      "sent_at": "2026-08-18T10:45:53+09:00",
+      "source": "연합뉴스"
     },
     "오픈소스ai위협적인내자본우수인재확보서둘": {
       "cluster_key": "title:오픈소스ai위협적인내자본우수인재확보서둘",
