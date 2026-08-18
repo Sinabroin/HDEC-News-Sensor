@@ -390,6 +390,16 @@
       "sent_at": "2026-08-04T10:12:23+09:00",
       "source": "뉴스워커"
     },
+    "6398cf6b70201fcf": {
+      "cluster_key": "title:현대건설테라파워원전최대8기설계조달시공우선권",
+      "delivery_id": "teams_ai_push:bb7505a4c719",
+      "first_sent_at": "2026-08-18T11:46:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "345cca066240d0a65acacabae5f8f44089380ff318d2318a6470c89befa7321b",
+      "sent_at": "2026-08-18T11:46:26+09:00",
+      "source": "연합뉴스"
+    },
     "643f3711b6d2cfaf": {
       "cluster_key": "title:돼지농장주벼락부자로데이터센터갈등의열쇠는이광빈의플랫폼",
       "delivery_id": "teams_ai_push:e13e1e26f3c8",
@@ -2422,6 +2432,16 @@
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
     },
+    "title:현대건설테라파워원전최대8기설계조달시공우선권": {
+      "cluster_key": "title:현대건설테라파워원전최대8기설계조달시공우선권",
+      "delivery_id": "teams_ai_push:bb7505a4c719",
+      "first_sent_at": "2026-08-18T11:46:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "345cca066240d0a65acacabae5f8f44089380ff318d2318a6470c89befa7321b",
+      "sent_at": "2026-08-18T11:46:26+09:00",
+      "source": "연합뉴스"
+    },
     "title:현대제철ai인프라승부수철강업계새성장축될까": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -3516,7 +3536,7 @@
     }
   },
   "last_normal_send_at": "2026-08-18T10:45:53+09:00",
-  "last_successful_send_at": "2026-08-18T10:45:53+09:00",
+  "last_successful_send_at": "2026-08-18T11:46:26+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4747,6 +4767,16 @@
       "material_signature": "b3f43387d6571d6df1c687c2d32b74fc5299e4a4379511d7cc14b282baf17c60",
       "sent_at": "2026-08-18T06:46:34+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260818077200003": {
+      "cluster_key": "title:현대건설테라파워원전최대8기설계조달시공우선권",
+      "delivery_id": "teams_ai_push:bb7505a4c719",
+      "first_sent_at": "2026-08-18T11:46:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "345cca066240d0a65acacabae5f8f44089380ff318d2318a6470c89befa7321b",
+      "sent_at": "2026-08-18T11:46:26+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -5929,6 +5959,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "현대건설테라파워원전최대8기설계조달시공우선권": {
+      "cluster_key": "title:현대건설테라파워원전최대8기설계조달시공우선권",
+      "delivery_id": "teams_ai_push:bb7505a4c719",
+      "first_sent_at": "2026-08-18T11:46:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "345cca066240d0a65acacabae5f8f44089380ff318d2318a6470c89befa7321b",
+      "sent_at": "2026-08-18T11:46:26+09:00",
+      "source": "연합뉴스"
     },
     "현대건설홀텍엔터지와걸프만smr사업협력ai데이터센터전력수요공략": {
       "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
