@@ -540,6 +540,16 @@
       "sent_at": "2026-08-14T05:11:53+09:00",
       "source": "세계일보"
     },
+    "9506c30b511774c7": {
+      "cluster_key": "ai_event:0b5aa91048dfee258d5b3358",
+      "delivery_id": "teams_ai_push:7720f38c2758",
+      "first_sent_at": "2026-08-19T16:17:40+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "8ed455ac3485fdffe6b26de50e0dc89bed6abed501b992e0e2c2b20bb10dc533",
+      "sent_at": "2026-08-19T16:17:40+09:00",
+      "source": "연합뉴스"
+    },
     "98cb94c107a7b37d": {
       "cluster_key": "title:뉴욕증시국제유가상승에일제히하락다우05",
       "delivery_id": "teams_ai_push:2e4afb7f7c64",
@@ -1252,6 +1262,16 @@
     }
   },
   "cluster_keys": {
+    "ai_event:0b5aa91048dfee258d5b3358": {
+      "cluster_key": "ai_event:0b5aa91048dfee258d5b3358",
+      "delivery_id": "teams_ai_push:7720f38c2758",
+      "first_sent_at": "2026-08-19T16:17:40+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "8ed455ac3485fdffe6b26de50e0dc89bed6abed501b992e0e2c2b20bb10dc533",
+      "sent_at": "2026-08-19T16:17:40+09:00",
+      "source": "연합뉴스"
+    },
     "ai_event:232948c62378e00e3bdb91f3": {
       "cluster_key": "ai_event:232948c62378e00e3bdb91f3",
       "delivery_id": "teams_ai_push:d8891c057abf",
@@ -3570,7 +3590,7 @@
     }
   },
   "last_normal_send_at": "2026-08-18T16:59:32+09:00",
-  "last_successful_send_at": "2026-08-18T16:59:32+09:00",
+  "last_successful_send_at": "2026-08-19T16:17:40+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4821,6 +4841,16 @@
       "material_signature": "345cca066240d0a65acacabae5f8f44089380ff318d2318a6470c89befa7321b",
       "sent_at": "2026-08-18T11:46:26+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260819137800063": {
+      "cluster_key": "ai_event:0b5aa91048dfee258d5b3358",
+      "delivery_id": "teams_ai_push:7720f38c2758",
+      "first_sent_at": "2026-08-19T16:17:40+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "8ed455ac3485fdffe6b26de50e0dc89bed6abed501b992e0e2c2b20bb10dc533",
+      "sent_at": "2026-08-19T16:17:40+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -5593,6 +5623,16 @@
       "material_signature": "f7dd61f7f3440a318cead209c3a51e9bbf4deebe9a6279220c8c2bdd9b1924a1",
       "sent_at": "2026-08-05T20:35:03+09:00",
       "source": "신아일보"
+    },
+    "삼성전자아산반도체공장내달착공3대메가사업중처음": {
+      "cluster_key": "ai_event:0b5aa91048dfee258d5b3358",
+      "delivery_id": "teams_ai_push:7720f38c2758",
+      "first_sent_at": "2026-08-19T16:17:40+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "8ed455ac3485fdffe6b26de50e0dc89bed6abed501b992e0e2c2b20bb10dc533",
+      "sent_at": "2026-08-19T16:17:40+09:00",
+      "source": "연합뉴스"
     },
     "스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑": {
       "cluster_key": "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑",
