@@ -290,6 +290,16 @@
       "sent_at": "2026-08-16T14:40:57+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "4a245fb3bd36614f": {
+      "cluster_key": "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권",
+      "delivery_id": "teams_ai_push:9e77d9fc85d6",
+      "first_sent_at": "2026-08-20T02:57:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8bedf4875b9024781c0915d20e9cd99527b1f1ddd65a3d84cff8c2ad8012c178",
+      "sent_at": "2026-08-20T02:57:34+09:00",
+      "source": "연합뉴스"
+    },
     "4ad456d6df1c3af3": {
       "cluster_key": "title:로봇이움직이고팔런티어가판단하며sap",
       "delivery_id": "teams_ai_push:cda34e0b7d63",
@@ -1661,6 +1671,16 @@
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
       "source": "매일경제"
+    },
+    "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권": {
+      "cluster_key": "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권",
+      "delivery_id": "teams_ai_push:9e77d9fc85d6",
+      "first_sent_at": "2026-08-20T02:57:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8bedf4875b9024781c0915d20e9cd99527b1f1ddd65a3d84cff8c2ad8012c178",
+      "sent_at": "2026-08-20T02:57:34+09:00",
+      "source": "연합뉴스"
     },
     "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
@@ -3589,8 +3609,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-18T16:59:32+09:00",
-  "last_successful_send_at": "2026-08-19T16:17:40+09:00",
+  "last_normal_send_at": "2026-08-20T02:57:34+09:00",
+  "last_successful_send_at": "2026-08-20T02:57:34+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4851,6 +4871,16 @@
       "material_signature": "8ed455ac3485fdffe6b26de50e0dc89bed6abed501b992e0e2c2b20bb10dc533",
       "sent_at": "2026-08-19T16:17:40+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260820003000091": {
+      "cluster_key": "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권",
+      "delivery_id": "teams_ai_push:9e77d9fc85d6",
+      "first_sent_at": "2026-08-20T02:57:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8bedf4875b9024781c0915d20e9cd99527b1f1ddd65a3d84cff8c2ad8012c178",
+      "sent_at": "2026-08-20T02:57:34+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -5233,6 +5263,16 @@
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
       "source": "매일경제"
+    },
+    "구글반도체기업마벨과ai칩동맹최대17조원신주인수권": {
+      "cluster_key": "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권",
+      "delivery_id": "teams_ai_push:9e77d9fc85d6",
+      "first_sent_at": "2026-08-20T02:57:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8bedf4875b9024781c0915d20e9cd99527b1f1ddd65a3d84cff8c2ad8012c178",
+      "sent_at": "2026-08-20T02:57:34+09:00",
+      "source": "연합뉴스"
     },
     "구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구": {
       "cluster_key": "title:구글브로드컴컨소시엄285조원규모ai반도체공급금융인프라구",
