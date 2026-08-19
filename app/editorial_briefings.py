@@ -989,6 +989,62 @@ def valid_http_url(value: object) -> str:
     return candidate
 
 
+def _non_public_literal_ip_host(host: str) -> bool:
+    """True when ``host`` is a LITERAL IP that is not globally routable.
+
+    Classification is by Python ``ipaddress`` only — no DNS resolution. A host
+    that does not parse as a literal IP returns False (it is a name, left to the
+    existing downstream URL/source publication gates). ``is_global`` alone is
+    insufficient: Python treats some non-routable literals (e.g. multicast
+    ``224.0.0.1``) as global, so loopback/private/link-local/unspecified/
+    multicast/reserved are each rejected explicitly as well."""
+    try:
+        literal = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        return False
+    return (
+        literal.is_loopback
+        or literal.is_private
+        or literal.is_link_local
+        or literal.is_unspecified
+        or literal.is_multicast
+        or literal.is_reserved
+        or not literal.is_global
+    )
+
+
+def manual_publisher_article_url(value: object) -> str:
+    """Strict validator for an operator-supplied durable publisher/article URL.
+
+    R4-OPS-10 — the article (and image) URL an operator stores in the durable
+    editorial review authority must never be a server-side request-forgery
+    vector. On top of :func:`valid_http_url` (http/https only; no userinfo; no
+    CR/LF; protocol-relative and non-http(s) already fail there) this additionally
+    rejects:
+
+    - any ASCII control character anywhere in the URL;
+    - the loopback name ``localhost`` (and ``*.localhost``); and
+    - any host that is a LITERAL IP which is not globally routable (loopback,
+      RFC1918 private, link-local, unspecified, multicast, or reserved).
+
+    No DNS resolution is performed, so a non-literal hostname passes through to
+    the existing downstream URL/source publication gates unchanged."""
+    candidate = valid_http_url(value)
+    if not candidate:
+        return ""
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in candidate):
+        return ""
+    try:
+        host = (urlparse(candidate).hostname or "").casefold().rstrip(".")
+    except ValueError:
+        return ""
+    if not host or host == "localhost" or host.endswith(".localhost"):
+        return ""
+    if _non_public_literal_ip_host(host):
+        return ""
+    return candidate
+
+
 _IMAGE_URL_WRAPPERS = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"))
 _IMAGE_URL_QUOTE_CHARS = {'"', "'", "“", "”", "‘", "’"}
 _URL_PATH_SAFE = "/:@!$&'()*+,;=-._~%"

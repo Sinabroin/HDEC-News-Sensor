@@ -52,6 +52,12 @@ import build_editorial_review_console as builder  # noqa: E402
 KST = timezone(timedelta(hours=9))
 IMPORT_PATH = "/api/editorial/import-article"
 SNAPSHOT_2741 = "review-2026-08-19-2741f4475e29b6b1"
+# The REAL committed immutable Review snapshot manifest for 2026-08-19. Its
+# content-addressed integrity digest starts with the id's 16-hex suffix, so it is
+# genuine committed evidence (not a fabricated shape). save_draft/publish_daily
+# now prove this manifest exists + validates before any durable write.
+SNAPSHOT_MANIFEST_REPO_PATH = f"docs/editorial/review/snapshots/{SNAPSHOT_2741}/manifest.json"
+REAL_SNAPSHOT_MANIFEST = json.loads((ROOT / SNAPSHOT_MANIFEST_REPO_PATH).read_text("utf-8"))
 EMPTY_EDITION_ID = "daily-2026-08-19-1670559143df86ae"
 EMPTY_MANIFEST_PATH = (
     ROOT / "docs/editorial/daily/editions" / f"{EMPTY_EDITION_ID}.json"
@@ -80,13 +86,33 @@ class V:
 class FakeGitHub:
     """In-memory GitHub Contents client with SHA-based optimistic concurrency."""
 
-    def __init__(self, repo: str = "Sinabroin/HDEC-News-Sensor", token: str = "t"):
+    def __init__(
+        self,
+        repo: str = "Sinabroin/HDEC-News-Sensor",
+        token: str = "t",
+        *,
+        seed_snapshot: bool = True,
+    ):
         self.repo = repo
         self.token = token
         self.branch = "main"
         self.store: dict[str, dict] = {}
         self.puts: list[tuple[str, str | None]] = []
         self.network_calls = 0
+        # By default the fake repository authority holds the REAL committed
+        # 2026-08-19 Review snapshot, so the new existence check passes for the
+        # legitimate id. Negative fixtures pass seed_snapshot=False and then seed a
+        # nonexistent/defective/undecodable manifest explicitly.
+        if seed_snapshot:
+            self.set_snapshot(copy.deepcopy(REAL_SNAPSHOT_MANIFEST))
+
+    def set_snapshot(self, manifest) -> None:
+        """Place a manifest at the server-derived snapshot path for SNAPSHOT_2741.
+
+        ``manifest=None`` models a committed-but-undecodable manifest (the real
+        GitHubContentsClient decodes non-JSON content to json=None)."""
+        self.store[eor.review_snapshot_manifest_path(SNAPSHOT_2741)] = {
+            "_v": 1, "json": manifest}
 
     def get_file(self, path: str):
         self.network_calls += 1
@@ -601,6 +627,198 @@ def section_routes(v: V) -> None:
 
 
 # ---------------------------------------------------------------------------
+def section_snapshot_authority(v: V) -> None:
+    print("\n== 8. Real immutable Review snapshot existence authority (fail-closed) ==")
+
+    def attempt(seed, *, snapshot=SNAPSHOT_2741, edition="2026-08-19",
+                base_revision=None, publish=False):
+        """Run the REAL save_draft/publish_daily domain fn against a fresh fake.
+
+        Returns (error_code, put_count, dispatched) — proving no durable write or
+        dispatch happens on rejection."""
+        gh = FakeGitHub(seed_snapshot=False)
+        seed(gh)
+        dispatched: list[str] = []
+        over = {"review_snapshot_id": snapshot, "edition_key": edition}
+        if base_revision is not None:
+            over["base_revision"] = base_revision
+        code = ""
+        try:
+            if publish:
+                eor.publish_daily(_payload(**over), operator_login="ceoYS",
+                                  client=gh, dispatcher=lambda: dispatched.append("x"))
+            else:
+                eor.save_draft(_payload(**over), operator_login="ceoYS", client=gh)
+        except eor.OperatorReviewError as exc:
+            code = exc.code
+        return code, len(gh.puts), dispatched
+
+    seed_real = lambda gh: gh.set_snapshot(copy.deepcopy(REAL_SNAPSHOT_MANIFEST))
+
+    def seed_variant(**over):
+        def _apply(gh):
+            manifest = copy.deepcopy(REAL_SNAPSHOT_MANIFEST)
+            manifest.update(over)
+            gh.set_snapshot(manifest)
+        return _apply
+
+    # A. real committed snapshot => accepted (durable bind + write)
+    gh = FakeGitHub()  # auto-seeds the REAL committed 2026-08-19 snapshot
+    rA = eor.save_draft(_payload(), operator_login="ceoYS", client=gh)
+    okA = (rA["review_snapshot_id"] == SNAPSHOT_2741 and not rA["unchanged"]
+           and len(gh.puts) == 1)
+    v.check("A. real committed 2026-08-19 snapshot accepted (binds + writes once)", okA)
+    v.flag("SNAPSHOT_EXISTENCE_VERIFIED_SERVER_SIDE", okA)
+
+    # B. random same-date syntactically valid snapshot (no manifest) => rejected
+    codeB, putsB, _ = attempt(seed_real, snapshot="review-2026-08-19-0000000000000000")
+    okB = codeB == "SNAPSHOT_NOT_FOUND" and putsB == 0
+    v.check("B. random same-date valid-shape snapshot rejected (no write)",
+            okB, f"code={codeB} puts={putsB}")
+    v.flag("RANDOM_VALID_SHAPE_SNAPSHOT_ACCEPTED", not okB)
+
+    # C. nonexistent deadbeef snapshot => rejected
+    codeC, putsC, _ = attempt(seed_real, snapshot="review-2026-08-19-deadbeefdeadbeef")
+    okC = codeC == "SNAPSHOT_NOT_FOUND" and putsC == 0
+    v.check("C. nonexistent deadbeef snapshot rejected (no write)",
+            okC, f"code={codeC} puts={putsC}")
+    v.flag("NONEXISTENT_SNAPSHOT_REJECTED", okC)
+
+    # D. wrong edition inside the manifest => rejected
+    codeD, putsD, _ = attempt(seed_variant(edition_key="2026-08-18"))
+    okD = codeD == "SNAPSHOT_EDITION_MISMATCH" and putsD == 0
+    v.check("D. manifest edition mismatch rejected", okD, f"code={codeD}")
+    v.flag("SNAPSHOT_MANIFEST_EDITION_MISMATCH_REJECTED", okD)
+
+    # E. wrong snapshot id inside the manifest (real other-id manifest) => rejected
+    codeE, putsE, _ = attempt(
+        seed_variant(review_snapshot_id="review-2026-08-19-2e8513abf0a81eba"))
+    okE = codeE == "SNAPSHOT_IDENTITY_MISMATCH" and putsE == 0
+    v.check("E. manifest snapshot-id mismatch rejected", okE, f"code={codeE}")
+    v.flag("SNAPSHOT_MANIFEST_ID_MISMATCH_REJECTED", okE)
+
+    # F. wrong product => rejected
+    codeF, putsF, _ = attempt(seed_variant(product="daily_edition"))
+    okF = codeF == "SNAPSHOT_PRODUCT_MISMATCH" and putsF == 0
+    v.check("F. manifest product mismatch rejected", okF, f"code={codeF}")
+    v.flag("SNAPSHOT_MANIFEST_PRODUCT_MISMATCH_REJECTED", okF)
+
+    # G. integrity mismatch — mutating the candidate-bundle, console-HTML, or the
+    # digest each breaks the content-addressed integrity contract => rejected.
+    codeG1, putsG1, _ = attempt(seed_variant(candidate_bundle_sha256="0" * 64))
+    codeG2, putsG2, _ = attempt(seed_variant(console_html_sha256="1" * 64))
+    codeG3, putsG3, _ = attempt(seed_variant(
+        integrity={**REAL_SNAPSHOT_MANIFEST["integrity"], "digest": "2" * 64}))
+    okG = (codeG1 == codeG2 == codeG3 == "SNAPSHOT_INTEGRITY_MISMATCH"
+           and putsG1 == putsG2 == putsG3 == 0)
+    v.check("G. integrity mismatch (candidate-bundle / console / digest) rejected",
+            okG, f"{codeG1}/{codeG2}/{codeG3}")
+    v.flag("SNAPSHOT_INTEGRITY_MISMATCH_REJECTED", okG)
+
+    # H. malformed (undecodable) manifest => rejected
+    codeH, putsH, _ = attempt(lambda gh: gh.set_snapshot(None))
+    okH = codeH == "SNAPSHOT_MANIFEST_MALFORMED" and putsH == 0
+    v.check("H. malformed manifest rejected", okH, f"code={codeH}")
+    v.flag("SNAPSHOT_MANIFEST_MALFORMED_REJECTED", okH)
+
+    # I. trailing newline / control-char id => rejected before any path use
+    codeNL, putsNL, _ = attempt(seed_real, snapshot=SNAPSHOT_2741 + "\n")
+    codeNUL, putsNUL, _ = attempt(seed_real, snapshot=SNAPSHOT_2741 + "\x00")
+    codeTAB, putsTAB, _ = attempt(
+        seed_real, snapshot=SNAPSHOT_2741[:-1] + "\t" + SNAPSHOT_2741[-1])
+    okNL = codeNL == "MALFORMED_SNAPSHOT_ID" and putsNL == 0
+    okCC = (codeNUL == "MALFORMED_SNAPSHOT_ID" and putsNUL == 0
+            and codeTAB == "MALFORMED_SNAPSHOT_ID" and putsTAB == 0)
+    v.check("I. trailing-newline snapshot id rejected (no write)", okNL, f"code={codeNL}")
+    v.check("I. control-char snapshot id rejected (no write)",
+            okCC, f"nul={codeNUL} tab={codeTAB}")
+    v.flag("SNAPSHOT_TRAILING_NEWLINE_REJECTED", okNL)
+    v.flag("SNAPSHOT_CONTROL_CHAR_REJECTED", okCC)
+
+    # Publish path enforces the same authority: no approved write, no dispatch.
+    codeP, putsP, dispP = attempt(
+        seed_real, snapshot="review-2026-08-19-deadbeefdeadbeef",
+        base_revision="0" * 64, publish=True)
+    okP = codeP == "SNAPSHOT_NOT_FOUND" and putsP == 0 and not dispP
+    v.check("publish of nonexistent snapshot fails closed (no approved write, no dispatch)",
+            okP, f"code={codeP} puts={putsP} dispatched={dispP}")
+    v.flag("SNAPSHOT_AUTHORITY_ENFORCED_ON_PUBLISH", okP)
+
+
+# ---------------------------------------------------------------------------
+def section_manual_publisher_url(v: V) -> None:
+    print("\n== 9. Manual publisher URL authority (SSRF-safe literal-IP gate, no DNS) ==")
+    u = editorial_briefings.manual_publisher_article_url
+
+    public = "https://www.yna.co.kr/view/AKR20260819"
+    v.check("public https publisher URL accepted", u(public) == public)
+    v.check("globally-routable literal IP accepted (v4 + v6)",
+            u("https://93.184.216.34/x") == "https://93.184.216.34/x"
+            and u("https://[2606:4700:4700::1111]/x") == "https://[2606:4700:4700::1111]/x")
+
+    localhost = all(u(x) == "" for x in
+                    ("http://localhost/", "https://localhost:8080/x", "http://sub.localhost/"))
+    v.check("localhost name rejected", localhost)
+    v.flag("MANUAL_LOCALHOST_URL_REJECTED", localhost)
+
+    loopback = all(u(x) == "" for x in
+                   ("http://127.0.0.1/", "http://127.5.5.5/", "http://[::1]/"))
+    v.check("loopback literal IP rejected", loopback)
+    v.flag("MANUAL_LOOPBACK_IP_REJECTED", loopback)
+
+    private = all(u(x) == "" for x in ("http://10.0.0.1/", "http://172.16.0.1/",
+                                       "http://172.31.9.9/", "http://192.168.1.1/"))
+    v.check("RFC1918 private literal IP rejected", private)
+    v.flag("MANUAL_PRIVATE_LITERAL_IP_REJECTED", private)
+
+    linklocal = all(u(x) == "" for x in ("http://169.254.169.254/", "http://[fe80::1]/"))
+    v.check("link-local literal IP rejected (incl. cloud metadata endpoint)", linklocal)
+    v.flag("MANUAL_LINK_LOCAL_IP_REJECTED", linklocal)
+
+    unspecified = all(u(x) == "" for x in ("http://0.0.0.0/", "http://[::]/"))
+    v.check("unspecified literal IP rejected", unspecified)
+    v.flag("MANUAL_UNSPECIFIED_IP_REJECTED", unspecified)
+
+    multi_reserved = u("http://224.0.0.1/") == "" and u("http://240.0.0.1/") == ""
+    v.check("multicast/reserved literal IP rejected (is_global insufficient alone)",
+            multi_reserved)
+    v.flag("MANUAL_MULTICAST_RESERVED_IP_REJECTED", multi_reserved)
+
+    other = all(u(x) == "" for x in (
+        "http://user:pass@example.com/",                     # userinfo
+        "//evil.example/x",                                  # protocol-relative
+        "ftp://example.com/", "javascript:alert(1)",         # non-http(s)
+        "https://example.com/\tx", "https://example.com/\x00x",  # ASCII controls
+    ))
+    v.check("userinfo / protocol-relative / non-http(s) / ASCII-control rejected", other)
+    v.flag("MANUAL_NON_LITERAL_VECTORS_REJECTED", other)
+
+    # Enforced at the durable leaf boundary: a private-IP ARTICLE url blocks save.
+    gh = FakeGitHub()
+    blocked = ""
+    try:
+        eor.save_draft(
+            _payload(selected_items=[_daily_item(
+                selected_url="http://169.254.169.254/latest/meta-data/")]),
+            operator_login="ceoYS", client=gh)
+    except eor.OperatorReviewError as exc:
+        blocked = exc.code
+    ok_article = blocked == "UNSAFE_ARTICLE_URL" and len(gh.puts) == 0
+    v.check("durable save rejects private-IP article URL (no write)",
+            ok_article, f"code={blocked} puts={len(gh.puts)}")
+    v.flag("MANUAL_URL_ENFORCED_AT_DURABLE_LEAF", ok_article)
+
+    # image URL uses the same gate: a private-IP image is stripped (optional field).
+    gh2 = FakeGitHub()
+    saved = eor.save_draft(
+        _payload(selected_items=[_daily_item(image_url="http://127.0.0.1/x.png")]),
+        operator_login="ceoYS", client=gh2)
+    stored_image = gh2.store[saved["path"]]["json"]["selected_items"][0]["image_url"]
+    v.check("private-IP image URL stripped, not stored", stored_image == "")
+    v.flag("MANUAL_PRIVATE_IMAGE_URL_STRIPPED", stored_image == "")
+
+
+# ---------------------------------------------------------------------------
 def main() -> int:
     v = V()
     import py_compile
@@ -617,6 +835,8 @@ def main() -> int:
     section_rehearsal(v)
     section_recall_audit(v)
     section_routes(v)
+    section_snapshot_authority(v)
+    section_manual_publisher_url(v)
 
     print("\n== R4-OPS-10 FLAGS ==")
     for name in sorted(v.flags):

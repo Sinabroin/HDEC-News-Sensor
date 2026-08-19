@@ -35,13 +35,23 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Callable
 
-from app import config, editorial_briefings, editorial_review, public_urls
+from app import (
+    config,
+    editor_delivery,
+    editorial_briefings,
+    editorial_review,
+    public_urls,
+)
 
 # ---------------------------------------------------------------------------
 # Bounds and fixed server-side identifiers (never client-controlled)
 # ---------------------------------------------------------------------------
 DRAFT_DIR = "data/editorial_operator_drafts"
 APPROVED_DIR = "data/editorial_reviews"
+# Fixed, server-side repository location of the immutable Review snapshots the
+# operator editor is opened against (content-addressed, append-only). The client
+# never supplies this path, a repository, a branch, or a ref.
+SNAPSHOT_DIR = "docs/editorial/review/snapshots"
 DISPATCH_REF = "main"
 MAX_SELECTED = editorial_review.MAX_REVIEW_ARTICLES
 REVIEW_CONTRACT_VERSION = editorial_review.REVIEW_VERSION  # v2 (load_review contract)
@@ -62,6 +72,12 @@ _ERRORS: dict[str, tuple[int, str]] = {
     "MALFORMED_EDITION_KEY": (400, "에디션 식별자 형식이 올바르지 않습니다."),
     "MALFORMED_SNAPSHOT_ID": (400, "검토 스냅샷 식별자 형식이 올바르지 않습니다."),
     "EDITION_MISMATCH": (409, "에디션과 검토 스냅샷의 날짜가 일치하지 않습니다."),
+    "SNAPSHOT_NOT_FOUND": (409, "검토 스냅샷을 찾을 수 없습니다. 편집기를 다시 열어 주세요."),
+    "SNAPSHOT_MANIFEST_MALFORMED": (409, "검토 스냅샷 매니페스트가 유효하지 않습니다."),
+    "SNAPSHOT_PRODUCT_MISMATCH": (409, "검토 스냅샷 종류가 올바르지 않습니다."),
+    "SNAPSHOT_IDENTITY_MISMATCH": (409, "검토 스냅샷 식별자가 매니페스트와 일치하지 않습니다."),
+    "SNAPSHOT_EDITION_MISMATCH": (409, "검토 스냅샷의 에디션이 일치하지 않습니다."),
+    "SNAPSHOT_INTEGRITY_MISMATCH": (409, "검토 스냅샷 무결성 검증에 실패했습니다."),
     "EMPTY_SELECTION": (400, "게시하려면 최소 한 건의 기사를 선택해야 합니다."),
     "TOO_MANY_SELECTED": (400, "선택 기사는 최대 6건입니다."),
     "UNSAFE_ARTICLE_URL": (400, "안전하지 않은 기사 URL이 포함되어 있습니다."),
@@ -96,8 +112,13 @@ def _text(value: object, limit: int) -> str:
 
 
 def _safe_article_url(value: object) -> str:
-    """http/https only; reject javascript/data/blob/file, userinfo, CR/LF."""
-    return editorial_briefings.valid_http_url(value)
+    """SSRF-safe durable article/image URL.
+
+    http/https only; rejects javascript/data/blob/file, userinfo, CR/LF, ASCII
+    controls, the loopback name ``localhost``, and any non-globally-routable
+    literal-IP host (loopback/private/link-local/unspecified/multicast/reserved).
+    No DNS resolution — a non-literal hostname is left to downstream gates."""
+    return editorial_briefings.manual_publisher_article_url(value)
 
 
 def _bounded_category_analysis(value: object, category: str) -> dict:
@@ -269,6 +290,69 @@ def approved_review_path(edition_key: str) -> str:
     return f"{APPROVED_DIR}/{edition_key}.json"
 
 
+def review_snapshot_manifest_path(snapshot_id: str) -> str:
+    """Server-derived repository path of an immutable Review snapshot manifest.
+
+    ``snapshot_id`` is regex-validated (``review-YYYY-MM-DD-<16hex>``, ``\\Z``-
+    anchored) so it carries no traversal or control character; the repository,
+    branch, and this path are entirely server-side (never client-supplied)."""
+    if not public_urls.parse_editor_snapshot_id(snapshot_id):
+        raise OperatorReviewError("MALFORMED_SNAPSHOT_ID")
+    return f"{SNAPSHOT_DIR}/{snapshot_id}/manifest.json"
+
+
+def verify_review_snapshot_authority(
+    client: "GitHubContentsClient", edition_key: str, snapshot_id: str
+) -> dict:
+    """Prove ``review_snapshot_id`` resolves to a REAL immutable Review snapshot.
+
+    Regex shape and date equality are NOT sufficient authority: the durable draft
+    and approved review bind an exact snapshot identity, so the server must prove
+    that identity names a snapshot that actually exists and is intact BEFORE any
+    durable write or workflow dispatch.
+
+    The server derives the fixed manifest path itself and reads it from the fixed
+    repository authority (the client supplies no repository, branch, path, ref, or
+    manifest URL). The manifest is then validated under the EXISTING immutable
+    snapshot integrity contract (:func:`app.editor_delivery.validate_snapshot_manifest`),
+    which recomputes the content-addressed sha256 digest that binds the candidate
+    bundle and console HTML identities and re-derives the ``<16hex>`` id suffix —
+    so a syntactically valid but nonexistent or tampered id fails closed. Precise
+    identity mismatches (product / snapshot id / edition) are reported before the
+    integrity contract so each failure class carries its own typed code.
+
+    No second snapshot identity scheme is introduced; this reuses the production
+    canonicalization. Returns the validated manifest on success."""
+    manifest_path = review_snapshot_manifest_path(snapshot_id)
+    fetched = client.get_file(manifest_path)
+    if fetched is None:
+        # No manifest at the server-derived path → the snapshot does not exist.
+        raise OperatorReviewError("SNAPSHOT_NOT_FOUND")
+    manifest = fetched.get("json") if isinstance(fetched, Mapping) else None
+    if not isinstance(manifest, Mapping):
+        raise OperatorReviewError("SNAPSHOT_MANIFEST_MALFORMED")
+    manifest = dict(manifest)
+    if str(manifest.get("product") or "") != "editor_review_snapshot":
+        raise OperatorReviewError("SNAPSHOT_PRODUCT_MISMATCH")
+    if str(manifest.get("review_snapshot_id") or "") != snapshot_id:
+        raise OperatorReviewError("SNAPSHOT_IDENTITY_MISMATCH")
+    if str(manifest.get("edition_key") or "") != edition_key:
+        raise OperatorReviewError("SNAPSHOT_EDITION_MISMATCH")
+    try:
+        validated = editor_delivery.validate_snapshot_manifest(manifest)
+    except editor_delivery.EditorDeliveryError as exc:
+        # Integrity/resource-digest/asset/generation-evidence failure — this is
+        # where a mutated candidate-bundle or console-HTML identity is caught,
+        # because both are folded into the content-addressed integrity digest.
+        raise OperatorReviewError("SNAPSHOT_INTEGRITY_MISMATCH") from exc
+    if (
+        validated.get("review_snapshot_id") != snapshot_id
+        or validated.get("edition_key") != edition_key
+    ):
+        raise OperatorReviewError("SNAPSHOT_IDENTITY_MISMATCH")
+    return validated
+
+
 def content_revision(record: Mapping) -> str:
     """sha256 over canonical content JSON (identity of the stored record)."""
     core = {key: value for key, value in record.items() if key != "revision"}
@@ -369,6 +453,12 @@ def save_draft(
     record = normalize_operator_review(
         payload, operator_login=operator_login, review_status="draft"
     )
+    # Prove the bound review snapshot is a REAL committed immutable snapshot in
+    # the repository authority before any durable write (a valid-shaped but
+    # nonexistent/tampered id fails closed here, performing no write).
+    verify_review_snapshot_authority(
+        client, record["edition_key"], record["review_snapshot_id"]
+    )
     revision = content_revision(record)
     path = draft_storage_path(record["edition_key"], record["review_snapshot_id"])
     base_revision = str(payload.get("base_revision") or "")
@@ -442,6 +532,10 @@ def publish_daily(
     base_revision = str(payload.get("base_revision") or "")
     if not base_revision:
         raise OperatorReviewError("STALE_DRAFT")
+
+    # Prove the bound review snapshot is a REAL committed immutable snapshot
+    # before reading the draft, writing the approved review, or dispatching.
+    verify_review_snapshot_authority(client, edition_key, snapshot_id)
 
     draft_path = draft_storage_path(edition_key, snapshot_id)
     draft = client.get_file(draft_path)
