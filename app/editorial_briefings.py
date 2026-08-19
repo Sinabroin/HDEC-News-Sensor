@@ -995,13 +995,30 @@ _URL_PATH_SAFE = "/:@!$&'()*+,;=-._~%"
 _URL_QUERY_SAFE = "=&?/:@!$'()*+,;%-._~"
 
 
+def safe_editorial_anchor_href(value: object) -> str:
+    """Return a canonical http/https href for an operator hyperlink, or "".
+
+    R4-OPS-10 — operator-edited summaries may carry hyperlinks. Only http/https
+    are honoured; javascript:/data:/blob:/file:/mailto:, protocol-relative
+    (``//host``), userinfo (``user:pass@``), and any CR/LF-bearing or malformed
+    value fail closed to "" (the anchor is dropped, its text preserved). Query
+    and fragment are legitimate on article URLs and are kept; the value is HTML-
+    escaped by the caller before it reaches an attribute so injection is inert.
+    """
+    return valid_http_url(value)
+
+
 class _EditorialInlineSanitizer(HTMLParser):
-    """Allow only bold and line-break markup in operator-edited summaries."""
+    """Allow only bold, line-break, and safe hyperlink markup in summaries."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.strong_depth = 0
+        # Each <a> start pushes True (emitted safe anchor) or False (dropped:
+        # unsafe href or nested), so the matching </a> emits (or suppresses)
+        # exactly one closing tag. Nested anchors are never emitted.
+        self.anchor_stack: list[bool] = []
 
     def handle_starttag(self, tag: str, attrs) -> None:
         lowered = tag.casefold()
@@ -1010,21 +1027,41 @@ class _EditorialInlineSanitizer(HTMLParser):
             self.strong_depth += 1
         elif lowered == "br":
             self.parts.append("<br>")
+        elif lowered == "a":
+            href = ""
+            for name, raw in attrs or ():
+                if str(name).casefold() == "href":
+                    href = safe_editorial_anchor_href(raw)
+                    break
+            if href and not any(self.anchor_stack):
+                # Preserve ONLY href; target/rel are generated application-side.
+                self.parts.append(
+                    f'<a href="{escape(href, quote=True)}" '
+                    'target="_blank" rel="noopener noreferrer">'
+                )
+                self.anchor_stack.append(True)
+            else:
+                self.anchor_stack.append(False)
 
     def handle_startendtag(self, tag: str, attrs) -> None:
         if tag.casefold() == "br":
             self.parts.append("<br>")
 
     def handle_endtag(self, tag: str) -> None:
-        if tag.casefold() in {"strong", "b"} and self.strong_depth:
+        lowered = tag.casefold()
+        if lowered in {"strong", "b"} and self.strong_depth:
             self.parts.append("</strong>")
             self.strong_depth -= 1
+        elif lowered == "a" and self.anchor_stack:
+            if self.anchor_stack.pop():
+                self.parts.append("</a>")
 
     def handle_data(self, data: str) -> None:
         self.parts.append(escape(data))
 
     def output(self) -> str:
-        return "".join(self.parts) + "</strong>" * self.strong_depth
+        tail = "</a>" * sum(1 for emitted in self.anchor_stack if emitted)
+        return "".join(self.parts) + tail + "</strong>" * self.strong_depth
 
 
 class _EditorialInlineText(HTMLParser):

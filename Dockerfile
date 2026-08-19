@@ -16,7 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 운영 실행과 인증된 editorial import에 필요한 leaf만 담는다(DB/발송/insight는 제외).
 COPY app/__init__.py app/config.py app/operator_auth.py app/operator_gateway.py \
      app/operator_api.py app/editorial_article_import.py app/editorial_briefings.py \
-     app/editorial_review.py app/news_access.py app/news_coverage.py \
+     app/editorial_review.py app/editorial_operator_review.py app/public_urls.py \
+     app/news_access.py app/news_coverage.py \
      app/source_quality.py ./app/
 
 EXPOSE 8000

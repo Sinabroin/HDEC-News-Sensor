@@ -64,34 +64,90 @@ def render_console(template: str, bundle: dict) -> str:
     )
 
 
-def normalize_article_import_api_url(value: object) -> str:
-    """Allow an explicit HTTPS endpoint (or loopback HTTP for local verification)."""
+ARTICLE_IMPORT_PATH = "/api/editorial/import-article"
+
+
+def _safe_origin(candidate: str) -> tuple[str, str] | None:
+    """Return (scheme, netloc-origin) for a safe HTTPS (or loopback HTTP) URL.
+
+    Fail closed (None) on: malformed URL, non-https (unless loopback http),
+    protocol-relative form, embedded userinfo, or a non-default port. Query and
+    fragment are NOT inspected here — the caller decides per URL kind."""
+    try:
+        parsed = urlparse(candidate)
+        port = parsed.port
+    except (TypeError, ValueError):
+        return None
+    if parsed.username is not None or parsed.password is not None or not parsed.hostname:
+        return None
+    loopback = parsed.hostname.casefold() in {"localhost", "127.0.0.1", "::1"}
+    if parsed.scheme != "https" and not (parsed.scheme == "http" and loopback):
+        return None
+    if port is not None and not (
+        (parsed.scheme == "https" and port == 443) or (parsed.scheme == "http" and loopback)
+    ):
+        return None
+    host = parsed.hostname.casefold()
+    origin = f"{host}:{port}" if port is not None else host
+    return parsed.scheme, origin
+
+
+def normalize_operator_api_base(value: object) -> str:
+    """Canonical public Operator API base origin, or "".
+
+    The base is the ONLY authority for the article-import endpoint; a malformed,
+    non-HTTPS, protocol-relative, userinfo-bearing, path/query/fragment-bearing,
+    or otherwise unsafe base fails closed so no endpoint is derived."""
     candidate = str(value or "").strip().rstrip("/")
     if not candidate:
         return ""
     try:
         parsed = urlparse(candidate)
-        port = parsed.port
     except (TypeError, ValueError):
         return ""
-    if (
-        parsed.username is not None
-        or parsed.password is not None
-        or parsed.query
-        or parsed.fragment
-        or not parsed.hostname
-    ):
+    # A base is scheme://host[:port] only — any path/query/fragment is rejected.
+    if parsed.path.rstrip("/") or parsed.query or parsed.fragment:
         return ""
-    loopback = parsed.hostname.casefold() in {"localhost", "127.0.0.1", "::1"}
-    if parsed.scheme != "https" and not (parsed.scheme == "http" and loopback):
+    if _safe_origin(candidate) is None:
         return ""
-    if port is not None and not (
-        (parsed.scheme == "https" and port == 443)
-        or (parsed.scheme == "http" and loopback)
-    ):
+    return candidate
+
+
+def normalize_article_import_api_url(value: object, *, operator_api_base: str = "") -> str:
+    """Resolve the public authenticated article-import endpoint, or "".
+
+    - With an operator API base and no explicit URL, derive
+      ``<base>/api/editorial/import-article`` (the canonical, host-bound form).
+    - An explicitly configured URL must be exactly that path, carry no
+      credentials/query/fragment, and — when a base is configured — share the
+      base's exact origin. A wrong/deceptive/internal host, malformed URL, or
+      unsafe scheme fails closed. No secret is ever embedded.
+    """
+    base = normalize_operator_api_base(operator_api_base) if operator_api_base else ""
+    explicit = str(value or "").strip().rstrip("/")
+    if not explicit:
+        if not base:
+            return ""
+        candidate = f"{base}{ARTICLE_IMPORT_PATH}"
+    else:
+        candidate = explicit
+    try:
+        parsed = urlparse(candidate)
+    except (TypeError, ValueError):
         return ""
-    if parsed.path.rstrip("/") != "/api/editorial/import-article":
+    if parsed.query or parsed.fragment:
         return ""
+    if parsed.path.rstrip("/") != ARTICLE_IMPORT_PATH:
+        return ""
+    origin = _safe_origin(candidate)
+    if origin is None:
+        return ""
+    if base:
+        base_origin = _safe_origin(base)
+        if base_origin is None or origin != base_origin:
+            # A configured base is the sole authority: reject any endpoint whose
+            # scheme/host/port does not match it (wrong/deceptive host).
+            return ""
     return candidate
 
 
@@ -342,6 +398,16 @@ def main() -> int:
             "No credential or secret is embedded."
         ),
     )
+    parser.add_argument(
+        "--operator-api-base",
+        default=os.environ.get("OPERATOR_API_BASE", ""),
+        help=(
+            "Canonical public Operator API base (e.g. the repo variable "
+            "OPERATOR_API_BASE). The article-import endpoint is derived and "
+            "host-bound to it; a wrong/malformed base disables import. "
+            "Public value only — never a secret."
+        ),
+    )
     args = parser.parse_args()
 
     run_at = parse_run_at(args.run_at)
@@ -497,7 +563,8 @@ def main() -> int:
     latest_dir = output_root / "latest"
     generated_at = datetime.now(KST).isoformat(timespec="seconds")
     article_import_api_url = normalize_article_import_api_url(
-        args.article_import_api_url
+        args.article_import_api_url,
+        operator_api_base=args.operator_api_base,
     )
 
     bundle = editorial_review.write_bundle(
