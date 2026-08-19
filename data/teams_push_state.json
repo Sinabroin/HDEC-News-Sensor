@@ -830,6 +830,16 @@
       "sent_at": "2026-08-13T19:33:41+09:00",
       "source": "서울경제"
     },
+    "e5c71fb79845ea81": {
+      "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
+      "delivery_id": "teams_ai_push:b984d2e34840",
+      "first_sent_at": "2026-08-20T06:04:46+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "48f0447bd35267f15bbffff1cbb1099904b4d89e9936f2e8f4479816b6b51f86",
+      "sent_at": "2026-08-20T06:04:46+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "e8ea49fb7b92aa9a": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
       "delivery_id": "teams_ai_push:215d0cbefc57",
@@ -1551,6 +1561,16 @@
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
       "source": "한겨레"
+    },
+    "title:gpu보다메모리삼성skai칩병목해법제시한다": {
+      "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
+      "delivery_id": "teams_ai_push:b984d2e34840",
+      "first_sent_at": "2026-08-20T06:04:46+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "48f0447bd35267f15bbffff1cbb1099904b4d89e9936f2e8f4479816b6b51f86",
+      "sent_at": "2026-08-20T06:04:46+09:00",
+      "source": "파이낸셜뉴스"
     },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -3629,8 +3649,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-20T04:35:37+09:00",
-  "last_successful_send_at": "2026-08-20T04:35:37+09:00",
+  "last_normal_send_at": "2026-08-20T06:04:46+09:00",
+  "last_successful_send_at": "2026-08-20T06:04:46+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3910,6 +3930,16 @@
       "last_material_update_at": null,
       "material_signature": "b62faa664e80a96df7097fb486f1f30693727def29b3d70e4d4b997a936dda31",
       "sent_at": "2026-08-18T04:49:11+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202608191455229421": {
+      "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
+      "delivery_id": "teams_ai_push:b984d2e34840",
+      "first_sent_at": "2026-08-20T06:04:46+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "48f0447bd35267f15bbffff1cbb1099904b4d89e9936f2e8f4479816b6b51f86",
+      "sent_at": "2026-08-20T06:04:46+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://fnnews.com/news/202608200410163625": {
@@ -5163,6 +5193,16 @@
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
       "source": "한겨레"
+    },
+    "gpu보다메모리삼성skai칩병목해법제시한다": {
+      "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
+      "delivery_id": "teams_ai_push:b984d2e34840",
+      "first_sent_at": "2026-08-20T06:04:46+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "48f0447bd35267f15bbffff1cbb1099904b4d89e9936f2e8f4479816b6b51f86",
+      "sent_at": "2026-08-20T06:04:46+09:00",
+      "source": "파이낸셜뉴스"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
