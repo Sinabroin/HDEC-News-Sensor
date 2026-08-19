@@ -840,6 +840,16 @@
       "sent_at": "2026-08-05T05:25:09+09:00",
       "source": "녹색경제신문"
     },
+    "eacb599305cf5410": {
+      "cluster_key": "title:구글마벨과ai칩동맹최대122억달러지분매입옵션",
+      "delivery_id": "teams_ai_push:064df45060dc",
+      "first_sent_at": "2026-08-20T04:35:37+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "efa886481e2754f377b0b99fb5ceb33da0607caa5ba8f33f531105c7af42de73",
+      "sent_at": "2026-08-20T04:35:37+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "ed3daf71b2fbcb4f": {
       "cluster_key": "title:에이치와이티씨아마존출신임원영입ai데이터센터로봇사업확장",
       "delivery_id": "teams_ai_push:da5132929846",
@@ -1671,6 +1681,16 @@
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
       "source": "매일경제"
+    },
+    "title:구글마벨과ai칩동맹최대122억달러지분매입옵션": {
+      "cluster_key": "title:구글마벨과ai칩동맹최대122억달러지분매입옵션",
+      "delivery_id": "teams_ai_push:064df45060dc",
+      "first_sent_at": "2026-08-20T04:35:37+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "efa886481e2754f377b0b99fb5ceb33da0607caa5ba8f33f531105c7af42de73",
+      "sent_at": "2026-08-20T04:35:37+09:00",
+      "source": "파이낸셜뉴스"
     },
     "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권": {
       "cluster_key": "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권",
@@ -3609,8 +3629,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-20T02:57:34+09:00",
-  "last_successful_send_at": "2026-08-20T02:57:34+09:00",
+  "last_normal_send_at": "2026-08-20T04:35:37+09:00",
+  "last_successful_send_at": "2026-08-20T04:35:37+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3890,6 +3910,16 @@
       "last_material_update_at": null,
       "material_signature": "b62faa664e80a96df7097fb486f1f30693727def29b3d70e4d4b997a936dda31",
       "sent_at": "2026-08-18T04:49:11+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202608200410163625": {
+      "cluster_key": "title:구글마벨과ai칩동맹최대122억달러지분매입옵션",
+      "delivery_id": "teams_ai_push:064df45060dc",
+      "first_sent_at": "2026-08-20T04:35:37+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "efa886481e2754f377b0b99fb5ceb33da0607caa5ba8f33f531105c7af42de73",
+      "sent_at": "2026-08-20T04:35:37+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hani.co.kr/arti/economy/it/1273187.html": {
@@ -5263,6 +5293,16 @@
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
       "source": "매일경제"
+    },
+    "구글마벨과ai칩동맹최대122억달러지분매입옵션": {
+      "cluster_key": "title:구글마벨과ai칩동맹최대122억달러지분매입옵션",
+      "delivery_id": "teams_ai_push:064df45060dc",
+      "first_sent_at": "2026-08-20T04:35:37+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "efa886481e2754f377b0b99fb5ceb33da0607caa5ba8f33f531105c7af42de73",
+      "sent_at": "2026-08-20T04:35:37+09:00",
+      "source": "파이낸셜뉴스"
     },
     "구글반도체기업마벨과ai칩동맹최대17조원신주인수권": {
       "cluster_key": "title:구글반도체기업마벨과ai칩동맹최대17조원신주인수권",
