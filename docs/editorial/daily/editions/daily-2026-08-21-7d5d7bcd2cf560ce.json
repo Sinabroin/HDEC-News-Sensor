@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-08-21",
+  "coverage_start": "2026-08-20T07:00:00+09:00",
+  "coverage_end": "2026-08-21T06:40:00+09:00",
+  "published_run_at": "2026-08-21T08:11:23+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "headline_title": "AI 전환 ‘발상의 전환’…돈 없는 중기, 대학 눈돌려라",
+  "editor_summary": "경우 AI 설비 1대 구입에 5000만원, AI 소프트웨어 설치에 8000만원 등 기본 3억원은 투자 해야 AX가 가능하기... 비용이라 AI 전환 속도가 더딜 수밖에 없다”고 짚었다. 중앙일보 가 지난 5월 한국여론리서치에 의뢰해 전국...",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "AI 전환 ‘발상의 전환’…돈 없는 중기, 대학 눈돌려라",
+      "summary": "경우 AI 설비 1대 구입에 5000만원, AI 소프트웨어 설치에 8000만원 등 기본 3억원은 투자 해야 AX가 가능하기... 비용이라 AI 전환 속도가 더딜 수밖에 없다”고 짚었다. 중앙일보 가 지난 5월 한국여론리서치에 의뢰해 전국...",
+      "category": "기업동향",
+      "publisher": "중앙일보",
+      "publisher_url": "https://www.joongang.co.kr/article/25454941",
+      "published_at": "2026-08-21T00:01:01+09:00"
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-08-21.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "dd37d2a846469153a8d7bfeb51a84b7158e63bd81ea4f19e056143cc7d42596b",
+    "publication_state": "published"
+  },
+  "revision": "7d5d7bcd2cf560ce",
+  "edition_id": "daily-2026-08-21-7d5d7bcd2cf560ce",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "7d5d7bcd2cf560ce9738512ff404ee2d4d7cc3513d81bb3840ed34cf223db0b3"
+  }
+}
