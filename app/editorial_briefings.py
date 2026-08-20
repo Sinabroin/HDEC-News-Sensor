@@ -989,19 +989,92 @@ def valid_http_url(value: object) -> str:
     return candidate
 
 
+def _non_public_literal_ip_host(host: str) -> bool:
+    """True when ``host`` is a LITERAL IP that is not globally routable.
+
+    Classification is by Python ``ipaddress`` only — no DNS resolution. A host
+    that does not parse as a literal IP returns False (it is a name, left to the
+    existing downstream URL/source publication gates). ``is_global`` alone is
+    insufficient: Python treats some non-routable literals (e.g. multicast
+    ``224.0.0.1``) as global, so loopback/private/link-local/unspecified/
+    multicast/reserved are each rejected explicitly as well."""
+    try:
+        literal = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        return False
+    return (
+        literal.is_loopback
+        or literal.is_private
+        or literal.is_link_local
+        or literal.is_unspecified
+        or literal.is_multicast
+        or literal.is_reserved
+        or not literal.is_global
+    )
+
+
+def manual_publisher_article_url(value: object) -> str:
+    """Strict validator for an operator-supplied durable publisher/article URL.
+
+    R4-OPS-10 — the article (and image) URL an operator stores in the durable
+    editorial review authority must never be a server-side request-forgery
+    vector. On top of :func:`valid_http_url` (http/https only; no userinfo; no
+    CR/LF; protocol-relative and non-http(s) already fail there) this additionally
+    rejects:
+
+    - any ASCII control character anywhere in the URL;
+    - the loopback name ``localhost`` (and ``*.localhost``); and
+    - any host that is a LITERAL IP which is not globally routable (loopback,
+      RFC1918 private, link-local, unspecified, multicast, or reserved).
+
+    No DNS resolution is performed, so a non-literal hostname passes through to
+    the existing downstream URL/source publication gates unchanged."""
+    candidate = valid_http_url(value)
+    if not candidate:
+        return ""
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in candidate):
+        return ""
+    try:
+        host = (urlparse(candidate).hostname or "").casefold().rstrip(".")
+    except ValueError:
+        return ""
+    if not host or host == "localhost" or host.endswith(".localhost"):
+        return ""
+    if _non_public_literal_ip_host(host):
+        return ""
+    return candidate
+
+
 _IMAGE_URL_WRAPPERS = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"))
 _IMAGE_URL_QUOTE_CHARS = {'"', "'", "“", "”", "‘", "’"}
 _URL_PATH_SAFE = "/:@!$&'()*+,;=-._~%"
 _URL_QUERY_SAFE = "=&?/:@!$'()*+,;%-._~"
 
 
+def safe_editorial_anchor_href(value: object) -> str:
+    """Return a canonical http/https href for an operator hyperlink, or "".
+
+    R4-OPS-10 — operator-edited summaries may carry hyperlinks. Only http/https
+    are honoured; javascript:/data:/blob:/file:/mailto:, protocol-relative
+    (``//host``), userinfo (``user:pass@``), and any CR/LF-bearing or malformed
+    value fail closed to "" (the anchor is dropped, its text preserved). Query
+    and fragment are legitimate on article URLs and are kept; the value is HTML-
+    escaped by the caller before it reaches an attribute so injection is inert.
+    """
+    return valid_http_url(value)
+
+
 class _EditorialInlineSanitizer(HTMLParser):
-    """Allow only bold and line-break markup in operator-edited summaries."""
+    """Allow only bold, line-break, and safe hyperlink markup in summaries."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.strong_depth = 0
+        # Each <a> start pushes True (emitted safe anchor) or False (dropped:
+        # unsafe href or nested), so the matching </a> emits (or suppresses)
+        # exactly one closing tag. Nested anchors are never emitted.
+        self.anchor_stack: list[bool] = []
 
     def handle_starttag(self, tag: str, attrs) -> None:
         lowered = tag.casefold()
@@ -1010,21 +1083,41 @@ class _EditorialInlineSanitizer(HTMLParser):
             self.strong_depth += 1
         elif lowered == "br":
             self.parts.append("<br>")
+        elif lowered == "a":
+            href = ""
+            for name, raw in attrs or ():
+                if str(name).casefold() == "href":
+                    href = safe_editorial_anchor_href(raw)
+                    break
+            if href and not any(self.anchor_stack):
+                # Preserve ONLY href; target/rel are generated application-side.
+                self.parts.append(
+                    f'<a href="{escape(href, quote=True)}" '
+                    'target="_blank" rel="noopener noreferrer">'
+                )
+                self.anchor_stack.append(True)
+            else:
+                self.anchor_stack.append(False)
 
     def handle_startendtag(self, tag: str, attrs) -> None:
         if tag.casefold() == "br":
             self.parts.append("<br>")
 
     def handle_endtag(self, tag: str) -> None:
-        if tag.casefold() in {"strong", "b"} and self.strong_depth:
+        lowered = tag.casefold()
+        if lowered in {"strong", "b"} and self.strong_depth:
             self.parts.append("</strong>")
             self.strong_depth -= 1
+        elif lowered == "a" and self.anchor_stack:
+            if self.anchor_stack.pop():
+                self.parts.append("</a>")
 
     def handle_data(self, data: str) -> None:
         self.parts.append(escape(data))
 
     def output(self) -> str:
-        return "".join(self.parts) + "</strong>" * self.strong_depth
+        tail = "</a>" * sum(1 for emitted in self.anchor_stack if emitted)
+        return "".join(self.parts) + tail + "</strong>" * self.strong_depth
 
 
 class _EditorialInlineText(HTMLParser):

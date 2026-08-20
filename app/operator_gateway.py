@@ -51,6 +51,12 @@ _WEB_BASE = "https://github.com"
 _COLLECT_WORKFLOW = "scheduled-live-refresh.yml"
 _TELEGRAM_WORKFLOW = "telegram-notify.yml"
 _TEAMS_WORKFLOW = "email-alert.yml"
+# R4-OPS-10 — the operator "게시(publish)" action re-runs the EXACT existing Daily
+# publication workflow that already honours every Daily safety gate (lead-source,
+# real-photo image gate, executive qualification, immutable manifest, public
+# verification, at-most-once transport). The workflow filename, ref, and input
+# are fixed server-side; no browser value selects a workflow/ref/repository.
+_DAILY_PUBLISH_WORKFLOW = "editorial-daily-brief.yml"
 _DISPATCH_REF = "main"
 _TIMEOUT_SECONDS = 20
 _RUN_LOOKUP_ATTEMPTS = 4
@@ -304,6 +310,23 @@ def trigger_telegram(headers=None, origin: str = "") -> dict:
         return blocked
     return {"action": "telegram",
             **_dispatch(_TELEGRAM_WORKFLOW, {"approve_send": "true"})}
+
+
+def dispatch_daily_publish() -> dict:
+    """Dispatch the FIXED Daily publication workflow (server-side only).
+
+    Called by the operator publish route AFTER the approved review has been
+    durably persisted. The workflow filename and ref are module constants and the
+    only input is ``publish_only=true`` (regenerate the superseding edition with
+    delivery disabled — the reader page/immutable edition are minted; Teams/SMTP
+    transport stays a separately gated operator action). Fail-closed when the
+    server-side GitHub authority is unconfigured; never returns a secret."""
+    if not is_configured():
+        return {"status": "not_configured", "workflow": _DAILY_PUBLISH_WORKFLOW}
+    return {
+        "action": "daily_publish",
+        **_dispatch(_DAILY_PUBLISH_WORKFLOW, {"publish_only": "true"}),
+    }
 
 
 def trigger_teams(headers=None, origin: str = "") -> dict:

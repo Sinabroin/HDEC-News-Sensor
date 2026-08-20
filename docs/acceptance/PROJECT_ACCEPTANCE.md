@@ -1,7 +1,7 @@
 # HDEC NEWS SENSOR — PROJECT ACCEPTANCE CONTRACT
 ## Project-specific overlay for AI_PROJECT_EXECUTION_STANDARD.md
 
-**Version:** 1.4
+**Version:** 1.5
 **Project:** 현대건설 임원용 뉴스 센서 에이전트 / HDEC News Sensor  
 **Repository:** `Sinabroin/HDEC-News-Sensor`  
 **Status:** Production acceptance contract  
@@ -491,6 +491,99 @@ Required expected result:
 - the product image/public/identity gates are never patched out or weakened;
 - local and GitHub Actions verifier runs exercise equivalent semantics.
 
+## HDEC-DEFECT-017 — Production Review snapshots omitted the existing article-import API config
+
+Observed production evidence on `2026-08-19`:
+
+- Editor snapshot `review-2026-08-19-2741f4475e29b6b1` (SMTP 250) opened a page
+  with `article_import_api_url=""`, `article_import_enabled=false`;
+- the operator could not import an article even though the backend
+  `POST /api/editorial/import-article` already exists.
+
+Required expected result:
+
+- the production Review build/workflow supplies the canonical PUBLIC Operator
+  API base (repo variable `OPERATOR_API_BASE`); the builder derives and
+  host-binds `<base>/api/editorial/import-article`;
+- a wrong/deceptive/internal host, malformed URL, unsafe scheme,
+  protocol-relative form, userinfo, or a query/fragment fails closed (import
+  stays disabled) rather than pointing at an unexpected endpoint;
+- no secret is embedded in the snapshot or the builder
+  (`ARTICLE_IMPORT_SECRET_EMBEDDED=0`);
+- the reuse of the existing import backend/domain is verified, not a second
+  import implementation.
+
+## HDEC-DEFECT-018 — Manual article entry unreachable when import was disabled
+
+Observed: the manual-entry fallback was hidden by default and only opened after
+an automatic import failure, so when the import API was disabled the operator
+could not trigger it at all.
+
+Required expected result:
+
+- a visible `직접 기사 추가` control is ALWAYS reachable, whether the import API
+  is enabled, disabled, temporarily unavailable, or after an import failure;
+- manual entry never requires intentionally causing an HTTP failure first;
+- manual publisher URLs stay strictly validated (no javascript/data/blob/file/
+  internal/protocol-relative URLs).
+
+## HDEC-DEFECT-019 — Body hyperlink editing unsupported / stripped
+
+Observed: the toolbar exposed only Bold, and both the client `sanitizeInline`
+and the server `sanitize_editorial_inline_html` stripped `<a>`, so edited body
+text could not carry persistent hyperlinks.
+
+Required expected result:
+
+- `링크 삽입/수정` and `링크 해제` controls exist;
+- only a small safe inline subset survives (`text`, `<br>`, `<strong>`, `<a>`);
+- `<a>` requires http/https, is canonicalized, preserves only `href` plus
+  application-generated safe `target`/`rel`, and rejects javascript/data/blob/
+  file/protocol-relative/userinfo/malformed hrefs and attribute injection;
+- a safe hyperlink survives the full path: browser edit → server draft → reload
+  → publication input → final published Daily HTML.
+
+## HDEC-DEFECT-020 — Editor lacked durable authenticated save/publish
+
+Observed: the Editor could only download a local HTML file and export local
+JSON; there was no durable server-side draft save, no operator review
+persistence, and no explicit production publication. A local download was
+visually indistinguishable from publishing.
+
+Required expected result:
+
+- an authenticated operator (existing OAuth session + allowed Origin) can
+  durably save an operator draft to repository authority (GitHub Contents API,
+  server-derived path, optimistic concurrency), never Vercel ephemeral FS;
+- an explicit `Daily Brief 게시` action confirms the EXACT persisted draft as
+  the approved review and dispatches the FIXED Daily publication workflow
+  (fixed workflow/ref/inputs — no client-chosen workflow, ref, repository, or
+  path);
+- publication mints a NEW immutable revision/`edition_id` and leaves the prior
+  immutable edition (e.g. `daily-2026-08-19-1670559143df86ae`) unchanged; the
+  old Teams exact-edition link still resolves the original edition;
+- save/publish bind product=daily, edition_key ↔ review_snapshot_id, operator
+  identity, and parent revision; stale parent, wrong edition, tampered
+  snapshot, unauthenticated write, forbidden Origin, and ambiguous publish all
+  fail closed (no silent retry / duplicate publication);
+- the UI distinguishes `임시 저장` / `Daily Brief 게시` / `최종 브리핑 다운로드`
+  and never reports a download or an ambiguous publish as success;
+- existing Daily safety gates (lead-source, real-photo image gate, executive
+  qualification, immutable manifest, public verification, at-most-once
+  transport) are reused unchanged and never weakened to let a manual article
+  publish.
+
+## Note on the 2026-08-19 empty Daily (recall audit, not a defect)
+
+The `2026-08-19` Daily was a truthful honest-empty edition. The committed
+selection audit shows the gate ran (`ai_central_qualified_count=1`,
+`direct_candidates_rejected_below_relevance_floor=4`, `qualified_candidates=0`);
+the lone AI-central item was correctly held below the executive relevance floor.
+`2026_08_19_EMPTY_DAILY_POLICY_VALID=true`, `RECALL_DEFECT_FOUND=false`. This is
+an editorial-policy/coverage-window/timing outcome, not a selection defect, and
+must NOT be loosened to force a non-empty Daily. R4-OPS-10 is exactly the
+operator recovery path for such correct-but-empty editions.
+
 ---
 
 # 7. REAL-CORPUS REPLAY MATRIX
@@ -776,6 +869,54 @@ ADVERSARIAL_NEIGHBOR_CASES=PASS
 RELEVANT_REGRESSIONS=PASS
 REMOTE_CHECKPOINT_AVAILABLE=true
 ```
+
+## R4-OPS-10 — Editor production usability (HDEC-DEFECT-017..020)
+
+```text
+ARTICLE_IMPORT_PRODUCTION_WIRING=PASS
+ARTICLE_IMPORT_SECRET_EMBEDDED=0
+ARTICLE_IMPORT_WRONG_HOST_REJECTED=PASS
+ARTICLE_IMPORT_UNSAFE_URL_REJECTED=PASS
+MANUAL_ARTICLE_ENTRY_ALWAYS_REACHABLE=true
+
+SAFE_LINK_HTTPS_PASS=true
+LINK_JAVASCRIPT_REJECTED=true
+LINK_DATA_REJECTED=true
+LINK_USERINFO_REJECTED=true
+LINK_MALFORMED_REJECTED=true
+LINK_ATTRIBUTE_INJECTION_REJECTED=true
+LINK_SURVIVES_SAVE_RELOAD=true
+LINK_SURVIVES_PUBLICATION=true
+
+DRAFT_SAVE_BINDS_EXACT_SNAPSHOT=true
+DRAFT_REVISION_SAFE=true
+DUPLICATE_SAVE_SAFE=true
+STALE_DRAFT_REJECTED=true
+UNAUTHENTICATED_EDITOR_WRITE_REJECTED=true
+FORBIDDEN_ORIGIN_REJECTED=true
+WRONG_EDITION_REJECTED=true
+TAMPERED_SNAPSHOT_REJECTED=true
+UNSAFE_ARTICLE_URL_REJECTED=true
+ARBITRARY_REPO_PATH_REJECTED=true
+ARBITRARY_WORKFLOW_REF_REJECTED=true
+
+PUBLISH_USES_EXACT_DRAFT_AUTHORITY=true
+AMBIGUOUS_PUBLISH_FAIL_CLOSED=true
+SUPERSEDING_EDITION_ID_CHANGES=true
+ORIGINAL_EDITION_UNCHANGED=true
+EDITOR_EXACT_EDITION_IDENTITY_PRESERVED=true
+OLD_IMMUTABLE_DAILY_REMAINS_VALID=true
+
+2026_08_19_EMPTY_DAILY_POLICY_VALID=true
+RECALL_DEFECT_FOUND=false
+WATCH_R4_OPS8_NOT_REGRESSED=true
+DAILY_IMAGE_GATE_WEAKENED=false
+BROAD_RUNTIME_KILL_SWITCH_REINTRODUCED=false
+```
+
+Verifier: `python3 scripts/verify_r4_ops10_editor_usability.py` (route-level
+FastAPI TestClient checks run when FastAPI is available, else skip; the leaf,
+sanitizer, wiring, rehearsal, and recall sections are always deterministic).
 
 ---
 

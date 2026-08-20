@@ -17,9 +17,13 @@ WEEKLY_LATEST_URL = f"{PUBLIC_ROOT}/editorial/weekly/latest.html"
 # The id embeds the edition date plus the 16-hex revision prefix of the edition
 # manifest's integrity digest, so a republished date mints a new id and never
 # reuses an older edition's identity.
-DAILY_EDITION_ID_RE = re.compile(r"^daily-(\d{4}-\d{2}-\d{2})-([0-9a-f]{16})$")
+# Anchored with \Z (not $): Python's $ also matches just before a trailing
+# newline, so `$` would accept "...<16hex>\n" and let that control character
+# flow into a server-derived repository path. \Z pins the absolute end so a
+# newline/control-char suffix is rejected as a malformed identifier.
+DAILY_EDITION_ID_RE = re.compile(r"^daily-(\d{4}-\d{2}-\d{2})-([0-9a-f]{16})\Z")
 EDITOR_SNAPSHOT_ID_RE = re.compile(
-    r"^review-(\d{4}-\d{2}-\d{2})-([0-9a-f]{16})$"
+    r"^review-(\d{4}-\d{2}-\d{2})-([0-9a-f]{16})\Z"
 )
 DAILY_EDITOR_LINK_SOURCE = "teams_daily"
 _EDITOR_SOURCE_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")

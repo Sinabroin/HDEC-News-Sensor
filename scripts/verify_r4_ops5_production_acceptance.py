@@ -132,7 +132,7 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
     text = PROJECT_ACCEPTANCE_PATH.read_text(encoding="utf-8")
     normalized_text = " ".join(text.split())
     version_updated = bool(
-        re.search(r"(?m)^\*\*Version:\*\* 1\.4\s*$", text)
+        re.search(r"(?m)^\*\*Version:\*\* 1\.5\s*$", text)
     )
     defect_present = (
         "HDEC-DEFECT-005 — SBS Premium realtime authority leak" in text
@@ -188,7 +188,11 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
         f"## HDEC-DEFECT-{number}" in text
         for number in ("015", "016")
     )
-    check("HDEC project acceptance overlay version is exactly 1.4", version_updated)
+    r4_ops10_defect_classes = all(
+        f"## HDEC-DEFECT-{number}" in text
+        for number in ("017", "018", "019", "020")
+    )
+    check("HDEC project acceptance overlay version is exactly 1.5", version_updated)
     check("HDEC-DEFECT-005 is sealed in project acceptance", defect_present)
     check("publisher URL authority invariant is sealed in project acceptance", authority_invariant)
     check("trailing and English opinion contract is sealed in project acceptance", opinion_contract)
@@ -196,6 +200,7 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
     check("R4-OPS-8 semantic precision contract is sealed", r4_ops8_semantic_contract)
     check("AI-infrastructure groundbreaking recall contract is sealed", groundbreaking_contract)
     check("R4-OPS-9 defect classes 015-016 are sealed", r4_ops9_defect_classes)
+    check("R4-OPS-10 defect classes 017-020 are sealed", r4_ops10_defect_classes)
     return {
         "version_updated": version_updated,
         "defect_present": defect_present,
@@ -205,6 +210,7 @@ def project_acceptance_overlay_contracts() -> dict[str, bool]:
         "r4_ops8_semantic_contract": r4_ops8_semantic_contract,
         "groundbreaking_contract": groundbreaking_contract,
         "r4_ops9_defect_classes": r4_ops9_defect_classes,
+        "r4_ops10_defect_classes": r4_ops10_defect_classes,
     }
 
 
@@ -1202,6 +1208,7 @@ def main() -> int:
     print(f"HDEC_DEFECT_005_PRESENT={str(overlay['defect_present']).lower()}")
     print(f"R4_OPS8_DEFECT_CLASSES_PRESENT={str(overlay['r4_ops8_defect_classes']).lower()}")
     print(f"R4_OPS9_DEFECT_CLASSES_PRESENT={str(overlay['r4_ops9_defect_classes']).lower()}")
+    print(f"R4_OPS10_DEFECT_CLASSES_PRESENT={str(overlay['r4_ops10_defect_classes']).lower()}")
     print(f"R4_OPS8_SEMANTIC_CONTRACT_PRESENT={str(overlay['r4_ops8_semantic_contract']).lower()}")
     print(f"AI_INFRA_GROUNDBREAKING_CONTRACT_PRESENT={str(overlay['groundbreaking_contract']).lower()}")
     print(f"PUBLISHER_AUTHORITY_INVARIANT_PRESENT={str(overlay['authority_invariant']).lower()}")

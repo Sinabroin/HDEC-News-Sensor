@@ -23,6 +23,7 @@ from starlette.concurrency import run_in_threadpool
 from app import (
     config,
     editorial_article_import,
+    editorial_operator_review,
     operator_auth,
     operator_gateway,
 )
@@ -39,6 +40,9 @@ _OPERATOR_HTTP = {
 
 router = APIRouter()
 _IMPORT_REQUEST_MAX_BYTES = 4_096
+# The operator review payload carries up to six edited cards (title/summary/
+# body HTML/category analysis/hyperlinks); bound it generously but firmly.
+_EDITORIAL_REVIEW_MAX_BYTES = 64 * 1024
 
 
 def _operator_response(result: dict) -> JSONResponse:
@@ -234,6 +238,127 @@ async def editorial_import_article(request: Request):
     except Exception:
         # Do not expose exception types, messages, fetched content, or stack traces.
         return _article_import_error("INTERNAL_ERROR", status=500)
+    return JSONResponse(status_code=200, content=result)
+
+
+def _operator_review_error(
+    code: str, *, status: int | None = None, message: str = ""
+) -> JSONResponse:
+    error = editorial_operator_review.OperatorReviewError(
+        code, status=status, message=message
+    )
+    return JSONResponse(status_code=error.status, content=error.response_payload())
+
+
+def _authorize_editorial_write(
+    request: Request, action: str
+) -> tuple[JSONResponse | None, str]:
+    """Require the existing operator identity/session + Origin allowlist, and the
+    server-side GitHub authority needed to persist durably.
+
+    Returns (blocking_response_or_None, operator_login). ``action`` is a
+    non-collect action, so in origin mode a valid GitHub OAuth session is
+    mandatory (collect-only bypass never applies to editorial writes)."""
+    if not operator_gateway.is_configured():
+        return (
+            _operator_review_error(
+                "NOT_CONFIGURED",
+                message="운영자 저장이 서버에 구성되지 않았습니다.",
+            ),
+            "",
+        )
+    auth = operator_gateway.authorize(
+        request.headers, request.headers.get("origin", ""), action=action
+    )
+    if not auth["ok"]:
+        reason = auth["reason"]
+        if reason == "forbidden_origin":
+            return _operator_review_error("INVALID_PAYLOAD", status=403,
+                                          message="허용되지 않은 출처입니다."), ""
+        if reason == "rate_limited":
+            return _operator_review_error("INVALID_PAYLOAD", status=429,
+                                          message="요청이 너무 많습니다."), ""
+        if reason == "not_configured":
+            return _operator_review_error("NOT_CONFIGURED"), ""
+        return _operator_review_error("INVALID_PAYLOAD", status=401,
+                                      message="운영자 인증이 필요합니다."), ""
+    session = operator_auth.session_from_headers(request.headers)
+    who = str(auth.get("who") or "")
+    login = (session or {}).get("login") or who
+    return None, str(login or "")
+
+
+async def _bounded_review_payload(request: Request) -> tuple[dict | None, JSONResponse | None]:
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        return None, _operator_review_error("INVALID_PAYLOAD", status=415,
+                                             message="application/json 본문이 필요합니다.")
+    content_length = request.headers.get("content-length", "")
+    try:
+        advertised = int(content_length) if content_length else None
+    except ValueError:
+        advertised = None
+    if advertised is not None and advertised > _EDITORIAL_REVIEW_MAX_BYTES:
+        return None, _operator_review_error("INVALID_PAYLOAD", status=413,
+                                             message="요청 본문이 너무 큽니다.")
+    body = await request.body()
+    if len(body) > _EDITORIAL_REVIEW_MAX_BYTES:
+        return None, _operator_review_error("INVALID_PAYLOAD", status=413,
+                                            message="요청 본문이 너무 큽니다.")
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return None, _operator_review_error("INVALID_PAYLOAD", status=400)
+    if not isinstance(payload, dict):
+        return None, _operator_review_error("INVALID_PAYLOAD", status=400)
+    return payload, None
+
+
+@router.post("/api/editorial/save-draft")
+async def editorial_save_draft(request: Request):
+    """Durably save one operator DRAFT (git repository authority, not ephemeral
+    FS). Server-derived path; optimistic concurrency; a draft is never
+    auto-published. Never exposes GitHub token / stack / secret."""
+    blocked, login = _authorize_editorial_write(request, "save_editorial_draft")
+    if blocked is not None:
+        return blocked
+    payload, error = await _bounded_review_payload(request)
+    if error is not None:
+        return error
+    try:
+        result = await run_in_threadpool(
+            editorial_operator_review.save_draft, payload, operator_login=login
+        )
+    except editorial_operator_review.OperatorReviewError as exc:
+        return JSONResponse(status_code=exc.status, content=exc.response_payload())
+    except Exception:
+        return _operator_review_error("INTERNAL_ERROR", status=500)
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/api/editorial/publish-daily")
+async def editorial_publish_daily(request: Request):
+    """Confirm the EXACT persisted draft as the approved Daily review and request
+    the fixed Daily publication workflow. Mints a NEW immutable edition_id via
+    the existing gated pipeline; the previous immutable edition is never mutated.
+    The dispatcher is fixed server-side (no client-chosen workflow/ref)."""
+    blocked, login = _authorize_editorial_write(request, "publish_editorial_daily")
+    if blocked is not None:
+        return blocked
+    payload, error = await _bounded_review_payload(request)
+    if error is not None:
+        return error
+    try:
+        result = await run_in_threadpool(
+            editorial_operator_review.publish_daily,
+            payload,
+            operator_login=login,
+            dispatcher=operator_gateway.dispatch_daily_publish,
+        )
+    except editorial_operator_review.OperatorReviewError as exc:
+        return JSONResponse(status_code=exc.status, content=exc.response_payload())
+    except Exception:
+        return _operator_review_error("INTERNAL_ERROR", status=500)
     return JSONResponse(status_code=200, content=result)
 
 

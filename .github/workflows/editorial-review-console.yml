@@ -65,6 +65,12 @@ jobs:
           OUTPUT_ROOT: ${{ steps.mode.outputs.output_root }}
           RUN_AT: ${{ steps.mode.outputs.run_at }}
           CALIBRATION_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.calibration_only }}
+          # R4-OPS-10 — the published snapshot receives the PUBLIC Operator API
+          # base so the Editor can call the existing authenticated
+          # POST /api/editorial/import-article. The builder host-binds and
+          # derives the endpoint; an empty/malformed base keeps import disabled.
+          # This is a public URL variable, never a secret.
+          OPERATOR_API_BASE: ${{ vars.OPERATOR_API_BASE }}
         run: |
           args=(--output-root "$OUTPUT_ROOT" --candidate-limit 24)
           if [ -n "$RUN_AT" ]; then
@@ -72,6 +78,9 @@ jobs:
           fi
           if [ "$CALIBRATION_ONLY" = "true" ]; then
             args+=(--calibration-diagnostics)
+          fi
+          if [ -n "$OPERATOR_API_BASE" ]; then
+            args+=(--operator-api-base "$OPERATOR_API_BASE")
           fi
           python3 scripts/build_editorial_review_console.py "${args[@]}"
       - name: Verify console and isolated Editor delivery contracts

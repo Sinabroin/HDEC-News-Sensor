@@ -792,7 +792,7 @@ def run_browser_interaction(
   }
   window.alert=()=>{};
   if(localStorage.getItem(phaseKey)!=="restore"){
-    results.manual_fallback_initially_hidden=document.getElementById("manualFallback").hidden===true;
+    results.manual_add_always_reachable=!!document.getElementById("manualFallback")&&document.getElementById("manualFallback").hidden===false&&!!document.getElementById("manualAddBtn");
     const laneButtons=[...document.querySelectorAll("[data-lane]")];
     results.operator_lane_controls=laneButtons.map(button=>button.textContent.trim()).join(">")==="전체>주요 후보>공공기관·정책";
     document.querySelector('[data-lane="public"]').click();
@@ -872,7 +872,7 @@ def run_browser_interaction(
     results.import_sector_placement=!!importedCard&&view(importedId).category===importFixture.article.category&&!!document.querySelector(`[data-sector-category="${importFixture.article.category}"] [data-selected-id="${importedId}"]`);
     results.import_fields_filled=imported.title===importFixture.article.title&&imported.summary===importFixture.article.summary&&imported.source===importFixture.article.source;
     results.import_success_state=document.getElementById("importStatus").classList.contains("success")&&document.getElementById("importStatus").textContent.includes(importFixture.article.category);
-    results.manual_fallback_hidden_after_success=document.getElementById("manualFallback").hidden===true;
+    results.manual_add_reachable_after_success=document.getElementById("manualFallback").hidden===false&&document.getElementById("manualFallback").open===false;
     await pause(250);
     const importedFrame=importedCard&&importedCard.querySelector("[data-image-frame]");
     const importedImage=importedFrame&&importedFrame.querySelector("img");
@@ -908,7 +908,9 @@ def run_browser_interaction(
     toggleSelected(failureCapacity,true);
     results.fixture_import_calls=mockImportCalls===3;
     results.external_test_network_calls=0;
-    results.final_download_primary=document.querySelectorAll(".primary-action").length===1&&document.querySelector(".primary-action")?.textContent.trim()==="최종 브리핑 다운로드";
+    results.publish_primary_action=document.querySelectorAll(".primary-action").length===1&&document.querySelector(".primary-action")?.textContent.trim()==="Daily Brief 게시"&&document.getElementById("publishBtn")?.classList.contains("primary-action")===true&&document.getElementById("htmlBtn")?.textContent.trim()==="최종 브리핑 다운로드"&&!document.getElementById("htmlBtn")?.classList.contains("primary-action");
+    results.server_buttons_disabled_offline=document.getElementById("publishBtn")?.disabled===true&&document.getElementById("saveDraftBtn")?.disabled===true;
+    results.link_editor_controls_present=!!document.getElementById("linkBtn")&&!!document.getElementById("unlinkBtn")&&!!document.getElementById("boldBtn");
     results.removed_action_buttons=!document.getElementById("categoryOrderBtn")&&!document.getElementById("feedbackBtn")&&!document.getElementById("approveBtn");
     results.reset_secondary_menu=!!document.querySelector(".utility-menu #restoreBtn")&&!!document.querySelector("#restoreBtn").closest("details");
 
@@ -1369,8 +1371,14 @@ def main() -> int:
         "기사 URL로 자동 불러오기",
         'contenteditable="true"',
         'id="boldBtn"',
-        "직접 입력하기",
+        'id="linkBtn"',
+        'id="unlinkBtn"',
+        'id="saveDraftBtn"',
+        'id="publishBtn"',
+        "직접 기사 추가",
         "최종 브리핑 다운로드",
+        "Daily Brief 게시",
+        "임시 저장",
         "feedbackRecords",
         "selectedItems",
         "human_link",
@@ -1452,10 +1460,15 @@ def main() -> int:
         and "html_dir=image_stage" in builder_source,
     )
     v.check(
-        "article URL is the only default import input",
+        "article URL import plus always-reachable manual add",
         'id="importUrl"' in template
         and 'id="importBtn"' in template
-        and 'id="manualFallback" hidden' in template,
+        # R4-OPS-10 — the manual-add panel is no longer hidden-until-failure; it
+        # is always reachable (no `hidden` attribute) so an operator can add an
+        # article even when the import API is disabled or unavailable.
+        and 'id="manualFallback" hidden' not in template
+        and 'id="manualFallback"' in template
+        and 'id="manualAddBtn"' in template,
     )
     v.check(
         "URL import exposes loading success and error states",
@@ -1521,8 +1534,14 @@ def main() -> int:
         and "briefBody(state.selected.map(view)" in template,
     )
     v.check(
-        "only final briefing download is primary",
+        "publish is the single primary action; download is secondary",
+        # R4-OPS-10 — [Daily Brief 게시] is the primary action (server publish);
+        # [최종 브리핑 다운로드] is demoted to a secondary local-file download so
+        # the UI never implies that a download equals production publication.
         template.count('class="primary-action"') == 1
+        and 'id="publishBtn" type="button" disabled title=' in template
+        and ">Daily Brief 게시</button>" in template
+        and 'class="secondary" id="htmlBtn"' in template
         and ">최종 브리핑 다운로드</button>" in template,
     )
     v.check(
@@ -1553,6 +1572,53 @@ def main() -> int:
         and "--article-import-api-url" in builder_source
         and "normalize_article_import_api_url" in builder_source
         and "hdec-news-sensor-operator.vercel.app" not in builder_source,
+    )
+    # R4-OPS-10 — the import endpoint is derived from and host-bound to the
+    # canonical public Operator API base (repo variable), never a second
+    # hardcoded host; the Review workflow actually supplies that base.
+    v.check(
+        "builder host-binds import URL to the operator API base",
+        "--operator-api-base" in builder_source
+        and "normalize_operator_api_base" in builder_source
+        and 'os.environ.get("OPERATOR_API_BASE"' in builder_source,
+    )
+    review_workflow = (
+        ROOT / ".github/workflows/editorial-review-console.yml"
+    ).read_text(encoding="utf-8")
+    v.check(
+        "review workflow supplies the public Operator API base",
+        "vars.OPERATOR_API_BASE" in review_workflow
+        and "--operator-api-base" in review_workflow,
+    )
+    import scripts.build_editorial_review_console as _builder  # noqa: E402
+    _p = "/api/editorial/import-article"
+    v.check(
+        "wrong operator API host is rejected (host binding)",
+        _builder.normalize_article_import_api_url(
+            "https://evil.example" + _p,
+            operator_api_base="https://good.example",
+        )
+        == ""
+        and _builder.normalize_article_import_api_url(
+            "https://good.example" + _p,
+            operator_api_base="https://good.example",
+        )
+        == "https://good.example" + _p,
+    )
+    v.check(
+        "malformed / unsafe operator API base is rejected fail-closed",
+        _builder.normalize_article_import_api_url(
+            "", operator_api_base="https://user:pass@good.example"
+        )
+        == ""
+        and _builder.normalize_article_import_api_url(
+            "", operator_api_base="//good.example"
+        )
+        == ""
+        and _builder.normalize_article_import_api_url(
+            "", operator_api_base="https://good.example"
+        )
+        == "https://good.example" + _p,
     )
     operator_api_source = (ROOT / "app/operator_api.py").read_text(encoding="utf-8")
     v.check(
@@ -1718,7 +1784,7 @@ def main() -> int:
             ("restored_dom_order", "reload restores selected DOM order"),
             ("restored_sector_order", "reload preserves fixed sector order"),
             ("restored_images", "reload preserves image or fallback rendering"),
-            ("manual_fallback_initially_hidden", "manual fallback is hidden before failure"),
+            ("manual_add_always_reachable", "manual add control is always reachable"),
             ("operator_lane_controls", "operator lane controls remain exact"),
             ("operator_public_lane_filter", "operator public lane hides non-public candidates"),
             ("import_enter_triggered", "Enter key triggers article import"),
@@ -1728,7 +1794,7 @@ def main() -> int:
             ("import_sector_placement", "URL import places card in classified sector"),
             ("import_fields_filled", "URL import fills title source and summary"),
             ("import_success_state", "URL import reports classified success"),
-            ("manual_fallback_hidden_after_success", "manual fallback stays hidden after success"),
+            ("manual_add_reachable_after_success", "manual add stays reachable and collapsed after success"),
             ("import_image_render", "imported raster image renders or falls back"),
             ("duplicate_url_guard", "duplicate canonical URL is rejected without API call"),
             ("imported_card_drag", "imported selected card remains draggable across sectors"),
@@ -1739,7 +1805,9 @@ def main() -> int:
             ("retry_control", "failed import exposes retry control"),
             ("fixture_import_calls", "browser import uses exactly three mock calls"),
             ("external_test_network_calls", "browser performs zero external test requests"),
-            ("final_download_primary", "final briefing download is the only primary action"),
+            ("publish_primary_action", "Daily Brief publish is the primary action, download secondary"),
+            ("server_buttons_disabled_offline", "server save/publish disabled without exact-edition operator session"),
+            ("link_editor_controls_present", "bold/link/unlink editor controls are present"),
             ("removed_action_buttons", "removed top action buttons stay absent"),
             ("reset_secondary_menu", "AI reset is in the secondary menu"),
             ("restored_imported_candidate", "reload restores imported selected candidate"),
