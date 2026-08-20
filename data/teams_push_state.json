@@ -830,6 +830,16 @@
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
     },
+    "e1c664c1f58c6733": {
+      "cluster_key": "title:현대차9조투자새만금희망고문끝날까산업용지3배늘리고매",
+      "delivery_id": "teams_ai_push:56f104b2868a",
+      "first_sent_at": "2026-08-21T04:39:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fcc49272193dc98f276f4fa3dbd7ed53a2041cffb97c0c506a0093895aa3eba7",
+      "sent_at": "2026-08-21T04:39:21+09:00",
+      "source": "한국일보"
+    },
     "e2b6ca83572b1f3d": {
       "cluster_key": "title:철강석화ai반도체특수로불황뚫었다",
       "delivery_id": "teams_ai_push:8e13f7ec40c9",
@@ -2572,6 +2582,16 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "title:현대차9조투자새만금희망고문끝날까산업용지3배늘리고매": {
+      "cluster_key": "title:현대차9조투자새만금희망고문끝날까산업용지3배늘리고매",
+      "delivery_id": "teams_ai_push:56f104b2868a",
+      "first_sent_at": "2026-08-21T04:39:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fcc49272193dc98f276f4fa3dbd7ed53a2041cffb97c0c506a0093895aa3eba7",
+      "sent_at": "2026-08-21T04:39:21+09:00",
+      "source": "한국일보"
+    },
     "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
       "delivery_id": "teams_ai_push:3e91ff23dd72",
@@ -3683,8 +3703,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-20T14:55:38+09:00",
-  "last_successful_send_at": "2026-08-20T14:55:38+09:00",
+  "last_normal_send_at": "2026-08-21T04:39:21+09:00",
+  "last_successful_send_at": "2026-08-21T04:39:21+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4014,6 +4034,16 @@
       "last_material_update_at": null,
       "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
       "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
+    },
+    "https://hankookilbo.com/news/article/A2026082011270001872": {
+      "cluster_key": "title:현대차9조투자새만금희망고문끝날까산업용지3배늘리고매",
+      "delivery_id": "teams_ai_push:56f104b2868a",
+      "first_sent_at": "2026-08-21T04:39:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fcc49272193dc98f276f4fa3dbd7ed53a2041cffb97c0c506a0093895aa3eba7",
+      "sent_at": "2026-08-21T04:39:21+09:00",
       "source": "한국일보"
     },
     "https://hankookilbo.com/news/article/A2026082014280001407": {
@@ -6257,6 +6287,16 @@
       "material_signature": "18c187093b18a7eb7bb031e58a42b82b46e5c10e7397df766f6a51275821efbb",
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
+    },
+    "현대차9조투자새만금희망고문끝날까산업용지3배늘리고매": {
+      "cluster_key": "title:현대차9조투자새만금희망고문끝날까산업용지3배늘리고매",
+      "delivery_id": "teams_ai_push:56f104b2868a",
+      "first_sent_at": "2026-08-21T04:39:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fcc49272193dc98f276f4fa3dbd7ed53a2041cffb97c0c506a0093895aa3eba7",
+      "sent_at": "2026-08-21T04:39:21+09:00",
+      "source": "한국일보"
     },
     "현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계": {
       "cluster_key": "title:현대차그룹브라질을남미수소거점으로수소트럭그린수소생태계",
