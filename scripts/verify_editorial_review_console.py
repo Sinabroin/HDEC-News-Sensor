@@ -669,10 +669,10 @@ def verify_article_import_domain(v: V) -> dict[str, object]:
         '@router.post("/api/editorial/import-article")' in api_source,
     )
     v.check(
-        "import endpoint requires existing operator auth",
+        "import endpoint requires allowed Origin and rate limit",
         "_authorize_article_import(request)" in api_source
         and "operator_gateway.authorize(" in api_source
-        and 'action="import_article"' in api_source,
+        and 'action="analyze_article"' in api_source,
     )
     v.check(
         "import endpoint is POST only",
@@ -701,8 +701,10 @@ def verify_article_import_domain(v: V) -> dict[str, object]:
         and "if total > limit:" in import_source,
     )
     v.check(
-        "origin mode import requires OAuth session",
-        "import_article" not in operator_gateway._ORIGIN_MODE_ACTIONS,
+        "origin mode import permits only the narrow read-only analysis action",
+        "analyze_article" in operator_gateway._ORIGIN_MODE_ACTIONS
+        and "save_editorial_draft" not in operator_gateway._ORIGIN_MODE_ACTIONS
+        and "publish_editorial_daily" not in operator_gateway._ORIGIN_MODE_ACTIONS,
     )
     return result
 
@@ -770,6 +772,10 @@ def run_browser_interaction(
     const requestUrl=String(url||"");
     if(requestUrl.endsWith("/api/auth/session")){
       resolve({ok:true,status:200,json:async()=>({authenticated:false})});
+      return;
+    }
+    if(requestUrl.endsWith("/api/editorial/contributor/session")){
+      resolve({ok:true,status:200,json:async()=>({authenticated:false,role:""})});
       return;
     }
     if(requestUrl.endsWith("/manifest.json")||requestUrl==="manifest.json"){
@@ -1415,7 +1421,7 @@ def main() -> int:
         "candidate card contains safe original links",
         "original-article-link" in template
         and "원문 열기 ↗" in template
-        and "safeAuthorityUrl(candidate.selected_url)" in template,
+        and "candidateArticleUrl(candidate)" in template,
     )
     v.check(
         "left original links use target and rel security",
@@ -1518,8 +1524,9 @@ def main() -> int:
         and "같은 원문 URL의 기사가 이미 후보에 있습니다" in template,
     )
     v.check(
-        "final links reject portal and redirect authorities",
-        "safeAuthorityUrl(candidate.selected_url)" in template
+        "final links allow only explicit portal-copy provenance or publisher authority",
+        "candidateArticleUrl(candidate)" in template
+        and "safePortalCopyUrl" in template
         and '"news.daum.net","v.daum.net"' in template
         and '"news.naver.com"' in template
         and '"news.google.com"' in template

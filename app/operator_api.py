@@ -23,7 +23,9 @@ from starlette.concurrency import run_in_threadpool
 from app import (
     config,
     editorial_article_import,
+    editorial_contributor_auth,
     editorial_operator_review,
+    editorial_team_intake,
     operator_auth,
     operator_gateway,
 )
@@ -43,6 +45,8 @@ _IMPORT_REQUEST_MAX_BYTES = 4_096
 # The operator review payload carries up to six edited cards (title/summary/
 # body HTML/category analysis/hyperlinks); bound it generously but firmly.
 _EDITORIAL_REVIEW_MAX_BYTES = 64 * 1024
+_CONTRIBUTOR_LOGIN_MAX_BYTES = 1_024
+_TEAM_SUBMISSION_MAX_BYTES = 8_192
 
 
 def _operator_response(result: dict) -> JSONResponse:
@@ -65,11 +69,11 @@ def _article_import_error(
 
 
 def _authorize_article_import(request: Request) -> JSONResponse | None:
-    """Require the existing operator identity/session and Origin allowlist."""
+    """Require an allowed Origin/rate limit; analysis itself is read-only."""
     auth = operator_gateway.authorize(
         request.headers,
         request.headers.get("origin", ""),
-        action="import_article",
+        action="analyze_article",
     )
     if auth["ok"]:
         return None
@@ -86,7 +90,7 @@ def _authorize_article_import(request: Request) -> JSONResponse | None:
         return _article_import_error(
             "AUTH_REQUIRED",
             status=503,
-            message="운영자 인증이 설정되지 않았습니다.",
+            message="기사 분석 API의 허용 출처 정책이 설정되지 않았습니다.",
         )
     return _article_import_error("AUTH_REQUIRED", status=401)
 
@@ -200,9 +204,100 @@ def auth_logout():
     return response
 
 
+def _team_error(
+    code: str, *, status: int | None = None, message: str = ""
+) -> JSONResponse:
+    error = editorial_team_intake.TeamIntakeError(
+        code, status=status, message=message
+    )
+    return JSONResponse(status_code=error.status, content=error.response_payload())
+
+
+def _authorize_contributor_origin(
+    request: Request, action: str
+) -> JSONResponse | None:
+    auth = operator_gateway.authorize(
+        request.headers, request.headers.get("origin", ""), action=action
+    )
+    if auth["ok"]:
+        return None
+    reason = auth["reason"]
+    if reason == "forbidden_origin":
+        return _team_error("INVALID_PAYLOAD", status=403,
+                           message="허용되지 않은 출처입니다.")
+    if reason == "rate_limited":
+        return _team_error("INVALID_PAYLOAD", status=429,
+                           message="요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+    if reason == "not_configured":
+        return _team_error("NOT_CONFIGURED")
+    return _team_error("AUTH_REQUIRED", status=401)
+
+
+async def _bounded_json(request: Request, max_bytes: int) -> dict | None:
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        return None
+    content_length = request.headers.get("content-length", "")
+    try:
+        advertised = int(content_length) if content_length else None
+    except ValueError:
+        advertised = None
+    if advertised is not None and advertised > max_bytes:
+        return None
+    body = await request.body()
+    if len(body) > max_bytes:
+        return None
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+@router.post("/api/editorial/contributor/login")
+async def contributor_login(request: Request):
+    blocked = _authorize_contributor_origin(request, "contributor_auth")
+    if blocked is not None:
+        return blocked
+    payload = await _bounded_json(request, _CONTRIBUTOR_LOGIN_MAX_BYTES)
+    if payload is None or set(payload) != {"code"}:
+        return _team_error("INVALID_PAYLOAD")
+    if not editorial_contributor_auth.configured():
+        return _team_error("NOT_CONFIGURED")
+    if not editorial_contributor_auth.valid_code(payload.get("code")):
+        return _team_error("AUTH_REQUIRED", status=401,
+                           message="팀원 인증 코드가 올바르지 않습니다.")
+    response = JSONResponse(content={"ok": True, "authenticated": True,
+                                     "role": "editorial_contributor"})
+    editorial_contributor_auth.set_session_cookie(response)
+    return response
+
+
+@router.get("/api/editorial/contributor/session")
+def contributor_session(request: Request):
+    blocked = _authorize_contributor_origin(request, "contributor_auth")
+    if blocked is not None:
+        return blocked
+    session = editorial_contributor_auth.session_from_headers(request.headers)
+    return {
+        "authenticated": bool(session),
+        "role": "editorial_contributor" if session else "",
+    }
+
+
+@router.post("/api/editorial/contributor/logout")
+def contributor_logout(request: Request):
+    blocked = _authorize_contributor_origin(request, "contributor_auth")
+    if blocked is not None:
+        return blocked
+    response = JSONResponse(content={"authenticated": False})
+    editorial_contributor_auth.clear_session_cookie(response)
+    return response
+
+
 @router.post("/api/editorial/import-article")
 async def editorial_import_article(request: Request):
-    """Import one public article for an authenticated editorial operator.
+    """Analyze one public article without requiring an operator session.
 
     The route never returns fetched HTML or a full article body and is not an
     arbitrary URL proxy. Every redirect and image fetch is revalidated by the
@@ -240,6 +335,27 @@ async def editorial_import_article(request: Request):
     except Exception:
         # Do not expose exception types, messages, fetched content, or stack traces.
         return _article_import_error("INTERNAL_ERROR", status=500)
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/api/editorial/submit-for-review")
+async def editorial_submit_for_review(request: Request):
+    blocked = _authorize_contributor_origin(request, "contributor_submit")
+    if blocked is not None:
+        return blocked
+    if not editorial_contributor_auth.session_from_headers(request.headers):
+        return _team_error("AUTH_REQUIRED")
+    payload = await _bounded_json(request, _TEAM_SUBMISSION_MAX_BYTES)
+    if payload is None:
+        return _team_error("INVALID_PAYLOAD")
+    try:
+        result = await run_in_threadpool(
+            editorial_team_intake.submit_for_review, payload
+        )
+    except editorial_team_intake.TeamIntakeError as exc:
+        return JSONResponse(status_code=exc.status, content=exc.response_payload())
+    except Exception:
+        return _team_error("INTERNAL_ERROR")
     return JSONResponse(status_code=200, content=result)
 
 
@@ -361,6 +477,33 @@ async def editorial_publish_daily(request: Request):
         return JSONResponse(status_code=exc.status, content=exc.response_payload())
     except Exception:
         return _operator_review_error("INTERNAL_ERROR", status=500)
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/api/editorial/pending-submissions")
+async def editorial_pending_submissions(request: Request):
+    blocked, _login = _authorize_editorial_write(
+        request, "load_pending_submissions"
+    )
+    if blocked is not None:
+        return blocked
+    pairs = list(request.query_params.multi_items())
+    if len(pairs) != 2 or {key for key, _value in pairs} != {
+        "edition_key", "review_snapshot_id"
+    }:
+        return _team_error("INVALID_PAYLOAD")
+    edition_key = request.query_params.get("edition_key", "")
+    snapshot_id = request.query_params.get("review_snapshot_id", "")
+    try:
+        result = await run_in_threadpool(
+            editorial_team_intake.load_pending_submissions,
+            edition_key,
+            snapshot_id,
+        )
+    except editorial_team_intake.TeamIntakeError as exc:
+        return JSONResponse(status_code=exc.status, content=exc.response_payload())
+    except Exception:
+        return _team_error("INTERNAL_ERROR")
     return JSONResponse(status_code=200, content=result)
 
 

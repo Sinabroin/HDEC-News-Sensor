@@ -23,7 +23,8 @@
     ],
     "origins": [
       "ai_collected",
-      "human_link"
+      "human_link",
+      "team_link"
     ],
     "overall_rating": {
       "minimum": 0,

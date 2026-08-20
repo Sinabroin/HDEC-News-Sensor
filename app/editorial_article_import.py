@@ -1,4 +1,4 @@
-"""Authenticated editorial URL import domain.
+"""Read-only editorial URL import domain.
 
 The module fetches one public article URL, extracts bounded editorial metadata,
 creates a deterministic executive summary, classifies it with the R3-V6
@@ -16,7 +16,7 @@ import re
 import socket
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from html import escape, unescape
 from html.parser import HTMLParser
@@ -111,7 +111,8 @@ _NEGATIVE_CONTAINER_RE = re.compile(
 )
 _BODY_CONTAINER_RE = re.compile(
     r"(?:article|article[-_]?body|article[-_]?content|news[-_]?body|"
-    r"news[-_]?content|story[-_]?body|post[-_]?content|content[-_]?body)",
+    r"news[-_]?content|story[-_]?body|post[-_]?content|content[-_]?body|"
+    r"dic[-_]?area|harmonycontainer|marticle|news[-_]?view)",
     re.I,
 )
 _BOILERPLATE_RE = re.compile(
@@ -224,6 +225,7 @@ class PublisherDocument:
     publisher_url: str
     portal_source: str
     portal_resolution_reason: str
+    portal_copy: bool
     document: FetchedDocument
 
 
@@ -440,6 +442,51 @@ def portal_source_for_url(value: object) -> str:
     if "/search" in path and host:
         return "search"
     return ""
+
+
+def _allowlisted_portal_copy_source(value: object) -> str:
+    """Return the only portal providers eligible for article-copy fallback."""
+    source = portal_source_for_url(value)
+    return source if source in {"daum", "naver"} else ""
+
+
+def _explicit_portal_article_url(value: object, source: str) -> bool:
+    """Require a provider-specific article identity, never a home/list/search URL."""
+    try:
+        parsed = urlparse(str(value or ""))
+    except ValueError:
+        return False
+    if _allowlisted_portal_copy_source(value) != source:
+        return False
+    path = parsed.path.rstrip("/")
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True, max_num_fields=32))
+    if source == "daum":
+        return bool(
+            re.fullmatch(r"/(?:v|news/view)/\d{10,24}", path)
+            or (
+                re.fullmatch(r"/(?:news|breakingnews)/[^/]+/[^/]+", path)
+                and any(str(value).isdigit() for value in query.values())
+            )
+        )
+    if source == "naver":
+        return bool(
+            re.fullmatch(r"/(?:mnews/)?article/\d{3,6}/\d{6,24}", path)
+            or (
+                path in {"/main/read.naver", "/main/read.nhn"}
+                and re.fullmatch(r"\d{3,6}", str(query.get("oid") or ""))
+                and re.fullmatch(r"\d{6,24}", str(query.get("aid") or ""))
+            )
+        )
+    return False
+
+
+def is_allowlisted_portal_copy_url(value: object, source: str = "") -> bool:
+    """Whether a URL is an exact Daum/Naver article-copy fallback identity."""
+    portal_source = str(source or "") or _allowlisted_portal_copy_source(value)
+    return bool(
+        portal_source in {"daum", "naver"}
+        and _explicit_portal_article_url(value, portal_source)
+    )
 
 
 def is_publisher_direct_url(value: object) -> bool:
@@ -1038,27 +1085,31 @@ def resolve_publisher_document(
     """Resolve a discovery/portal URL to a fetched publisher-direct HTML document."""
     input_url = validate_public_article_url(url, resolver=resolver)
     if is_microsoft_safelinks_url(input_url):
-        publisher_url = unwrap_microsoft_safelinks_url(
+        target_url = unwrap_microsoft_safelinks_url(
             input_url,
             resolver=resolver,
         )
-        if not is_publisher_direct_url(publisher_url):
+        target_source = portal_source_for_url(target_url)
+        if target_source in {"search", "shortener", "microsoft_safelinks"}:
             raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
-        publisher_document = fetch_article_html(
-            publisher_url,
+        # An explicit SafeLinks target may itself be an allowlisted news portal.
+        # Re-enter the normal portal resolver only after the target has passed
+        # the complete URL/DNS/SSRF validation above. Arbitrary shorteners and
+        # search pages were rejected explicitly and are never broadly followed.
+        resolved_target = resolve_publisher_document(
+            target_url,
             resolver=resolver,
             opener=opener,
         )
-        if not is_publisher_direct_url(publisher_document.final_url):
-            raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
-        return PublisherDocument(
-            input_url=input_url,
-            discovery_url=input_url,
-            publisher_url=publisher_document.final_url,
-            portal_source="microsoft_safelinks",
-            portal_resolution_reason="microsoft_safelinks_explicit_target",
-            document=publisher_document,
-        )
+        if not resolved_target.portal_source and not resolved_target.portal_copy:
+            return replace(
+                resolved_target,
+                input_url=input_url,
+                discovery_url=input_url,
+                portal_source="microsoft_safelinks",
+                portal_resolution_reason="microsoft_safelinks_explicit_target",
+            )
+        return replace(resolved_target, input_url=input_url)
     if is_nonpublisher_wrapper_url(input_url):
         raise ArticleImportError("MICROSOFT_SAFELINK_TARGET_MISSING")
     discovery = fetch_article_html(input_url, resolver=resolver, opener=opener)
@@ -1080,16 +1131,38 @@ def resolve_publisher_document(
             publisher_url=discovery.final_url,
             portal_source=portal_source,
             portal_resolution_reason=reason,
+            portal_copy=False,
             document=discovery,
         )
     if not portal_source:
         raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
 
-    publisher_url, reason = discover_portal_publisher_url(
-        discovery.text,
-        discovery.final_url,
-        resolver=resolver,
-    )
+    try:
+        publisher_url, reason = discover_portal_publisher_url(
+            discovery.text,
+            discovery.final_url,
+            resolver=resolver,
+        )
+    except ArticleImportError as exc:
+        # R4-OPS-10C — only an exact Daum/Naver article URL may use the hosted
+        # copy.  Unsafe discovered targets keep failing closed, and every other
+        # portal/search/home/list page retains the publisher-required behavior.
+        fallback_source = _allowlisted_portal_copy_source(discovery.final_url)
+        if (
+            exc.code != "PORTAL_ORIGINAL_NOT_FOUND"
+            or not fallback_source
+            or not _explicit_portal_article_url(discovery.final_url, fallback_source)
+        ):
+            raise
+        return PublisherDocument(
+            input_url=input_url,
+            discovery_url=discovery.final_url,
+            publisher_url="",
+            portal_source=fallback_source,
+            portal_resolution_reason="portal_copy_fallback",
+            portal_copy=True,
+            document=discovery,
+        )
     publisher_document = fetch_article_html(
         publisher_url,
         resolver=resolver,
@@ -1103,6 +1176,7 @@ def resolve_publisher_document(
         publisher_url=publisher_document.final_url,
         portal_source=portal_source,
         portal_resolution_reason=reason,
+        portal_copy=False,
         document=publisher_document,
     )
 
@@ -1181,6 +1255,8 @@ def extract_article(
     page_url: str,
     *,
     resolver: Callable[..., Iterable[tuple]] | None = None,
+    allow_portal_copy: bool = False,
+    portal_source: str = "",
 ) -> ExtractedArticle:
     parser = _ArticleHTMLParser()
     try:
@@ -1237,19 +1313,27 @@ def extract_article(
         or page_url
     )
     canonical_url = ""
-    try:
-        candidate_url = validate_public_article_url(
-            urljoin(page_url, canonical_raw),
-            resolver=resolver,
-        )
-        if is_publisher_direct_url(candidate_url):
-            canonical_url = candidate_url
-    except ArticleImportError:
-        pass
-    if not canonical_url:
+    if allow_portal_copy:
         canonical_url = validate_public_article_url(page_url, resolver=resolver)
-        if not is_publisher_direct_url(canonical_url):
+        if (
+            portal_source not in {"daum", "naver"}
+            or not _explicit_portal_article_url(canonical_url, portal_source)
+        ):
             raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
+    else:
+        try:
+            candidate_url = validate_public_article_url(
+                urljoin(page_url, canonical_raw),
+                resolver=resolver,
+            )
+            if is_publisher_direct_url(candidate_url):
+                canonical_url = candidate_url
+        except ArticleImportError:
+            pass
+        if not canonical_url:
+            canonical_url = validate_public_article_url(page_url, resolver=resolver)
+            if not is_publisher_direct_url(canonical_url):
+                raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
 
     image_candidates: list[tuple[str, str]] = []
     for value in _jsonld_image_values(jsonld.get("image")):
@@ -1280,6 +1364,76 @@ def extract_article(
         title_source=title_source,
         body_source=body_source,
     )
+
+
+def _validate_portal_copy_quality(
+    html: str,
+    page_url: str,
+    extracted: ExtractedArticle,
+    portal_source: str,
+) -> None:
+    """Fail closed unless an allowlisted portal page is demonstrably an article."""
+    if not _explicit_portal_article_url(page_url, portal_source):
+        raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
+    parser = _ArticleHTMLParser()
+    try:
+        parser.feed(str(html or ""))
+        parser.close()
+    except (TypeError, ValueError):
+        raise ArticleImportError("ARTICLE_METADATA_NOT_FOUND") from None
+    article_metadata = bool(_jsonld_article(parser)) or _meta_first(
+        parser, "og:type"
+    ).casefold() in {"article", "news", "newsarticle"}
+    structured_body = any(
+        paragraph.context in {"article", "main", "body_container"}
+        and _paragraph_is_content(paragraph)
+        for paragraph in parser.paragraphs
+    )
+    trustworthy_title = extracted.title_source in {
+        "json_ld",
+        "og_title",
+        "twitter_title",
+        "h1",
+    }
+    normalized_source = _clean_text(extracted.source).casefold()
+    portal_labels = {
+        "daum", "다음", "다음뉴스", "daum 뉴스", "daum news",
+        "naver", "네이버", "네이버뉴스", "naver 뉴스", "naver news",
+        "news", "뉴스",
+    }
+    meaningful_source = bool(
+        normalized_source
+        and normalized_source not in portal_labels
+        and normalized_source
+        not in {
+            (urlparse(page_url).hostname or "").casefold(),
+            (urlparse(page_url).hostname or "").casefold().removeprefix("www."),
+        }
+    )
+    if (
+        not trustworthy_title
+        or len(extracted.body) < ARTICLE_BODY_MIN_CHARS
+        or not meaningful_source
+        or not (article_metadata and structured_body)
+    ):
+        raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
+
+
+def _portal_copy_publisher_label(value: object, portal_source: str) -> str:
+    """Remove a portal branding prefix/suffix while retaining the real source."""
+    source = _clean_text(value)
+    brands = (
+        r"(?:daum|다음(?:뉴스)?)"
+        if portal_source == "daum"
+        else r"(?:naver|네이버(?:뉴스)?)"
+    )
+    prefixed = re.match(rf"^{brands}\s*[|·:>/-]\s*(.+)$", source, re.I)
+    if prefixed:
+        source = _clean_text(prefixed.group(1))
+    suffixed = re.match(rf"^(.+?)\s*[|·:>/-]\s*{brands}$", source, re.I)
+    if suffixed:
+        source = _clean_text(suffixed.group(1))
+    return source[:160]
 
 
 def _sentences(body: str) -> list[str]:
@@ -1574,7 +1728,22 @@ def import_article(
         fetched.text,
         fetched.final_url,
         resolver=resolver,
+        allow_portal_copy=resolution.portal_copy,
+        portal_source=resolution.portal_source,
     )
+    if resolution.portal_copy:
+        _validate_portal_copy_quality(
+            fetched.text,
+            fetched.final_url,
+            extracted,
+            resolution.portal_source,
+        )
+        extracted = replace(
+            extracted,
+            source=_portal_copy_publisher_label(
+                extracted.source, resolution.portal_source
+            ),
+        )
     summary = summarize_article(extracted.title, extracted.body)
     summary_html = editorial_briefings.sanitize_editorial_inline_html(
         escape(summary)
@@ -1593,16 +1762,26 @@ def import_article(
         resolver=resolver,
         opener=image_opener if image_opener is not None else opener,
     )
+    publisher_authoritative = not resolution.portal_copy
+    publisher_url = extracted.canonical_url if publisher_authoritative else ""
+    analysis_url = extracted.canonical_url
     article = {
         "input_url": resolution.input_url,
         "discovery_url": resolution.discovery_url,
         "discovery_source": resolution.portal_source or "publisher_direct",
         "portal_source": resolution.portal_source,
         "portal_resolution_reason": resolution.portal_resolution_reason,
-        "portal_fallback_used": False,
-        "publisher_url": extracted.canonical_url,
-        "publisher_domain": (urlparse(extracted.canonical_url).hostname or "").casefold(),
-        "publisher_direct": True,
+        "portal_fallback_used": resolution.portal_copy,
+        "portal_copy": resolution.portal_copy,
+        "publisher_url": publisher_url,
+        "publisher_domain": (
+            (urlparse(publisher_url).hostname or "").casefold()
+            if publisher_authoritative
+            else ""
+        ),
+        "publisher_direct": publisher_authoritative,
+        "publisher_domain_authoritative": publisher_authoritative,
+        "analysis_url": analysis_url,
         "canonical_url": extracted.canonical_url,
         "fetched_url": fetched.final_url,
         "title": extracted.title,
@@ -1624,7 +1803,8 @@ def import_article(
             "redirect_count": len(fetched.redirect_chain),
             "portal_source": resolution.portal_source,
             "portal_resolution_reason": resolution.portal_resolution_reason,
-            "portal_fallback_used": False,
+            "portal_fallback_used": resolution.portal_copy,
+            "portal_copy": resolution.portal_copy,
         },
     }
     return {"ok": True, "article": article}
@@ -1648,6 +1828,7 @@ __all__ = [
     "import_article",
     "materialize_imported_image",
     "is_microsoft_safelinks_url",
+    "is_allowlisted_portal_copy_url",
     "is_nonpublisher_wrapper_url",
     "is_publisher_direct_url",
     "portal_source_for_url",

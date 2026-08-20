@@ -141,6 +141,16 @@ OPERATOR_EDITOR_RETURN_COOKIE = "hdec_operator_editor_return"
 OPERATOR_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
 OPERATOR_OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
 
+# R4-OPS-10C — lightweight team-contributor authentication. Only a SHA-256
+# digest is configured server-side; plaintext contributor codes never enter the
+# repository. The cookie has its own name/role/token format and cannot satisfy
+# operator authentication even though its signature key is safely domain-separated.
+EDITORIAL_CONTRIBUTOR_CODE_SHA256 = (
+    os.environ.get("EDITORIAL_CONTRIBUTOR_CODE_SHA256") or ""
+).strip().casefold()
+EDITORIAL_CONTRIBUTOR_SESSION_COOKIE = "hdec_editorial_contributor_session"
+EDITORIAL_CONTRIBUTOR_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
+
 # 공개 정적 페이지에서 Operator API로의 cross-origin 호출을 허용할 origin 목록.
 # 기본은 공개 대시보드 origin 2곳(커스텀 도메인 guides.playground-aidesignlab.co.kr +
 # 프로젝트 Pages sinabroin.github.io) + loopback. 둘 다 브라우저가 base+경로로 POST할 때 Origin
