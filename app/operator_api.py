@@ -119,6 +119,8 @@ def github_login(request: Request):
         request.query_params.get("product"),
         request.query_params.get("edition_id"),
         request.query_params.get("source"),
+        request.query_params.get("review_snapshot_id"),
+        request.query_params.get("edition_key"),
     )
     if editor_return:
         operator_auth.set_editor_return_cookie(response, editor_return)

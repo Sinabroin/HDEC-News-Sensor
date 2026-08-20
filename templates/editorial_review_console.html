@@ -24,6 +24,7 @@ button,input,select,textarea{font:inherit}
 .import-row{display:grid;grid-template-columns:1fr 112px;gap:7px}.import-row button{border:0;border-radius:10px;background:var(--navy);color:#fff;font-weight:900;cursor:pointer}
 .import-row button:disabled,.import-row input:disabled{cursor:not-allowed;opacity:.58}
 .import-status{min-height:18px;margin:8px 1px 0;font-size:12px;color:var(--muted)}.import-status.loading{color:var(--blue)}.import-status.success{color:var(--good)}.import-status.error{color:var(--bad)}
+.import-auth{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:9px 10px;border:1px solid #b8c9de;border-radius:10px;background:#eef4fb;color:#27445f;font-size:12px;line-height:1.45}.import-auth[hidden]{display:none}.import-login{display:inline-block;padding:7px 11px;border-radius:8px;background:var(--navy);color:#fff;text-decoration:none;font-weight:900}.import-login:hover{background:#0e63b8}
 .manual-panel{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
 .manual-panel[hidden]{display:none}
 .manual-panel summary{cursor:pointer;padding:12px 14px;font-weight:900;color:var(--navy)}
@@ -99,6 +100,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
         <button id="importBtn" type="button" disabled>사용 불가</button>
       </div>
       <p class="import-status" id="importStatus" role="status" aria-live="polite"></p>
+      <div class="import-auth" id="importAuth" hidden><a class="import-login" id="importLoginCta" href="#">GitHub로 운영자 로그인</a><span id="importAuthHint">로그인하면 입력한 URL을 유지하고 이 검토 화면으로 돌아옵니다.</span></div>
     </section>
     <details class="manual-panel" id="manualFallback">
       <summary id="manualFallbackSummary">직접 기사 추가</summary>
@@ -151,6 +153,7 @@ const MAX_MANUAL_CANDIDATES=12;
 const MAX_IMPORTED_IMAGE_DATA_URL=350000;
 const articleImportApiUrl=safeImportApiUrl(bundle.article_import_api_url);
 const storageKey=`hdec-editorial-review-v2:${bundle.edition_key}`;
+const pendingImportStorageKey=`hdec-editorial-pending-import:${bundle.edition_key}`;
 const dimensionLabels={business_relevance:"업무 관련성",importance:"기사 중요도",source_reliability:"출처 신뢰도",specificity:"정보 구체성",executive_value:"임원 보고 가치",novelty:"새로움"};
 const exclusionLabels={low_trust_source:"듣보잡·신뢰도 낮음",promotional:"홍보성",clickbait:"제목 낚시",shallow:"내용이 얕음",duplicate:"중복 기사",low_hdec_relevance:"현대건설 관련성 낮음",not_ai:"AI 직접 관련 없음",stale:"오래된 기사",stock_market_noise:"증권·주가성",fact_check_needed:"사실 확인 부족"};
 const defaultSelected=bundle.candidates.filter(x=>x.ai_recommended).slice(0,MAX_SELECTED).map(x=>x.candidate_id);
@@ -200,8 +203,9 @@ function safeAuthorityUrl(value){
     if(parsed.port&&parsed.port!==(parsed.protocol==="https:"?"443":"80"))return "";
     if(host==="localhost"||host.includes(":")||/^\d+(?:\.\d+){3}$/.test(host))return "";
     if([".local",".internal",".localhost",".intranet",".home",".lan"].some(suffix=>host.endsWith(suffix)))return "";
-    const blocked=["news.daum.net","v.daum.net","media.daum.net","news.naver.com","n.news.naver.com","m.news.naver.com","news.google.com","msn.com","news.yahoo.com","bit.ly","t.co","tinyurl.com","goo.gl","han.gl","me2.do","vo.la","url.kr"];
+    const blocked=["news.daum.net","v.daum.net","media.daum.net","news.naver.com","n.news.naver.com","m.news.naver.com","news.google.com","msn.com","news.yahoo.com","bit.ly","t.co","tinyurl.com","goo.gl","han.gl","me2.do","vo.la","url.kr","teams.public.onecdn.static.microsoft","safelinks.protection.outlook.com"];
     if(blocked.some(domain=>host===domain||host.endsWith(`.${domain}`)))return "";
+    if(host.endsWith(".onecdn.static.microsoft")||host.endsWith(".safelinks.protection.outlook.com"))return "";
     if(["google.com","bing.com","search.naver.com","search.daum.net"].some(domain=>host===domain||host.endsWith(`.${domain}`)))return "";
     if(parsed.pathname.toLowerCase().includes("/search"))return "";
     return candidate;
@@ -505,6 +509,70 @@ function setImportStatus(message,kind=""){
   status.textContent=String(message||"");
   status.className=`import-status${kind?` ${kind}`:""}`;
 }
+function rememberPendingImport(value){
+  const url=safeUrl(value);
+  try{
+    if(url)localStorage.setItem(pendingImportStorageKey,url);
+    else localStorage.removeItem(pendingImportStorageKey);
+  }catch(error){}
+  return url;
+}
+function pendingImportUrl(){
+  try{return safeUrl(localStorage.getItem(pendingImportStorageKey)||"");}catch(error){return "";}
+}
+function operatorApiOrigin(){
+  try{return articleImportApiUrl?new URL(articleImportApiUrl).origin:"";}catch(error){return "";}
+}
+function importLoginHref(snapshotId=""){
+  const origin=operatorApiOrigin();
+  if(!origin)return "";
+  const params=new URLSearchParams({product:"daily",edition_key:bundle.edition_key});
+  const pageParams=new URLSearchParams(window.location.search);
+  const editionId=pageParams.get("edition_id")||"";
+  const source=pageParams.get("source")||"teams_daily";
+  if(new RegExp(`^daily-${bundle.edition_key.replace(/-/g,"\\-")}-[0-9a-f]{16}$`).test(editionId))params.set("edition_id",editionId);
+  if(/^[a-z][a-z0-9_]{0,31}$/.test(source))params.set("source",source);
+  if(new RegExp(`^review-${bundle.edition_key.replace(/-/g,"\\-")}-[0-9a-f]{16}$`).test(snapshotId))params.set("review_snapshot_id",snapshotId);
+  return origin+"/api/auth/github/login?"+params.toString();
+}
+function showImportAuth(authenticated,snapshotId=""){
+  const panel=document.getElementById("importAuth");
+  const cta=document.getElementById("importLoginCta");
+  if(!panel||!cta)return;
+  if(authenticated){panel.hidden=true;return;}
+  const href=importLoginHref(snapshotId);
+  panel.hidden=!href;
+  if(href)cta.href=href;
+}
+async function resolveImportSnapshotId(){
+  if(serverContext.snapshotId)return serverContext.snapshotId;
+  try{
+    const response=await fetch("manifest.json",{cache:"no-store"});
+    const manifest=response.ok?await response.json():null;
+    const id=manifest&&typeof manifest.review_snapshot_id==="string"?manifest.review_snapshot_id:"";
+    if(new RegExp(`^review-${bundle.edition_key.replace(/-/g,"\\-")}-[0-9a-f]{16}$`).test(id))serverContext.snapshotId=id;
+  }catch(error){}
+  return serverContext.snapshotId;
+}
+async function probeImportAuth(){
+  const origin=operatorApiOrigin();
+  if(!origin){showImportAuth(true);return;}
+  showImportAuth(false,serverContext.snapshotId);
+  const snapshotPromise=resolveImportSnapshotId();
+  try{
+    const response=await fetch(origin+"/api/auth/session",{method:"GET",credentials:"include"});
+    const data=response.ok?await response.json():null;
+    const snapshotId=await snapshotPromise;
+    if(data&&data.authenticated===true){
+      serverContext.authenticated=true;
+      serverContext.login=String(data.login||"");
+      showImportAuth(true,snapshotId);
+    }else{
+      serverContext.authenticated=false;
+      showImportAuth(false,snapshotId);
+    }
+  }catch(error){showImportAuth(false,await snapshotPromise);}
+}
 function canonicalKey(value){
   const safe=safeUrl(value);
   if(!safe)return "";
@@ -521,11 +589,22 @@ function duplicateByUrl(value){
   const key=canonicalKey(value);
   return key?allCandidates().find(candidate=>canonicalKey(candidate.selected_url)===key):null;
 }
-function showManualFallback(url){
+function showManualFallback(url,partial=null){
   const fallback=document.getElementById("manualFallback");
   fallback.hidden=false;
   fallback.open=true;
   document.getElementById("manualUrl").value=safeUrl(url);
+  if(partial&&typeof partial==="object"){
+    const source=String(partial.source||"").trim().slice(0,160);
+    const title=String(partial.title||"").trim().slice(0,500);
+    const summary=String(partial.summary||"").trim().slice(0,500);
+    if(source)document.getElementById("manualSource").value=source;
+    if(title)document.getElementById("manualTitle").value=title;
+    if(summary)document.getElementById("manualSummary").value=summary;
+    if(CATEGORY_ORDER.includes(partial.category))document.getElementById("manualCategory").value=partial.category;
+    const image=safeUrl(partial.image_url);
+    if(image)document.getElementById("manualImage").value=image;
+  }
 }
 function normalizedImportedArticle(article){
   if(!article||typeof article!=="object")return null;
@@ -575,6 +654,7 @@ async function importArticleFromUrl(){
     setImportStatus("http 또는 https 기사 URL을 입력해 주세요.","error");
     return;
   }
+  rememberPendingImport(inputUrl);
   if(duplicateByUrl(inputUrl)){
     setImportStatus("이미 후보에 있는 기사 URL입니다.","error");
     return;
@@ -602,7 +682,10 @@ async function importArticleFromUrl(){
     let payload=null;
     try{payload=await response.json();}catch(error){}
     if(!response.ok||!payload?.ok){
-      throw new Error(payload?.error?.message||"기사를 자동으로 불러오지 못했습니다.");
+      const importError=new Error(payload?.error?.message||"기사를 자동으로 불러오지 못했습니다.");
+      importError.code=String(payload?.error?.code||"");
+      importError.partial=payload?.partial_article&&typeof payload.partial_article==="object"?payload.partial_article:null;
+      throw importError;
     }
     const article=normalizedImportedArticle(payload.article);
     if(!article)throw new Error("기사 응답 형식이 올바르지 않습니다.");
@@ -656,6 +739,7 @@ async function importArticleFromUrl(){
     state.manualCandidates.push(item);
     state.edits[id]={title:item.title,summary_html:item.summary_html,category:item.category};
     input.value="";
+    rememberPendingImport("");
     document.getElementById("manualFallback").open=false;
     moveArticle(id,item.category);
     setImportStatus(`기사를 불러와 ${item.category} 섹터에 추가했습니다.`,"success");
@@ -663,7 +747,8 @@ async function importArticleFromUrl(){
     if(error?.name==="AbortError"){
       setImportStatus("기사 불러오기를 취소했습니다.","");
     }else{
-      showManualFallback(inputUrl);
+      showManualFallback(inputUrl,error?.partial||null);
+      if(error?.code==="AUTH_REQUIRED")showImportAuth(false,serverContext.snapshotId);
       setImportStatus(error?.message||"기사를 자동으로 불러오지 못했습니다.","error");
       button.dataset.retry="true";
     }
@@ -690,6 +775,7 @@ function addManual(){
   state.manualCandidates.push(item);
   state.edits[id]={title,summary_html:esc(summary),category};
   ["manualUrl","manualSource","manualTitle","manualSummary","manualImage"].forEach(key=>document.getElementById(key).value="");
+  if(canonicalKey(url)===canonicalKey(pendingImportUrl()))rememberPendingImport("");
   moveArticle(id,category);
   setImportStatus(`직접 입력한 기사를 ${category} 섹터에 추가했습니다.`,"success");
 }
@@ -937,6 +1023,14 @@ document.getElementById("importBtn").addEventListener("click",importArticleFromU
 document.getElementById("importUrl").addEventListener("keydown",event=>{
   if(event.key==="Enter"){event.preventDefault();importArticleFromUrl();}
 });
+document.getElementById("importUrl").addEventListener("input",event=>{
+  rememberPendingImport(event.target.value);
+});
+document.getElementById("importUrl").addEventListener("paste",()=>{
+  // One-shot intake: once the browser applies the pasted value, a complete
+  // http(s) URL starts the authenticated import without another click.
+  setTimeout(()=>{if(safeUrl(document.getElementById("importUrl").value)&&!importController)importArticleFromUrl();},0);
+});
 document.getElementById("restoreBtn").addEventListener("click",()=>{
   if(!confirm("초기화하면 현재 선택·편집·평가와 URL로 불러온 기사가 모두 사라집니다. AI 추천 상태로 되돌릴까요?"))return;
   state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:state.exactEditionId||"",draftRevision:state.draftRevision||"",approvedRevision:state.approvedRevision||""};
@@ -1005,6 +1099,10 @@ if(articleImportApiUrl){
   document.getElementById("importUrl").placeholder="기사 URL 붙여넣기 · https://...";
   document.getElementById("importBtn").disabled=false;
   document.getElementById("importBtn").textContent="기사 불러오기";
+  const pendingUrl=pendingImportUrl();
+  if(pendingUrl)document.getElementById("importUrl").value=pendingUrl;
+  showImportAuth(false,serverContext.snapshotId);
+  window.addEventListener("DOMContentLoaded",()=>{probeImportAuth();},{once:true});
 }else{
   document.getElementById("importLabel").textContent="기사 URL 자동 불러오기 · 현재 사용할 수 없음";
   document.getElementById("importUrl").disabled=true;
@@ -1036,8 +1134,17 @@ const product=params.get("product")||"";
 const editionIdParam=params.get("edition_id")||"";
 const sourceRaw=params.get("source")||"";
 const sourceTag=SOURCE_TAG_RE.test(sourceRaw)?sourceRaw:"";
+function dailyArtifactUrl(suffix){
+  const marker="/editorial/review/";
+  const pathname=String(window.location&&window.location.pathname||"");
+  const origin=String(window.location&&window.location.origin||"");
+  const index=pathname.indexOf(marker);
+  const clean=String(suffix||"").replace(/^\/+/,"");
+  if(index>=0&&origin&&origin!=="null")return origin+pathname.slice(0,index)+"/editorial/daily/"+clean;
+  return "../../daily/"+clean;
+}
 function readerFallbackHtml(){
-  return `<p style="margin:14px 0 0"><a href="../../daily/${esc(bundle.edition_key)}.html" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:800">게시된 Daily Brief 보기</a></p>`;
+  return `<p style="margin:14px 0 0"><a href="${esc(dailyArtifactUrl(bundle.edition_key+".html"))}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:800">게시된 Daily Brief 보기</a></p>`;
 }
 function failClosed(reasonCode,message){
   window.__exactEditionDebug={state:"failed",reason:reasonCode};
@@ -1146,11 +1253,7 @@ function resolveReviewSnapshotId(){
   // The review_snapshot_id is content-addressed over this console, so it cannot
   // live inside the console; it is read from the sibling manifest.json (which is
   // NOT part of the snapshot digest). Server writes bind to this exact snapshot.
-  return fetch("manifest.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(manifest=>{
-    const id=manifest&&typeof manifest.review_snapshot_id==="string"?manifest.review_snapshot_id:"";
-    if(SNAPSHOT_ID_RE.test(id))serverContext.snapshotId=id;
-    return serverContext.snapshotId;
-  }).catch(()=>"");
+  return resolveImportSnapshotId().then(id=>SNAPSHOT_ID_RE.test(id)?id:"");
 }
 function updateServerReadyState(){
   refreshServerButtons();
@@ -1177,22 +1280,26 @@ function probeOperatorSession(){
     if(data&&data.authenticated===true){
       serverContext.authenticated=true;
       serverContext.login=String(data.login||"");
+      showImportAuth(true,serverContext.snapshotId);
       if(slot)slot.innerHTML=`운영자 인증됨: <b>${esc(serverContext.login)}</b>`;
       resolveReviewSnapshotId().then(updateServerReadyState);
       return;
     }
     serverContext.authenticated=false;
     refreshServerButtons();
-    const loginQuery=new URLSearchParams({product:"daily",edition_id:editionIdParam});
+    const loginQuery=new URLSearchParams({product:"daily",edition_id:editionIdParam,edition_key:bundle.edition_key});
     if(sourceTag)loginQuery.set("source",sourceTag);
+    if(serverContext.snapshotId)loginQuery.set("review_snapshot_id",serverContext.snapshotId);
     const loginHref=esc(origin+"/api/auth/github/login?"+loginQuery.toString());
     if(slot)slot.innerHTML=`<a href="${loginHref}" style="display:inline-block;padding:7px 12px;border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:800">GitHub로 운영자 로그인</a> <span>로그인 후 이 에디션으로 돌아옵니다.</span>`;
     setServerState("운영자 로그인 필요 · 로그인하면 이 에디션을 서버에 임시 저장/게시할 수 있습니다.","auth");
+    showImportAuth(false,serverContext.snapshotId);
   }).catch(()=>{
     serverContext.authenticated=false;
     refreshServerButtons();
     if(slot)slot.textContent="운영자 인증 상태를 확인할 수 없습니다 (읽기 전용으로 계속 볼 수 있습니다).";
     setServerState("운영자 인증 상태를 확인할 수 없습니다 · 로컬 편집·다운로드는 가능합니다.","warn");
+    showImportAuth(false,serverContext.snapshotId);
   });
 }
 (async()=>{
@@ -1202,7 +1309,7 @@ function probeOperatorSession(){
   }
   let manifest=null;
   try{
-    const response=await fetch(`../../daily/editions/${editionIdParam}.json`,{cache:"no-store"});
+    const response=await fetch(dailyArtifactUrl(`editions/${editionIdParam}.json`),{cache:"no-store"});
     if(!response.ok){failClosed("unknown_edition","이 에디션 식별자에 해당하는 게시 기록을 찾을 수 없습니다.");return;}
     manifest=await response.json();
   }catch(error){failClosed("unknown_edition","에디션 게시 기록을 불러올 수 없습니다.");return;}

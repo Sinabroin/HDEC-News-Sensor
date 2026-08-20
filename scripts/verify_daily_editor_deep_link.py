@@ -699,7 +699,9 @@ def main() -> int:
     )
     check(
         "console loads the manifest relative to its own origin only",
-        "fetch(`../../daily/editions/${editionIdParam}.json`" in module
+        "fetch(dailyArtifactUrl(`editions/${editionIdParam}.json`)" in module
+        and "window.location.origin" in module
+        and 'const marker="/editorial/review/"' in module
         and 'cache:"no-store"' in module,
     )
     check(
@@ -736,7 +738,8 @@ def main() -> int:
     check(
         "unauthenticated flow enters the existing GitHub OAuth with local identity only",
         '"/api/auth/github/login?"' in module
-        and 'new URLSearchParams({product:"daily",edition_id:editionIdParam})' in module
+        and 'new URLSearchParams({product:"daily",edition_id:editionIdParam,edition_key:bundle.edition_key})' in module
+        and 'loginQuery.set("review_snapshot_id",serverContext.snapshotId)' in module
         and "GitHub로 운영자 로그인" in module,
     )
     check(

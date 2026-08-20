@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "authority": "HDEC_CONFIRMED_HUMAN_EXEMPLARS_V1",
+  "storage": "content_addressed_individual_json",
+  "activation": "approved_operator_daily_review_only",
+  "idempotency_key": [
+    "edition_key",
+    "review_snapshot_id",
+    "canonical_publisher_url"
+  ],
+  "allowed_fields": [
+    "version",
+    "exemplar_id",
+    "edition_key",
+    "review_snapshot_id",
+    "canonical_publisher_url",
+    "publisher_domain",
+    "source",
+    "category",
+    "title",
+    "topic_signals",
+    "provenance",
+    "selected",
+    "approved"
+  ],
+  "forbidden_data": [
+    "article_body",
+    "full_text",
+    "html",
+    "cookies",
+    "headers",
+    "secrets"
+  ]
+}
