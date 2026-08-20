@@ -666,6 +666,10 @@ def publish_daily(
       RECONCILIATION_REQUIRED (ambiguous publish);
     - re-publishing the identical draft is idempotent (already_published),
       performing no second dispatch;
+    - the fixed publish_only dispatch runs BEFORE the auxiliary confirmed-learning
+      persistence, so a learning-storage failure never blocks the operator's
+      reader-edition publication; the identical retry then reconciles learning via
+      the idempotent branch without dispatching again (dispatch stays at-most-once);
     - the dispatcher is a no-argument injected callable → the browser can never
       choose the workflow, ref, or repository."""
     client = client or GitHubContentsClient()
@@ -724,6 +728,9 @@ def publish_daily(
         )
         if current_revision == approved_revision:
             # Exactly this draft is already the approved review → idempotent.
+            # This is also the learning-recovery path: if a prior publish
+            # dispatched but was then interrupted before the corpus/profile writes
+            # finished, this reconciles them here and never dispatches again.
             learning = _persist_confirmed_learning(client, approved)
             return {
                 "ok": True,
@@ -747,13 +754,19 @@ def publish_daily(
         message=f"chore(editorial): approve operator Daily review {edition_key}",
         base_sha=base_sha,
     )
-    # Only an explicitly approved, durably stored review activates learning.
-    # If a later corpus/profile write is interrupted, the identical publish can
-    # safely reconcile it without adding another sample before any dispatch.
-    learning = _persist_confirmed_learning(client, approved)
+    # Publication is the operator's explicit primary action, so the fixed
+    # publish_only dispatch runs immediately after the approved review is durable
+    # — BEFORE the auxiliary confirmed-learning persistence. Learning is a
+    # consequence of publication, never a precondition: a corpus/profile write
+    # failure must not open a new window that strands the reader-edition dispatch.
     dispatch_result: dict = {"dispatched": False}
     if dispatcher is not None:
         dispatch_result = {"dispatched": True, "dispatch": dispatcher()}
+    # Learning is deliberately last. If this write is interrupted the publication
+    # has already succeeded and dispatched; the identical re-publish reconciles the
+    # corpus/profile through the idempotent already_published branch above without
+    # adding another sample or dispatching a second time (at-most-once preserved).
+    learning = _persist_confirmed_learning(client, approved)
     return {
         "ok": True,
         "already_published": False,

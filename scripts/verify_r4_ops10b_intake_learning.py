@@ -113,6 +113,46 @@ class FakeGitHub:
         return {"sha": f"sha:{path}:{version}"}
 
 
+class DispatchCounter:
+    """A no-argument publish dispatcher that counts real dispatch invocations."""
+
+    def __init__(self) -> None:
+        self.count = 0
+
+    def __call__(self) -> dict:
+        self.count += 1
+        return {"workflow": "daily-publish", "status": "queued", "invocation": self.count}
+
+
+class FaultGitHub(FakeGitHub):
+    """FakeGitHub that fails the Nth PUT matching a predicate exactly once.
+
+    Models an interrupted learning corpus/profile write so the identical-retry
+    recovery path can be proven without any real network or production write. The
+    injected failure clears after it fires, mirroring a transient outage."""
+
+    def __init__(self, fail_predicate, *, fail_on_hit: int = 1) -> None:
+        super().__init__()
+        self._fail_predicate = fail_predicate
+        self._fail_on_hit = fail_on_hit
+        self._hits = 0
+        self.injected = False
+
+    def put_file(self, path, *, content_bytes, message, base_sha):
+        if not self.injected and self._fail_predicate(path):
+            self._hits += 1
+            if self._hits == self._fail_on_hit:
+                self.injected = True
+                raise operator_review.OperatorReviewError("LEARNING_PERSIST_FAILED")
+        return super().put_file(
+            path, content_bytes=content_bytes, message=message, base_sha=base_sha
+        )
+
+
+def _is_exemplar_put(path: str) -> bool:
+    return "/human_exemplars/exemplar-" in path
+
+
 def human_item(**overrides) -> dict:
     value = {
         "candidate_id": "manual-human-1",
@@ -477,6 +517,131 @@ def verify_learning(v: Verify) -> None:
     )
 
 
+def verify_publish_dispatch_ordering(v: Verify) -> None:
+    print("\n== Publish-before-learning ordering (F1 fault injection) ==")
+
+    # Happy path: the fixed publish_only dispatch fires exactly once, and an
+    # identical re-publish takes the idempotent branch without dispatching again.
+    client = FakeGitHub()
+    saved = operator_review.save_draft(
+        review_payload(), operator_login="sinabroin", client=client
+    )
+    counter = DispatchCounter()
+    first = operator_review.publish_daily(
+        review_payload(base_revision=saved["revision"]),
+        operator_login="sinabroin",
+        client=client,
+        dispatcher=counter,
+    )
+    again = operator_review.publish_daily(
+        review_payload(
+            base_revision=saved["revision"],
+            base_approved_revision=first["approved_revision"],
+        ),
+        operator_login="sinabroin",
+        client=client,
+        dispatcher=counter,
+    )
+    v.check(
+        "happy path dispatches exactly once and never re-dispatches",
+        first["dispatched"] is True
+        and first["already_published"] is False
+        and again["already_published"] is True
+        and again["dispatched"] is False
+        and counter.count == 1,
+        f"first={first.get('dispatched')} again={again.get('dispatched')} count={counter.count}",
+    )
+
+    def run_recovery(label, *, items, fail_predicate, fail_on_hit, expect_added, expect_count):
+        client = FaultGitHub(fail_predicate, fail_on_hit=fail_on_hit)
+        saved = operator_review.save_draft(
+            review_payload(selected_items=items),
+            operator_login="sinabroin",
+            client=client,
+        )
+        counter = DispatchCounter()
+        first_error = ""
+        try:
+            operator_review.publish_daily(
+                review_payload(selected_items=items, base_revision=saved["revision"]),
+                operator_login="sinabroin",
+                client=client,
+                dispatcher=counter,
+            )
+        except operator_review.OperatorReviewError as exc:
+            first_error = exc.code
+        # The approved review is durable and the dispatch has already fired even
+        # though the auxiliary learning write failed.
+        approved_present = (
+            operator_review.approved_review_path("2026-08-20") in client.store
+        )
+        dispatch_after_first = counter.count
+        # The operator retries the identical publish. It must recover the learning
+        # corpus/profile with NO second dispatch and NO duplicate/lost sample. The
+        # retry deliberately omits base_approved_revision (the first call errored
+        # before returning one) to prove recovery needs only the draft revision.
+        recovered = operator_review.publish_daily(
+            review_payload(selected_items=items, base_revision=saved["revision"]),
+            operator_login="sinabroin",
+            client=client,
+            dispatcher=counter,
+        )
+        exemplar_paths = sorted(k for k in client.store if _is_exemplar_put(k))
+        profile_stored = operator_review.FEEDBACK_PROFILE_PATH in client.store
+        exemplars_valid = all(
+            editorial_feedback.valid_human_exemplar(client.store[p]["json"])
+            for p in exemplar_paths
+        )
+        v.check(
+            label,
+            first_error == "LEARNING_PERSIST_FAILED"
+            and approved_present
+            and dispatch_after_first == 1
+            and recovered["already_published"] is True
+            and recovered["dispatched"] is False
+            and recovered["learning_exemplars_added"] == expect_added
+            and recovered["learning_exemplar_count"] == expect_count
+            and len(exemplar_paths) == expect_count
+            and profile_stored
+            and exemplars_valid
+            and counter.count == 1,
+            f"first_error={first_error} dispatch={counter.count} recovered={recovered} "
+            f"exemplars={len(exemplar_paths)} profile={profile_stored}",
+        )
+
+    run_recovery(
+        "A. exemplar write fails after dispatch → identical retry recovers, dispatch stays 1",
+        items=[human_item()],
+        fail_predicate=_is_exemplar_put,
+        fail_on_hit=1,
+        expect_added=1,
+        expect_count=1,
+    )
+    run_recovery(
+        "B. profile write fails after dispatch → identical retry recovers, dispatch stays 1",
+        items=[human_item()],
+        fail_predicate=lambda path: path == operator_review.FEEDBACK_PROFILE_PATH,
+        fail_on_hit=1,
+        expect_added=0,
+        expect_count=1,
+    )
+    run_recovery(
+        "C. partial multi-exemplar failure after dispatch → retry completes, dispatch stays 1",
+        items=[
+            human_item(),
+            human_item(
+                candidate_id="manual-human-2",
+                selected_url="https://publisher.example.com/article/ai-dc-2",
+                title="AI 데이터센터 전력망 2차 계약 체결",
+            ),
+        ],
+        fail_predicate=_is_exemplar_put,
+        fail_on_hit=2,
+        expect_added=1,
+        expect_count=2,
+    )
+
+
 def verify_auth_return(v: Verify) -> None:
     print("\n== OAuth exact-snapshot return ==")
     exact = operator_auth.validated_editor_return_url(
@@ -517,15 +682,83 @@ def verify_auth_return(v: Verify) -> None:
 
 
 def browser_executable() -> Path | None:
+    # GitHub-hosted Ubuntu images ship Google Chrome; a WSL developer host often
+    # only has Windows Chrome/Edge reachable through /mnt/c. Both are supported,
+    # matching scripts/verify_editorial_review_console.py.
     for candidate in (
         os.environ.get("HDEC_TEST_BROWSER"),
         shutil.which("google-chrome"),
         shutil.which("chromium"),
         shutil.which("chromium-browser"),
+        "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe",
+        "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
     ):
         if candidate and Path(candidate).is_file():
             return Path(candidate)
     return None
+
+
+def _browser_fixture_uri(path: Path, browser: Path) -> str:
+    """A ``file://`` URI the chosen browser can actually open.
+
+    A Windows ``.exe`` browser launched from WSL cannot read a Linux ``/tmp``
+    path, so the fixture path is translated to its Windows form (``wslpath -w``),
+    exactly as the sibling console verifier does; a native Linux browser keeps the
+    ordinary ``file://`` URI. Test-only — production runtime is unaffected."""
+    if browser.suffix.casefold() != ".exe":
+        return path.resolve().as_uri()
+    windows_path = subprocess.run(
+        ["wslpath", "-w", str(path.resolve())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return "file:///" + windows_path.replace("\\", "/")
+
+
+def _browser_argument_path(path: Path, browser: Path) -> str:
+    """A filesystem path argument (e.g. --user-data-dir) the browser can use."""
+    if browser.suffix.casefold() != ".exe":
+        return str(path.resolve())
+    return subprocess.run(
+        ["wslpath", "-w", str(path.resolve())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _windows_accessible_tempdir() -> "tempfile.TemporaryDirectory":
+    """A temp dir on the Windows %TEMP% mount for a WSL-launched ``.exe`` browser.
+
+    Both the fixture and the user-data-dir live here so Chrome/Edge read a native
+    Windows path (``C:\\...``). A Linux ``\\\\wsl.localhost`` UNC path is reachable
+    but the 9P read is far too slow for the full rendered console fixture (it
+    exceeds the browser timeout), so a real Windows drive is used — the approach
+    proven for this repository's WSL hosts."""
+    windows_temp_output = subprocess.run(
+        ["cmd.exe", "/d", "/c", "echo", "%TEMP%"],
+        cwd="/mnt/c",
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    windows_temp = next(
+        line.strip()
+        for line in reversed(windows_temp_output.splitlines())
+        if re.match(r"^[A-Za-z]:\\", line.strip())
+    )
+    wsl_temp = subprocess.run(
+        ["wslpath", "-u", windows_temp],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return tempfile.TemporaryDirectory(
+        prefix="r4-ops10b-browser-",
+        dir=wsl_temp,
+        ignore_cleanup_errors=True,
+    )
 
 
 def browser_acceptance() -> dict:
@@ -687,8 +920,18 @@ window.fetch=async function(url,options={}){
         "__TARGETLESS_MESSAGE__": TARGETLESS_MESSAGE,
     }.items():
         harness = harness.replace(key, value)
-    with tempfile.TemporaryDirectory(prefix="r4-ops10b-browser-") as temporary:
-        temp = Path(temporary)
+    windows_browser = browser.suffix.casefold() == ".exe"
+    # A WSL-launched Windows browser cannot read a Linux user-data-dir and reads a
+    # large Linux fixture over the \\wsl.localhost 9P mount far too slowly, so both
+    # the fixture and profile live on the Windows %TEMP% mount; a native Linux
+    # browser keeps them in an ordinary Linux temp dir.
+    base_handle = (
+        _windows_accessible_tempdir()
+        if windows_browser
+        else tempfile.TemporaryDirectory(prefix="r4-ops10b-browser-")
+    )
+    try:
+        base = Path(base_handle.name)
         html = console_builder.render_console(
             (ROOT / "templates" / "editorial_review_console.html").read_text(encoding="utf-8"),
             bundle,
@@ -696,14 +939,12 @@ window.fetch=async function(url,options={}){
         html = html.replace('<script id="candidate-data"', prelude + '<script id="candidate-data"', 1)
         before_body, after_body = html.rsplit("</body>", 1)
         html = before_body + harness + "</body>" + after_body
-        fixture = temp / "index.html"
+        fixture = base / "index.html"
         fixture.write_text(html, encoding="utf-8")
-        profile = temp / "profile"
+        profile = base / "profile"
         command = [
             str(browser),
             "--headless=new",
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
             "--disable-gpu",
             "--disable-background-networking",
             "--disable-component-update",
@@ -714,10 +955,16 @@ window.fetch=async function(url,options={}){
             "--no-default-browser-check",
             "--allow-file-access-from-files",
             "--virtual-time-budget=7000",
-            f"--user-data-dir={profile}",
+            f"--user-data-dir={_browser_argument_path(profile, browser)}",
             "--dump-dom",
-            fixture.resolve().as_uri(),
+            _browser_fixture_uri(fixture, browser),
         ]
+        if not windows_browser:
+            # GitHub-hosted runners can deny Chromium's user-namespace sandbox
+            # and expose a very small /dev/shm. This fixture opens local files
+            # only (window.fetch is replaced above), so these Linux CI flags do
+            # not weaken any production browser or network boundary.
+            command[2:2] = ["--no-sandbox", "--disable-dev-shm-usage"]
         completed = subprocess.run(
             command,
             capture_output=True,
@@ -725,6 +972,8 @@ window.fetch=async function(url,options={}){
             timeout=45,
             check=False,
         )
+    finally:
+        base_handle.cleanup()
     match = re.search(r'<pre id="ops10b-browser-result">([^<]+)</pre>', completed.stdout)
     if completed.returncode != 0 or not match:
         return {
@@ -764,6 +1013,7 @@ def main() -> int:
     v = Verify()
     verify_safelinks_and_urls(v)
     verify_learning(v)
+    verify_publish_dispatch_ordering(v)
     verify_auth_return(v)
     verify_browser(v)
     print(f"\nchecks={v.checks} failures={v.failures}")
