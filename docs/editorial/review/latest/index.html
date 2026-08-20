@@ -29,6 +29,9 @@ button,input,select,textarea{font:inherit}
 .manual-panel summary{cursor:pointer;padding:12px 14px;font-weight:900;color:var(--navy)}
 .manual-grid{padding:0 12px 12px;display:grid;gap:7px}.manual-row{display:grid;grid-template-columns:1fr 130px;gap:7px}
 .manual-grid textarea{min-height:76px;resize:vertical}.manual-add{border:0;border-radius:9px;background:var(--navy);color:#fff;font-weight:900;padding:9px;cursor:pointer}
+.manual-hint{font-size:11px;color:var(--muted);margin:0 0 1px;line-height:1.5}
+.server-state{margin:2px 1px 10px;font-size:12px;line-height:1.5;color:var(--muted);min-height:16px}.server-state.ok{color:var(--good)}.server-state.warn{color:var(--invest)}.server-state.error{color:var(--bad)}.server-state.auth{color:var(--blue)}
+.actionbar button:disabled{opacity:.5;cursor:not-allowed}
 .candidates{display:grid;gap:10px}
 .candidate{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 4px 16px rgba(16,18,24,.04);cursor:grab}
 .candidate.selected{border:2px solid var(--navy);padding:11px}.candidate.dragging{opacity:.4}
@@ -97,13 +100,14 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
       </div>
       <p class="import-status" id="importStatus" role="status" aria-live="polite"></p>
     </section>
-    <details class="manual-panel" id="manualFallback" hidden>
-      <summary>직접 입력하기</summary>
+    <details class="manual-panel" id="manualFallback">
+      <summary id="manualFallbackSummary">직접 기사 추가</summary>
       <div class="manual-grid">
+        <p class="manual-hint">URL 자동 불러오기를 쓸 수 없거나 실패해도, 여기서 언제든 기사를 직접 추가할 수 있습니다.</p>
         <input id="manualUrl" type="url" placeholder="기사 원문 URL · https://...">
         <div class="manual-row"><input id="manualSource" placeholder="언론사/기관"><select id="manualCategory"><option>투자·산업</option><option>기업동향</option><option>기술정보</option></select></div>
         <input id="manualTitle" placeholder="기사 제목">
-        <textarea id="manualSummary" placeholder="브리프에 넣을 요약문 · 추가 후 오른쪽에서 편집/볼드 가능"></textarea>
+        <textarea id="manualSummary" placeholder="브리프에 넣을 요약문 · 추가 후 오른쪽에서 편집/볼드/링크 가능"></textarea>
         <input id="manualImage" type="url" placeholder="대표 이미지 URL · 선택사항">
         <button class="manual-add" id="manualAddBtn" type="button">기사 추가하고 선택</button>
       </div>
@@ -124,18 +128,21 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
   </aside>
   <main class="right">
     <div class="actionbar">
-      <button class="primary-action" id="htmlBtn" type="button">최종 브리핑 다운로드</button>
+      <button class="primary-action" id="publishBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 게시할 수 있습니다">Daily Brief 게시</button>
+      <button class="secondary" id="saveDraftBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 서버에 임시 저장할 수 있습니다">임시 저장</button>
+      <button class="secondary" id="htmlBtn" type="button" title="이 기기로 HTML 파일을 내려받습니다 (게시가 아닙니다)">최종 브리핑 다운로드</button>
       <details class="utility-menu">
         <summary aria-label="보조 메뉴">⋯</summary>
         <button class="secondary" id="restoreBtn" type="button">초기화 · AI 추천 복원</button>
       </details>
       <button class="secondary" id="reviewJsonBtn" type="button">검토 JSON 내보내기</button>
     </div>
-    <div class="editor-tools"><b>본문 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><span class="editor-hint">오른쪽 제목·요약을 직접 수정하고, 요약에서 텍스트를 선택한 뒤 B를 누르세요. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
+    <div class="server-state" id="serverState" role="status" aria-live="polite">로컬 편집 모드 · 임시 저장/게시는 Teams의 정확한 에디션 링크로 열면 활성화됩니다. 다운로드는 이 기기 파일 저장이며 게시가 아닙니다.</div>
+    <div class="editor-tools"><b>본문 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><button id="linkBtn" type="button" title="선택한 문장에 링크 삽입/수정">링크</button><button id="unlinkBtn" type="button" title="선택한 링크 해제">링크 해제</button><span class="editor-hint">오른쪽 제목·요약을 직접 수정하고, 요약에서 텍스트를 선택한 뒤 B(굵게)·링크·링크 해제를 쓰세요. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
     <div class="preview-shell"><div class="preview" id="preview"></div></div>
   </main>
 </div>
-<script id="candidate-data" type="application/json">{"version": 2, "edition_type": "daily", "edition_key": "2026-08-20", "coverage_start": "2026-08-19T07:00:00+09:00", "coverage_end": "2026-08-20T06:40:00+09:00", "generated_at": "2026-08-20T08:01:12+09:00", "category_order": ["투자·산업", "기업동향", "기술정보"], "candidate_count": 0, "candidates": [], "collection_audit": {"naver_provider_enabled": true, "naver_provider_status": "active", "naver_credentials_present": true, "naver_provider_activation_error": false, "naver_provider_queries_ok": 22, "naver_api_requests": 67, "naver_articles_collected": 204, "naver_originallinks_collected": 204, "google_news_articles_collected": 288, "publisher_direct_rss_articles_collected": 40, "publisher_direct_eligible_count": 39, "publisher_direct_quarantine_count": 489, "primary_publisher_queries_attempted": 30, "primary_publisher_queries_ok": 30, "primary_publisher_articles_collected": 24, "primary_10_articles_collected": 31, "secondary_3_articles_collected": 0, "primary_publisher_lane_budget_exhausted": false, "final_portal_urls": 0, "feedback_queries_attempted": 0, "feedback_articles_collected": 0}, "feedback_profile_version": 2, "article_import_api_url": "", "article_import_enabled": false, "selection_audit": {"naver_articles_in_coverage": 3, "naver_articles_relevance_qualified": 1, "naver_articles_after_dedup": 3, "google_articles_in_coverage": 1, "google_articles_relevance_qualified": 1, "direct_candidates_before_selection": 6, "aggregator_candidates_before_selection": 0, "naver_direct_articles_selected": 0, "other_direct_articles_selected": 0, "aggregator_articles_selected": 0, "direct_candidates_displaced_by_aggregator": 0, "direct_candidates_rejected_below_relevance_floor": 2, "weak_content_rejected": 0, "qualified_candidates": 0, "selected_candidates": 0, "selection_shortfall": 8, "ai_central_qualified_count": 1, "incidental_ai_rejected_count": 0, "stock_market_rejected_count": 0, "unrelated_domain_rejected_count": 7, "selected_ai_core_count": 0, "selected_enabling_infrastructure_count": 0, "memory_profile": "", "memory_active": false, "memory_shadow_only": false, "memory_runtime_invoked": false, "selected_with_memory_support": 0, "rejected_with_negative_precedent": 0, "selection_changed_by_memory": false, "headline_supported_by_gold_plus": false, "retrieved_precedent_count": 0, "deterministic_selected_ids": [], "memory_shadow_selected_ids": [], "main_candidate_lane_count": 0, "public_institution_lane_count": 0, "promoted_public_candidate_count": 0, "non_promoted_public_candidate_count": 0, "selected_public_candidate_count": 0, "tni_brief_public_candidate_count": 0, "tni_report_topic_candidate_count": 0, "duplicate_official_media_event_clusters": 0, "public_candidate_ids": [], "promoted_public_candidate_ids": [], "public_supporting_evidence_ids": [], "public_candidate_category_map": [], "official_rows_seen": 4, "official_ai_central_rows": 0, "official_incidental_ai_rejected_rows": 0, "official_unrelated_domain_rejected_rows": 4, "official_material_event_rows": 0, "official_selected_rows": 0, "executive_qualified_count": 0, "executive_materiality_rejected_count": 0, "provider_query_only_rejected_count": 0, "same_publisher_duplicate_rejected_count": 0, "review_qualified_primary_10": 0, "review_qualified_secondary_3": 0, "review_qualified_official": 0, "deliverable_major_lead_candidates": 0}}</script>
+<script id="candidate-data" type="application/json">{"version": 2, "edition_type": "daily", "edition_key": "2026-08-20", "coverage_start": "2026-08-19T07:00:00+09:00", "coverage_end": "2026-08-20T06:40:00+09:00", "generated_at": "2026-08-20T13:25:26+09:00", "category_order": ["투자·산업", "기업동향", "기술정보"], "candidate_count": 0, "candidates": [], "collection_audit": {"naver_provider_enabled": true, "naver_provider_status": "active", "naver_credentials_present": true, "naver_provider_activation_error": false, "naver_provider_queries_ok": 21, "naver_api_requests": 67, "naver_articles_collected": 201, "naver_originallinks_collected": 201, "google_news_articles_collected": 288, "publisher_direct_rss_articles_collected": 40, "publisher_direct_eligible_count": 40, "publisher_direct_quarantine_count": 483, "primary_publisher_queries_attempted": 30, "primary_publisher_queries_ok": 30, "primary_publisher_articles_collected": 21, "primary_10_articles_collected": 32, "secondary_3_articles_collected": 0, "primary_publisher_lane_budget_exhausted": false, "final_portal_urls": 0, "feedback_queries_attempted": 0, "feedback_articles_collected": 0}, "feedback_profile_version": 2, "article_import_api_url": "https://hdec-news-sensor-operator.vercel.app/api/editorial/import-article", "article_import_enabled": true, "selection_audit": {"naver_articles_in_coverage": 3, "naver_articles_relevance_qualified": 2, "naver_articles_after_dedup": 3, "google_articles_in_coverage": 1, "google_articles_relevance_qualified": 1, "direct_candidates_before_selection": 7, "aggregator_candidates_before_selection": 0, "naver_direct_articles_selected": 0, "other_direct_articles_selected": 0, "aggregator_articles_selected": 0, "direct_candidates_displaced_by_aggregator": 0, "direct_candidates_rejected_below_relevance_floor": 1, "weak_content_rejected": 0, "qualified_candidates": 0, "selected_candidates": 0, "selection_shortfall": 8, "ai_central_qualified_count": 1, "incidental_ai_rejected_count": 0, "stock_market_rejected_count": 0, "unrelated_domain_rejected_count": 7, "selected_ai_core_count": 0, "selected_enabling_infrastructure_count": 0, "memory_profile": "", "memory_active": false, "memory_shadow_only": false, "memory_runtime_invoked": false, "selected_with_memory_support": 0, "rejected_with_negative_precedent": 0, "selection_changed_by_memory": false, "headline_supported_by_gold_plus": false, "retrieved_precedent_count": 0, "deterministic_selected_ids": [], "memory_shadow_selected_ids": [], "main_candidate_lane_count": 1, "public_institution_lane_count": 0, "promoted_public_candidate_count": 0, "non_promoted_public_candidate_count": 0, "selected_public_candidate_count": 0, "tni_brief_public_candidate_count": 0, "tni_report_topic_candidate_count": 0, "duplicate_official_media_event_clusters": 0, "public_candidate_ids": [], "promoted_public_candidate_ids": [], "public_supporting_evidence_ids": [], "public_candidate_category_map": [], "official_rows_seen": 4, "official_ai_central_rows": 0, "official_incidental_ai_rejected_rows": 0, "official_unrelated_domain_rejected_rows": 4, "official_material_event_rows": 0, "official_selected_rows": 0, "executive_qualified_count": 0, "executive_materiality_rejected_count": 1, "provider_query_only_rejected_count": 0, "same_publisher_duplicate_rejected_count": 0, "review_qualified_primary_10": 0, "review_qualified_secondary_3": 0, "review_qualified_official": 0, "deliverable_major_lead_candidates": 0}}</script>
 <script>
 const bundle=JSON.parse(document.getElementById("candidate-data").textContent);
 const CATEGORY_ORDER=["투자·산업","기업동향","기술정보"];
@@ -147,12 +154,18 @@ const storageKey=`hdec-editorial-review-v2:${bundle.edition_key}`;
 const dimensionLabels={business_relevance:"업무 관련성",importance:"기사 중요도",source_reliability:"출처 신뢰도",specificity:"정보 구체성",executive_value:"임원 보고 가치",novelty:"새로움"};
 const exclusionLabels={low_trust_source:"듣보잡·신뢰도 낮음",promotional:"홍보성",clickbait:"제목 낚시",shallow:"내용이 얕음",duplicate:"중복 기사",low_hdec_relevance:"현대건설 관련성 낮음",not_ai:"AI 직접 관련 없음",stale:"오래된 기사",stock_market_noise:"증권·주가성",fact_check_needed:"사실 확인 부족"};
 const defaultSelected=bundle.candidates.filter(x=>x.ai_recommended).slice(0,MAX_SELECTED).map(x=>x.candidate_id);
-let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:""};
+let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:"",draftRevision:"",approvedRevision:""};
 try{
   const saved=JSON.parse(localStorage.getItem(storageKey));
   if(saved&&Array.isArray(saved.selected))state={...state,...saved};
 }catch(error){}
 state.exactEditionId=typeof state.exactEditionId==="string"?state.exactEditionId:"";
+state.draftRevision=typeof state.draftRevision==="string"?state.draftRevision:"";
+state.approvedRevision=typeof state.approvedRevision==="string"?state.approvedRevision:"";
+// R4-OPS-10 — durable server save/publish context; populated ONLY when the
+// console is opened via the exact-edition Teams deep link with a verified
+// operator session. A plain preview console never enables server writes.
+let serverContext={origin:"",snapshotId:"",editionKey:"",editionId:"",authenticated:false,login:""};
 state.manualCandidates=Array.isArray(state.manualCandidates)?state.manualCandidates:[];
 state.ratings=state.ratings&&typeof state.ratings==="object"?state.ratings:{};
 state.edits=state.edits&&typeof state.edits==="object"?state.edits:{};
@@ -216,6 +229,17 @@ function safeImageUrl(value){
   if(match[1]==="webp"&&!payload.startsWith("UklGR"))return "";
   return candidate;
 }
+function safeLinkHref(value){
+  // Operator hyperlink policy — http/https only; reject javascript:/data:/blob:/
+  // file:/mailto:, protocol-relative (//host), userinfo (user:pass@), and any
+  // malformed value. Returns a canonicalized href, or "" (anchor dropped).
+  try{
+    const parsed=new URL(String(value??""));
+    if(parsed.protocol!=="http:"&&parsed.protocol!=="https:")return "";
+    if(parsed.username||parsed.password)return "";
+    return parsed.href;
+  }catch(error){return "";}
+}
 function sanitizeInline(html){
   const box=document.createElement("div");
   box.innerHTML=String(html||"");
@@ -230,6 +254,20 @@ function sanitizeInline(html){
       const element=document.createElement("strong");
       element.appendChild(fragment);
       return element;
+    }
+    if(tag==="a"){
+      // Preserve ONLY a safe href; target/rel are generated here so no inline
+      // attribute (onclick/style/class/target injection) can survive.
+      const href=safeLinkHref(node.getAttribute("href"));
+      if(href){
+        const anchor=document.createElement("a");
+        anchor.setAttribute("href",href);
+        anchor.setAttribute("target","_blank");
+        anchor.setAttribute("rel","noopener noreferrer");
+        anchor.appendChild(fragment);
+        return anchor;
+      }
+      return fragment;
     }
     return fragment;
   }
@@ -618,7 +656,7 @@ async function importArticleFromUrl(){
     state.manualCandidates.push(item);
     state.edits[id]={title:item.title,summary_html:item.summary_html,category:item.category};
     input.value="";
-    document.getElementById("manualFallback").hidden=true;
+    document.getElementById("manualFallback").open=false;
     moveArticle(id,item.category);
     setImportStatus(`기사를 불러와 ${item.category} 섹터에 추가했습니다.`,"success");
   }catch(error){
@@ -813,6 +851,83 @@ function validatePlacementOverrides(){
 function operatorReviewPayload(){
   return {version:3,edition_type:"daily",edition_key:bundle.edition_key,review_status:"draft",selected_items:selectedItems(),feedback_records:feedbackRecords(),generated_at:new Date().toISOString()};
 }
+function setServerState(message,kind=""){
+  const slot=document.getElementById("serverState");
+  if(!slot)return;
+  slot.textContent=String(message||"");
+  slot.className="server-state"+(kind?" "+kind:"");
+}
+function serverWritesReady(){
+  return !!(serverContext.origin&&serverContext.snapshotId&&serverContext.authenticated);
+}
+function refreshServerButtons(){
+  const ready=serverWritesReady();
+  const saveBtn=document.getElementById("saveDraftBtn");
+  const publishBtn=document.getElementById("publishBtn");
+  if(saveBtn)saveBtn.disabled=!ready;
+  if(publishBtn)publishBtn.disabled=!ready;
+}
+function operatorReviewBody(){
+  // Identity is server-derived/verified; selected_items carry the operator's
+  // exact edited/reordered selection (safe URLs + sanitized body HTML server-side).
+  return {product:"daily",edition_key:serverContext.editionKey||bundle.edition_key,review_snapshot_id:serverContext.snapshotId,selected_items:selectedItems()};
+}
+async function postJson(path,body){
+  const response=await fetch(serverContext.origin+path,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  let payload=null;try{payload=await response.json();}catch(error){}
+  return {response,payload};
+}
+async function serverSaveDraft(){
+  if(!serverWritesReady()){setServerState("정확한 에디션 링크에서 운영자 인증 후 서버 저장이 활성화됩니다.","warn");return null;}
+  if(!validatePlacementOverrides())return null;
+  document.getElementById("saveDraftBtn").disabled=true;
+  document.getElementById("publishBtn").disabled=true;
+  setServerState("서버에 임시 저장 중…","auth");
+  try{
+    const {response,payload}=await postJson("/api/editorial/save-draft",{...operatorReviewBody(),base_revision:state.draftRevision||""});
+    if(response.status===409){setServerState("저장 충돌 · 다른 편집이 반영되어 있습니다. 최신 버전을 불러온 뒤 다시 저장하세요.","error");return null;}
+    if(!response.ok||!payload||payload.ok!==true)throw new Error((payload&&payload.error&&payload.error.message)||"임시 저장에 실패했습니다.");
+    state.draftRevision=String(payload.revision||"");
+    save();
+    setServerState(`임시 저장됨 · revision ${state.draftRevision.slice(0,12)} · 선택 ${payload.selected_count}건${payload.unchanged?" · 변경 없음":""}`,"ok");
+    return payload;
+  }catch(error){
+    setServerState((error&&error.message)||"임시 저장에 실패했습니다.","error");
+    return null;
+  }finally{
+    refreshServerButtons();
+  }
+}
+async function serverPublishDaily(){
+  if(!serverWritesReady()){setServerState("정확한 에디션 링크에서 운영자 인증 후 게시가 활성화됩니다.","warn");return;}
+  if(!validatePlacementOverrides())return;
+  if(state.selected.length===0){setServerState("게시하려면 최소 한 건의 기사를 선택하세요. (빈 에디션은 그대로 유지하세요.)","error");return;}
+  if(!confirm("현재 선택·편집 내용을 서버에 저장한 뒤, 이 날짜의 새 Daily Brief 개정본으로 게시를 요청합니다. 기존 에디션은 그대로 보존되고 새 edition_id가 발급됩니다. 다운로드와 달리 실제 발행입니다. 계속할까요?"))return;
+  // Publish uses the EXACT persisted draft: save first, then publish that revision.
+  const saved=await serverSaveDraft();
+  if(!saved)return;
+  document.getElementById("publishBtn").disabled=true;
+  document.getElementById("saveDraftBtn").disabled=true;
+  setServerState("게시 요청 중…","auth");
+  try{
+    const {response,payload}=await postJson("/api/editorial/publish-daily",{product:"daily",edition_key:serverContext.editionKey||bundle.edition_key,review_snapshot_id:serverContext.snapshotId,base_revision:state.draftRevision,base_approved_revision:state.approvedRevision||""});
+    if(response.status===409){setServerState("게시 상태가 모호합니다 · 다른 게시가 있었을 수 있습니다. 최신 상태를 확인하고 다시 시도하세요.","error");return;}
+    if(!response.ok||!payload||payload.ok!==true)throw new Error((payload&&payload.error&&payload.error.message)||"게시 요청에 실패했습니다.");
+    state.approvedRevision=String(payload.approved_revision||"");
+    save();
+    if(payload.already_published){
+      setServerState("이미 이 초안으로 게시되어 있습니다 · 추가 발행 없음.","ok");
+    }else if(payload.dispatched){
+      setServerState("게시 요청 접수됨 · 새 Daily 개정본을 발행 중입니다 (완료까지 잠시 걸릴 수 있습니다). 기존 에디션은 그대로 보존됩니다.","ok");
+    }else{
+      setServerState("게시 승인은 저장되었으나 발행 트리거 상태를 운영자가 확인해야 합니다.","warn");
+    }
+  }catch(error){
+    setServerState((error&&error.message)||"게시 요청에 실패했습니다.","error");
+  }finally{
+    refreshServerButtons();
+  }
+}
 
 document.getElementById("search").addEventListener("input",renderCandidates);
 document.getElementById("filter").addEventListener("change",renderCandidates);
@@ -824,23 +939,48 @@ document.getElementById("importUrl").addEventListener("keydown",event=>{
 });
 document.getElementById("restoreBtn").addEventListener("click",()=>{
   if(!confirm("초기화하면 현재 선택·편집·평가와 URL로 불러온 기사가 모두 사라집니다. AI 추천 상태로 되돌릴까요?"))return;
-  state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft"};
+  state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:state.exactEditionId||"",draftRevision:state.draftRevision||"",approvedRevision:state.approvedRevision||""};
   normalizeSelectedOrder();
   markDraftAndRender();
   document.querySelector(".utility-menu").open=false;
   setImportStatus("AI 추천 상태로 초기화했습니다.","");
 });
-document.getElementById("boldBtn").addEventListener("mousedown",event=>{
-  event.preventDefault();
-  if(!lastEditable||lastEditable.dataset.field!=="summary_html"){alert("오른쪽 요약문에서 굵게 만들 텍스트를 먼저 선택하세요.");return;}
+function applyInlineCommand(command,value){
+  if(!lastEditable||lastEditable.dataset.field!=="summary_html"){alert("오른쪽 요약문에서 편집할 텍스트를 먼저 선택하세요.");return false;}
   lastEditable.focus();
-  document.execCommand("bold",false,null);
+  document.execCommand(command,false,value===undefined?null:value);
   edit(lastEditable.dataset.id).summary_html=sanitizeInline(lastEditable.innerHTML);
   state.reviewStatus="draft";
   save();
+  return true;
+}
+function selectionHasText(){
+  const selection=window.getSelection&&window.getSelection();
+  return !!(selection&&!selection.isCollapsed&&String(selection).trim());
+}
+document.getElementById("boldBtn").addEventListener("mousedown",event=>{
+  event.preventDefault();
+  applyInlineCommand("bold");
+});
+document.getElementById("linkBtn").addEventListener("mousedown",event=>{
+  event.preventDefault();
+  if(!lastEditable||lastEditable.dataset.field!=="summary_html"){alert("오른쪽 요약문에서 링크를 걸 텍스트를 먼저 선택하세요.");return;}
+  if(!selectionHasText()){alert("링크를 걸 텍스트를 먼저 드래그해 선택하세요.");return;}
+  const existing=(window.getSelection&&window.getSelection().anchorNode&&window.getSelection().anchorNode.parentElement&&window.getSelection().anchorNode.parentElement.closest("a"));
+  const raw=window.prompt("링크 URL을 입력하세요 (http:// 또는 https://).",existing?existing.getAttribute("href")||"":"https://");
+  if(raw===null)return;
+  const href=safeLinkHref(raw.trim());
+  if(!href){alert("http 또는 https 로 시작하는 안전한 URL만 사용할 수 있습니다.");return;}
+  applyInlineCommand("createLink",href);
+});
+document.getElementById("unlinkBtn").addEventListener("mousedown",event=>{
+  event.preventDefault();
+  applyInlineCommand("unlink");
 });
 document.getElementById("htmlBtn").addEventListener("click",()=>{if(validatePlacementOverrides())download(`HDEC_AI_Daily_Brief_${bundle.edition_key}.html`,standaloneHtml(),"text/html;charset=utf-8");});
 document.getElementById("reviewJsonBtn").addEventListener("click",()=>{if(validatePlacementOverrides())download(`HDEC_AI_Editorial_Review_${bundle.edition_key}.json`,JSON.stringify(operatorReviewPayload(),null,2),"application/json;charset=utf-8");});
+document.getElementById("saveDraftBtn").addEventListener("click",()=>{serverSaveDraft();});
+document.getElementById("publishBtn").addEventListener("click",()=>{serverPublishDaily();});
 
 normalizeSelectedOrder();
 window.__exactEditionDebug=null;
@@ -996,23 +1136,64 @@ function renderExactEditionPanel(manifest){
   panel.dataset.editionId=manifest.edition_id;
   panel.innerHTML=`<div style="background:#eef6ee;border:1px solid #9fc8a2;border-radius:14px;padding:13px 16px;margin-bottom:12px;font-size:13px"><b style="color:#0d5c22">정확한 에디션을 확인했습니다</b> <span style="color:#3a4150">— 이 화면은 Teams 메시지가 가리키는 ${esc(manifest.edition_key)} 에디션(개정 ${esc(manifest.revision)})입니다.</span><div style="margin-top:7px;color:#3a4150">수집 범위 ${esc(manifest.coverage_start)} ~ ${esc(manifest.coverage_end)} · 검토 상태 ${esc(manifest.review_mode)}/${esc(manifest.review_decision)} · 게시 상태 ${esc(publication.publication_state||"")}${datedLink?` · <a href="${esc(datedLink)}" target="_blank" rel="noopener noreferrer">게시된 Daily Brief 보기</a>`:""}</div><details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#002c5f">게시된 기사 구성 (${(manifest.articles||[]).length}건)</summary><ol style="margin:7px 0 0;padding-left:20px">${manifestArticleRows(manifest)}</ol><p style="margin:7px 0 0;color:#677080;font-size:12px">Editor's Summary: ${esc(manifest.editor_summary||"")}</p></details><div id="editorAuthState" style="margin-top:8px;color:#677080;font-size:12px"></div></div>`;
   main.insertBefore(panel,main.firstChild);
-  probeOperatorSession();
+  // R4-OPS-10 — server draft-save/publish wiring is a best-effort enhancement.
+  // Opening the exact immutable edition stays read-only and must NEVER fail
+  // closed because of it, so a wiring error is swallowed here.
+  try{probeOperatorSession();}catch(error){}
+}
+const SNAPSHOT_ID_RE=/^review-\d{4}-\d{2}-\d{2}-[0-9a-f]{16}$/;
+function resolveReviewSnapshotId(){
+  // The review_snapshot_id is content-addressed over this console, so it cannot
+  // live inside the console; it is read from the sibling manifest.json (which is
+  // NOT part of the snapshot digest). Server writes bind to this exact snapshot.
+  return fetch("manifest.json",{cache:"no-store"}).then(response=>response.ok?response.json():null).then(manifest=>{
+    const id=manifest&&typeof manifest.review_snapshot_id==="string"?manifest.review_snapshot_id:"";
+    if(SNAPSHOT_ID_RE.test(id))serverContext.snapshotId=id;
+    return serverContext.snapshotId;
+  }).catch(()=>"");
+}
+function updateServerReadyState(){
+  refreshServerButtons();
+  if(serverWritesReady()){
+    setServerState(`운영자 인증됨: ${serverContext.login} · 이 에디션(${serverContext.editionKey})을 서버에 임시 저장하거나 새 개정본으로 게시할 수 있습니다.`,"ok");
+  }else if(serverContext.authenticated&&!serverContext.snapshotId){
+    setServerState("운영자 인증됨 · 이 에디션의 검토 스냅샷을 확인하지 못해 서버 저장을 사용할 수 없습니다. 로컬 편집·다운로드는 가능합니다.","warn");
+  }
 }
 function probeOperatorSession(){
   const slot=document.getElementById("editorAuthState");
-  if(!slot)return;
-  if(!articleImportApiUrl){slot.textContent="운영자 API가 구성되지 않아 로컬 편집만 가능합니다 (저장·승인·게시는 이 화면에서 일어나지 않습니다).";return;}
+  serverContext.editionKey=bundle.edition_key;
+  serverContext.editionId=editionIdParam;
+  if(!articleImportApiUrl){
+    if(slot)slot.textContent="운영자 API가 구성되지 않아 로컬 편집만 가능합니다 (서버 임시 저장·게시는 사용할 수 없습니다).";
+    setServerState("운영자 API 미구성 · 로컬 편집·다운로드만 가능합니다. 서버 임시 저장/게시는 사용할 수 없습니다.","warn");
+    return;
+  }
   let origin="";
-  try{origin=new URL(articleImportApiUrl).origin;}catch(error){slot.textContent="운영자 API 주소를 확인할 수 없습니다.";return;}
+  try{origin=new URL(articleImportApiUrl).origin;}catch(error){if(slot)slot.textContent="운영자 API 주소를 확인할 수 없습니다.";return;}
+  serverContext.origin=origin;
+  setServerState("운영자 인증 상태를 확인하는 중…","auth");
   fetch(origin+"/api/auth/session",{method:"GET",credentials:"include"}).then(response=>response.json()).then(data=>{
     if(data&&data.authenticated===true){
-      slot.innerHTML=`운영자 인증됨: <b>${esc(data.login||"")}</b>`;
+      serverContext.authenticated=true;
+      serverContext.login=String(data.login||"");
+      if(slot)slot.innerHTML=`운영자 인증됨: <b>${esc(serverContext.login)}</b>`;
+      resolveReviewSnapshotId().then(updateServerReadyState);
       return;
     }
+    serverContext.authenticated=false;
+    refreshServerButtons();
     const loginQuery=new URLSearchParams({product:"daily",edition_id:editionIdParam});
     if(sourceTag)loginQuery.set("source",sourceTag);
-    slot.innerHTML=`<a href="${esc(origin+"/api/auth/github/login?"+loginQuery.toString())}" style="display:inline-block;padding:7px 12px;border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:800">GitHub로 운영자 로그인</a> <span>로그인 후 이 에디션으로 돌아옵니다.</span>`;
-  }).catch(()=>{slot.textContent="운영자 인증 상태를 확인할 수 없습니다 (읽기 전용으로 계속 볼 수 있습니다).";});
+    const loginHref=esc(origin+"/api/auth/github/login?"+loginQuery.toString());
+    if(slot)slot.innerHTML=`<a href="${loginHref}" style="display:inline-block;padding:7px 12px;border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:800">GitHub로 운영자 로그인</a> <span>로그인 후 이 에디션으로 돌아옵니다.</span>`;
+    setServerState("운영자 로그인 필요 · 로그인하면 이 에디션을 서버에 임시 저장/게시할 수 있습니다.","auth");
+  }).catch(()=>{
+    serverContext.authenticated=false;
+    refreshServerButtons();
+    if(slot)slot.textContent="운영자 인증 상태를 확인할 수 없습니다 (읽기 전용으로 계속 볼 수 있습니다).";
+    setServerState("운영자 인증 상태를 확인할 수 없습니다 · 로컬 편집·다운로드는 가능합니다.","warn");
+  });
 }
 (async()=>{
   if(!(window.crypto&&crypto.subtle&&typeof crypto.subtle.digest==="function")){
