@@ -29,6 +29,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
@@ -38,7 +39,9 @@ from typing import Callable
 from app import (
     config,
     editor_delivery,
+    editorial_article_import,
     editorial_briefings,
+    editorial_feedback,
     editorial_review,
     public_urls,
 )
@@ -48,6 +51,8 @@ from app import (
 # ---------------------------------------------------------------------------
 DRAFT_DIR = "data/editorial_operator_drafts"
 APPROVED_DIR = "data/editorial_reviews"
+HUMAN_EXEMPLAR_DIR = "data/editorial_feedback/human_exemplars"
+FEEDBACK_PROFILE_PATH = "data/editorial_feedback/profile.json"
 # Fixed, server-side repository location of the immutable Review snapshots the
 # operator editor is opened against (content-addressed, append-only). The client
 # never supplies this path, a repository, a branch, or a ref.
@@ -86,6 +91,8 @@ _ERRORS: dict[str, tuple[int, str]] = {
     "RECONCILIATION_REQUIRED": (409, "게시 상태가 모호합니다. 최신 상태를 확인해 주세요."),
     "NOT_CONFIGURED": (503, "운영자 저장소 저장이 구성되지 않았습니다."),
     "PERSIST_FAILED": (502, "초안 저장에 실패했습니다."),
+    "LEARNING_CORPUS_INVALID": (409, "사람 선별 학습 기록의 무결성을 확인하지 못했습니다."),
+    "LEARNING_PERSIST_FAILED": (502, "승인된 사람 선별 학습 기록 저장에 실패했습니다."),
     "INTERNAL_ERROR": (500, "내부 오류가 발생했습니다."),
 }
 
@@ -166,7 +173,9 @@ def _normalize_selected_item(raw: object, *, default_published_at: str) -> dict:
     if not candidate_id or origin not in _ALLOWED_ORIGINS:
         raise OperatorReviewError("INVALID_PAYLOAD")
     selected_url = _safe_article_url(raw.get("selected_url"))
-    if not selected_url:
+    if not selected_url or editorial_article_import.is_nonpublisher_wrapper_url(
+        selected_url
+    ):
         raise OperatorReviewError("UNSAFE_ARTICLE_URL")
     title = _text(raw.get("title"), _MAX_TITLE)
     source = _text(raw.get("source"), _MAX_SOURCE)
@@ -407,6 +416,30 @@ class GitHubContentsClient:
             parsed = None
         return {"sha": payload.get("sha") or "", "json": parsed}
 
+    def list_directory(self, path: str) -> list[str]:
+        """List fixed-repository file paths under one server-derived directory."""
+        url_path = f"{path}?ref={self.branch}"
+        try:
+            with self._request(url_path) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return []
+            raise OperatorReviewError("LEARNING_PERSIST_FAILED") from exc
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            raise OperatorReviewError("LEARNING_PERSIST_FAILED") from exc
+        if not isinstance(payload, list):
+            raise OperatorReviewError("LEARNING_CORPUS_INVALID")
+        files = []
+        prefix = path.rstrip("/") + "/"
+        for item in payload:
+            if not isinstance(item, Mapping) or item.get("type") != "file":
+                continue
+            item_path = str(item.get("path") or "")
+            if item_path.startswith(prefix) and "/" not in item_path[len(prefix):]:
+                files.append(item_path)
+        return sorted(set(files))
+
     def put_file(
         self, path: str, *, content_bytes: bytes, message: str, base_sha: str | None
     ) -> dict:
@@ -435,6 +468,119 @@ def _serialize(record: Mapping, revision: str) -> bytes:
     return (json.dumps(stored, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
         "utf-8"
     )
+
+
+def _serialize_json(record: Mapping) -> bytes:
+    return (json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
+        "utf-8"
+    )
+
+
+def _human_exemplar_path(exemplar_id: str) -> str:
+    if not re.fullmatch(r"exemplar-[0-9a-f]{64}", str(exemplar_id or "")):
+        raise OperatorReviewError("LEARNING_CORPUS_INVALID")
+    return f"{HUMAN_EXEMPLAR_DIR}/{exemplar_id}.json"
+
+
+def _persist_confirmed_learning(
+    client: GitHubContentsClient,
+    approved_review: Mapping,
+) -> dict[str, object]:
+    """Persist confirmed exemplars, then rebuild the active profile from corpus.
+
+    Approval is the only caller.  Each exemplar has a stable evidence-addressed
+    file, so an identical re-publish cannot add a second sample.  The profile is
+    derived from all valid corpus files on every change/reconciliation; no
+    cumulative score mutation is used.
+    """
+    proposed = editorial_feedback.confirmed_human_exemplars(approved_review)
+    if not proposed:
+        return {
+            "learning_exemplars_added": 0,
+            "learning_exemplar_count": 0,
+            "learning_profile_updated": False,
+        }
+
+    expected_paths: set[str] = set()
+    added = 0
+    for exemplar in proposed:
+        path = _human_exemplar_path(str(exemplar.get("exemplar_id") or ""))
+        expected_paths.add(path)
+        current = client.get_file(path)
+        if current is not None:
+            current_json = current.get("json") if isinstance(current, Mapping) else None
+            if (
+                not editorial_feedback.valid_human_exemplar(current_json)
+                or str(current_json.get("exemplar_id") or "")
+                != str(exemplar.get("exemplar_id") or "")
+            ):
+                raise OperatorReviewError("LEARNING_CORPUS_INVALID")
+            continue
+        try:
+            client.put_file(
+                path,
+                content_bytes=_serialize_json(exemplar),
+                message=(
+                    "chore(editorial): record approved human exemplar "
+                    f"{str(exemplar['exemplar_id'])[-12:]}"
+                ),
+                base_sha=None,
+            )
+        except OperatorReviewError as exc:
+            if exc.code == "STALE_DRAFT":
+                raise OperatorReviewError("LEARNING_PERSIST_FAILED") from exc
+            raise
+        added += 1
+
+    paths = [
+        path
+        for path in client.list_directory(HUMAN_EXEMPLAR_DIR)
+        if re.fullmatch(
+            rf"{re.escape(HUMAN_EXEMPLAR_DIR)}/exemplar-[0-9a-f]{{64}}\.json",
+            path,
+        )
+    ]
+    if not expected_paths.issubset(paths):
+        raise OperatorReviewError("LEARNING_PERSIST_FAILED")
+    corpus = []
+    seen_ids: set[str] = set()
+    for path in sorted(paths):
+        stored = client.get_file(path)
+        value = stored.get("json") if isinstance(stored, Mapping) else None
+        if not editorial_feedback.valid_human_exemplar(value):
+            raise OperatorReviewError("LEARNING_CORPUS_INVALID")
+        exemplar_id = str(value.get("exemplar_id") or "")
+        if exemplar_id in seen_ids or path != _human_exemplar_path(exemplar_id):
+            raise OperatorReviewError("LEARNING_CORPUS_INVALID")
+        seen_ids.add(exemplar_id)
+        corpus.append(value)
+
+    try:
+        profile = editorial_feedback.compile_profile_from_exemplars(corpus)
+    except (TypeError, ValueError) as exc:
+        raise OperatorReviewError("LEARNING_CORPUS_INVALID") from exc
+    current_profile = client.get_file(FEEDBACK_PROFILE_PATH)
+    current_json = (
+        current_profile.get("json") if isinstance(current_profile, Mapping) else None
+    )
+    profile_updated = current_json != profile
+    if profile_updated:
+        try:
+            client.put_file(
+                FEEDBACK_PROFILE_PATH,
+                content_bytes=_serialize_json(profile),
+                message="chore(editorial): rebuild confirmed human preference profile",
+                base_sha=(current_profile.get("sha") or None) if current_profile else None,
+            )
+        except OperatorReviewError as exc:
+            if exc.code == "STALE_DRAFT":
+                raise OperatorReviewError("LEARNING_PERSIST_FAILED") from exc
+            raise
+    return {
+        "learning_exemplars_added": added,
+        "learning_exemplar_count": len(corpus),
+        "learning_profile_updated": profile_updated,
+    }
 
 
 def save_draft(
@@ -578,6 +724,7 @@ def publish_daily(
         )
         if current_revision == approved_revision:
             # Exactly this draft is already the approved review → idempotent.
+            learning = _persist_confirmed_learning(client, approved)
             return {
                 "ok": True,
                 "already_published": True,
@@ -586,6 +733,7 @@ def publish_daily(
                 "edition_key": edition_key,
                 "approved_review_path": approved_path,
                 "dispatched": False,
+                **learning,
             }
         if base_approved_revision != current_revision:
             # Someone else changed the approved review since the operator loaded
@@ -599,6 +747,10 @@ def publish_daily(
         message=f"chore(editorial): approve operator Daily review {edition_key}",
         base_sha=base_sha,
     )
+    # Only an explicitly approved, durably stored review activates learning.
+    # If a later corpus/profile write is interrupted, the identical publish can
+    # safely reconcile it without adding another sample before any dispatch.
+    learning = _persist_confirmed_learning(client, approved)
     dispatch_result: dict = {"dispatched": False}
     if dispatcher is not None:
         dispatch_result = {"dispatched": True, "dispatch": dispatcher()}
@@ -610,6 +762,7 @@ def publish_daily(
         "edition_key": edition_key,
         "review_snapshot_id": snapshot_id,
         "approved_review_path": approved_path,
+        **learning,
         **dispatch_result,
     }
 

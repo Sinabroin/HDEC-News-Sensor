@@ -121,6 +121,14 @@ class FakeGitHub:
         payload = self.store[path]
         return {"sha": f"sha:{path}:{payload['_v']}", "json": copy.deepcopy(payload["json"])}
 
+    def list_directory(self, path: str):
+        self.network_calls += 1
+        prefix = path.rstrip("/") + "/"
+        return sorted(
+            key for key in self.store
+            if key.startswith(prefix) and "/" not in key[len(prefix):]
+        )
+
     def put_file(self, path, *, content_bytes, message, base_sha):
         self.network_calls += 1
         existing = self.store.get(path)

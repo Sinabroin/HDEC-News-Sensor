@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 import json
 import re
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean
 from typing import Any, Iterable, Mapping
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 PROFILE_VERSION = 2
+HUMAN_EXEMPLAR_VERSION = 1
+HUMAN_EXEMPLAR_PREFIX = "exemplar-"
+HUMAN_EXEMPLAR_MAX_KEYWORDS = 12
 MAX_ABS_ADJUSTMENT = 0.85
 MANUAL_DOMAIN_SEED_CAP = 0.18
 MANUAL_KEYWORD_SEED_CAP = 0.12
@@ -20,6 +25,29 @@ _STOPWORDS = {
     "전망", "시장", "기업", "기술", "산업", "경영", "뉴스",
     "ai", "the", "and", "for", "with",
 }
+_NON_PUBLISHER_DOMAINS = frozenset(
+    {
+        "news.daum.net",
+        "v.daum.net",
+        "media.daum.net",
+        "news.naver.com",
+        "n.news.naver.com",
+        "m.news.naver.com",
+        "news.google.com",
+        "msn.com",
+        "news.yahoo.com",
+        "bit.ly",
+        "t.co",
+        "tinyurl.com",
+        "goo.gl",
+        "han.gl",
+        "me2.do",
+        "vo.la",
+        "url.kr",
+        "teams.public.onecdn.static.microsoft",
+        "safelinks.protection.outlook.com",
+    }
+)
 
 
 def _key(value: object) -> str:
@@ -40,7 +68,211 @@ def _keywords(value: object) -> list[str]:
         for item in _WORD_RE.findall(str(value or ""))
         if item.casefold() not in _STOPWORDS and not item.isdigit()
     }
-    return sorted(words)[:12]
+    return sorted(words)[:HUMAN_EXEMPLAR_MAX_KEYWORDS]
+
+
+def _non_publisher_domain(domain: str) -> bool:
+    return bool(
+        any(domain == item or domain.endswith("." + item) for item in _NON_PUBLISHER_DOMAINS)
+        or domain.endswith(".onecdn.static.microsoft")
+        or domain.endswith(".safelinks.protection.outlook.com")
+    )
+
+
+def canonical_learning_url(value: object) -> str:
+    """Canonical publisher URL eligible for bounded human learning, or ``""``.
+
+    Durable review validation owns the SSRF/literal-IP boundary.  This second,
+    deterministic pass strips fragments/default ports and rejects known portal,
+    shortener, search, and Microsoft wrapper authorities so those hosts can
+    never become preferred news domains.
+    """
+    raw = str(value or "").strip()
+    try:
+        parsed = urlparse(raw)
+        port = parsed.port
+    except (TypeError, ValueError):
+        return ""
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        return ""
+    domain = parsed.hostname.casefold().rstrip(".").removeprefix("www.")
+    if (
+        not domain
+        or "." not in domain
+        or _non_publisher_domain(domain)
+        or any(
+            domain.endswith(suffix)
+            for suffix in (".internal", ".intranet", ".local", ".localhost", ".home", ".lan")
+        )
+    ):
+        return ""
+    try:
+        ipaddress.ip_address(domain)
+    except ValueError:
+        pass
+    else:
+        return ""
+    if "/search" in parsed.path.casefold():
+        return ""
+    scheme = parsed.scheme.casefold()
+    default_port = 443 if scheme == "https" else 80
+    if port is not None and port != default_port:
+        return ""
+    netloc = parsed.hostname.casefold().rstrip(".")
+    return urlunparse(
+        (scheme, netloc, parsed.path or "/", parsed.params, parsed.query, "")
+    )
+
+
+def _exemplar_identity(
+    *, edition_key: str, review_snapshot_id: str, canonical_url: str
+) -> str:
+    stable = "\x1f".join((edition_key, review_snapshot_id, canonical_url))
+    return HUMAN_EXEMPLAR_PREFIX + hashlib.sha256(stable.encode("utf-8")).hexdigest()
+
+
+def confirmed_human_exemplars(approved_review: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Derive unique confirmed positive exemplars from one approved review.
+
+    Draft/local/abandoned items cannot enter: the record must explicitly be an
+    approved Daily review and each item must be selected ``origin=human_link``.
+    The exemplar intentionally contains no body, headers, cookies, or secrets.
+    """
+    if (
+        str(approved_review.get("product") or "") != "daily"
+        or str(approved_review.get("review_status") or "") != "approved"
+    ):
+        return []
+    edition_key = str(approved_review.get("edition_key") or "")
+    snapshot_id = str(approved_review.get("review_snapshot_id") or "")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", edition_key):
+        return []
+    if not re.fullmatch(
+        rf"review-{re.escape(edition_key)}-[0-9a-f]{{16}}", snapshot_id
+    ):
+        return []
+    items = approved_review.get("selected_items")
+    if not isinstance(items, list):
+        return []
+    output: dict[str, dict[str, Any]] = {}
+    for item in items:
+        if not isinstance(item, Mapping) or str(item.get("origin") or "") != "human_link":
+            continue
+        canonical_url = canonical_learning_url(item.get("selected_url"))
+        domain = _domain(canonical_url)
+        source = str(item.get("source") or "").strip()[:160]
+        category = str(item.get("category") or "").strip()[:80]
+        title = str(item.get("title") or "").strip()[:500]
+        if not canonical_url or not domain or not source or not category or not title:
+            continue
+        exemplar_id = _exemplar_identity(
+            edition_key=edition_key,
+            review_snapshot_id=snapshot_id,
+            canonical_url=canonical_url,
+        )
+        output.setdefault(
+            exemplar_id,
+            {
+                "version": HUMAN_EXEMPLAR_VERSION,
+                "exemplar_id": exemplar_id,
+                "edition_key": edition_key,
+                "review_snapshot_id": snapshot_id,
+                "canonical_publisher_url": canonical_url,
+                "publisher_domain": domain,
+                "source": source,
+                "category": category,
+                "title": title,
+                "topic_signals": _keywords(title),
+                "provenance": "human_link",
+                "selected": True,
+                "approved": True,
+            },
+        )
+    return [output[key] for key in sorted(output)]
+
+
+def valid_human_exemplar(value: object) -> bool:
+    """Validate the exact safe, bounded persisted exemplar contract."""
+    if not isinstance(value, Mapping):
+        return False
+    allowed = {
+        "version",
+        "exemplar_id",
+        "edition_key",
+        "review_snapshot_id",
+        "canonical_publisher_url",
+        "publisher_domain",
+        "source",
+        "category",
+        "title",
+        "topic_signals",
+        "provenance",
+        "selected",
+        "approved",
+    }
+    if set(value) != allowed:
+        return False
+    rebuilt = confirmed_human_exemplars(
+        {
+            "product": "daily",
+            "review_status": "approved",
+            "edition_key": value.get("edition_key"),
+            "review_snapshot_id": value.get("review_snapshot_id"),
+            "selected_items": [
+                {
+                    "origin": "human_link",
+                    "selected_url": value.get("canonical_publisher_url"),
+                    "source": value.get("source"),
+                    "category": value.get("category"),
+                    "title": value.get("title"),
+                }
+            ],
+        }
+    )
+    return bool(
+        len(rebuilt) == 1
+        and dict(value) == rebuilt[0]
+        and value.get("version") == HUMAN_EXEMPLAR_VERSION
+        and value.get("publisher_domain") == _domain(value.get("canonical_publisher_url"))
+        and isinstance(value.get("topic_signals"), list)
+        and len(value.get("topic_signals") or []) <= HUMAN_EXEMPLAR_MAX_KEYWORDS
+        and value.get("provenance") == "human_link"
+        and value.get("selected") is True
+        and value.get("approved") is True
+    )
+
+
+def compile_profile_from_exemplars(
+    exemplars: Iterable[Mapping[str, Any]],
+    *,
+    minimum_samples: int = 3,
+) -> dict[str, Any]:
+    """Rebuild the active bounded profile deterministically from the corpus."""
+    records = []
+    seen: set[str] = set()
+    for exemplar in exemplars:
+        if not valid_human_exemplar(exemplar):
+            raise ValueError("invalid human exemplar")
+        exemplar_id = str(exemplar["exemplar_id"])
+        if exemplar_id in seen:
+            continue
+        seen.add(exemplar_id)
+        records.append(
+            {
+                "origin": "human_link",
+                "selected": True,
+                "selected_url": exemplar["canonical_publisher_url"],
+                "source": exemplar["source"],
+                "category": exemplar["category"],
+                "title": exemplar["title"],
+            }
+        )
+    return compile_profile(records, minimum_samples=max(1, int(minimum_samples)))
 
 
 def empty_profile() -> dict[str, Any]:

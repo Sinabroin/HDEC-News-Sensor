@@ -709,6 +709,7 @@ def verify_article_import_domain(v: V) -> dict[str, object]:
 
 def _browser_executable() -> Path | None:
     candidates = [
+        os.environ.get("HDEC_TEST_BROWSER"),
         # GitHub-hosted Ubuntu images ship Google Chrome as the supported
         # browser; distro Chromium wrappers can crash or retain child processes
         # after --dump-dom. Prefer Chrome while retaining local fallbacks.
@@ -766,6 +767,15 @@ def run_browser_interaction(
   const importFixture=__IMPORT_RESPONSE__;
   let mockImportCalls=0;
   window.fetch=(url,options={})=>new Promise(resolve=>setTimeout(()=>{
+    const requestUrl=String(url||"");
+    if(requestUrl.endsWith("/api/auth/session")){
+      resolve({ok:true,status:200,json:async()=>({authenticated:false})});
+      return;
+    }
+    if(requestUrl.endsWith("/manifest.json")||requestUrl==="manifest.json"){
+      resolve({ok:true,status:200,json:async()=>({review_snapshot_id:`review-${bundle.edition_key}-0000000000000000`})});
+      return;
+    }
     mockImportCalls+=1;
     const request=JSON.parse(options.body||"{}");
     if(String(request.url||"").includes("failure")){

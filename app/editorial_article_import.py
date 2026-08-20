@@ -22,13 +22,14 @@ from html import escape, unescape
 from html.parser import HTMLParser
 from io import BytesIO
 from typing import Callable, Iterable, Mapping
-from urllib.parse import urljoin, urlparse, urlunparse
+from urllib.parse import parse_qsl, urljoin, urlparse, urlunparse
 
 ARTICLE_URL_MAX_LENGTH = 2048
 ARTICLE_HTML_MAX_BYTES = 2_000_000
 ARTICLE_IMAGE_MAX_BYTES = 5_000_000
 ARTICLE_FETCH_TIMEOUT_SECONDS = 8
 ARTICLE_REDIRECT_LIMIT = 3
+MICROSOFT_SAFELINK_MAX_NESTING = 2
 ARTICLE_BODY_MIN_CHARS = 200
 ARTICLE_EXCERPT_MAX_CHARS = 1_200
 SUMMARY_MAX_CHARS = 500
@@ -78,6 +79,10 @@ _SHORTENER_HOSTS = (
     "vo.la",
     "url.kr",
 )
+_MICROSOFT_SAFELINK_SUFFIX = ".safelinks.protection.outlook.com"
+_MICROSOFT_SAFELINK_BASE_HOST = "safelinks.protection.outlook.com"
+_MICROSOFT_ONECDN_HOST = "teams.public.onecdn.static.microsoft"
+_MICROSOFT_ONECDN_PATH = "/evergreen-assets/safelinks/2/atp-safelinks.html"
 _SKIP_TAGS = frozenset(
     {"script", "style", "noscript", "nav", "footer", "aside", "form", "template"}
 )
@@ -153,6 +158,10 @@ _ERRORS: dict[str, tuple[int, str]] = {
     "PORTAL_ORIGINAL_NOT_FOUND": (
         422,
         "포털 페이지에서 언론사 원문을 확인하지 못했습니다.",
+    ),
+    "MICROSOFT_SAFELINK_TARGET_MISSING": (
+        422,
+        "원문 정보가 없는 Teams 보안 링크입니다. 기사에서 '원문 열기' 후 실제 언론사 URL을 복사해 주세요.",
     ),
     "IMAGE_REJECTED": (422, "대표 이미지가 안전성 또는 품질 검사를 통과하지 못했습니다."),
     "INTERNAL_ERROR": (500, "기사를 불러오는 중 내부 오류가 발생했습니다."),
@@ -321,12 +330,105 @@ def _host_matches(host: str, candidates: Iterable[str]) -> bool:
     return any(host == item or host.endswith("." + item) for item in candidates)
 
 
+def _microsoft_safelink_kind(value: object) -> str:
+    """Return the allowlisted Microsoft wrapper form, otherwise ``""``.
+
+    This is deliberately a tiny syntax allowlist.  It does not make a URL safe
+    to fetch; every wrapper and extracted target still passes through
+    :func:`validate_public_article_url` from scratch.
+    """
+    raw = str(value or "").strip()
+    if not raw or len(raw) > ARTICLE_URL_MAX_LENGTH:
+        return ""
+    try:
+        parsed = urlparse(raw)
+        port = parsed.port
+    except (TypeError, ValueError):
+        return ""
+    if (
+        parsed.scheme.casefold() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+        or parsed.params
+        or parsed.fragment
+    ):
+        return ""
+    host = parsed.hostname.casefold().rstrip(".")
+    if host == _MICROSOFT_SAFELINK_BASE_HOST or host.endswith(
+        _MICROSOFT_SAFELINK_SUFFIX
+    ):
+        return "outlook_safelinks"
+    if host == _MICROSOFT_ONECDN_HOST and parsed.path == _MICROSOFT_ONECDN_PATH:
+        return "teams_onecdn_safelinks"
+    return ""
+
+
+def is_microsoft_safelinks_url(value: object) -> bool:
+    """Whether ``value`` is one of the exact supported Microsoft wrappers."""
+    return bool(_microsoft_safelink_kind(value))
+
+
+def is_nonpublisher_wrapper_url(value: object) -> bool:
+    """Block known discovery wrappers from publisher authority and learning."""
+    try:
+        host = (urlparse(str(value or "")).hostname or "").casefold().rstrip(".")
+    except ValueError:
+        return False
+    return bool(
+        is_microsoft_safelinks_url(value)
+        or host == _MICROSOFT_ONECDN_HOST
+        or host.endswith(".onecdn.static.microsoft")
+    )
+
+
+def unwrap_microsoft_safelinks_url(
+    value: object,
+    *,
+    resolver: Callable[..., Iterable[tuple]] | None = None,
+) -> str:
+    """Unpack at most two known Microsoft SafeLinks wrappers.
+
+    Query parsing performs the one standards-defined percent-decoding pass.
+    Double-encoded schemes, duplicate ``url`` parameters, malformed targets,
+    arbitrary wrapper hosts, and deeper nesting fail closed.  Crucially, the
+    normal public-host/DNS/SSRF validator is rerun for the wrapper and for every
+    extracted target before it can be considered again.
+    """
+    current = str(value or "").strip()
+    for depth in range(MICROSOFT_SAFELINK_MAX_NESTING + 1):
+        current = validate_public_article_url(current, resolver=resolver)
+        if not _microsoft_safelink_kind(current):
+            return current
+        if depth >= MICROSOFT_SAFELINK_MAX_NESTING:
+            raise ArticleImportError("REDIRECT_REJECTED")
+        try:
+            pairs = parse_qsl(
+                urlparse(current).query,
+                keep_blank_values=True,
+                strict_parsing=False,
+                max_num_fields=16,
+            )
+        except ValueError:
+            raise ArticleImportError("INVALID_URL") from None
+        targets = [candidate for key, candidate in pairs if key.casefold() == "url"]
+        if not targets or not targets[0].strip():
+            raise ArticleImportError("MICROSOFT_SAFELINK_TARGET_MISSING")
+        if len(targets) != 1:
+            raise ArticleImportError("INVALID_URL")
+        current = targets[0].strip()
+    raise ArticleImportError("REDIRECT_REJECTED")
+
+
 def portal_source_for_url(value: object) -> str:
     try:
         parsed = urlparse(str(value or ""))
     except ValueError:
         return ""
     host = (parsed.hostname or "").casefold().rstrip(".")
+    if is_nonpublisher_wrapper_url(value):
+        return "microsoft_safelinks"
     for source, domains in _PORTAL_HOSTS.items():
         if _host_matches(host, domains):
             return source
@@ -935,6 +1037,30 @@ def resolve_publisher_document(
 ) -> PublisherDocument:
     """Resolve a discovery/portal URL to a fetched publisher-direct HTML document."""
     input_url = validate_public_article_url(url, resolver=resolver)
+    if is_microsoft_safelinks_url(input_url):
+        publisher_url = unwrap_microsoft_safelinks_url(
+            input_url,
+            resolver=resolver,
+        )
+        if not is_publisher_direct_url(publisher_url):
+            raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
+        publisher_document = fetch_article_html(
+            publisher_url,
+            resolver=resolver,
+            opener=opener,
+        )
+        if not is_publisher_direct_url(publisher_document.final_url):
+            raise ArticleImportError("PORTAL_ORIGINAL_NOT_FOUND")
+        return PublisherDocument(
+            input_url=input_url,
+            discovery_url=input_url,
+            publisher_url=publisher_document.final_url,
+            portal_source="microsoft_safelinks",
+            portal_resolution_reason="microsoft_safelinks_explicit_target",
+            document=publisher_document,
+        )
+    if is_nonpublisher_wrapper_url(input_url):
+        raise ArticleImportError("MICROSOFT_SAFELINK_TARGET_MISSING")
     discovery = fetch_article_html(input_url, resolver=resolver, opener=opener)
     input_portal = portal_source_for_url(input_url)
     final_portal = portal_source_for_url(discovery.final_url)
@@ -1521,9 +1647,12 @@ __all__ = [
     "fetch_article_html",
     "import_article",
     "materialize_imported_image",
+    "is_microsoft_safelinks_url",
+    "is_nonpublisher_wrapper_url",
     "is_publisher_direct_url",
     "portal_source_for_url",
     "resolve_publisher_document",
     "summarize_article",
+    "unwrap_microsoft_safelinks_url",
     "validate_public_article_url",
 ]

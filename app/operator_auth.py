@@ -27,7 +27,13 @@ _GITHUB_USER_URL = "https://api.github.com/user"
 _TIMEOUT_SECONDS = 15
 
 
-def validated_editor_return_url(product, edition_id, source) -> str:
+def validated_editor_return_url(
+    product,
+    edition_id,
+    source,
+    review_snapshot_id="",
+    edition_key="",
+) -> str:
     """R4-R9C safe post-login destination, or "" when anything is not exact.
 
     Only validated local identifiers are accepted (product must be "daily",
@@ -38,6 +44,42 @@ def validated_editor_return_url(product, edition_id, source) -> str:
     the output; unknown or malformed identities fail closed to ""."""
     if str(product or "") != "daily":
         return ""
+    snapshot_value = str(review_snapshot_id or "")
+    if snapshot_value:
+        snapshot_key = public_url_contract.parse_editor_snapshot_id(snapshot_value)
+        if not snapshot_key or (edition_key and str(edition_key) != snapshot_key):
+            return ""
+        snapshot_url = public_url_contract.editor_snapshot_url(snapshot_value)
+        if not snapshot_url:
+            return ""
+        edition_value = str(edition_id or "")
+        if not edition_value:
+            # The immutable snapshot path itself is the authority.  No raw URL
+            # or caller-controlled path/query survives this reconstruction.
+            source_value = (
+                str(source or "") or public_url_contract.DAILY_EDITOR_LINK_SOURCE
+            )
+            source_valid = public_url_contract.daily_editor_console_url(
+                f"daily-{snapshot_key}-0000000000000000",
+                source=source_value,
+            )
+            return (
+                snapshot_url
+                if str(edition_key or "") == snapshot_key and source_valid
+                else ""
+            )
+        if public_url_contract.parse_daily_edition_id(edition_value) != snapshot_key:
+            return ""
+        # Reuse the canonical exact-edition helper to validate the source tag,
+        # then put those already-validated local identifiers on the immutable
+        # snapshot URL so save/publish context can be restored after OAuth.
+        dated_url = public_url_contract.daily_editor_console_url(
+            edition_value,
+            source=str(source or "") or public_url_contract.DAILY_EDITOR_LINK_SOURCE,
+        )
+        if not dated_url:
+            return ""
+        return snapshot_url + "?" + urllib.parse.urlparse(dated_url).query
     edition_value = str(edition_id or "")
     if not public_url_contract.parse_daily_edition_id(edition_value):
         return ""
@@ -47,17 +89,40 @@ def validated_editor_return_url(product, edition_id, source) -> str:
     )
 
 
-def encode_editor_return(product, edition_id, source) -> str:
+def encode_editor_return(
+    product,
+    edition_id,
+    source,
+    review_snapshot_id="",
+    edition_key="",
+) -> str:
     """Cookie payload for the validated edition identity ("" when invalid)."""
-    if not validated_editor_return_url(product, edition_id, source):
+    if not validated_editor_return_url(
+        product,
+        edition_id,
+        source,
+        review_snapshot_id,
+        edition_key,
+    ):
         return ""
     source_value = str(source or "") or public_url_contract.DAILY_EDITOR_LINK_SOURCE
+    if review_snapshot_id:
+        return f"daily_snapshot|{review_snapshot_id}|{edition_id or ''}|{source_value}"
     return f"daily|{edition_id}|{source_value}"
 
 
 def editor_return_url_from_cookie(raw_value) -> str:
     """Re-validate the cookie payload from scratch; fail closed to ""."""
     parts = str(raw_value or "").split("|")
+    if len(parts) == 4 and parts[0] == "daily_snapshot":
+        snapshot_key = public_url_contract.parse_editor_snapshot_id(parts[1])
+        return validated_editor_return_url(
+            "daily",
+            parts[2],
+            parts[3],
+            parts[1],
+            snapshot_key,
+        )
     if len(parts) != 3:
         return ""
     return validated_editor_return_url(parts[0], parts[1], parts[2])
