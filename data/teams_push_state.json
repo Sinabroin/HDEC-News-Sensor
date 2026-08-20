@@ -780,6 +780,16 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "d44b382a55cca69a": {
+      "cluster_key": "title:창원시1조894억규모ai데이터센터투자유치2028년준공",
+      "delivery_id": "teams_ai_push:b6dcb7c633b0",
+      "first_sent_at": "2026-08-20T14:55:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8662aea5692c2a91146c205b75e71b0b5d66de5e8435b8ac293ac977b7daf2af",
+      "sent_at": "2026-08-20T14:55:38+09:00",
+      "source": "한국일보"
+    },
     "d93b842b2bc12685": {
       "cluster_key": "title:스페이스x코딩스타트업커서85조원에인수완료",
       "delivery_id": "teams_ai_push:296246d8a87e",
@@ -2382,6 +2392,16 @@
       "sent_at": "2026-08-05T03:49:29+09:00",
       "source": "뉴스퀘스트"
     },
+    "title:창원시1조894억규모ai데이터센터투자유치2028년준공": {
+      "cluster_key": "title:창원시1조894억규모ai데이터센터투자유치2028년준공",
+      "delivery_id": "teams_ai_push:b6dcb7c633b0",
+      "first_sent_at": "2026-08-20T14:55:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8662aea5692c2a91146c205b75e71b0b5d66de5e8435b8ac293ac977b7daf2af",
+      "sent_at": "2026-08-20T14:55:38+09:00",
+      "source": "한국일보"
+    },
     "title:철강석화ai반도체특수로불황뚫었다": {
       "cluster_key": "title:철강석화ai반도체특수로불황뚫었다",
       "delivery_id": "teams_ai_push:8e13f7ec40c9",
@@ -3649,8 +3669,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-20T06:04:46+09:00",
-  "last_successful_send_at": "2026-08-20T06:04:46+09:00",
+  "last_normal_send_at": "2026-08-20T14:55:38+09:00",
+  "last_successful_send_at": "2026-08-20T14:55:38+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3980,6 +4000,16 @@
       "last_material_update_at": null,
       "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
       "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
+    },
+    "https://hankookilbo.com/news/article/A2026082014280001407": {
+      "cluster_key": "title:창원시1조894억규모ai데이터센터투자유치2028년준공",
+      "delivery_id": "teams_ai_push:b6dcb7c633b0",
+      "first_sent_at": "2026-08-20T14:55:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8662aea5692c2a91146c205b75e71b0b5d66de5e8435b8ac293ac977b7daf2af",
+      "sent_at": "2026-08-20T14:55:38+09:00",
       "source": "한국일보"
     },
     "https://hbnpress.com/news/view/1065599489272731": {
@@ -6023,6 +6053,16 @@
       "material_signature": "719cd9556ddd194593bd091653ac7d5e6cf3e92ed1301863878fd0d35a58c367",
       "sent_at": "2026-08-05T03:49:29+09:00",
       "source": "뉴스퀘스트"
+    },
+    "창원시1조894억규모ai데이터센터투자유치2028년준공": {
+      "cluster_key": "title:창원시1조894억규모ai데이터센터투자유치2028년준공",
+      "delivery_id": "teams_ai_push:b6dcb7c633b0",
+      "first_sent_at": "2026-08-20T14:55:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8662aea5692c2a91146c205b75e71b0b5d66de5e8435b8ac293ac977b7daf2af",
+      "sent_at": "2026-08-20T14:55:38+09:00",
+      "source": "한국일보"
     },
     "철강석화ai반도체특수로불황뚫었다": {
       "cluster_key": "title:철강석화ai반도체특수로불황뚫었다",
