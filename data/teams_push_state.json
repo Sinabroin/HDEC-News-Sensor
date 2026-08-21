@@ -500,6 +500,16 @@
       "sent_at": "2026-08-14T17:51:55+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "828ad7a7f269a1d2": {
+      "cluster_key": "title:초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어",
+      "delivery_id": "teams_ai_push:c3296cb6eafe",
+      "first_sent_at": "2026-08-21T16:26:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8d53be5f0798d78a69618f95894de9c32df87ccfcaeaef2a59630acf335dfa23",
+      "sent_at": "2026-08-21T16:26:15+09:00",
+      "source": "KyungHyangSinmun"
+    },
     "8318ec15e0c03e51": {
       "cluster_key": "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것",
       "delivery_id": "teams_ai_push:d64cd9196c53",
@@ -2452,6 +2462,16 @@
       "sent_at": "2026-07-29T18:11:49+09:00",
       "source": "비즈워치"
     },
+    "title:초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어": {
+      "cluster_key": "title:초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어",
+      "delivery_id": "teams_ai_push:c3296cb6eafe",
+      "first_sent_at": "2026-08-21T16:26:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8d53be5f0798d78a69618f95894de9c32df87ccfcaeaef2a59630acf335dfa23",
+      "sent_at": "2026-08-21T16:26:15+09:00",
+      "source": "KyungHyangSinmun"
+    },
     "title:초과이윤분배우리가착각하는것들": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
       "delivery_id": "teams_ai_push:449508c2ca7a",
@@ -3737,8 +3757,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-21T11:40:34+09:00",
-  "last_successful_send_at": "2026-08-21T11:40:34+09:00",
+  "last_normal_send_at": "2026-08-21T16:26:15+09:00",
+  "last_successful_send_at": "2026-08-21T16:26:15+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4178,6 +4198,16 @@
       "last_material_update_at": null,
       "material_signature": "d696caa0b053b33004595474d7918eeabb725f2b9211e6c38fb913aed68f10f4",
       "sent_at": "2026-08-18T08:02:02+09:00",
+      "source": "KyungHyangSinmun"
+    },
+    "https://khan.co.kr/article/202608211620001": {
+      "cluster_key": "title:초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어",
+      "delivery_id": "teams_ai_push:c3296cb6eafe",
+      "first_sent_at": "2026-08-21T16:26:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8d53be5f0798d78a69618f95894de9c32df87ccfcaeaef2a59630acf335dfa23",
+      "sent_at": "2026-08-21T16:26:15+09:00",
       "source": "KyungHyangSinmun"
     },
     "https://mk.co.kr/news/business/12113296": {
@@ -6181,6 +6211,16 @@
       "material_signature": "3bb791bad7b4df4c00891906c17bc154311e637f1757b6e39a01fea6e6917707",
       "sent_at": "2026-07-29T18:11:49+09:00",
       "source": "비즈워치"
+    },
+    "초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어": {
+      "cluster_key": "title:초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어",
+      "delivery_id": "teams_ai_push:c3296cb6eafe",
+      "first_sent_at": "2026-08-21T16:26:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "8d53be5f0798d78a69618f95894de9c32df87ccfcaeaef2a59630acf335dfa23",
+      "sent_at": "2026-08-21T16:26:15+09:00",
+      "source": "KyungHyangSinmun"
     },
     "초과이윤분배우리가착각하는것들": {
       "cluster_key": "title:초과이윤분배우리가착각하는것들",
