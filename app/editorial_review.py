@@ -446,7 +446,8 @@ def candidate_to_article(
 
 
 def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
-    if item.get("origin") != "human_link":
+    origin = str(item.get("origin") or "")
+    if origin not in {"human_link", "team_link"}:
         raise EditorialReviewError("manual item origin mismatch")
     title = _clean(item.get("title"))
     source = _clean(item.get("source"))
@@ -506,6 +507,12 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         if raw_manual_implication
         else ""
     )
+    publisher_authoritative = bool(item.get("publisher_domain_authoritative"))
+    publisher_url = (
+        _safe_article_url(item.get("publisher_url"))
+        if origin == "team_link" and publisher_authoritative
+        else selected_url if origin == "human_link" else ""
+    )
     return EditorialArticle(
         title=title,
         summary=summary,
@@ -513,15 +520,26 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         source=source,
         published_at=published_at,
         selected_url=selected_url,
-        link_kind="publisher_direct",
-        link_label="사용자 선별 원문",
+        link_kind="publisher_direct" if publisher_url else "portal_copy",
+        link_label="사용자 선별 원문" if origin == "human_link" else (
+            "원문 보기" if publisher_url else "포털 기사 보기"
+        ),
         category=category,
-        collection_source_kind="human_link",
-        selection_reason="human_supplied_link",
+        collection_source_kind=origin,
+        selection_reason=(
+            "human_supplied_link" if origin == "human_link" else "approved_team_link"
+        ),
         original_article_url=selected_url,
-        publisher_article_url=selected_url,
-        publisher_url_source_kind="human_supplied",
-        publisher_url_reason="human_supplied_link",
+        publisher_article_url=publisher_url,
+        publisher_url_source_kind=(
+            "human_supplied" if origin == "human_link"
+            else "team_resolved_publisher" if publisher_url
+            else "portal_copy_non_authoritative"
+        ),
+        publisher_url_reason=(
+            "human_supplied_link" if origin == "human_link"
+            else str(item.get("portal_resolution_reason") or "team_pending_submission")
+        ),
         image_url=image_url,
         image_remote_url=image_url,
         image_source_kind="human_supplied" if image_url else "fallback",
@@ -658,7 +676,7 @@ def load_review(path: Path, edition_key: str) -> dict[str, Any] | None:
     ids = [str(item.get("candidate_id") or "") for item in selected if isinstance(item, Mapping)]
     if len(ids) != len(selected) or any(not item for item in ids) or len(ids) != len(set(ids)):
         return None
-    if any(item.get("origin") not in {"ai_collected", "human_link"} for item in selected):
+    if any(item.get("origin") not in {"ai_collected", "human_link", "team_link"} for item in selected):
         return None
     return payload
 
@@ -678,7 +696,7 @@ def choose_daily_articles(
             articles: list[EditorialArticle] = []
             for item in selected_items:
                 candidate_id_value = str(item.get("candidate_id") or "")
-                if item.get("origin") == "human_link":
+                if item.get("origin") in {"human_link", "team_link"}:
                     articles.append(manual_item_to_article(item))
                     continue
                 base = by_id.get(candidate_id_value)
@@ -764,7 +782,7 @@ def build_feedback_proposal(
     unknown_selected = sorted(
         candidate_id
         for candidate_id in set(selected_ids) - set(by_id)
-        if selected_by_id[candidate_id].get("origin") != "human_link"
+        if selected_by_id[candidate_id].get("origin") not in {"human_link", "team_link"}
     )
     if unknown_selected:
         raise EditorialReviewError("feedback proposal selected ID is unknown")
@@ -773,7 +791,10 @@ def build_feedback_proposal(
     edits: list[dict[str, Any]] = []
     for order, item in enumerate(selected_items, start=1):
         cid = str(item.get("candidate_id") or "")
-        base = by_id.get(cid, item if item.get("origin") == "human_link" else {})
+        base = by_id.get(
+            cid,
+            item if item.get("origin") in {"human_link", "team_link"} else {},
+        )
         base_summary = editorial_inline_plain_text(
             sanitize_editorial_inline_html(
                 str(base.get("summary_html") or escape(_clean(base.get("summary"))))

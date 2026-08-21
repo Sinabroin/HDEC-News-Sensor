@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "authority": "HDEC_EDITORIAL_PENDING_TEAM_SUBMISSION_V1",
+  "status": "pending",
+  "activation": "none_until_operator_daily_approval",
+  "storage": "data/editorial_feedback/pending_submissions/<edition_key>/<submission_id>.json",
+  "idempotency": "content_addressed_submission_id",
+  "required_fields": [
+    "schema",
+    "version",
+    "submission_id",
+    "edition_key",
+    "review_snapshot_id",
+    "analysis_url",
+    "publisher_url",
+    "publisher_domain_authoritative",
+    "source",
+    "title",
+    "executive_summary",
+    "category",
+    "image_url",
+    "portal_copy",
+    "portal_source",
+    "portal_resolution_reason",
+    "submitted_at",
+    "status"
+  ],
+  "forbidden_data": [
+    "article_body",
+    "full_text",
+    "html",
+    "cookies",
+    "headers",
+    "secrets"
+  ]
+}

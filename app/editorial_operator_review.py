@@ -61,7 +61,7 @@ DISPATCH_REF = "main"
 MAX_SELECTED = editorial_review.MAX_REVIEW_ARTICLES
 REVIEW_CONTRACT_VERSION = editorial_review.REVIEW_VERSION  # v2 (load_review contract)
 CATEGORY_ORDER = editorial_review.CATEGORY_ORDER
-_ALLOWED_ORIGINS = frozenset({"ai_collected", "human_link"})
+_ALLOWED_ORIGINS = frozenset({"ai_collected", "human_link", "team_link"})
 _MAX_TITLE = 500
 _MAX_SOURCE = 160
 _MAX_SUMMARY = 4000
@@ -212,6 +212,49 @@ def _normalize_selected_item(raw: object, *, default_published_at: str) -> dict:
         "link_kind": "publisher_direct",
         "link_label": _text(raw.get("link_label"), 60) or "원문 보기",
     }
+    if origin == "team_link":
+        submission_id = str(raw.get("submission_id") or "")
+        analysis_url = _safe_article_url(raw.get("analysis_url") or selected_url)
+        publisher_authoritative = bool(raw.get("publisher_domain_authoritative"))
+        publisher_url = _safe_article_url(raw.get("publisher_url"))
+        portal_copy = bool(raw.get("portal_copy"))
+        portal_source = _text(raw.get("portal_source"), 40)
+        portal_reason = _text(raw.get("portal_resolution_reason"), 120)
+        if not re.fullmatch(r"submission-[0-9a-f]{64}", submission_id):
+            raise OperatorReviewError("INVALID_PAYLOAD")
+        if publisher_authoritative:
+            if (
+                not publisher_url
+                or not editorial_article_import.is_publisher_direct_url(publisher_url)
+                or selected_url != publisher_url
+                or portal_copy
+            ):
+                raise OperatorReviewError("UNSAFE_ARTICLE_URL")
+        else:
+            if (
+                publisher_url
+                or not portal_copy
+                or portal_source not in {"daum", "naver"}
+                or portal_reason != "portal_copy_fallback"
+                or selected_url != analysis_url
+                or not editorial_article_import.is_allowlisted_portal_copy_url(
+                    analysis_url, portal_source
+                )
+            ):
+                raise OperatorReviewError("UNSAFE_ARTICLE_URL")
+        item.update(
+            {
+                "submission_id": submission_id,
+                "analysis_url": analysis_url,
+                "publisher_url": publisher_url,
+                "publisher_domain_authoritative": publisher_authoritative,
+                "portal_copy": portal_copy,
+                "portal_source": portal_source,
+                "portal_resolution_reason": portal_reason,
+                "link_kind": "publisher_direct" if publisher_authoritative else "portal_copy",
+                "link_label": "원문 보기" if publisher_authoritative else "포털 기사 보기",
+            }
+        )
     return item
 
 

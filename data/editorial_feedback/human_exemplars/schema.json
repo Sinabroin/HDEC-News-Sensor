@@ -1,12 +1,12 @@
 {
-  "version": 1,
-  "authority": "HDEC_CONFIRMED_HUMAN_EXEMPLARS_V1",
+  "version": 2,
+  "authority": "HDEC_CONFIRMED_HUMAN_OR_TEAM_EXEMPLARS_V2",
   "storage": "content_addressed_individual_json",
   "activation": "approved_operator_daily_review_only",
   "idempotency_key": [
     "edition_key",
     "review_snapshot_id",
-    "canonical_publisher_url"
+    "canonical_publisher_url_or_allowlisted_portal_analysis_url"
   ],
   "allowed_fields": [
     "version",
@@ -15,6 +15,9 @@
     "review_snapshot_id",
     "canonical_publisher_url",
     "publisher_domain",
+    "analysis_url",
+    "publisher_domain_authoritative",
+    "portal_source",
     "source",
     "category",
     "title",

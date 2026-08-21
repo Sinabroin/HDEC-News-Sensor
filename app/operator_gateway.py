@@ -62,9 +62,13 @@ _TIMEOUT_SECONDS = 20
 _RUN_LOOKUP_ATTEMPTS = 4
 _RUN_LOOKUP_DELAY_SECONDS = 0.75
 
-# D7-AG-5B/5C — 신원 없는 `origin` 인가 모드가 로그인 없이 실행을 허용하는 액션 집합.
-# 저위험 수집(collect)만 포함한다. 발송(telegram/teams)은 GitHub OAuth session cookie가 필요하다.
-_ORIGIN_MODE_ACTIONS = frozenset({"collect"})
+# D7-AG-5B/5C + R4-OPS-10C — 신원 없는 `origin` 인가 모드에서 허용된
+# Origin과 레이트리밋만으로 진입할 수 있는 좁은 액션 집합.  ``analyze_article``
+# 은 읽기 전용이며, contributor 액션은 각 route가 별도의 contributor cookie와
+# exact payload/authority 검증을 추가로 요구한다. 발송·운영자 저장·게시는 없다.
+_ORIGIN_MODE_ACTIONS = frozenset(
+    {"collect", "analyze_article", "contributor_auth", "contributor_submit"}
+)
 
 
 def _access_policy_ready() -> bool:

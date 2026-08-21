@@ -25,6 +25,7 @@ button,input,select,textarea{font:inherit}
 .import-row button:disabled,.import-row input:disabled{cursor:not-allowed;opacity:.58}
 .import-status{min-height:18px;margin:8px 1px 0;font-size:12px;color:var(--muted)}.import-status.loading{color:var(--blue)}.import-status.success{color:var(--good)}.import-status.error{color:var(--bad)}
 .import-auth{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:9px 10px;border:1px solid #b8c9de;border-radius:10px;background:#eef4fb;color:#27445f;font-size:12px;line-height:1.45}.import-auth[hidden]{display:none}.import-login{display:inline-block;padding:7px 11px;border-radius:8px;background:var(--navy);color:#fff;text-decoration:none;font-weight:900}.import-login:hover{background:#0e63b8}
+.team-panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}.team-panel h2{font-size:13px;color:var(--navy);margin:0 0 7px}.team-panel p{font-size:11px;line-height:1.5;color:var(--muted);margin:5px 0}.team-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.team-row input{min-width:180px;flex:1;border:1px solid var(--line);border-radius:9px;padding:8px}.team-row button{border:0;border-radius:9px;background:var(--navy);color:#fff;font-weight:900;padding:8px 11px;cursor:pointer}.team-row button.secondary-team{background:#fff;color:var(--navy);border:1px solid var(--line)}.team-row button:disabled{opacity:.5;cursor:not-allowed}.team-state{font-size:12px!important;min-height:18px}.team-state.ok{color:var(--good)}.team-state.error{color:var(--bad)}
 .manual-panel{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
 .manual-panel[hidden]{display:none}
 .manual-panel summary{cursor:pointer;padding:12px 14px;font-weight:900;color:var(--navy)}
@@ -94,13 +95,20 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
       <div class="pill" id="saveState">자동 저장</div>
     </div>
     <section class="import-panel" aria-labelledby="importLabel">
-      <label class="import-label" id="importLabel" for="importUrl">기사 URL 자동 불러오기 · 현재 사용할 수 없음</label>
+      <label class="import-label" id="importLabel" for="importUrl">기사 URL로 자동 불러오기 · 현재 사용할 수 없음</label>
       <div class="import-row">
         <input id="importUrl" type="url" inputmode="url" autocomplete="url" placeholder="운영자 API 미구성" disabled>
         <button id="importBtn" type="button" disabled>사용 불가</button>
       </div>
       <p class="import-status" id="importStatus" role="status" aria-live="polite"></p>
-      <div class="import-auth" id="importAuth" hidden><a class="import-login" id="importLoginCta" href="#">GitHub로 운영자 로그인</a><span id="importAuthHint">로그인하면 입력한 URL을 유지하고 이 검토 화면으로 돌아옵니다.</span></div>
+      <div class="import-auth" id="importAuth"><span id="importAuthHint">기사 분석은 로그인 없이 가능합니다.</span></div>
+    </section>
+    <section class="team-panel" id="teamPanel" aria-labelledby="teamPanelTitle">
+      <h2 id="teamPanelTitle">팀원 검토 요청</h2>
+      <p>분석된 기사를 편집 검토 대기열에 보냅니다. 최종 게시와 학습 반영은 운영자 승인 후 이루어집니다.</p>
+      <div class="team-row" id="teamCodeControls"><input id="teamCode" type="password" autocomplete="current-password" maxlength="256" placeholder="팀 코드"><button id="teamAuthBtn" type="button">팀원 인증</button></div>
+      <div class="team-row"><button id="teamSubmitBtn" type="button" disabled>검토 요청</button><button class="secondary-team" id="teamLogoutBtn" type="button" hidden>팀원 로그아웃</button></div>
+      <p class="team-state" id="teamState" role="status" aria-live="polite">팀 코드는 검토 요청을 저장할 때만 필요합니다.</p>
     </section>
     <details class="manual-panel" id="manualFallback">
       <summary id="manualFallbackSummary">직접 기사 추가</summary>
@@ -122,7 +130,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
     <div class="toolbar">
       <input id="search" placeholder="기사 제목·언론사·URL 검색">
       <select id="filter">
-        <option value="all">전체 후보</option><option value="selected">선택 기사</option><option value="recommended">AI 추천</option><option value="human">사용자 링크</option><option value="rated-low">낮은 평가</option><option value="unrated">미평가</option>
+        <option value="all">전체 후보</option><option value="selected">선택 기사</option><option value="recommended">AI 추천</option><option value="human">사용자 링크</option><option value="team">팀원 제안</option><option value="rated-low">낮은 평가</option><option value="unrated">미평가</option>
       </select>
     </div>
     <div class="status"><span class="pill">후보 <b id="candidateCount">0</b></span><span class="pill">선택 <b id="selectedCount">0</b>/6</span><span class="pill">평가 <b id="ratedCount">0</b></span></div>
@@ -132,6 +140,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
     <div class="actionbar">
       <button class="primary-action" id="publishBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 게시할 수 있습니다">Daily Brief 게시</button>
       <button class="secondary" id="saveDraftBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 서버에 임시 저장할 수 있습니다">임시 저장</button>
+      <button class="secondary" id="loadTeamBtn" type="button" disabled>팀원 제안 불러오기</button>
       <button class="secondary" id="htmlBtn" type="button" title="이 기기로 HTML 파일을 내려받습니다 (게시가 아닙니다)">최종 브리핑 다운로드</button>
       <details class="utility-menu">
         <summary aria-label="보조 메뉴">⋯</summary>
@@ -140,6 +149,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
       <button class="secondary" id="reviewJsonBtn" type="button">검토 JSON 내보내기</button>
     </div>
     <div class="server-state" id="serverState" role="status" aria-live="polite">로컬 편집 모드 · 임시 저장/게시는 Teams의 정확한 에디션 링크로 열면 활성화됩니다. 다운로드는 이 기기 파일 저장이며 게시가 아닙니다.</div>
+    <div class="server-state auth" id="operatorAuthCta">운영자 기능은 GitHub 로그인 후 사용할 수 있습니다.</div>
     <div class="editor-tools"><b>본문 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><button id="linkBtn" type="button" title="선택한 문장에 링크 삽입/수정">링크</button><button id="unlinkBtn" type="button" title="선택한 링크 해제">링크 해제</button><span class="editor-hint">오른쪽 제목·요약을 직접 수정하고, 요약에서 텍스트를 선택한 뒤 B(굵게)·링크·링크 해제를 쓰세요. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
     <div class="preview-shell"><div class="preview" id="preview"></div></div>
   </main>
@@ -157,7 +167,7 @@ const pendingImportStorageKey=`hdec-editorial-pending-import:${bundle.edition_ke
 const dimensionLabels={business_relevance:"업무 관련성",importance:"기사 중요도",source_reliability:"출처 신뢰도",specificity:"정보 구체성",executive_value:"임원 보고 가치",novelty:"새로움"};
 const exclusionLabels={low_trust_source:"듣보잡·신뢰도 낮음",promotional:"홍보성",clickbait:"제목 낚시",shallow:"내용이 얕음",duplicate:"중복 기사",low_hdec_relevance:"현대건설 관련성 낮음",not_ai:"AI 직접 관련 없음",stale:"오래된 기사",stock_market_noise:"증권·주가성",fact_check_needed:"사실 확인 부족"};
 const defaultSelected=bundle.candidates.filter(x=>x.ai_recommended).slice(0,MAX_SELECTED).map(x=>x.candidate_id);
-let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:"",draftRevision:"",approvedRevision:""};
+let state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:"",draftRevision:"",approvedRevision:"",lastImportedCandidateId:""};
 try{
   const saved=JSON.parse(localStorage.getItem(storageKey));
   if(saved&&Array.isArray(saved.selected))state={...state,...saved};
@@ -165,10 +175,12 @@ try{
 state.exactEditionId=typeof state.exactEditionId==="string"?state.exactEditionId:"";
 state.draftRevision=typeof state.draftRevision==="string"?state.draftRevision:"";
 state.approvedRevision=typeof state.approvedRevision==="string"?state.approvedRevision:"";
+state.lastImportedCandidateId=typeof state.lastImportedCandidateId==="string"?state.lastImportedCandidateId:"";
 // R4-OPS-10 — durable server save/publish context; populated ONLY when the
 // console is opened via the exact-edition Teams deep link with a verified
 // operator session. A plain preview console never enables server writes.
 let serverContext={origin:"",snapshotId:"",editionKey:"",editionId:"",authenticated:false,login:""};
+let contributorContext={authenticated:false};
 state.manualCandidates=Array.isArray(state.manualCandidates)?state.manualCandidates:[];
 state.ratings=state.ratings&&typeof state.ratings==="object"?state.ratings:{};
 state.edits=state.edits&&typeof state.edits==="object"?state.edits:{};
@@ -210,6 +222,23 @@ function safeAuthorityUrl(value){
     if(parsed.pathname.toLowerCase().includes("/search"))return "";
     return candidate;
   }catch(error){return "";}
+}
+function safePortalCopyUrl(value,portalSource){
+  const candidate=safeUrl(value);
+  if(!candidate)return "";
+  try{
+    const parsed=new URL(candidate);
+    const host=parsed.hostname.toLowerCase().replace(/\.$/,"");
+    const allowed=portalSource==="daum"?["v.daum.net","news.daum.net","media.daum.net"]:portalSource==="naver"?["news.naver.com","n.news.naver.com","m.news.naver.com"]:[];
+    if(parsed.username||parsed.password||!allowed.includes(host)||!parsed.pathname.replace(/\//g,""))return "";
+    return candidate;
+  }catch(error){return "";}
+}
+function candidateArticleUrl(candidate){
+  if(candidate&&candidate.publisher_domain_authoritative===false&&candidate.portal_copy===true){
+    return safePortalCopyUrl(candidate.analysis_url||candidate.selected_url,candidate.portal_source);
+  }
+  return safeAuthorityUrl(candidate&&candidate.selected_url);
 }
 function safeImportApiUrl(value){
   try{
@@ -443,8 +472,10 @@ function candidateCard(candidate){
   const record=rating(candidate.candidate_id);
   const selected=state.selected.includes(candidate.candidate_id);
   const human=candidate.origin==="human_link";
+  const team=candidate.origin==="team_link";
+  const removable=human||team;
   const imported=candidate.collection_source_kind==="url_import";
-  const articleUrl=safeAuthorityUrl(candidate.selected_url);
+  const articleUrl=candidateArticleUrl(candidate);
   const title=articleUrl
     ?`<a class="candidate-title original-article-link" href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${esc(current.title)}</a>`
     :`<div class="candidate-title">${esc(current.title)}</div>`;
@@ -456,9 +487,9 @@ function candidateCard(candidate){
   const tags=Object.entries(exclusionLabels).map(([key,label])=>`<button type="button" class="tag ${record.exclusion_tags.includes(key)?"on":""}" data-tag="${esc(key)}">${esc(label)}</button>`).join("");
   const reason=candidate.category_analysis?.reason||"";
   const excerpt=imported&&candidate.article_text_excerpt?`<details class="excerpt"><summary>추출 본문 확인</summary><p>${esc(candidate.article_text_excerpt)}</p></details>`:"";
-  const originLabel=imported?"URL 불러오기":human?"사용자 링크":`AI ${esc(candidate.ai_rank)}위`;
-  const originClass=imported?"imported":human?"human":"";
-  return `<article class="candidate ${selected?"selected":""}" draggable="true" data-id="${esc(candidate.candidate_id)}"><div class="candidate-head"><input type="checkbox" aria-label="기사 선택" ${selected?"checked":""}>${title}${human?`<button type="button" class="remove-manual" title="삭제">삭제</button>`:""}</div>${imageMarkup(current,"candidate-image")}<div class="meta"><span class="badge ${originClass}">${originLabel}</span><span class="badge">${esc(candidate.source)}</span><span>${esc(current.category)}</span>${candidate.published_at?`<span>${esc(candidate.published_at)}</span>`:""}</div>${originalLink}${publicRoutingMarkup(candidate)}<div class="summary">${esc(current.summary)}</div>${reason?`<div class="analysis-reason">${esc(reason)}</div>`:""}${excerpt}<div class="rating-row"><b>품질</b><span class="stars">${stars}</span><span>${record.overall_rating||"미평가"}</span></div><details class="details"><summary>세부 평가·제외 사유</summary><div class="dimensions">${dimensions}</div><div class="tags">${tags}</div><textarea class="note" placeholder="평가 메모">${esc(record.note)}</textarea></details></article>`;
+  const originLabel=team?"팀원 제안":imported?"URL 불러오기":human?"사용자 링크":`AI ${esc(candidate.ai_rank)}위`;
+  const originClass=imported?"imported":(human||team)?"human":"";
+  return `<article class="candidate ${selected?"selected":""}" draggable="true" data-id="${esc(candidate.candidate_id)}"><div class="candidate-head"><input type="checkbox" aria-label="기사 선택" ${selected?"checked":""}>${title}${removable?`<button type="button" class="remove-manual" title="삭제">삭제</button>`:""}</div>${imageMarkup(current,"candidate-image")}<div class="meta"><span class="badge ${originClass}">${originLabel}</span><span class="badge">${esc(candidate.source)}</span><span>${esc(current.category)}</span>${candidate.published_at?`<span>${esc(candidate.published_at)}</span>`:""}</div>${originalLink}${publicRoutingMarkup(candidate)}<div class="summary">${esc(current.summary)}</div>${reason?`<div class="analysis-reason">${esc(reason)}</div>`:""}${excerpt}<div class="rating-row"><b>품질</b><span class="stars">${stars}</span><span>${record.overall_rating||"미평가"}</span></div><details class="details"><summary>세부 평가·제외 사유</summary><div class="dimensions">${dimensions}</div><div class="tags">${tags}</div><textarea class="note" placeholder="평가 메모">${esc(record.note)}</textarea></details></article>`;
 }
 function renderCandidates(){
   const query=document.getElementById("search").value.trim().toLowerCase();
@@ -473,6 +504,7 @@ function renderCandidates(){
     if(filter==="selected"&&!state.selected.includes(candidate.candidate_id))return false;
     if(filter==="recommended"&&!candidate.ai_recommended)return false;
     if(filter==="human"&&candidate.origin!=="human_link")return false;
+    if(filter==="team"&&candidate.origin!=="team_link")return false;
     if(filter==="rated-low"&&!(record.overall_rating>0&&record.overall_rating<=2))return false;
     if(filter==="unrated"&&record.overall_rating>0)return false;
     return true;
@@ -537,12 +569,9 @@ function importLoginHref(snapshotId=""){
 }
 function showImportAuth(authenticated,snapshotId=""){
   const panel=document.getElementById("importAuth");
-  const cta=document.getElementById("importLoginCta");
-  if(!panel||!cta)return;
-  if(authenticated){panel.hidden=true;return;}
-  const href=importLoginHref(snapshotId);
-  panel.hidden=!href;
-  if(href)cta.href=href;
+  const hint=document.getElementById("importAuthHint");
+  if(panel)panel.hidden=false;
+  if(hint)hint.textContent="기사 분석은 로그인 없이 가능합니다.";
 }
 async function resolveImportSnapshotId(){
   if(serverContext.snapshotId)return serverContext.snapshotId;
@@ -557,6 +586,8 @@ async function resolveImportSnapshotId(){
 async function probeImportAuth(){
   const origin=operatorApiOrigin();
   if(!origin){showImportAuth(true);return;}
+  serverContext.origin=origin;
+  serverContext.editionKey=bundle.edition_key;
   showImportAuth(false,serverContext.snapshotId);
   const snapshotPromise=resolveImportSnapshotId();
   try{
@@ -567,11 +598,15 @@ async function probeImportAuth(){
       serverContext.authenticated=true;
       serverContext.login=String(data.login||"");
       showImportAuth(true,snapshotId);
+      renderOperatorAuthCta();
+      refreshServerButtons();
     }else{
       serverContext.authenticated=false;
       showImportAuth(false,snapshotId);
+      renderOperatorAuthCta();
+      refreshServerButtons();
     }
-  }catch(error){showImportAuth(false,await snapshotPromise);}
+  }catch(error){showImportAuth(false,await snapshotPromise);renderOperatorAuthCta();refreshServerButtons();}
 }
 function canonicalKey(value){
   const safe=safeUrl(value);
@@ -608,22 +643,33 @@ function showManualFallback(url,partial=null){
 }
 function normalizedImportedArticle(article){
   if(!article||typeof article!=="object")return null;
-  const canonicalUrl=safeAuthorityUrl(article.canonical_url);
+  const publisherAuthoritative=article.publisher_domain_authoritative===true&&article.publisher_direct===true;
+  const portalCopy=article.portal_copy===true&&article.portal_fallback_used===true;
+  const portalSource=String(article.portal_source||"").trim().slice(0,40);
+  const analysisUrl=publisherAuthoritative?safeAuthorityUrl(article.analysis_url||article.canonical_url):safePortalCopyUrl(article.analysis_url||article.canonical_url,portalSource);
+  const publisherUrl=publisherAuthoritative?safeAuthorityUrl(article.publisher_url||article.canonical_url):"";
+  const canonicalUrl=publisherAuthoritative?publisherUrl:analysisUrl;
   const title=String(article.title||"").trim().slice(0,500);
   const source=String(article.source||"").trim().slice(0,160);
   const summary=String(article.summary||"").trim().slice(0,500);
   const category=CATEGORY_ORDER.includes(article.category)?article.category:"";
   const analysis=article.category_analysis;
   const analysisValid=analysis&&typeof analysis==="object"&&analysis.category===category&&analysis.scores&&typeof analysis.scores==="object"&&analysis.matched_signals&&typeof analysis.matched_signals==="object"&&typeof analysis.reason==="string";
-  if(!canonicalUrl||!title||!source||!summary||!category||!analysisValid||article.publisher_direct!==true||article.portal_fallback_used===true)return null;
+  const provenanceValid=publisherAuthoritative
+    ?!!publisherUrl&&!portalCopy
+    :portalCopy&&["daum","naver"].includes(portalSource)&&article.portal_resolution_reason==="portal_copy_fallback"&&!article.publisher_url;
+  if(!canonicalUrl||!title||!source||!summary||!category||!analysisValid||!provenanceValid)return null;
   return {
     input_url:safeUrl(article.input_url),
     discovery_url:safeUrl(article.discovery_url),
     canonical_url:canonicalUrl,
-    publisher_url:safeUrl(article.publisher_url)||canonicalUrl,
+    analysis_url:analysisUrl,
+    publisher_url:publisherUrl,
     publisher_domain:String(article.publisher_domain||"").trim().slice(0,255),
-    publisher_direct:article.publisher_direct===true,
-    portal_source:String(article.portal_source||"").trim().slice(0,40),
+    publisher_direct:publisherAuthoritative,
+    publisher_domain_authoritative:publisherAuthoritative,
+    portal_copy:portalCopy,
+    portal_source:portalSource,
     portal_resolution_reason:String(article.portal_resolution_reason||"").trim().slice(0,120),
     portal_fallback_used:article.portal_fallback_used===true,
     title,
@@ -712,15 +758,18 @@ async function importArticleFromUrl(){
       published_at_fallback:article.published_at?"":"bundle_coverage_end",
       input_url:article.input_url||inputUrl,
       discovery_url:article.discovery_url,
-      selected_url:article.canonical_url,
+      analysis_url:article.analysis_url,
+      selected_url:article.publisher_domain_authoritative?article.publisher_url:article.analysis_url,
       publisher_url:article.publisher_url,
       publisher_domain:article.publisher_domain,
       publisher_direct:article.publisher_direct,
+      publisher_domain_authoritative:article.publisher_domain_authoritative,
+      portal_copy:article.portal_copy,
       portal_source:article.portal_source,
       portal_resolution_reason:article.portal_resolution_reason,
       portal_fallback_used:article.portal_fallback_used,
-      link_kind:"publisher_direct",
-      link_label:"불러온 원문",
+      link_kind:article.publisher_domain_authoritative?"publisher_direct":"portal_copy",
+      link_label:article.publisher_domain_authoritative?"불러온 원문":"포털 기사 보기",
       category:article.category,
       category_analysis:article.category_analysis,
       article_text_excerpt:article.article_text_excerpt,
@@ -732,11 +781,12 @@ async function importArticleFromUrl(){
       image_reason:article.extraction.image_result||"",
       image_quality_accepted:!!article.image_url,
       collection_source_kind:"url_import",
-      selection_reason:"authenticated_url_import",
+      selection_reason:"anonymous_url_import",
       feedback_adjustment:0,
       adjusted_score:0
     };
     state.manualCandidates.push(item);
+    state.lastImportedCandidateId=id;
     state.edits[id]={title:item.title,summary_html:item.summary_html,category:item.category};
     input.value="";
     rememberPendingImport("");
@@ -779,8 +829,81 @@ function addManual(){
   moveArticle(id,category);
   setImportStatus(`직접 입력한 기사를 ${category} 섹터에 추가했습니다.`,"success");
 }
+function setTeamState(message,kind=""){
+  const slot=document.getElementById("teamState");
+  if(!slot)return;
+  slot.textContent=String(message||"");
+  slot.className="team-state"+(kind?` ${kind}`:"");
+}
+function teamSubmissionCandidate(){
+  const exact=byId(state.lastImportedCandidateId);
+  if(exact&&exact.collection_source_kind==="url_import"&&state.selected.includes(exact.candidate_id))return exact;
+  return [...state.manualCandidates].reverse().find(candidate=>candidate.collection_source_kind==="url_import"&&state.selected.includes(candidate.candidate_id))||null;
+}
+function refreshTeamUi(){
+  const configured=!!operatorApiOrigin();
+  const controls=document.getElementById("teamCodeControls");
+  const logout=document.getElementById("teamLogoutBtn");
+  const submit=document.getElementById("teamSubmitBtn");
+  if(controls)controls.hidden=contributorContext.authenticated;
+  if(logout)logout.hidden=!contributorContext.authenticated;
+  if(submit)submit.disabled=!(configured&&contributorContext.authenticated&&teamSubmissionCandidate());
+}
+async function probeContributorSession(){
+  const origin=operatorApiOrigin();
+  if(!origin){setTeamState("Operator API가 구성되지 않아 팀 검토 요청을 저장할 수 없습니다.","error");refreshTeamUi();return;}
+  try{
+    const response=await fetch(origin+"/api/editorial/contributor/session",{method:"GET",credentials:"include"});
+    const payload=response.ok?await response.json():null;
+    contributorContext.authenticated=!!(payload&&payload.authenticated===true&&payload.role==="editorial_contributor");
+    setTeamState(contributorContext.authenticated?"팀원 인증됨":"팀 코드는 검토 요청을 저장할 때만 필요합니다.",contributorContext.authenticated?"ok":"");
+  }catch(error){contributorContext.authenticated=false;setTeamState("팀원 인증 상태를 확인하지 못했습니다.","error");}
+  refreshTeamUi();
+}
+async function authenticateContributor(){
+  const origin=operatorApiOrigin();
+  const input=document.getElementById("teamCode");
+  const code=input.value;
+  if(!origin||!code){setTeamState("팀 코드를 입력해 주세요.","error");return;}
+  document.getElementById("teamAuthBtn").disabled=true;
+  try{
+    const response=await fetch(origin+"/api/editorial/contributor/login",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});
+    let payload=null;try{payload=await response.json();}catch(error){}
+    if(!response.ok||!payload?.authenticated)throw new Error(payload?.error?.message||"팀원 인증에 실패했습니다.");
+    input.value="";
+    contributorContext.authenticated=true;
+    setTeamState("팀원 인증됨","ok");
+  }catch(error){contributorContext.authenticated=false;setTeamState(error?.message||"팀원 인증에 실패했습니다.","error");}
+  document.getElementById("teamAuthBtn").disabled=false;
+  refreshTeamUi();
+}
+async function logoutContributor(){
+  const origin=operatorApiOrigin();
+  if(origin){try{await fetch(origin+"/api/editorial/contributor/logout",{method:"POST",credentials:"include"});}catch(error){}}
+  contributorContext.authenticated=false;
+  setTeamState("팀원 인증이 해제되었습니다.","");
+  refreshTeamUi();
+}
+async function submitTeamReview(){
+  const candidate=teamSubmissionCandidate();
+  const snapshotId=await resolveImportSnapshotId();
+  const origin=operatorApiOrigin();
+  if(!contributorContext.authenticated){setTeamState("먼저 팀원 인증을 완료해 주세요.","error");return;}
+  if(!candidate){setTeamState("먼저 URL로 분석해 선택된 기사를 준비해 주세요.","error");return;}
+  if(!snapshotId){setTeamState("정확한 검토 스냅샷을 확인하지 못했습니다.","error");return;}
+  const button=document.getElementById("teamSubmitBtn");
+  button.disabled=true;
+  setTeamState("기사를 서버에서 다시 확인하고 검토 요청을 저장하는 중…","");
+  try{
+    const response=await fetch(origin+"/api/editorial/submit-for-review",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({product:"daily",edition_key:bundle.edition_key,review_snapshot_id:snapshotId,url:safeUrl(candidate.input_url||candidate.selected_url)})});
+    let payload=null;try{payload=await response.json();}catch(error){}
+    if(!response.ok||!payload?.ok)throw new Error(payload?.error?.message||"검토 요청을 저장하지 못했습니다.");
+    setTeamState("검토 요청이 접수되었습니다. 최종 게시와 학습 반영은 운영자 승인 후 이루어집니다.","ok");
+  }catch(error){setTeamState(error?.message||"검토 요청을 저장하지 못했습니다.","error");}
+  refreshTeamUi();
+}
 function selectedArticleCard(candidate){
-  const articleUrl=safeAuthorityUrl(candidate.selected_url);
+  const articleUrl=candidateArticleUrl(candidate);
   const source=articleUrl?`<a href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${esc(candidate.source)}</a>`:esc(candidate.source);
   return `<article class="article-card selected-article-card" draggable="true" data-selected-id="${esc(candidate.candidate_id)}" data-selected-category="${esc(candidate.category)}">${imageMarkup(candidate)}<div class="article-body"><select class="category-select" data-category-id="${esc(candidate.candidate_id)}" aria-label="기사 섹터">${categoryOptions(candidate.category)}</select><h3 class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="title">${esc(candidate.title)}</h3><p class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="summary_html">${candidate.summary_html}</p><div class="src">출처 ${source}</div></div></article>`;
 }
@@ -871,9 +994,9 @@ function renderStats(){
 function renderLaneTabs(){
   document.querySelectorAll("[data-lane]").forEach(button=>button.classList.toggle("active",button.dataset.lane===state.laneFilter));
 }
-function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();}
+function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();refreshTeamUi();}
 function briefArticleCard(candidate){
-  const articleUrl=safeAuthorityUrl(candidate.selected_url);
+  const articleUrl=candidateArticleUrl(candidate);
   const source=articleUrl?`<a href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${esc(candidate.source)}</a>`:esc(candidate.source);
   return `<article class="article-card">${imageMarkup(candidate)}<div class="article-body"><span class="ticker ${categoryClass(candidate.category)}">${esc(candidate.category)}</span><h3>${esc(candidate.title)}</h3><p>${sanitizeInline(candidate.summary_html)}</p><div class="src">출처 ${source}</div></div></article>`;
 }
@@ -896,7 +1019,7 @@ function selectedItems(){
   return state.selected.map(id=>{
     const candidate=view(id);
     const placementRecord=placement(id);
-    return {candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",title:candidate.title,summary:candidate.summary,summary_html:sanitizeInline(candidate.summary_html),source:candidate.source,published_at:candidate.published_at,selected_url:safeAuthorityUrl(candidate.selected_url),link_kind:candidate.link_kind||"publisher_direct",link_label:candidate.link_label||"원문 보기",category:candidate.category,category_analysis:candidate.category_analysis||{},image_url:safeImageUrl(candidate.image_url),collection_source_kind:candidate.collection_source_kind||"",selection_reason:candidate.selection_reason||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",main_surface_eligible:!!candidate.main_surface_eligible,teams_alert_eligible:!!candidate.teams_alert_eligible,tni_brief_eligible:!!candidate.tni_brief_eligible,tni_report_topic_eligible:!!candidate.tni_report_topic_eligible,default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:candidate.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||""};
+    return {candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",title:candidate.title,summary:candidate.summary,summary_html:sanitizeInline(candidate.summary_html),source:candidate.source,published_at:candidate.published_at,selected_url:candidateArticleUrl(candidate),submission_id:candidate.submission_id||"",analysis_url:safeUrl(candidate.analysis_url||""),publisher_url:safeAuthorityUrl(candidate.publisher_url||""),publisher_domain_authoritative:candidate.publisher_domain_authoritative===true,portal_copy:candidate.portal_copy===true,portal_source:candidate.portal_source||"",portal_resolution_reason:candidate.portal_resolution_reason||"",link_kind:candidate.link_kind||"publisher_direct",link_label:candidate.link_label||"원문 보기",category:candidate.category,category_analysis:candidate.category_analysis||{},image_url:safeImageUrl(candidate.image_url),collection_source_kind:candidate.collection_source_kind||"",selection_reason:candidate.selection_reason||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",main_surface_eligible:!!candidate.main_surface_eligible,teams_alert_eligible:!!candidate.teams_alert_eligible,tni_brief_eligible:!!candidate.tni_brief_eligible,tni_report_topic_eligible:!!candidate.tni_report_topic_eligible,default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:candidate.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||""};
   });
 }
 function feedbackRecords(){
@@ -904,7 +1027,7 @@ function feedbackRecords(){
     const record=rating(candidate.candidate_id);
     const current=view(candidate.candidate_id);
     const placementRecord=placement(candidate.candidate_id);
-    return {version:2,edition_key:bundle.edition_key,candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",selected_url:safeAuthorityUrl(candidate.selected_url),title:current.title,source:candidate.source,category:current.category,selected:state.selected.includes(candidate.candidate_id),selected_position:state.selected.indexOf(candidate.candidate_id)+1||null,overall_rating:record.overall_rating||0,dimension_ratings:record.dimension_ratings||{},exclusion_tags:record.exclusion_tags||[],note:record.note||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:current.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||"",rated_at:new Date().toISOString()};
+    return {version:2,edition_key:bundle.edition_key,candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",selected_url:candidateArticleUrl(candidate),title:current.title,source:candidate.source,category:current.category,selected:state.selected.includes(candidate.candidate_id),selected_position:state.selected.indexOf(candidate.candidate_id)+1||null,overall_rating:record.overall_rating||0,dimension_ratings:record.dimension_ratings||{},exclusion_tags:record.exclusion_tags||[],note:record.note||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:current.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||"",rated_at:new Date().toISOString()};
   });
 }
 function validatePlacementOverrides(){
@@ -944,7 +1067,19 @@ function setServerState(message,kind=""){
   slot.className="server-state"+(kind?" "+kind:"");
 }
 function serverWritesReady(){
+  return !!(serverContext.origin&&serverContext.snapshotId&&serverContext.editionId&&serverContext.authenticated);
+}
+function operatorPendingReady(){
   return !!(serverContext.origin&&serverContext.snapshotId&&serverContext.authenticated);
+}
+function renderOperatorAuthCta(){
+  const slot=document.getElementById("operatorAuthCta");
+  if(!slot)return;
+  if(!serverContext.origin){slot.textContent="Operator API가 구성되지 않아 운영자 기능을 사용할 수 없습니다.";return;}
+  if(serverContext.authenticated){slot.innerHTML=`GitHub 운영자 인증됨: <b>${esc(serverContext.login)}</b>`;slot.className="server-state ok";return;}
+  const href=importLoginHref(serverContext.snapshotId);
+  slot.innerHTML=href?`<a class="import-login" href="${esc(href)}">GitHub로 운영자 로그인</a> <span>서버 초안·Daily 게시·팀원 제안 불러오기는 운영자 전용입니다.</span>`:"GitHub 운영자 로그인이 필요합니다.";
+  slot.className="server-state auth";
 }
 function refreshServerButtons(){
   const ready=serverWritesReady();
@@ -952,6 +1087,8 @@ function refreshServerButtons(){
   const publishBtn=document.getElementById("publishBtn");
   if(saveBtn)saveBtn.disabled=!ready;
   if(publishBtn)publishBtn.disabled=!ready;
+  const loadTeamBtn=document.getElementById("loadTeamBtn");
+  if(loadTeamBtn)loadTeamBtn.disabled=!operatorPendingReady();
 }
 function operatorReviewBody(){
   // Identity is server-derived/verified; selected_items carry the operator's
@@ -962,6 +1099,40 @@ async function postJson(path,body){
   const response=await fetch(serverContext.origin+path,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   let payload=null;try{payload=await response.json();}catch(error){}
   return {response,payload};
+}
+function pendingToCandidate(row){
+  if(!row||row.status!=="pending"||!/^submission-[0-9a-f]{64}$/.test(String(row.submission_id||"")))return null;
+  const publisherAuthoritative=row.publisher_domain_authoritative===true;
+  const selectedUrl=publisherAuthoritative?safeAuthorityUrl(row.publisher_url):safePortalCopyUrl(row.analysis_url,row.portal_source);
+  const title=String(row.title||"").trim().slice(0,500);
+  const source=String(row.source||"").trim().slice(0,160);
+  const summary=String(row.executive_summary||"").trim().slice(0,500);
+  const category=CATEGORY_ORDER.includes(row.category)?row.category:"";
+  if(!selectedUrl||!title||!source||!summary||!category)return null;
+  return {candidate_id:`team-${row.submission_id}`,submission_id:row.submission_id,origin:"team_link",ai_rank:null,ai_recommended:false,title,source,summary,summary_html:esc(summary),published_at:bundle.coverage_end,selected_url:selectedUrl,analysis_url:safeUrl(row.analysis_url),publisher_url:publisherAuthoritative?safeAuthorityUrl(row.publisher_url):"",publisher_domain_authoritative:publisherAuthoritative,portal_copy:row.portal_copy===true,portal_source:String(row.portal_source||""),portal_resolution_reason:String(row.portal_resolution_reason||""),portal_fallback_used:row.portal_copy===true,link_kind:publisherAuthoritative?"publisher_direct":"portal_copy",link_label:publisherAuthoritative?"원문 보기":"포털 기사 보기",category,category_analysis:{category,scores:{},matched_signals:{},reason:"팀원 제출 후 서버 재검증된 대기 제안"},image_url:safeImageUrl(row.image_url),image_remote_url:"",collection_source_kind:"team_link",selection_reason:"pending_team_submission",feedback_adjustment:0,adjusted_score:0};
+}
+async function loadTeamSubmissions(){
+  if(!operatorPendingReady()){setServerState("GitHub 운영자 로그인 후 팀원 제안을 불러올 수 있습니다.","warn");return;}
+  const button=document.getElementById("loadTeamBtn");
+  button.disabled=true;
+  setServerState("팀원 제안을 불러오는 중…","auth");
+  try{
+    const query=new URLSearchParams({edition_key:bundle.edition_key,review_snapshot_id:serverContext.snapshotId});
+    const response=await fetch(serverContext.origin+"/api/editorial/pending-submissions?"+query.toString(),{method:"GET",credentials:"include"});
+    let payload=null;try{payload=await response.json();}catch(error){}
+    if(!response.ok||!payload?.ok)throw new Error(payload?.error?.message||"팀원 제안을 불러오지 못했습니다.");
+    let added=0;
+    for(const row of payload.submissions||[]){
+      const candidate=pendingToCandidate(row);
+      if(!candidate||byId(candidate.candidate_id)||state.manualCandidates.length>=MAX_MANUAL_CANDIDATES)continue;
+      state.manualCandidates.push(candidate);
+      state.edits[candidate.candidate_id]={title:candidate.title,summary_html:candidate.summary_html,category:candidate.category};
+      added+=1;
+    }
+    save();render();
+    setServerState(`팀원 제안 ${added}건을 후보로 불러왔습니다. 자동 선택·승인되지 않았습니다.`,"ok");
+  }catch(error){setServerState(error?.message||"팀원 제안을 불러오지 못했습니다.","error");}
+  refreshServerButtons();
 }
 async function serverSaveDraft(){
   if(!serverWritesReady()){setServerState("정확한 에디션 링크에서 운영자 인증 후 서버 저장이 활성화됩니다.","warn");return null;}
@@ -1019,6 +1190,10 @@ document.getElementById("search").addEventListener("input",renderCandidates);
 document.getElementById("filter").addEventListener("change",renderCandidates);
 document.querySelectorAll("[data-lane]").forEach(button=>button.addEventListener("click",()=>{state.laneFilter=button.dataset.lane;save();renderCandidates();renderLaneTabs();}));
 document.getElementById("manualAddBtn").addEventListener("click",addManual);
+document.getElementById("teamAuthBtn").addEventListener("click",authenticateContributor);
+document.getElementById("teamSubmitBtn").addEventListener("click",submitTeamReview);
+document.getElementById("teamLogoutBtn").addEventListener("click",logoutContributor);
+document.getElementById("loadTeamBtn").addEventListener("click",loadTeamSubmissions);
 document.getElementById("importBtn").addEventListener("click",importArticleFromUrl);
 document.getElementById("importUrl").addEventListener("keydown",event=>{
   if(event.key==="Enter"){event.preventDefault();importArticleFromUrl();}
@@ -1033,7 +1208,7 @@ document.getElementById("importUrl").addEventListener("paste",()=>{
 });
 document.getElementById("restoreBtn").addEventListener("click",()=>{
   if(!confirm("초기화하면 현재 선택·편집·평가와 URL로 불러온 기사가 모두 사라집니다. AI 추천 상태로 되돌릴까요?"))return;
-  state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:state.exactEditionId||"",draftRevision:state.draftRevision||"",approvedRevision:state.approvedRevision||""};
+  state={selected:[...defaultSelected],ratings:{},manualCandidates:[],edits:{},placementOverrides:{},laneFilter:"all",reviewStatus:"draft",exactEditionId:state.exactEditionId||"",draftRevision:state.draftRevision||"",approvedRevision:state.approvedRevision||"",lastImportedCandidateId:""};
   normalizeSelectedOrder();
   markDraftAndRender();
   document.querySelector(".utility-menu").open=false;
@@ -1089,8 +1264,12 @@ window.__editorialReviewDebug=()=>({
     selected_url:candidate.selected_url,
     category:view(candidate.candidate_id)?.category||"",
     image_url:candidate.image_url,
-    collection_source_kind:candidate.collection_source_kind
-  }))
+    collection_source_kind:candidate.collection_source_kind,
+    origin:candidate.origin,
+    publisher_domain_authoritative:candidate.publisher_domain_authoritative,
+    portal_copy:candidate.portal_copy
+  })),
+  contributorAuthenticated:contributorContext.authenticated
 });
 render();
 if(articleImportApiUrl){
@@ -1102,7 +1281,7 @@ if(articleImportApiUrl){
   const pendingUrl=pendingImportUrl();
   if(pendingUrl)document.getElementById("importUrl").value=pendingUrl;
   showImportAuth(false,serverContext.snapshotId);
-  window.addEventListener("DOMContentLoaded",()=>{probeImportAuth();},{once:true});
+  window.addEventListener("DOMContentLoaded",()=>{probeImportAuth();probeContributorSession();},{once:true});
 }else{
   document.getElementById("importLabel").textContent="기사 URL 자동 불러오기 · 현재 사용할 수 없음";
   document.getElementById("importUrl").disabled=true;
@@ -1257,6 +1436,7 @@ function resolveReviewSnapshotId(){
 }
 function updateServerReadyState(){
   refreshServerButtons();
+  renderOperatorAuthCta();
   if(serverWritesReady()){
     setServerState(`운영자 인증됨: ${serverContext.login} · 이 에디션(${serverContext.editionKey})을 서버에 임시 저장하거나 새 개정본으로 게시할 수 있습니다.`,"ok");
   }else if(serverContext.authenticated&&!serverContext.snapshotId){
@@ -1287,6 +1467,7 @@ function probeOperatorSession(){
     }
     serverContext.authenticated=false;
     refreshServerButtons();
+    renderOperatorAuthCta();
     const loginQuery=new URLSearchParams({product:"daily",edition_id:editionIdParam,edition_key:bundle.edition_key});
     if(sourceTag)loginQuery.set("source",sourceTag);
     if(serverContext.snapshotId)loginQuery.set("review_snapshot_id",serverContext.snapshotId);
@@ -1297,6 +1478,7 @@ function probeOperatorSession(){
   }).catch(()=>{
     serverContext.authenticated=false;
     refreshServerButtons();
+    renderOperatorAuthCta();
     if(slot)slot.textContent="운영자 인증 상태를 확인할 수 없습니다 (읽기 전용으로 계속 볼 수 있습니다).";
     setServerState("운영자 인증 상태를 확인할 수 없습니다 · 로컬 편집·다운로드는 가능합니다.","warn");
     showImportAuth(false,serverContext.snapshotId);

@@ -785,6 +785,9 @@ def browser_acceptance() -> dict:
             "publisher_url": PUBLISHER_URL,
             "publisher_domain": "publisher.example.com",
             "publisher_direct": True,
+            "publisher_domain_authoritative": True,
+            "portal_copy": False,
+            "analysis_url": PUBLISHER_URL,
             "portal_source": "",
             "portal_resolution_reason": "direct_input",
             "portal_fallback_used": False,
@@ -820,6 +823,7 @@ def browser_acceptance() -> dict:
             "discovery_url": safelink_url,
             "canonical_url": wrapped_target,
             "publisher_url": wrapped_target,
+            "analysis_url": wrapped_target,
             "title": "AI 데이터센터 전력망 두 번째 계약",
             "portal_source": "microsoft_safelinks",
             "portal_resolution_reason": "microsoft_safelinks_explicit_target",
@@ -835,10 +839,10 @@ window.fetch=async function(url,options={}){
   const requestUrl=String(url||"");
   if(requestUrl.endsWith("manifest.json"))return {ok:true,status:200,json:async()=>({review_snapshot_id:"__SNAPSHOT__"})};
   if(requestUrl.endsWith("/api/auth/session"))return {ok:true,status:200,json:async()=>({authenticated:window.__ops10bAuth,login:window.__ops10bAuth?"sinabroin":""})};
+  if(requestUrl.endsWith("/api/editorial/contributor/session"))return {ok:true,status:200,json:async()=>({authenticated:false,role:""})};
   if(requestUrl.endsWith("/api/editorial/import-article")){
     const request=JSON.parse(options.body||"{}");
     window.__ops10bImportCalls.push(request.url||"");
-    if(!window.__ops10bAuth)return {ok:false,status:401,json:async()=>({ok:false,error:{code:"AUTH_REQUIRED",message:"운영자 로그인이 필요합니다."}})};
     if(request.url==="__TARGETLESS__")return {ok:false,status:422,json:async()=>({ok:false,error:{code:"MICROSOFT_SAFELINK_TARGET_MISSING",message:"__TARGETLESS_MESSAGE__"}})};
     if(request.url==="__SAFELINK__")return {ok:true,status:200,json:async()=>window.__ops10bWrapped};
     return {ok:true,status:200,json:async()=>window.__ops10bDirect};
@@ -872,15 +876,13 @@ window.fetch=async function(url,options={}){
   await pause(250);
   result.zero_candidate_editor=allCandidates().length===0&&document.getElementById("candidateList").textContent.includes("현재 기준을 충족");
   result.import_api_configured=!input.disabled&&!document.getElementById("importBtn").disabled;
-  result.unauth_login_cta_visible=!document.getElementById("importAuth").hidden&&document.getElementById("importLoginCta").textContent.includes("GitHub");
-  await paste("__PUBLISHER__");
-  result.auth_pending_retained=input.value==="__PUBLISHER__"&&pendingImportUrl()==="__PUBLISHER__"&&document.getElementById("manualUrl").value==="__PUBLISHER__";
-  result.auth_failure_not_added=allCandidates().length===0&&document.getElementById("importStatus").classList.contains("error")&&!document.getElementById("importStatus").classList.contains("success");
-  window.__ops10bAuth=true;
-  await probeImportAuth();
-  result.authenticated_cta_hidden=document.getElementById("importAuth").hidden===true;
+  result.no_login_analysis_copy=!document.getElementById("importAuth").hidden&&document.getElementById("importAuthHint").textContent.includes("로그인 없이");
   await paste("__PUBLISHER__");
   const imported=state.manualCandidates.find(item=>item.collection_source_kind==="url_import"&&item.selected_url==="__PUBLISHER__");
+  result.anonymous_import_added=!!imported&&allCandidates().length===1;
+  window.__ops10bAuth=true;
+  await probeImportAuth();
+  result.analysis_copy_stays_no_login=document.getElementById("importAuthHint").textContent.includes("로그인 없이");
   result.direct_complete_card=!!imported&&imported.source==="테스트경제"&&!!imported.title&&!!imported.summary&&imported.category==="투자·산업"&&!!imported.image_url&&state.selected.includes(imported.candidate_id);
   result.right_preview_populated=!!imported&&!!document.querySelector(`[data-selected-id="${imported.candidate_id}"]`)&&document.getElementById("preview").textContent.includes(imported.title);
   result.import_success_state=document.getElementById("importStatus").classList.contains("success");
@@ -993,10 +995,9 @@ def verify_browser(v: Verify) -> None:
     for key, label in (
         ("zero_candidate_editor", "zero-candidate Editor renders honestly"),
         ("import_api_configured", "configured import API is enabled"),
-        ("unauth_login_cta_visible", "unauthenticated GitHub login CTA is visible"),
-        ("auth_pending_retained", "authentication failure retains pending URL"),
-        ("auth_failure_not_added", "authentication failure does not add article"),
-        ("authenticated_cta_hidden", "authenticated session clears login prompt"),
+        ("no_login_analysis_copy", "analysis explicitly works without login"),
+        ("anonymous_import_added", "anonymous analysis adds the article"),
+        ("analysis_copy_stays_no_login", "operator login is not implied for analysis"),
         ("direct_complete_card", "direct publisher URL creates complete selected card"),
         ("right_preview_populated", "right preview populates automatically"),
         ("import_success_state", "successful import reports success"),

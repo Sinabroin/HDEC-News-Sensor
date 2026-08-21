@@ -12,8 +12,11 @@ from statistics import mean
 from typing import Any, Iterable, Mapping
 from urllib.parse import urlparse, urlunparse
 
+from app import editorial_article_import
+
 PROFILE_VERSION = 2
 HUMAN_EXEMPLAR_VERSION = 1
+TEAM_EXEMPLAR_VERSION = 2
 HUMAN_EXEMPLAR_PREFIX = "exemplar-"
 HUMAN_EXEMPLAR_MAX_KEYWORDS = 12
 MAX_ABS_ADJUSTMENT = 0.85
@@ -136,11 +139,49 @@ def _exemplar_identity(
     return HUMAN_EXEMPLAR_PREFIX + hashlib.sha256(stable.encode("utf-8")).hexdigest()
 
 
+def _team_exemplar_identity(
+    *, edition_key: str, review_snapshot_id: str, evidence_url: str
+) -> str:
+    stable = "\x1f".join(
+        ("team_link", edition_key, review_snapshot_id, evidence_url)
+    )
+    return HUMAN_EXEMPLAR_PREFIX + hashlib.sha256(stable.encode("utf-8")).hexdigest()
+
+
+def _portal_analysis_url(value: object, portal_source: str) -> str:
+    raw = str(value or "").strip()
+    try:
+        parsed = urlparse(raw)
+    except ValueError:
+        return ""
+    domain = (parsed.hostname or "").casefold().rstrip(".")
+    allowed = {
+        "daum": {"v.daum.net", "news.daum.net", "media.daum.net"},
+        "naver": {"news.naver.com", "n.news.naver.com", "m.news.naver.com"},
+    }
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or domain not in allowed.get(portal_source, set())
+        or not parsed.path.strip("/")
+        or not editorial_article_import.is_allowlisted_portal_copy_url(
+            raw, portal_source
+        )
+    ):
+        return ""
+    return urlunparse(
+        (parsed.scheme.casefold(), domain, parsed.path or "/", parsed.params, parsed.query, "")
+    )
+
+
 def confirmed_human_exemplars(approved_review: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Derive unique confirmed positive exemplars from one approved review.
 
     Draft/local/abandoned items cannot enter: the record must explicitly be an
-    approved Daily review and each item must be selected ``origin=human_link``.
+    approved Daily review and each item must be selected ``origin=human_link``
+    or ``origin=team_link``. Non-authoritative portal copies retain topic signals
+    but deliberately carry no publisher URL/domain learning authority.
     The exemplar intentionally contains no body, headers, cookies, or secrets.
     """
     if (
@@ -161,23 +202,33 @@ def confirmed_human_exemplars(approved_review: Mapping[str, Any]) -> list[dict[s
         return []
     output: dict[str, dict[str, Any]] = {}
     for item in items:
-        if not isinstance(item, Mapping) or str(item.get("origin") or "") != "human_link":
+        if not isinstance(item, Mapping):
             continue
-        canonical_url = canonical_learning_url(item.get("selected_url"))
+        origin = str(item.get("origin") or "")
+        if origin not in {"human_link", "team_link"}:
+            continue
+        publisher_authoritative = (
+            origin == "human_link"
+            or bool(item.get("publisher_domain_authoritative"))
+        )
+        canonical_url = canonical_learning_url(
+            item.get("publisher_url") or item.get("selected_url")
+        ) if publisher_authoritative else ""
         domain = _domain(canonical_url)
         source = str(item.get("source") or "").strip()[:160]
         category = str(item.get("category") or "").strip()[:80]
         title = str(item.get("title") or "").strip()[:500]
-        if not canonical_url or not domain or not source or not category or not title:
+        if not source or not category or not title:
             continue
-        exemplar_id = _exemplar_identity(
-            edition_key=edition_key,
-            review_snapshot_id=snapshot_id,
-            canonical_url=canonical_url,
-        )
-        output.setdefault(
-            exemplar_id,
-            {
+        if origin == "human_link":
+            if not canonical_url or not domain:
+                continue
+            exemplar_id = _exemplar_identity(
+                edition_key=edition_key,
+                review_snapshot_id=snapshot_id,
+                canonical_url=canonical_url,
+            )
+            record = {
                 "version": HUMAN_EXEMPLAR_VERSION,
                 "exemplar_id": exemplar_id,
                 "edition_key": edition_key,
@@ -191,7 +242,52 @@ def confirmed_human_exemplars(approved_review: Mapping[str, Any]) -> list[dict[s
                 "provenance": "human_link",
                 "selected": True,
                 "approved": True,
-            },
+            }
+        else:
+            portal_source = str(item.get("portal_source") or "")[:40]
+            analysis_url = str(item.get("analysis_url") or item.get("selected_url") or "")
+            if publisher_authoritative:
+                if not canonical_url or not domain or bool(item.get("portal_copy")):
+                    continue
+                analysis_url = canonical_url
+            else:
+                analysis_url = _portal_analysis_url(analysis_url, portal_source)
+                if (
+                    not analysis_url
+                    or not bool(item.get("portal_copy"))
+                    or portal_source not in {"daum", "naver"}
+                    or str(item.get("portal_resolution_reason") or "")
+                    != "portal_copy_fallback"
+                ):
+                    continue
+                canonical_url = ""
+                domain = ""
+            exemplar_id = _team_exemplar_identity(
+                edition_key=edition_key,
+                review_snapshot_id=snapshot_id,
+                evidence_url=canonical_url or analysis_url,
+            )
+            record = {
+                "version": TEAM_EXEMPLAR_VERSION,
+                "exemplar_id": exemplar_id,
+                "edition_key": edition_key,
+                "review_snapshot_id": snapshot_id,
+                "canonical_publisher_url": canonical_url,
+                "publisher_domain": domain,
+                "analysis_url": analysis_url,
+                "publisher_domain_authoritative": publisher_authoritative,
+                "portal_source": portal_source,
+                "source": source,
+                "category": category,
+                "title": title,
+                "topic_signals": _keywords(title),
+                "provenance": "team_link",
+                "selected": True,
+                "approved": True,
+            }
+        output.setdefault(
+            exemplar_id,
+            record,
         )
     return [output[key] for key in sorted(output)]
 
@@ -215,6 +311,13 @@ def valid_human_exemplar(value: object) -> bool:
         "selected",
         "approved",
     }
+    provenance = str(value.get("provenance") or "")
+    if provenance == "team_link":
+        allowed |= {
+            "analysis_url",
+            "publisher_domain_authoritative",
+            "portal_source",
+        }
     if set(value) != allowed:
         return False
     rebuilt = confirmed_human_exemplars(
@@ -225,8 +328,24 @@ def valid_human_exemplar(value: object) -> bool:
             "review_snapshot_id": value.get("review_snapshot_id"),
             "selected_items": [
                 {
-                    "origin": "human_link",
+                    "origin": provenance,
                     "selected_url": value.get("canonical_publisher_url"),
+                    "publisher_url": value.get("canonical_publisher_url"),
+                    "analysis_url": value.get("analysis_url"),
+                    "publisher_domain_authoritative": value.get(
+                        "publisher_domain_authoritative"
+                    ),
+                    "portal_copy": (
+                        provenance == "team_link"
+                        and not bool(value.get("publisher_domain_authoritative"))
+                    ),
+                    "portal_source": value.get("portal_source"),
+                    "portal_resolution_reason": (
+                        "portal_copy_fallback"
+                        if provenance == "team_link"
+                        and not bool(value.get("publisher_domain_authoritative"))
+                        else ""
+                    ),
                     "source": value.get("source"),
                     "category": value.get("category"),
                     "title": value.get("title"),
@@ -237,11 +356,14 @@ def valid_human_exemplar(value: object) -> bool:
     return bool(
         len(rebuilt) == 1
         and dict(value) == rebuilt[0]
-        and value.get("version") == HUMAN_EXEMPLAR_VERSION
+        and value.get("version") == (
+            TEAM_EXEMPLAR_VERSION if provenance == "team_link"
+            else HUMAN_EXEMPLAR_VERSION
+        )
         and value.get("publisher_domain") == _domain(value.get("canonical_publisher_url"))
         and isinstance(value.get("topic_signals"), list)
         and len(value.get("topic_signals") or []) <= HUMAN_EXEMPLAR_MAX_KEYWORDS
-        and value.get("provenance") == "human_link"
+        and provenance in {"human_link", "team_link"}
         and value.get("selected") is True
         and value.get("approved") is True
     )
@@ -264,9 +386,12 @@ def compile_profile_from_exemplars(
         seen.add(exemplar_id)
         records.append(
             {
-                "origin": "human_link",
+                "origin": exemplar["provenance"],
                 "selected": True,
                 "selected_url": exemplar["canonical_publisher_url"],
+                "publisher_domain_authoritative": exemplar.get(
+                    "publisher_domain_authoritative", True
+                ),
                 "source": exemplar["source"],
                 "category": exemplar["category"],
                 "title": exemplar["title"],
@@ -391,7 +516,7 @@ def _record_score(record: Mapping[str, Any]) -> float | None:
         penalty = min(0.5, 0.1 * len(tags)) if isinstance(tags, list) else 0.0
         return (overall - 3) * 0.22 + (0.12 if selected else -0.04) - penalty
 
-    if origin == "human_link" and selected:
+    if origin in {"human_link", "team_link"} and selected:
         return 0.45
     return None
 
@@ -426,7 +551,7 @@ def compile_profile(
         for word in words:
             keyword_scores[word].append(score)
 
-        if record.get("origin") == "human_link" and bool(record.get("selected")):
+        if record.get("origin") in {"human_link", "team_link"} and bool(record.get("selected")):
             if domain:
                 manual_domain_counts[domain] += 1
             for word in words:
