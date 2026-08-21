@@ -181,6 +181,7 @@ state.lastImportedCandidateId=typeof state.lastImportedCandidateId==="string"?st
 // operator session. A plain preview console never enables server writes.
 let serverContext={origin:"",snapshotId:"",editionKey:"",editionId:"",authenticated:false,login:""};
 let contributorContext={authenticated:false};
+function clearOperatorAuthState(){serverContext.authenticated=false;serverContext.login="";}
 state.manualCandidates=Array.isArray(state.manualCandidates)?state.manualCandidates:[];
 state.ratings=state.ratings&&typeof state.ratings==="object"?state.ratings:{};
 state.edits=state.edits&&typeof state.edits==="object"?state.edits:{};
@@ -585,28 +586,29 @@ async function resolveImportSnapshotId(){
 }
 async function probeImportAuth(){
   const origin=operatorApiOrigin();
-  if(!origin){showImportAuth(true);return;}
+  clearOperatorAuthState();
+  if(!origin){showImportAuth(true);renderOperatorAuthCta();refreshServerButtons();return;}
   serverContext.origin=origin;
   serverContext.editionKey=bundle.edition_key;
   showImportAuth(false,serverContext.snapshotId);
+  renderOperatorAuthCta();
+  refreshServerButtons();
   const snapshotPromise=resolveImportSnapshotId();
   try{
-    const response=await fetch(origin+"/api/auth/session",{method:"GET",credentials:"include"});
+    const response=await fetch(origin+"/api/auth/session",{method:"GET",credentials:"include",cache:"no-store"});
     const data=response.ok?await response.json():null;
     const snapshotId=await snapshotPromise;
     if(data&&data.authenticated===true){
       serverContext.authenticated=true;
       serverContext.login=String(data.login||"");
       showImportAuth(true,snapshotId);
-      renderOperatorAuthCta();
-      refreshServerButtons();
     }else{
-      serverContext.authenticated=false;
+      clearOperatorAuthState();
       showImportAuth(false,snapshotId);
-      renderOperatorAuthCta();
-      refreshServerButtons();
     }
-  }catch(error){showImportAuth(false,await snapshotPromise);renderOperatorAuthCta();refreshServerButtons();}
+  }catch(error){clearOperatorAuthState();showImportAuth(false,await snapshotPromise);}
+  renderOperatorAuthCta();
+  refreshServerButtons();
 }
 function canonicalKey(value){
   const safe=safeUrl(value);
@@ -851,9 +853,10 @@ function refreshTeamUi(){
 }
 async function probeContributorSession(){
   const origin=operatorApiOrigin();
+  contributorContext.authenticated=false;
   if(!origin){setTeamState("Operator API가 구성되지 않아 팀 검토 요청을 저장할 수 없습니다.","error");refreshTeamUi();return;}
   try{
-    const response=await fetch(origin+"/api/editorial/contributor/session",{method:"GET",credentials:"include"});
+    const response=await fetch(origin+"/api/editorial/contributor/session",{method:"GET",credentials:"include",cache:"no-store"});
     const payload=response.ok?await response.json():null;
     contributorContext.authenticated=!!(payload&&payload.authenticated===true&&payload.role==="editorial_contributor");
     setTeamState(contributorContext.authenticated?"팀원 인증됨":"팀 코드는 검토 요청을 저장할 때만 필요합니다.",contributorContext.authenticated?"ok":"");
@@ -1445,6 +1448,9 @@ function updateServerReadyState(){
 }
 function probeOperatorSession(){
   const slot=document.getElementById("editorAuthState");
+  clearOperatorAuthState();
+  refreshServerButtons();
+  renderOperatorAuthCta();
   serverContext.editionKey=bundle.edition_key;
   serverContext.editionId=editionIdParam;
   if(!articleImportApiUrl){
@@ -1456,7 +1462,7 @@ function probeOperatorSession(){
   try{origin=new URL(articleImportApiUrl).origin;}catch(error){if(slot)slot.textContent="운영자 API 주소를 확인할 수 없습니다.";return;}
   serverContext.origin=origin;
   setServerState("운영자 인증 상태를 확인하는 중…","auth");
-  fetch(origin+"/api/auth/session",{method:"GET",credentials:"include"}).then(response=>response.json()).then(data=>{
+  fetch(origin+"/api/auth/session",{method:"GET",credentials:"include",cache:"no-store"}).then(response=>response.ok?response.json():null).then(data=>{
     if(data&&data.authenticated===true){
       serverContext.authenticated=true;
       serverContext.login=String(data.login||"");
@@ -1465,7 +1471,7 @@ function probeOperatorSession(){
       resolveReviewSnapshotId().then(updateServerReadyState);
       return;
     }
-    serverContext.authenticated=false;
+    clearOperatorAuthState();
     refreshServerButtons();
     renderOperatorAuthCta();
     const loginQuery=new URLSearchParams({product:"daily",edition_id:editionIdParam,edition_key:bundle.edition_key});
@@ -1476,7 +1482,7 @@ function probeOperatorSession(){
     setServerState("운영자 로그인 필요 · 로그인하면 이 에디션을 서버에 임시 저장/게시할 수 있습니다.","auth");
     showImportAuth(false,serverContext.snapshotId);
   }).catch(()=>{
-    serverContext.authenticated=false;
+    clearOperatorAuthState();
     refreshServerButtons();
     renderOperatorAuthCta();
     if(slot)slot.textContent="운영자 인증 상태를 확인할 수 없습니다 (읽기 전용으로 계속 볼 수 있습니다).";
