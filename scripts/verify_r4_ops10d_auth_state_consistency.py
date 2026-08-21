@@ -547,25 +547,25 @@ window.fetch=async function(url,options={{}}){{
   window.__ops10d.operator="false";
   await probeImportAuth();
   const opFalse=operatorState();
-  result.operator_true_to_false=!opFalse.authenticated&&opFalse.login===""&&!opFalse.text.includes("GitHub 운영자 인증됨")&&opFalse.text.includes("GitHub로 운영자 로그인")&&opFalse.saveDisabled&&opFalse.publishDisabled&&opFalse.pendingDisabled;
+  result.operator_true_to_false=!opFalse.authenticated&&opFalse.login===""&&!opFalse.text.includes("운영자 인증됨")&&opFalse.text.includes("운영자 로그인")&&!opFalse.text.includes("GitHub")&&opFalse.saveDisabled&&opFalse.publishDisabled&&opFalse.pendingDisabled;
 
   prepareOperator(true,"{LOGIN}");
   window.__ops10d.operator="failure";
   await probeImportAuth();
   const opFailure=operatorState();
-  result.operator_failure_clears=!opFailure.authenticated&&opFailure.login===""&&!opFailure.text.includes("GitHub 운영자 인증됨")&&opFailure.text.includes("GitHub로 운영자 로그인")&&opFailure.saveDisabled&&opFailure.publishDisabled&&opFailure.pendingDisabled;
+  result.operator_failure_clears=!opFailure.authenticated&&opFailure.login===""&&!opFailure.text.includes("운영자 인증됨")&&opFailure.text.includes("운영자 로그인")&&!opFailure.text.includes("GitHub")&&opFailure.saveDisabled&&opFailure.publishDisabled&&opFailure.pendingDisabled;
 
   prepareOperator(false,"");
   window.__ops10d.operator="false";
   await probeImportAuth();
   const opStillFalse=operatorState();
-  result.operator_false_stays_false=!opStillFalse.authenticated&&opStillFalse.login===""&&!opStillFalse.text.includes("GitHub 운영자 인증됨");
+  result.operator_false_stays_false=!opStillFalse.authenticated&&opStillFalse.login===""&&!opStillFalse.text.includes("운영자 인증됨");
 
   prepareOperator(false,"");
   window.__ops10d.operator="true";
   await probeImportAuth();
   const opTrue=operatorState();
-  result.operator_true_works=opTrue.authenticated&&opTrue.login==="{LOGIN}"&&opTrue.text.includes("GitHub 운영자 인증됨: {LOGIN}");
+  result.operator_true_works=opTrue.authenticated&&opTrue.login==="{LOGIN}"&&opTrue.text.includes("운영자 인증됨: {LOGIN}")&&!opTrue.text.includes("GitHub");
 
   contributorContext.authenticated=true;
   refreshTeamUi();
