@@ -2840,6 +2840,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "기후환노위3대메가프로젝트현안질의전력용수공급실효성도마"
     },
+    "https://electimes.com/news/articleView.html?idxno=371510": {
+      "article_id": "d03f9e415a889615",
+      "cluster_key": "title:ai데이터센터전력병목뚫는다슈나이더일렉고압배전솔루션국내",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-21T14:48:54+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-21T14:48:54+09:00",
+      "normalized_url": "https://electimes.com/news/articleView.html?idxno=371510",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "전기신문",
+      "source_tier": "specialist",
+      "title_fingerprint": "ai데이터센터전력병목뚫는다슈나이더일렉고압배전솔루션국내"
+    },
     "https://epnc.co.kr/news/articleView.html?idxno=405700": {
       "article_id": "6ad54b2053a5e357",
       "cluster_key": "title:ai수요에투자주기빨라졌다알리바바클라우드인프라에이전트",
