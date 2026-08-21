@@ -110,6 +110,16 @@
       "sent_at": "2026-08-08T06:12:18+09:00",
       "source": "KyungHyangSinmun"
     },
+    "19791e01f11943ac": {
+      "cluster_key": "title:100조원미래대응기금출범단기소진끊고ai인재지방투자",
+      "delivery_id": "teams_ai_push:6aaa2c03c9ce",
+      "first_sent_at": "2026-08-21T11:40:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
+      "sent_at": "2026-08-21T11:40:34+09:00",
+      "source": "아시아경제"
+    },
     "1ca79f32b813120e": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -1331,6 +1341,16 @@
       "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
       "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
+    },
+    "title:100조원미래대응기금출범단기소진끊고ai인재지방투자": {
+      "cluster_key": "title:100조원미래대응기금출범단기소진끊고ai인재지방투자",
+      "delivery_id": "teams_ai_push:6aaa2c03c9ce",
+      "first_sent_at": "2026-08-21T11:40:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
+      "sent_at": "2026-08-21T11:40:34+09:00",
+      "source": "아시아경제"
     },
     "title:1ai가판키운전력인프라건설eng선점경쟁후": {
       "cluster_key": "title:1ai가판키운전력인프라건설eng선점경쟁후",
@@ -3703,8 +3723,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-21T04:39:21+09:00",
-  "last_successful_send_at": "2026-08-21T04:39:21+09:00",
+  "last_normal_send_at": "2026-08-21T11:40:34+09:00",
+  "last_successful_send_at": "2026-08-21T11:40:34+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -3804,6 +3824,16 @@
       "last_material_update_at": null,
       "material_signature": "1e43c6a11ae9bbcfc40518f658a221d9a3867097047f3ed7c171f1750e1a4271",
       "sent_at": "2026-08-18T01:05:40+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026082109331740073": {
+      "cluster_key": "title:100조원미래대응기금출범단기소진끊고ai인재지방투자",
+      "delivery_id": "teams_ai_push:6aaa2c03c9ce",
+      "first_sent_at": "2026-08-21T11:40:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
+      "sent_at": "2026-08-21T11:40:34+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -5018,6 +5048,16 @@
     }
   },
   "title_fingerprints": {
+    "100조원미래대응기금출범단기소진끊고ai인재지방투자": {
+      "cluster_key": "title:100조원미래대응기금출범단기소진끊고ai인재지방투자",
+      "delivery_id": "teams_ai_push:6aaa2c03c9ce",
+      "first_sent_at": "2026-08-21T11:40:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
+      "sent_at": "2026-08-21T11:40:34+09:00",
+      "source": "아시아경제"
+    },
     "1ai가판키운전력인프라건설eng선점경쟁후": {
       "cluster_key": "title:1ai가판키운전력인프라건설eng선점경쟁후",
       "delivery_id": "teams_ai_push:5d405e65818d",
