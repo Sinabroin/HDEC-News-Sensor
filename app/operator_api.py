@@ -47,11 +47,31 @@ _IMPORT_REQUEST_MAX_BYTES = 4_096
 _EDITORIAL_REVIEW_MAX_BYTES = 64 * 1024
 _CONTRIBUTOR_LOGIN_MAX_BYTES = 1_024
 _TEAM_SUBMISSION_MAX_BYTES = 8_192
+_AUTH_SESSION_CACHE_HEADERS = {
+    "Cache-Control": "private, no-store, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
 
 
 def _operator_response(result: dict) -> JSONResponse:
     status = result.get("status", "error")
     return JSONResponse(status_code=_OPERATOR_HTTP.get(status, 502), content=result)
+
+
+def _auth_session_response(content: dict, *, status_code: int = 200) -> JSONResponse:
+    """Return authentication state without allowing browser/proxy reuse."""
+    return JSONResponse(
+        status_code=status_code,
+        content=content,
+        headers=_AUTH_SESSION_CACHE_HEADERS,
+    )
+
+
+def _disable_auth_session_caching(response: JSONResponse) -> JSONResponse:
+    """Apply the session cache contract to an existing blocked response."""
+    response.headers.update(_AUTH_SESSION_CACHE_HEADERS)
+    return response
 
 
 def _article_import_error(
@@ -192,8 +212,10 @@ def auth_session(request: Request):
         request.headers.get("cookie", "")
     )
     if not session:
-        return {"authenticated": False}
-    return {"authenticated": True, "login": session["login"]}
+        return _auth_session_response({"authenticated": False})
+    return _auth_session_response(
+        {"authenticated": True, "login": session["login"]}
+    )
 
 
 @router.post("/api/auth/logout")
@@ -277,12 +299,14 @@ async def contributor_login(request: Request):
 def contributor_session(request: Request):
     blocked = _authorize_contributor_origin(request, "contributor_auth")
     if blocked is not None:
-        return blocked
+        return _disable_auth_session_caching(blocked)
     session = editorial_contributor_auth.session_from_headers(request.headers)
-    return {
-        "authenticated": bool(session),
-        "role": "editorial_contributor" if session else "",
-    }
+    return _auth_session_response(
+        {
+            "authenticated": bool(session),
+            "role": "editorial_contributor" if session else "",
+        }
+    )
 
 
 @router.post("/api/editorial/contributor/logout")
