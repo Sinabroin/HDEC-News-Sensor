@@ -340,6 +340,16 @@
       "sent_at": "2026-08-16T18:48:22+09:00",
       "source": "파이낸셜뉴스"
     },
+    "52f588f2295a283a": {
+      "cluster_key": "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자",
+      "delivery_id": "teams_ai_push:c131efde5e9c",
+      "first_sent_at": "2026-08-22T16:07:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9ba62ffae1c708d3671e16fd6d2ef98888661489b21409253dc523671a713a96",
+      "sent_at": "2026-08-22T16:07:34+09:00",
+      "source": "세계일보"
+    },
     "57863506a87ea169": {
       "cluster_key": "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광",
       "delivery_id": "teams_ai_push:a73454feddc3",
@@ -1751,6 +1761,16 @@
       "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
       "sent_at": "2026-08-06T00:40:01+09:00",
       "source": "경북일보"
+    },
+    "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자": {
+      "cluster_key": "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자",
+      "delivery_id": "teams_ai_push:c131efde5e9c",
+      "first_sent_at": "2026-08-22T16:07:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9ba62ffae1c708d3671e16fd6d2ef98888661489b21409253dc523671a713a96",
+      "sent_at": "2026-08-22T16:07:34+09:00",
+      "source": "세계일보"
     },
     "title:구광모내주실리콘밸리행젠슨황만나피지컬ai협력": {
       "cluster_key": "title:구광모내주실리콘밸리행젠슨황만나피지컬ai협력",
@@ -3777,8 +3797,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-22T13:07:47+09:00",
-  "last_successful_send_at": "2026-08-22T13:07:47+09:00",
+  "last_normal_send_at": "2026-08-22T16:07:34+09:00",
+  "last_successful_send_at": "2026-08-22T16:07:34+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4498,6 +4518,16 @@
       "last_material_update_at": null,
       "material_signature": "e2b5ed9072fe8f2525ce6fc7fac861e51367b0ee4352c3ebb1799556c37bc142",
       "sent_at": "2026-08-14T05:11:53+09:00",
+      "source": "세계일보"
+    },
+    "https://segye.com/newsView/20260821508096": {
+      "cluster_key": "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자",
+      "delivery_id": "teams_ai_push:c131efde5e9c",
+      "first_sent_at": "2026-08-22T16:07:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9ba62ffae1c708d3671e16fd6d2ef98888661489b21409253dc523671a713a96",
+      "sent_at": "2026-08-22T16:07:34+09:00",
       "source": "세계일보"
     },
     "https://slownews.kr/163961": {
@@ -5511,6 +5541,16 @@
       "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
       "sent_at": "2026-08-06T00:40:01+09:00",
       "source": "경북일보"
+    },
+    "광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자": {
+      "cluster_key": "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자",
+      "delivery_id": "teams_ai_push:c131efde5e9c",
+      "first_sent_at": "2026-08-22T16:07:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9ba62ffae1c708d3671e16fd6d2ef98888661489b21409253dc523671a713a96",
+      "sent_at": "2026-08-22T16:07:34+09:00",
+      "source": "세계일보"
     },
     "구광모내주실리콘밸리행젠슨황만나피지컬ai협력": {
       "cluster_key": "title:구광모내주실리콘밸리행젠슨황만나피지컬ai협력",
