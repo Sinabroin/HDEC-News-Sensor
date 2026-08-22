@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-08-23",
+  "coverage_start": "2026-08-22T07:00:00+09:00",
+  "coverage_end": "2026-08-23T06:40:00+09:00",
+  "published_run_at": "2026-08-23T08:01:55+09:00",
+  "review_mode": "empty_edition",
+  "review_decision": "absent",
+  "edition_status": "empty",
+  "article_count": 0,
+  "headline_title": "",
+  "editor_summary": "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.",
+  "articles": [],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-08-23.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "29f719c34dbb569c1c4ce79b70881b07d5cd249902036395111f82c858ea79ab",
+    "publication_state": "published"
+  },
+  "revision": "b5677ea0b729f677",
+  "edition_id": "daily-2026-08-23-b5677ea0b729f677",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "b5677ea0b729f677e4c5604b96c2faed535637f3f06378f15410006d7a16c180"
+  }
+}
