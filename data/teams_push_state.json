@@ -500,6 +500,16 @@
       "sent_at": "2026-08-14T17:51:55+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "8225562baf288e13": {
+      "cluster_key": "title:투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성",
+      "delivery_id": "teams_ai_push:02661b17278a",
+      "first_sent_at": "2026-08-22T13:07:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "11881848ad0540c2211c51cfeda1080f987427f94f2cb984ae5167ff5033dc52",
+      "sent_at": "2026-08-22T13:07:47+09:00",
+      "source": "뉴시스"
+    },
     "828ad7a7f269a1d2": {
       "cluster_key": "title:초과세수쌓아ai청년에투자한다미래대응기금이렇게걷어",
       "delivery_id": "teams_ai_push:c3296cb6eafe",
@@ -2552,6 +2562,16 @@
       "sent_at": "2026-08-16T13:22:49+09:00",
       "source": "뉴시스"
     },
+    "title:투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성": {
+      "cluster_key": "title:투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성",
+      "delivery_id": "teams_ai_push:02661b17278a",
+      "first_sent_at": "2026-08-22T13:07:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "11881848ad0540c2211c51cfeda1080f987427f94f2cb984ae5167ff5033dc52",
+      "sent_at": "2026-08-22T13:07:47+09:00",
+      "source": "뉴시스"
+    },
     "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것": {
       "cluster_key": "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것",
       "delivery_id": "teams_ai_push:d64cd9196c53",
@@ -3757,8 +3777,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-21T16:26:15+09:00",
-  "last_successful_send_at": "2026-08-21T16:26:15+09:00",
+  "last_normal_send_at": "2026-08-22T13:07:47+09:00",
+  "last_successful_send_at": "2026-08-22T13:07:47+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4378,6 +4398,16 @@
       "last_material_update_at": null,
       "material_signature": "3eb0a533f464c90e23fa5578848c2aaa812af884f5b308c3484223a71b025c7d",
       "sent_at": "2026-08-17T13:25:59+09:00",
+      "source": "뉴시스"
+    },
+    "https://newsis.com/view/NISX20260820_0003756402": {
+      "cluster_key": "title:투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성",
+      "delivery_id": "teams_ai_push:02661b17278a",
+      "first_sent_at": "2026-08-22T13:07:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "11881848ad0540c2211c51cfeda1080f987427f94f2cb984ae5167ff5033dc52",
+      "sent_at": "2026-08-22T13:07:47+09:00",
       "source": "뉴시스"
     },
     "https://sedaily.com/article/20079249": {
@@ -6300,6 +6330,16 @@
       "last_material_update_at": null,
       "material_signature": "c64b8599ff144a00463f0e5f63ce760a9baa6f2bf080a2e234c8c786e8880232",
       "sent_at": "2026-08-16T13:22:49+09:00",
+      "source": "뉴시스"
+    },
+    "투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성": {
+      "cluster_key": "title:투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성",
+      "delivery_id": "teams_ai_push:02661b17278a",
+      "first_sent_at": "2026-08-22T13:07:47+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "11881848ad0540c2211c51cfeda1080f987427f94f2cb984ae5167ff5033dc52",
+      "sent_at": "2026-08-22T13:07:47+09:00",
       "source": "뉴시스"
     },
     "트럼프중국의ai암호화폐장악안돼시진핑과논의할것": {
