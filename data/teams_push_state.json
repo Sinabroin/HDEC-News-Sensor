@@ -740,6 +740,16 @@
       "sent_at": "2026-08-06T22:25:27+09:00",
       "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
     },
+    "bb346e48ccff37ac": {
+      "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
+      "delivery_id": "teams_ai_push:10582e020919",
+      "first_sent_at": "2026-08-23T13:01:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6f68c7fcbcffbb47692f7ce2ad3e357bb062ec594806ce9bf8d28038d3285d4e",
+      "sent_at": "2026-08-23T13:01:35+09:00",
+      "source": "서울경제"
+    },
     "bc472dfd8ae89dd9": {
       "cluster_key": "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대",
       "delivery_id": "teams_ai_push:9a63f7d7c037",
@@ -1631,6 +1641,16 @@
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
       "source": "한겨레"
+    },
+    "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관": {
+      "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
+      "delivery_id": "teams_ai_push:10582e020919",
+      "first_sent_at": "2026-08-23T13:01:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6f68c7fcbcffbb47692f7ce2ad3e357bb062ec594806ce9bf8d28038d3285d4e",
+      "sent_at": "2026-08-23T13:01:35+09:00",
+      "source": "서울경제"
     },
     "title:gpu보다메모리삼성skai칩병목해법제시한다": {
       "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
@@ -3797,8 +3817,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-22T16:07:34+09:00",
-  "last_successful_send_at": "2026-08-22T16:07:34+09:00",
+  "last_normal_send_at": "2026-08-23T13:01:35+09:00",
+  "last_successful_send_at": "2026-08-23T13:01:35+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4498,6 +4518,16 @@
       "last_material_update_at": null,
       "material_signature": "0a44317d08f3fa112590605fa5e4ef7d8224f8bc911a50a1f50e8816a262e80e",
       "sent_at": "2026-08-17T17:56:03+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20082199": {
+      "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
+      "delivery_id": "teams_ai_push:10582e020919",
+      "first_sent_at": "2026-08-23T13:01:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6f68c7fcbcffbb47692f7ce2ad3e357bb062ec594806ce9bf8d28038d3285d4e",
+      "sent_at": "2026-08-23T13:01:35+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -5411,6 +5441,16 @@
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
       "source": "한겨레"
+    },
+    "edcf1호ai프로젝트나왔다아프리카에17억달러차관": {
+      "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
+      "delivery_id": "teams_ai_push:10582e020919",
+      "first_sent_at": "2026-08-23T13:01:35+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6f68c7fcbcffbb47692f7ce2ad3e357bb062ec594806ce9bf8d28038d3285d4e",
+      "sent_at": "2026-08-23T13:01:35+09:00",
+      "source": "서울경제"
     },
     "gpu보다메모리삼성skai칩병목해법제시한다": {
       "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
