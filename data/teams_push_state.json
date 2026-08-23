@@ -20,6 +20,16 @@
       "sent_at": "2026-08-13T18:12:43+09:00",
       "source": "매일경제"
     },
+    "0ae6470d006f3170": {
+      "cluster_key": "title:시공10년내공쌓은gs건설ai데이터센터영토넓힌다",
+      "delivery_id": "teams_ai_push:e989dfc36a9e",
+      "first_sent_at": "2026-08-24T07:59:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6a7edfa456e3f4c79b75f52ef263c0b538082326d6241a7de458514ef27a8847",
+      "sent_at": "2026-08-24T07:59:20+09:00",
+      "source": "한국일보"
+    },
     "0b23a184e967af18": {
       "cluster_key": "title:배재규방향과시간에투자한투운용전략산업etf출시",
       "delivery_id": "teams_ai_push:ec619304f7a9",
@@ -2272,6 +2282,16 @@
       "sent_at": "2026-08-15T03:32:29+09:00",
       "source": "연합뉴스"
     },
+    "title:시공10년내공쌓은gs건설ai데이터센터영토넓힌다": {
+      "cluster_key": "title:시공10년내공쌓은gs건설ai데이터센터영토넓힌다",
+      "delivery_id": "teams_ai_push:e989dfc36a9e",
+      "first_sent_at": "2026-08-24T07:59:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6a7edfa456e3f4c79b75f52ef263c0b538082326d6241a7de458514ef27a8847",
+      "sent_at": "2026-08-24T07:59:20+09:00",
+      "source": "한국일보"
+    },
     "title:양다리안돼한국등동맹에ai기구가입금지최후통첩": {
       "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
       "delivery_id": "teams_ai_push:ece8b1665f2f",
@@ -3837,8 +3857,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-23T19:26:16+09:00",
-  "last_successful_send_at": "2026-08-23T19:26:16+09:00",
+  "last_normal_send_at": "2026-08-24T07:59:20+09:00",
+  "last_successful_send_at": "2026-08-24T07:59:20+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4188,6 +4208,16 @@
       "last_material_update_at": null,
       "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
       "sent_at": "2026-08-16T17:05:35+09:00",
+      "source": "한국일보"
+    },
+    "https://hankookilbo.com/news/article/A2026081914130005460": {
+      "cluster_key": "title:시공10년내공쌓은gs건설ai데이터센터영토넓힌다",
+      "delivery_id": "teams_ai_push:e989dfc36a9e",
+      "first_sent_at": "2026-08-24T07:59:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6a7edfa456e3f4c79b75f52ef263c0b538082326d6241a7de458514ef27a8847",
+      "sent_at": "2026-08-24T07:59:20+09:00",
       "source": "한국일보"
     },
     "https://hankookilbo.com/news/article/A2026082011270001872": {
@@ -6101,6 +6131,16 @@
       "material_signature": "25446b6e963644d433f37bf9eec97143d6d820404765029e0b21fd05780268ba",
       "sent_at": "2026-08-15T03:32:29+09:00",
       "source": "연합뉴스"
+    },
+    "시공10년내공쌓은gs건설ai데이터센터영토넓힌다": {
+      "cluster_key": "title:시공10년내공쌓은gs건설ai데이터센터영토넓힌다",
+      "delivery_id": "teams_ai_push:e989dfc36a9e",
+      "first_sent_at": "2026-08-24T07:59:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6a7edfa456e3f4c79b75f52ef263c0b538082326d6241a7de458514ef27a8847",
+      "sent_at": "2026-08-24T07:59:20+09:00",
+      "source": "한국일보"
     },
     "양다리안돼한국등동맹에ai기구가입금지최후통첩": {
       "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
