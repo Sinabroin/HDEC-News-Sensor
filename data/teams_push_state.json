@@ -510,6 +510,16 @@
       "sent_at": "2026-08-14T17:51:55+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "80a56d3dc192b53c": {
+      "cluster_key": "title:150조미래대응기금청년ai등투자양극화해소는빠졌다",
+      "delivery_id": "teams_ai_push:aef3ed5efa07",
+      "first_sent_at": "2026-08-23T19:26:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffead06234297c0a1c43c183feb9f6250fd1ed165b59282aa655bde576d33f66",
+      "sent_at": "2026-08-23T19:26:16+09:00",
+      "source": "한겨레"
+    },
     "8225562baf288e13": {
       "cluster_key": "title:투자자넘어사업자로sk그룹ai풀스택전력동맹가속ksmr전성",
       "delivery_id": "teams_ai_push:02661b17278a",
@@ -1391,6 +1401,16 @@
       "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
       "sent_at": "2026-08-21T11:40:34+09:00",
       "source": "아시아경제"
+    },
+    "title:150조미래대응기금청년ai등투자양극화해소는빠졌다": {
+      "cluster_key": "title:150조미래대응기금청년ai등투자양극화해소는빠졌다",
+      "delivery_id": "teams_ai_push:aef3ed5efa07",
+      "first_sent_at": "2026-08-23T19:26:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffead06234297c0a1c43c183feb9f6250fd1ed165b59282aa655bde576d33f66",
+      "sent_at": "2026-08-23T19:26:16+09:00",
+      "source": "한겨레"
     },
     "title:1ai가판키운전력인프라건설eng선점경쟁후": {
       "cluster_key": "title:1ai가판키운전력인프라건설eng선점경쟁후",
@@ -3817,8 +3837,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-23T13:01:35+09:00",
-  "last_successful_send_at": "2026-08-23T13:01:35+09:00",
+  "last_normal_send_at": "2026-08-23T19:26:16+09:00",
+  "last_successful_send_at": "2026-08-23T19:26:16+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4129,6 +4149,16 @@
       "material_signature": "efa886481e2754f377b0b99fb5ceb33da0607caa5ba8f33f531105c7af42de73",
       "sent_at": "2026-08-20T04:35:37+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "https://hani.co.kr/arti/economy/economy_general/1274227.html": {
+      "cluster_key": "title:150조미래대응기금청년ai등투자양극화해소는빠졌다",
+      "delivery_id": "teams_ai_push:aef3ed5efa07",
+      "first_sent_at": "2026-08-23T19:26:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffead06234297c0a1c43c183feb9f6250fd1ed165b59282aa655bde576d33f66",
+      "sent_at": "2026-08-23T19:26:16+09:00",
+      "source": "한겨레"
     },
     "https://hani.co.kr/arti/economy/it/1273187.html": {
       "cluster_key": "title:ai패권다투는중국도녹색기준한국은데이터센터속도전만",
@@ -5191,6 +5221,16 @@
       "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
       "sent_at": "2026-08-21T11:40:34+09:00",
       "source": "아시아경제"
+    },
+    "150조미래대응기금청년ai등투자양극화해소는빠졌다": {
+      "cluster_key": "title:150조미래대응기금청년ai등투자양극화해소는빠졌다",
+      "delivery_id": "teams_ai_push:aef3ed5efa07",
+      "first_sent_at": "2026-08-23T19:26:16+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "ffead06234297c0a1c43c183feb9f6250fd1ed165b59282aa655bde576d33f66",
+      "sent_at": "2026-08-23T19:26:16+09:00",
+      "source": "한겨레"
     },
     "1ai가판키운전력인프라건설eng선점경쟁후": {
       "cluster_key": "title:1ai가판키운전력인프라건설eng선점경쟁후",
