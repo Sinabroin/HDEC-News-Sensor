@@ -1236,6 +1236,10 @@ def main() -> int:
                     "title": "사용자가 고친 AI 데이터센터 제목",
                     "summary_html": "<strong>볼드 핵심</strong> 설명",
                     "implication_html": "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요",
+                    "executive_context_edits": {
+                        "fact_points": ["볼드 핵심 설명", "추가 확인이 필요한 사실"],
+                        "hdec_implication_text": "현대건설 수주 경쟁 관점에서 점검 필요",
+                    },
                     "category": "투자·산업",
                 },
                 {
@@ -1304,10 +1308,16 @@ def main() -> int:
             run_at=run_at,
             root_url="https://preview.fixture.test/HDEC-News-Sensor",
         )
-        v.check("rendered HTML contains bold", "<strong>볼드 핵심</strong>" in edition.html)
         v.check(
-            "rendered HTML carries the editor implication (R4-R6 §12)",
-            "현대건설 <strong>수주 경쟁</strong> 관점에서 점검 필요" in edition.html,
+            "rendered HTML contains bounded fact points instead of raw summary",
+            'data-role="fact-points"' in edition.html
+            and "볼드 핵심 설명" in edition.html
+            and "<strong>볼드 핵심</strong>" not in edition.html,
+        )
+        v.check(
+            "unsupported editor implication cannot manufacture analysis authority",
+            "현대건설 수주 경쟁 관점에서 점검 필요" not in edition.html
+            and 'data-content-kind="analysis"' not in edition.html,
         )
         v.check("rendered HTML contains manual link", "manual-ai-investment" in edition.html)
         v.check(

@@ -35,7 +35,7 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import (collector, daily_publication, editorial_briefing_state, editorial_briefings, editorial_radar, editorial_review, news_access, news_censor_verified_state, publisher_direct, teams_push_state)  # noqa: E402
+from app import (collector, daily_publication, editorial_briefing_state, editorial_briefings, editorial_radar, editorial_review, editorial_transparency, news_access, news_censor_verified_state, publisher_direct, teams_push_state)  # noqa: E402
 from app import public_urls as public_url_contract  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
@@ -1352,6 +1352,12 @@ def run_publish(
             articles,
             run_at=run_at,
             root_url=root_url,
+            transparency_audit=editorial_transparency.build_rolling_transparency(
+                raw_articles,
+                window_start=editorial_briefings.weekly_coverage(run_at).start,
+                window_end=editorial_briefings.weekly_coverage(run_at).end,
+                selected_count=len(articles),
+            ),
         )
         edition = replace(edition, image_audit=image_audit)
     print(f"editorial_review_mode={review_mode}")

@@ -97,10 +97,10 @@ EXPECTED_PROTECTED_SHA256 = {
         # dual-writer race (scheduled-live-refresh.yml stays the sole News Censor writer).
         "b9a26ae0ce41707591ff3f4ea0ab11cdc6515ff7a165be16c1646b517fa5973f"
     ),
-    # R4-OPS-10F — same Daily/Weekly headline design family plus the compact
-    # public collection-radar transparency section.
+    # R4-OPS-10G — same Daily/Weekly headline design family; collection
+    # diagnostics remain Editor-only and are absent from public Daily HTML.
     "templates/editorial_daily.html": (
-        "6503f871079946c864195976a7ff3b6ee4da1939eb4c3dff80532a744c868e29"
+        "3d900eee0237568f7c6b9c5d8fd1049d42d21abf366135dbbb7fcd495efacb63"
     ),
 }
 
