@@ -23,7 +23,7 @@ for path in (ROOT, SCRIPTS):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from app import (collector, editorial_briefings, editorial_feedback, editorial_review, live_collector)  # noqa: E402
+from app import (collector, editorial_briefings, editorial_feedback, editorial_radar, editorial_review, live_collector)  # noqa: E402
 from app.editorial_briefings import KST  # noqa: E402
 from run_editorial_briefing import collect_live_article_bundle  # noqa: E402
 
@@ -243,6 +243,10 @@ def write_immutable_review_snapshot(
         "duplicate_skipped": False,
         "failed": False,
     }
+    radar_path = edition_dir / "radar-audit.json"
+    radar_payload = radar_path.read_bytes() if radar_path.is_file() else b""
+    if radar_payload:
+        core["radar_audit_sha256"] = hashlib.sha256(radar_payload).hexdigest()
     digest = hashlib.sha256(
         json.dumps(
             core,
@@ -258,6 +262,8 @@ def write_immutable_review_snapshot(
         snapshot_dir / "candidates.json": candidate_payload,
         snapshot_dir / "index.html": console_payload,
     }
+    if radar_payload:
+        files[snapshot_dir / "radar-audit.json"] = radar_payload
     for record in asset_records:
         source = edition_dir / record["relative_path"]
         files[snapshot_dir / record["relative_path"]] = source.read_bytes()
@@ -456,6 +462,7 @@ def main() -> int:
         collection_audit["feedback_articles_collected"] = len(feedback_rows)
 
     selection_counters = editorial_briefings.SelectionAuditCounters()
+    radar_trace: list[dict] = []
     articles = editorial_briefings.normalize_articles(
         raw_articles,
         coverage,
@@ -466,6 +473,7 @@ def main() -> int:
         selection_audit=selection_counters,
         edition_type="daily",
         operator_review=True,
+        radar_trace=radar_trace,
     )
     if args.calibration_diagnostics:
         write_calibration_diagnostic(
@@ -558,6 +566,35 @@ def main() -> int:
         if recommended:
             recommendation_count += 1
 
+    recommended_keys = {
+        (
+            str(item.get("selected_url") or "").strip(),
+            str(item.get("title") or "").strip(),
+            str(item.get("source") or "").strip(),
+        )
+        for item in candidates
+        if item.get("ai_recommended") is True
+    }
+    for row in radar_trace:
+        identity = (
+            str(row.get("url") or "").strip(),
+            str(row.get("title") or "").strip(),
+            str(row.get("source") or "").strip(),
+        )
+        if identity in recommended_keys:
+            editorial_radar.set_stage(
+                row,
+                editorial_radar.STAGE_SELECTED,
+                qualification_reason="ai_recommended_for_editor_selection",
+            )
+
+    radar_audit = editorial_radar.build_audit(
+        radar_trace,
+        collection_audit=collection_audit,
+        selection_audit=selection_counters.manifest_fields(),
+        selected_count=recommendation_count,
+    )
+
     output_root = args.output_root.resolve()
     edition_dir = output_root / edition_key
     latest_dir = output_root / "latest"
@@ -580,8 +617,13 @@ def main() -> int:
     bundle["article_import_api_url"] = article_import_api_url
     bundle["article_import_enabled"] = bool(article_import_api_url)
     bundle["selection_audit"] = selection_counters.manifest_fields()
+    bundle["radar_audit"] = radar_audit
     (edition_dir / "candidates.json").write_text(
         json.dumps(bundle, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (edition_dir / "radar-audit.json").write_text(
+        json.dumps(radar_audit, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -591,6 +633,7 @@ def main() -> int:
 
     latest_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(edition_dir / "candidates.json", latest_dir / "candidates.json")
+    shutil.copyfile(edition_dir / "radar-audit.json", latest_dir / "radar-audit.json")
     shutil.copyfile(edition_dir / "index.html", latest_dir / "index.html")
     copy_preview_assets(image_stage, latest_dir)
 
@@ -605,6 +648,10 @@ def main() -> int:
         "edition_key": edition_key,
         "category_order": list(editorial_review.CATEGORY_ORDER),
         "candidate_count": len(candidates),
+        "radar_audit": radar_audit["funnel"],
+        "radar_rows_emitted": radar_audit["rows_emitted"],
+        "radar_rows_truncated": radar_audit["rows_truncated"],
+        "radar_dom_page_size": radar_audit["dom_page_size"],
         "main_candidate_lane_count": selection_counters.main_candidate_lane_count,
         "public_institution_lane_count": (
             selection_counters.public_institution_lane_count

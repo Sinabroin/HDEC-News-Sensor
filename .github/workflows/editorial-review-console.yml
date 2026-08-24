@@ -110,6 +110,7 @@ jobs:
           path: |
             ${{ steps.mode.outputs.output_root }}/calibration-diagnostic.json
             ${{ steps.mode.outputs.output_root }}/*/candidates.json
+            ${{ steps.mode.outputs.output_root }}/*/radar-audit.json
             ${{ steps.mode.outputs.output_root }}/*/manifest.json
             ${{ steps.mode.outputs.output_root }}/*/index.html
       - name: Publish candidate console only

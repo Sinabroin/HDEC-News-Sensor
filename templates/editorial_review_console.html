@@ -18,6 +18,7 @@ button,input,select,textarea{font:inherit}
 .toolbar input,.toolbar select,.manual-grid input,.manual-grid select,.manual-grid textarea,.import-row input{border:1px solid var(--line);border-radius:10px;padding:9px;background:#fff;width:100%}
 .status{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:12px;color:var(--muted)}
+.radar-panel{margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.radar-panel-head{padding:13px 14px 10px}.radar-panel-head h2{margin:0;color:var(--navy);font-size:14px}.radar-panel-head p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.5}.radar-funnel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.radar-metric{min-width:0;background:#f8fafc;padding:10px 8px;text-align:center}.radar-metric b{display:block;color:var(--navy);font-size:18px}.radar-metric span{display:block;color:var(--muted);font-size:10px;white-space:nowrap}.radar-providers{padding:7px 12px;color:var(--muted);font-size:10px}.radar-controls{display:grid;grid-template-columns:1fr 110px;gap:7px;padding:0 12px 9px}.radar-controls input,.radar-controls select{min-width:0;border:1px solid var(--line);border-radius:9px;padding:7px;background:#fff;font-size:11px}.radar-list{border-top:1px solid var(--line)}.radar-row{padding:10px 12px;border-bottom:1px solid #eef0f4}.radar-row:last-child{border-bottom:0}.radar-row-title{color:var(--ink);font-size:12px;font-weight:800;line-height:1.4;text-decoration:none}.radar-row-title:hover{color:var(--blue);text-decoration:underline}.radar-row-meta,.radar-row-reason,.radar-row-dimensions{margin-top:4px;color:var(--muted);font-size:10px;line-height:1.45}.radar-row-reason{color:#4b5563}.radar-stage{display:inline-block;margin-right:5px;padding:2px 6px;border-radius:999px;background:#eaf1f8;color:var(--navy);font-weight:900}.radar-promote{margin-top:6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--navy);padding:4px 7px;font-size:10px;font-weight:900;cursor:pointer}.radar-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}.radar-pagination button{border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--navy);padding:4px 7px;font-weight:900;cursor:pointer}.radar-pagination button:disabled{opacity:.4;cursor:not-allowed}
 .lane-tabs{display:flex;gap:6px;margin:8px 0 10px;flex-wrap:wrap}.lane-tab{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:900;cursor:pointer}.lane-tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
 .import-panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}
 .import-label{display:block;font-size:13px;font-weight:900;color:var(--navy);margin-bottom:8px}
@@ -70,6 +71,7 @@ button,input,select,textarea{font:inherit}
 .publication-section{margin-top:36px}.publication-label{display:inline-block;margin:0 0 16px;padding:5px 17px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-size:14px;font-weight:900}
 .headline-hero{position:relative;min-height:250px;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,var(--navy),var(--blue));color:#fff;padding:34px 30px 30px;cursor:grab}.headline-hero.dragging{opacity:.38}.headline-hero .headline-image{position:absolute;inset:0;min-height:0;height:100%;z-index:0}.headline-hero .headline-image img{height:100%}.headline-hero .headline-image .image-fallback{background:linear-gradient(125deg,#002c5f,#004b93 58%,#0e63b8)}.headline-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74))}.headline-content{position:relative;z-index:2}.headline-content h2{margin:0;color:#fff;font-size:30px;line-height:1.32;letter-spacing:-.035em}.headline-rule{width:52%;height:1px;margin:22px 0 12px;background:rgba(255,255,255,.38)}.headline-category{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.9);font-size:13px;font-weight:800}.headline-category .category-select{border-color:rgba(255,255,255,.5);background:rgba(0,44,95,.68);color:#fff}.headline-category .category-select option{color:#101218;background:#fff}
 .ednote{margin-top:-14px;padding:30px 30px 24px;border:1px solid rgba(16,18,24,.1);border-top:0;border-radius:0 0 22px 22px;background:#fff}.ednote h3{margin:0 0 8px;color:var(--navy);font-size:13px;letter-spacing:.035em}.ednote p{margin:0;color:#303846;font-size:15px}.ednote .src{margin-top:14px;padding-top:10px;border-top:1px solid #eef0f4}.briefing-cards{display:grid;gap:12px}.briefing-card{cursor:grab}.briefing-card .headline-action{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);padding:5px 9px;font-size:11px;font-weight:900;cursor:pointer}.briefing-empty,.headline-empty{padding:20px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--muted)}
+.headline-hero.headline-empty{display:block;min-height:220px;border:0;border-radius:22px;background:linear-gradient(125deg,#002c5f,#004b93 58%,#0e63b8);color:#fff;padding:34px 30px}.headline-hero.headline-empty h2{position:relative;z-index:2;margin:0;color:#fff;font-size:28px;line-height:1.4}.radar-compact{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.radar-compact-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.radar-compact-item{padding:9px 7px;border-radius:10px;background:#f5f7fa;text-align:center}.radar-compact-item b{display:block;color:var(--navy);font-size:18px}.radar-compact-item span{display:block;color:#777f8d;font-size:10px}.radar-compact-note{margin:10px 0 0;color:#677080;font-size:11px;line-height:1.55}
 .taxonomy{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.tax-row{display:flex;gap:10px;align-items:baseline;margin-bottom:8px;font-size:13px}.tax-row:last-child{margin-bottom:0}.tax-name{width:90px;flex:none;color:var(--ink);font-weight:800}.tax-desc{color:#777f8d}.tax-invest{color:var(--invest)}.tax-corp{color:var(--corp)}.tax-tech{color:var(--tech)}
 .placement-editor{max-width:760px;margin:12px auto 0;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.placement-editor>summary{cursor:pointer;padding:11px 14px;color:var(--navy);font-size:12px;font-weight:900}.placement-editor-body{padding:0 12px 12px}.placement-editor .editorial-sector{margin-top:12px}.placement-editor .sector-title{font-size:16px}.placement-editor .sector-dropzone{min-height:72px}.placement-editor .sector-empty{min-height:50px}
 .editorial-sector{margin-top:28px}.sector-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
@@ -90,7 +92,7 @@ button,input,select,textarea{font:inherit}
 .category-select{border:1px solid var(--line);border-radius:7px;background:#fff;color:#101218;padding:4px}
 footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:center;color:#677080;font-size:12px}
 @media(max-width:980px){.app{grid-template-columns:1fr}.left,.right{height:auto}.left{border-right:0;border-bottom:1px solid var(--line)}}
-@media(max-width:560px){.manual-row,.import-row{grid-template-columns:1fr}.import-row button{padding:9px}.article-card{grid-template-columns:100px 1fr}.preview{padding-left:4px;padding-right:4px}.headline-hero{min-height:220px;padding:27px 21px 24px}.headline-content h2{font-size:24px}.ednote{padding:25px 21px 20px}.tax-row{display:block}.tax-name{display:block;width:auto;margin-bottom:2px}}
+@media(max-width:560px){.manual-row,.import-row,.radar-controls{grid-template-columns:1fr}.import-row button{padding:9px}.radar-funnel,.radar-compact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.article-card{grid-template-columns:100px 1fr}.preview{padding-left:4px;padding-right:4px}.headline-hero{min-height:220px;padding:27px 21px 24px}.headline-content h2,.headline-hero.headline-empty h2{font-size:24px}.ednote{padding:25px 21px 20px}.tax-row{display:block}.tax-name{display:block;width:auto;margin-bottom:2px}}
 </style>
 </head>
 <body>
@@ -128,6 +130,14 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
         <button class="manual-add" id="manualAddBtn" type="button">기사 추가하고 선택</button>
       </div>
     </details>
+    <section class="radar-panel" id="radarPanel" aria-labelledby="radarPanelTitle">
+      <header class="radar-panel-head"><h2 id="radarPanelTitle">수집 레이더</h2><p>후보 0건과 수집 0건을 구분합니다. 원문 본문 없이 수집·판정 메타데이터만 표시합니다.</p></header>
+      <div class="radar-funnel" id="radarFunnel"></div>
+      <div class="radar-providers" id="radarProviders"></div>
+      <div class="radar-controls"><input id="radarSearch" placeholder="수집 기사 제목·출처 검색"><select id="radarFilter"><option value="all">전체 수집</option><option value="ai">AI 중심</option><option value="executive">임원 후보</option><option value="selected">선정</option><option value="excluded">제외</option></select></div>
+      <div class="radar-list" id="radarList"></div>
+      <div class="radar-pagination"><button id="radarPrev" type="button">이전</button><span id="radarPageState">0 / 0</span><button id="radarNext" type="button">다음</button></div>
+    </section>
     <nav class="lane-tabs" aria-label="후보 소스 레인">
       <button class="lane-tab active" type="button" data-lane="all">전체</button>
       <button class="lane-tab" type="button" data-lane="main">주요 후보</button>
@@ -178,6 +188,10 @@ const CATEGORY_ORDER=["투자·산업","기업동향","기술정보"];
 const MAX_SELECTED=6;
 const MAX_MANUAL_CANDIDATES=12;
 const MAX_IMPORTED_IMAGE_DATA_URL=350000;
+const radarAudit=bundle.radar_audit&&typeof bundle.radar_audit==="object"?bundle.radar_audit:{funnel:{},provider_counts:{},rows:[],dom_page_size:50};
+const radarRows=Array.isArray(radarAudit.rows)?radarAudit.rows:[];
+const RADAR_PAGE_SIZE=Math.min(50,Math.max(1,Number(radarAudit.dom_page_size)||50));
+let radarPage=0;
 const articleImportApiUrl=safeImportApiUrl(bundle.article_import_api_url);
 const storageKey=`hdec-editorial-review-v2:${bundle.edition_key}`;
 const pendingImportStorageKey=`hdec-editorial-pending-import:${bundle.edition_key}`;
@@ -222,6 +236,58 @@ function safeUrl(value){
     const parsed=new URL(String(value));
     return ["http:","https:"].includes(parsed.protocol)?parsed.href:"";
   }catch(error){return "";}
+}
+function currentRadarFunnel(){
+  const funnel=radarAudit.funnel&&typeof radarAudit.funnel==="object"?radarAudit.funnel:{};
+  return {
+    collection_count:Math.max(0,Number(funnel.collection_count)||0),
+    ai_central_count:Math.max(0,Number(funnel.ai_central_count)||0),
+    executive_candidate_count:Math.max(0,Number(funnel.executive_candidate_count)||0),
+    selected_count:state.selected.length,
+    watch_bridge_count:Math.max(0,Number(funnel.watch_bridge_count)||0)
+  };
+}
+function radarMetric(label,value){return `<div class="radar-metric"><b>${esc(value)}</b><span>${esc(label)}</span></div>`;}
+function radarRowSelected(row){
+  const rowUrl=safeUrl(row.url);
+  return state.selected.map(byId).filter(Boolean).some(candidate=>(rowUrl&&safeUrl(candidate.selected_url)===rowUrl)||((candidate.title||"").trim()===(row.title||"").trim()&&(candidate.source||"").trim()===(row.source||"").trim()));
+}
+function radarRowMatches(row,filter){
+  const dimensions=row.dimensions&&typeof row.dimensions==="object"?row.dimensions:{};
+  if(filter==="ai")return dimensions.ai_central===true;
+  if(filter==="executive")return dimensions.executive_materiality===true||["executive_candidate","selected"].includes(row.stage);
+  if(filter==="selected")return radarRowSelected(row);
+  if(filter==="excluded")return !radarRowSelected(row)&&row.stage==="excluded";
+  return true;
+}
+function radarRowMarkup(row,index){
+  const title=esc(row.title||"제목 확인 불가");
+  const link=safeUrl(row.url)?`<a class="radar-row-title" href="${esc(safeUrl(row.url))}" target="_blank" rel="noopener noreferrer">${title}</a>`:`<div class="radar-row-title">${title}</div>`;
+  const dimensions=row.dimensions&&typeof row.dimensions==="object"?row.dimensions:{};
+  const relevant=Array.isArray(dimensions.relevant_dimensions)?dimensions.relevant_dimensions.slice(0,5).join(" · "):"";
+  const reason=row.rejection_reason||row.qualification_reason||dimensions.executive_reason||"판정 메타데이터 없음";
+  const selected=radarRowSelected(row);
+  const promotable=!!safeUrl(row.url)&&!!row.title&&dimensions.ai_central===true&&!selected;
+  const stageLabel=selected?"선정":(row.stage_label||row.stage||"수집");
+  return `<article class="radar-row" data-radar-index="${index}">${link}<div class="radar-row-meta"><span class="radar-stage">${esc(stageLabel)}</span>${esc([row.source,row.published_at,row.collection_provider].filter(Boolean).join(" · "))}</div><div class="radar-row-reason">${esc(reason)}</div>${relevant?`<div class="radar-row-dimensions">판정 차원 · ${esc(relevant)}</div>`:""}${promotable?`<button class="radar-promote" type="button" data-radar-promote="${index}">후보로 승격</button>`:""}</article>`;
+}
+function renderRadar(){
+  const funnel=currentRadarFunnel();
+  document.getElementById("radarFunnel").innerHTML=[radarMetric("전체 수집",funnel.collection_count),radarMetric("AI 중심",funnel.ai_central_count),radarMetric("임원 검토 후보",funnel.executive_candidate_count),radarMetric("최종 선정",funnel.selected_count)].join("");
+  const providers=radarAudit.provider_counts||{};
+  document.getElementById("radarProviders").textContent=`Naver ${Number(providers.naver)||0} · Google News ${Number(providers.google_news)||0} · 정규화 행 ${Number(funnel.collection_count?radarAudit.funnel?.normalized_row_count:0)||radarRows.length}${Number(radarAudit.rows_truncated)||0?` · 표시 감사 행 ${radarRows.length} (절단 ${Number(radarAudit.rows_truncated)||0})`:""}`;
+  const query=document.getElementById("radarSearch").value.trim().toLowerCase();
+  const filter=document.getElementById("radarFilter").value;
+  const filtered=radarRows.filter(row=>radarRowMatches(row,filter)&&(!query||`${row.title||""} ${row.source||""} ${row.url||""}`.toLowerCase().includes(query)));
+  const pages=Math.max(1,Math.ceil(filtered.length/RADAR_PAGE_SIZE));
+  radarPage=Math.min(radarPage,pages-1);
+  const offset=radarPage*RADAR_PAGE_SIZE;
+  const visible=filtered.slice(offset,offset+RADAR_PAGE_SIZE);
+  document.getElementById("radarList").innerHTML=visible.length?visible.map((row,index)=>radarRowMarkup(row,radarRows.indexOf(row))).join(""):'<div class="sector-empty">이 레이더 조건에 맞는 수집 행이 없습니다.</div>';
+  document.getElementById("radarPageState").textContent=`${filtered.length}건 · ${radarPage+1}/${pages} 페이지 · 최대 ${RADAR_PAGE_SIZE}행`;
+  document.getElementById("radarPrev").disabled=radarPage===0;
+  document.getElementById("radarNext").disabled=radarPage>=pages-1;
+  document.querySelectorAll("[data-radar-promote]").forEach(button=>button.addEventListener("click",()=>promoteRadarRow(Number(button.dataset.radarPromote))));
 }
 function safeAuthorityUrl(value){
   const candidate=safeUrl(value);
@@ -342,6 +408,22 @@ function save(){
 }
 function allCandidates(){return [...bundle.candidates,...state.manualCandidates];}
 function byId(id){return allCandidates().find(candidate=>candidate.candidate_id===id);}
+function promoteRadarRow(index){
+  const row=radarRows[index];
+  if(!row)return;
+  const existing=allCandidates().find(candidate=>safeUrl(candidate.selected_url)===safeUrl(row.url));
+  if(existing){toggleSelected(existing.candidate_id,true);return;}
+  if(state.manualCandidates.length>=MAX_MANUAL_CANDIDATES){alert(`직접 추가 기사는 최대 ${MAX_MANUAL_CANDIDATES}건입니다.`);return;}
+  if(state.selected.length>=MAX_SELECTED){alert(`최대 ${MAX_SELECTED}건까지 선택할 수 있습니다.`);return;}
+  const id=`radar-${String(row.article_id||index).replace(/[^A-Za-z0-9_-]/g,"").slice(0,60)}`;
+  const dimensions=row.dimensions||{};
+  const category=row.category||((dimensions.competitor_relevance||0)>0?"기업동향":(dimensions.infrastructure_project_specificity||0)>0?"투자·산업":"기술정보");
+  const summary="원문을 확인한 뒤 Editor's Summary를 작성해 주세요.";
+  state.manualCandidates.push({candidate_id:id,origin:"human_link",ai_rank:null,ai_recommended:false,title:String(row.title||""),summary,summary_html:esc(summary),source:String(row.source||""),published_at:row.published_at||bundle.coverage_end,selected_url:safeUrl(row.url),link_kind:"publisher_direct",link_label:"레이더 원문",category:CATEGORY_ORDER.includes(category)?category:"기술정보",image_url:"",collection_source_kind:"radar_promotion",selection_reason:"human_promoted_from_collection_radar",feedback_adjustment:0,adjusted_score:0,category_analysis:{category:CATEGORY_ORDER.includes(category)?category:"기술정보",scores:{},matched_signals:{},reason:"운영자가 수집 레이더에서 명시적으로 승격"}});
+  state.selected.push(id);
+  normalizeSelectedOrder();
+  markDraftAndRender();
+}
 function edit(id){
   const candidate=byId(id);
   return state.edits[id]||(state.edits[id]={
@@ -958,7 +1040,13 @@ function articleSourceMarkup(candidate){
   return articleUrl?`<a data-link-kind="${esc(candidate.link_kind||"publisher_direct")}" href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`:label;
 }
 function headlineMarkup(candidate,editable){
-  if(!candidate)return `<div class="headline-empty" data-role="headline-empty">선정된 헤드라인이 없습니다. 왼쪽에서 기사를 선택하거나 선정 기사에서 헤드라인으로 지정해 주세요.</div>`;
+  if(!candidate){
+    const funnel=currentRadarFunnel();
+    const radarTruth=funnel.watch_bridge_count>0
+      ?`수집 레이더 ${funnel.collection_count}건 중 AI 중심 ${funnel.ai_central_count}건을 확인했고, 최종 선정은 0건입니다. 아침 레이더 추가 포착 ${funnel.watch_bridge_count}건은 별도 검토 대상으로 남겼습니다.`
+      :`수집 레이더에서는 ${funnel.collection_count}건을 탐지했고 AI 중심 ${funnel.ai_central_count}건을 검토했으며, 최종 임원급 선정은 0건입니다.`;
+    return `<article class="headline-hero headline-empty" data-role="headline-empty" data-edition-status="empty"><div class="headline-overlay"></div><h2>오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.</h2><div class="headline-rule" style="position:relative;z-index:2"></div><div class="headline-category" style="position:relative;z-index:2">품질 기준 유지 · 인위적 채움 없음 · 편집 상태: 선정된 헤드라인이 없습니다</div></article><div class="ednote" data-role="editor-summary-empty"><h3>Editor's Summary</h3><p>기준을 낮추거나 기사를 채워 넣지 않았습니다. ${esc(radarTruth)}</p></div>`;
+  }
   const category=editable
     ?`<select class="category-select" data-category-id="${esc(candidate.candidate_id)}" aria-label="헤드라인 분류">${categoryOptions(candidate.category)}</select>`
     :`<span>${esc(candidate.category)}</span>`;
@@ -992,13 +1080,20 @@ function briefingArticleCard(candidate,editable){
 function taxonomyMarkup(){
   return '<div class="taxonomy" data-role="information-taxonomy"><div class="tax-row"><span class="tax-name"><span class="tax-invest">●</span> 투자·산업</span><span class="tax-desc">자본과 인프라의 흐름 — 투자, 시장 재편, 정책·글로벌 동향</span></div><div class="tax-row"><span class="tax-name"><span class="tax-corp">●</span> 기업동향</span><span class="tax-desc">선도 기업과 경쟁사의 AI 도입·전환 전략</span></div><div class="tax-row"><span class="tax-name"><span class="tax-tech">●</span> 기술정보</span><span class="tax-desc">신규 AI 모델·제품·기술의 등장과 경영 영향</span></div></div>';
 }
+function publicationRadarMarkup(){
+  const funnel=currentRadarFunnel();
+  const note=funnel.watch_bridge_count>0
+    ?`최종 선정과 별도로 아침 레이더 추가 포착 ${funnel.watch_bridge_count}건이 있습니다. 자동 게재 없이 Daily 기준으로 재검토합니다.`
+    :"수집량과 최종 선정은 서로 다른 단계입니다. 빈 에디션도 수집 실패를 의미하지 않습니다.";
+  return `<div class="radar-compact" data-role="radar-scan"><div class="radar-compact-grid"><div class="radar-compact-item"><b>${funnel.collection_count}</b><span>수집</span></div><div class="radar-compact-item"><b>${funnel.ai_central_count}</b><span>AI 중심</span></div><div class="radar-compact-item"><b>${funnel.executive_candidate_count}</b><span>임원 후보</span></div><div class="radar-compact-item"><b>${funnel.selected_count}</b><span>최종 선정</span></div></div><p class="radar-compact-note">${esc(note)}</p></div>`;
+}
 function dailyBriefMarkup(selected,editable){
   const headline=selected[0]||null;
   const briefing=selected.slice(1);
   const briefingHtml=briefing.length
     ?briefing.map(candidate=>briefingArticleCard(candidate,editable)).join("")
     :`<p class="briefing-empty" data-role="briefing-empty">${headline?"추가로 선정된 주요 기사 없음":"오늘의 브리핑에 포함할 기사가 없습니다."}</p>`;
-  return `<header class="mast"><div class="brandmark">AI 경영 T&amp;I</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p><div class="issue">${esc(bundle.edition_key)}</div></header><section class="publication-section" aria-labelledby="previewHeadlineLabel"><h2 class="publication-label" id="previewHeadlineLabel">오늘의 헤드라인</h2>${headlineMarkup(headline,editable)}</section><section class="publication-section" aria-labelledby="previewBriefingLabel"><h2 class="publication-label" id="previewBriefingLabel">오늘의 브리핑</h2><div class="briefing-cards">${briefingHtml}</div></section><section class="publication-section" aria-labelledby="previewTaxonomyLabel"><h2 class="publication-label" id="previewTaxonomyLabel">정보 분류 기준</h2>${taxonomyMarkup()}</section><footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
+  return `<header class="mast"><div class="brandmark">AI 경영 T&amp;I</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p><div class="issue">${esc(bundle.edition_key)}</div></header><section class="publication-section" aria-labelledby="previewHeadlineLabel"><h2 class="publication-label" id="previewHeadlineLabel">오늘의 헤드라인</h2>${headlineMarkup(headline,editable)}</section><section class="publication-section" aria-labelledby="previewBriefingLabel"><h2 class="publication-label" id="previewBriefingLabel">오늘의 브리핑</h2><div class="briefing-cards">${briefingHtml}</div></section><section class="publication-section" aria-labelledby="previewRadarLabel"><h2 class="publication-label" id="previewRadarLabel">수집 레이더</h2>${publicationRadarMarkup()}</section><section class="publication-section" aria-labelledby="previewTaxonomyLabel"><h2 class="publication-label" id="previewTaxonomyLabel">정보 분류 기준</h2>${taxonomyMarkup()}</section><footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
 }
 function previewEditor(){
   return dailyBriefMarkup(state.selected.map(view).filter(Boolean),true);
@@ -1088,7 +1183,7 @@ function renderStats(){
 function renderLaneTabs(){
   document.querySelectorAll("[data-lane]").forEach(button=>button.classList.toggle("active",button.dataset.lane===state.laneFilter));
 }
-function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();refreshTeamUi();}
+function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();renderRadar();refreshTeamUi();}
 function briefBody(selected){
   return dailyBriefMarkup(selected,false);
 }
@@ -1279,6 +1374,10 @@ async function serverPublishDaily(){
 
 document.getElementById("search").addEventListener("input",renderCandidates);
 document.getElementById("filter").addEventListener("change",renderCandidates);
+document.getElementById("radarSearch").addEventListener("input",()=>{radarPage=0;renderRadar();});
+document.getElementById("radarFilter").addEventListener("change",()=>{radarPage=0;renderRadar();});
+document.getElementById("radarPrev").addEventListener("click",()=>{radarPage=Math.max(0,radarPage-1);renderRadar();});
+document.getElementById("radarNext").addEventListener("click",()=>{radarPage+=1;renderRadar();});
 document.querySelectorAll("[data-lane]").forEach(button=>button.addEventListener("click",()=>{state.laneFilter=button.dataset.lane;save();renderCandidates();renderLaneTabs();}));
 document.getElementById("manualAddBtn").addEventListener("click",addManual);
 document.getElementById("teamAuthBtn").addEventListener("click",authenticateContributor);

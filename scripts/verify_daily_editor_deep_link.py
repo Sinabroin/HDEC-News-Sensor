@@ -518,7 +518,7 @@ def main() -> int:
         "version", "product", "edition_key", "coverage_start", "coverage_end",
         "published_run_at", "review_mode", "review_decision", "headline_title",
         "editor_summary", "edition_status", "article_count", "articles",
-        "publication", "revision", "edition_id", "integrity",
+        "radar_audit", "publication", "revision", "edition_id", "integrity",
     }
     manifest_dump = json.dumps(manifest, ensure_ascii=False)
     check(

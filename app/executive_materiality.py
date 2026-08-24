@@ -66,6 +66,20 @@ HDEC_DIRECT_TERMS: tuple[str, ...] = (
     "현대건설", "현대엔지니어링", "힐스테이트", "디에이치",
 )
 
+# R4-OPS-10F — a named construction competitor pursuing a concrete AI /
+# infrastructure business is strategic evidence for Hyundai E&C leadership.
+# The actor alone never qualifies: the gate below requires BOTH an enabling
+# infrastructure domain and an explicit expansion/project-strategy signal.
+CONSTRUCTION_COMPETITOR_TERMS: tuple[str, ...] = (
+    "삼성물산", "대우건설", "gs건설", "dl이앤씨", "포스코이앤씨",
+    "sk에코플랜트",
+)
+STRATEGIC_EXPANSION_TERMS: tuple[str, ...] = (
+    "영토 넓", "사업 확대", "사업 확장", "포트폴리오 확대", "사업 강화",
+    "시장 공략", "공동 공략", "신사업 진출", "진출한다", "진출 확대",
+    "수주 경쟁", "프로젝트 추진", "개발 추진",
+)
+
 # Strategic HDEC infrastructure domains (physical/industrial layer HDEC builds
 # or operates).  Mirrors ai_centrality._ENABLING_INFRA_TERMS in spirit.
 EXEC_STRATEGIC_DOMAIN_TERMS: tuple[str, ...] = (
@@ -188,6 +202,27 @@ def executive_qualification(evidence: Mapping[str, Any]) -> ExecutiveQualificati
     )
     if hdec_hit:
         return ExecutiveQualification(True, f"hdec_direct_ai:{hdec_hit}")
+
+    # R4-OPS-10F — competitor strategy is material only as a conjunctive
+    # signal.  This admits the known GS E&C AI-data-center case while a generic
+    # competitor mention, a generic AI mention, or a bare data-center noun still
+    # fails.  It is a shared primitive used by Review/Daily observability; no
+    # channel-specific keyword override is introduced.
+    competitor_hit = next(
+        (term for term in CONSTRUCTION_COMPETITOR_TERMS if term in zone), ""
+    )
+    competitor_domain = next(
+        (term for term in EXEC_STRATEGIC_DOMAIN_TERMS if term in zone), ""
+    )
+    expansion_hit = next(
+        (term for term in STRATEGIC_EXPANSION_TERMS if term in zone), ""
+    )
+    if competitor_hit and competitor_domain and expansion_hit:
+        return ExecutiveQualification(
+            True,
+            "competitor_ai_infrastructure_strategy:"
+            f"{competitor_hit}->{competitor_domain}->{expansion_hit}",
+        )
 
     # Signal 2 — material corporate/industrial event (confirmed action, concrete
     # KRW/USD or MW/GW scale, or material risk) proven from title + factual lead.

@@ -35,7 +35,7 @@ for _path in (ROOT, SCRIPTS):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from app import (collector, daily_publication, editorial_briefing_state, editorial_briefings, editorial_review, news_access, news_censor_verified_state, publisher_direct)  # noqa: E402
+from app import (collector, daily_publication, editorial_briefing_state, editorial_briefings, editorial_radar, editorial_review, news_access, news_censor_verified_state, publisher_direct, teams_push_state)  # noqa: E402
 from app import public_urls as public_url_contract  # noqa: E402
 from app.editorial_briefings import EditorialError, KST  # noqa: E402
 
@@ -654,6 +654,7 @@ def _load_runtime_manifest(runtime_dir: Path, edition_type: str) -> dict:
         "failure_reasons",
         "publication_image_assets",
         "production_image_gate_required",
+        "radar_audit",
     }
     if (
         not isinstance(value, dict)
@@ -1075,11 +1076,13 @@ def run_publish(
     feedback_proposal: dict | None = None
     image_audit = editorial_briefings.image_audit_manifest(())
     publication_asset_payloads: list[dict] = []
+    radar_audit: dict | None = None
     if edition_type == "daily":
         bundle_path = ROOT / "docs" / "editorial" / "review" / key / "candidates.json"
         review_path = ROOT / "data" / "editorial_reviews" / f"{key}.json"
         try:
             bundle = editorial_review.load_bundle(bundle_path, key)
+            radar_audit = editorial_radar.normalize_audit(bundle.get("radar_audit"))
             # §12 — the review decision (approved/absent/malformed) is traced
             # machine-readably; a malformed review fails closed to the AI order
             # with no partial application and never claims human approval.
@@ -1188,6 +1191,64 @@ def run_publish(
                         if item["article_id"] in selected_image_ids
                     ],
                 )
+            finalization_at = _now()
+            try:
+                raw_snapshot_at = datetime.fromisoformat(
+                    str(bundle.get("generated_at") or "")
+                )
+                if raw_snapshot_at.tzinfo is None:
+                    raise ValueError("snapshot timezone missing")
+                snapshot_at = raw_snapshot_at.astimezone(KST)
+                if snapshot_at > finalization_at:
+                    raise ValueError("snapshot is after Daily finalization")
+            except (TypeError, ValueError) as exc:
+                raise OrchestratorError(
+                    "morning bridge requires a valid timezone-aware Editor snapshot"
+                ) from exc
+            watch_state_path = Path(
+                os.environ.get("MORNING_WATCH_STATE_PATH", "").strip()
+                or teams_push_state.DEFAULT_STATE_PATH
+            )
+            try:
+                watch_state = teams_push_state.load_state(watch_state_path)
+            except (OSError, teams_push_state.InvalidTeamsPushState) as exc:
+                raise OrchestratorError(
+                    "morning Watch ledger is unavailable or malformed"
+                ) from exc
+            bridge = editorial_radar.watch_bridge(
+                watch_state,
+                snapshot_at=snapshot_at,
+                finalization_at=finalization_at,
+                coverage_start=editorial_briefings.daily_coverage(run_at).start,
+                coverage_end=editorial_briefings.daily_coverage(run_at).end,
+                existing_article_ids=(
+                    str(candidate.get("article_id") or candidate.get("candidate_id") or "")
+                    for candidate in bundle.get("candidates") or []
+                    if isinstance(candidate, dict)
+                ),
+                existing_urls=(
+                    str(candidate.get("selected_url") or "")
+                    for candidate in bundle.get("candidates") or []
+                    if isinstance(candidate, dict)
+                ),
+            )
+            radar_audit = editorial_radar.merge_watch_bridge(radar_audit, bridge)
+            radar_audit["bridge_window"] = {
+                "snapshot_at": snapshot_at.isoformat(),
+                "finalization_at": finalization_at.isoformat(),
+                "watch_delivery_ids": [
+                    str(value)
+                    for value in bridge.get("bridge_delivery_ids", [])
+                    if str(value)
+                ],
+            }
+            print(
+                "morning_watch_bridge "
+                f"snapshot_at={snapshot_at.isoformat()} "
+                f"finalization_at={finalization_at.isoformat()} "
+                f"bridge_count={bridge['bridge_count']} "
+                f"late_watch_count={bridge['late_count']} sends=0 state_writes=0"
+            )
             edition = editorial_briefings.render_daily(
                 selected_articles,
                 run_at=run_at,
@@ -1195,6 +1256,7 @@ def run_publish(
                 review_mode=review_mode,
                 review_decision=review_decision,
                 editor_console_available=True,
+                radar_audit=radar_audit,
             )
             edition = replace(edition, image_audit=image_audit)
             raw_selection_manifest = bundle.get("selection_audit")

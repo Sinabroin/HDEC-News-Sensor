@@ -86,7 +86,13 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           REPORT_URL: ${{ vars.REPORT_URL || secrets.REPORT_URL || '' }}
+          MORNING_WATCH_STATE_PATH: ${{ runner.temp }}/morning-watch-state.json
         run: |
+          # R4-OPS-10F — capture the newest committed Watch truth immediately
+          # before the Daily finalization build. This is read-only and does not
+          # alter the tracked production ledger in the worktree.
+          git fetch origin main
+          git show origin/main:data/teams_push_state.json > "$MORNING_WATCH_STATE_PATH"
           PUBLISH_FLAG="--publish"
           if [ "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.publish_only == 'true' }}" = "true" ]; then
             PUBLISH_FLAG="--republish"
@@ -95,6 +101,23 @@ jobs:
             --edition-type daily \
             "$PUBLISH_FLAG" \
             --runtime-dir "$EDITORIAL_RUNTIME_DIR"
+
+      - name: Verify no important Watch item crossed the finalization boundary
+        if: steps.publish.outputs.skipped == 'false'
+        env:
+          EDITION: ${{ steps.publish.outputs.edition }}
+          EDITORIAL_RUNTIME_DIR: ${{ runner.temp }}/editorial-daily
+          FRESH_WATCH_STATE_PATH: ${{ runner.temp }}/morning-watch-state-final.json
+        run: |
+          # A Watch send racing after the build must not be silently omitted.
+          # Fail closed before publication; the existing 08:05/08:15
+          # once-per-edition retries rebuild from the newer ledger.
+          git fetch origin main
+          git show origin/main:data/teams_push_state.json > "$FRESH_WATCH_STATE_PATH"
+          python3 scripts/verify_daily_morning_bridge_freshness.py \
+            --runtime-manifest "$EDITORIAL_RUNTIME_DIR/runtime-manifest.json" \
+            --review-bundle "docs/editorial/review/${EDITION}/candidates.json" \
+            --watch-state "$FRESH_WATCH_STATE_PATH"
 
       - name: Commit and push exact Daily publication files
         if: steps.publish.outputs.skipped == 'false'
