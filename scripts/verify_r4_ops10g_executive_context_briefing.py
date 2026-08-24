@@ -337,20 +337,61 @@ def main() -> int:
     )
     production_baseline = editorial_executive_context.load_baseline_authority()
     gs = contexts["gs_ai_data_center"]
+    gs_real = editorial_executive_context.derive_executive_context(
+        {"title": "GS건설, AI 데이터센터 개발·투자·운영 사업 확대"},
+        baseline=production_baseline,
+        article_already_qualified=True,
+    )
     saemangeum = contexts["saemangeum_ai_hydrogen_hub"]
     generic = contexts["generic_ai_policy"]
     non_ai = contexts["non_ai_company_news"]
     semiconductor = contexts["semiconductor_infrastructure"]
     commentary = contexts["semiconductor_commentary"]
 
+    source = production_baseline["source_document"]
+    verification_source = source.get("verification_source", {})
+    production_entities = {
+        entity["canonical_name"]: entity for entity in production_baseline["entities"]
+    }
+    production_facts = [
+        fact for entity in production_baseline["entities"] for fact in entity["facts"]
+    ]
     verifier.check(
         "BASELINE_PROVENANCE",
         gs["provenance"]["baseline_id"] == baseline["baseline_id"]
         and gs["provenance"]["baseline_fact_ids"] == ["fixture-gs-portfolio-001"]
-        and production_baseline["entities"] == []
-        and production_baseline["source_document"]["sha256"]
-        == "28c5de0ef78ce5360a330c1a03cd88d8a4b2f03a74e8bd09d65f34355f89c21b",
+        and source["filename"] == "260814_사업보고서_비교검토_26년 반기(배포).pdf"
+        and source["title"] == "국내 건설사 사업보고서 비교 요약"
+        and source["reporting_basis"] == "'26년 반기(연결기준) 보고서 기준"
+        and source["source_document_date"] == "2026-08"
+        and source["organization"] == "전략기획사업부 / 경영기획실"
+        and source["sha256"]
+        == "28c5de0ef78ce5360a330c1a03cd88d8a4b2f03a74e8bd09d65f34355f89c21b"
+        and source["primary_local_source_status"]
+        == "microsoft_irm_protected_unreadable"
+        and source["extraction_status"] == "microsoft_irm_protected_unreadable"
+        and verification_source.get("source_kind") == "founder_provided_readable_copy"
+        and verification_source.get("sha256")
+        == "63807d7cd8d5e8f2f27b4263c15cab3bea6127d811f1eb65ab855e7a59e9358e"
+        and verification_source.get("verification_status")
+        == "verified_from_founder_provided_readable_copy"
+        and verification_source.get("byte_identity_with_primary") == "not_asserted"
+        and source["sha256"] != verification_source.get("sha256"),
     )
+    production_facts_verified = (
+        production_baseline["status"] == "verified"
+        and production_baseline["baseline_version"] == "2026-h1-construction-v2"
+        and len(production_entities) == 5
+        and len(production_facts) == 23
+        and all(fact["status"] == "verified" for fact in production_facts)
+        and all(fact["freshness"] == "historical_baseline" for fact in production_facts)
+        and all(fact["as_of"] == "2026-06-30" for fact in production_facts)
+        and all(
+            re.match(r"^p\.(?:3|6) ", fact["source_reference"])
+            for fact in production_facts
+        )
+    )
+    verifier.check("BASELINE_PRODUCTION_FACTS_VERIFIED", production_facts_verified)
     baseline_dump = PRODUCTION_BASELINE_PATH.read_text(encoding="utf-8")
     verifier.check(
         "BASELINE_BOUNDED_SECURITY",
@@ -361,16 +402,135 @@ def main() -> int:
             for forbidden in ("base64", "full_text", "raw_text", "page_text")
         ),
     )
-    exact_gs = editorial_executive_context.match_baseline_entity("GS건설 사업", baseline)
+    expected_fact_signatures = {
+        "현대건설": [
+            ("operating_cash_flow", -1.7, "KRW trillion", "p.3 Executive Summary / 재무현황"),
+            ("net_cash_or_debt", -0.6, "KRW trillion", "p.3 Executive Summary / 재무현황"),
+            ("pf_guarantee", 14, "KRW trillion approximately", "p.3 Executive Summary / 우발채무 등"),
+            ("completion_guarantee", 19, "KRW trillion approximately", "p.3 Executive Summary / 우발채무 등"),
+            ("strategy", None, "", "p.3 Executive Summary / 재무현황 주석"),
+            ("order_backlog", 104.9, "KRW trillion", "p.6 사업내용(2) / 수주잔고"),
+        ],
+        "GS건설": [
+            ("portfolio_shift", None, "", "p.3 Executive Summary / 회사현황·사업내용"),
+            ("data_center_strategy", None, "", "p.3 Executive Summary / GS 이니마 주석"),
+            ("portfolio_shift", 1.7, "KRW trillion", "p.3 Executive Summary / GS 이니마 주석"),
+            ("operating_profit", 47, "percent of H1 operating result approximately", "p.3 Executive Summary / GS 이니마 주석"),
+            ("net_cash_or_debt", -3.0, "KRW trillion", "p.3 Executive Summary / 재무현황"),
+            ("pf_guarantee", 2.9, "KRW trillion", "p.3 Executive Summary / 우발채무 등"),
+            ("order_backlog", 73.4, "KRW trillion", "p.6 사업내용(2) / 수주잔고"),
+        ],
+        "삼성물산": [
+            ("ai_transformation", None, "", "p.3 Executive Summary / 회사현황"),
+            ("net_cash_or_debt", 4.5, "KRW trillion", "p.3 Executive Summary / 재무현황"),
+            ("pf_guarantee", 2.0, "KRW trillion", "p.3 Executive Summary / 우발채무 등"),
+            ("order_backlog", 34.2, "KRW trillion", "p.6 사업내용(2) / 수주잔고"),
+        ],
+        "대우건설": [
+            ("net_cash_or_debt", -2.8, "KRW trillion", "p.3 Executive Summary / 재무현황"),
+            ("pf_guarantee", 2.2, "KRW trillion", "p.3 Executive Summary / 우발채무 등"),
+            ("order_backlog", 53.4, "KRW trillion", "p.6 사업내용(2) / 수주잔고"),
+        ],
+        "DL이앤씨": [
+            ("net_cash_or_debt", 1.2, "KRW trillion", "p.3 Executive Summary / 재무현황"),
+            ("pf_guarantee", 1.8, "KRW trillion", "p.3 Executive Summary / 우발채무 등"),
+            ("order_backlog", 29.8, "KRW trillion", "p.6 사업내용(2) / 수주잔고"),
+        ],
+    }
+
+    def fact_signatures(canonical_name: str) -> list[tuple[object, ...]]:
+        return [
+            (
+                fact["dimension"],
+                fact["value"],
+                fact["unit"],
+                fact["source_reference"],
+            )
+            for fact in production_entities[canonical_name]["facts"]
+        ]
+
+    exact_hdec = editorial_executive_context.match_baseline_entity(
+        "현대건설", production_baseline
+    )
     none_hyundai_car = editorial_executive_context.match_baseline_entity(
-        "현대차 투자", baseline
+        "현대차", production_baseline
+    )
+    exact_gs = editorial_executive_context.match_baseline_entity(
+        "GS건설", production_baseline
+    )
+    none_gs_group = editorial_executive_context.match_baseline_entity(
+        "GS그룹", production_baseline
+    )
+    exact_samsung = editorial_executive_context.match_baseline_entity(
+        "삼성물산 AI 네이티브 건설", production_baseline
+    )
+    none_samsung_electronics = editorial_executive_context.match_baseline_entity(
+        "삼성전자 AI", production_baseline
+    )
+    exact_daewoo = editorial_executive_context.match_baseline_entity(
+        "대우건설", production_baseline
+    )
+    exact_dl = editorial_executive_context.match_baseline_entity(
+        "DL이앤씨", production_baseline
     )
     ambiguous = editorial_executive_context.match_baseline_entity(
-        "GS건설·삼성물산 협력", baseline
+        "GS건설·삼성물산 협력", production_baseline
+    )
+    aliases = {
+        alias.casefold()
+        for entity in production_baseline["entities"]
+        for alias in entity["aliases"]
+    }
+    verifier.check(
+        "HDEC_BASELINE",
+        exact_hdec["status"] == "matched"
+        and exact_hdec["entity"]["canonical_name"] == "현대건설"
+        and none_hyundai_car["status"] == "none"
+        and set(production_entities["현대건설"]["aliases"])
+        == {"현대건설", "Hyundai E&C", "Hyundai Engineering & Construction"}
+        and fact_signatures("현대건설") == expected_fact_signatures["현대건설"],
+    )
+    verifier.check(
+        "GS_BASELINE",
+        exact_gs["status"] == "matched"
+        and exact_gs["entity"]["canonical_name"] == "GS건설"
+        and none_gs_group["status"] == "none"
+        and set(production_entities["GS건설"]["aliases"])
+        == {"GS건설", "GS E&C", "GS Engineering & Construction"}
+        and fact_signatures("GS건설") == expected_fact_signatures["GS건설"],
+    )
+    verifier.check(
+        "SAMSUNG_BASELINE",
+        exact_samsung["status"] == "matched"
+        and exact_samsung["entity"]["canonical_name"] == "삼성물산"
+        and none_samsung_electronics["status"] == "none"
+        and set(production_entities["삼성물산"]["aliases"])
+        == {"삼성물산", "삼성물산 건설", "Samsung C&T"}
+        and fact_signatures("삼성물산") == expected_fact_signatures["삼성물산"],
+    )
+    verifier.check(
+        "DAEWOO_BASELINE",
+        exact_daewoo["status"] == "matched"
+        and set(production_entities["대우건설"]["aliases"])
+        == {"대우건설", "Daewoo E&C", "Daewoo Engineering & Construction"}
+        and fact_signatures("대우건설") == expected_fact_signatures["대우건설"],
+    )
+    verifier.check(
+        "DL_BASELINE",
+        exact_dl["status"] == "matched"
+        and set(production_entities["DL이앤씨"]["aliases"])
+        == {"DL이앤씨", "DL E&C", "DL E&C Co."}
+        and fact_signatures("DL이앤씨") == expected_fact_signatures["DL이앤씨"]
+        and aliases.isdisjoint({"삼성", "gs", "dl", "현대"}),
     )
     verifier.check(
         "BASELINE_ENTITY_EXACT_MATCH",
-        exact_gs["status"] == "matched" and none_hyundai_car["status"] == "none",
+        exact_hdec["status"] == "matched"
+        and none_hyundai_car["status"] == "none"
+        and exact_gs["status"] == "matched"
+        and none_gs_group["status"] == "none"
+        and exact_samsung["status"] == "matched"
+        and none_samsung_electronics["status"] == "none",
     )
     verifier.check("AMBIGUOUS_ENTITY_FAIL_CLOSED", ambiguous["status"] == "ambiguous")
     verifier.check(
@@ -395,6 +555,28 @@ def main() -> int:
         gs["baseline_match"]["canonical_name"] == "GS건설"
         and gs["delta_vs_baseline"]["status"] == "supported"
         and "전력" in gs["hdec_implication"]["text"],
+    )
+    gs_production_fact_ids = {
+        fact["fact_id"] for fact in production_entities["GS건설"]["facts"]
+    }
+    verifier.check(
+        "GS_REAL_BASELINE_DELTA",
+        gs_real["baseline_match"]["status"] == "matched"
+        and gs_real["baseline_match"]["canonical_name"] == "GS건설"
+        and gs_real["baseline_context"]["status"] == "supported"
+        and gs_real["delta_vs_baseline"]["status"] == "supported"
+        and gs_real["hdec_implication"]["status"] == "supported"
+        and gs_real["provenance"]["baseline_id"]
+        == production_baseline["baseline_id"]
+        and gs_real["provenance"]["baseline_version"]
+        == "2026-h1-construction-v2"
+        and bool(gs_real["provenance"]["baseline_fact_ids"])
+        and set(gs_real["provenance"]["baseline_fact_ids"])
+        <= gs_production_fact_ids
+        and all(
+            fact_id.startswith("2026h1-gs-")
+            for fact_id in gs_real["provenance"]["baseline_fact_ids"]
+        ),
     )
     verifier.check(
         "SAEMANGEUM_CONTEXT",
@@ -727,6 +909,19 @@ def main() -> int:
     print("TEAMS_RAW_COUNT_MISREPRESENTED=false")
     print("WATCH_CARD_FUNNEL_SPAM=false")
     print("WEEKLY_PRESENTATION_CHANGED=false")
+    print(f"BASELINE_ENTITY_COUNT={len(production_entities)}")
+    print(f"BASELINE_FACT_COUNT={len(production_facts)}")
+    print(
+        "BASELINE_PRODUCTION_FACTS_VERIFIED="
+        + ("true" if production_facts_verified else "false")
+    )
+    print(f"PRIMARY_LOCAL_SOURCE_SHA256={source['sha256']}")
+    print("PRIMARY_LOCAL_SOURCE_READABLE=false")
+    print(f"VERIFICATION_COPY_SHA256={verification_source.get('sha256', '')}")
+    print(
+        "VERIFICATION_COPY_STATUS="
+        + str(verification_source.get("verification_status", ""))
+    )
     print("PRODUCTION_WRITES=0")
     print("WORKFLOW_DISPATCHES=0")
     print("PRODUCTION_SENDS=0")

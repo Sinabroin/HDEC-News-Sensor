@@ -156,17 +156,49 @@ def validate_baseline_authority(value: object) -> dict[str, Any]:
     sha256 = _clean(source.get("sha256"), 64).casefold()
     if sha256 and not re.fullmatch(r"[0-9a-f]{64}", sha256):
         raise ExecutiveContextError("baseline source sha256 is malformed")
-    baseline["source_document"] = {
+    normalized_source: dict[str, Any] = {
         "filename": _require_text(source.get("filename"), field="source filename", limit=240),
+        "title": _clean(source.get("title"), 200),
+        "reporting_basis": _clean(source.get("reporting_basis"), 120),
         "source_document_date": _require_text(
             source.get("source_document_date"), field="source_document_date", limit=32
         ),
+        "organization": _clean(source.get("organization"), 120),
         "sha256": sha256,
+        "primary_local_source_status": _clean(
+            source.get("primary_local_source_status"), 60
+        ),
         "extraction_status": _require_text(
             source.get("extraction_status"), field="extraction_status", limit=60
         ),
         "page_reference_scheme": _clean(source.get("page_reference_scheme"), 80),
     }
+    verification_source = source.get("verification_source")
+    if verification_source is not None:
+        if not isinstance(verification_source, Mapping):
+            raise ExecutiveContextError("baseline verification_source is malformed")
+        verification_sha256 = _clean(verification_source.get("sha256"), 64).casefold()
+        if not re.fullmatch(r"[0-9a-f]{64}", verification_sha256):
+            raise ExecutiveContextError("baseline verification source sha256 is malformed")
+        normalized_source["verification_source"] = {
+            "source_kind": _require_text(
+                verification_source.get("source_kind"),
+                field="verification source kind",
+                limit=80,
+            ),
+            "sha256": verification_sha256,
+            "verification_status": _require_text(
+                verification_source.get("verification_status"),
+                field="verification status",
+                limit=80,
+            ),
+            "byte_identity_with_primary": _require_text(
+                verification_source.get("byte_identity_with_primary"),
+                field="verification byte identity",
+                limit=40,
+            ),
+        }
+    baseline["source_document"] = normalized_source
     entities = value.get("entities")
     if not isinstance(entities, list) or len(entities) > 50:
         raise ExecutiveContextError("baseline entities are malformed")
@@ -220,7 +252,7 @@ def validate_baseline_authority(value: object) -> dict[str, Any]:
                     "fact_id": fact_id,
                     "dimension": dimension,
                     "value": numeric_value,
-                    "unit": _clean(raw_fact.get("unit"), 40),
+                    "unit": _clean(raw_fact.get("unit"), 80),
                     "as_of": _require_text(raw_fact.get("as_of"), field="fact as_of", limit=32),
                     "source_reference": _require_text(
                         raw_fact.get("source_reference"), field="source_reference", limit=120
