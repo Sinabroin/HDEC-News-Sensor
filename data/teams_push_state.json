@@ -2988,6 +2988,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "ai수요에투자주기빨라졌다알리바바클라우드인프라에이전트"
     },
+    "https://epnc.co.kr/news/articleView.html?idxno=405942": {
+      "article_id": "854b065c500e0e9a",
+      "cluster_key": "title:아크릴gpu국산npu통합운영소버린ax전략공개",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-24T14:25:30+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-24T14:25:30+09:00",
+      "normalized_url": "https://epnc.co.kr/news/articleView.html?idxno=405942",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "테크월드",
+      "source_tier": "specialist",
+      "title_fingerprint": "아크릴gpu국산npu통합운영소버린ax전략공개"
+    },
     "https://etnews.com/20260806000330": {
       "article_id": "718834e62668084e",
       "cluster_key": "title:통신사ai토큰배울바크다",
