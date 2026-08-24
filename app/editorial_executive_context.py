@@ -31,6 +31,9 @@ NONE = "none"
 AMBIGUOUS = "ambiguous"
 SUPPORTED = "supported"
 NOT_SUPPORTED = "not_supported"
+EXPANSION = "expansion"
+CONTRACTION = "contraction"
+NEUTRAL_UNKNOWN = "neutral_unknown"
 
 MAX_FACT_POINTS = 3
 MAX_FACT_LENGTH = 180
@@ -58,6 +61,13 @@ ALLOWED_DIMENSIONS = frozenset(
 VERIFIED_FACT_STATUSES = frozenset({"verified", "stale_verified"})
 
 _SENTENCE_RE = re.compile(r"(?<=[.!?。！？])\s+|\n+|\s*[•▪]\s*")
+_CLAUSE_BOUNDARY_RE = re.compile(
+    r"(?:[.!?。！？;；]+\s*|[,，]\s+|\n+|\s*[•▪]\s*)"
+)
+_COMMENTARY_CONNECTOR_RE = re.compile(
+    r"((?:발표|언급|논의|설명|참석|보고|교육)"
+    r"(?:했고|했으며|하고|하며|한\s+후|한\s+뒤|\s+후|\s+뒤))\s+"
+)
 _WORD_RE = re.compile(r"[0-9A-Za-z가-힣]+")
 _NUMBER_RE = re.compile(
     r"(?:\d[\d,.]*\s*(?:조|억|만|천|백)?\s*(?:원|달러|%|건|개|GW|MW|명|km|㎡))",
@@ -84,18 +94,144 @@ _INFRA_CONSEQUENCE_TERMS = (
     "건설", "시공", "epc", "투자", "수주", "발주", "계약", "착공", "준공",
     "증설", "용량", "인허가", "조성", "공급", "가동", "운영",
 )
-_BASELINE_DIMENSION_LINKS = {
-    "data_center": frozenset({"data_center_strategy", "portfolio_shift", "strategy"}),
-    "power_grid": frozenset({"data_center_strategy", "portfolio_shift", "strategy"}),
-    "industrial_site": frozenset({"portfolio_shift", "strategy", "overseas"}),
-    "energy_hydrogen": frozenset({"portfolio_shift", "strategy"}),
-    "nuclear_smr": frozenset({"nuclear", "portfolio_shift", "strategy"}),
-    "automation_physical_ai": frozenset({"ai_transformation", "strategy"}),
-    "semiconductor_fab": frozenset({"portfolio_shift", "strategy"}),
-    "capital_pf": frozenset(
-        {"pf_guarantee", "completion_guarantee", "operating_cash_flow", "net_cash_or_debt"}
+_BASELINE_FACT_PRIORITY = {
+    "data_center": ("data_center_strategy", "portfolio_shift", "strategy"),
+    "power_grid": ("strategy", "portfolio_shift", "data_center_strategy"),
+    "industrial_site": ("strategy", "portfolio_shift", "overseas"),
+    "energy_hydrogen": ("strategy", "portfolio_shift"),
+    "nuclear_smr": ("nuclear", "strategy"),
+    "automation_physical_ai": ("ai_transformation", "strategy"),
+    "semiconductor_fab": ("strategy", "portfolio_shift"),
+    "capital_pf": (
+        "pf_guarantee",
+        "completion_guarantee",
+        "operating_cash_flow",
+        "net_cash_or_debt",
     ),
 }
+_BASELINE_EVIDENCE_TERMS: dict[str, tuple[str, ...]] = {
+    "data_center": ("데이터센터", "데이터 센터", "data center", "datacenter", "idc"),
+    "power_grid": ("전력", "전력망", "그리드", "송전", "변전", "배전", "ppa"),
+    "industrial_site": ("산업단지", "산업 단지", "산업거점", "부지", "용지", "토지"),
+    "energy_hydrogen": ("수소", "재생에너지", "에너지", "발전", "ess"),
+    "nuclear_smr": ("원전", "원자력", "smr", "소형모듈원전"),
+    "automation_physical_ai": (
+        "ai",
+        "인공지능",
+        "피지컬",
+        "로봇",
+        "스마트건설",
+        "bim",
+        "디지털 트윈",
+    ),
+    "semiconductor_fab": ("반도체", "팹", "fab", "파운드리"),
+    "capital_pf": (
+        "프로젝트금융",
+        "프로젝트 금융",
+        "pf",
+        "보증",
+        "자금조달",
+        "영업현금흐름",
+        "순현금",
+        "순차입",
+    ),
+}
+_DELTA_DIMENSION_TERMS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "data_center",
+        ("데이터센터", "데이터 센터", "data center", "datacenter", "idc"),
+    ),
+    (
+        "power_grid",
+        ("전력", "전력망", "그리드", "송전", "변전", "배전", "전력계약", "ppa"),
+    ),
+    (
+        "industrial_site",
+        ("산업단지", "산업 단지", "산업거점", "부지", "용지", "새만금", "토지"),
+    ),
+    ("energy_hydrogen", ("수소", "재생에너지", "에너지", "발전", "ess")),
+    ("nuclear_smr", ("원전", "원자력", "smr", "소형모듈원전")),
+    (
+        "automation_physical_ai",
+        ("피지컬 ai", "건설로봇", "건설 로봇", "스마트건설", "bim", "디지털 트윈"),
+    ),
+    (
+        "semiconductor_fab",
+        ("반도체 팹", "반도체 공장", "fab", "파운드리", "클러스터"),
+    ),
+    (
+        "capital_pf",
+        ("프로젝트금융", "프로젝트 금융", "pf", "보증", "자금조달"),
+    ),
+)
+_AI_WORKFLOW_TERMS = (
+    "설계",
+    "입찰",
+    "견적",
+    "공정",
+    "시공",
+    "현장",
+    "업무",
+    "프로세스",
+    "자동화",
+    "도입",
+    "적용",
+    "전환",
+)
+_EXPANSION_TERMS = (
+    "운영 개시",
+    "사업 진출",
+    "신규 진출",
+    "파트너십 체결",
+    "용량 확대",
+    "투자 확대",
+    "개발 착수",
+    "도입 확대",
+    "전환 추진",
+    "사업 추진",
+    "착공",
+    "수주",
+    "발주",
+    "계약",
+    "투자",
+    "개발",
+    "증설",
+    "확대",
+    "도입",
+    "적용",
+    "전환",
+    "구축",
+    "상용화",
+)
+_CONTRACTION_TERMS = (
+    "매각 후 철수",
+    "사업 철수",
+    "사업 포기",
+    "투자 축소",
+    "계획 취소",
+    "사업 재검토",
+    "철수",
+    "축소",
+    "중단",
+    "취소",
+    "폐기",
+)
+_NON_MOVEMENT_CONTEXT_TERMS = (
+    "세미나",
+    "컨퍼런스",
+    "시장 전망",
+    "주가 전망",
+    "전망 발표",
+    "보고서 발표",
+    "교육",
+    "채용",
+    "관심 표명",
+    "검토 의견",
+)
+_NEGATED_MOVEMENT_RE = re.compile(
+    r"(?:확대|증설|진출|투자|개발|착공|수주|발주|계약|도입|적용|전환|구축|추진)"
+    r"(?:을|를|이|가)?\s*(?:하지\s*않|않기로|보류)"
+)
 _EDITABLE_FIELDS = frozenset(
     {
         "fact_points",
@@ -408,19 +544,124 @@ def _detected_dimensions(text: str) -> list[str]:
     ]
 
 
+def _bounded_clauses(evidence: Sequence[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Split only authorized, length-bounded article evidence into local clauses."""
+    output: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for field, value in evidence:
+        split_ready = _COMMENTARY_CONNECTOR_RE.sub(r"\1\n", value)
+        for raw_clause in _CLAUSE_BOUNDARY_RE.split(split_ready):
+            clause = _clean(raw_clause, 600)
+            key = (field, clause.casefold())
+            if not clause or key in seen:
+                continue
+            seen.add(key)
+            output.append((field, clause))
+    return output
+
+
+def _delta_dimensions(clause: str) -> list[str]:
+    low = clause.casefold()
+    ai_workflow = any(term.casefold() in low for term in _AI_TERMS) and any(
+        term.casefold() in low for term in _AI_WORKFLOW_TERMS
+    )
+    output: list[str] = []
+    for dimension, terms in _DELTA_DIMENSION_TERMS:
+        if any(term.casefold() in low for term in terms) or (
+            dimension == "automation_physical_ai" and ai_workflow
+        ):
+            output.append(dimension)
+    return output
+
+
+def _movement_direction(clause: str) -> str:
+    """Conservatively classify only material execution in the same clause."""
+    low = clause.casefold()
+    if any(term.casefold() in low for term in _NON_MOVEMENT_CONTEXT_TERMS):
+        return NEUTRAL_UNKNOWN
+    if any(term.casefold() in low for term in _CONTRACTION_TERMS):
+        return CONTRACTION
+    if _NEGATED_MOVEMENT_RE.search(low):
+        return NEUTRAL_UNKNOWN
+    if any(term.casefold() in low for term in _EXPANSION_TERMS):
+        return EXPANSION
+    return NEUTRAL_UNKNOWN
+
+
+def _delta_evidence(clauses: Sequence[tuple[str, str]]) -> dict[str, str]:
+    first_dimension = ""
+    for field, clause in clauses:
+        dimensions = _delta_dimensions(clause)
+        if not dimensions:
+            continue
+        if not first_dimension:
+            first_dimension = dimensions[0]
+        direction = _movement_direction(clause)
+        if direction in {EXPANSION, CONTRACTION}:
+            return {
+                "article_field": field,
+                "clause": clause,
+                "dimension": dimensions[0],
+                "movement_direction": direction,
+            }
+    return {
+        "article_field": "",
+        "clause": "",
+        "dimension": first_dimension,
+        "movement_direction": NEUTRAL_UNKNOWN,
+    }
+
+
+def _fact_relevant_to_dimension(fact: Mapping[str, Any], dimension: str) -> bool:
+    paraphrase = str(fact.get("evidence_paraphrase") or "").casefold()
+    return any(
+        term.casefold() in paraphrase
+        for term in _BASELINE_EVIDENCE_TERMS.get(dimension, ())
+    )
+
+
 def _baseline_facts_for_dimensions(
     entity: Mapping[str, Any], dimensions: Sequence[str]
 ) -> list[dict[str, Any]]:
-    allowed = set().union(*(_BASELINE_DIMENSION_LINKS.get(item, ()) for item in dimensions))
-    output = []
-    for fact in entity.get("facts", []):
-        if (
-            isinstance(fact, Mapping)
-            and fact.get("status") in VERIFIED_FACT_STATUSES
-            and fact.get("dimension") in allowed
-        ):
-            output.append(dict(fact))
+    facts = [
+        fact
+        for fact in entity.get("facts", [])
+        if isinstance(fact, Mapping) and fact.get("status") in VERIFIED_FACT_STATUSES
+    ]
+    output: list[dict[str, Any]] = []
+    used_ids: set[str] = set()
+    for article_dimension in dict.fromkeys(dimensions):
+        for fact_dimension in _BASELINE_FACT_PRIORITY.get(article_dimension, ()):
+            for fact in facts:
+                fact_id = str(fact.get("fact_id") or "")
+                if (
+                    fact_id in used_ids
+                    or fact.get("dimension") != fact_dimension
+                    or not _fact_relevant_to_dimension(fact, article_dimension)
+                ):
+                    continue
+                output.append(dict(fact))
+                used_ids.add(fact_id)
+                if len(output) == 2:
+                    return output
     return output[:2]
+
+
+def _delta_signal(dimension: str, direction: str) -> str:
+    signals = {
+        "data_center": "AI 데이터센터 사업",
+        "power_grid": "전력 인프라 사업",
+        "industrial_site": "산업거점 개발",
+        "energy_hydrogen": "에너지·수소 사업",
+        "nuclear_smr": "원전·SMR 사업",
+        "automation_physical_ai": "AI 전환",
+        "semiconductor_fab": "반도체 인프라 사업",
+        "capital_pf": "자본·PF 운용",
+    }
+    suffix = (
+        "확대·실행 움직임" if direction == EXPANSION else "축소·철수 검토 움직임"
+    )
+    return f"{signals.get(dimension, '사업')} {suffix}"
 
 
 def _implication(text: str, dimensions: Sequence[str], *, qualified: bool) -> tuple[str, list[str]]:
@@ -511,10 +752,13 @@ def derive_executive_context(
     evidence, _fields = _authorized_evidence(article)
     current_text = " ".join(value for _field, value in evidence)
     dimensions = _detected_dimensions(current_text)
+    delta_evidence = _delta_evidence(_bounded_clauses(evidence))
+    delta_dimension = delta_evidence["dimension"]
+    baseline_dimensions = [delta_dimension] if delta_dimension else list(dimensions)
     match = match_baseline_entity(current_text, trusted_baseline)
     entity = match.get("entity") if match["status"] == MATCHED else None
     baseline_facts = (
-        _baseline_facts_for_dimensions(entity, dimensions)
+        _baseline_facts_for_dimensions(entity, baseline_dimensions)
         if isinstance(entity, Mapping)
         else []
     )
@@ -526,30 +770,37 @@ def derive_executive_context(
         if baseline_supported
         else ""
     )
-    action_supported = any(
-        term.casefold() in current_text.casefold() for term in _ACTION_TERMS
+    delta_baseline_facts = (
+        _baseline_facts_for_dimensions(entity, [delta_dimension])[:1]
+        if isinstance(entity, Mapping) and delta_dimension
+        else []
     )
     delta_supported = bool(
         article_already_qualified
         and match["status"] == MATCHED
-        and baseline_facts
-        and action_supported
+        and delta_baseline_facts
+        and delta_evidence["movement_direction"] in {EXPANSION, CONTRACTION}
     )
     delta_text = ""
     if delta_supported:
         entity_name = str(entity.get("canonical_name") or "")
-        signal = {
-            "data_center": "AI 데이터센터 사업 움직임",
-            "power_grid": "전력 인프라 사업 움직임",
-            "industrial_site": "산업거점 개발 움직임",
-            "nuclear_smr": "원전·SMR 사업 움직임",
-            "automation_physical_ai": "AI 전환 움직임",
-            "semiconductor_fab": "반도체 인프라 사업 움직임",
-        }.get(dimensions[0] if dimensions else "", "사업 움직임")
-        delta_text = (
-            f"{entity_name}의 이번 {signal}은 {period} 기준선에 기록된 "
-            f"{baseline_facts[0]['evidence_paraphrase']} 방향의 후속 신호임."
-        )
+        direction = delta_evidence["movement_direction"]
+        signal = _delta_signal(delta_dimension, direction)
+        baseline_fact_text = str(
+            delta_baseline_facts[0]["evidence_paraphrase"]
+        ).rstrip(" .。")
+        if direction == EXPANSION:
+            delta_text = (
+                f"{entity_name}의 이번 {signal}은 {period} 기준선에서 확인된 "
+                f"‘{baseline_fact_text}’이라는 사실과 같은 전략 축의 "
+                "실행·강화 신호로 볼 수 있음."
+            )
+        else:
+            delta_text = (
+                f"{entity_name}의 이번 {signal}은 {period} 기준선에 기록된 "
+                f"‘{baseline_fact_text}’이라는 사실과 반대 방향의 "
+                "전략 변화 또는 재검토 신호임."
+            )
     implication_text, implication_dimensions = _implication(
         current_text, dimensions, qualified=article_already_qualified
     )
@@ -573,6 +824,12 @@ def derive_executive_context(
         "delta_vs_baseline": {
             "status": SUPPORTED if delta_supported else NOT_SUPPORTED,
             "text": delta_text,
+            "dimension": delta_dimension if delta_supported else "",
+            "movement_direction": (
+                delta_evidence["movement_direction"]
+                if delta_supported
+                else NEUTRAL_UNKNOWN
+            ),
         },
         "hdec_implication": {
             "status": SUPPORTED if implication_text else NOT_SUPPORTED,
@@ -589,6 +846,14 @@ def derive_executive_context(
             "baseline_id": trusted_baseline["baseline_id"] if baseline_supported else "",
             "baseline_version": trusted_baseline["baseline_version"] if baseline_supported else "",
             "baseline_fact_ids": [str(fact["fact_id"]) for fact in baseline_facts],
+            "delta_baseline_fact_ids": (
+                [str(fact["fact_id"]) for fact in delta_baseline_facts]
+                if delta_supported
+                else []
+            ),
+            "delta_article_fields": (
+                [delta_evidence["article_field"]] if delta_supported else []
+            ),
             "source_document_date": (
                 trusted_baseline["source_document"]["source_document_date"]
                 if baseline_supported
@@ -684,10 +949,13 @@ __all__ = [
     "AMBIGUOUS",
     "BASELINE_SCHEMA_VERSION",
     "CONTEXT_VERSION",
+    "CONTRACTION",
     "DEFAULT_BASELINE_PATH",
+    "EXPANSION",
     "ExecutiveContextError",
     "MATCHED",
     "NONE",
+    "NEUTRAL_UNKNOWN",
     "NOT_SUPPORTED",
     "SUPPORTED",
     "apply_editor_edits",

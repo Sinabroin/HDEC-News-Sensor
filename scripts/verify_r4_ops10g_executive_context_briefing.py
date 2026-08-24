@@ -342,6 +342,59 @@ def main() -> int:
         baseline=production_baseline,
         article_already_qualified=True,
     )
+    delta_cases = {
+        "gs_seminar": editorial_executive_context.derive_executive_context(
+            {"title": "GS건설, AI 데이터센터 관련 세미나 참석"},
+            baseline=production_baseline,
+        ),
+        "gs_ai_training": editorial_executive_context.derive_executive_context(
+            {"title": "GS건설, 임직원 AI 교육 확대"},
+            baseline=production_baseline,
+        ),
+        "gs_market_commentary": editorial_executive_context.derive_executive_context(
+            {"title": "GS건설, 데이터센터 시장 전망 발표"},
+            baseline=production_baseline,
+        ),
+        "gs_withdrawal": editorial_executive_context.derive_executive_context(
+            {"title": "GS건설, AI 데이터센터 사업 철수 검토"},
+            baseline=production_baseline,
+        ),
+        "gs_cross_clause": editorial_executive_context.derive_executive_context(
+            {
+                "title": (
+                    "GS건설은 데이터센터 시장 전망을 발표함. "
+                    "해외 주택사업 투자를 확대함."
+                ),
+                "subtitle": "GS건설",
+            },
+            baseline=production_baseline,
+        ),
+        "gs_cross_connector": editorial_executive_context.derive_executive_context(
+            {
+                "title": (
+                    "GS건설, 데이터센터 시장 전망을 발표했고 "
+                    "해외 주택사업을 확대했다"
+                )
+            },
+            baseline=production_baseline,
+        ),
+        "samsung_ai_execution": editorial_executive_context.derive_executive_context(
+            {"title": "삼성물산, 설계·입찰 AI 적용 확대"},
+            baseline=production_baseline,
+        ),
+        "samsung_commentary": editorial_executive_context.derive_executive_context(
+            {"title": "삼성물산, AI 건설시장 전망 발표"},
+            baseline=production_baseline,
+        ),
+        "multi_entity": editorial_executive_context.derive_executive_context(
+            {"title": "GS건설·삼성물산 AI 데이터센터 공동사업"},
+            baseline=production_baseline,
+        ),
+        "asset_disposal_only": editorial_executive_context.derive_executive_context(
+            {"title": "GS건설, AI 데이터센터 자산 매각"},
+            baseline=production_baseline,
+        ),
+    }
     saemangeum = contexts["saemangeum_ai_hydrogen_hub"]
     generic = contexts["generic_ai_policy"]
     non_ai = contexts["non_ai_company_news"]
@@ -360,6 +413,8 @@ def main() -> int:
         "BASELINE_PROVENANCE",
         gs["provenance"]["baseline_id"] == baseline["baseline_id"]
         and gs["provenance"]["baseline_fact_ids"] == ["fixture-gs-portfolio-001"]
+        and gs["provenance"]["delta_baseline_fact_ids"]
+        == ["fixture-gs-portfolio-001"]
         and source["filename"] == "260814_사업보고서_비교검토_26년 반기(배포).pdf"
         and source["title"] == "국내 건설사 사업보고서 비교 요약"
         and source["reporting_basis"] == "'26년 반기(연결기준) 보고서 기준"
@@ -570,12 +625,155 @@ def main() -> int:
         == production_baseline["baseline_id"]
         and gs_real["provenance"]["baseline_version"]
         == "2026-h1-construction-v2"
-        and bool(gs_real["provenance"]["baseline_fact_ids"])
+        and gs_real["provenance"]["baseline_fact_ids"]
+        == ["2026h1-gs-data-center-strategy-p3"]
+        and gs_real["provenance"]["delta_baseline_fact_ids"]
+        == ["2026h1-gs-data-center-strategy-p3"]
         and set(gs_real["provenance"]["baseline_fact_ids"])
-        <= gs_production_fact_ids
+        <= gs_production_fact_ids,
+    )
+    gs_seminar = delta_cases["gs_seminar"]
+    gs_ai_training = delta_cases["gs_ai_training"]
+    gs_market_commentary = delta_cases["gs_market_commentary"]
+    gs_withdrawal = delta_cases["gs_withdrawal"]
+    gs_cross_clause = delta_cases["gs_cross_clause"]
+    gs_cross_connector = delta_cases["gs_cross_connector"]
+    samsung_ai_execution = delta_cases["samsung_ai_execution"]
+    samsung_commentary = delta_cases["samsung_commentary"]
+    multi_entity = delta_cases["multi_entity"]
+    asset_disposal_only = delta_cases["asset_disposal_only"]
+    expected_gs_delta_fact_ids = ["2026h1-gs-data-center-strategy-p3"]
+    expected_samsung_delta_fact_ids = ["2026h1-samsung-ai-transformation-p3"]
+    verifier.check(
+        "GS_EXPANSION_DELTA",
+        gs_real["baseline_match"]["status"] == "matched"
+        and gs_real["baseline_match"]["canonical_name"] == "GS건설"
+        and gs_real["delta_vs_baseline"]["status"] == "supported"
+        and gs_real["delta_vs_baseline"]["dimension"] == "data_center"
+        and gs_real["delta_vs_baseline"]["movement_direction"] == "expansion"
+        and gs_real["provenance"]["delta_baseline_fact_ids"]
+        == expected_gs_delta_fact_ids
+        and "같은 전략 축의 실행·강화 신호로 볼 수 있음" in gs_real["delta_vs_baseline"]["text"]
+        and "해외주택 투자사업 확대" not in gs_real["delta_vs_baseline"]["text"]
+        and "기준선 방향의 후속 신호" not in gs_real["delta_vs_baseline"]["text"],
+    )
+    verifier.check(
+        "GS_SEMINAR_NEGATIVE",
+        gs_seminar["baseline_match"]["status"] == "matched"
+        and gs_seminar["delta_vs_baseline"]["status"] == "not_supported"
+        and gs_seminar["provenance"]["delta_baseline_fact_ids"] == [],
+    )
+    verifier.check(
+        "GS_AI_TRAINING_NEGATIVE",
+        gs_ai_training["baseline_match"]["status"] == "matched"
+        and gs_ai_training["baseline_context"]["status"] == "not_supported"
+        and gs_ai_training["delta_vs_baseline"]["status"] == "not_supported"
+        and gs_ai_training["provenance"]["delta_baseline_fact_ids"] == [],
+    )
+    verifier.check(
+        "GS_MARKET_COMMENTARY_NEGATIVE",
+        gs_market_commentary["delta_vs_baseline"]["status"] == "not_supported"
+        and gs_market_commentary["provenance"]["delta_baseline_fact_ids"] == [],
+    )
+    verifier.check(
+        "GS_WITHDRAWAL_DIRECTION",
+        gs_withdrawal["delta_vs_baseline"]["status"] == "supported"
+        and gs_withdrawal["delta_vs_baseline"]["dimension"] == "data_center"
+        and gs_withdrawal["delta_vs_baseline"]["movement_direction"] == "contraction"
+        and gs_withdrawal["provenance"]["delta_baseline_fact_ids"]
+        == expected_gs_delta_fact_ids
+        and "반대 방향의 전략 변화 또는 재검토 신호" in gs_withdrawal["delta_vs_baseline"]["text"]
+        and "기준선 방향의 후속 신호" not in gs_withdrawal["delta_vs_baseline"]["text"],
+    )
+    verifier.check(
+        "GS_CROSS_CLAUSE_FALSE_BINDING",
+        gs_cross_clause["baseline_match"]["status"] == "matched"
+        and gs_cross_clause["delta_vs_baseline"]["status"] == "not_supported"
+        and gs_cross_connector["baseline_match"]["status"] == "matched"
+        and gs_cross_connector["delta_vs_baseline"]["status"] == "not_supported",
+    )
+    verifier.check(
+        "SAMSUNG_AI_EXECUTION_DELTA",
+        samsung_ai_execution["baseline_match"]["status"] == "matched"
+        and samsung_ai_execution["baseline_match"]["canonical_name"] == "삼성물산"
+        and samsung_ai_execution["delta_vs_baseline"]["status"] == "supported"
+        and samsung_ai_execution["delta_vs_baseline"]["dimension"]
+        == "automation_physical_ai"
+        and samsung_ai_execution["delta_vs_baseline"]["movement_direction"]
+        == "expansion"
+        and samsung_ai_execution["provenance"]["delta_baseline_fact_ids"]
+        == expected_samsung_delta_fact_ids,
+    )
+    verifier.check(
+        "SAMSUNG_COMMENTARY_NEGATIVE",
+        samsung_commentary["baseline_match"]["status"] == "matched"
+        and samsung_commentary["delta_vs_baseline"]["status"] == "not_supported"
+        and samsung_commentary["provenance"]["delta_baseline_fact_ids"] == [],
+    )
+    verifier.check(
+        "MULTI_ENTITY_FAIL_CLOSED",
+        multi_entity["baseline_match"]["status"] == "ambiguous"
+        and multi_entity["delta_vs_baseline"]["status"] == "not_supported"
+        and multi_entity["provenance"]["delta_baseline_fact_ids"] == [],
+    )
+    verifier.check(
+        "DIMENSION_FACT_MATCHING",
+        gs_real["provenance"]["delta_baseline_fact_ids"]
+        == expected_gs_delta_fact_ids
+        and samsung_ai_execution["provenance"]["delta_baseline_fact_ids"]
+        == expected_samsung_delta_fact_ids
+        and "해외주택" not in gs_real["baseline_context"]["text"],
+    )
+    verifier.check(
+        "DELTA_BASELINE_FACT_IDS",
+        gs_real["provenance"]["delta_baseline_fact_ids"]
+        == expected_gs_delta_fact_ids
+        and gs_withdrawal["provenance"]["delta_baseline_fact_ids"]
+        == expected_gs_delta_fact_ids
         and all(
-            fact_id.startswith("2026h1-gs-")
-            for fact_id in gs_real["provenance"]["baseline_fact_ids"]
+            context["provenance"]["delta_baseline_fact_ids"] == []
+            for context in (
+                gs_seminar,
+                gs_ai_training,
+                gs_market_commentary,
+                gs_cross_clause,
+                gs_cross_connector,
+                samsung_commentary,
+                multi_entity,
+                asset_disposal_only,
+            )
+        ),
+    )
+    verifier.check(
+        "CLAUSE_LEVEL_BINDING",
+        gs_cross_clause["delta_vs_baseline"]["status"] == "not_supported"
+        and gs_cross_connector["delta_vs_baseline"]["status"] == "not_supported",
+    )
+    verifier.check(
+        "MOVEMENT_DIRECTION_CLASSIFICATION",
+        gs_real["delta_vs_baseline"]["movement_direction"] == "expansion"
+        and gs_withdrawal["delta_vs_baseline"]["movement_direction"] == "contraction"
+        and asset_disposal_only["delta_vs_baseline"]["status"] == "not_supported"
+        and asset_disposal_only["delta_vs_baseline"]["movement_direction"]
+        == "neutral_unknown",
+    )
+    verifier.check(
+        "DELTA_EVIDENCE_GATE",
+        gs_real["delta_vs_baseline"]["status"] == "supported"
+        and gs_withdrawal["delta_vs_baseline"]["status"] == "supported"
+        and samsung_ai_execution["delta_vs_baseline"]["status"] == "supported"
+        and all(
+            context["delta_vs_baseline"]["status"] == "not_supported"
+            for context in (
+                gs_seminar,
+                gs_ai_training,
+                gs_market_commentary,
+                gs_cross_clause,
+                gs_cross_connector,
+                samsung_commentary,
+                multi_entity,
+                asset_disposal_only,
+            )
         ),
     )
     verifier.check(
@@ -584,6 +782,12 @@ def main() -> int:
         and saemangeum["delta_vs_baseline"]["status"] == "not_supported"
         and "산업" in saemangeum["hdec_implication"]["text"]
         and "인허가" in saemangeum["watch_point"]["text"],
+    )
+    verifier.check(
+        "HDEC_IMPLICATION_INDEPENDENT",
+        saemangeum["baseline_match"]["status"] == "none"
+        and saemangeum["delta_vs_baseline"]["status"] == "not_supported"
+        and saemangeum["hdec_implication"]["status"] == "supported",
     )
     verifier.check(
         "GENERIC_AI_NEGATIVE_CASE",
@@ -826,11 +1030,34 @@ def main() -> int:
         )
     except editorial_operator_review.OperatorReviewError:
         rejected_claim = True
+    edited_delta = editorial_executive_context.apply_editor_edits(
+        gs_real, {"delta_text": "편집된 Delta 설명"}
+    )
+    rejected_direction_edit = False
+    try:
+        editorial_executive_context.normalize_editor_edits(
+            {
+                "delta_text": "브라우저가 만든 Delta",
+                "movement_direction": "contraction",
+            }
+        )
+    except editorial_executive_context.ExecutiveContextError:
+        rejected_direction_edit = True
     verifier.check(
         "EDITOR_SERVER_CONTEXT_VALIDATION",
         normalized["selected_items"][0]["executive_context_edits"]["fact_points"]
         == ["편집 사실 1", "편집 사실 2"]
         and rejected_claim,
+    )
+    verifier.check(
+        "SERVER_REVALIDATION",
+        edited_delta["delta_vs_baseline"]["text"] == "편집된 Delta 설명"
+        and edited_delta["delta_vs_baseline"]["status"] == "supported"
+        and edited_delta["delta_vs_baseline"]["movement_direction"] == "expansion"
+        and edited_delta["provenance"]["delta_baseline_fact_ids"]
+        == expected_gs_delta_fact_ids
+        and rejected_claim
+        and rejected_direction_edit,
     )
 
     operator_source = (ROOT / "app" / "editorial_operator_review.py").read_text(
@@ -868,6 +1095,14 @@ def main() -> int:
         "RIGHT_PREVIEW_CLASSIFICATION_GUIDE_HIDDEN",
         "previewTaxonomyLabel" not in template and "taxonomyMarkup" not in template,
     )
+    shared_authority_claim_valid = (
+        'delta_vs_baseline:{status:"not_supported",text:""}' in template
+        and "data_center_strategy" not in template
+        and "movement_direction" not in template
+        and rejected_claim
+        and rejected_direction_edit
+    )
+    verifier.check("SHARED_AUTHORITY_CLAIM_VALID", shared_authority_claim_valid)
 
     browser = _browser_acceptance()
     verifier.check("REAL_BROWSER_USED", "error" not in browser, browser)
@@ -908,6 +1143,11 @@ def main() -> int:
     print("CONTRIBUTOR_PRIVILEGE_ESCALATION=false")
     print("TEAMS_RAW_COUNT_MISREPRESENTED=false")
     print("WATCH_CARD_FUNNEL_SPAM=false")
+    print("BROWSER_PROVENANCE_INJECTION=false")
+    print(
+        "SHARED_AUTHORITY_CLAIM_VALID="
+        + ("true" if shared_authority_claim_valid else "false")
+    )
     print("WEEKLY_PRESENTATION_CHANGED=false")
     print(f"BASELINE_ENTITY_COUNT={len(production_entities)}")
     print(f"BASELINE_FACT_COUNT={len(production_facts)}")
