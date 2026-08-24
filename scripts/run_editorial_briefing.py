@@ -1996,6 +1996,51 @@ def persist_exact_250_success(
     return updated
 
 
+def run_reconcile_unsent_claim(
+    edition_type: str,
+    *,
+    run_at: datetime,
+    runtime_dir: Path,
+    state_path: Path | None = None,
+) -> dict:
+    """Release this run's exact claim after a failed final pre-send gate.
+
+    The workflow invokes this only after the read-only Watch freshness gate has
+    failed and before the send step can run.  No success evidence is created;
+    the next serialized scheduled run may rebuild from newer Watch truth.
+    """
+    _require_production_gate()
+    if edition_type != "daily":
+        raise OrchestratorError("unsent claim reconciliation is Daily-only")
+    key = editorial_briefings.edition_key(edition_type, run_at)
+    claim_owner = _github_claim_owner()
+    manifest = _load_runtime_manifest(runtime_dir, edition_type)
+    if manifest["edition_key"] != key:
+        raise OrchestratorError("runtime edition does not match current catch-up edition")
+    state = editorial_briefing_state.load_state(edition_type, path=state_path)
+    updated = editorial_briefing_state.release_unaccepted_claim(
+        state,
+        edition_type,
+        key,
+        claim_owner,
+        identity=_manifest_identity(manifest),
+    )
+    editorial_briefing_state.atomic_write_state(
+        edition_type,
+        updated,
+        path=state_path,
+    )
+    _github_output("state_changed", "true")
+    _github_output("state_path", _state_output_path(edition_type, state_path))
+    _github_output("edition", key)
+    print(
+        f"claim_reconciled edition_type={edition_type} edition={key} "
+        "reason=final_watch_freshness_failed accepted_delivery=false "
+        "smtp_attempts=0 state_changed=true"
+    )
+    return updated
+
+
 def run_send(
     edition_type: str,
     *,
@@ -2075,6 +2120,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--republish", action="store_true")
     mode.add_argument("--verify-public", action="store_true")
     mode.add_argument("--claim", action="store_true")
+    mode.add_argument("--reconcile-unsent-claim", action="store_true")
     mode.add_argument("--send", action="store_true")
     parser.add_argument("--run-at", default="")
     parser.add_argument("--runtime-dir", default="")
@@ -2126,6 +2172,12 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.claim:
             run_claim(
+                args.edition_type,
+                run_at=run_at,
+                runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),
+            )
+        elif args.reconcile_unsent_claim:
+            run_reconcile_unsent_claim(
                 args.edition_type,
                 run_at=run_at,
                 runtime_dir=_runtime_dir(args.runtime_dir, args.edition_type),

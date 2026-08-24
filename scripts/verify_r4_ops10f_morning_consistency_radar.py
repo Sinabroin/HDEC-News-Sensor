@@ -10,7 +10,9 @@ tested, rather than approximated with static HTML assertions.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -18,16 +20,21 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SCRIPTS = ROOT / "scripts"
+for path in (ROOT, SCRIPTS):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 
 from app import (  # noqa: E402
+    editorial_briefing_state,
     editorial_briefings as brief,
     editorial_radar,
     executive_materiality,
     teams_push_state,
     watch_semantic_precision,
 )
+import verify_publisher_direct_collector as publisher_pin_verifier  # noqa: E402
+import run_editorial_briefing as briefing_runner  # noqa: E402
 
 
 class Verifier:
@@ -49,6 +56,14 @@ RUN_AT = datetime.fromisoformat("2026-08-24T08:02:00+09:00")
 SNAPSHOT_AT = datetime.fromisoformat("2026-08-24T07:45:00+09:00")
 FINALIZATION_AT = datetime.fromisoformat("2026-08-24T08:02:00+09:00")
 DELIVERED_AT = datetime.fromisoformat("2026-08-24T08:03:00+09:00")
+FINAL_PRE_SEND_AT = datetime.fromisoformat("2026-08-24T08:05:00+09:00")
+
+PRODUCTION_PATHS = (
+    ROOT / "data" / "teams_push_state.json",
+    ROOT / "data" / "editor_delivery_state.json",
+    ROOT / "data" / "editorial_daily_state.json",
+    ROOT / "docs" / "editorial" / "daily" / "2026-08-24.html",
+)
 
 GS_TITLE = "시공 10년 내공 쌓은 GS건설, AI 데이터센터 영토 넓힌다"
 GS_URL = "https://hankookilbo.com/news/article/A2026081914130005460"
@@ -368,15 +383,16 @@ def _test_bridge(verifier: Verifier, audit: dict) -> None:
         duplicate,
     )
 
-    # Exercise the actual pre-publication workflow leaf. The first invocation
-    # carries the bridge identity and passes; the second omits it and must stop
-    # publication before claim/send.
-    coverage = brief.daily_coverage(RUN_AT)
+    # Exercise the actual read-only gate at both freshness boundaries. The
+    # immutable edition manifest and runtime manifest carry one exact bridge
+    # identity. A later IMPORTANT Watch delivery must fail the final gate.
     with tempfile.TemporaryDirectory(prefix="r4-ops10f-freshness-") as temporary:
         root = Path(temporary)
         state_path = root / "watch-state.json"
+        racing_state_path = root / "watch-state-racing.json"
         bundle_path = root / "candidates.json"
         runtime_path = root / "runtime-manifest.json"
+        edition_manifest_path = root / "immutable-edition.json"
         teams_push_state.save_state(state, state_path)
         bundle_path.write_text(
             json.dumps({"candidates": []}, ensure_ascii=False), encoding="utf-8"
@@ -387,19 +403,31 @@ def _test_bridge(verifier: Verifier, audit: dict) -> None:
             "finalization_at": FINALIZATION_AT.isoformat(),
             "watch_delivery_ids": bridge["bridge_delivery_ids"],
         }
-        runtime = {
-            "coverage_start": coverage.start.isoformat(),
-            "coverage_end": coverage.end.isoformat(),
-            "radar_audit": fresh_radar,
-        }
+        gate_daily = brief.render_daily(
+            [],
+            run_at=RUN_AT,
+            root_url="https://daily.fixture.test",
+            radar_audit=fresh_radar,
+        )
+        runtime = brief.manifest_for_runtime(
+            gate_daily,
+            root / "2026-08-24.html",
+            root / "latest.html",
+        )
         runtime_path.write_text(
             json.dumps(runtime, ensure_ascii=False), encoding="utf-8"
+        )
+        edition_manifest_path.write_text(
+            json.dumps(gate_daily.edition_manifest, ensure_ascii=False),
+            encoding="utf-8",
         )
         command = [
             sys.executable,
             str(ROOT / "scripts/verify_daily_morning_bridge_freshness.py"),
             "--runtime-manifest",
             str(runtime_path),
+            "--edition-manifest",
+            str(edition_manifest_path),
             "--review-bundle",
             str(bundle_path),
             "--watch-state",
@@ -407,24 +435,202 @@ def _test_bridge(verifier: Verifier, audit: dict) -> None:
             "--checked-at",
             FINALIZATION_AT.isoformat(),
         ]
-        fresh = subprocess.run(
+        early_fresh = subprocess.run(
             command, cwd=ROOT, capture_output=True, text=True, timeout=30, check=False
         )
-        runtime["radar_audit"]["bridge_window"]["watch_delivery_ids"] = []
-        runtime_path.write_text(
-            json.dumps(runtime, ensure_ascii=False), encoding="utf-8"
+        stable_final = subprocess.run(
+            [
+                *command[:-1],
+                FINAL_PRE_SEND_AT.isoformat(),
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
         )
-        stale = subprocess.run(
-            command, cwd=ROOT, capture_output=True, text=True, timeout=30, check=False
+
+        racing_article = {
+            "article_id": "post-early-important-watch",
+            "title": "정부, AI 데이터센터 전력망 확충 사업 최종 승인",
+            "source": "연합뉴스",
+            "url": "https://www.yna.co.kr/view/AKR20260824001100003",
+            "published_at": "2026-08-24T06:20:00+09:00",
+            "first_seen_at": "2026-08-24T08:03:30+09:00",
+            "first_material_discovery_at": "2026-08-24T08:04:00+09:00",
+        }
+        racing_state = teams_push_state.mark_sent_after_success(
+            state,
+            racing_article,
+            cluster_key="bridge:post-early-important-watch",
+            signature="signature:post-early-important-watch",
+            importance="important",
+            source=racing_article["source"],
+            send_succeeded=True,
+            sent_at="2026-08-24T08:04:00+09:00",
+            delivery_id="teams_ai_push:post-early-important-watch",
         )
+        teams_push_state.save_state(racing_state, racing_state_path)
+        stale_command = [
+            racing_state_path.as_posix() if value == str(state_path) else value
+            for value in command
+        ]
+        stale_command[-1] = FINAL_PRE_SEND_AT.isoformat()
+        gate_inputs = (
+            runtime_path,
+            edition_manifest_path,
+            bundle_path,
+            racing_state_path,
+        )
+        input_hashes = {
+            path: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in gate_inputs
+        }
+        stale_final = subprocess.run(
+            stale_command,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        inputs_unchanged = all(
+            hashlib.sha256(path.read_bytes()).hexdigest() == digest
+            for path, digest in input_hashes.items()
+        )
+
+        identity = {
+            "edition_key": runtime["edition_key"],
+            "coverage_start": runtime["coverage_start"],
+            "coverage_end": runtime["coverage_end"],
+            "html_sha256": runtime["html_sha256"],
+            "public_url": runtime["public_dated_url"],
+            "delivery_kind": "empty_status",
+            "article_count": 0,
+        }
+        claim_owner = "github-run:9001:attempt:1"
+        claimed = editorial_briefing_state.add_claim(
+            editorial_briefing_state.empty_state("daily"),
+            "daily",
+            {
+                **identity,
+                "claim_owner": claim_owner,
+                "claimed_at": "2026-08-24T08:03:00+09:00",
+            },
+        )
+        wrong_identity_rejected = False
+        try:
+            editorial_briefing_state.release_unaccepted_claim(
+                claimed,
+                "daily",
+                runtime["edition_key"],
+                claim_owner,
+                identity={**identity, "html_sha256": "f" * 64},
+            )
+        except editorial_briefing_state.StateError:
+            wrong_identity_rejected = True
+        claim_state_path = root / "daily-claim-state.json"
+        editorial_briefing_state.atomic_write_state(
+            "daily", claimed, path=claim_state_path
+        )
+        production_env = {
+            "EDITORIAL_PRODUCTION": "1",
+            "GITHUB_REF": "refs/heads/main",
+            "GITHUB_RUN_ID": "9001",
+            "GITHUB_RUN_ATTEMPT": "1",
+            "GITHUB_OUTPUT": str(root / "github-output.txt"),
+        }
+        previous_env = {name: os.environ.get(name) for name in production_env}
+        try:
+            os.environ.update(production_env)
+            reconciled = briefing_runner.run_reconcile_unsent_claim(
+                "daily",
+                run_at=RUN_AT,
+                runtime_dir=root,
+                state_path=claim_state_path,
+            )
+        finally:
+            for name, value in previous_env.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+        rebuilt_identity = {
+            **identity,
+            "html_sha256": "b" * 64,
+            "public_url": identity["public_url"] + "?revision=rebuilt",
+        }
+        retry_claimed = editorial_briefing_state.add_claim(
+            reconciled,
+            "daily",
+            {
+                **rebuilt_identity,
+                "claim_owner": "github-run:9002:attempt:1",
+                "claimed_at": "2026-08-24T08:07:00+09:00",
+            },
+        )
+        sent_daily = editorial_briefing_state.convert_claim_to_success(
+            claimed,
+            "daily",
+            {
+                **identity,
+                "smtp_status": "accepted",
+                "smtp_code": 250,
+                "sent_at": DELIVERED_AT.isoformat(),
+            },
+            claim_owner,
+        )
+        sent_daily_reclaim_rejected = False
+        try:
+            editorial_briefing_state.add_claim(
+                sent_daily,
+                "daily",
+                {
+                    **identity,
+                    "claim_owner": "github-run:9003:attempt:1",
+                    "claimed_at": "2026-08-24T08:11:00+09:00",
+                },
+            )
+        except editorial_briefing_state.StateError:
+            sent_daily_reclaim_rejected = True
     verifier.check(
-        "actual freshness gate accepts complete bridge and rejects stale bridge",
-        fresh.returncode == 0
-        and "RESULT=PASS_MORNING_WATCH_BRIDGE_FRESH" in fresh.stdout
-        and stale.returncode == 1
-        and "RESULT=FAIL_MORNING_WATCH_BRIDGE_STALE" in stale.stdout
-        and "network_sends=0 state_writes=0 docs_writes=0" in fresh.stdout,
-        {"fresh": fresh.stdout, "stale": stale.stdout},
+        "early and final gates accept an immutable complete Watch bridge",
+        early_fresh.returncode == 0
+        and stable_final.returncode == 0
+        and "RESULT=PASS_MORNING_WATCH_BRIDGE_FRESH" in early_fresh.stdout
+        and "RESULT=PASS_MORNING_WATCH_BRIDGE_FRESH" in stable_final.stdout,
+        {"early": early_fresh.stdout, "final": stable_final.stdout},
+    )
+    verifier.check(
+        "new IMPORTANT Watch delivery after early PASS fails final pre-send gate",
+        stale_final.returncode == 1
+        and "teams_ai_push:post-early-important-watch" in stale_final.stdout
+        and "RESULT=FAIL_MORNING_WATCH_BRIDGE_STALE" in stale_final.stdout,
+        stale_final.stdout,
+    )
+    verifier.check(
+        "stale final gate performs zero sends and zero production-state writes",
+        "network_sends=0 smtp_attempts=0 teams_sends=0 production_state_writes=0"
+        in stale_final.stdout
+        and inputs_unchanged,
+        stale_final.stdout,
+    )
+    verifier.check(
+        "stale exact claim is not successful and reconciles for an exact rebuild",
+        not editorial_briefing_state.has_success(claimed, runtime["edition_key"])
+        and editorial_briefing_state.has_claim(claimed, runtime["edition_key"])
+        and wrong_identity_rejected
+        and not editorial_briefing_state.has_claim(reconciled, runtime["edition_key"])
+        and editorial_briefing_state.has_claim(
+            retry_claimed, runtime["edition_key"]
+        ),
+    )
+    verifier.check(
+        "Watch after an already-sent Daily cannot create a Daily resend",
+        late["late_count"] == 1
+        and editorial_briefing_state.has_success(sent_daily, runtime["edition_key"])
+        and not editorial_briefing_state.has_claim(sent_daily, runtime["edition_key"])
+        and sent_daily_reclaim_rejected,
     )
 
 
@@ -495,6 +701,39 @@ def _test_calibration(verifier: Verifier) -> None:
     )
 
 
+def _test_pin_governance(verifier: Verifier) -> None:
+    exact = publisher_pin_verifier.EXPECTED_PROTECTED_SHA256
+    mutable = publisher_pin_verifier.MUTABLE_PROTECTED_STATE_PATHS
+    verifier.check(
+        "protected immutable/code artifacts retain exact 64-character SHA256 pins",
+        bool(exact)
+        and all(
+            len(expected) == 64
+            and all(character in "0123456789abcdef" for character in expected)
+            and publisher_pin_verifier.sha256(ROOT / path) == expected
+            for path, expected in exact.items()
+        ),
+    )
+    verifier.check(
+        "mutable Daily production state uses strict schema governance, not whole-file pin",
+        "data/editorial_daily_state.json" not in exact
+        and mutable.get("data/editorial_daily_state.json") == "daily"
+        and editorial_briefing_state.load_state(
+            "daily", ROOT / "data" / "editorial_daily_state.json"
+        )["edition_type"]
+        == "daily",
+    )
+    verifier_source = (ROOT / "scripts/verify_publisher_direct_collector.py").read_text(
+        encoding="utf-8"
+    )
+    verifier.check(
+        "protected checks remain mandatory exact equality checks",
+        "protected_before[path] == expected" in verifier_source
+        and "continue-on-error" not in verifier_source
+        and "startswith(expected)" not in verifier_source,
+    )
+
+
 def _test_delivery_and_auth(verifier: Verifier) -> None:
     workflow = (ROOT / ".github/workflows/editorial-daily-brief.yml").read_text(
         encoding="utf-8"
@@ -508,10 +747,28 @@ def _test_delivery_and_auth(verifier: Verifier) -> None:
         and "require_claim_owner" in runner,
     )
     verifier.check(
-        "fresh Watch race gate runs before claim and send steps",
+        "early and final Watch gates bracket publication/claim before send",
         workflow.index("Verify no important Watch item crossed the finalization boundary")
         < workflow.index("Claim exact Daily edition after public verification")
-        < workflow.index("Send claimed Daily edition"),
+        < workflow.index("Send claimed Daily edition after final Watch freshness check")
+        and workflow.rindex("verify_daily_morning_bridge_freshness.py")
+        < workflow.rindex("--send"),
+    )
+    verifier.check(
+        "final pre-send gate reads fresh authoritative Watch state and immutable bridge identity",
+        'git show origin/main:data/teams_push_state.json > "$FINAL_WATCH_STATE_PATH"'
+        in workflow
+        and '--edition-manifest "$EDITION_MANIFEST_PATH"' in workflow
+        and workflow.count("verify_daily_morning_bridge_freshness.py") == 2
+        and "continue-on-error" not in workflow,
+    )
+    verifier.check(
+        "failed final gate reconciles only the unsent exact claim before retry",
+        "--reconcile-unsent-claim" in workflow
+        and "release_unaccepted_claim" in runner
+        and workflow.index("Send claimed Daily edition after final Watch freshness check")
+        < workflow.index("Reconcile unsent Daily claim after final freshness failure")
+        and "steps.send.outputs.freshness_passed != 'true'" in workflow,
     )
 
     browser = subprocess.run(
@@ -533,15 +790,39 @@ def _test_delivery_and_auth(verifier: Verifier) -> None:
 
 def main() -> int:
     verifier = Verifier()
+    production_before = {
+        path: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in PRODUCTION_PATHS
+    }
     audit = _collection_audit()
     _test_collection_and_ui(verifier, audit)
     _test_daily_design(verifier, audit)
     _test_bridge(verifier, audit)
     _test_calibration(verifier)
+    _test_pin_governance(verifier)
     _test_delivery_and_auth(verifier)
+    production_after = {
+        path: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in PRODUCTION_PATHS
+    }
+    verifier.check(
+        "focused repair verification preserves all production state/artifacts",
+        production_after == production_before,
+        {
+            str(path.relative_to(ROOT)): (
+                production_before[path], production_after[path]
+            )
+            for path in PRODUCTION_PATHS
+            if production_before[path] != production_after[path]
+        },
+    )
 
     print(f"checks={verifier.checks} failures={len(verifier.failures)}")
     print("REAL_BROWSER_USED=true")
+    print(
+        "network_sends=0 smtp_attempts=0 teams_sends=0 "
+        "production_state_writes=0"
+    )
     print(
         "OPS10F_FOCUSED=" + ("PASS" if not verifier.failures else "FAIL")
     )

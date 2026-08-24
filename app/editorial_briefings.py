@@ -5733,6 +5733,12 @@ def build_daily_edition_manifest(
         ],
         "late_watch_count": normalized_radar["funnel"].get("late_watch_count", 0),
     }
+    # The bounded delivery-ID window is the immutable Watch-to-Daily bridge
+    # identity.  The pre-send freshness gate compares this content-addressed
+    # copy with the runtime copy and the newest authoritative Watch ledger.
+    bridge_window = normalized_radar.get("bridge_window")
+    if isinstance(bridge_window, Mapping):
+        public_radar["bridge_window"] = dict(bridge_window)
     manifest = {
         "version": 2,
         "product": "daily",

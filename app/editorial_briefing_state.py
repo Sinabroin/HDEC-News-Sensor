@@ -413,6 +413,35 @@ def require_claim_owner(
     return deepcopy(claim)
 
 
+def release_unaccepted_claim(
+    state: Mapping,
+    edition_type: str,
+    edition_key: str,
+    claim_owner: str,
+    *,
+    identity: Mapping,
+) -> dict:
+    """Release only the caller's exact, unaccepted claim for a safe rebuild.
+
+    This is the narrow reconciliation transition used when a publication
+    precondition fails after a durable claim but before any SMTP attempt.  A
+    successful edition is never removed, and ownership plus immutable edition
+    identity must still match exactly.
+    """
+    current = validate_state(dict(state), edition_type)
+    if has_success(current, edition_key):
+        raise StateError("cannot release a successful edition")
+    require_claim_owner(
+        current,
+        edition_type,
+        edition_key,
+        claim_owner,
+        identity=identity,
+    )
+    del current["delivery_claims"][edition_key]
+    return validate_state(current, edition_type)
+
+
 def convert_claim_to_success(
     state: Mapping,
     edition_type: str,
