@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-08-25",
+  "coverage_start": "2026-08-24T07:00:00+09:00",
+  "coverage_end": "2026-08-25T06:40:00+09:00",
+  "published_run_at": "2026-08-25T08:10:16+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 517,
+      "normalized_row_count": 39,
+      "ai_central_count": 5,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-08-25T08:02:37+09:00",
+      "finalization_at": "2026-08-25T08:10:16.194413+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "AI 가 보내온 ‘채권발작’ 청구서…누가, 무엇으로 갚나[목대균의 글로...",
+  "editor_summary": "데이터센터 투자자금을 마련하기 위해 발행한 회사채도 약 750억달러에 달한다. 정부와 빅테크가 같은 투자자의 돈을 놓고 경쟁하기 시작한 것이다. AI 는 전기만 먹는 것이 아니다.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "AI 가 보내온 ‘채권발작’ 청구서…누가, 무엇으로 갚나[목대균의 글로...",
+      "summary": "데이터센터 투자자금을 마련하기 위해 발행한 회사채도 약 750억달러에 달한다. 정부와 빅테크가 같은 투자자의 돈을 놓고 경쟁하기 시작한 것이다. AI 는 전기만 먹는 것이 아니다.",
+      "category": "투자·산업",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/economy/12135120",
+      "published_at": "2026-08-24T17:54:34+09:00"
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-08-25.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "51cbabfed601f91c8a96d1aa1c66b3449e893e4351da0bd19868298959c5c91c",
+    "publication_state": "published"
+  },
+  "revision": "515a41f1d53754aa",
+  "edition_id": "daily-2026-08-25-515a41f1d53754aa",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "515a41f1d53754aa8c9c2fddd2e6a23c1f31666f276e70baebb7511f02ee0916"
+  }
+}
