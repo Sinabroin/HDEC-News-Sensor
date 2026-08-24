@@ -27,7 +27,7 @@ from html import escape, unescape
 from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import Path
-from typing import Callable, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urljoin, urlparse, urlunparse
 
 try:
@@ -39,6 +39,7 @@ except ImportError:  # Text/editorial policy remains usable without image extras
 from app import (
     ai_centrality,
     config,
+    editorial_radar,
     editorial_preference_runtime,
     executive_materiality,
     news_access,
@@ -855,6 +856,7 @@ class RenderedEdition:
     editor_url: str = ""
     edition_manifest: dict | None = None
     image_audit: dict | None = None
+    radar_audit: dict | None = None
 
     @property
     def html_sha256(self) -> str:
@@ -2574,7 +2576,26 @@ def _select_article_candidates(
     ) = None,
     edition_type: str | None = None,
     operator_review: bool = False,
+    radar_rows: dict[int, dict] | None = None,
 ) -> list[_ArticleCandidate]:
+    def radar_stage(
+        candidate: _ArticleCandidate,
+        stage: str,
+        *,
+        qualified: str = "",
+        rejected: str = "",
+    ) -> None:
+        if radar_rows is None:
+            return
+        row = radar_rows.get(id(candidate))
+        if row is not None:
+            editorial_radar.set_stage(
+                row,
+                stage,
+                qualification_reason=qualified,
+                rejection_reason=rejected,
+            )
+
     # R4-R6 §5 — AI-only scope is the first gate: an AI-branded edition never
     # fills with non-AI-central articles, whatever the supply looks like.
     # Every rejection class is counted machine-readably.
@@ -2596,6 +2617,14 @@ def _select_article_candidates(
                 if article.official_material_event:
                     audit.official_material_event_rows += 1
             if not article.official_daily_pool_eligible:
+                radar_stage(
+                    candidate,
+                    editorial_radar.STAGE_EXCLUDED,
+                    rejected=(
+                        article.official_ai_gate_reason
+                        or "official_semantic_gate_rejected"
+                    ),
+                )
                 if audit is not None:
                     if article.official_ai_gate_reason == (
                         public_institution_routing.OFFICIAL_AI_GATE_INCIDENTAL
@@ -2618,7 +2647,21 @@ def _select_article_candidates(
         rejection = candidate.ai_rejection_class
         if not rejection:
             ai_qualified.append(candidate)
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_AI_CENTRAL,
+                qualified=candidate.ai_centrality_reason,
+            )
             continue
+        radar_stage(
+            candidate,
+            editorial_radar.STAGE_EXCLUDED,
+            rejected=(
+                candidate.ai_centrality_exclusion
+                or candidate.ai_centrality_reason
+                or rejection
+            ),
+        )
         if audit is not None:
             if rejection == "stock_market":
                 audit.stock_market_rejected_count += 1
@@ -2642,6 +2685,21 @@ def _select_article_candidates(
         if not candidate.weak_content_reason
     ]
     weak_rejected = len(floor_qualified) - len(quality_relevant)
+    floor_ids = {id(candidate) for candidate in floor_qualified}
+    quality_ids = {id(candidate) for candidate in quality_relevant}
+    for candidate in candidates:
+        if id(candidate) not in floor_ids:
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_EXCLUDED,
+                rejected="below_editorial_relevance_floor",
+            )
+        elif id(candidate) not in quality_ids:
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_EXCLUDED,
+                rejected=candidate.weak_content_reason or "weak_content_rejected",
+            )
 
     # R4-R17 §B — Executive Qualification Gate. Runs AFTER weak-content
     # rejection (so those counters are preserved) and only on the Daily/Review
@@ -2658,11 +2716,31 @@ def _select_article_candidates(
     for candidate in quality_relevant:
         if not executive_gate_active or candidate.is_official_institution:
             executive_qualified.append(candidate)
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_EXECUTIVE_CANDIDATE,
+                qualified=(
+                    candidate.article.official_ai_gate_reason
+                    if candidate.is_official_institution
+                    else "executive_gate_not_applicable"
+                ),
+            )
             continue
-        if _executive_qualification(candidate).qualified:
+        executive_decision = _executive_qualification(candidate)
+        if executive_decision.qualified:
             executive_qualified.append(candidate)
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_EXECUTIVE_CANDIDATE,
+                qualified=executive_decision.reason,
+            )
         else:
             executive_rejected += 1
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_EXCLUDED,
+                rejected=executive_decision.reason,
+            )
 
     # R4-R8: an official item can be operator-visible without being eligible
     # for automated publication. Supporting duplicate releases also remain
@@ -2679,6 +2757,18 @@ def _select_article_candidates(
             or candidate.article.tni_brief_eligible
         )
     ]
+    relevant_ids = {id(candidate) for candidate in relevant}
+    for candidate in executive_qualified:
+        if id(candidate) not in relevant_ids:
+            radar_stage(
+                candidate,
+                editorial_radar.STAGE_EXCLUDED,
+                rejected=(
+                    "supporting_evidence_only"
+                    if candidate.article.supporting_evidence_only
+                    else "public_lane_not_tni_brief_eligible"
+                ),
+            )
     relevant.sort(key=_candidate_sort_key, reverse=True)
     public_review_candidates.sort(key=_candidate_sort_key, reverse=True)
 
@@ -4439,6 +4529,7 @@ def normalize_articles(
     ) = None,
     edition_type: str | None = None,
     operator_review: bool = False,
+    radar_trace: list[dict] | None = None,
 ) -> list[EditorialArticle]:
     if selection_mode not in _SELECTION_MODES:
         raise EditorialError(f"unsupported selection mode: {selection_mode}")
@@ -4450,15 +4541,29 @@ def normalize_articles(
         )
     else:
         candidates: list[_ArticleCandidate] = []
+        radar_rows: dict[int, dict] = {}
         audit = selection_audit
-        for raw in raw_articles:
+        for sequence, raw in enumerate(raw_articles):
             if not isinstance(raw, Mapping):
                 continue
+            trace_row = editorial_radar.lightweight_row(raw, sequence=sequence)
+            if radar_trace is not None:
+                radar_trace.append(trace_row)
             try:
                 published = parse_published_at(raw.get("published_at"))
             except EditorialError:
+                editorial_radar.set_stage(
+                    trace_row,
+                    editorial_radar.STAGE_EXCLUDED,
+                    rejection_reason="published_at_invalid_or_missing",
+                )
                 continue
             if not (coverage.start <= published <= coverage.end):
+                editorial_radar.set_stage(
+                    trace_row,
+                    editorial_radar.STAGE_EXCLUDED,
+                    rejection_reason="outside_frozen_editorial_coverage",
+                )
                 continue
             provider_tokens = _provider_tokens(raw)
             if audit is not None:
@@ -4469,6 +4574,13 @@ def normalize_articles(
             candidate = _build_article_candidate(raw, coverage)
             if candidate is not None:
                 candidates.append(candidate)
+                radar_rows[id(candidate)] = trace_row
+            else:
+                editorial_radar.set_stage(
+                    trace_row,
+                    editorial_radar.STAGE_EXCLUDED,
+                    rejection_reason="invalid_or_unsafe_editorial_metadata",
+                )
 
         duplicate_clusters, supporting_ids = _public_media_duplicate_groups(
             candidates
@@ -4478,6 +4590,14 @@ def normalize_articles(
             preserve_public_supporting_duplicates=operator_review,
             audit=audit,
         )
+        deduped_ids = {id(candidate) for candidate in deduped}
+        for candidate in candidates:
+            if id(candidate) not in deduped_ids:
+                editorial_radar.set_stage(
+                    radar_rows[id(candidate)],
+                    editorial_radar.STAGE_EXCLUDED,
+                    rejection_reason="normalized_duplicate_or_retransmission",
+                )
         if audit is not None:
             audit.duplicate_official_media_event_clusters = duplicate_clusters
             audit.public_supporting_evidence_ids = supporting_ids
@@ -4505,6 +4625,7 @@ def normalize_articles(
             preference_runtime=preference_runtime,
             edition_type=edition_type,
             operator_review=operator_review,
+            radar_rows=radar_rows,
         )
         selected_rows = [
             (candidate.article, candidate.raw) for candidate in selected_candidates
@@ -5315,6 +5436,98 @@ def _daily_headline(article: EditorialArticle) -> str:
     )
 
 
+def _daily_empty_headline(radar_audit: Mapping[str, Any]) -> str:
+    funnel = radar_audit.get("funnel") if isinstance(radar_audit, Mapping) else {}
+    funnel = funnel if isinstance(funnel, Mapping) else {}
+    collected = max(0, int(funnel.get("collection_count") or 0))
+    ai_count = max(0, int(funnel.get("ai_central_count") or 0))
+    bridge_count = max(0, int(funnel.get("watch_bridge_count") or 0))
+    bridge_sentence = (
+        f" 오전 레이더 추가 포착 {bridge_count}건은 오늘 기사로 가장하지 않고 "
+        "별도 검토 신호로 표시했습니다."
+        if bridge_count
+        else ""
+    )
+    return (
+        '<section class="hero empty-edition" data-role="headline" '
+        'data-edition-status="empty" style="position:relative;overflow:hidden;'
+        'border-radius:22px;background:linear-gradient(125deg,#002C5F 0%,'
+        '#004B93 58%,#0E63B8 100%);color:#fff;padding:34px 30px 30px;">'
+        '<div class="hero-overlay" style="position:absolute;inset:0;z-index:1;'
+        'background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74));"></div>'
+        '<h2 style="position:relative;z-index:2;margin:0;line-height:1.4;color:#fff;">'
+        f'{escape(DAILY_EMPTY_STATUS_TEXT)}</h2>'
+        '<div class="hero-rule" style="position:relative;z-index:2"></div>'
+        '<div class="hero-foot" style="position:relative;z-index:2">'
+        '<span>품질 기준 유지 · 인위적 채움 없음</span></div></section>'
+        '<div class="ednote"><h3 class="ed-k">Editor\'s Summary</h3>'
+        '<p>기준을 낮추거나 기사를 채워 넣지 않았습니다. '
+        f'수집 레이더에서는 {collected}건을 탐지했고 AI 중심 {ai_count}건을 '
+        f'검토했으며 최종 임원급 선정은 0건입니다.{escape(bridge_sentence)}</p></div>'
+    )
+
+
+def _daily_radar_html(radar_audit: Mapping[str, Any]) -> str:
+    funnel = radar_audit.get("funnel") if isinstance(radar_audit, Mapping) else {}
+    funnel = funnel if isinstance(funnel, Mapping) else {}
+    values = (
+        ("수집", max(0, int(funnel.get("collection_count") or 0))),
+        ("AI 중심", max(0, int(funnel.get("ai_central_count") or 0))),
+        ("임원 후보", max(0, int(funnel.get("executive_candidate_count") or 0))),
+        ("최종 선정", max(0, int(funnel.get("selected_count") or 0))),
+    )
+    metrics = "".join(
+        f'<div class="radar-item"><b>{count}</b><span>{escape(label)}</span></div>'
+        for label, count in values
+    )
+    bridge_rows = radar_audit.get("morning_bridge_rows", [])
+    bridge_rows = bridge_rows if isinstance(bridge_rows, list) else []
+    bridge_count = max(0, int(funnel.get("watch_bridge_count") or 0))
+    note = (
+        f"최종 선정과 별도로 오전 레이더 추가 포착 {bridge_count}건이 있습니다. "
+        "자동 게재하지 않고 발행 시점의 Daily 안전 기준과 시간 의미를 구분했습니다."
+        if bridge_count
+        else "수집량과 최종 선정은 서로 다른 단계입니다. 빈 에디션도 수집 실패를 의미하지 않습니다."
+    )
+    near_misses: list[str] = []
+    for row in bridge_rows[: editorial_radar.MAX_PUBLIC_NEAR_MISSES]:
+        if not isinstance(row, Mapping):
+            continue
+        title = escape(str(row.get("title") or "Watch 중요 기사"))
+        url = editorial_radar.safe_public_url(row.get("url"))
+        title_html = (
+            f'<a href="{escape(url, quote=True)}" target="_blank" '
+            f'rel="noopener noreferrer">{title}</a>'
+            if url
+            else title
+        )
+        source = escape(str(row.get("source") or ""))
+        reason = escape(
+            str(
+                row.get("rejection_reason")
+                or row.get("daily_disposition")
+                or "Daily 재검토 대상"
+            )
+        )
+        near_misses.append(
+            f'<p class="radar-near-miss">{title_html}'
+            f'{" · " + source if source else ""} '
+            f'<span class="radar-reason">— {reason}</span></p>'
+        )
+    bridge_html = (
+        '<div class="radar-bridge"><p class="radar-bridge-title">아침 레이더 추가 포착</p>'
+        + "".join(near_misses)
+        + "</div>"
+        if near_misses
+        else ""
+    )
+    return (
+        '<div class="radar-panel" data-role="radar-scan">'
+        f'<div class="radar-grid">{metrics}</div>'
+        f'<p class="radar-note">{escape(note)}</p>{bridge_html}</div>'
+    )
+
+
 def _daily_card(article: EditorialArticle) -> str:
     return (
         '<article class="card" data-role="article-card" '
@@ -5506,7 +5719,26 @@ def build_daily_edition_manifest(
     run_at: datetime,
     review_mode: str,
     review_decision: str,
+    radar_audit: Mapping[str, Any] | None = None,
 ) -> dict:
+    normalized_radar = editorial_radar.normalize_audit(
+        radar_audit,
+        selected_count=len(articles),
+    )
+    public_radar = {
+        "version": normalized_radar["version"],
+        "funnel": normalized_radar["funnel"],
+        "morning_bridge_rows": normalized_radar.get("morning_bridge_rows", [])[
+            : editorial_radar.MAX_PUBLIC_NEAR_MISSES
+        ],
+        "late_watch_count": normalized_radar["funnel"].get("late_watch_count", 0),
+    }
+    # The bounded delivery-ID window is the immutable Watch-to-Daily bridge
+    # identity.  The pre-send freshness gate compares this content-addressed
+    # copy with the runtime copy and the newest authoritative Watch ledger.
+    bridge_window = normalized_radar.get("bridge_window")
+    if isinstance(bridge_window, Mapping):
+        public_radar["bridge_window"] = dict(bridge_window)
     manifest = {
         "version": 2,
         "product": "daily",
@@ -5518,8 +5750,18 @@ def build_daily_edition_manifest(
         "review_decision": str(review_decision or "not_applicable"),
         "edition_status": "nonempty" if articles else "empty",
         "article_count": len(articles),
+        "radar_audit": public_radar,
         "headline_title": articles[0].title if articles else "",
-        "editor_summary": articles[0].summary if articles else DAILY_EMPTY_STATUS_TEXT,
+        "editor_summary": (
+            articles[0].summary
+            if articles
+            else (
+                "최종 선정 0건 · 오전 레이더 추가 포착 "
+                f"{normalized_radar['funnel']['watch_bridge_count']}건"
+                if normalized_radar["funnel"]["watch_bridge_count"]
+                else DAILY_EMPTY_STATUS_TEXT
+            )
+        ),
         "articles": [
             {
                 "position": index,
@@ -5601,6 +5843,7 @@ def render_daily(
     review_decision: str = "not_applicable",
     editor_console_available: bool = False,
     lead_source_gate: bool = False,
+    radar_audit: Mapping[str, Any] | None = None,
 ) -> RenderedEdition:
     if lead_source_gate:
         # R4-R10 — drop long-tail/specialist leads from the delivered brief.
@@ -5611,6 +5854,10 @@ def render_daily(
     coverage = daily_coverage(run_at)
     dated_url, latest_url = public_urls(root_url, "daily", key)
     headline = articles[0] if articles else None
+    normalized_radar = editorial_radar.normalize_audit(
+        radar_audit,
+        selected_count=len(articles),
+    )
     if headline is not None and headline.ai_centrality_level not in DAILY_HEADLINE_ALLOWED_CENTRALITY:
         raise EditorialError(
             "daily headline is not AI-central: level="
@@ -5627,15 +5874,7 @@ def render_daily(
             "HEADLINE_HTML": (
                 _daily_headline(headline)
                 if headline is not None
-                else (
-                    '<section class="hero empty-edition" data-role="headline" '
-                    'data-edition-status="empty" style="border-radius:22px;'
-                    'background:#eef3f8;color:#002c5f;padding:34px 30px">'
-                    f'<h2 style="margin:0;line-height:1.45">{escape(DAILY_EMPTY_STATUS_TEXT)}</h2>'
-                    '</section><div class="ednote"><h3 class="ed-k">Editor\'s Summary</h3>'
-                    '<p>기준을 낮추거나 기사를 채워 넣지 않았습니다. 해당 수집 범위의 '
-                    '정직한 빈 에디션입니다.</p></div>'
-                )
+                else _daily_empty_headline(normalized_radar)
             ),
             "ARTICLE_CARDS_HTML": (
                 "".join(_daily_card(item) for item in articles[1:6])
@@ -5645,6 +5884,7 @@ def render_daily(
                     else '<p class="empty">오늘의 브리핑에 포함할 기사가 없습니다.</p>'
                 )
             ),
+            "RADAR_HTML": _daily_radar_html(normalized_radar),
             "TAXONOMY_HTML": _taxonomy_html(),
             "FOOTER_HTML": _brief_footer("daily", key, coverage),
         },
@@ -5660,6 +5900,7 @@ def render_daily(
         run_at=run_at,
         review_mode=review_mode,
         review_decision=review_decision,
+        radar_audit=normalized_radar,
     )
     edition_id = edition_manifest["edition_id"]
     # The operator action is emitted only when the dated Review Console for
@@ -5673,9 +5914,15 @@ def render_daily(
         if editor_console_available
         else ""
     )
+    bridge_count = normalized_radar["funnel"]["watch_bridge_count"]
+    empty_status = (
+        f"최종 선정 0건 · 오전 레이더 추가 포착 {bridge_count}건"
+        if headline is None and bridge_count
+        else DAILY_EMPTY_STATUS_TEXT
+    )
     text_lines = [
         f"HDEC AI Daily Brief · {key}",
-        headline.title if headline is not None else DAILY_EMPTY_STATUS_TEXT,
+        headline.title if headline is not None else empty_status,
         "",
     ]
     if editor_url:
@@ -5693,7 +5940,7 @@ def render_daily(
         coverage,
         [(
             "오늘의 헤드라인" if headline is not None else "오늘의 상태",
-            escape(headline.title if headline is not None else DAILY_EMPTY_STATUS_TEXT),
+            escape(headline.title if headline is not None else empty_status),
         )],
         dated_url,
         DAILY_PUBLISHED_LINK_LABEL,
@@ -5704,12 +5951,13 @@ def render_daily(
     return RenderedEdition(
         "daily", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
         "daily_empty_status" if not articles else "daily",
-        headline.title if headline is not None else DAILY_EMPTY_STATUS_TEXT,
+        headline.title if headline is not None else empty_status,
         len(articles),
         edition_id=edition_id,
         editor_url=editor_url,
         edition_manifest=edition_manifest,
         image_audit=image_audit_manifest(articles),
+        radar_audit=normalized_radar,
     )
 
 
@@ -6072,13 +6320,26 @@ def validate_rendered(edition: RenderedEdition) -> None:
     else:
         if edition.html.count('data-role="headline"') != 1:
             raise EditorialError("brief headline count mismatch")
-        if empty_daily and (
-            'data-edition-status="empty"' not in edition.html
-            or DAILY_EMPTY_STATUS_TEXT not in edition.html
-            or DAILY_EMPTY_STATUS_TEXT not in edition.teams_text
-            or DAILY_EMPTY_STATUS_TEXT not in edition.teams_html
-        ):
-            raise EditorialError("truthful empty Daily status missing")
+        if empty_daily:
+            funnel = (
+                edition.radar_audit.get("funnel", {})
+                if isinstance(edition.radar_audit, Mapping)
+                else {}
+            )
+            bridge_count = max(0, int(funnel.get("watch_bridge_count") or 0))
+            qualified_status = (
+                f"최종 선정 0건 · 오전 레이더 추가 포착 {bridge_count}건"
+                if bridge_count
+                else DAILY_EMPTY_STATUS_TEXT
+            )
+            if (
+                'data-edition-status="empty"' not in edition.html
+                or DAILY_EMPTY_STATUS_TEXT not in edition.html
+                or qualified_status not in edition.teams_text
+                or qualified_status not in edition.teams_html
+                or (bridge_count and "오전 레이더 추가 포착" not in edition.html)
+            ):
+                raise EditorialError("truthful empty Daily status missing")
         if edition.html.count('data-role="article-card"') > 5:
             raise EditorialError("brief article card cap exceeded")
     if 'data-brief-contract="AI_TNI_EXECUTIVE_V1"' not in edition.html:
@@ -6232,6 +6493,10 @@ def manifest_for_runtime(edition: RenderedEdition, dated_path: Path, latest_path
         "article_count": edition.article_count,
         "edition_id": edition.edition_id,
         "editor_url": edition.editor_url,
+        "radar_audit": editorial_radar.normalize_audit(
+            edition.radar_audit,
+            selected_count=edition.article_count,
+        ),
         **audit,
     }
 

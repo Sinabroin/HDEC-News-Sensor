@@ -169,6 +169,16 @@ _HDEC_OR_COMPETITOR_TERMS: tuple[str, ...] = (
     "sk에코플랜트",
 )
 
+# R4-OPS-10F — explicit construction-competitor expansion in an AI enabling
+# infrastructure business is itself a material strategy event.  Qualification
+# remains conjunctive in _material_event: named actor + AI/infra subject + one
+# of these strategy predicates.  A bare AI mention or generic "expansion"
+# cannot qualify.
+_CONSTRUCTION_STRATEGY_EXPANSION_TERMS: tuple[str, ...] = (
+    "영토 넓", "사업 확대", "사업 확장", "시장 공략", "공동 공략",
+    "포트폴리오 확대", "신사업 진출", "진출 확대", "수주 경쟁",
+)
+
 _MAJOR_AI_ACTOR_TERMS: tuple[str, ...] = (
     "엔비디아", "nvidia", "오픈ai", "openai", "마이크로소프트", "microsoft",
     "구글", "google", "알파벳", "alphabet", "메타", "meta", "아마존",
@@ -226,6 +236,15 @@ _NONEXECUTIVE_COMMENTARY_TERMS: tuple[str, ...] = (
     "전망", "예상", "관측", "분석", "해설", "가이드", "체크리스트",
     "열쇠는", "벼락부자", "속도전만", "제안 거절한", "몸값 반토막",
     "으로 본", "가동시", "추가 배출", "이유", "ai와 뉴비즈",
+)
+
+# A consumer convenience launch can contain both "AI" and a broad event verb
+# such as "공개" without creating an interruptive executive event.  Keep this
+# narrow and title-dominant: industrial AI hardware/infrastructure remains
+# eligible through the enabling-infrastructure evidence above.
+_CONSUMER_FEATURE_TERMS: tuple[str, ...] = (
+    "스마트폰 기능", "휴대폰 기능", "사진 편집", "셀카", "배경 지우기",
+    "이모지", "스마트폰 앱", "모바일 앱 기능",
 )
 
 
@@ -371,6 +390,15 @@ def _material_event(
         lead_lower,
         title_aligned=title_aligned,
     )
+    competitor_infra_strategy_hits = _hits(
+        title_lower, _CONSTRUCTION_STRATEGY_EXPANSION_TERMS
+    )
+    competitor_infra_strategy = bool(
+        _hits(title_lower, _HDEC_OR_COMPETITOR_TERMS)
+        and _hits(title_lower, _AI_TERMS)
+        and _hits(title_lower, _ENABLING_INFRA_TERMS)
+        and competitor_infra_strategy_hits
+    )
     aligned_event = bool(
         title_aligned
         and (
@@ -384,6 +412,7 @@ def _material_event(
         or actor_bridge
         or groundbreaking_bridge
         or scaled_corporate_investment
+        or competitor_infra_strategy
     )
     evidence = tuple(dict.fromkeys(
         event_hits
@@ -394,7 +423,9 @@ def _material_event(
         + headline_cues
         + actor_nexus_hits
         + groundbreaking_hits
+        + competitor_infra_strategy_hits
         + (("scaled_corporate_investment",) if scaled_corporate_investment else ())
+        + (("competitor_ai_infrastructure_strategy",) if competitor_infra_strategy else ())
     ))
     return material, evidence
 
@@ -471,6 +502,16 @@ def classify(article: Mapping[str, Any]) -> WatchSemanticPrecisionDecision:
             False,
             "investor_audience_or_market_guidance_dominates",
             tuple(dict.fromkeys(investor_hits + audience_hits + guidance_hits + series_hits)),
+            **common,
+        )
+
+    consumer_hits = _hits(title_lower, _CONSUMER_FEATURE_TERMS)
+    if consumer_hits and not title_infra_hits:
+        return WatchSemanticPrecisionDecision(
+            OTHER_NONEXECUTIVE,
+            False,
+            "consumer_convenience_feature_without_executive_consequence",
+            tuple(dict.fromkeys(consumer_hits + title_ai_hits)),
             **common,
         )
 

@@ -18,6 +18,7 @@ button,input,select,textarea{font:inherit}
 .toolbar input,.toolbar select,.manual-grid input,.manual-grid select,.manual-grid textarea,.import-row input{border:1px solid var(--line);border-radius:10px;padding:9px;background:#fff;width:100%}
 .status{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
 .pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:12px;color:var(--muted)}
+.radar-panel{margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.radar-panel-head{padding:13px 14px 10px}.radar-panel-head h2{margin:0;color:var(--navy);font-size:14px}.radar-panel-head p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.5}.radar-funnel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.radar-metric{min-width:0;background:#f8fafc;padding:10px 8px;text-align:center}.radar-metric b{display:block;color:var(--navy);font-size:18px}.radar-metric span{display:block;color:var(--muted);font-size:10px;white-space:nowrap}.radar-providers{padding:7px 12px;color:var(--muted);font-size:10px}.radar-controls{display:grid;grid-template-columns:1fr 110px;gap:7px;padding:0 12px 9px}.radar-controls input,.radar-controls select{min-width:0;border:1px solid var(--line);border-radius:9px;padding:7px;background:#fff;font-size:11px}.radar-list{border-top:1px solid var(--line)}.radar-row{padding:10px 12px;border-bottom:1px solid #eef0f4}.radar-row:last-child{border-bottom:0}.radar-row-title{color:var(--ink);font-size:12px;font-weight:800;line-height:1.4;text-decoration:none}.radar-row-title:hover{color:var(--blue);text-decoration:underline}.radar-row-meta,.radar-row-reason,.radar-row-dimensions{margin-top:4px;color:var(--muted);font-size:10px;line-height:1.45}.radar-row-reason{color:#4b5563}.radar-stage{display:inline-block;margin-right:5px;padding:2px 6px;border-radius:999px;background:#eaf1f8;color:var(--navy);font-weight:900}.radar-promote{margin-top:6px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--navy);padding:4px 7px;font-size:10px;font-weight:900;cursor:pointer}.radar-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}.radar-pagination button{border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--navy);padding:4px 7px;font-weight:900;cursor:pointer}.radar-pagination button:disabled{opacity:.4;cursor:not-allowed}
 .lane-tabs{display:flex;gap:6px;margin:8px 0 10px;flex-wrap:wrap}.lane-tab{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:900;cursor:pointer}.lane-tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
 .import-panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}
 .import-label{display:block;font-size:13px;font-weight:900;color:var(--navy);margin-bottom:8px}
@@ -54,7 +55,8 @@ button,input,select,textarea{font:inherit}
 .dimensions select{width:100%;padding:5px;border:1px solid var(--line);border-radius:7px;background:#fff}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.tag{font-size:11px;padding:4px 7px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
 .tag.on{background:#feeceb;border-color:#f2b8b5;color:var(--bad)}.note{width:100%;margin-top:7px;border:1px solid var(--line);border-radius:8px;padding:7px;resize:vertical;min-height:54px}
-.actionbar{position:sticky;top:0;z-index:20;background:rgba(238,241,245,.96);backdrop-filter:blur(10px);padding:0 0 12px;display:flex;gap:8px;flex-wrap:wrap}
+.local-actionbar{position:sticky;top:0;z-index:20;background:rgba(238,241,245,.96);backdrop-filter:blur(10px);padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap}
+.operator-panel{margin:0 0 10px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}.operator-panel>summary{cursor:pointer;padding:9px 12px;color:var(--navy);font-size:12px;font-weight:900}.operator-panel[open]>summary{border-bottom:1px solid var(--line)}.operator-panel-body{padding:11px}.operator-panel .actionbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px}
 .actionbar button{border:0;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}
 .primary-action{background:var(--navy);color:#fff;box-shadow:0 7px 18px rgba(0,44,95,.22);padding:11px 18px!important}.secondary{background:#fff;color:var(--navy);border:1px solid var(--line)!important}
 .utility-menu{position:relative}.utility-menu>summary{list-style:none;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);padding:9px 13px;cursor:pointer;font-weight:900}.utility-menu>summary::-webkit-details-marker{display:none}
@@ -65,7 +67,13 @@ button,input,select,textarea{font:inherit}
 .preview-shell{max-width:760px;margin:0 auto;background:#f2f3f6;border-radius:18px;padding:18px;box-shadow:0 14px 40px rgba(16,18,24,.10)}
 .preview{max-width:700px;margin:0 auto;padding:8px 20px 48px;color:#101218;line-height:1.6}
 .mast{text-align:center}.brandmark{display:inline-block;background:var(--navy);color:white;border-radius:999px;padding:9px 22px;font-size:18px;font-weight:900}
-.mast h1{font-size:42px;line-height:1.05;margin:14px 0 8px;letter-spacing:-.045em}.mast p{font-size:13px;color:#3a4150}
+.mast h1{font-size:42px;line-height:1.05;margin:14px 0 8px;letter-spacing:-.045em}.mast p{font-size:13px;color:#3a4150;margin:0}.mast .issue{display:inline-block;margin-top:18px;font-size:14px;font-weight:800}
+.publication-section{margin-top:36px}.publication-label{display:inline-block;margin:0 0 16px;padding:5px 17px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-size:14px;font-weight:900}
+.headline-hero{position:relative;min-height:250px;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,var(--navy),var(--blue));color:#fff;padding:34px 30px 30px;cursor:grab}.headline-hero.dragging{opacity:.38}.headline-hero .headline-image{position:absolute;inset:0;min-height:0;height:100%;z-index:0}.headline-hero .headline-image img{height:100%}.headline-hero .headline-image .image-fallback{background:linear-gradient(125deg,#002c5f,#004b93 58%,#0e63b8)}.headline-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74))}.headline-content{position:relative;z-index:2}.headline-content h2{margin:0;color:#fff;font-size:30px;line-height:1.32;letter-spacing:-.035em}.headline-rule{width:52%;height:1px;margin:22px 0 12px;background:rgba(255,255,255,.38)}.headline-category{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.9);font-size:13px;font-weight:800}.headline-category .category-select{border-color:rgba(255,255,255,.5);background:rgba(0,44,95,.68);color:#fff}.headline-category .category-select option{color:#101218;background:#fff}
+.ednote{margin-top:-14px;padding:30px 30px 24px;border:1px solid rgba(16,18,24,.1);border-top:0;border-radius:0 0 22px 22px;background:#fff}.ednote h3{margin:0 0 8px;color:var(--navy);font-size:13px;letter-spacing:.035em}.ednote p{margin:0;color:#303846;font-size:15px}.ednote .src{margin-top:14px;padding-top:10px;border-top:1px solid #eef0f4}.briefing-cards{display:grid;gap:12px}.briefing-card{cursor:grab}.briefing-card .headline-action{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);padding:5px 9px;font-size:11px;font-weight:900;cursor:pointer}.briefing-empty,.headline-empty{padding:20px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--muted)}
+.headline-hero.headline-empty{display:block;min-height:220px;border:0;border-radius:22px;background:linear-gradient(125deg,#002c5f,#004b93 58%,#0e63b8);color:#fff;padding:34px 30px}.headline-hero.headline-empty h2{position:relative;z-index:2;margin:0;color:#fff;font-size:28px;line-height:1.4}.radar-compact{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.radar-compact-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.radar-compact-item{padding:9px 7px;border-radius:10px;background:#f5f7fa;text-align:center}.radar-compact-item b{display:block;color:var(--navy);font-size:18px}.radar-compact-item span{display:block;color:#777f8d;font-size:10px}.radar-compact-note{margin:10px 0 0;color:#677080;font-size:11px;line-height:1.55}
+.taxonomy{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.tax-row{display:flex;gap:10px;align-items:baseline;margin-bottom:8px;font-size:13px}.tax-row:last-child{margin-bottom:0}.tax-name{width:90px;flex:none;color:var(--ink);font-weight:800}.tax-desc{color:#777f8d}.tax-invest{color:var(--invest)}.tax-corp{color:var(--corp)}.tax-tech{color:var(--tech)}
+.placement-editor{max-width:760px;margin:12px auto 0;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.placement-editor>summary{cursor:pointer;padding:11px 14px;color:var(--navy);font-size:12px;font-weight:900}.placement-editor-body{padding:0 12px 12px}.placement-editor .editorial-sector{margin-top:12px}.placement-editor .sector-title{font-size:16px}.placement-editor .sector-dropzone{min-height:72px}.placement-editor .sector-empty{min-height:50px}
 .editorial-sector{margin-top:28px}.sector-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
 .sector-title{font-size:22px;margin:0;color:var(--navy);letter-spacing:-.03em}.sector-count{font-size:12px;color:var(--muted);font-weight:800}
 .sector-dropzone{min-height:112px;border:2px dashed #c9d1dc;border-radius:18px;padding:10px;transition:.15s;background:rgba(255,255,255,.35)}
@@ -79,12 +87,12 @@ button,input,select,textarea{font:inherit}
 .ticker{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900}
 .ticker-invest{background:#f7f0e2;color:var(--invest)}.ticker-corp{background:#e6f5f3;color:var(--corp)}.ticker-tech{background:#f1f1fd;color:var(--tech)}
 .article-body h3{font-size:18px;line-height:1.4;margin:7px 0}.article-body p{font-size:14px;line-height:1.62;color:#3a4150}
-.src{font-size:11px;color:#777f8d;margin-top:8px}.src a{color:inherit}
+.src{font-size:11px;color:#777f8d;margin-top:8px}.src a{color:inherit;text-decoration:none}.src .dt{display:block;margin-top:2px;color:#98a2b3;font-weight:500}
 .editable{outline:1px dashed transparent;border-radius:5px}.editable:hover,.editable:focus{outline-color:#5b8bc0;background:#f8fbff}
 .category-select{border:1px solid var(--line);border-radius:7px;background:#fff;color:#101218;padding:4px}
 footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:center;color:#677080;font-size:12px}
 @media(max-width:980px){.app{grid-template-columns:1fr}.left,.right{height:auto}.left{border-right:0;border-bottom:1px solid var(--line)}}
-@media(max-width:560px){.manual-row,.import-row{grid-template-columns:1fr}.import-row button{padding:9px}.article-card{grid-template-columns:100px 1fr}.preview{padding-left:4px;padding-right:4px}}
+@media(max-width:560px){.manual-row,.import-row,.radar-controls{grid-template-columns:1fr}.import-row button{padding:9px}.radar-funnel,.radar-compact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.article-card{grid-template-columns:100px 1fr}.preview{padding-left:4px;padding-right:4px}.headline-hero{min-height:220px;padding:27px 21px 24px}.headline-content h2,.headline-hero.headline-empty h2{font-size:24px}.ednote{padding:25px 21px 20px}.tax-row{display:block}.tax-name{display:block;width:auto;margin-bottom:2px}}
 </style>
 </head>
 <body>
@@ -122,6 +130,14 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
         <button class="manual-add" id="manualAddBtn" type="button">기사 추가하고 선택</button>
       </div>
     </details>
+    <section class="radar-panel" id="radarPanel" aria-labelledby="radarPanelTitle">
+      <header class="radar-panel-head"><h2 id="radarPanelTitle">수집 레이더</h2><p>후보 0건과 수집 0건을 구분합니다. 원문 본문 없이 수집·판정 메타데이터만 표시합니다.</p></header>
+      <div class="radar-funnel" id="radarFunnel"></div>
+      <div class="radar-providers" id="radarProviders"></div>
+      <div class="radar-controls"><input id="radarSearch" placeholder="수집 기사 제목·출처 검색"><select id="radarFilter"><option value="all">전체 수집</option><option value="ai">AI 중심</option><option value="executive">임원 후보</option><option value="selected">선정</option><option value="excluded">제외</option></select></div>
+      <div class="radar-list" id="radarList"></div>
+      <div class="radar-pagination"><button id="radarPrev" type="button">이전</button><span id="radarPageState">0 / 0</span><button id="radarNext" type="button">다음</button></div>
+    </section>
     <nav class="lane-tabs" aria-label="후보 소스 레인">
       <button class="lane-tab active" type="button" data-lane="all">전체</button>
       <button class="lane-tab" type="button" data-lane="main">주요 후보</button>
@@ -137,10 +153,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
     <div class="candidates" id="candidateList"></div>
   </aside>
   <main class="right">
-    <div class="actionbar">
-      <button class="primary-action" id="publishBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 게시할 수 있습니다">Daily Brief 게시</button>
-      <button class="secondary" id="saveDraftBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 서버에 임시 저장할 수 있습니다">임시 저장</button>
-      <button class="secondary" id="loadTeamBtn" type="button" disabled>팀원 제안 불러오기</button>
+    <div class="local-actionbar">
       <button class="secondary" id="htmlBtn" type="button" title="이 기기로 HTML 파일을 내려받습니다 (게시가 아닙니다)">최종 브리핑 다운로드</button>
       <details class="utility-menu">
         <summary aria-label="보조 메뉴">⋯</summary>
@@ -148,10 +161,24 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
       </details>
       <button class="secondary" id="reviewJsonBtn" type="button">검토 JSON 내보내기</button>
     </div>
-    <div class="server-state" id="serverState" role="status" aria-live="polite">로컬 편집 모드 · 임시 저장/게시는 Teams의 정확한 에디션 링크로 열면 활성화됩니다. 다운로드는 이 기기 파일 저장이며 게시가 아닙니다.</div>
-    <div class="server-state auth" id="operatorAuthCta">운영자 기능은 GitHub 로그인 후 사용할 수 있습니다.</div>
+    <details class="operator-panel" id="operatorPanel">
+      <summary><span id="operatorSummary">운영자 기능</span></summary>
+      <div class="operator-panel-body">
+        <div class="actionbar">
+          <button class="primary-action" id="publishBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 게시할 수 있습니다">Daily Brief 게시</button>
+          <button class="secondary" id="saveDraftBtn" type="button" disabled title="정확한 에디션 링크에서 운영자 인증 후 서버에 임시 저장할 수 있습니다">임시 저장</button>
+          <button class="secondary" id="loadTeamBtn" type="button" disabled>팀원 제안 불러오기</button>
+        </div>
+        <div class="server-state" id="serverState" role="status" aria-live="polite">로컬 편집 모드 · 임시 저장/게시는 Teams의 정확한 에디션 링크로 열면 활성화됩니다. 다운로드는 이 기기 파일 저장이며 게시가 아닙니다.</div>
+        <div class="server-state auth" id="operatorAuthCta">운영자 연결 상태를 확인하고 있습니다.</div>
+      </div>
+    </details>
     <div class="editor-tools"><b>본문 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><button id="linkBtn" type="button" title="선택한 문장에 링크 삽입/수정">링크</button><button id="unlinkBtn" type="button" title="선택한 링크 해제">링크 해제</button><span class="editor-hint">오른쪽 제목·요약을 직접 수정하고, 요약에서 텍스트를 선택한 뒤 B(굵게)·링크·링크 해제를 쓰세요. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
     <div class="preview-shell"><div class="preview" id="preview"></div></div>
+    <details class="placement-editor" id="placementEditor">
+      <summary>기사 순서·분류 편집</summary>
+      <div class="placement-editor-body" id="placementEditorBody"></div>
+    </details>
   </main>
 </div>
 <script id="candidate-data" type="application/json">{{CANDIDATE_JSON}}</script>
@@ -161,6 +188,10 @@ const CATEGORY_ORDER=["투자·산업","기업동향","기술정보"];
 const MAX_SELECTED=6;
 const MAX_MANUAL_CANDIDATES=12;
 const MAX_IMPORTED_IMAGE_DATA_URL=350000;
+const radarAudit=bundle.radar_audit&&typeof bundle.radar_audit==="object"?bundle.radar_audit:{funnel:{},provider_counts:{},rows:[],dom_page_size:50};
+const radarRows=Array.isArray(radarAudit.rows)?radarAudit.rows:[];
+const RADAR_PAGE_SIZE=Math.min(50,Math.max(1,Number(radarAudit.dom_page_size)||50));
+let radarPage=0;
 const articleImportApiUrl=safeImportApiUrl(bundle.article_import_api_url);
 const storageKey=`hdec-editorial-review-v2:${bundle.edition_key}`;
 const pendingImportStorageKey=`hdec-editorial-pending-import:${bundle.edition_key}`;
@@ -205,6 +236,58 @@ function safeUrl(value){
     const parsed=new URL(String(value));
     return ["http:","https:"].includes(parsed.protocol)?parsed.href:"";
   }catch(error){return "";}
+}
+function currentRadarFunnel(){
+  const funnel=radarAudit.funnel&&typeof radarAudit.funnel==="object"?radarAudit.funnel:{};
+  return {
+    collection_count:Math.max(0,Number(funnel.collection_count)||0),
+    ai_central_count:Math.max(0,Number(funnel.ai_central_count)||0),
+    executive_candidate_count:Math.max(0,Number(funnel.executive_candidate_count)||0),
+    selected_count:state.selected.length,
+    watch_bridge_count:Math.max(0,Number(funnel.watch_bridge_count)||0)
+  };
+}
+function radarMetric(label,value){return `<div class="radar-metric"><b>${esc(value)}</b><span>${esc(label)}</span></div>`;}
+function radarRowSelected(row){
+  const rowUrl=safeUrl(row.url);
+  return state.selected.map(byId).filter(Boolean).some(candidate=>(rowUrl&&safeUrl(candidate.selected_url)===rowUrl)||((candidate.title||"").trim()===(row.title||"").trim()&&(candidate.source||"").trim()===(row.source||"").trim()));
+}
+function radarRowMatches(row,filter){
+  const dimensions=row.dimensions&&typeof row.dimensions==="object"?row.dimensions:{};
+  if(filter==="ai")return dimensions.ai_central===true;
+  if(filter==="executive")return dimensions.executive_materiality===true||["executive_candidate","selected"].includes(row.stage);
+  if(filter==="selected")return radarRowSelected(row);
+  if(filter==="excluded")return !radarRowSelected(row)&&row.stage==="excluded";
+  return true;
+}
+function radarRowMarkup(row,index){
+  const title=esc(row.title||"제목 확인 불가");
+  const link=safeUrl(row.url)?`<a class="radar-row-title" href="${esc(safeUrl(row.url))}" target="_blank" rel="noopener noreferrer">${title}</a>`:`<div class="radar-row-title">${title}</div>`;
+  const dimensions=row.dimensions&&typeof row.dimensions==="object"?row.dimensions:{};
+  const relevant=Array.isArray(dimensions.relevant_dimensions)?dimensions.relevant_dimensions.slice(0,5).join(" · "):"";
+  const reason=row.rejection_reason||row.qualification_reason||dimensions.executive_reason||"판정 메타데이터 없음";
+  const selected=radarRowSelected(row);
+  const promotable=!!safeUrl(row.url)&&!!row.title&&dimensions.ai_central===true&&!selected;
+  const stageLabel=selected?"선정":(row.stage_label||row.stage||"수집");
+  return `<article class="radar-row" data-radar-index="${index}">${link}<div class="radar-row-meta"><span class="radar-stage">${esc(stageLabel)}</span>${esc([row.source,row.published_at,row.collection_provider].filter(Boolean).join(" · "))}</div><div class="radar-row-reason">${esc(reason)}</div>${relevant?`<div class="radar-row-dimensions">판정 차원 · ${esc(relevant)}</div>`:""}${promotable?`<button class="radar-promote" type="button" data-radar-promote="${index}">후보로 승격</button>`:""}</article>`;
+}
+function renderRadar(){
+  const funnel=currentRadarFunnel();
+  document.getElementById("radarFunnel").innerHTML=[radarMetric("전체 수집",funnel.collection_count),radarMetric("AI 중심",funnel.ai_central_count),radarMetric("임원 검토 후보",funnel.executive_candidate_count),radarMetric("최종 선정",funnel.selected_count)].join("");
+  const providers=radarAudit.provider_counts||{};
+  document.getElementById("radarProviders").textContent=`Naver ${Number(providers.naver)||0} · Google News ${Number(providers.google_news)||0} · 정규화 행 ${Number(funnel.collection_count?radarAudit.funnel?.normalized_row_count:0)||radarRows.length}${Number(radarAudit.rows_truncated)||0?` · 표시 감사 행 ${radarRows.length} (절단 ${Number(radarAudit.rows_truncated)||0})`:""}`;
+  const query=document.getElementById("radarSearch").value.trim().toLowerCase();
+  const filter=document.getElementById("radarFilter").value;
+  const filtered=radarRows.filter(row=>radarRowMatches(row,filter)&&(!query||`${row.title||""} ${row.source||""} ${row.url||""}`.toLowerCase().includes(query)));
+  const pages=Math.max(1,Math.ceil(filtered.length/RADAR_PAGE_SIZE));
+  radarPage=Math.min(radarPage,pages-1);
+  const offset=radarPage*RADAR_PAGE_SIZE;
+  const visible=filtered.slice(offset,offset+RADAR_PAGE_SIZE);
+  document.getElementById("radarList").innerHTML=visible.length?visible.map((row,index)=>radarRowMarkup(row,radarRows.indexOf(row))).join(""):'<div class="sector-empty">이 레이더 조건에 맞는 수집 행이 없습니다.</div>';
+  document.getElementById("radarPageState").textContent=`${filtered.length}건 · ${radarPage+1}/${pages} 페이지 · 최대 ${RADAR_PAGE_SIZE}행`;
+  document.getElementById("radarPrev").disabled=radarPage===0;
+  document.getElementById("radarNext").disabled=radarPage>=pages-1;
+  document.querySelectorAll("[data-radar-promote]").forEach(button=>button.addEventListener("click",()=>promoteRadarRow(Number(button.dataset.radarPromote))));
 }
 function safeAuthorityUrl(value){
   const candidate=safeUrl(value);
@@ -325,6 +408,22 @@ function save(){
 }
 function allCandidates(){return [...bundle.candidates,...state.manualCandidates];}
 function byId(id){return allCandidates().find(candidate=>candidate.candidate_id===id);}
+function promoteRadarRow(index){
+  const row=radarRows[index];
+  if(!row)return;
+  const existing=allCandidates().find(candidate=>safeUrl(candidate.selected_url)===safeUrl(row.url));
+  if(existing){toggleSelected(existing.candidate_id,true);return;}
+  if(state.manualCandidates.length>=MAX_MANUAL_CANDIDATES){alert(`직접 추가 기사는 최대 ${MAX_MANUAL_CANDIDATES}건입니다.`);return;}
+  if(state.selected.length>=MAX_SELECTED){alert(`최대 ${MAX_SELECTED}건까지 선택할 수 있습니다.`);return;}
+  const id=`radar-${String(row.article_id||index).replace(/[^A-Za-z0-9_-]/g,"").slice(0,60)}`;
+  const dimensions=row.dimensions||{};
+  const category=row.category||((dimensions.competitor_relevance||0)>0?"기업동향":(dimensions.infrastructure_project_specificity||0)>0?"투자·산업":"기술정보");
+  const summary="원문을 확인한 뒤 Editor's Summary를 작성해 주세요.";
+  state.manualCandidates.push({candidate_id:id,origin:"human_link",ai_rank:null,ai_recommended:false,title:String(row.title||""),summary,summary_html:esc(summary),source:String(row.source||""),published_at:row.published_at||bundle.coverage_end,selected_url:safeUrl(row.url),link_kind:"publisher_direct",link_label:"레이더 원문",category:CATEGORY_ORDER.includes(category)?category:"기술정보",image_url:"",collection_source_kind:"radar_promotion",selection_reason:"human_promoted_from_collection_radar",feedback_adjustment:0,adjusted_score:0,category_analysis:{category:CATEGORY_ORDER.includes(category)?category:"기술정보",scores:{},matched_signals:{},reason:"운영자가 수집 레이더에서 명시적으로 승격"}});
+  state.selected.push(id);
+  normalizeSelectedOrder();
+  markDraftAndRender();
+}
 function edit(id){
   const candidate=byId(id);
   return state.edits[id]||(state.edits[id]={
@@ -367,7 +466,7 @@ function categoryOptions(value){
 function imageMarkup(candidate,extraClass=""){
   const imageUrl=safeImageUrl(candidate.image_url);
   const fallbackHidden=imageUrl?" hidden":"";
-  return `<div class="image-frame ${esc(extraClass)}" data-image-frame>${imageUrl?`<img src="${esc(imageUrl)}" alt="${esc(candidate.title)}" loading="lazy" decoding="async">`:""}<div class="image-fallback"${fallbackHidden}>이미지 없음</div></div>`;
+  return `<div class="image-frame ${esc(extraClass)}" data-image-frame>${imageUrl?`<img src="${esc(imageUrl)}" alt="${esc(candidate.title)}" loading="lazy" decoding="async">`:""}<div class="image-fallback"${fallbackHidden}>AI 경영 T&amp;I<br><span>대표 이미지 없음</span></div></div>`;
 }
 function bindImageFallbacks(root=document){
   root.querySelectorAll("[data-image-frame]").forEach(frame=>{
@@ -382,9 +481,9 @@ function bindImageFallbacks(root=document){
   });
 }
 function normalizeSelectedOrder(){
-  state.selected=CATEGORY_ORDER.flatMap(category=>
-    state.selected.filter(id=>view(id)?.category===category)
-  );
+  // Publication authority is selected_items order. Preserve it exactly: the
+  // Daily renderer consumes this order and promotes the first surviving row.
+  state.selected=[...new Set(state.selected)].filter(id=>!!byId(id)).slice(0,MAX_SELECTED);
 }
 function markDraftAndRender(){
   state.reviewStatus="draft";
@@ -395,6 +494,7 @@ function moveArticle(id,targetCategory,targetId=null,placeAfter=false){
   const candidate=byId(id);
   if(!CATEGORY_ORDER.includes(targetCategory)||!candidate)return false;
   const alreadySelected=state.selected.includes(id);
+  const headlineId=state.selected[0]||"";
   if(!alreadySelected&&state.selected.length>=MAX_SELECTED){
     alert("최대 6건까지 선택할 수 있습니다.");
     renderCandidates();
@@ -417,6 +517,25 @@ function moveArticle(id,targetCategory,targetId=null,placeAfter=false){
   else if(placeAfter)index+=1;
   targetGroup.splice(index,0,id);
   state.selected=CATEGORY_ORDER.flatMap(category=>groups[category]);
+  // A category edit is not a headline change. Keep position zero authoritative
+  // unless the operator explicitly reordered against another article.
+  if(headlineId&&!targetId&&state.selected.includes(headlineId))state.selected=[headlineId,...state.selected.filter(selectedId=>selectedId!==headlineId)];
+  markDraftAndRender();
+  return true;
+}
+function reorderArticle(id,targetId,placeAfter=false){
+  if(id===targetId||!state.selected.includes(id)||!state.selected.includes(targetId))return false;
+  state.selected=state.selected.filter(selectedId=>selectedId!==id);
+  let index=state.selected.indexOf(targetId);
+  if(index<0)return false;
+  if(placeAfter)index+=1;
+  state.selected.splice(index,0,id);
+  markDraftAndRender();
+  return true;
+}
+function makeHeadline(id){
+  if(!state.selected.includes(id)||state.selected[0]===id)return false;
+  state.selected=[id,...state.selected.filter(selectedId=>selectedId!==id)];
   markDraftAndRender();
   return true;
 }
@@ -914,9 +1033,70 @@ function sectorMarkup(category,selected){
   const articles=selected.filter(candidate=>candidate.category===category);
   return `<section class="editorial-sector" data-sector-category="${esc(category)}"><header class="sector-header"><h2 class="sector-title">${esc(category)}</h2><span class="sector-count">${articles.length}건</span></header><div class="sector-dropzone" data-drop-category="${esc(category)}">${articles.length?articles.map(selectedArticleCard).join(""):`<div class="sector-empty">왼쪽 기사를 이 섹터로 드래그하세요</div>`}</div></section>`;
 }
+function articleSourceMarkup(candidate){
+  const articleUrl=candidateArticleUrl(candidate);
+  const detail=[candidate.published_at,candidate.link_label||"원문 보기"].filter(Boolean).map(esc).join(" · ");
+  const label=`${esc(candidate.source)}${detail?`<span class="dt">${detail}</span>`:""}`;
+  return articleUrl?`<a data-link-kind="${esc(candidate.link_kind||"publisher_direct")}" href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`:label;
+}
+function headlineMarkup(candidate,editable){
+  if(!candidate){
+    const funnel=currentRadarFunnel();
+    const radarTruth=funnel.watch_bridge_count>0
+      ?`수집 레이더 ${funnel.collection_count}건 중 AI 중심 ${funnel.ai_central_count}건을 확인했고, 최종 선정은 0건입니다. 아침 레이더 추가 포착 ${funnel.watch_bridge_count}건은 별도 검토 대상으로 남겼습니다.`
+      :`수집 레이더에서는 ${funnel.collection_count}건을 탐지했고 AI 중심 ${funnel.ai_central_count}건을 검토했으며, 최종 임원급 선정은 0건입니다.`;
+    return `<article class="headline-hero headline-empty" data-role="headline-empty" data-edition-status="empty"><div class="headline-overlay"></div><h2>오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.</h2><div class="headline-rule" style="position:relative;z-index:2"></div><div class="headline-category" style="position:relative;z-index:2">품질 기준 유지 · 인위적 채움 없음 · 편집 상태: 선정된 헤드라인이 없습니다</div></article><div class="ednote" data-role="editor-summary-empty"><h3>Editor's Summary</h3><p>기준을 낮추거나 기사를 채워 넣지 않았습니다. ${esc(radarTruth)}</p></div>`;
+  }
+  const category=editable
+    ?`<select class="category-select" data-category-id="${esc(candidate.candidate_id)}" aria-label="헤드라인 분류">${categoryOptions(candidate.category)}</select>`
+    :`<span>${esc(candidate.category)}</span>`;
+  const title=editable
+    ?`<h2 class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="title">${esc(candidate.title)}</h2>`
+    :`<h2>${esc(candidate.title)}</h2>`;
+  const summary=editable
+    ?`<p class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="summary_html">${sanitizeInline(candidate.summary_html)}</p>`
+    :`<p>${sanitizeInline(candidate.summary_html)}</p>`;
+  const drag=editable?' draggable="true"':'';
+  const identity=editable?` data-selected-id="${esc(candidate.candidate_id)}" data-selected-category="${esc(candidate.category)}"`:'';
+  const classes=editable?"headline-hero publication-selected-card":"headline-hero";
+  return `<article class="${classes}"${drag}${identity} data-role="headline" data-article-id="${esc(candidate.candidate_id)}">${imageMarkup(candidate,"headline-image")}<div class="headline-overlay"></div><div class="headline-content">${title}<div class="headline-rule"></div><div class="headline-category">${category}</div></div></article><div class="ednote" data-role="editor-summary" data-article-id="${esc(candidate.candidate_id)}"><h3>Editor's Summary</h3>${summary}<div class="src">출처 ${articleSourceMarkup(candidate)}</div></div>`;
+}
+function briefingArticleCard(candidate,editable){
+  const category=editable
+    ?`<select class="category-select" data-category-id="${esc(candidate.candidate_id)}" aria-label="기사 분류">${categoryOptions(candidate.category)}</select>`
+    :`<span class="ticker ${categoryClass(candidate.category)}">${esc(candidate.category)}</span>`;
+  const title=editable
+    ?`<h3 class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="title">${esc(candidate.title)}</h3>`
+    :`<h3>${esc(candidate.title)}</h3>`;
+  const summary=editable
+    ?`<p class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="summary_html">${sanitizeInline(candidate.summary_html)}</p>`
+    :`<p>${sanitizeInline(candidate.summary_html)}</p>`;
+  const classes=editable?"article-card briefing-card publication-selected-card":"article-card briefing-card";
+  const drag=editable?' draggable="true"':'';
+  const identity=editable?` data-selected-id="${esc(candidate.candidate_id)}" data-selected-category="${esc(candidate.category)}"`:'';
+  const action=editable?`<button class="headline-action" type="button" data-headline-id="${esc(candidate.candidate_id)}">헤드라인으로 지정</button>`:"";
+  return `<article class="${classes}"${drag}${identity} data-role="article-card" data-article-id="${esc(candidate.candidate_id)}">${imageMarkup(candidate)}<div class="article-body">${category}${title}${summary}<div class="src">출처 ${articleSourceMarkup(candidate)}</div>${action}</div></article>`;
+}
+function taxonomyMarkup(){
+  return '<div class="taxonomy" data-role="information-taxonomy"><div class="tax-row"><span class="tax-name"><span class="tax-invest">●</span> 투자·산업</span><span class="tax-desc">자본과 인프라의 흐름 — 투자, 시장 재편, 정책·글로벌 동향</span></div><div class="tax-row"><span class="tax-name"><span class="tax-corp">●</span> 기업동향</span><span class="tax-desc">선도 기업과 경쟁사의 AI 도입·전환 전략</span></div><div class="tax-row"><span class="tax-name"><span class="tax-tech">●</span> 기술정보</span><span class="tax-desc">신규 AI 모델·제품·기술의 등장과 경영 영향</span></div></div>';
+}
+function publicationRadarMarkup(){
+  const funnel=currentRadarFunnel();
+  const note=funnel.watch_bridge_count>0
+    ?`최종 선정과 별도로 아침 레이더 추가 포착 ${funnel.watch_bridge_count}건이 있습니다. 자동 게재 없이 Daily 기준으로 재검토합니다.`
+    :"수집량과 최종 선정은 서로 다른 단계입니다. 빈 에디션도 수집 실패를 의미하지 않습니다.";
+  return `<div class="radar-compact" data-role="radar-scan"><div class="radar-compact-grid"><div class="radar-compact-item"><b>${funnel.collection_count}</b><span>수집</span></div><div class="radar-compact-item"><b>${funnel.ai_central_count}</b><span>AI 중심</span></div><div class="radar-compact-item"><b>${funnel.executive_candidate_count}</b><span>임원 후보</span></div><div class="radar-compact-item"><b>${funnel.selected_count}</b><span>최종 선정</span></div></div><p class="radar-compact-note">${esc(note)}</p></div>`;
+}
+function dailyBriefMarkup(selected,editable){
+  const headline=selected[0]||null;
+  const briefing=selected.slice(1);
+  const briefingHtml=briefing.length
+    ?briefing.map(candidate=>briefingArticleCard(candidate,editable)).join("")
+    :`<p class="briefing-empty" data-role="briefing-empty">${headline?"추가로 선정된 주요 기사 없음":"오늘의 브리핑에 포함할 기사가 없습니다."}</p>`;
+  return `<header class="mast"><div class="brandmark">AI 경영 T&amp;I</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p><div class="issue">${esc(bundle.edition_key)}</div></header><section class="publication-section" aria-labelledby="previewHeadlineLabel"><h2 class="publication-label" id="previewHeadlineLabel">오늘의 헤드라인</h2>${headlineMarkup(headline,editable)}</section><section class="publication-section" aria-labelledby="previewBriefingLabel"><h2 class="publication-label" id="previewBriefingLabel">오늘의 브리핑</h2><div class="briefing-cards">${briefingHtml}</div></section><section class="publication-section" aria-labelledby="previewRadarLabel"><h2 class="publication-label" id="previewRadarLabel">수집 레이더</h2>${publicationRadarMarkup()}</section><section class="publication-section" aria-labelledby="previewTaxonomyLabel"><h2 class="publication-label" id="previewTaxonomyLabel">정보 분류 기준</h2>${taxonomyMarkup()}</section><footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
+}
 function previewEditor(){
-  const selected=state.selected.map(view).filter(Boolean);
-  return `<header class="mast"><div class="brandmark">HDEC AI</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend & Insight</p><div>${esc(bundle.edition_key)}</div></header>${CATEGORY_ORDER.map(category=>sectorMarkup(category,selected)).join("")}<footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
+  return dailyBriefMarkup(state.selected.map(view).filter(Boolean),true);
 }
 function bindEditors(){
   document.querySelectorAll(".editable").forEach(element=>{
@@ -936,7 +1116,7 @@ function bindEditors(){
   }));
 }
 function bindDropTargets(){
-  document.querySelectorAll(".selected-article-card").forEach(card=>{
+  document.querySelectorAll(".publication-selected-card,.selected-article-card").forEach(card=>{
     const id=card.dataset.selectedId;
     card.addEventListener("dragstart",event=>{
       if(event.target.closest(INTERACTIVE_SELECTOR)){event.preventDefault();return;}
@@ -961,7 +1141,8 @@ function bindDropTargets(){
       const box=card.getBoundingClientRect();
       const after=event.clientY>box.top+box.height/2;
       card.classList.remove("drop-before","drop-after");
-      moveArticle(payload.id,card.dataset.selectedCategory,id,after);
+      if(card.classList.contains("publication-selected-card"))reorderArticle(payload.id,id,after);
+      else moveArticle(payload.id,card.dataset.selectedCategory,id,after);
     });
   });
   document.querySelectorAll(".sector-dropzone").forEach(zone=>{
@@ -981,13 +1162,18 @@ function bindDropTargets(){
       moveArticle(payload.id,zone.dataset.dropCategory);
     });
   });
+  document.querySelectorAll("[data-headline-id]").forEach(button=>button.addEventListener("click",()=>makeHeadline(button.dataset.headlineId)));
 }
 function renderPreview(){
   const root=document.getElementById("preview");
+  const placementRoot=document.getElementById("placementEditorBody");
+  const selected=state.selected.map(view).filter(Boolean);
   root.innerHTML=previewEditor();
+  placementRoot.innerHTML=CATEGORY_ORDER.map(category=>sectorMarkup(category,selected)).join("");
   bindEditors();
   bindDropTargets();
   bindImageFallbacks(root);
+  bindImageFallbacks(placementRoot);
 }
 function renderStats(){
   document.getElementById("candidateCount").textContent=allCandidates().length;
@@ -997,14 +1183,9 @@ function renderStats(){
 function renderLaneTabs(){
   document.querySelectorAll("[data-lane]").forEach(button=>button.classList.toggle("active",button.dataset.lane===state.laneFilter));
 }
-function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();refreshTeamUi();}
-function briefArticleCard(candidate){
-  const articleUrl=candidateArticleUrl(candidate);
-  const source=articleUrl?`<a href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${esc(candidate.source)}</a>`:esc(candidate.source);
-  return `<article class="article-card">${imageMarkup(candidate)}<div class="article-body"><span class="ticker ${categoryClass(candidate.category)}">${esc(candidate.category)}</span><h3>${esc(candidate.title)}</h3><p>${sanitizeInline(candidate.summary_html)}</p><div class="src">출처 ${source}</div></div></article>`;
-}
+function render(){renderCandidates();renderPreview();renderStats();renderLaneTabs();renderRadar();refreshTeamUi();}
 function briefBody(selected){
-  return `<header class="mast"><div class="brandmark">HDEC AI</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend & Insight</p><div>${esc(bundle.edition_key)}</div></header>${CATEGORY_ORDER.map(category=>{const articles=selected.filter(candidate=>candidate.category===category);return `<section class="editorial-sector"><header class="sector-header"><h2 class="sector-title">${esc(category)}</h2><span class="sector-count">${articles.length}건</span></header>${articles.map(briefArticleCard).join("")}</section>`;}).join("")}<footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
+  return dailyBriefMarkup(selected,false);
 }
 function standaloneHtml(){
   const css=document.querySelector("style").textContent;
@@ -1077,11 +1258,13 @@ function operatorPendingReady(){
 }
 function renderOperatorAuthCta(){
   const slot=document.getElementById("operatorAuthCta");
+  const summary=document.getElementById("operatorSummary");
   if(!slot)return;
-  if(!serverContext.origin){slot.textContent="Operator API가 구성되지 않아 운영자 기능을 사용할 수 없습니다.";return;}
-  if(serverContext.authenticated){slot.innerHTML=`GitHub 운영자 인증됨: <b>${esc(serverContext.login)}</b>`;slot.className="server-state ok";return;}
+  if(summary)summary.textContent=serverContext.authenticated?"운영자 기능 · 인증됨":"운영자 기능";
+  if(!serverContext.origin){slot.textContent="운영자 연결이 구성되지 않아 서버 기능을 사용할 수 없습니다.";slot.className="server-state warn";return;}
+  if(serverContext.authenticated){slot.innerHTML=`운영자 인증됨: <b>${esc(serverContext.login)}</b>`;slot.className="server-state ok";return;}
   const href=importLoginHref(serverContext.snapshotId);
-  slot.innerHTML=href?`<a class="import-login" href="${esc(href)}">GitHub로 운영자 로그인</a> <span>서버 초안·Daily 게시·팀원 제안 불러오기는 운영자 전용입니다.</span>`:"GitHub 운영자 로그인이 필요합니다.";
+  slot.innerHTML=href?`<a class="import-login" href="${esc(href)}">운영자 로그인</a> <span>서버 초안·Daily 게시·팀원 제안 불러오기는 운영자 전용입니다.</span>`:"운영자 로그인이 필요합니다.";
   slot.className="server-state auth";
 }
 function refreshServerButtons(){
@@ -1115,7 +1298,7 @@ function pendingToCandidate(row){
   return {candidate_id:`team-${row.submission_id}`,submission_id:row.submission_id,origin:"team_link",ai_rank:null,ai_recommended:false,title,source,summary,summary_html:esc(summary),published_at:bundle.coverage_end,selected_url:selectedUrl,analysis_url:safeUrl(row.analysis_url),publisher_url:publisherAuthoritative?safeAuthorityUrl(row.publisher_url):"",publisher_domain_authoritative:publisherAuthoritative,portal_copy:row.portal_copy===true,portal_source:String(row.portal_source||""),portal_resolution_reason:String(row.portal_resolution_reason||""),portal_fallback_used:row.portal_copy===true,link_kind:publisherAuthoritative?"publisher_direct":"portal_copy",link_label:publisherAuthoritative?"원문 보기":"포털 기사 보기",category,category_analysis:{category,scores:{},matched_signals:{},reason:"팀원 제출 후 서버 재검증된 대기 제안"},image_url:safeImageUrl(row.image_url),image_remote_url:"",collection_source_kind:"team_link",selection_reason:"pending_team_submission",feedback_adjustment:0,adjusted_score:0};
 }
 async function loadTeamSubmissions(){
-  if(!operatorPendingReady()){setServerState("GitHub 운영자 로그인 후 팀원 제안을 불러올 수 있습니다.","warn");return;}
+  if(!operatorPendingReady()){setServerState("운영자 로그인 후 팀원 제안을 불러올 수 있습니다.","warn");return;}
   const button=document.getElementById("loadTeamBtn");
   button.disabled=true;
   setServerState("팀원 제안을 불러오는 중…","auth");
@@ -1191,6 +1374,10 @@ async function serverPublishDaily(){
 
 document.getElementById("search").addEventListener("input",renderCandidates);
 document.getElementById("filter").addEventListener("change",renderCandidates);
+document.getElementById("radarSearch").addEventListener("input",()=>{radarPage=0;renderRadar();});
+document.getElementById("radarFilter").addEventListener("change",()=>{radarPage=0;renderRadar();});
+document.getElementById("radarPrev").addEventListener("click",()=>{radarPage=Math.max(0,radarPage-1);renderRadar();});
+document.getElementById("radarNext").addEventListener("click",()=>{radarPage+=1;renderRadar();});
 document.querySelectorAll("[data-lane]").forEach(button=>button.addEventListener("click",()=>{state.laneFilter=button.dataset.lane;save();renderCandidates();renderLaneTabs();}));
 document.getElementById("manualAddBtn").addEventListener("click",addManual);
 document.getElementById("teamAuthBtn").addEventListener("click",authenticateContributor);
@@ -1423,7 +1610,7 @@ function renderExactEditionPanel(manifest){
   panel.id="exactEditionPanel";
   panel.dataset.deepLinkState="verified";
   panel.dataset.editionId=manifest.edition_id;
-  panel.innerHTML=`<div style="background:#eef6ee;border:1px solid #9fc8a2;border-radius:14px;padding:13px 16px;margin-bottom:12px;font-size:13px"><b style="color:#0d5c22">정확한 에디션을 확인했습니다</b> <span style="color:#3a4150">— 이 화면은 Teams 메시지가 가리키는 ${esc(manifest.edition_key)} 에디션(개정 ${esc(manifest.revision)})입니다.</span><div style="margin-top:7px;color:#3a4150">수집 범위 ${esc(manifest.coverage_start)} ~ ${esc(manifest.coverage_end)} · 검토 상태 ${esc(manifest.review_mode)}/${esc(manifest.review_decision)} · 게시 상태 ${esc(publication.publication_state||"")}${datedLink?` · <a href="${esc(datedLink)}" target="_blank" rel="noopener noreferrer">게시된 Daily Brief 보기</a>`:""}</div><details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#002c5f">게시된 기사 구성 (${(manifest.articles||[]).length}건)</summary><ol style="margin:7px 0 0;padding-left:20px">${manifestArticleRows(manifest)}</ol><p style="margin:7px 0 0;color:#677080;font-size:12px">Editor's Summary: ${esc(manifest.editor_summary||"")}</p></details><div id="editorAuthState" style="margin-top:8px;color:#677080;font-size:12px"></div></div>`;
+  panel.innerHTML=`<div style="background:#eef6ee;border:1px solid #9fc8a2;border-radius:14px;padding:13px 16px;margin-bottom:12px;font-size:13px"><b style="color:#0d5c22">정확한 에디션을 확인했습니다</b> <span style="color:#3a4150">— 이 화면은 Teams 메시지가 가리키는 ${esc(manifest.edition_key)} 에디션(개정 ${esc(manifest.revision)})입니다.</span><div style="margin-top:7px;color:#3a4150">수집 범위 ${esc(manifest.coverage_start)} ~ ${esc(manifest.coverage_end)} · 검토 상태 ${esc(manifest.review_mode)}/${esc(manifest.review_decision)} · 게시 상태 ${esc(publication.publication_state||"")}${datedLink?` · <a href="${esc(datedLink)}" target="_blank" rel="noopener noreferrer">게시된 Daily Brief 보기</a>`:""}</div><details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:#002c5f">게시된 기사 구성 (${(manifest.articles||[]).length}건)</summary><ol style="margin:7px 0 0;padding-left:20px">${manifestArticleRows(manifest)}</ol><p style="margin:7px 0 0;color:#677080;font-size:12px">Editor's Summary: ${esc(manifest.editor_summary||"")}</p></details></div>`;
   main.insertBefore(panel,main.firstChild);
   // R4-OPS-10 — server draft-save/publish wiring is a best-effort enhancement.
   // Opening the exact immutable edition stays read-only and must NEVER fail
@@ -1447,19 +1634,17 @@ function updateServerReadyState(){
   }
 }
 function probeOperatorSession(){
-  const slot=document.getElementById("editorAuthState");
   clearOperatorAuthState();
   refreshServerButtons();
   renderOperatorAuthCta();
   serverContext.editionKey=bundle.edition_key;
   serverContext.editionId=editionIdParam;
   if(!articleImportApiUrl){
-    if(slot)slot.textContent="운영자 API가 구성되지 않아 로컬 편집만 가능합니다 (서버 임시 저장·게시는 사용할 수 없습니다).";
     setServerState("운영자 API 미구성 · 로컬 편집·다운로드만 가능합니다. 서버 임시 저장/게시는 사용할 수 없습니다.","warn");
     return;
   }
   let origin="";
-  try{origin=new URL(articleImportApiUrl).origin;}catch(error){if(slot)slot.textContent="운영자 API 주소를 확인할 수 없습니다.";return;}
+  try{origin=new URL(articleImportApiUrl).origin;}catch(error){setServerState("운영자 연결 주소를 확인할 수 없습니다.","warn");return;}
   serverContext.origin=origin;
   setServerState("운영자 인증 상태를 확인하는 중…","auth");
   fetch(origin+"/api/auth/session",{method:"GET",credentials:"include",cache:"no-store"}).then(response=>response.ok?response.json():null).then(data=>{
@@ -1467,25 +1652,18 @@ function probeOperatorSession(){
       serverContext.authenticated=true;
       serverContext.login=String(data.login||"");
       showImportAuth(true,serverContext.snapshotId);
-      if(slot)slot.innerHTML=`운영자 인증됨: <b>${esc(serverContext.login)}</b>`;
       resolveReviewSnapshotId().then(updateServerReadyState);
       return;
     }
     clearOperatorAuthState();
     refreshServerButtons();
     renderOperatorAuthCta();
-    const loginQuery=new URLSearchParams({product:"daily",edition_id:editionIdParam,edition_key:bundle.edition_key});
-    if(sourceTag)loginQuery.set("source",sourceTag);
-    if(serverContext.snapshotId)loginQuery.set("review_snapshot_id",serverContext.snapshotId);
-    const loginHref=esc(origin+"/api/auth/github/login?"+loginQuery.toString());
-    if(slot)slot.innerHTML=`<a href="${loginHref}" style="display:inline-block;padding:7px 12px;border-radius:8px;background:#002c5f;color:#fff;text-decoration:none;font-weight:800">GitHub로 운영자 로그인</a> <span>로그인 후 이 에디션으로 돌아옵니다.</span>`;
     setServerState("운영자 로그인 필요 · 로그인하면 이 에디션을 서버에 임시 저장/게시할 수 있습니다.","auth");
     showImportAuth(false,serverContext.snapshotId);
   }).catch(()=>{
     clearOperatorAuthState();
     refreshServerButtons();
     renderOperatorAuthCta();
-    if(slot)slot.textContent="운영자 인증 상태를 확인할 수 없습니다 (읽기 전용으로 계속 볼 수 있습니다).";
     setServerState("운영자 인증 상태를 확인할 수 없습니다 · 로컬 편집·다운로드는 가능합니다.","warn");
     showImportAuth(false,serverContext.snapshotId);
   });

@@ -518,7 +518,7 @@ def main() -> int:
         "version", "product", "edition_key", "coverage_start", "coverage_end",
         "published_run_at", "review_mode", "review_decision", "headline_title",
         "editor_summary", "edition_status", "article_count", "articles",
-        "publication", "revision", "edition_id", "integrity",
+        "radar_audit", "publication", "revision", "edition_id", "integrity",
     }
     manifest_dump = json.dumps(manifest, ensure_ascii=False)
     check(
@@ -737,10 +737,12 @@ def main() -> int:
     )
     check(
         "unauthenticated flow enters the existing GitHub OAuth with local identity only",
-        '"/api/auth/github/login?"' in module
-        and 'new URLSearchParams({product:"daily",edition_id:editionIdParam,edition_key:bundle.edition_key})' in module
-        and 'loginQuery.set("review_snapshot_id",serverContext.snapshotId)' in module
-        and "GitHub로 운영자 로그인" in module,
+        '"/api/auth/github/login?"' in CONSOLE_TEMPLATE
+        and 'new URLSearchParams({product:"daily",edition_key:bundle.edition_key})' in CONSOLE_TEMPLATE
+        and 'params.set("edition_id",editionId)' in CONSOLE_TEMPLATE
+        and 'params.set("review_snapshot_id",snapshotId)' in CONSOLE_TEMPLATE
+        and '>운영자 로그인</a>' in CONSOLE_TEMPLATE
+        and "GitHub로 운영자 로그인" not in CONSOLE_TEMPLATE,
     )
     check(
         "verified panel is the exact-edition authority surface",

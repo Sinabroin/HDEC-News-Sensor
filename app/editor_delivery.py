@@ -67,6 +67,9 @@ def validate_snapshot_manifest(manifest: object) -> dict:
     for field in ("candidate_bundle_sha256", "console_html_sha256"):
         if not _SHA_RE.fullmatch(str(manifest.get(field) or "")):
             raise EditorDeliveryError("editor snapshot resource digest malformed")
+    radar_digest = manifest.get("radar_audit_sha256")
+    if radar_digest is not None and not _SHA_RE.fullmatch(str(radar_digest)):
+        raise EditorDeliveryError("editor radar audit digest malformed")
     assets = manifest.get("assets")
     if not isinstance(assets, list):
         raise EditorDeliveryError("editor snapshot assets malformed")

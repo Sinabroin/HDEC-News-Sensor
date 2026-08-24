@@ -35,6 +35,7 @@ from app import (  # noqa: E402
     config,
     db,
     editorial_article_import,
+    editorial_briefing_state,
     editorial_briefings,
     insight,
     live_collector,
@@ -54,15 +55,17 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-OPS-5 keeps Review at 07:20, targets Daily at 07:50 with
         # idempotent 08:05/08:15 retries, and gates both truthful empty and
         # non-empty immutable editions through the final offline acceptance.
-        "d4b8ff85d4772e1306240442cee02371568b06ee2bdc1d675813aa571c74d32f"
+        # R4-OPS-10F-R1 rechecks exact Watch delivery IDs immediately before
+        # send and reconciles only an unsent stale claim for a safe rebuild.
+        "c050479cf0d1f757bee76250774780773ba9ef6b584cb1d3ecf1fd456f9b220c"
     ),
     ".github/workflows/editorial-review-console.yml": (
         # R4-R19/R20 calibration artifacts and R4-R21 honest-empty publishing
         # are part of the reviewed Editor production workflow.
-        "a862e0726f8d114ed46b0fc43cc8b5a3fff8d3ec641bfeb6605b5caedee30e50"
+        "046a3b421611653072a564dde04f51fbe223be98ae4ceb2d674876017da2c619"
     ),
     ".github/workflows/editorial-weekly-ti.yml": (
-        "0fcdd70c8d2a0fee45fd44cec92c7ef837d8bbda408a3e7551f1713feb953851"
+        "6652186a4195595e2720e8e3808b804da33f048393015bbae31717bef44d7687"
     ),
     ".github/workflows/email-alert.yml": (
         "b410682cc5e62da76b6a2e6e8b55f1fad945fb27fa41d6019808fc1192ef054d"
@@ -74,7 +77,7 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-OPS-5 runs the repaired Naver operational/live-ingestion/direct-
         # publisher chain plus the final source/pacing/Daily acceptance before
         # any live build can begin.
-        "3f3ab948a480448a8a46e6feaaf6cd5b5bcc2eaa1cd6c6b048f1cf39a05153cf"
+        "745bd5ba5c5ddddde1f48521472beb9d43b8f7aa3dbd235fdf37af6e01208818"
     ),
     ".github/workflows/teams-ai-news-watch.yml": (
         # R4-R5 validates one temp live artifact and applies the dedicated sent
@@ -86,7 +89,7 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-OPS-5 additionally gates the exact-domain publisher contract,
         # explicit A/B/C tiers, opinion exclusion, real-corpus replay and
         # rolling normal-card pacing before the live collection/send path.
-        "c0c44cdb2f2ffb9d9fb248b5255618638bf8559dd9ac42b13958880e4c01a285"
+        "db47711c4a68e7a9e69fa6b359e6b8e43fefd6e95357dccc35dea5d2f9cdf15a"
     ),
     ".github/workflows/telegram-notify.yml": (
         # R4-R10 repoints the operator dashboard export off the sealed News Censor
@@ -94,23 +97,23 @@ EXPECTED_PROTECTED_SHA256 = {
         # dual-writer race (scheduled-live-refresh.yml stays the sole News Censor writer).
         "b9a26ae0ce41707591ff3f4ea0ab11cdc6515ff7a165be16c1646b517fa5973f"
     ),
+    # R4-OPS-10F — same Daily/Weekly headline design family plus the compact
+    # public collection-radar transparency section.
     "templates/editorial_daily.html": (
-        "1c399616877a2dc014b541d781076c32508dc522fcd947a4a62a94d25fb7f9ab"
-    ),
-    "data/editorial_daily_state.json": (
-        # Verified successor after the accepted 2026-08-06 Daily delivery
-        # (origin/main 9b6e351 via 564462f, merged without modification —
-        # sent by main's legacy reader-only path that this branch forbids).
-        "68838c384c07ce87a711277850cff1087bc6cac526cfdce3a61f1e05f1fe7155"
+        "6503f871079946c864195976a7ff3b6ee4da1939eb4c3dff80532a744c868e29"
     ),
 }
 
-# Watch owns this ledger and may advance it through autonomous state-only main
-# commits. An exact historical SHA would make the verifier stale after every
-# healthy run. Snapshot it around the test instead: any verifier write still
-# fails below, while the current authoritative production successor is accepted.
+# Mutable operational ledgers advance through healthy production runs. Exact
+# whole-file hashes would therefore be permanently stale. They remain protected
+# by strict schema/invariant validation plus before/after byte snapshots, so a
+# malformed state or any verifier mutation still fails closed.
+MUTABLE_PROTECTED_STATE_PATHS = {
+    "data/editorial_daily_state.json": "daily",
+}
 RUNTIME_PROTECTED_PATHS = (
     *EXPECTED_PROTECTED_SHA256,
+    *MUTABLE_PROTECTED_STATE_PATHS,
     "data/teams_push_state.json",
 )
 
@@ -317,6 +320,31 @@ def main() -> int:
     }
     for path, expected in EXPECTED_PROTECTED_SHA256.items():
         check(f"protected SHA256 exact: {path}", protected_before[path] == expected)
+    for path, edition_type in MUTABLE_PROTECTED_STATE_PATHS.items():
+        try:
+            state = editorial_briefing_state.load_state(
+                edition_type, ROOT / path
+            )
+        except (OSError, editorial_briefing_state.StateError) as exc:
+            check(f"mutable protected state valid: {path}", False, exc)
+        else:
+            check(
+                f"mutable protected state schema/invariants: {path}",
+                state.get("edition_type") == edition_type
+                and state.get("version") == editorial_briefing_state.STATE_VERSION,
+            )
+            malformed = copy.deepcopy(state)
+            malformed["edition_type"] = "weekly"
+            try:
+                editorial_briefing_state.validate_state(malformed, edition_type)
+            except editorial_briefing_state.StateError:
+                malformed_rejected = True
+            else:
+                malformed_rejected = False
+            check(
+                f"mutable protected state malformed identity fails closed: {path}",
+                malformed_rejected,
+            )
     check(
         "TEAMS_AI_NEWS_WATCH remains zero",
         os.environ.get("TEAMS_AI_NEWS_WATCH", "0") == "0",

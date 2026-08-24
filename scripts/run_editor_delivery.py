@@ -120,6 +120,8 @@ def verify_local_snapshot(
         "index.html": manifest["console_html_sha256"],
         "candidates.json": manifest["candidate_bundle_sha256"],
     }
+    if manifest.get("radar_audit_sha256"):
+        expected["radar-audit.json"] = manifest["radar_audit_sha256"]
     for name, digest in expected.items():
         try:
             payload = (directory / name).read_bytes()
@@ -176,10 +178,14 @@ def verify_public_snapshot_once(
         )
         if public_manifest["review_snapshot_id"] != snapshot_id:
             return False
-        resources = (
+        resources = [
             (identity["editor_public_url"], manifest["console_html_sha256"]),
             (base + "/candidates.json", manifest["candidate_bundle_sha256"]),
-        )
+        ]
+        if manifest.get("radar_audit_sha256"):
+            resources.append(
+                (base + "/radar-audit.json", manifest["radar_audit_sha256"])
+            )
         for url, digest in resources:
             if hashlib.sha256(_response_bytes(url, opener=opener)).hexdigest() != digest:
                 return False

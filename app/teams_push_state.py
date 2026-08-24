@@ -338,6 +338,33 @@ def _entry(
     }
 
 
+def _morning_bridge_metadata(article: object, *, sent_at: str) -> dict[str, str]:
+    """One bounded article-id record; never copied into every dedup index."""
+    metadata = _mapping(article, "source_metadata") or _mapping(article, "provenance")
+    first_seen = _clean(
+        _value(article, "first_seen_at")
+        or _value(article, "detected_at")
+        or metadata.get("first_seen_at")
+        or metadata.get("collected_at")
+    )
+    first_material_discovery = _clean(
+        _value(article, "first_material_discovery_at")
+        or metadata.get("first_material_discovery_at")
+        or first_seen
+        or sent_at
+    )
+    identity = article_identity(article)
+    return {
+        # R4-OPS-10F — lightweight read-only Morning Bridge evidence. No body,
+        # generated summary, query, headers, or credentials are persisted.
+        "title": _clean(_value(article, "title"))[:300],
+        "url": identity["normalized_url"][:2048],
+        "published_at": _clean(_value(article, "published_at"))[:80],
+        "first_seen_at": first_seen[:80],
+        "first_material_discovery_at": first_material_discovery[:80],
+    }
+
+
 def mark_sent_after_success(
     state: Mapping[str, Any],
     article: object,
@@ -368,6 +395,7 @@ def mark_sent_after_success(
         is_update=is_update,
         delivery_id=_clean(delivery_id),
     )
+    bridge_metadata = _morning_bridge_metadata(article, sent_at=ts)
     for map_name, key in (
         ("article_ids", identity["article_id"]),
         ("normalized_urls", identity["normalized_url"]),
@@ -377,7 +405,11 @@ def mark_sent_after_success(
         if key:
             prior = current[map_name].get(key, {})
             first_sent = prior.get("first_sent_at") if isinstance(prior, dict) else None
-            current[map_name][key] = {**entry, "first_sent_at": first_sent or ts}
+            current[map_name][key] = {
+                **entry,
+                **(bridge_metadata if map_name == "article_ids" else {}),
+                "first_sent_at": first_sent or ts,
+            }
     current["last_successful_send_at"] = ts
     if advances_normal_pace is None:
         advances_normal_pace = _clean(importance).lower() == "important"

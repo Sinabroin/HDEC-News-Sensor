@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "reference": {
+    "title": "AI 경영 T&I · Weekly Brief — 2026년 8월 3주차 (2026.08.20)",
+    "url": "https://kikeun.github.io/aidesign/260820_AI%EA%B2%BD%EC%98%81_T_I_Brief_2026-08%EC%9B%94-3%EC%A3%BC%EC%B0%A8_%ED%9B%84%EB%B3%B4_embed.html",
+    "fetched_read_only": true,
+    "fixture_scope": "title/source/url and expected disposition only; no article bodies"
+  },
+  "gold_positive": [
+    {
+      "title": "새만금, 공공 주도 개발로 전환 AI·수소 등 4개 산업거점",
+      "source": "한국경제",
+      "url": "https://v.daum.net/v/20260820180747166",
+      "expected_disposition": "ai_radar_context",
+      "expected_dimensions": ["site_industrial", "project"]
+    },
+    {
+      "title": "AI 데이터센터, 산업 간 경쟁구도 재편",
+      "source": "한국경제",
+      "url": "https://v.daum.net/v/20260819200240356",
+      "expected_disposition": "ai_radar_context",
+      "expected_dimensions": ["data_center"]
+    },
+    {
+      "title": "18.4GW AI 데이터센터…1200조 투자 시동",
+      "source": "매일경제",
+      "url": "https://v.daum.net/v/20260817163913465",
+      "expected_disposition": "executive_positive",
+      "expected_dimensions": ["data_center", "capital", "concrete_capital_or_capacity"]
+    },
+    {
+      "title": "앤트로픽, 2028년 매출 2000억달러 전망",
+      "source": "조선일보",
+      "url": "https://v.daum.net/v/20260817145209225",
+      "expected_disposition": "ai_radar_context",
+      "expected_dimensions": []
+    },
+    {
+      "title": "美, 중국 AI 기구 참여국 공급망 배제 경고",
+      "source": "동아일보",
+      "url": "https://v.daum.net/v/20260816145850116",
+      "expected_disposition": "executive_positive",
+      "expected_dimensions": []
+    },
+    {
+      "title": "현대글로비스 선박 45척에 스타링크 설치",
+      "source": "매일경제",
+      "url": "https://v.daum.net/v/20260819133901367",
+      "expected_disposition": "weekly_context_only",
+      "expected_dimensions": []
+    },
+    {
+      "title": "구글, 파산 항공사 업무데이터 141억 인수",
+      "source": "조선비즈",
+      "url": "https://v.daum.net/v/20260818162809173",
+      "expected_disposition": "weekly_context_only",
+      "expected_dimensions": []
+    },
+    {
+      "title": "클로드 AI 워터마크…유료 이용자 반발",
+      "source": "KBS",
+      "url": "https://v.daum.net/v/20260817121609297",
+      "expected_disposition": "ai_radar_context",
+      "expected_dimensions": []
+    },
+    {
+      "title": "AI 점장, 인간 직원 첫 해고 결정",
+      "source": "한국일보",
+      "url": "https://v.daum.net/v/20260816160410926",
+      "expected_disposition": "ai_radar_context",
+      "expected_dimensions": []
+    }
+  ],
+  "construction_infra_positive": [
+    {
+      "title": "시공 10년 내공 쌓은 GS건설, AI 데이터센터 영토 넓힌다",
+      "source": "한국일보",
+      "url": "https://hankookilbo.com/news/article/A2026081914130005460",
+      "expected_disposition": "watch_important_and_daily_bridge",
+      "expected_dimensions": ["data_center", "epc_construction", "competitor_strategy"]
+    },
+    {
+      "title": "정부, AI 데이터센터 전력망 확충에 20조 프로젝트금융 투입",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260824000100003",
+      "expected_disposition": "executive_positive",
+      "expected_dimensions": ["data_center", "power_grid", "capital"]
+    },
+    {
+      "title": "용인 AI 반도체 팹 산업단지 전력·용수 인프라 EPC 30조 투자 확정",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260824000200003",
+      "expected_disposition": "executive_positive",
+      "expected_dimensions": ["power_grid", "cooling_water", "site_industrial", "epc_construction", "semiconductor_fab"]
+    }
+  ],
+  "known_negative": [
+    {
+      "title": "150조 미래대응기금…청년·AI 인재·지방 투자",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260824000300003",
+      "expected_disposition": "radar_context_not_interruptive"
+    },
+    {
+      "title": "반도체 투자 전망 밝아…AI 수혜주 주목",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/stock/fixture-1",
+      "expected_disposition": "reject_stock_commentary"
+    },
+    {
+      "title": "지역 청소년 대상 생성형 AI 체험교실 개최",
+      "source": "지역신문",
+      "url": "https://local.fixture.test/youth-ai-class",
+      "expected_disposition": "reject_local_incidental_event"
+    },
+    {
+      "title": "새 AI 스마트폰 기능 공개…사진 편집 더 편리해진다",
+      "source": "테크블로그",
+      "url": "https://consumer.fixture.test/ai-phone-feature",
+      "expected_disposition": "reject_consumer_product"
+    }
+  ],
+  "semiconductor_context": {
+    "generic": {
+      "title": "반도체 업황 회복 기대…대형주 투자전략 점검",
+      "source": "매일경제",
+      "url": "https://www.mk.co.kr/news/stock/fixture-2"
+    },
+    "infrastructure": {
+      "title": "AI 반도체 팹 산업단지 부지·전력·용수·EPC 30조 투자 확정",
+      "source": "연합뉴스",
+      "url": "https://www.yna.co.kr/view/AKR20260824000400003"
+    }
+  }
+}
