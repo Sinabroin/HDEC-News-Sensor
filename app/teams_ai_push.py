@@ -67,11 +67,17 @@ SELECTION_MODE_FALLBACK = "fallback"
 
 IMPORTANCE_TOP = "top"
 IMPORTANCE_IMPORTANT = "important"
+IMPORTANCE_OBSERVATION = "strong_observation"
 IMPORTANCE_LABELS = {
     IMPORTANCE_TOP: "🔴 최우선",
     IMPORTANCE_IMPORTANT: "🟠 중요",
+    IMPORTANCE_OBSERVATION: "🟡 강한 관찰 신호",
 }
-IMPORTANCE_RANK = {IMPORTANCE_TOP: 0, IMPORTANCE_IMPORTANT: 1}
+IMPORTANCE_RANK = {
+    IMPORTANCE_TOP: 0,
+    IMPORTANCE_IMPORTANT: 1,
+    IMPORTANCE_OBSERVATION: 2,
+}
 
 # Each rule is intentionally explicit. Dashboard taxonomy is not changed; these labels
 # are only for the Teams push surface.
@@ -1016,6 +1022,21 @@ def classify_ai_topic(article: object) -> TopicDecision:
             ),
         )
 
+    if isinstance(article, Mapping):
+        observation = watch_semantic_precision.classify(article)
+        if (
+            observation.semantic_class
+            == watch_semantic_precision.AI_STRONG_OBSERVATION
+        ):
+            return TopicDecision(
+                True,
+                topic_key="ai_strong_observation",
+                topic_label="AI 강한 관찰 신호",
+                matched_terms=tuple(
+                    dict.fromkeys(ai_core_hits + observation.evidence_terms)
+                ),
+            )
+
     generic_hits = tuple(
         dict.fromkeys(
             ai_core_hits
@@ -1308,6 +1329,15 @@ def is_ai_strategically_significant(
 
     if not topic.eligible:
         return False
+
+    # R4-OPS-10H — the bounded publisher-factual Tier-2 classifier is itself
+    # an independently sufficient executive-strategy signal. It remains
+    # downstream of AI centrality and cannot use generated metadata.
+    if (
+        watch_semantic_precision.classify(article).semantic_class
+        == watch_semantic_precision.AI_STRONG_OBSERVATION
+    ):
+        return True
 
     # 전략성은 기사 제목·리드 요약에서만 판정한다.
     # 대시보드 해설, category, provenance의 AI 문구는 사용하지 않는다.
@@ -1872,8 +1902,46 @@ def evaluate_teams_push_policy(
         )
 
     importance = map_importance(article, topic)
+    if (
+        semantic_precision.semantic_class
+        == watch_semantic_precision.AI_STRONG_OBSERVATION
+    ):
+        # R4-OPS-10H Tier 2 — the semantic leaf has already proved one of the
+        # narrow, publisher-factual observation lanes.  Preserve all upstream
+        # hard blocks, but do not require an interruptive event/score basis:
+        # that requirement is exactly what separates Tier 1 from Tier 2.
+        if importance.reason in {
+            "malformed_required_field",
+            "shadow_blocked",
+            "shadow_unavailable",
+        }:
+            reason_map = {
+                "malformed_required_field": "malformed_required_field",
+                "shadow_blocked": "shadow_blocked",
+                "shadow_unavailable": "shadow_unavailable",
+            }
+            return TeamsPolicyEvaluation(
+                article,
+                topic,
+                True,
+                importance,
+                True,
+                False,
+                reason_map[importance.reason],
+                stock_market=stock_gate,
+                semantic_precision=semantic_precision,
+            )
+        importance = ImportanceDecision(
+            True,
+            IMPORTANCE_OBSERVATION,
+            IMPORTANCE_LABELS[IMPORTANCE_OBSERVATION],
+            semantic_precision.reason,
+            importance.score,
+            importance.hdec_direct,
+        )
     if not importance.sendable:
         reason_map = {
+            "shadow_blocked": "shadow_blocked",
             "shadow_unavailable": "shadow_unavailable",
             "insufficient_importance_basis": "insufficient_importance",
         }
@@ -2335,12 +2403,27 @@ def apply_major_media_first_gate(
             rejected.append(item)
 
     cap = max(0, int(run_cap))
-    urgent = [
+    tier_1_immediate = [
         item for item in immediate
-        if item.candidate.importance.level == IMPORTANCE_TOP
-        or item.candidate.importance.hdec_direct
+        if item.candidate.importance.level != IMPORTANCE_OBSERVATION
     ]
-    normal = [item for item in immediate if item not in urgent]
+    tier_2_immediate = [
+        item for item in immediate
+        if item.candidate.importance.level == IMPORTANCE_OBSERVATION
+    ]
+    # R4-OPS-10H — Tier 2 is a bounded useful-delivery fallback, not extra
+    # volume.  It may supply at most one card and only when no unsent Tier-1
+    # candidate is available in an automatic major/official lane.
+    active_immediate = tier_1_immediate or tier_2_immediate[:1]
+    urgent = [
+        item for item in active_immediate
+        if item.candidate.importance.level != IMPORTANCE_OBSERVATION
+        and (
+            item.candidate.importance.level == IMPORTANCE_TOP
+            or item.candidate.importance.hdec_direct
+        )
+    ]
+    normal = [item for item in active_immediate if item not in urgent]
     last_normal_send_at = _clean(state_map.get("last_normal_send_at"))
     normal_pacing_age = (
         push_state.minutes_between(last_normal_send_at, now_value)
@@ -2555,9 +2638,21 @@ def apply_major_media_first_gate(
             for item in deferred_major
         ),
         "urgent_rows_selected": sum(
-            item.candidate.importance.level == IMPORTANCE_TOP
-            or item.candidate.importance.hdec_direct
+            item.candidate.importance.level != IMPORTANCE_OBSERVATION
+            and (
+                item.candidate.importance.level == IMPORTANCE_TOP
+                or item.candidate.importance.hdec_direct
+            )
             for item in selected
+        ),
+        "tier_1_immediate_rows": len(tier_1_immediate),
+        "tier_2_immediate_rows": len(tier_2_immediate),
+        "tier_2_selected_rows": sum(
+            item.candidate.importance.level == IMPORTANCE_OBSERVATION
+            for item in selected
+        ),
+        "tier_2_suppressed_by_tier_1_rows": (
+            len(tier_2_immediate) if tier_1_immediate else 0
         ),
     }
     return SourceGateBatchResult(

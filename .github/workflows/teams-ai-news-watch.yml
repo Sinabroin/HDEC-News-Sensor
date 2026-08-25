@@ -1,7 +1,8 @@
 name: Teams AI News Watch
 
 # D7-AK-6C — 10분 주기 경량 Teams 발송 감시.
-# 새로 감지된 '중요·최우선' AI 기사만 기사별로 Teams 테스트1 채널(email_channel)에 발송한다.
+# 새로 감지된 Tier 1 '중요·최우선' AI 기사, 또는 Tier 1이 전혀 없을 때
+# publisher-factual Tier 2 '강한 관찰 신호' 최대 1건만 Teams 테스트1 채널(email_channel)에 발송한다.
 # 전체 대시보드/Pages를 재빌드하거나 docs/daily를 수정하지 않는다 — 라이브 뉴스 메타데이터와
 # validated live brief만 임시 파일(runner.temp)로 생성해 발송 판단에만 쓴다. 시장/기상 라이브 실측은
 # 하지 않는다(뉴스 delta에는 불필요 → 경량 유지).
@@ -63,7 +64,7 @@ jobs:
       # 1) 게이트 (mock-safe · 비밀값/네트워크 0건). Teams 기사별 발송 계약 verifier들.
       - name: Verify pipeline (mock-safe, no secrets)
         run: |
-          python3 -m py_compile scripts/send_teams_ai_push.py app/teams_ai_push.py app/teams_push_state.py app/public_urls.py
+          python3 -m py_compile scripts/send_teams_ai_push.py app/teams_ai_push.py app/watch_semantic_precision.py app/teams_push_state.py app/public_urls.py scripts/verify_r4_ops10h_autonomous_editorial_selection.py
           python3 scripts/verify_teams_ai_push.py
           python3 scripts/verify_teams_push_state.py
           python3 scripts/verify_teams_ai_push_dry_run.py
@@ -73,6 +74,7 @@ jobs:
           python3 scripts/verify_teams_major_media_gate.py
           python3 scripts/verify_teams_strict_source_gate.py
           python3 scripts/verify_stock_market_hard_exclusion.py
+          python3 scripts/verify_r4_ops10h_autonomous_editorial_selection.py
           python3 scripts/verify_r4_ops7_watch_production_gate.py
 
       # 2) 라이브 뉴스 메타데이터만 임시 파일로 생성한다(공개 docs/daily·Pages 미변경·미게시).
@@ -105,7 +107,8 @@ jobs:
             echo "NEWS_MODE=live · collector failure/fallback/indeterminate — fail-closed, no send"
           fi
 
-      # 3) 전용 sent ledger 기준 신규 중요·최우선 AI 기사를 0~5건 배치로 Teams 채널에 발송한다 — D7-AK-6E R4-R6.
+      # 3) 전용 sent ledger 기준 신규 Tier 1 중요·최우선 AI 기사, 또는 Tier 1 부재 시
+      #    Tier 2 강한 관찰 신호 최대 1건을 Teams 채널에 발송한다 — R4-OPS-10H.
       #    shadow_alert_delta는 발송 조건이 아니다(중요도는 app.teams_ai_push의 기사별 재사용 신호로 판정) — D7-AK-6C.
       #    공식 production transport = email_channel: 검증된 Gmail SMTP(scripts/send_email_alert.py 계약 재사용)로
       #    Teams 채널 이메일(TEAMS_CHANNEL_EMAIL)로 보낸다(기사당 1통·다이제스트 병합 없음·run당 최대 5건,
