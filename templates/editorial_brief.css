@@ -27,6 +27,7 @@ body{margin:0;background:var(--canvas);color:var(--ink);font-family:"Malgun Goth
 .chip .d{width:6px;height:6px;border-radius:50%;background:var(--cat)}
 .card h3{margin:7px 0 7px;font-size:17px;line-height:1.42;letter-spacing:-.025em}
 .sum{margin:0;color:#4b5563;font-size:13px;line-height:1.62}
+.executive-context{margin-top:10px;color:#303846;font-size:13px;line-height:1.58}.fact-points{margin:0;padding-left:19px}.fact-points li{margin:0 0 5px}.context-delta,.context-analysis,.context-watch{margin-top:11px;padding-top:9px;border-top:1px solid #eef0f4}.executive-context strong{display:block;margin-bottom:2px;color:var(--navy);font-size:11.5px}.executive-context p{margin:0;color:#4b5563}.context-analysis{border-left:3px solid var(--navy);padding-left:10px}.context-watch strong{color:#8a5a0a}
 .src{margin-top:13px;padding-top:9px;border-top:1px solid #eef0f4;color:#8b94a3;font-size:11px;font-weight:600}
 .src a{color:inherit;text-decoration:none}
 .src .dt{display:block;margin-top:2px;color:#98a2b3;font-weight:500}

@@ -188,15 +188,16 @@ def _test_collection_and_ui(verifier: Verifier, audit: dict) -> None:
     funnel = audit["funnel"]
     verifier.check(
         "2026-08-24 collection funnel distinguishes collection from selection",
-        funnel == {
-            "collection_count": 496,
-            "normalized_row_count": 496,
-            "ai_central_count": 5,
-            "executive_candidate_count": 0,
-            "selected_count": 0,
-            "watch_bridge_count": 0,
-            "late_watch_count": 0,
-        },
+        funnel["collection_count"] == 496
+        and funnel["raw_collected_count"] == 496
+        and funnel["unique_collected_count"] == 496
+        and funnel["unique_count_proven"] is True
+        and funnel["normalized_row_count"] == 496
+        and funnel["ai_central_count"] == 5
+        and funnel["executive_candidate_count"] == 0
+        and funnel["selected_count"] == 0
+        and funnel["watch_bridge_count"] == 0
+        and funnel["late_watch_count"] == 0,
         funnel,
     )
     verifier.check(
@@ -255,10 +256,9 @@ def _test_daily_design(verifier: Verifier, audit: dict) -> None:
         and empty.edition_manifest["articles"] == [],
     )
     verifier.check(
-        "public Daily exposes the collection funnel without dumping rows",
-        "수집 레이더" in empty.html
-        and ">496<" in empty.html
-        and ">5<" in empty.html
+        "public Daily hides the collection funnel and diagnostic rows",
+        "수집 레이더" not in empty.html
+        and "정보 분류 기준" not in empty.html
         and audit["rows"][10]["title"] not in empty.html,
     )
 
@@ -272,12 +272,13 @@ def _test_daily_design(verifier: Verifier, audit: dict) -> None:
     )
     brief.validate_rendered(normal)
     verifier.check(
-        "non-empty Daily uses Hero, Editor's Summary, source, briefing, and radar",
+        "non-empty Daily uses Hero, Editor's Summary, source, and briefing without radar",
         'data-role="headline"' in normal.html
         and "Editor's Summary" in normal.html
         and "출처" in normal.html
         and 'data-role="article-card"' in normal.html
-        and 'data-role="radar-scan"' in normal.html,
+        and 'data-role="radar-scan"' not in normal.html
+        and "정보 분류 기준" not in normal.html,
     )
     verifier.check(
         "headline identity is not duplicated in briefing cards",
@@ -285,7 +286,7 @@ def _test_daily_design(verifier: Verifier, audit: dict) -> None:
         and articles[0].title not in normal.html.split('data-role="article-card"', 1)[-1],
     )
     verifier.check(
-        "Editor and publication share Daily semantic hierarchy",
+        "Editor and publication share executive hierarchy while diagnostics stay Editor-only",
         all(
             token in (ROOT / "templates" / "editorial_review_console.html").read_text(encoding="utf-8")
             and token in normal.html
@@ -295,10 +296,11 @@ def _test_daily_design(verifier: Verifier, audit: dict) -> None:
                 "오늘의 헤드라인",
                 "Editor's Summary",
                 "오늘의 브리핑",
-                "수집 레이더",
-                "정보 분류 기준",
             )
-        ),
+        )
+        and 'id="radarPanel"' in (ROOT / "templates" / "editorial_review_console.html").read_text(encoding="utf-8")
+        and "수집 레이더" not in normal.html
+        and "정보 분류 기준" not in normal.html,
     )
     verifier.check(
         "publication manifest uses the same selected/radar truth",
@@ -337,8 +339,8 @@ def _test_bridge(verifier: Verifier, audit: dict) -> None:
     )
     brief.validate_rendered(bridge_daily)
     verifier.check(
-        "empty Daily qualifies its status when a morning Watch signal exists",
-        "오전 레이더 추가 포착 1건" in bridge_daily.html
+        "empty Daily keeps Watch bridge detail in Teams but not executive HTML",
+        "오전 레이더 추가 포착 1건" not in bridge_daily.html
         and "최종 선정 0건 · 오전 레이더 추가 포착 1건" in bridge_daily.teams_text
         and merged["morning_truth_absolute_empty_allowed"] is False,
     )

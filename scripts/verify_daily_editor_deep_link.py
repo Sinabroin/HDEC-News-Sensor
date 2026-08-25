@@ -509,7 +509,7 @@ def main() -> int:
         and manifest["review_mode"] == "human_approved"
         and manifest["review_decision"] == "approved"
         and manifest["headline_title"] == ARTICLES[0].title
-        and manifest["editor_summary"] == ARTICLES[0].summary
+        and manifest["editor_summary"] == brief.executive_summary_text(list(ARTICLES))
         and manifest["publication"]["dated_url"] == edition.public_dated_url
         and manifest["publication"]["html_sha256"] == edition.html_sha256
         and manifest["publication"]["publication_state"] == "published",

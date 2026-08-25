@@ -21,6 +21,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from app import (
     ai_centrality,
+    editorial_executive_context,
     editorial_preference_runtime,
     executive_materiality,
     public_institution_routing,
@@ -2855,6 +2856,57 @@ def _compact_summary(value: object, *, max_chars: int = 320) -> str:
     return text[: max_chars - 1].rstrip() + "…"
 
 
+def _watch_executive_context(article: object) -> dict[str, Any]:
+    """Use the shared post-qualification authority; never alter Watch policy."""
+    evidence = {
+        "title": _article_field(article, "title"),
+        "subtitle": _article_field(article, "publisher_subtitle", "subtitle"),
+        "snippet": _article_field(
+            article,
+            "publisher_snippet",
+            "publisher_factual_lead",
+            "snippet",
+        ),
+        "summary": _article_field(article, "summary"),
+        "collection_source_kind": _article_field(article, "collection_source_kind"),
+        "summary_authorized": _value(article, "summary_authorized") is True,
+    }
+    return editorial_executive_context.derive_executive_context(
+        evidence,
+        article_already_qualified=True,
+    )
+
+
+def _watch_context_lines(context: Mapping[str, Any]) -> tuple[list[str], str]:
+    points = [
+        _compact_summary(point, max_chars=180)
+        for point in context.get("fact_points", [])[:2]
+        if _clean(point)
+    ]
+    baseline = context.get("baseline_context")
+    baseline = baseline if isinstance(baseline, Mapping) else {}
+    implication = context.get("hdec_implication")
+    implication = implication if isinstance(implication, Mapping) else {}
+    if baseline.get("status") == editorial_executive_context.SUPPORTED and baseline.get("text"):
+        points.append(_compact_summary(baseline["text"], max_chars=180))
+    if implication.get("status") == editorial_executive_context.SUPPORTED and implication.get("text"):
+        implication_line = "현대건설 관점: " + _compact_summary(
+            implication["text"], max_chars=220
+        )
+        if len(points) < 3:
+            points.append(implication_line)
+        elif points:
+            points[-1] = implication_line
+    watch = context.get("watch_point")
+    watch = watch if isinstance(watch, Mapping) else {}
+    watch_text = (
+        _compact_summary(watch.get("text"), max_chars=180)
+        if watch.get("status") == editorial_executive_context.SUPPORTED
+        else ""
+    )
+    return points[:3], watch_text
+
+
 def build_teams_article_card(
     alert: object,
     article: object,
@@ -2875,10 +2927,8 @@ def build_teams_article_card(
         )
 
     title = _article_field(article, "title") or "제목 없음"
-    summary = _article_field(article, "summary", "snippet") or "핵심 요약이 제공되지 않았습니다."
-    hdec_impact = _article_field(
-        article, "hdec_relevance", "radarReason", "whyImportant", "why_it_matters"
-    ) or "현대건설 영향은 원문과 대시보드에서 추가 확인이 필요합니다."
+    context = _watch_executive_context(article)
+    context_lines, watch_text = _watch_context_lines(context)
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(_value(article, "published_at") or _value(article, "published_kst")) or "시각 미상"
     detected = _fmt_kst(detected_at or _value(alert, "generated_at") or _value(alert, "generated_kst")) or "시각 미상"
@@ -2897,10 +2947,15 @@ def build_teams_article_card(
         _text_block(importance.label, weight="Bolder", color=importance_color, size="Medium"),
         _text_block(category, isSubtle=True, spacing="None"),
         _text_block(f"{title_prefix}{title}", weight="Bolder", size="Large", spacing="Medium"),
-        _text_block("핵심 요약", weight="Bolder", spacing="Medium"),
-        _text_block(summary, spacing="Small"),
-        _text_block("현대건설 영향", weight="Bolder", spacing="Medium"),
-        _text_block(hdec_impact, spacing="Small"),
+        _text_block(
+            "\n".join(f"• {line}" for line in context_lines),
+            spacing="Medium",
+        ),
+        *(
+            [_text_block(f"Watch: {watch_text}", weight="Bolder", spacing="Medium")]
+            if watch_text
+            else []
+        ),
         {
             "type": "FactSet",
             "spacing": "Medium",
@@ -3110,20 +3165,8 @@ def render_article_email(
             "article has no evidenced delivery category in its title/lead map"
         )
     title = _article_field(article, "title") or "제목 없음"
-    summary = _compact_summary(
-        _article_field(article, "summary", "snippet")
-        or "핵심 요약이 제공되지 않았습니다."
-    )
-    why = _compact_summary(
-        _article_field(
-            article,
-            "hdec_relevance",
-            "radarReason",
-            "whyImportant",
-            "why_it_matters",
-        )
-        or importance.reason
-    )
+    context = _watch_executive_context(article)
+    context_lines, watch_text = _watch_context_lines(context)
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(
         _value(article, "published_at") or _value(article, "published_kst")
@@ -3144,8 +3187,8 @@ def render_article_email(
     text_body = "\n".join((
         f"카테고리: {category}",
         f"제목: {prefix}{title}",
-        f"요약: {summary}",
-        f"왜 중요한가: {why}",
+        *(f"• {line}" for line in context_lines),
+        *((f"Watch: {watch_text}",) if watch_text else ()),
         f"발행: {source} · {published_line}",
         "",
         f"기사 원문 보기: {article_url}",
@@ -3163,6 +3206,12 @@ def render_article_email(
         "display:inline-block;padding:10px 14px;border-radius:6px;text-decoration:none;"
         "font-weight:700;margin:4px 8px 4px 0;"
     )
+    bullets_html = "".join(f"<li>{escaped(line)}</li>" for line in context_lines)
+    watch_html = (
+        f'<p style="margin:0 0 14px;"><strong>Watch</strong><br>{escaped(watch_text)}</p>'
+        if watch_text
+        else ""
+    )
     html_body = (
         '<div style="font-family:Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;'
         'max-width:640px;line-height:1.55;color:#101828;">'
@@ -3173,8 +3222,9 @@ def render_article_email(
         f'<strong>카테고리</strong> {escaped(category)}</p>'
         f'<h2 style="font-size:22px;line-height:1.35;margin:8px 0 12px;">'
         f'{escaped(prefix + title)}</h2>'
-        f'<p style="margin:0 0 14px;"><strong>요약</strong><br>{escaped(summary)}</p>'
-        f'<p style="margin:0 0 14px;"><strong>왜 중요한가</strong><br>{escaped(why)}</p>'
+        f'<ul style="margin:0 0 14px;padding-left:20px;">'
+        f'{bullets_html}</ul>'
+        f'{watch_html}'
         f'<p style="font-size:13px;color:#667085;margin:0 0 16px;">'
         f'{escaped(source)} · {escaped(published_line)}</p>'
         f'<a href="{origin_href}" style="{button_style}background:#0B2F4F;color:#fff;">'

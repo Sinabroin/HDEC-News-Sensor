@@ -1,0 +1,330 @@
+{
+  "schema_version": 1,
+  "baseline_version": "2026-h1-construction-v2",
+  "baseline_id": "construction-peer-baseline-2026-h1",
+  "reporting_period": "2026년 반기",
+  "as_of": "2026-06-30",
+  "status": "verified",
+  "source_document": {
+    "filename": "260814_사업보고서_비교검토_26년 반기(배포).pdf",
+    "title": "국내 건설사 사업보고서 비교 요약",
+    "reporting_basis": "'26년 반기(연결기준) 보고서 기준",
+    "source_document_date": "2026-08",
+    "organization": "전략기획사업부 / 경영기획실",
+    "sha256": "28c5de0ef78ce5360a330c1a03cd88d8a4b2f03a74e8bd09d65f34355f89c21b",
+    "primary_local_source_status": "microsoft_irm_protected_unreadable",
+    "extraction_status": "microsoft_irm_protected_unreadable",
+    "page_reference_scheme": "readable verification-copy PDF page numbers",
+    "verification_source": {
+      "source_kind": "founder_provided_readable_copy",
+      "sha256": "63807d7cd8d5e8f2f27b4263c15cab3bea6127d811f1eb65ab855e7a59e9358e",
+      "verification_status": "verified_from_founder_provided_readable_copy",
+      "byte_identity_with_primary": "not_asserted"
+    }
+  },
+  "entities": [
+    {
+      "entity_id": "hyundai-engineering-construction",
+      "canonical_name": "현대건설",
+      "aliases": [
+        "Hyundai E&C",
+        "Hyundai Engineering & Construction"
+      ],
+      "facts": [
+        {
+          "fact_id": "2026h1-hdec-operating-cash-flow-p3",
+          "dimension": "operating_cash_flow",
+          "value": -1.7,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황",
+          "evidence_paraphrase": "2026년 반기 기준 현대건설 영업현금흐름은 -1.7조원임.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-hdec-net-cash-or-debt-p3",
+          "dimension": "net_cash_or_debt",
+          "value": -0.6,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황",
+          "evidence_paraphrase": "2026년 반기 기준 현대건설 순현금(현금-차입금)은 -0.6조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-hdec-pf-guarantee-p3",
+          "dimension": "pf_guarantee",
+          "value": 14,
+          "unit": "KRW trillion approximately",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 우발채무 등",
+          "evidence_paraphrase": "현대건설 PF 보증규모는 약 14조원으로 비교 건설사 중 최대 수준으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-hdec-completion-guarantee-p3",
+          "dimension": "completion_guarantee",
+          "value": 19,
+          "unit": "KRW trillion approximately",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 우발채무 등",
+          "evidence_paraphrase": "현대건설 책임준공 실행액은 약 19조원으로 비교 건설사 중 최대 수준으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-hdec-strategy-p3",
+          "dimension": "strategy",
+          "value": null,
+          "unit": "",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황 주석",
+          "evidence_paraphrase": "현대건설은 원전·데이터센터 등 고부가가치 사업을 통한 중장기 영업이익 확보 전략을 제시함.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-hdec-order-backlog-p6",
+          "dimension": "order_backlog",
+          "value": 104.9,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.6 사업내용(2) / 수주잔고",
+          "evidence_paraphrase": "현대건설 연결 수주잔고는 104.9조원이며 국내 74.7조원, 해외 30.2조원임.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        }
+      ]
+    },
+    {
+      "entity_id": "gs-engineering-construction",
+      "canonical_name": "GS건설",
+      "aliases": [
+        "GS E&C",
+        "GS Engineering & Construction"
+      ],
+      "facts": [
+        {
+          "fact_id": "2026h1-gs-portfolio-shift-p3",
+          "dimension": "portfolio_shift",
+          "value": null,
+          "unit": "",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 회사현황·사업내용",
+          "evidence_paraphrase": "GS건설은 해외주택 투자사업 확대를 위해 전담조직을 신설하고 GS 이니마 매각을 통한 자금 확보를 추진함.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-gs-data-center-strategy-p3",
+          "dimension": "data_center_strategy",
+          "value": null,
+          "unit": "",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / GS 이니마 주석",
+          "evidence_paraphrase": "GS 이니마 매각에 따른 실적 부족분을 AI 데이터센터 사업으로 확보하는 전략이 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-gs-inima-sale-p3",
+          "dimension": "portfolio_shift",
+          "value": 1.7,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / GS 이니마 주석",
+          "evidence_paraphrase": "GS 이니마 100% 지분 매매계약이 완료됐으며 UAE TAQA 대상 매각금액은 1.7조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-gs-inima-operating-profit-share-p3",
+          "dimension": "operating_profit",
+          "value": 47,
+          "unit": "percent of H1 operating result approximately",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / GS 이니마 주석",
+          "evidence_paraphrase": "GS 이니마 실적은 2026년 상반기 GS건설 영업실적의 약 47%를 차지한 것으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-gs-net-cash-or-debt-p3",
+          "dimension": "net_cash_or_debt",
+          "value": -3.0,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황",
+          "evidence_paraphrase": "2026년 반기 기준 GS건설 순현금은 -3.0조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-gs-pf-guarantee-p3",
+          "dimension": "pf_guarantee",
+          "value": 2.9,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 우발채무 등",
+          "evidence_paraphrase": "GS건설 PF 보증규모는 2.9조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-gs-order-backlog-p6",
+          "dimension": "order_backlog",
+          "value": 73.4,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.6 사업내용(2) / 수주잔고",
+          "evidence_paraphrase": "GS건설 수주잔고는 73.4조원이며 국내 48.5조원, 해외 24.9조원임.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        }
+      ]
+    },
+    {
+      "entity_id": "samsung-ct-construction",
+      "canonical_name": "삼성물산",
+      "aliases": [
+        "삼성물산 건설",
+        "Samsung C&T"
+      ],
+      "facts": [
+        {
+          "fact_id": "2026h1-samsung-ai-transformation-p3",
+          "dimension": "ai_transformation",
+          "value": null,
+          "unit": "",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 회사현황",
+          "evidence_paraphrase": "삼성물산 건설부문은 'AI 네이티브' 건설사 전환 로드맵을 제시하고 2028년까지 설계·입찰 등에 AI를 전면 도입할 계획을 제시함.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-samsung-net-cash-or-debt-p3",
+          "dimension": "net_cash_or_debt",
+          "value": 4.5,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황",
+          "evidence_paraphrase": "2026년 반기 기준 삼성물산 순현금은 4.5조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-samsung-pf-guarantee-p3",
+          "dimension": "pf_guarantee",
+          "value": 2.0,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 우발채무 등",
+          "evidence_paraphrase": "삼성물산 PF 보증규모는 2.0조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-samsung-order-backlog-p6",
+          "dimension": "order_backlog",
+          "value": 34.2,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.6 사업내용(2) / 수주잔고",
+          "evidence_paraphrase": "삼성물산 건설부문 수주잔고는 34.2조원이며 국내 20.7조원, 해외 13.5조원임.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        }
+      ]
+    },
+    {
+      "entity_id": "daewoo-engineering-construction",
+      "canonical_name": "대우건설",
+      "aliases": [
+        "Daewoo E&C",
+        "Daewoo Engineering & Construction"
+      ],
+      "facts": [
+        {
+          "fact_id": "2026h1-daewoo-net-cash-or-debt-p3",
+          "dimension": "net_cash_or_debt",
+          "value": -2.8,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황",
+          "evidence_paraphrase": "2026년 반기 기준 대우건설 순현금은 -2.8조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-daewoo-pf-guarantee-p3",
+          "dimension": "pf_guarantee",
+          "value": 2.2,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 우발채무 등",
+          "evidence_paraphrase": "대우건설 PF 보증규모는 2.2조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-daewoo-order-backlog-p6",
+          "dimension": "order_backlog",
+          "value": 53.4,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.6 사업내용(2) / 수주잔고",
+          "evidence_paraphrase": "대우건설 수주잔고는 53.4조원이며 국내 48.2조원, 해외 5.2조원임.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        }
+      ]
+    },
+    {
+      "entity_id": "dl-engineering-construction",
+      "canonical_name": "DL이앤씨",
+      "aliases": [
+        "DL E&C",
+        "DL E&C Co."
+      ],
+      "facts": [
+        {
+          "fact_id": "2026h1-dl-net-cash-or-debt-p3",
+          "dimension": "net_cash_or_debt",
+          "value": 1.2,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 재무현황",
+          "evidence_paraphrase": "2026년 반기 기준 DL 측 순현금은 1.2조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-dl-pf-guarantee-p3",
+          "dimension": "pf_guarantee",
+          "value": 1.8,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.3 Executive Summary / 우발채무 등",
+          "evidence_paraphrase": "DL 측 PF 보증규모는 1.8조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        },
+        {
+          "fact_id": "2026h1-dl-order-backlog-p6",
+          "dimension": "order_backlog",
+          "value": 29.8,
+          "unit": "KRW trillion",
+          "as_of": "2026-06-30",
+          "source_reference": "p.6 사업내용(2) / 수주잔고",
+          "evidence_paraphrase": "DL 연결 수주잔고는 29.8조원으로 제시됨.",
+          "status": "verified",
+          "freshness": "historical_baseline"
+        }
+      ]
+    }
+  ]
+}

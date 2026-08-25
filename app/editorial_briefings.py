@@ -21,7 +21,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 from collections import Counter
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime, time, timedelta, timezone
 from html import escape, unescape
 from html.parser import HTMLParser
@@ -39,7 +39,9 @@ except ImportError:  # Text/editorial policy remains usable without image extras
 from app import (
     ai_centrality,
     config,
+    editorial_executive_context,
     editorial_radar,
+    editorial_transparency,
     editorial_preference_runtime,
     executive_materiality,
     news_access,
@@ -797,6 +799,9 @@ class EditorialArticle:
     # §12 — Editor's Summary implication: generated default, human override wins.
     executive_implication: str = ""
     implication_html: str = ""
+    # R4-OPS-10G — derived only after selection.  This object has no authority
+    # over qualification/ranking and is shared by Editor, Daily and Teams.
+    executive_context: dict[str, Any] = field(default_factory=dict)
     # R4-R6 §5/§6 — canonical AI-centrality level carried to the headline
     # contract; "operator_override" marks an explicit human override with a
     # written reason (never silent).
@@ -4630,6 +4635,43 @@ def normalize_articles(
         selected_rows = [
             (candidate.article, candidate.raw) for candidate in selected_candidates
         ]
+    # R4-OPS-10G: selection is complete above.  Company context is attached
+    # afterwards so it cannot add/remove/reorder a candidate or alter a gate.
+    contextualized_rows: list[tuple[EditorialArticle, Mapping]] = []
+    for article, raw in selected_rows:
+        source_kind = _collection_source_kind(raw)
+        context = editorial_executive_context.derive_executive_context(
+            {
+                "title": article.title,
+                "subtitle": raw.get("subtitle"),
+                "snippet": raw.get("snippet"),
+                "summary": article.summary,
+                "summary_authorized": source_kind in {
+                    "url_import",
+                    "human_link",
+                    "team_link",
+                },
+                "collection_source_kind": source_kind,
+                "source": article.source,
+            },
+            article_already_qualified=True,
+        )
+        implication = str(context["hdec_implication"].get("text") or "")
+        contextualized_rows.append(
+            (
+                replace(
+                    article,
+                    executive_context=context,
+                    executive_implication=(
+                        article.executive_implication
+                        if edition_type == "weekly"
+                        else implication or article.executive_implication
+                    ),
+                ),
+                raw,
+            )
+        )
+    selected_rows = contextualized_rows
     if not resolve_images:
         return [article for article, _raw in selected_rows]
 
@@ -5371,6 +5413,103 @@ def _daily_summary_html(article: EditorialArticle) -> str:
     return escape(article.summary)
 
 
+def _context_part(article: EditorialArticle, name: str) -> Mapping[str, Any]:
+    context = article.executive_context
+    if not isinstance(context, Mapping):
+        return {}
+    value = context.get(name)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _context_fact_points(article: EditorialArticle) -> list[str]:
+    context = article.executive_context
+    if not isinstance(context, Mapping):
+        return []
+    points = context.get("fact_points")
+    if not isinstance(points, list):
+        return []
+    return [str(point).strip() for point in points[:3] if str(point).strip()]
+
+
+def executive_summary_text(articles: list[EditorialArticle]) -> str:
+    """Return a short factual synthesis followed by explicitly framed analysis."""
+    if not articles:
+        return DAILY_EMPTY_STATUS_TEXT
+    facts: list[str] = []
+    for article in articles[:3]:
+        points = _context_fact_points(article)
+        candidate = points[0] if points else article.title
+        if candidate and candidate not in facts:
+            facts.append(candidate.rstrip())
+        if len(facts) == 2:
+            break
+    implications: list[str] = []
+    for article in articles:
+        implication = _context_part(article, "hdec_implication")
+        text = str(implication.get("text") or "").strip()
+        if implication.get("status") == editorial_executive_context.SUPPORTED and text:
+            implications.append(text)
+    sentences = facts[:2]
+    if implications:
+        dimensions = {
+            dimension
+            for article in articles
+            for dimension in _context_part(article, "hdec_implication").get("dimensions", [])
+            if isinstance(dimension, str)
+        }
+        if len(articles) > 1 and dimensions:
+            signal = "·".join(sorted(dimensions)[:3])
+            sentences.append(
+                f"현대건설 관점의 분석 신호는 {signal} 사업 구조와 발주 조건의 구체화 여부임."
+            )
+        else:
+            sentences.append(f"분석: {implications[0]}")
+    return " ".join(sentence for sentence in sentences[:4] if sentence)
+
+
+def _executive_context_html(article: EditorialArticle) -> str:
+    points = _context_fact_points(article)
+    fact_html = "".join(f"<li>{escape(point)}</li>" for point in points)
+    baseline = _context_part(article, "baseline_context")
+    delta = _context_part(article, "delta_vs_baseline")
+    implication = _context_part(article, "hdec_implication")
+    watch = _context_part(article, "watch_point")
+    context_parts: list[str] = []
+    baseline_text = str(baseline.get("text") or "").strip()
+    delta_text = str(delta.get("text") or "").strip()
+    if baseline.get("status") == editorial_executive_context.SUPPORTED and baseline_text:
+        context_parts.append(
+            '<div class="context-delta" data-role="baseline-context">'
+            f'<strong>경영 맥락</strong><p>{escape(baseline_text)}</p></div>'
+        )
+    if delta.get("status") == editorial_executive_context.SUPPORTED and delta_text:
+        context_parts.append(
+            '<div class="context-delta" data-role="delta-vs-baseline">'
+            f'<strong>Delta</strong><p>{escape(delta_text)}</p></div>'
+        )
+    implication_text = str(implication.get("text") or "").strip()
+    if implication.get("status") == editorial_executive_context.SUPPORTED and implication_text:
+        context_parts.append(
+            '<div class="context-analysis" data-role="hdec-implication" '
+            'data-content-kind="analysis"><strong>현대건설 관점</strong>'
+            f'<p>{escape(implication_text)}</p></div>'
+        )
+    watch_text = str(watch.get("text") or "").strip()
+    if watch.get("status") == editorial_executive_context.SUPPORTED and watch_text:
+        context_parts.append(
+            '<div class="context-watch" data-role="watch-point"><strong>Watch Point</strong>'
+            f'<p>{escape(watch_text)}</p></div>'
+        )
+    if not fact_html and not context_parts:
+        return f'<p class="sum">{_daily_summary_html(article)}</p>'
+    return (
+        '<div class="executive-context" data-role="executive-context">'
+        + (f'<ul class="fact-points" data-role="fact-points">{fact_html}</ul>' if fact_html else "")
+        + "".join(context_parts)
+        + "</div>"
+    )
+
+
 def _implication_inline_html(article: EditorialArticle) -> str:
     """§12 why-it-matters text: editor override wins over the generated one."""
     if article.implication_html:
@@ -5410,7 +5549,7 @@ def _card_summary_html(article: EditorialArticle) -> str:
     return f"{summary} — {implication}"
 
 
-def _daily_headline(article: EditorialArticle) -> str:
+def _daily_headline(article: EditorialArticle, articles: list[EditorialArticle]) -> str:
     return (
         '<section class="hero" data-role="headline" style="position:relative;'
         'overflow:hidden;border-radius:22px;background:linear-gradient(125deg,'
@@ -5429,25 +5568,15 @@ def _daily_headline(article: EditorialArticle) -> str:
         '<div class="ednote" style="background:#fff;border:1px solid rgba(16,18,24,.10);'
         'border-radius:0 0 22px 22px;margin-top:-14px;padding:30px 30px 24px;">'
         "<h3 class=\"ed-k\">Editor's Summary</h3>"
-        f"{_editor_summary_block(article)}"
+        f"<p>{escape(executive_summary_text(articles))}</p>"
+        f"{_executive_context_html(article)}"
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div>"
     )
 
 
-def _daily_empty_headline(radar_audit: Mapping[str, Any]) -> str:
-    funnel = radar_audit.get("funnel") if isinstance(radar_audit, Mapping) else {}
-    funnel = funnel if isinstance(funnel, Mapping) else {}
-    collected = max(0, int(funnel.get("collection_count") or 0))
-    ai_count = max(0, int(funnel.get("ai_central_count") or 0))
-    bridge_count = max(0, int(funnel.get("watch_bridge_count") or 0))
-    bridge_sentence = (
-        f" 오전 레이더 추가 포착 {bridge_count}건은 오늘 기사로 가장하지 않고 "
-        "별도 검토 신호로 표시했습니다."
-        if bridge_count
-        else ""
-    )
+def _daily_empty_headline(_radar_audit: Mapping[str, Any]) -> str:
     return (
         '<section class="hero empty-edition" data-role="headline" '
         'data-edition-status="empty" style="position:relative;overflow:hidden;'
@@ -5461,9 +5590,8 @@ def _daily_empty_headline(radar_audit: Mapping[str, Any]) -> str:
         '<div class="hero-foot" style="position:relative;z-index:2">'
         '<span>품질 기준 유지 · 인위적 채움 없음</span></div></section>'
         '<div class="ednote"><h3 class="ed-k">Editor\'s Summary</h3>'
-        '<p>기준을 낮추거나 기사를 채워 넣지 않았습니다. '
-        f'수집 레이더에서는 {collected}건을 탐지했고 AI 중심 {ai_count}건을 '
-        f'검토했으며 최종 임원급 선정은 0건입니다.{escape(bridge_sentence)}</p></div>'
+        '<p>기준을 낮추거나 기사를 채워 넣지 않았습니다. 오늘은 경영진 보고 '
+        '기준을 충족한 기사가 없음.</p></div>'
     )
 
 
@@ -5537,7 +5665,7 @@ def _daily_card(article: EditorialArticle) -> str:
         f'<div class="thumb">{_reference_image(article)}</div>'
         '<div class="card-body">'
         f'<span class="chip"><span class="d"></span>{escape(article.category)}</span>'
-        f'<h3>{escape(article.title)}</h3><p class="sum">{_card_summary_html(article)}</p>'
+        f'<h3>{escape(article.title)}</h3>{_executive_context_html(article)}'
         '<div class="src" style="margin-top:14px;padding-top:10px;border-top:1px solid '
         '#EEF0F4;font-size:11.5px;color:#9CA3B0;font-weight:600;">출처 '
         f"{_article_source_anchor(article)}</div></div></article>"
@@ -5753,7 +5881,7 @@ def build_daily_edition_manifest(
         "radar_audit": public_radar,
         "headline_title": articles[0].title if articles else "",
         "editor_summary": (
-            articles[0].summary
+            executive_summary_text(articles)
             if articles
             else (
                 "최종 선정 0건 · 오전 레이더 추가 포착 "
@@ -5774,6 +5902,7 @@ def build_daily_edition_manifest(
                 "published_at": article.published_at.astimezone(KST).isoformat(
                     timespec="seconds"
                 ),
+                "executive_context": article.executive_context,
             }
             for index, article in enumerate(articles, start=1)
         ],
@@ -5872,7 +6001,7 @@ def render_daily(
             "COVERAGE_LABEL": escape(coverage.label()),
             "BRIEF_STYLES": _brief_styles(),
             "HEADLINE_HTML": (
-                _daily_headline(headline)
+                _daily_headline(headline, articles)
                 if headline is not None
                 else _daily_empty_headline(normalized_radar)
             ),
@@ -5884,8 +6013,6 @@ def render_daily(
                     else '<p class="empty">오늘의 브리핑에 포함할 기사가 없습니다.</p>'
                 )
             ),
-            "RADAR_HTML": _daily_radar_html(normalized_radar),
-            "TAXONOMY_HTML": _taxonomy_html(),
             "FOOTER_HTML": _brief_footer("daily", key, coverage),
         },
     )
@@ -5933,7 +6060,14 @@ def render_daily(
             f"전체 뉴스 대시보드 보기: {public_url_contract.CANONICAL_DASHBOARD_URL}",
         ]
     )
-    teams_text = "\n".join(text_lines)
+    transparency = editorial_transparency.from_radar_audit(
+        normalized_radar,
+        selected_count=len(articles),
+    )
+    teams_text = "\n".join(text_lines) + "\n\n" + editorial_transparency.render_text(
+        transparency,
+        window_label="24시간",
+    )
     teams_html = _teams_html(
         "HDEC AI Daily Brief",
         key,
@@ -5946,6 +6080,10 @@ def render_daily(
         DAILY_PUBLISHED_LINK_LABEL,
         leading_actions=(
             ((DAILY_EDITOR_LINK_LABEL, editor_url),) if editor_url else ()
+        ),
+        footer_html=editorial_transparency.render_html(
+            transparency,
+            window_label="24시간",
         ),
     )
     return RenderedEdition(
@@ -6061,6 +6199,7 @@ def render_weekly(
     *,
     run_at: datetime,
     root_url: str,
+    transparency_audit: Mapping[str, Any] | None = None,
 ) -> RenderedEdition:
     if not articles:
         raise EditorialError("weekly edition has no eligible linked articles")
@@ -6103,7 +6242,20 @@ def render_weekly(
         f"이번 주 Weekly Brief 보기: {public_url_contract.WEEKLY_LATEST_URL}",
         f"전체 뉴스 대시보드 보기: {public_url_contract.CANONICAL_DASHBOARD_URL}",
     ]
-    teams_text = "\n".join(text_lines)
+    transparency = dict(transparency_audit or {})
+    if not transparency:
+        transparency = {
+            "raw_collected_count": len(articles),
+            "unique_collected_count": len(articles),
+            "ai_central_count": len(articles),
+            "executive_candidate_count": len(articles),
+            "selected_count": len(articles),
+            "unique_count_proven": False,
+        }
+    teams_text = "\n".join(text_lines) + "\n\n" + editorial_transparency.render_text(
+        transparency,
+        window_label="7일",
+    )
     teams_html = _teams_html(
         "AI 경영 T&I Weekly Brief",
         key,
@@ -6111,6 +6263,10 @@ def render_weekly(
         [("이번 주 헤드라인", escape(headline.title))],
         public_url_contract.WEEKLY_LATEST_URL,
         "이번 주 Weekly Brief 보기",
+        footer_html=editorial_transparency.render_html(
+            transparency,
+            window_label="7일",
+        ),
     )
     return RenderedEdition(
         "weekly", key, coverage, html, dated_url, latest_url, teams_text, teams_html,
@@ -6128,6 +6284,7 @@ def _teams_html(
     cta: str,
     *,
     leading_actions: tuple[tuple[str, str], ...] = (),
+    footer_html: str = "",
 ) -> str:
     blocks = "".join(
         f"<p><strong>{escape(label)}</strong><br>{body}</p>" for label, body in sections
@@ -6146,7 +6303,7 @@ def _teams_html(
         '<!doctype html><html lang="ko"><body style="font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;max-width:640px;color:#101218">'
         f"<h2>{escape(heading)}</h2><p>{escape(key)}<br>{escape(coverage.label())}</p>{blocks}"
         f'<p>{leading}<a href="{escape(public_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">{escape(cta)}</a>'
-        f'<a href="{escape(dashboard_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">전체 뉴스 대시보드 보기</a></p>'
+        f'<a href="{escape(dashboard_url, quote=True)}" target="_blank" rel="noopener noreferrer" style="{button_style}">전체 뉴스 대시보드 보기</a></p>{footer_html}'
         '</body></html>'
     )
 
@@ -6337,7 +6494,6 @@ def validate_rendered(edition: RenderedEdition) -> None:
                 or DAILY_EMPTY_STATUS_TEXT not in edition.html
                 or qualified_status not in edition.teams_text
                 or qualified_status not in edition.teams_html
-                or (bridge_count and "오전 레이더 추가 포착" not in edition.html)
             ):
                 raise EditorialError("truthful empty Daily status missing")
         if edition.html.count('data-role="article-card"') > 5:
