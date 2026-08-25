@@ -70,6 +70,7 @@ from app.teams_ai_push import (  # noqa: E402
     DEFAULT_TEAMS_BATCH_MAX,
     HARD_TEAMS_BATCH_MAX,
     IMPORTANCE_IMPORTANT,
+    IMPORTANCE_OBSERVATION,
     SELECTION_MODE_FALLBACK,
     apply_major_media_first_gate,
     evaluate_teams_push_policy,
@@ -109,11 +110,25 @@ SEND_MODE = "send"
 APPROVAL_TRUE = {"1", "true", "yes", "approved"}
 REJECTION_COUNTER_KEYS = (
     "not_ai_core",
+    "ai_not_central_incidental_ai_mention",
+    "ai_not_central_non_ai",
+    "excluded_stock_market_title",
+    "excluded_political_title",
+    "excluded_real_estate_transaction_title",
+    "excluded_civic_campaign_or_publicity_title",
+    "excluded_stock_market_dominant",
+    "excluded_fund_product_noise",
+    "excluded_investor_market_commentary",
+    "excluded_generic_industry_ai_tailwind",
+    "excluded_roundup_multi_topic",
+    "excluded_ai_incidental",
+    "excluded_other_nonexecutive",
     "insufficient_hdec_relevance",
     "insufficient_importance",
     "freshness_failed",
     "carry_forward_excluded",
     "source_authority_failed",
+    "shadow_blocked",
     "shadow_unavailable",
     "no_confirmed_event",
     "speculation_only",
@@ -122,6 +137,8 @@ REJECTION_COUNTER_KEYS = (
     "exact_duplicate",
     "duplicate_event",
     "malformed_required_field",
+    "no_evidenced_delivery_category",
+    "public_institution_not_promoted",
     "other_policy_reason",
 )
 
@@ -175,14 +192,16 @@ def _major_row_decision_traces(
     baseline,
     gate_batch,
     records,
+    major_only: bool = True,
 ) -> list[dict[str, Any]]:
-    """R4-R12 §1 — categorical decision trace for every major-lane row.
+    """Categorical decision trace for major rows or all policy-relevant rows.
 
-    One trace entry per primary_10 / secondary_3 / promoted-official row that
-    reached the sender, so a zero-selected run is explainable at row level
-    from the run log alone. Log-safe by construction: only the non-reversible
-    article reference, the publisher display name, and categorical decision
-    codes — never a URL, title, or credential (rules.md §4)."""
+    R4-R12 keeps the established major-lane trace. R4-OPS-10H additionally
+    traces every verified AI-core / HDEC-relevant / importance-qualified row,
+    so a specialist or public-lane final rejection cannot disappear into an
+    aggregate bucket. Log-safe by construction: only the non-reversible
+    article reference, publisher display name, and categorical decision codes
+    — never a URL, title, or credential (rules.md §4)."""
     outcome_by_ref: dict[str, dict[str, Any]] = {}
     for record in records:
         outcome_by_ref.setdefault(str(record.get("article_ref")), record)
@@ -219,7 +238,21 @@ def _major_row_decision_traces(
         promoted_official = bool(
             routing.is_public_lane and routing.teams_alert_eligible
         )
-        if tier not in {"primary_10", "secondary_3", "major_secondary"} and not promoted_official:
+        major_lane = (
+            tier in {"primary_10", "secondary_3", "major_secondary"}
+            or promoted_official
+        )
+        policy_relevant = bool(
+            id(row) in verified_object_ids
+            and (
+                evaluation.topic.eligible
+                or evaluation.hdec_relevant
+                or evaluation.importance.sendable
+            )
+        )
+        if (major_only and not major_lane) or (
+            not major_only and not policy_relevant
+        ):
             continue
         ref = article_ref(row)
         stage, stage_reason = "", ""
@@ -254,11 +287,33 @@ def _major_row_decision_traces(
             "publisher_rank": int(policy["publisher_rank"]),
             "verified": id(row) in verified_object_ids,
             "gate_class": "promoted_official" if promoted_official else tier,
+            "major_lane": major_lane,
             "ai_core": bool(evaluation.topic.eligible),
             "ai_exclusion": str(evaluation.topic.exclusion_reason or ""),
             "hdec_relevant": bool(evaluation.hdec_relevant),
             "importance_sendable": bool(evaluation.importance.sendable),
             "importance_level": str(evaluation.importance.level or ""),
+            "selection_tier": (
+                "tier_2_strong_observation"
+                if evaluation.importance.level == IMPORTANCE_OBSERVATION
+                else "tier_1_executive_headline"
+                if evaluation.importance.sendable
+                else ""
+            ),
+            "semantic_class": str(
+                evaluation.semantic_precision.semantic_class
+                if evaluation.semantic_precision is not None
+                else ""
+            ),
+            "semantic_reason": str(
+                evaluation.semantic_precision.reason
+                if evaluation.semantic_precision is not None
+                else ""
+            ),
+            "delivery_category": str(evaluation.delivery_category or ""),
+            "public_promotion_reason": str(
+                evaluation.public_routing.promotion_reason or ""
+            ),
             "confirmed_event": bool(row.get("shadow_confirmed_event_types")),
             "freshness_current": row.get("current_run_seen") is not False
             and row.get("carried_forward") is not True,
@@ -744,6 +799,16 @@ def deliver(
         gate_batch=gate_batch,
         records=records,
     )
+    policy_row_decision_trace = _major_row_decision_traces(
+        article_rows=article_rows,
+        policy_evaluations=policy_evaluations,
+        verified_object_ids=verified_object_ids,
+        candidates=candidates,
+        baseline=baseline,
+        gate_batch=gate_batch,
+        records=records,
+        major_only=False,
+    )
     selected_source_audit = [
         {
             "article_ref": article_ref(gated.candidate.article),
@@ -891,10 +956,26 @@ def deliver(
         "urgent_rows_selected": int(
             gate_batch.audit.get("urgent_rows_selected") or 0
         ),
+        "tier_1_immediate_rows": int(
+            gate_batch.audit.get("tier_1_immediate_rows") or 0
+        ),
+        "tier_2_immediate_rows": int(
+            gate_batch.audit.get("tier_2_immediate_rows") or 0
+        ),
+        "tier_2_selected_rows": int(
+            gate_batch.audit.get("tier_2_selected_rows") or 0
+        ),
+        "tier_2_suppressed_by_tier_1_rows": int(
+            gate_batch.audit.get("tier_2_suppressed_by_tier_1_rows") or 0
+        ),
         "selected_source_audit": selected_source_audit,
         # R4-R12 §1 — row-level categorical decision trace for every
         # primary_10 / secondary_3 / promoted-official row in this run.
         "major_row_decision_trace": major_row_decision_trace,
+        # R4-OPS-10H — every verified row that reached AI/HDEC/importance
+        # policy, including non-major lanes. This makes safe-zero versus
+        # over-strict-zero distinguishable from one natural run.
+        "policy_row_decision_trace": policy_row_decision_trace,
         "skip_reasons": {
             "already_sent": blocked,
             "deferred_due_to_cap": len(deferred),
@@ -1042,6 +1123,11 @@ def _write_github_output(path: str, summary: Mapping[str, Any]) -> None:
         "normal_rows_deferred_by_pacing="
         + str(int(summary.get("normal_rows_deferred_by_pacing") or 0)),
         f"urgent_rows_selected={int(summary.get('urgent_rows_selected') or 0)}",
+        f"tier_1_immediate_rows={int(summary.get('tier_1_immediate_rows') or 0)}",
+        f"tier_2_immediate_rows={int(summary.get('tier_2_immediate_rows') or 0)}",
+        f"tier_2_selected_rows={int(summary.get('tier_2_selected_rows') or 0)}",
+        "tier_2_suppressed_by_tier_1_rows="
+        + str(int(summary.get("tier_2_suppressed_by_tier_1_rows") or 0)),
     )
     try:
         with Path(path).open("a", encoding="utf-8") as handle:
@@ -1071,6 +1157,25 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
             f"confirmed_event={'true' if trace['confirmed_event'] else 'false'} "
             f"freshness_current={'true' if trace['freshness_current'] else 'false'} "
             f"stock_excluded={'true' if trace['stock_market_excluded'] else 'false'} "
+            f"stage={trace['stage']} "
+            f"rejection_reason={trace['rejection_reason'] or '-'} "
+            f"selected={'true' if trace['final_selected'] else 'false'} "
+            f"smtp={trace['smtp_status']}"
+        )
+    for trace in summary.get("policy_row_decision_trace", ()):
+        print(
+            "Teams policy-row trace: "
+            f"article={trace['article_ref']} "
+            f"source={trace['source']} "
+            f"tier={trace['source_tier']} "
+            f"major_lane={'true' if trace['major_lane'] else 'false'} "
+            f"ai_core={'true' if trace['ai_core'] else 'false'} "
+            f"hdec_relevant={'true' if trace['hdec_relevant'] else 'false'} "
+            f"selection_tier={trace['selection_tier'] or '-'} "
+            f"semantic_class={trace['semantic_class'] or '-'} "
+            f"semantic_reason={trace['semantic_reason'] or '-'} "
+            f"delivery_category={trace['delivery_category'] or '-'} "
+            f"promotion={trace['public_promotion_reason'] or '-'} "
             f"stage={trace['stage']} "
             f"rejection_reason={trace['rejection_reason'] or '-'} "
             f"selected={'true' if trace['final_selected'] else 'false'} "
@@ -1116,6 +1221,11 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
         "normal_rows_deferred_by_pacing="
         f"{summary['normal_rows_deferred_by_pacing']} "
         f"urgent_rows_selected={summary['urgent_rows_selected']}"
+        f" tier_1_immediate_rows={summary['tier_1_immediate_rows']}"
+        f" tier_2_immediate_rows={summary['tier_2_immediate_rows']}"
+        f" tier_2_selected_rows={summary['tier_2_selected_rows']}"
+        " tier_2_suppressed_by_tier_1_rows="
+        f"{summary['tier_2_suppressed_by_tier_1_rows']}"
     )
     print(
         "Teams AI push summary: transport=email_channel "

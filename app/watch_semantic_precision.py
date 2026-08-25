@@ -26,6 +26,7 @@ from typing import Any, Mapping, Sequence
 from app import ai_centrality
 
 AI_MATERIAL_EVENT = "AI_MATERIAL_EVENT"
+AI_STRONG_OBSERVATION = "AI_STRONG_OBSERVATION"
 INVESTOR_MARKET_COMMENTARY = "INVESTOR_MARKET_COMMENTARY"
 GENERIC_INDUSTRY_AI_TAILWIND = "GENERIC_INDUSTRY_AI_TAILWIND"
 ROUNDUP_MULTI_TOPIC = "ROUNDUP_MULTI_TOPIC"
@@ -247,6 +248,96 @@ _CONSUMER_FEATURE_TERMS: tuple[str, ...] = (
     "이모지", "스마트폰 앱", "모바일 앱 기능",
 )
 
+# R4-OPS-10H — a bounded second lane for high-signal observations that are
+# useful to an executive even though they are not interruptive Tier-1 events.
+# Every lane is conjunctive and reads only the same publisher-owned factual
+# zone as the rest of this module.  A bare AI mention, a prediction, a seminar,
+# or generated editorial text can never establish this class.
+_AUTONOMOUS_RESEARCH_TERMS: tuple[str, ...] = (
+    "ai 과학자", "ai 연구자", "자율 연구", "자동화된 연구",
+    "스스로 실험", "인간 개입 없이", "human intervention",
+    "autonomous scientist", "ai scientist",
+)
+_SCIENTIFIC_DISCOVERY_TERMS: tuple[str, ...] = (
+    "새 이론", "새로운 이론", "새 개념", "새로운 개념", "발견",
+    "실험 설계", "실험을 설계", "검증·분석", "검증하고 분석",
+    "scientific discovery", "design experiments",
+)
+_GOVERNANCE_FRAMEWORK_TERMS: tuple[str, ...] = (
+    "ai 윤리원칙", "ai 윤리 원칙", "인공지능 윤리원칙",
+    "인공지능 윤리 원칙", "ai 안전 원칙", "ai 안전 기준",
+    "에이전틱 ai 통제", "ai 에이전트 통제", "비례적 책임",
+    "ai 거버넌스", "ai governance",
+)
+_FRAMEWORK_COMMITMENT_TERMS: tuple[str, ...] = (
+    "전면 개편", "개편했다", "발표했다", "원칙을 발표", "명시했다",
+    "기준을 마련", "가이드라인을 마련", "채택했다", "공표했다",
+    "revised", "announced", "adopted",
+)
+_INDUSTRIAL_ECOSYSTEM_TERMS: tuple[str, ...] = (
+    "ai·로봇", "ai 로봇", "인공지능·로봇", "인공지능 로봇",
+    "피지컬 ai", "physical ai", "에지 ai", "edge ai",
+    "로봇산업", "로봇 산업", "산업 ai", "industrial ai",
+)
+_ECOSYSTEM_ACTOR_TERMS: tuple[str, ...] = (
+    "인텔", "intel", "엔비디아", "nvidia", "퀄컴", "qualcomm",
+    "삼성전자", "현대차", "현대차그룹", "마이크로소프트", "microsoft",
+    "구글", "google", "아마존", "amazon",
+)
+_ECOSYSTEM_COMMITMENT_TERMS: tuple[str, ...] = (
+    "정회원 가입 신청", "가입 신청서", "가입 신청", "가입 심사",
+    "회원사 된다", "회원사로 합류", "협회 가입", "정회원",
+    "joined the association", "membership application",
+)
+_CORPORATE_AI_GOVERNANCE_TERMS: tuple[str, ...] = (
+    "ai 초대 이사진", "ai 이사진", "ai 이사회", "ai 법인 이사진",
+    "인공지능 초대 이사진", "인공지능 이사진", "인공지능 이사회",
+)
+_CORPORATE_AI_ACTOR_TERMS: tuple[str, ...] = (
+    "카카오", "네이버", "삼성전자", "lg전자", "현대차", "현대차그룹",
+    "마이크로소프트", "microsoft", "구글", "google", "아마존", "amazon",
+    "메타", "meta", "오픈ai", "openai", "앤트로픽", "anthropic",
+)
+_GOVERNANCE_COMPOSITION_TERMS: tuple[str, ...] = (
+    "이사진 명단", "이사는 총", "이사로 구성", "사내이사", "비상무이사",
+    "이사회 구성", "이사회를 구성", "이사로 선임", "이사진을 선임",
+    "board composition", "appointed to the board",
+)
+
+
+def _strong_observation(
+    title_lower: str,
+    factual_zone: str,
+) -> tuple[bool, tuple[str, ...]]:
+    """Return a proved Tier-2 observation, never a forecast or filler."""
+    autonomous = _hits(factual_zone, _AUTONOMOUS_RESEARCH_TERMS)
+    discovery = _hits(factual_zone, _SCIENTIFIC_DISCOVERY_TERMS)
+    if autonomous and discovery:
+        return True, tuple(dict.fromkeys(autonomous + discovery))
+
+    governance = _hits(factual_zone, _GOVERNANCE_FRAMEWORK_TERMS)
+    framework_action = _hits(factual_zone, _FRAMEWORK_COMMITMENT_TERMS)
+    if governance and framework_action:
+        return True, tuple(dict.fromkeys(governance + framework_action))
+
+    ecosystem = _hits(factual_zone, _INDUSTRIAL_ECOSYSTEM_TERMS)
+    actor = _hits(factual_zone, _ECOSYSTEM_ACTOR_TERMS)
+    commitment = _hits(factual_zone, _ECOSYSTEM_COMMITMENT_TERMS)
+    if ecosystem and actor and commitment:
+        return True, tuple(dict.fromkeys(ecosystem + actor + commitment))
+
+    corporate_governance = _hits(
+        title_lower, _CORPORATE_AI_GOVERNANCE_TERMS
+    )
+    corporate_actor = _hits(factual_zone, _CORPORATE_AI_ACTOR_TERMS)
+    composition = _hits(factual_zone, _GOVERNANCE_COMPOSITION_TERMS)
+    if corporate_governance and corporate_actor and composition:
+        return True, tuple(
+            dict.fromkeys(corporate_governance + corporate_actor + composition)
+        )
+
+    return False, ()
+
 
 def _mapping(obj: object, key: str) -> Mapping[str, Any]:
     if isinstance(obj, Mapping):
@@ -449,6 +540,10 @@ def classify(article: Mapping[str, Any]) -> WatchSemanticPrecisionDecision:
         title_aligned=title_aligned,
         lead_ai=bool(lead_ai_hits),
     )
+    strong_observation, observation_hits = _strong_observation(
+        title_lower,
+        factual_zone,
+    )
 
     common = dict(
         title_ai_evidence=bool(title_ai_hits),
@@ -551,6 +646,15 @@ def classify(article: Mapping[str, Any]) -> WatchSemanticPrecisionDecision:
             **common,
         )
 
+    if strong_observation:
+        return WatchSemanticPrecisionDecision(
+            AI_STRONG_OBSERVATION,
+            True,
+            "bounded_factual_evidence_proves_strong_observation",
+            tuple(dict.fromkeys(observation_hits + title_ai_hits + title_infra_hits)),
+            **common,
+        )
+
     return WatchSemanticPrecisionDecision(
         OTHER_NONEXECUTIVE,
         False,
@@ -563,6 +667,7 @@ def classify(article: Mapping[str, Any]) -> WatchSemanticPrecisionDecision:
 __all__ = [
     "AI_INCIDENTAL",
     "AI_MATERIAL_EVENT",
+    "AI_STRONG_OBSERVATION",
     "GENERIC_INDUSTRY_AI_TAILWIND",
     "INVESTOR_MARKET_COMMENTARY",
     "OTHER_NONEXECUTIVE",
