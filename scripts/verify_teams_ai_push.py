@@ -736,8 +736,9 @@ def main() -> int:
     assert len(capped) == 10, len(capped)
     assert len(select_teams_push_candidates(twelve, max_articles=99)) == 10
 
-    # card render (unchanged contract): 7 fields, single 원문 보기 action, no webhook secret,
-    # only the selected article's URL is present.
+    # R4-OPS-10G card contract: bounded executive context, source/time facts,
+    # exact actions, no legacy labels or funnel diagnostics, and only the
+    # selected article's URL.
     alert = {
         "generated_at": "2026-07-23T09:31:00+09:00",
         "dashboard_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/daily/dashboard-latest.html",
@@ -748,8 +749,18 @@ def main() -> int:
     content = card["attachments"][0]["content"]
     assert content["type"] == "AdaptiveCard" and content["version"] == "1.4"
     rendered = json.dumps(card, ensure_ascii=False)
-    for required in ("핵심 요약", "현대건설 영향", "출처", "게시시각", "감지시각", "기사 원문 보기", "전체 뉴스 대시보드 보기"):
-        assert required in rendered
+    for required in (
+        "현대건설 관점:",
+        "출처",
+        "게시시각",
+        "감지시각",
+        "기사 원문 보기",
+        "전체 뉴스 대시보드 보기",
+    ):
+        assert required in rendered, required
+    assert rendered.count("• ") <= 3
+    for prohibited in ("핵심 요약", "현대건설 영향", "AI T&I 탐지 현황"):
+        assert prohibited not in rendered, prohibited
     assert "TEAMS_WORKFLOW_WEBHOOK_URL" not in rendered
     selected_url = publisher_url(candidates[0].article)
     assert selected_url in rendered

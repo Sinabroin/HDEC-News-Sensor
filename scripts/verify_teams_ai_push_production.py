@@ -621,8 +621,7 @@ def check_delivery(tmp: Path) -> None:
         ("중요도", "최우선"),
         ("카테고리", "AI 데이터센터"),
         ("기사 제목", "AI 데이터센터 투자 계약 체결"),
-        ("핵심 요약", "양사가 AI 데이터센터 투자 계약을 공식 체결했다."),
-        ("왜 중요한가", "데이터센터 EPC와 전력 인프라 사업 기회에 직접 영향"),
+        ("현대건설 관점", "현대건설 관점:"),
         ("출처", "연합뉴스"),
         ("언론사 원문 링크", DIRECT_ARTICLE_URL),
         ("대시보드 링크", CANONICAL_DASHBOARD_URL),
@@ -639,10 +638,22 @@ def check_delivery(tmp: Path) -> None:
           REPRESENTATIVE_IMAGE_URL not in parsed["html"] and "<img" not in parsed["html"])
     check("Google News aggregator URL appears zero times in the email",
           GOOGLE_AGGREGATOR_URL not in body)
-    check("summary is capped and long tail is omitted",
-          "이 문장은 3줄 요약 상한 밖이므로" in body
-          and body.count("추가 상세") < 80)
-    check("why-it-matters section is retained", "왜 중요한가" in body)
+    check("executive context bullet count is bounded",
+          1 <= parsed["text"].count("• ") <= 3
+          and 1 <= parsed["html"].count("<li>") <= 3)
+    check("unverified generated summary and long tail are excluded",
+          "양사가 AI 데이터센터 투자 계약을 공식 체결했다." not in body
+          and "이 문장은 3줄 요약 상한 밖이므로" not in body
+          and "추가 상세" not in body)
+    check("executive implication is explicitly labeled",
+          "현대건설 관점:" in body)
+    check("watch point is retained when supported",
+          "Watch:" in parsed["text"] and "<strong>Watch</strong>" in parsed["html"])
+    check("legacy summary and impact labels are absent",
+          "핵심 요약" not in body and "왜 중요한가" not in body
+          and "현대건설 영향" not in body)
+    check("watch email contains no funnel diagnostics",
+          "AI T&I 탐지 현황" not in body)
     check("detected time is removed from the body", "감지시각" not in body)
     check("importance is rendered as a small badge",
           "font-size:12px" in parsed["html"] and "border-radius:12px" in parsed["html"])
