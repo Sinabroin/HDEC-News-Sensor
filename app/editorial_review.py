@@ -9,7 +9,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from app import ai_centrality, public_institution_routing
+from app import ai_centrality, editorial_executive_context, public_institution_routing
 from app.editorial_briefings import (
     EditorialArticle,
     EditorialError,
@@ -270,6 +270,7 @@ def article_to_candidate(
         "executive_relevance_reason": article.executive_relevance_reason,
         "materiality_reason": article.materiality_reason,
         "executive_implication": article.executive_implication,
+        "executive_context": article.executive_context,
         "ai_centrality_level": article.ai_centrality_level,
         "source_class": article.source_class,
         "editorial_lane": article.editorial_lane,
@@ -382,6 +383,20 @@ def candidate_to_article(
         if raw_implication_override
         else ""
     )
+    context = editorial_executive_context.derive_executive_context(
+        {
+            "title": title,
+            "summary": summary,
+            "summary_authorized": True,
+            "collection_source_kind": _clean(candidate.get("collection_source_kind")),
+            "source": source,
+        },
+        article_already_qualified=True,
+    )
+    context = editorial_executive_context.apply_editor_edits(
+        context,
+        edit.get("executive_context_edits"),
+    )
 
     return EditorialArticle(
         title=title,
@@ -436,8 +451,9 @@ def candidate_to_article(
         publisher_priority_label=_clean(candidate.get("publisher_priority_label")),
         executive_relevance_reason=_clean(candidate.get("executive_relevance_reason")),
         materiality_reason=_clean(candidate.get("materiality_reason")),
-        executive_implication=_clean(candidate.get("executive_implication")),
+        executive_implication=_clean(context["hdec_implication"].get("text")),
         implication_html=implication_html,
+        executive_context=context,
         ai_centrality_level=_resolve_review_ai_centrality(title, summary, edit),
         **route_fields,
         duplicate_event_cluster=_clean(candidate.get("duplicate_event_cluster")),
@@ -513,6 +529,20 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         if origin == "team_link" and publisher_authoritative
         else selected_url if origin == "human_link" else ""
     )
+    context = editorial_executive_context.derive_executive_context(
+        {
+            "title": title,
+            "summary": summary,
+            "summary_authorized": True,
+            "collection_source_kind": origin,
+            "source": source,
+        },
+        article_already_qualified=True,
+    )
+    context = editorial_executive_context.apply_editor_edits(
+        context,
+        item.get("executive_context_edits"),
+    )
     return EditorialArticle(
         title=title,
         summary=summary,
@@ -546,6 +576,8 @@ def manual_item_to_article(item: Mapping[str, Any]) -> EditorialArticle:
         image_fallback_used=not bool(image_url),
         image_reason="human_supplied" if image_url else "no_manual_image",
         implication_html=manual_implication_html,
+        executive_implication=_clean(context["hdec_implication"].get("text")),
+        executive_context=context,
         ai_centrality_level=_resolve_review_ai_centrality(title, summary, item),
         **route_fields,
     )

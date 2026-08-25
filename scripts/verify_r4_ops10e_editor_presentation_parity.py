@@ -141,7 +141,8 @@ HARNESS = r"""
     const oneImage=oneHeadline.querySelector("img");
     const oneFallback=oneHeadline.querySelector(".image-fallback");
     result.one_headline=previewIds('#preview [data-role="headline"]').join("")===a&&oneHeadline.querySelector("h2").textContent.trim()===oneView.title&&oneHeadline.querySelector("select").value===oneView.category;
-    result.one_summary_source=!!document.querySelector('#preview [data-role="editor-summary"]')&&document.querySelector('#preview [data-role="editor-summary"] p').textContent.trim()===oneView.summary&&document.querySelector('#preview [data-role="editor-summary"] .src').textContent.includes(oneView.source);
+    const oneFacts=[...document.querySelectorAll('#preview [data-role="editor-summary"] [data-role="fact-points"] li')];
+    result.one_summary_source=!!document.querySelector('#preview [data-role="editor-summary"]')&&oneFacts.length>=2&&oneFacts.length<=3&&!document.querySelector('#preview [data-role="editor-summary"] .summary-synthesis').textContent.includes(oneView.summary)&&document.querySelector('#preview [data-role="editor-summary"] .src').textContent.includes(oneView.source);
     result.one_safe_link=!!document.querySelector('#preview [data-role="editor-summary"] .src a[href^="https://"]');
     result.one_image=!!(oneImage&&oneImage.naturalWidth>0)||!!(oneFallback&&!oneFallback.hidden);
     result.one_not_duplicated=previewIds('#preview [data-role="article-card"]').length===0&&document.querySelector('#preview [data-role="briefing-empty"]').textContent.includes("추가로 선정된 주요 기사 없음");
@@ -174,17 +175,21 @@ HARNESS = r"""
 
     const editedTitle="편집된 AI 헤드라인 제목";
     const editedSummary='<strong>편집된 AI 요약</strong><br><a href="https://evidence.example.test/fact">근거 링크</a>';
+    const editedFact="편집된 임원용 사실 포인트";
     const heroTitle=document.querySelector(`#preview [data-role="headline"] [data-field="title"]`);
     heroTitle.textContent=editedTitle;
     heroTitle.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:"편집"}));
     const heroSummary=document.querySelector(`#preview [data-role="editor-summary"] [data-field="summary_html"]`);
     heroSummary.innerHTML=editedSummary;
     heroSummary.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:"편집"}));
+    const heroFact=document.querySelector(`#preview [data-role="editor-summary"] [data-field="fact_point"]`);
+    heroFact.textContent=editedFact;
+    heroFact.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:"편집"}));
     const heroCategory=document.querySelector(`#preview [data-role="headline"] [data-category-id="${c}"]`);
     heroCategory.value="기업동향";
     heroCategory.dispatchEvent(new Event("change",{bubbles:true}));
-    result.edit_canonical=view(c).title===editedTitle&&view(c).summary_html.includes("<strong>편집된 AI 요약</strong>")&&view(c).summary_html.includes('href="https://evidence.example.test/fact"')&&view(c).category==="기업동향"&&state.selected[0]===c;
-    result.edit_preview=document.querySelector('#preview [data-role="headline"] h2').textContent.trim()===editedTitle&&document.querySelector('#preview [data-role="editor-summary"] p').textContent.includes("편집된 AI 요약")&&document.querySelector('#preview [data-role="headline"] select').value==="기업동향";
+    result.edit_canonical=view(c).title===editedTitle&&view(c).summary_html.includes("<strong>편집된 AI 요약</strong>")&&view(c).summary_html.includes('href="https://evidence.example.test/fact"')&&view(c).executive_context.fact_points[0]===editedFact&&view(c).category==="기업동향"&&state.selected[0]===c;
+    result.edit_preview=document.querySelector('#preview [data-role="headline"] h2').textContent.trim()===editedTitle&&document.querySelector('#preview [data-role="editor-summary"] [data-role="fact-points"]').textContent.includes(editedFact)&&document.querySelector('#preview [data-role="headline"] select').value==="기업동향";
     result.edit_left=document.querySelector(`.candidate[data-id="${c}"] .candidate-title`).textContent.trim()===editedTitle;
     result.inline_sanitizer=sanitizeInline('<a href="javascript:alert(1)">위험</a><strong>허용</strong>')==="위험<strong>허용</strong>";
 
@@ -210,10 +215,10 @@ HARNESS = r"""
     const headlineIndex=localBrief.indexOf(`data-role="headline" data-article-id="${c}"`);
     const briefingA=localBrief.indexOf(`data-role="article-card" data-article-id="${a}"`);
     const briefingB=localBrief.indexOf(`data-role="article-card" data-article-id="${b}"`);
-    result.local_download=headlineIndex>=0&&briefingA>headlineIndex&&briefingB>briefingA&&localBrief.match(new RegExp(`data-article-id="${c}"`,"g")).length===2&&localBrief.includes("오늘의 헤드라인")&&localBrief.includes("Editor's Summary")&&localBrief.includes("오늘의 브리핑")&&localBrief.includes(editedTitle)&&localBrief.includes("편집된 AI 요약");
+    result.local_download=headlineIndex>=0&&briefingA>headlineIndex&&briefingB>briefingA&&localBrief.match(new RegExp(`data-article-id="${c}"`,"g")).length===2&&localBrief.includes("오늘의 헤드라인")&&localBrief.includes("Editor's Summary")&&localBrief.includes("오늘의 브리핑")&&localBrief.includes(editedTitle)&&localBrief.includes(editedFact)&&!localBrief.includes("수집 레이더")&&!localBrief.includes("정보 분류 기준");
     // The headline appears in Hero + its attached Summary panel, never as a card.
     result.local_no_headline_card=!localBrief.includes(`data-role="article-card" data-article-id="${c}"`);
-    const expected={selected:[...state.selected],title:view(c).title,summary_html:view(c).summary_html,category:view(c).category,items:selectedItems(),local_download:result.local_download&&result.local_no_headline_card};
+    const expected={selected:[...state.selected],title:view(c).title,summary_html:view(c).summary_html,fact:view(c).executive_context.fact_points[0],category:view(c).category,items:selectedItems(),local_download:result.local_download&&result.local_no_headline_card};
     localStorage.setItem(expectedKey,JSON.stringify(expected));
     localStorage.setItem(phaseKey,"restore");
     result.external_requests=externalRequests;
@@ -221,9 +226,9 @@ HARNESS = r"""
     const expected=JSON.parse(localStorage.getItem(expectedKey)||"{}");
     result.reload_selected=JSON.stringify(state.selected)===JSON.stringify(expected.selected);
     result.reload_headline=previewIds('#preview [data-role="headline"]').join("")===expected.selected[0]&&JSON.stringify(previewIds('#preview [data-role="article-card"]'))===JSON.stringify(expected.selected.slice(1));
-    result.reload_edits=view(expected.selected[0]).title===expected.title&&view(expected.selected[0]).summary_html===expected.summary_html&&view(expected.selected[0]).category===expected.category;
+    result.reload_edits=view(expected.selected[0]).title===expected.title&&view(expected.selected[0]).summary_html===expected.summary_html&&view(expected.selected[0]).executive_context.fact_points[0]===expected.fact&&view(expected.selected[0]).category===expected.category;
     const localBrief=await downloadedBrief();
-    result.reload_download=expected.local_download&&localBrief.includes(expected.title)&&localBrief.includes("편집된 AI 요약")&&!localBrief.includes(`data-role="article-card" data-article-id="${expected.selected[0]}"`);
+    result.reload_download=expected.local_download&&localBrief.includes(expected.title)&&localBrief.includes(expected.fact)&&!localBrief.includes("수집 레이더")&&!localBrief.includes("정보 분류 기준")&&!localBrief.includes(`data-role="article-card" data-article-id="${expected.selected[0]}"`);
     result.items=selectedItems();
     result.external_requests=externalRequests;
   }

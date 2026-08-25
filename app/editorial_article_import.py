@@ -1716,7 +1716,7 @@ def import_article(
     image_opener: object | None = None,
 ) -> dict[str, object]:
     """Fetch and transform one article without retaining or returning full HTML/body."""
-    from app import editorial_briefings, editorial_review
+    from app import editorial_briefings, editorial_executive_context, editorial_review
 
     resolution = resolve_publisher_document(
         url,
@@ -1807,6 +1807,18 @@ def import_article(
             "portal_copy": resolution.portal_copy,
         },
     }
+    article["executive_context"] = (
+        editorial_executive_context.derive_executive_context(
+            {
+                "title": extracted.title,
+                "summary": summary,
+                "summary_authorized": True,
+                "collection_source_kind": "url_import",
+                "source": extracted.source,
+            },
+            article_already_qualified=True,
+        )
+    )
     return {"ok": True, "article": article}
 
 

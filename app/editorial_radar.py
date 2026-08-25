@@ -451,10 +451,34 @@ def build_audit(
     executive_count = max(
         0, int(selection_audit.get("executive_qualified_count") or 0)
     )
+    raw_count = collection_total(collection_audit, len(normalized))
+    unique_keys: set[str] = set()
+    unique_proven = True
+    for index, row in enumerate(normalized):
+        identity = teams_push_state.article_identity(row)
+        normalized_url = str(identity.get("normalized_url") or "")
+        if normalized_url:
+            unique_keys.add("url:" + normalized_url)
+            continue
+        # ``lightweight_row`` may synthesize article_id from source/title when
+        # no URL exists. Keep the signal dedup bounded but label it honestly.
+        article_id = str(identity.get("article_id") or "")
+        unique_keys.add("signal:" + article_id if article_id else f"unkeyed:{index}")
+        unique_proven = False
     return {
         "version": RADAR_VERSION,
         "funnel": {
-            "collection_count": collection_total(collection_audit, len(normalized)),
+            # Legacy collection_count remains the raw-provider total for Editor
+            # diagnostics. Teams explicitly uses unique_collected_count below.
+            "collection_count": raw_count,
+            "raw_collected_count": raw_count,
+            "unique_collected_count": len(unique_keys),
+            "unique_count_proven": unique_proven,
+            "unique_count_authority": (
+                "canonical_article_identity"
+                if unique_proven
+                else "bounded_collection_signal_identity"
+            ),
             "normalized_row_count": len(normalized),
             "ai_central_count": ai_count,
             "executive_candidate_count": executive_count,
@@ -501,6 +525,8 @@ def normalize_audit(value: object, *, selected_count: int | None = None) -> dict
         output["funnel"] = funnel
     for key in (
         "collection_count",
+        "raw_collected_count",
+        "unique_collected_count",
         "normalized_row_count",
         "ai_central_count",
         "executive_candidate_count",
@@ -509,6 +535,17 @@ def normalize_audit(value: object, *, selected_count: int | None = None) -> dict
         "late_watch_count",
     ):
         funnel[key] = max(0, int(funnel.get(key) or 0))
+    if not funnel["raw_collected_count"]:
+        funnel["raw_collected_count"] = funnel["collection_count"]
+    if not funnel["unique_collected_count"]:
+        funnel["unique_collected_count"] = funnel["normalized_row_count"]
+    # Legacy audits did not distinguish provider hits from unique articles.
+    # Absence of an explicit proof therefore fails closed to "수집 신호".
+    funnel["unique_count_proven"] = funnel.get("unique_count_proven") is True
+    funnel["unique_count_authority"] = _clean(
+        funnel.get("unique_count_authority") or "normalized_article_identity",
+        limit=80,
+    )
     if selected_count is not None:
         funnel["selected_count"] = max(0, int(selected_count))
     rows = output.get("rows")

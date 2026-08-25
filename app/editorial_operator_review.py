@@ -41,6 +41,7 @@ from app import (
     editor_delivery,
     editorial_article_import,
     editorial_briefings,
+    editorial_executive_context,
     editorial_feedback,
     editorial_review,
     public_urls,
@@ -168,6 +169,10 @@ def _normalized_published_at(value: object, *, default: str) -> str:
 def _normalize_selected_item(raw: object, *, default_published_at: str) -> dict:
     if not isinstance(raw, Mapping):
         raise OperatorReviewError("INVALID_PAYLOAD")
+    # Baseline provenance/status is server authority.  A browser may submit
+    # only the explicit editable text subset, never a whole context object.
+    if "executive_context" in raw:
+        raise OperatorReviewError("INVALID_PAYLOAD")
     candidate_id = _text(raw.get("candidate_id"), _MAX_CANDIDATE_ID)
     origin = str(raw.get("origin") or "")
     if not candidate_id or origin not in _ALLOWED_ORIGINS:
@@ -212,6 +217,14 @@ def _normalize_selected_item(raw: object, *, default_published_at: str) -> dict:
         "link_kind": "publisher_direct",
         "link_label": _text(raw.get("link_label"), 60) or "원문 보기",
     }
+    try:
+        item["executive_context_edits"] = (
+            editorial_executive_context.normalize_editor_edits(
+                raw.get("executive_context_edits")
+            )
+        )
+    except editorial_executive_context.ExecutiveContextError as exc:
+        raise OperatorReviewError("INVALID_PAYLOAD") from exc
     if origin == "team_link":
         submission_id = str(raw.get("submission_id") or "")
         analysis_url = _safe_article_url(raw.get("analysis_url") or selected_url)

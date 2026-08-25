@@ -71,6 +71,7 @@ button,input,select,textarea{font:inherit}
 .publication-section{margin-top:36px}.publication-label{display:inline-block;margin:0 0 16px;padding:5px 17px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-size:14px;font-weight:900}
 .headline-hero{position:relative;min-height:250px;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,var(--navy),var(--blue));color:#fff;padding:34px 30px 30px;cursor:grab}.headline-hero.dragging{opacity:.38}.headline-hero .headline-image{position:absolute;inset:0;min-height:0;height:100%;z-index:0}.headline-hero .headline-image img{height:100%}.headline-hero .headline-image .image-fallback{background:linear-gradient(125deg,#002c5f,#004b93 58%,#0e63b8)}.headline-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74))}.headline-content{position:relative;z-index:2}.headline-content h2{margin:0;color:#fff;font-size:30px;line-height:1.32;letter-spacing:-.035em}.headline-rule{width:52%;height:1px;margin:22px 0 12px;background:rgba(255,255,255,.38)}.headline-category{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.9);font-size:13px;font-weight:800}.headline-category .category-select{border-color:rgba(255,255,255,.5);background:rgba(0,44,95,.68);color:#fff}.headline-category .category-select option{color:#101218;background:#fff}
 .ednote{margin-top:-14px;padding:30px 30px 24px;border:1px solid rgba(16,18,24,.1);border-top:0;border-radius:0 0 22px 22px;background:#fff}.ednote h3{margin:0 0 8px;color:var(--navy);font-size:13px;letter-spacing:.035em}.ednote p{margin:0;color:#303846;font-size:15px}.ednote .src{margin-top:14px;padding-top:10px;border-top:1px solid #eef0f4}.briefing-cards{display:grid;gap:12px}.briefing-card{cursor:grab}.briefing-card .headline-action{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);padding:5px 9px;font-size:11px;font-weight:900;cursor:pointer}.briefing-empty,.headline-empty{padding:20px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--muted)}
+.executive-context{margin-top:12px;color:#303846;font-size:13px;line-height:1.58}.fact-points{margin:0;padding-left:20px}.fact-points li{margin:0 0 6px}.context-block{margin-top:11px;padding-top:9px;border-top:1px solid #eef0f4}.context-block strong{display:block;margin-bottom:3px;color:var(--navy);font-size:11.5px}.context-block p{margin:0!important;color:#4b5563!important;font-size:13px!important}.context-analysis{border-left:3px solid var(--navy);padding-left:10px}.context-watch strong{color:#8a5a0a}.context-edit{min-height:22px}.summary-synthesis{margin-bottom:13px!important}
 .headline-hero.headline-empty{display:block;min-height:220px;border:0;border-radius:22px;background:linear-gradient(125deg,#002c5f,#004b93 58%,#0e63b8);color:#fff;padding:34px 30px}.headline-hero.headline-empty h2{position:relative;z-index:2;margin:0;color:#fff;font-size:28px;line-height:1.4}.radar-compact{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.radar-compact-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.radar-compact-item{padding:9px 7px;border-radius:10px;background:#f5f7fa;text-align:center}.radar-compact-item b{display:block;color:var(--navy);font-size:18px}.radar-compact-item span{display:block;color:#777f8d;font-size:10px}.radar-compact-note{margin:10px 0 0;color:#677080;font-size:11px;line-height:1.55}
 .taxonomy{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.tax-row{display:flex;gap:10px;align-items:baseline;margin-bottom:8px;font-size:13px}.tax-row:last-child{margin-bottom:0}.tax-name{width:90px;flex:none;color:var(--ink);font-weight:800}.tax-desc{color:#777f8d}.tax-invest{color:var(--invest)}.tax-corp{color:var(--corp)}.tax-tech{color:var(--tech)}
 .placement-editor{max-width:760px;margin:12px auto 0;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.placement-editor>summary{cursor:pointer;padding:11px 14px;color:var(--navy);font-size:12px;font-weight:900}.placement-editor-body{padding:0 12px 12px}.placement-editor .editorial-sector{margin-top:12px}.placement-editor .sector-title{font-size:16px}.placement-editor .sector-dropzone{min-height:72px}.placement-editor .sector-empty{min-height:50px}
@@ -131,7 +132,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
       </div>
     </details>
     <section class="radar-panel" id="radarPanel" aria-labelledby="radarPanelTitle">
-      <header class="radar-panel-head"><h2 id="radarPanelTitle">수집 레이더</h2><p>후보 0건과 수집 0건을 구분합니다. 원문 본문 없이 수집·판정 메타데이터만 표시합니다.</p></header>
+      <header class="radar-panel-head"><h2 id="radarPanelTitle">수집·판단 레이더</h2><p>후보 0건과 수집 0건을 구분합니다. 원문 본문 없이 수집·판정 메타데이터만 표시합니다.</p></header>
       <div class="radar-funnel" id="radarFunnel"></div>
       <div class="radar-providers" id="radarProviders"></div>
       <div class="radar-controls"><input id="radarSearch" placeholder="수집 기사 제목·출처 검색"><select id="radarFilter"><option value="all">전체 수집</option><option value="ai">AI 중심</option><option value="executive">임원 후보</option><option value="selected">선정</option><option value="excluded">제외</option></select></div>
@@ -173,7 +174,7 @@ footer{margin-top:36px;border-top:1px solid #dfe3e9;padding-top:18px;text-align:
         <div class="server-state auth" id="operatorAuthCta">운영자 연결 상태를 확인하고 있습니다.</div>
       </div>
     </details>
-    <div class="editor-tools"><b>본문 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><button id="linkBtn" type="button" title="선택한 문장에 링크 삽입/수정">링크</button><button id="unlinkBtn" type="button" title="선택한 링크 해제">링크 해제</button><span class="editor-hint">오른쪽 제목·요약을 직접 수정하고, 요약에서 텍스트를 선택한 뒤 B(굵게)·링크·링크 해제를 쓰세요. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
+    <div class="editor-tools"><b>브리핑 편집</b><button id="boldBtn" type="button" title="선택한 문장을 굵게">B</button><button id="linkBtn" type="button" title="선택한 문장에 링크 삽입/수정">링크</button><button id="unlinkBtn" type="button" title="선택한 링크 해제">링크 해제</button><span class="editor-hint">오른쪽 제목·사실 포인트·Delta·현대건설 관점·Watch Point를 직접 수정할 수 있습니다. 기사 카드를 끌어 순서와 섹터를 바꿀 수 있습니다.</span></div>
     <div class="preview-shell"><div class="preview" id="preview"></div></div>
     <details class="placement-editor" id="placementEditor">
       <summary>기사 순서·분류 편집</summary>
@@ -397,6 +398,28 @@ function plain(html){
   box.innerHTML=sanitizeInline(html);
   return box.textContent.replace(/\s+/g," ").trim();
 }
+function concisePoint(value){
+  return String(value||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,180);
+}
+function clientFactPreviewContext(title,summary){
+  // Offline/manual-entry fallback: expose only the factual text the editor
+  // supplied. HDEC analysis, Watch and baseline/Delta authority are derived
+  // again by the server; the browser never invents or persists those claims.
+  const candidates=String(summary||"").split(/[.!?。！？]\s*|\n+|[•▪]/).map(concisePoint).filter(Boolean);
+  if(candidates.length<2&&title)candidates.push(concisePoint(title));
+  const facts=[];
+  for(const point of candidates){if(point&&!facts.includes(point)){facts.push(point);if(facts.length===3)break;}}
+  return {version:1,fact_points:facts,baseline_match:{status:"none",entity_id:"",canonical_name:""},baseline_context:{status:"not_supported",text:"",reporting_period:"",as_of:""},delta_vs_baseline:{status:"not_supported",text:""},hdec_implication:{status:"not_supported",label:"현대건설 관점 · 분석",text:"",dimensions:[]},watch_point:{status:"not_supported",text:""},provenance:{article_fields:["title","editor_supplied_summary"],baseline_id:"",baseline_version:"",baseline_fact_ids:[],source_document_date:""},confidence:{status:facts.length?"preview_only":"insufficient",baseline_status:"browser_preview_only",article_already_qualified:true,selection_authority:false}};
+}
+function contextEditsFor(context){
+  const value=context&&typeof context==="object"?context:{};
+  return {fact_points:Array.isArray(value.fact_points)?value.fact_points.slice(0,3).map(concisePoint).filter(Boolean):[],baseline_context_text:String(value.baseline_context?.text||"").slice(0,500),delta_text:String(value.delta_vs_baseline?.text||"").slice(0,500),hdec_implication_text:String(value.hdec_implication?.text||"").slice(0,600),watch_point_text:String(value.watch_point?.text||"").slice(0,320)};
+}
+function contextView(candidate,changes){
+  const base=candidate?.executive_context&&typeof candidate.executive_context==="object"?candidate.executive_context:clientFactPreviewContext(changes?.title||candidate?.title,plain(changes?.summary_html||candidate?.summary_html||esc(candidate?.summary||"")));
+  const edits=changes?.executive_context_edits&&typeof changes.executive_context_edits==="object"?changes.executive_context_edits:contextEditsFor(base);
+  return {...base,fact_points:Array.isArray(edits.fact_points)?edits.fact_points.slice(0,3).map(concisePoint).filter(Boolean):[],baseline_context:{...(base.baseline_context||{}),text:String(edits.baseline_context_text||"")},delta_vs_baseline:{...(base.delta_vs_baseline||{}),text:String(edits.delta_text||"")},hdec_implication:{...(base.hdec_implication||{}),text:String(edits.hdec_implication_text||"")},watch_point:{...(base.watch_point||{}),text:String(edits.watch_point_text||"")}};
+}
 function save(){
   try{
     localStorage.setItem(storageKey,JSON.stringify(state));
@@ -419,7 +442,8 @@ function promoteRadarRow(index){
   const dimensions=row.dimensions||{};
   const category=row.category||((dimensions.competitor_relevance||0)>0?"기업동향":(dimensions.infrastructure_project_specificity||0)>0?"투자·산업":"기술정보");
   const summary="원문을 확인한 뒤 Editor's Summary를 작성해 주세요.";
-  state.manualCandidates.push({candidate_id:id,origin:"human_link",ai_rank:null,ai_recommended:false,title:String(row.title||""),summary,summary_html:esc(summary),source:String(row.source||""),published_at:row.published_at||bundle.coverage_end,selected_url:safeUrl(row.url),link_kind:"publisher_direct",link_label:"레이더 원문",category:CATEGORY_ORDER.includes(category)?category:"기술정보",image_url:"",collection_source_kind:"radar_promotion",selection_reason:"human_promoted_from_collection_radar",feedback_adjustment:0,adjusted_score:0,category_analysis:{category:CATEGORY_ORDER.includes(category)?category:"기술정보",scores:{},matched_signals:{},reason:"운영자가 수집 레이더에서 명시적으로 승격"}});
+  const executiveContext=clientFactPreviewContext(String(row.title||""),summary);
+  state.manualCandidates.push({candidate_id:id,origin:"human_link",ai_rank:null,ai_recommended:false,title:String(row.title||""),summary,summary_html:esc(summary),source:String(row.source||""),published_at:row.published_at||bundle.coverage_end,selected_url:safeUrl(row.url),link_kind:"publisher_direct",link_label:"레이더 원문",category:CATEGORY_ORDER.includes(category)?category:"기술정보",image_url:"",collection_source_kind:"radar_promotion",selection_reason:"human_promoted_from_collection_radar",feedback_adjustment:0,adjusted_score:0,executive_context:executiveContext,category_analysis:{category:CATEGORY_ORDER.includes(category)?category:"기술정보",scores:{},matched_signals:{},reason:"운영자가 수집 레이더에서 명시적으로 승격"}});
   state.selected.push(id);
   normalizeSelectedOrder();
   markDraftAndRender();
@@ -429,20 +453,23 @@ function edit(id){
   return state.edits[id]||(state.edits[id]={
     title:candidate?.title||"",
     summary_html:candidate?.summary_html||esc(candidate?.summary||""),
-    category:CATEGORY_ORDER.includes(candidate?.category)?candidate.category:"기술정보"
+    category:CATEGORY_ORDER.includes(candidate?.category)?candidate.category:"기술정보",
+    executive_context_edits:contextEditsFor(candidate?.executive_context||clientFactPreviewContext(candidate?.title,candidate?.summary))
   });
 }
 function view(id){
   const candidate=byId(id);
   if(!candidate)return null;
   const changes=edit(id);
+  if(!changes.executive_context_edits)changes.executive_context_edits=contextEditsFor(candidate.executive_context||clientFactPreviewContext(changes.title||candidate.title,plain(changes.summary_html||candidate.summary_html||esc(candidate.summary||""))));
   const summaryHtml=sanitizeInline(changes.summary_html||candidate.summary_html||esc(candidate.summary||""));
   return {
     ...candidate,
     title:changes.title||candidate.title,
     summary_html:summaryHtml,
     summary:plain(summaryHtml),
-    category:CATEGORY_ORDER.includes(changes.category)?changes.category:"기술정보"
+    category:CATEGORY_ORDER.includes(changes.category)?changes.category:"기술정보",
+    executive_context:contextView(candidate,changes)
   };
 }
 function rating(id){
@@ -802,7 +829,8 @@ function normalizedImportedArticle(article){
     category_analysis:analysis,
     article_text_excerpt:String(article.article_text_excerpt||"").slice(0,1200),
     image_url:safeImageUrl(article.image_url),
-    extraction:article.extraction&&typeof article.extraction==="object"?article.extraction:{}
+    extraction:article.extraction&&typeof article.extraction==="object"?article.extraction:{},
+    executive_context:article.executive_context&&typeof article.executive_context==="object"?article.executive_context:clientFactPreviewContext(title,summary)
   };
 }
 async function importArticleFromUrl(){
@@ -904,11 +932,12 @@ async function importArticleFromUrl(){
       collection_source_kind:"url_import",
       selection_reason:"anonymous_url_import",
       feedback_adjustment:0,
-      adjusted_score:0
+      adjusted_score:0,
+      executive_context:article.executive_context
     };
     state.manualCandidates.push(item);
     state.lastImportedCandidateId=id;
-    state.edits[id]={title:item.title,summary_html:item.summary_html,category:item.category};
+    state.edits[id]={title:item.title,summary_html:item.summary_html,category:item.category,executive_context_edits:contextEditsFor(item.executive_context)};
     input.value="";
     rememberPendingImport("");
     document.getElementById("manualFallback").open=false;
@@ -942,9 +971,10 @@ function addManual(){
   if(state.selected.length>=MAX_SELECTED){alert("선택 기사는 최대 6건입니다.");return;}
   if(state.manualCandidates.length>=MAX_MANUAL_CANDIDATES){alert("URL·직접 입력 후보는 최대 12건입니다.");return;}
   const id=`manual-${Date.now()}-${Math.random().toString(16).slice(2,8)}`;
-  const item={candidate_id:id,origin:"human_link",ai_rank:null,ai_recommended:false,title,summary,summary_html:esc(summary),source,published_at:new Date().toISOString(),selected_url:url,link_kind:"publisher_direct",link_label:"사용자 선별 원문",category,image_url:"",image_remote_url:remoteImage,collection_source_kind:"human_link",selection_reason:"human_supplied_link",feedback_adjustment:0,adjusted_score:0,category_analysis:{category,scores:{},matched_signals:{},reason:"사용자가 명시적으로 선택한 카테고리"}};
+  const executiveContext=clientFactPreviewContext(title,summary);
+  const item={candidate_id:id,origin:"human_link",ai_rank:null,ai_recommended:false,title,summary,summary_html:esc(summary),source,published_at:new Date().toISOString(),selected_url:url,link_kind:"publisher_direct",link_label:"사용자 선별 원문",category,image_url:"",image_remote_url:remoteImage,collection_source_kind:"human_link",selection_reason:"human_supplied_link",feedback_adjustment:0,adjusted_score:0,executive_context:executiveContext,category_analysis:{category,scores:{},matched_signals:{},reason:"사용자가 명시적으로 선택한 카테고리"}};
   state.manualCandidates.push(item);
-  state.edits[id]={title,summary_html:esc(summary),category};
+  state.edits[id]={title,summary_html:esc(summary),category,executive_context_edits:contextEditsFor(executiveContext)};
   ["manualUrl","manualSource","manualTitle","manualSummary","manualImage"].forEach(key=>document.getElementById(key).value="");
   if(canonicalKey(url)===canonicalKey(pendingImportUrl()))rememberPendingImport("");
   moveArticle(id,category);
@@ -1039,13 +1069,40 @@ function articleSourceMarkup(candidate){
   const label=`${esc(candidate.source)}${detail?`<span class="dt">${detail}</span>`:""}`;
   return articleUrl?`<a data-link-kind="${esc(candidate.link_kind||"publisher_direct")}" href="${esc(articleUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`:label;
 }
-function headlineMarkup(candidate,editable){
+function executiveSynthesis(selected){
+  if(!selected.length)return "오늘은 경영진 보고 기준을 충족한 기사가 없음. 기준을 낮추거나 내용을 인위적으로 채우지 않음.";
+  const facts=[];
+  for(const candidate of selected.slice(0,3)){
+    const point=candidate.executive_context?.fact_points?.[0]||candidate.title;
+    if(point&&!facts.includes(point))facts.push(String(point).trim());
+    if(facts.length===2)break;
+  }
+  const implication=selected.map(candidate=>candidate.executive_context?.hdec_implication).find(value=>value?.status==="supported"&&value.text);
+  if(implication)facts.push(`분석: ${String(implication.text).trim()}`);
+  return facts.slice(0,4).join(" ");
+}
+function contextEditable(value,id,field,index=null){
+  const indexAttribute=index===null?"":` data-context-index="${index}"`;
+  return `<span class="editable context-edit" contenteditable="true" data-id="${esc(id)}" data-field="${field}"${indexAttribute}>${esc(value)}</span>`;
+}
+function executiveContextMarkup(candidate,editable){
+  const context=candidate.executive_context&&typeof candidate.executive_context==="object"?candidate.executive_context:clientFactPreviewContext(candidate.title,candidate.summary);
+  const points=Array.isArray(context.fact_points)?context.fact_points.slice(0,3).filter(Boolean):[];
+  const facts=points.map((point,index)=>`<li>${editable?contextEditable(point,candidate.candidate_id,"fact_point",index):esc(point)}</li>`).join("");
+  const blocks=[];
+  const baseline=context.baseline_context||{};
+  const delta=context.delta_vs_baseline||{};
+  const implication=context.hdec_implication||{};
+  const watch=context.watch_point||{};
+  if(baseline.status==="supported"&&baseline.text)blocks.push(`<div class="context-block" data-role="baseline-context"><strong>경영 맥락</strong><p>${editable?contextEditable(baseline.text,candidate.candidate_id,"baseline_context_text"):esc(baseline.text)}</p></div>`);
+  if(delta.status==="supported"&&delta.text)blocks.push(`<div class="context-block" data-role="delta-vs-baseline"><strong>Delta</strong><p>${editable?contextEditable(delta.text,candidate.candidate_id,"delta_text"):esc(delta.text)}</p></div>`);
+  if(implication.status==="supported"&&implication.text)blocks.push(`<div class="context-block context-analysis" data-role="hdec-implication" data-content-kind="analysis"><strong>현대건설 관점</strong><p>${editable?contextEditable(implication.text,candidate.candidate_id,"hdec_implication_text"):esc(implication.text)}</p></div>`);
+  if(watch.status==="supported"&&watch.text)blocks.push(`<div class="context-block context-watch" data-role="watch-point"><strong>Watch Point</strong><p>${editable?contextEditable(watch.text,candidate.candidate_id,"watch_point_text"):esc(watch.text)}</p></div>`);
+  return `<div class="executive-context" data-role="executive-context">${facts?`<ul class="fact-points" data-role="fact-points">${facts}</ul>`:""}${blocks.join("")}</div>`;
+}
+function headlineMarkup(candidate,editable,selected){
   if(!candidate){
-    const funnel=currentRadarFunnel();
-    const radarTruth=funnel.watch_bridge_count>0
-      ?`수집 레이더 ${funnel.collection_count}건 중 AI 중심 ${funnel.ai_central_count}건을 확인했고, 최종 선정은 0건입니다. 아침 레이더 추가 포착 ${funnel.watch_bridge_count}건은 별도 검토 대상으로 남겼습니다.`
-      :`수집 레이더에서는 ${funnel.collection_count}건을 탐지했고 AI 중심 ${funnel.ai_central_count}건을 검토했으며, 최종 임원급 선정은 0건입니다.`;
-    return `<article class="headline-hero headline-empty" data-role="headline-empty" data-edition-status="empty"><div class="headline-overlay"></div><h2>오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.</h2><div class="headline-rule" style="position:relative;z-index:2"></div><div class="headline-category" style="position:relative;z-index:2">품질 기준 유지 · 인위적 채움 없음 · 편집 상태: 선정된 헤드라인이 없습니다</div></article><div class="ednote" data-role="editor-summary-empty"><h3>Editor's Summary</h3><p>기준을 낮추거나 기사를 채워 넣지 않았습니다. ${esc(radarTruth)}</p></div>`;
+    return `<article class="headline-hero headline-empty" data-role="headline-empty" data-edition-status="empty"><div class="headline-overlay"></div><h2>오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.</h2><div class="headline-rule" style="position:relative;z-index:2"></div><div class="headline-category" style="position:relative;z-index:2">품질 기준 유지 · 인위적 채움 없음 · 편집 상태: 선정된 헤드라인이 없습니다</div></article><div class="ednote" data-role="editor-summary-empty"><h3>Editor's Summary</h3><p>${esc(executiveSynthesis([]))}</p></div>`;
   }
   const category=editable
     ?`<select class="category-select" data-category-id="${esc(candidate.candidate_id)}" aria-label="헤드라인 분류">${categoryOptions(candidate.category)}</select>`
@@ -1053,13 +1110,11 @@ function headlineMarkup(candidate,editable){
   const title=editable
     ?`<h2 class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="title">${esc(candidate.title)}</h2>`
     :`<h2>${esc(candidate.title)}</h2>`;
-  const summary=editable
-    ?`<p class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="summary_html">${sanitizeInline(candidate.summary_html)}</p>`
-    :`<p>${sanitizeInline(candidate.summary_html)}</p>`;
   const drag=editable?' draggable="true"':'';
   const identity=editable?` data-selected-id="${esc(candidate.candidate_id)}" data-selected-category="${esc(candidate.category)}"`:'';
   const classes=editable?"headline-hero publication-selected-card":"headline-hero";
-  return `<article class="${classes}"${drag}${identity} data-role="headline" data-article-id="${esc(candidate.candidate_id)}">${imageMarkup(candidate,"headline-image")}<div class="headline-overlay"></div><div class="headline-content">${title}<div class="headline-rule"></div><div class="headline-category">${category}</div></div></article><div class="ednote" data-role="editor-summary" data-article-id="${esc(candidate.candidate_id)}"><h3>Editor's Summary</h3>${summary}<div class="src">출처 ${articleSourceMarkup(candidate)}</div></div>`;
+  const rawSummaryEditor=editable?`<span hidden class="editable raw-summary-authority" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="summary_html">${sanitizeInline(candidate.summary_html)}</span>`:"";
+  return `<article class="${classes}"${drag}${identity} data-role="headline" data-article-id="${esc(candidate.candidate_id)}">${imageMarkup(candidate,"headline-image")}<div class="headline-overlay"></div><div class="headline-content">${title}<div class="headline-rule"></div><div class="headline-category">${category}</div></div></article><div class="ednote" data-role="editor-summary" data-article-id="${esc(candidate.candidate_id)}"><h3>Editor's Summary</h3><p class="summary-synthesis">${esc(executiveSynthesis(selected))}</p>${executiveContextMarkup(candidate,editable)}${rawSummaryEditor}<div class="src">출처 ${articleSourceMarkup(candidate)}</div></div>`;
 }
 function briefingArticleCard(candidate,editable){
   const category=editable
@@ -1068,24 +1123,11 @@ function briefingArticleCard(candidate,editable){
   const title=editable
     ?`<h3 class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="title">${esc(candidate.title)}</h3>`
     :`<h3>${esc(candidate.title)}</h3>`;
-  const summary=editable
-    ?`<p class="editable" contenteditable="true" data-id="${esc(candidate.candidate_id)}" data-field="summary_html">${sanitizeInline(candidate.summary_html)}</p>`
-    :`<p>${sanitizeInline(candidate.summary_html)}</p>`;
   const classes=editable?"article-card briefing-card publication-selected-card":"article-card briefing-card";
   const drag=editable?' draggable="true"':'';
   const identity=editable?` data-selected-id="${esc(candidate.candidate_id)}" data-selected-category="${esc(candidate.category)}"`:'';
   const action=editable?`<button class="headline-action" type="button" data-headline-id="${esc(candidate.candidate_id)}">헤드라인으로 지정</button>`:"";
-  return `<article class="${classes}"${drag}${identity} data-role="article-card" data-article-id="${esc(candidate.candidate_id)}">${imageMarkup(candidate)}<div class="article-body">${category}${title}${summary}<div class="src">출처 ${articleSourceMarkup(candidate)}</div>${action}</div></article>`;
-}
-function taxonomyMarkup(){
-  return '<div class="taxonomy" data-role="information-taxonomy"><div class="tax-row"><span class="tax-name"><span class="tax-invest">●</span> 투자·산업</span><span class="tax-desc">자본과 인프라의 흐름 — 투자, 시장 재편, 정책·글로벌 동향</span></div><div class="tax-row"><span class="tax-name"><span class="tax-corp">●</span> 기업동향</span><span class="tax-desc">선도 기업과 경쟁사의 AI 도입·전환 전략</span></div><div class="tax-row"><span class="tax-name"><span class="tax-tech">●</span> 기술정보</span><span class="tax-desc">신규 AI 모델·제품·기술의 등장과 경영 영향</span></div></div>';
-}
-function publicationRadarMarkup(){
-  const funnel=currentRadarFunnel();
-  const note=funnel.watch_bridge_count>0
-    ?`최종 선정과 별도로 아침 레이더 추가 포착 ${funnel.watch_bridge_count}건이 있습니다. 자동 게재 없이 Daily 기준으로 재검토합니다.`
-    :"수집량과 최종 선정은 서로 다른 단계입니다. 빈 에디션도 수집 실패를 의미하지 않습니다.";
-  return `<div class="radar-compact" data-role="radar-scan"><div class="radar-compact-grid"><div class="radar-compact-item"><b>${funnel.collection_count}</b><span>수집</span></div><div class="radar-compact-item"><b>${funnel.ai_central_count}</b><span>AI 중심</span></div><div class="radar-compact-item"><b>${funnel.executive_candidate_count}</b><span>임원 후보</span></div><div class="radar-compact-item"><b>${funnel.selected_count}</b><span>최종 선정</span></div></div><p class="radar-compact-note">${esc(note)}</p></div>`;
+  return `<article class="${classes}"${drag}${identity} data-role="article-card" data-article-id="${esc(candidate.candidate_id)}">${imageMarkup(candidate)}<div class="article-body">${category}${title}${executiveContextMarkup(candidate,editable)}<div class="src">출처 ${articleSourceMarkup(candidate)}</div>${action}</div></article>`;
 }
 function dailyBriefMarkup(selected,editable){
   const headline=selected[0]||null;
@@ -1093,7 +1135,7 @@ function dailyBriefMarkup(selected,editable){
   const briefingHtml=briefing.length
     ?briefing.map(candidate=>briefingArticleCard(candidate,editable)).join("")
     :`<p class="briefing-empty" data-role="briefing-empty">${headline?"추가로 선정된 주요 기사 없음":"오늘의 브리핑에 포함할 기사가 없습니다."}</p>`;
-  return `<header class="mast"><div class="brandmark">AI 경영 T&amp;I</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p><div class="issue">${esc(bundle.edition_key)}</div></header><section class="publication-section" aria-labelledby="previewHeadlineLabel"><h2 class="publication-label" id="previewHeadlineLabel">오늘의 헤드라인</h2>${headlineMarkup(headline,editable)}</section><section class="publication-section" aria-labelledby="previewBriefingLabel"><h2 class="publication-label" id="previewBriefingLabel">오늘의 브리핑</h2><div class="briefing-cards">${briefingHtml}</div></section><section class="publication-section" aria-labelledby="previewRadarLabel"><h2 class="publication-label" id="previewRadarLabel">수집 레이더</h2>${publicationRadarMarkup()}</section><section class="publication-section" aria-labelledby="previewTaxonomyLabel"><h2 class="publication-label" id="previewTaxonomyLabel">정보 분류 기준</h2>${taxonomyMarkup()}</section><footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
+  return `<header class="mast"><div class="brandmark">AI 경영 T&amp;I</div><h1>Daily Brief</h1><p>AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p><div class="issue">${esc(bundle.edition_key)}</div></header><section class="publication-section" aria-labelledby="previewHeadlineLabel"><h2 class="publication-label" id="previewHeadlineLabel">오늘의 헤드라인</h2>${headlineMarkup(headline,editable,selected)}</section><section class="publication-section" aria-labelledby="previewBriefingLabel"><h2 class="publication-label" id="previewBriefingLabel">오늘의 브리핑</h2><div class="briefing-cards">${briefingHtml}</div></section><footer><b>발행 — 워크이노베이션센터 | AI디자인랩</b><br>외부 보도를 중심으로 요약한 자료이며 세부 내용은 원문 기준입니다.</footer>`;
 }
 function previewEditor(){
   return dailyBriefMarkup(state.selected.map(view).filter(Boolean),true);
@@ -1105,7 +1147,13 @@ function bindEditors(){
       const id=element.dataset.id;
       const field=element.dataset.field;
       if(field==="title")edit(id).title=element.textContent.replace(/\s+/g," ").trim();
-      else edit(id).summary_html=sanitizeInline(element.innerHTML);
+      else if(field==="summary_html")edit(id).summary_html=sanitizeInline(element.innerHTML);
+      else{
+        const edits=edit(id).executive_context_edits;
+        const text=element.textContent.replace(/\s+/g," ").trim();
+        if(field==="fact_point")edits.fact_points[Number(element.dataset.contextIndex)]=text.slice(0,180);
+        else if(["baseline_context_text","delta_text","hdec_implication_text","watch_point_text"].includes(field))edits[field]=text;
+      }
       state.reviewStatus="draft";
       save();
       renderCandidates();
@@ -1203,7 +1251,7 @@ function selectedItems(){
   return state.selected.map(id=>{
     const candidate=view(id);
     const placementRecord=placement(id);
-    return {candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",title:candidate.title,summary:candidate.summary,summary_html:sanitizeInline(candidate.summary_html),source:candidate.source,published_at:candidate.published_at,selected_url:candidateArticleUrl(candidate),submission_id:candidate.submission_id||"",analysis_url:safeUrl(candidate.analysis_url||""),publisher_url:safeAuthorityUrl(candidate.publisher_url||""),publisher_domain_authoritative:candidate.publisher_domain_authoritative===true,portal_copy:candidate.portal_copy===true,portal_source:candidate.portal_source||"",portal_resolution_reason:candidate.portal_resolution_reason||"",link_kind:candidate.link_kind||"publisher_direct",link_label:candidate.link_label||"원문 보기",category:candidate.category,category_analysis:candidate.category_analysis||{},image_url:safeImageUrl(candidate.image_url),collection_source_kind:candidate.collection_source_kind||"",selection_reason:candidate.selection_reason||"",source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",main_surface_eligible:!!candidate.main_surface_eligible,teams_alert_eligible:!!candidate.teams_alert_eligible,tni_brief_eligible:!!candidate.tni_brief_eligible,tni_report_topic_eligible:!!candidate.tni_report_topic_eligible,default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:candidate.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||""};
+    return {candidate_id:candidate.candidate_id,origin:candidate.origin||"ai_collected",title:candidate.title,summary:candidate.summary,summary_html:sanitizeInline(candidate.summary_html),source:candidate.source,published_at:candidate.published_at,selected_url:candidateArticleUrl(candidate),submission_id:candidate.submission_id||"",analysis_url:safeUrl(candidate.analysis_url||""),publisher_url:safeAuthorityUrl(candidate.publisher_url||""),publisher_domain_authoritative:candidate.publisher_domain_authoritative===true,portal_copy:candidate.portal_copy===true,portal_source:candidate.portal_source||"",portal_resolution_reason:candidate.portal_resolution_reason||"",link_kind:candidate.link_kind||"publisher_direct",link_label:candidate.link_label||"원문 보기",category:candidate.category,category_analysis:candidate.category_analysis||{},image_url:safeImageUrl(candidate.image_url),collection_source_kind:candidate.collection_source_kind||"",selection_reason:candidate.selection_reason||"",executive_context_edits:contextEditsFor(candidate.executive_context),source_class:candidate.source_class||"other",editorial_lane:candidate.editorial_lane||"main_candidate",public_institution_type:candidate.public_institution_type||"",main_surface_eligible:!!candidate.main_surface_eligible,teams_alert_eligible:!!candidate.teams_alert_eligible,tni_brief_eligible:!!candidate.tni_brief_eligible,tni_report_topic_eligible:!!candidate.tni_report_topic_eligible,default_surface:candidate.default_surface||"main_candidate_lane",final_surface:placementRecord.final_surface,final_category:candidate.category,promotion_reason:candidate.promotion_reason||"",human_placement_override:!!placementRecord.human_placement_override,human_placement_reason:placementRecord.human_placement_reason||""};
   });
 }
 function feedbackRecords(){
@@ -1295,7 +1343,7 @@ function pendingToCandidate(row){
   const summary=String(row.executive_summary||"").trim().slice(0,500);
   const category=CATEGORY_ORDER.includes(row.category)?row.category:"";
   if(!selectedUrl||!title||!source||!summary||!category)return null;
-  return {candidate_id:`team-${row.submission_id}`,submission_id:row.submission_id,origin:"team_link",ai_rank:null,ai_recommended:false,title,source,summary,summary_html:esc(summary),published_at:bundle.coverage_end,selected_url:selectedUrl,analysis_url:safeUrl(row.analysis_url),publisher_url:publisherAuthoritative?safeAuthorityUrl(row.publisher_url):"",publisher_domain_authoritative:publisherAuthoritative,portal_copy:row.portal_copy===true,portal_source:String(row.portal_source||""),portal_resolution_reason:String(row.portal_resolution_reason||""),portal_fallback_used:row.portal_copy===true,link_kind:publisherAuthoritative?"publisher_direct":"portal_copy",link_label:publisherAuthoritative?"원문 보기":"포털 기사 보기",category,category_analysis:{category,scores:{},matched_signals:{},reason:"팀원 제출 후 서버 재검증된 대기 제안"},image_url:safeImageUrl(row.image_url),image_remote_url:"",collection_source_kind:"team_link",selection_reason:"pending_team_submission",feedback_adjustment:0,adjusted_score:0};
+  return {candidate_id:`team-${row.submission_id}`,submission_id:row.submission_id,origin:"team_link",ai_rank:null,ai_recommended:false,title,source,summary,summary_html:esc(summary),published_at:bundle.coverage_end,selected_url:selectedUrl,analysis_url:safeUrl(row.analysis_url),publisher_url:publisherAuthoritative?safeAuthorityUrl(row.publisher_url):"",publisher_domain_authoritative:publisherAuthoritative,portal_copy:row.portal_copy===true,portal_source:String(row.portal_source||""),portal_resolution_reason:String(row.portal_resolution_reason||""),portal_fallback_used:row.portal_copy===true,link_kind:publisherAuthoritative?"publisher_direct":"portal_copy",link_label:publisherAuthoritative?"원문 보기":"포털 기사 보기",category,category_analysis:{category,scores:{},matched_signals:{},reason:"팀원 제출 후 서버 재검증된 대기 제안"},image_url:safeImageUrl(row.image_url),image_remote_url:"",collection_source_kind:"team_link",selection_reason:"pending_team_submission",feedback_adjustment:0,adjusted_score:0,executive_context:clientFactPreviewContext(title,summary)};
 }
 async function loadTeamSubmissions(){
   if(!operatorPendingReady()){setServerState("운영자 로그인 후 팀원 제안을 불러올 수 있습니다.","warn");return;}
@@ -1312,7 +1360,7 @@ async function loadTeamSubmissions(){
       const candidate=pendingToCandidate(row);
       if(!candidate||byId(candidate.candidate_id)||state.manualCandidates.length>=MAX_MANUAL_CANDIDATES)continue;
       state.manualCandidates.push(candidate);
-      state.edits[candidate.candidate_id]={title:candidate.title,summary_html:candidate.summary_html,category:candidate.category};
+      state.edits[candidate.candidate_id]={title:candidate.title,summary_html:candidate.summary_html,category:candidate.category,executive_context_edits:contextEditsFor(candidate.executive_context)};
       added+=1;
     }
     save();render();
@@ -1553,6 +1601,23 @@ function manifestArticleRows(manifest){
     return `<li style="margin:4px 0;font-size:13px;line-height:1.5">${title} <span style="color:#677080;font-size:11px">${esc(article.category)} · ${esc(article.publisher)}${article.headline?" · 헤드라인":""}</span></li>`;
   }).join("");
 }
+function manifestContextEdits(context){
+  // Keep exact-edition reconstruction self-contained and bounded. The
+  // immutable manifest may carry server-derived context, but only the four
+  // editor-editable text fields enter mutable browser state; provenance and
+  // baseline authority remain server-owned.
+  const value=context&&typeof context==="object"&&!Array.isArray(context)?context:{};
+  const point=value.fact_points;
+  const bounded=Array.isArray(point)?point.slice(0,3).map(item=>String(item||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,180)).filter(Boolean):[];
+  const section=(name)=>value[name]&&typeof value[name]==="object"&&!Array.isArray(value[name])?value[name]:{};
+  return {
+    fact_points:bounded,
+    baseline_context_text:String(section("baseline_context").text||"").slice(0,500),
+    delta_text:String(section("delta_vs_baseline").text||"").slice(0,500),
+    hdec_implication_text:String(section("hdec_implication").text||"").slice(0,600),
+    watch_point_text:String(section("watch_point").text||"").slice(0,320)
+  };
+}
 function adoptExactEdition(manifest){
   // R4-R9C — the immutable manifest DRIVES the editable form state so the
   // operator edits the exact linked edition, never a stale AI-default or a
@@ -1580,7 +1645,8 @@ function adoptExactEdition(manifest){
     driven[id]={
       title:String(row.title||candidate.title||""),
       summary_html:esc(String(row.summary||"")),
-      category:CATEGORY_ORDER.includes(row.category)?row.category:"기술정보"
+      category:CATEGORY_ORDER.includes(row.category)?row.category:"기술정보",
+      executive_context_edits:manifestContextEdits(row.executive_context||candidate.executive_context)
     };
   }
   // R4-R11 — a saved operator draft made under THIS exact edition id survives

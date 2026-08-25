@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "fixture_only": true,
+  "synthetic_baseline": {
+    "schema_version": 1,
+    "baseline_version": "synthetic-r4-ops10g-v1",
+    "baseline_id": "synthetic-construction-peer-baseline",
+    "reporting_period": "검증용 2026년 반기",
+    "as_of": "2026-06-30",
+    "status": "fixture_verified",
+    "source_document": {
+      "filename": "SYNTHETIC_FIXTURE_NOT_A_PRODUCTION_SOURCE.json",
+      "source_document_date": "2026-08-14",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "extraction_status": "synthetic_fixture",
+      "page_reference_scheme": "fixture-row"
+    },
+    "entities": [
+      {
+        "entity_id": "fixture-gs-ec",
+        "canonical_name": "GS건설",
+        "aliases": ["GS E&C", "GS Engineering & Construction"],
+        "facts": [
+          {
+            "fact_id": "fixture-gs-portfolio-001",
+            "dimension": "portfolio_shift",
+            "value": null,
+            "unit": "",
+            "as_of": "2026-06-30",
+            "source_reference": "fixture-row-1",
+            "evidence_paraphrase": "비핵심 자산 재편 이후 AI 데이터센터 개발·운영 역량 확대를 추진함",
+            "status": "verified",
+            "freshness": "historical_baseline"
+          }
+        ]
+      },
+      {
+        "entity_id": "fixture-hdec",
+        "canonical_name": "현대건설",
+        "aliases": ["Hyundai E&C"],
+        "facts": []
+      },
+      {
+        "entity_id": "fixture-samsung-ct",
+        "canonical_name": "삼성물산",
+        "aliases": ["Samsung C&T"],
+        "facts": []
+      }
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "gs_ai_data_center",
+      "already_qualified": true,
+      "article": {
+        "title": "GS건설, AI 데이터센터 개발·투자·운영 사업 확대",
+        "source": "검증매체",
+        "snippet": "GS건설은 AI 데이터센터 개발과 투자, 시공, 운영을 잇는 사업 구조를 확대함. 신규 프로젝트와 전력 파트너 확보를 추진함.",
+        "collection_source_kind": "publisher_direct"
+      }
+    },
+    {
+      "case_id": "saemangeum_ai_hydrogen_hub",
+      "already_qualified": true,
+      "article": {
+        "title": "새만금, 공공주도 개발…AI·수소 산업거점 구축",
+        "source": "검증매체",
+        "snippet": "산업용지를 확대하고 개발 일정을 앞당겨 AI·로봇 산업거점을 조성함. 대규모 민간 투자와 AI 데이터센터, 재생에너지·수소 기반시설 구축을 추진함. 후속 부지 조성과 인허가 절차가 남아 있음.",
+        "collection_source_kind": "publisher_direct"
+      }
+    },
+    {
+      "case_id": "generic_ai_policy",
+      "already_qualified": false,
+      "article": {
+        "title": "정부, AI 인재 육성 정책 방향 논의",
+        "source": "검증매체",
+        "snippet": "정부가 AI 인재 육성을 위한 포괄적 정책 방향을 논의함.",
+        "collection_source_kind": "publisher_direct"
+      }
+    },
+    {
+      "case_id": "non_ai_company_news",
+      "already_qualified": false,
+      "article": {
+        "title": "GS건설, 임금협상 타결",
+        "source": "검증매체",
+        "snippet": "노사가 임금협상을 타결함.",
+        "collection_source_kind": "publisher_direct"
+      }
+    },
+    {
+      "case_id": "semiconductor_infrastructure",
+      "already_qualified": true,
+      "article": {
+        "title": "AI 반도체 팹 산업단지 부지·전력·용수 EPC 투자 확정",
+        "source": "검증매체",
+        "snippet": "신규 팹 건설을 위해 부지와 전력·용수 기반시설 투자를 확정하고 EPC 발주를 추진함.",
+        "collection_source_kind": "publisher_direct"
+      }
+    },
+    {
+      "case_id": "semiconductor_commentary",
+      "already_qualified": false,
+      "article": {
+        "title": "반도체 업황 회복 기대와 대형주 투자전략",
+        "source": "검증매체",
+        "snippet": "증권가가 반도체 업황과 종목 전망을 제시함.",
+        "collection_source_kind": "publisher_direct"
+      }
+    }
+  ]
+}
