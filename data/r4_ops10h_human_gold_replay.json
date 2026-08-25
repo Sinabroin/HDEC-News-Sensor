@@ -1,0 +1,93 @@
+{
+  "fixture_contract": "R4_OPS10H_HUMAN_GOLD_REPLAY_V1",
+  "schema_version": 1,
+  "purpose": "Founder-confirmed examples for bounded Tier-2 strong-observation recall. Text is offline test evidence only; delivery still requires publisher-direct authority.",
+  "positive": [
+    {
+      "case_id": "human-ai-scientist",
+      "provenance": "user_confirmed_2026-08-25",
+      "title": "혼자 실험하고 새 이론 발견…상상 속 'AI 과학자' 현실로",
+      "snippet": "AI가 스스로 실험을 설계하고 검증·분석까지 마쳐 새로운 이론과 개념을 발견하는 연구 방식이 현실화되고 있다.",
+      "source": "한국경제",
+      "url": "https://www.hankyung.com/article/2026082479011",
+      "expected_tier": "strong_observation",
+      "expected_category": "AI 기업전략"
+    },
+    {
+      "case_id": "human-intel-robot-ecosystem",
+      "provenance": "user_confirmed_2026-08-25",
+      "title": "[단독]인텔, 한국AI·로봇산업협회 회원사 된다 [로보 인사이트]",
+      "snippet": "인텔코리아가 한국AI·로봇산업협회에 정회원 가입 신청서를 제출해 가입 심사를 받고 있다.",
+      "source": "서울경제",
+      "url": "https://www.sedaily.com/NewsView/r4-ops10h-human-gold-intel",
+      "url_provenance": "synthetic_offline_publisher_domain_fixture",
+      "expected_tier": "strong_observation",
+      "expected_category": "산업·피지컬 AI"
+    },
+    {
+      "case_id": "human-agentic-ai-governance",
+      "provenance": "user_confirmed_2026-08-25",
+      "title": "6년 만에 AI 윤리원칙 다시 쓴 정부…에이전틱 AI 통제·AI 빅테크 책임 강화",
+      "snippet": "정부가 국가 AI 윤리원칙을 전면 개편하고 AI 에이전트 통제와 영향력이 큰 사업자의 비례적 책임을 명시했다.",
+      "source": "경향신문",
+      "url": "https://www.khan.co.kr/article/202608241457001",
+      "expected_tier": "strong_observation",
+      "expected_category": "AI 위험·보안"
+    },
+    {
+      "case_id": "observed-kakao-ai-board",
+      "provenance": "observed_production_2026-08-25_0803z",
+      "title": "[팩플] 전 CTO부터 국세청장까지… 베일 벗은 카카오 AI 초대 이사진",
+      "snippet": "25일 중앙일보가 확보한 카카오 AI 이사진 명단에 따르면 초대 이사는 총 7명으로 구성됐다. 사내이사는 카카오 대표와 최고재무책임자가 맡는다.",
+      "source": "중앙일보",
+      "url": "https://www.joongang.co.kr/article/25455979",
+      "expected_tier": "strong_observation",
+      "expected_category": "AI 기업전략"
+    }
+  ],
+  "hard_negative": [
+    {
+      "case_id": "consumer-ai-feature",
+      "title": "스마트폰 AI 사진 편집 기능 공개…배경 지우기 더 쉬워졌다",
+      "snippet": "새 모바일 앱 기능으로 셀카와 이모지 편집 편의성을 높였다.",
+      "source": "한국경제",
+      "url": "https://www.hankyung.com/article/r4-ops10h-negative-consumer"
+    },
+    {
+      "case_id": "stock-ai-target",
+      "title": "AI 수혜주 목표주가 상향…지금 살 종목은",
+      "snippet": "증권가는 AI 수요 증가에 따른 실적 모멘텀을 전망했다.",
+      "source": "서울경제",
+      "url": "https://www.sedaily.com/NewsView/r4-ops10h-negative-stock"
+    },
+    {
+      "case_id": "opinion-physical-ai",
+      "title": "[기자칼럼] 피지컬 AI 시대를 서둘러야 한다",
+      "snippet": "산업계가 변화에 대비해야 한다는 필자의 견해다.",
+      "publisher_section": "오피니언",
+      "source": "경향신문",
+      "url": "https://www.khan.co.kr/article/r4-ops10h-negative-opinion"
+    },
+    {
+      "case_id": "speculation-ai-research",
+      "title": "AI가 언젠가 새로운 이론을 발견할 가능성",
+      "snippet": "전문가들은 AI 과학자가 등장할 수도 있다고 전망했다.",
+      "source": "한국경제",
+      "url": "https://www.hankyung.com/article/r4-ops10h-negative-speculation"
+    },
+    {
+      "case_id": "seminar-filler",
+      "title": "AI 로봇 세미나 개최…산업 미래 논의",
+      "snippet": "관계자들이 참석해 기술 동향을 소개하고 기념사진을 촬영했다.",
+      "source": "서울경제",
+      "url": "https://www.sedaily.com/NewsView/r4-ops10h-negative-seminar"
+    },
+    {
+      "case_id": "portal-only",
+      "title": "AI 과학자가 스스로 실험해 새로운 이론 발견",
+      "snippet": "AI가 인간 개입 없이 실험을 설계하고 검증했다.",
+      "source": "한국경제",
+      "url": "https://v.daum.net/v/20260824160837049"
+    }
+  ]
+}
