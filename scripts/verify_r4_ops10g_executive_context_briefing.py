@@ -1148,7 +1148,64 @@ def main() -> int:
         "SHARED_AUTHORITY_CLAIM_VALID="
         + ("true" if shared_authority_claim_valid else "false")
     )
-    print("WEEKLY_PRESENTATION_CHANGED=false")
+    # R4-OPS-10G-R2 — Public Weekly is outside the 10G presentation
+    # change boundary. Compare complete deterministic fixture HTML against
+    # fresh production main, including both dominant and multi modes.
+    import hashlib as _weekly_hashlib
+    from datetime import datetime as _weekly_datetime
+    from app import editorial_briefings as _weekly_brief
+
+    _weekly_run_at = _weekly_datetime.fromisoformat(
+        "2026-07-29T07:30:00+09:00"
+    )
+    _weekly_root_url = (
+        "https://preview.fixture.test/HDEC-News-Sensor"
+    )
+    _weekly_expected_sha256 = {
+        "dominant": (
+            "45b12fe861d4e58cca3d60e1e1d786c1"
+            "aa10b45ed031c5285c747f89f4f29824"
+        ),
+        "multi": (
+            "53e188fac050517292c934961f5f39d0"
+            "60a80d5af5e53132d7a64d2378b7d284"
+        ),
+    }
+    _weekly_actual_sha256 = {}
+
+    for _weekly_profile in ("dominant", "multi"):
+        _weekly_edition = _weekly_brief.render_edition(
+            "weekly",
+            _weekly_brief.fixture_articles(
+                "weekly",
+                _weekly_run_at,
+                profile=_weekly_profile,
+            ),
+            run_at=_weekly_run_at,
+            root_url=_weekly_root_url,
+        )
+        _weekly_brief.validate_rendered(_weekly_edition)
+        _weekly_actual_sha256[_weekly_profile] = (
+            _weekly_hashlib.sha256(
+                _weekly_edition.html.encode("utf-8")
+            ).hexdigest()
+        )
+
+    _weekly_presentation_changed = (
+        _weekly_actual_sha256 != _weekly_expected_sha256
+    )
+
+    if _weekly_presentation_changed:
+        raise AssertionError(
+            "Public Weekly presentation changed: "
+            f"expected={_weekly_expected_sha256!r} "
+            f"actual={_weekly_actual_sha256!r}"
+        )
+
+    print(
+        "WEEKLY_PRESENTATION_CHANGED="
+        + ("true" if _weekly_presentation_changed else "false")
+    )
     print(f"BASELINE_ENTITY_COUNT={len(production_entities)}")
     print(f"BASELINE_FACT_COUNT={len(production_facts)}")
     print(

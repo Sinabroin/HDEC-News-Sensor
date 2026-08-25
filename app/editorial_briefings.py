@@ -4662,7 +4662,11 @@ def normalize_articles(
                 replace(
                     article,
                     executive_context=context,
-                    executive_implication=implication or article.executive_implication,
+                    executive_implication=(
+                        article.executive_implication
+                        if edition_type == "weekly"
+                        else implication or article.executive_implication
+                    ),
                 ),
                 raw,
             )
