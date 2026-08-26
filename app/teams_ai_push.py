@@ -1688,6 +1688,30 @@ _REALTIME_UNCOMMITTED_PLAN_TERMS: tuple[str, ...] = (
     "기획 용역",
     "기획용역",
     "사업 기획",
+
+    # R4-OPS-10M — advocacy / aspiration is not execution.
+    #
+    # A resolution rally, joint declaration, regional aspiration,
+    # support request, cluster concept, or council launch may be
+    # strategically relevant enough for Daily/Weekly monitoring,
+    # but cannot establish a realtime executive interruption unless
+    # bounded publisher evidence independently proves execution.
+    "결의대회",
+    "결의문",
+    "공동 결의",
+    "뜻을 모았다",
+    "힘을 모았다",
+    "촉구",
+    "건의",
+    "구상을 제시",
+    "구상을 밝혔다",
+    "비전을 제시",
+    "도약",
+    "육성",
+    "조성",
+    "협의체 출범",
+    "협의회 출범",
+    "추진단 출범",
 )
 
 _REALTIME_EXECUTION_PROOF_TERMS: tuple[str, ...] = (
@@ -1697,6 +1721,23 @@ _REALTIME_EXECUTION_PROOF_TERMS: tuple[str, ...] = (
     "투자하기로",
     "예산 확정",
     "국비 확정",
+
+    # R4-OPS-10M — independently proven public execution
+    # milestones that may safely override aspiration language.
+    "예산 배정",
+    "예산을 배정",
+    "예산 반영",
+    "예산을 반영",
+    "국비 확보",
+    "국비를 확보",
+    "지원 확정",
+    "사업 확정",
+    "국가사업 확정",
+    "지정 확정",
+    "지정했다",
+    "지정됐",
+    "지정되었",
+
     "공급계약",
     "공급 계약",
     "계약 체결",
