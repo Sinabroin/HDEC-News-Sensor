@@ -1758,11 +1758,11 @@ _REALTIME_PLAN_QUALIFIED_EXECUTION_PATTERNS: tuple[re.Pattern[str], ...] = (
     ),
     re.compile(
         r"(?:사업자|시공사)(?:를|를\s*)"
-        r"선정(?:할|하기로)?\s*(?:계획|예정|추진|검토)?"
+        r"선정(?:할|하기로)?\s*(?:계획|예정|추진|검토|준비)"
     ),
     re.compile(
         r"계약(?:을|을\s*)"
-        r"체결(?:할|하기로)?\s*(?:계획|예정|추진|검토)?"
+        r"체결(?:할|하기로)?\s*(?:계획|예정|추진|검토|준비)"
     ),
     re.compile(
         r"(?:입찰\s*공고|입찰공고)"
@@ -2092,7 +2092,12 @@ def evaluate_teams_push_policy(
             ImportanceDecision(False, reason=semantic_precision.reason),
             True,
             False,
-            reason_by_class[semantic_precision.semantic_class],
+            (
+                "excluded_product_spec_announcement"
+                if semantic_precision.reason
+                == "product_spec_announcement_without_executive_consequence"
+                else reason_by_class[semantic_precision.semantic_class]
+            ),
             stock_market=stock_gate,
             semantic_precision=semantic_precision,
         )

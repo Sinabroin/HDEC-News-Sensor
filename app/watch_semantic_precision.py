@@ -107,6 +107,78 @@ _INDEPENDENT_HARD_EVENT_TERMS: tuple[str, ...] = (
     "취약점", "랜섬웨어", "연결 중단", "승인 중단", "건설 중단",
 )
 
+
+# R4-OPS-10L — product/spec announcement realtime floor.
+#
+# Production regression:
+#   "엔비디아, 로봇용 AI 컴퓨터 '젯슨 오린 나노2' 공개…
+#    추론 성능 2배"
+#
+# A hardware product announcement dominated by specs is useful for the
+# dashboard/Daily surface, but is not by itself an executive realtime event.
+# It remains realtime-eligible when the same bounded publisher evidence
+# independently proves a contract, deployment/adoption, investment,
+# production/supply commitment, security incident, regulation, etc.
+_PRODUCT_LAUNCH_ACTION_TERMS: tuple[str, ...] = (
+    "출시",
+    "공개",
+    "선보",
+    "발표",
+)
+
+_PRODUCT_HARDWARE_TERMS: tuple[str, ...] = (
+    "ai 컴퓨터",
+    "컴퓨터",
+    "gpu",
+    "npu",
+    "ai 가속기",
+    "가속기",
+    "ai 칩",
+    "칩",
+    "반도체",
+    "프로세서",
+    "서버",
+    "로봇",
+    "로보틱스",
+    "디바이스",
+    "웨어러블",
+    "스마트글래스",
+    "스마트 글래스",
+)
+
+_PRODUCT_SPEC_TERMS: tuple[str, ...] = (
+    "추론 성능",
+    "연산 성능",
+    "성능",
+    "처리 속도",
+    "속도",
+    "tops",
+    "tflops",
+    "메모리",
+    "사양",
+    "스펙",
+    "가격",
+    "전력 효율",
+    "소비전력",
+)
+
+_PRODUCT_EXECUTIVE_CONSEQUENCE_TERMS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        _INDEPENDENT_HARD_EVENT_TERMS
+        + (
+            "양산",
+            "양산 개시",
+            "대량 공급",
+            "공급 개시",
+            "정식 공급",
+            "채택 확정",
+            "상용 배치",
+            "상용배치",
+            "대규모 도입",
+        )
+    )
+)
+
 _EVENT_HEADLINE_CUES: tuple[str, ...] = (
     "투자", "계약", "협약", "협력", "손잡고", "수주", "착공", "준공", "증설",
     "인수", "합병", "출시", "공개", "조달", "지원", "뒷받침", "승인", "발효",
@@ -440,6 +512,77 @@ def _actor_bridge_ai_nexus(lead_lower: str) -> tuple[bool, tuple[str, ...]]:
     )
 
 
+
+def _product_spec_announcement_without_executive_consequence(
+    title_lower: str,
+    factual_zone: str,
+) -> tuple[bool, tuple[str, ...]]:
+    """Return True for a spec-sheet hardware launch with no material consequence.
+
+    The decision is deliberately Watch-only and uses the same bounded
+    publisher-owned evidence as the semantic gate.  A generic product launch
+    does not become executive realtime news merely because the product is AI,
+    GPU, or robotics-related.
+
+    A separately proven contract, deployment/adoption, investment,
+    production/supply commitment, security event, or regulatory constraint
+    preserves realtime recall.
+    """
+    launch_hits = _hits(
+        title_lower,
+        _PRODUCT_LAUNCH_ACTION_TERMS,
+    )
+    hardware_hits = _hits(
+        title_lower,
+        _PRODUCT_HARDWARE_TERMS,
+    )
+    spec_hits = _hits(
+        title_lower,
+        _PRODUCT_SPEC_TERMS,
+    )
+
+    if not (
+        launch_hits
+        and hardware_hits
+        and spec_hits
+    ):
+        return False, ()
+
+    consequence_hits = _hits(
+        factual_zone,
+        _PRODUCT_EXECUTIVE_CONSEQUENCE_TERMS,
+    )
+    risk_hits = _hits(
+        factual_zone,
+        _MATERIAL_RISK_OR_CONSTRAINT_TERMS,
+    )
+
+    if consequence_hits or risk_hits:
+        return (
+            False,
+            tuple(
+                dict.fromkeys(
+                    launch_hits
+                    + hardware_hits
+                    + spec_hits
+                    + consequence_hits
+                    + risk_hits
+                )
+            ),
+        )
+
+    return (
+        True,
+        tuple(
+            dict.fromkeys(
+                launch_hits
+                + hardware_hits
+                + spec_hits
+            )
+        ),
+    )
+
+
 def _material_event(
     title_lower: str,
     factual_zone: str,
@@ -609,6 +752,35 @@ def classify(article: Mapping[str, Any]) -> WatchSemanticPrecisionDecision:
             tuple(dict.fromkeys(consumer_hits + title_ai_hits)),
             **common,
         )
+
+    product_spec_only, product_spec_hits = (
+        _product_spec_announcement_without_executive_consequence(
+            title_lower,
+            factual_zone,
+        )
+    )
+
+    if product_spec_only:
+        product_common = dict(common)
+        # A generic launch verb may have tripped the legacy material-event
+        # vocabulary, but this Watch-specific executive floor intentionally
+        # removes that interpretation for this narrow spec-sheet lane.
+        product_common["material_event"] = False
+
+        return WatchSemanticPrecisionDecision(
+            OTHER_NONEXECUTIVE,
+            False,
+            "product_spec_announcement_without_executive_consequence",
+            tuple(
+                dict.fromkeys(
+                    product_spec_hits
+                    + title_ai_hits
+                    + title_infra_hits
+                )
+            ),
+            **product_common,
+        )
+
 
     tailwind_hits = _hits(factual_zone, _TAILWIND_CAUSE_TERMS)
     outcome_hits = _hits(title_lower, _PERFORMANCE_OR_SECTOR_OUTCOME_TERMS)
