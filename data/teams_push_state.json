@@ -900,6 +900,21 @@
       "sent_at": "2026-08-04T19:11:00+09:00",
       "source": "비즈트리뷴"
     },
+    "e16f407118312139": {
+      "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
+      "delivery_id": "teams_ai_push:a76f12827588",
+      "first_material_discovery_at": "2026-08-26T12:43:17+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-08-26T12:43:17+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a95834d7d35ce7fae4ea75993b6717f2a048649206a0ad71c92c3651f46793d6",
+      "published_at": "2026-08-26T12:34:00+09:00",
+      "sent_at": "2026-08-26T12:43:17+09:00",
+      "source": "SBS 뉴스",
+      "title": "40MW급 데이터센터 구축…'제주권 AX 대전환'에 속도",
+      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008722615"
+    },
     "e1c664c1f58c6733": {
       "cluster_key": "title:현대차9조투자새만금희망고문끝날까산업용지3배늘리고매",
       "delivery_id": "teams_ai_push:56f104b2868a",
@@ -1441,6 +1456,16 @@
       "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
+    },
+    "title:40mw급데이터센터구축제주권ax대전환에속도": {
+      "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
+      "delivery_id": "teams_ai_push:a76f12827588",
+      "first_sent_at": "2026-08-26T12:43:17+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a95834d7d35ce7fae4ea75993b6717f2a048649206a0ad71c92c3651f46793d6",
+      "sent_at": "2026-08-26T12:43:17+09:00",
+      "source": "SBS 뉴스"
     },
     "title:47ai공장의불을켜라ai패권의진짜전": {
       "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
@@ -3872,7 +3897,7 @@
     }
   },
   "last_normal_send_at": "2026-08-24T07:59:20+09:00",
-  "last_successful_send_at": "2026-08-24T07:59:20+09:00",
+  "last_successful_send_at": "2026-08-26T12:43:17+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4442,6 +4467,16 @@
       "last_material_update_at": null,
       "material_signature": "30fc73e82e7879f508b0ff38a84b6adb650c93ad08cf52efe11237e29eddf1b7",
       "sent_at": "2026-08-17T21:41:35+09:00",
+      "source": "SBS 뉴스"
+    },
+    "https://news.sbs.co.kr/news/endPage.do?news_id=N1008722615": {
+      "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
+      "delivery_id": "teams_ai_push:a76f12827588",
+      "first_sent_at": "2026-08-26T12:43:17+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a95834d7d35ce7fae4ea75993b6717f2a048649206a0ad71c92c3651f46793d6",
+      "sent_at": "2026-08-26T12:43:17+09:00",
       "source": "SBS 뉴스"
     },
     "https://news1.kr/industry/sb-founded/6259527": {
@@ -5295,6 +5330,16 @@
       "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
+    },
+    "40mw급데이터센터구축제주권ax대전환에속도": {
+      "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
+      "delivery_id": "teams_ai_push:a76f12827588",
+      "first_sent_at": "2026-08-26T12:43:17+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "a95834d7d35ce7fae4ea75993b6717f2a048649206a0ad71c92c3651f46793d6",
+      "sent_at": "2026-08-26T12:43:17+09:00",
+      "source": "SBS 뉴스"
     },
     "47ai공장의불을켜라ai패권의진짜전": {
       "cluster_key": "title:47ai공장의불을켜라ai패권의진짜전",
