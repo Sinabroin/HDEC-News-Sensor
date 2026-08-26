@@ -59,7 +59,8 @@
     {"tier": "major_secondary", "rank": 13, "name": "국민일보", "aliases": ["국민일보"], "domains": ["kmib.co.kr"]},
     {"tier": "major_secondary", "rank": 14, "name": "세계일보", "aliases": ["세계일보"], "domains": ["segye.com"]},
     {"tier": "major_secondary", "rank": 15, "name": "서울신문", "aliases": ["서울신문"], "domains": ["seoul.co.kr"]},
-    {"tier": "major_secondary", "rank": 16, "name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]}
+    {"tier": "major_secondary", "rank": 16, "name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]},
+    {"tier": "major_secondary", "rank": 17, "name": "아이뉴스24", "aliases": ["아이뉴스24", "inews24"], "domains": ["inews24.com"]}
   ],
   "publisher_delivery_tier_labels": {
     "primary_10": "핵심 10개 언론사",
@@ -73,7 +74,7 @@
     "excluded": "제외 출처"
   },
   "teams_delivery_source_policy": {
-    "note": "R4-OPS-5A Teams A/B/C 정책. Tier A 13개 핵심 종합언론과 명시된 Tier B 16개 주요 종합·경제·산업 언론만 기사별 실질 게이트 통과 후 자동 발송 가능하다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 알려진 URL 호스트 신원은 표시 source alias보다 우선한다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 하며, 미열거 sibling/foreign host는 alias 권한을 상속하지 않는다.",
+    "note": "R4-OPS-5A Teams A/B/C 정책. Tier A 13개 핵심 종합언론과 명시된 Tier B 17개 주요 종합·경제·산업 언론만 기사별 실질 게이트 통과 후 자동 발송 가능하다. Tier C 전문지는 Editor/근거용이며 독립 realtime 카드로 자동 발송하지 않는다. 알려진 URL 호스트 신원은 표시 source alias보다 우선한다. 모든 도메인은 exact-by-default이고 www 외 하위 도메인은 이 목록에 정확히 열거되어야 하며, 미열거 sibling/foreign host는 alias 권한을 상속하지 않는다.",
     "major_secondary_publishers": [
       {"name": "서울경제", "aliases": ["서울경제"], "domains": ["sedaily.com"]},
       {"name": "한국일보", "aliases": ["한국일보"], "domains": ["hankookilbo.com"]},
@@ -90,7 +91,8 @@
       {"name": "국민일보", "aliases": ["국민일보"], "domains": ["kmib.co.kr"]},
       {"name": "세계일보", "aliases": ["세계일보"], "domains": ["segye.com"]},
       {"name": "서울신문", "aliases": ["서울신문"], "domains": ["seoul.co.kr"]},
-      {"name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]}
+      {"name": "문화일보", "aliases": ["문화일보"], "domains": ["munhwa.com"]},
+      {"name": "아이뉴스24", "aliases": ["아이뉴스24", "inews24"], "domains": ["inews24.com"]}
     ],
     "specialist_publishers": [
       {"name": "IT조선", "aliases": ["it조선", "it chosun"], "domains": ["it.chosun.com"]},
