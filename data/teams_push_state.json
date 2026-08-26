@@ -615,6 +615,21 @@
       "sent_at": "2026-08-16T11:42:57+09:00",
       "source": "뉴스1"
     },
+    "8f8e977020b9e00e": {
+      "cluster_key": "title:2040년까지재생e6배확대원전lng신설불가피",
+      "delivery_id": "teams_ai_push:40329ae1e2de",
+      "first_material_discovery_at": "2026-08-27T06:49:09+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-08-27T06:49:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
+      "published_at": "2026-08-27T06:17:15+09:00",
+      "sent_at": "2026-08-27T06:49:09+09:00",
+      "source": "서울경제",
+      "title": "2040년까지 재생e 6배 확대…원전·LNG 신설 불가피[Pick코노미]",
+      "url": "https://sedaily.com/article/20083785"
+    },
     "92baa5a958c3d24e": {
       "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
       "delivery_id": "teams_ai_push:f7205365bd29",
@@ -1486,6 +1501,16 @@
       "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
+    },
+    "title:2040년까지재생e6배확대원전lng신설불가피": {
+      "cluster_key": "title:2040년까지재생e6배확대원전lng신설불가피",
+      "delivery_id": "teams_ai_push:40329ae1e2de",
+      "first_sent_at": "2026-08-27T06:49:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
+      "sent_at": "2026-08-27T06:49:09+09:00",
+      "source": "서울경제"
     },
     "title:40mw급데이터센터구축제주권ax대전환에속도": {
       "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
@@ -3946,8 +3971,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-26T18:13:50+09:00",
-  "last_successful_send_at": "2026-08-26T18:13:50+09:00",
+  "last_normal_send_at": "2026-08-27T06:49:09+09:00",
+  "last_successful_send_at": "2026-08-27T06:49:09+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4709,6 +4734,16 @@
       "sent_at": "2026-08-23T13:01:35+09:00",
       "source": "서울경제"
     },
+    "https://sedaily.com/article/20083785": {
+      "cluster_key": "title:2040년까지재생e6배확대원전lng신설불가피",
+      "delivery_id": "teams_ai_push:40329ae1e2de",
+      "first_sent_at": "2026-08-27T06:49:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
+      "sent_at": "2026-08-27T06:49:09+09:00",
+      "source": "서울경제"
+    },
     "https://segye.com/newsView/20260813519804": {
       "cluster_key": "title:네이버바다위데이터센터스타트업투자",
       "delivery_id": "teams_ai_push:08c77f66f50e",
@@ -5400,6 +5435,16 @@
       "material_signature": "91de005f3d003722d7802d630508f6b440470efbfa0a133c223f0ea7f9e5cc34",
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
+    },
+    "2040년까지재생e6배확대원전lng신설불가피": {
+      "cluster_key": "title:2040년까지재생e6배확대원전lng신설불가피",
+      "delivery_id": "teams_ai_push:40329ae1e2de",
+      "first_sent_at": "2026-08-27T06:49:09+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
+      "sent_at": "2026-08-27T06:49:09+09:00",
+      "source": "서울경제"
     },
     "40mw급데이터센터구축제주권ax대전환에속도": {
       "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
