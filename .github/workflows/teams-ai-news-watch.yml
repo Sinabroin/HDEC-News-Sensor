@@ -73,6 +73,7 @@ jobs:
           python3 scripts/verify_teams_validated_brief_semantic_equivalence.py
           python3 scripts/verify_teams_major_media_gate.py
           python3 scripts/verify_teams_strict_source_gate.py
+          python3 scripts/verify_r4_ops10k_executive_materiality_depth.py
           python3 scripts/verify_stock_market_hard_exclusion.py
           python3 scripts/verify_r4_ops10h_autonomous_editorial_selection.py
           python3 scripts/verify_r4_ops7_watch_production_gate.py

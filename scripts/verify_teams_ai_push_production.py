@@ -647,8 +647,9 @@ def check_delivery(tmp: Path) -> None:
           and "추가 상세" not in body)
     check("executive implication is explicitly labeled",
           "현대건설 관점:" in body)
-    check("watch point is retained when supported",
-          "Watch:" in parsed["text"] and "<strong>Watch</strong>" in parsed["html"])
+    check("executive check point is retained when supported",
+          "확인 포인트:" in parsed["text"]
+          and "<strong>확인 포인트</strong>" in parsed["html"])
     check("legacy summary and impact labels are absent",
           "핵심 요약" not in body and "왜 중요한가" not in body
           and "현대건설 영향" not in body)
