@@ -695,6 +695,109 @@ def main() -> int:
     check("§10 production ledger was read-only (byte-identical after the run)",
           PRODUCTION_STATE_PATH.read_bytes() == state_bytes_before)
 
+    # ---------------------------------------------------- §11 R4-OPS-10I
+    # Production starvation repair: 아이뉴스24 is an explicit Tier-B source,
+    # not a generic neutral-source bypass. Exact publisher identity is required;
+    # an alias paired with a foreign host must still fail closed.
+    INEWS24_URL = "https://www.inews24.com/view/9999999"
+
+    inews_policy = source_priority.teams_delivery_source_policy(
+        "아이뉴스24", INEWS24_URL
+    )
+    check(
+        "§11 아이뉴스24 exact publisher identity resolves to Tier-B immediate",
+        inews_policy["tier"] == "major_secondary"
+        and inews_policy["teams_lane"]
+        == source_priority.TEAMS_LANE_IMMEDIATE_MAJOR
+        and inews_policy["publisher_identity"] == "아이뉴스24"
+        and inews_policy["identity_evidence"] == "exact_domain",
+        str(inews_policy),
+    )
+
+    inews_alias_policy = source_priority.teams_delivery_source_policy(
+        "아이뉴스24", ""
+    )
+    check(
+        "§11 아이뉴스24 exact alias is Tier-B for URL-less legacy rows",
+        inews_alias_policy["tier"] == "major_secondary"
+        and inews_alias_policy["teams_lane"]
+        == source_priority.TEAMS_LANE_IMMEDIATE_MAJOR,
+        str(inews_alias_policy),
+    )
+
+    inews_spoof = source_priority.teams_delivery_source_policy(
+        "아이뉴스24", "https://example.invalid/not-inews24"
+    )
+    check(
+        "§11 아이뉴스24 alias cannot promote an unknown foreign host",
+        inews_spoof["tier"] == "neutral"
+        and inews_spoof["teams_lane"]
+        == source_priority.TEAMS_LANE_NEVER_AUTOMATIC,
+        str(inews_spoof),
+    )
+
+    # The actual repair is source authority only. The article must still pass
+    # the full existing AI / materiality / stock / opinion / freshness gates.
+    with tempfile.TemporaryDirectory(prefix="hdec-r4ops10i-") as raw:
+        tmp = Path(raw)
+
+        material = specialist_article(
+            "r4ops10i-inews24-material",
+            "아이뉴스24",
+            INEWS24_URL,
+            title="AI 데이터센터 전력 인프라 공급계약 체결",
+            summary="AI 데이터센터 전력 인프라 공급계약을 공식 체결했다.",
+            snippet="AI 데이터센터 전력 인프라 공급계약을 공식 체결했다.",
+            hdec_relevance="현대건설 AI 데이터센터 사업 직접 관련",
+            shadow_confirmed_event_types=["contract_signed"],
+        )
+
+        st = tmp / "inews24-material-state.json"
+        summary, rec = deliver(tmp, [material], st)
+
+        check(
+            "§11 qualified 아이뉴스24 material event selects and reaches fake SMTP once",
+            summary["selected"] == 1
+            and summary["selected_major_secondary_rows"] == 1
+            and summary["source_gate_rejected_rows"] == 0
+            and summary["smtp_attempted_rows"] == 1
+            and summary["smtp_accepted_rows"] == 1
+            and len(rec.attempts) == 1,
+            str(summary),
+        )
+
+        stock = specialist_article(
+            "r4ops10i-inews24-stock",
+            "아이뉴스24",
+            "https://www.inews24.com/view/9999998",
+            title="AI 데이터센터 수혜주 급등…목표주가 상향",
+            summary="증권가는 AI 데이터센터 수혜주 목표주가를 상향했다.",
+            snippet="증권가는 관련 종목의 추가 상승 가능성을 전망했다.",
+            hdec_relevance="AI 데이터센터 산업 관련",
+            shadow_confirmed_event_types=[],
+        )
+
+        st = tmp / "inews24-stock-state.json"
+        summary, rec = deliver(tmp, [stock], st)
+
+        check(
+            "§11 Tier-B promotion never bypasses stock-market hard exclusion",
+            summary["selected"] == 0
+            and summary["smtp_attempted_rows"] == 0
+            and rec.attempts == [],
+            str(summary),
+        )
+
+    # Today's other observed neutral publishers remain closed. This repair
+    # deliberately does not create a generic neutral-source fallback.
+    for source in ("더팩트", "MS TODAY"):
+        policy = source_priority.teams_delivery_source_policy(source, "")
+        check(
+            f"§11 {source} remains never_automatic",
+            policy["teams_lane"] == source_priority.TEAMS_LANE_NEVER_AUTOMATIC,
+            str(policy),
+        )
+
     print(f"checks={CHECKS} failures={len(FAILURES)}")
     if FAILURES:
         for name in FAILURES:
