@@ -470,6 +470,21 @@
       "sent_at": "2026-08-11T16:44:43+09:00",
       "source": "파이낸셜뉴스"
     },
+    "69584f07be2f5b19": {
+      "cluster_key": "title:엔비디아로봇용ai컴퓨터젯슨오린나노2공개추론성능2배",
+      "delivery_id": "teams_ai_push:f99c084febdf",
+      "first_material_discovery_at": "2026-08-26T14:09:19+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-08-26T14:09:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "35abc8d3010efdf924d56fa239b3d0b931b3556bb21516544ffad4cfbd5906de",
+      "published_at": "2026-08-26T10:25:52+09:00",
+      "sent_at": "2026-08-26T14:09:19+09:00",
+      "source": "아이뉴스24",
+      "title": "엔비디아, 로봇용 AI 컴퓨터 '젯슨 오린 나노2' 공개…추론 성능 2배",
+      "url": "https://inews24.com/view/1998242"
+    },
     "699e303754c965c7": {
       "cluster_key": "title:산은우정사업본부1조원규모ai인프라펀드조성",
       "delivery_id": "teams_ai_push:54d92180c628",
@@ -2347,6 +2362,16 @@
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
     },
+    "title:엔비디아로봇용ai컴퓨터젯슨오린나노2공개추론성능2배": {
+      "cluster_key": "title:엔비디아로봇용ai컴퓨터젯슨오린나노2공개추론성능2배",
+      "delivery_id": "teams_ai_push:f99c084febdf",
+      "first_sent_at": "2026-08-26T14:09:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "35abc8d3010efdf924d56fa239b3d0b931b3556bb21516544ffad4cfbd5906de",
+      "sent_at": "2026-08-26T14:09:19+09:00",
+      "source": "아이뉴스24"
+    },
     "title:엘리스그룹온수냉각적용b300ai데이터센터구축": {
       "cluster_key": "title:엘리스그룹온수냉각적용b300ai데이터센터구축",
       "delivery_id": "teams_ai_push:65b28e7ed6ad",
@@ -3896,8 +3921,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-24T07:59:20+09:00",
-  "last_successful_send_at": "2026-08-26T12:43:17+09:00",
+  "last_normal_send_at": "2026-08-26T14:09:19+09:00",
+  "last_successful_send_at": "2026-08-26T14:09:19+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4288,6 +4313,16 @@
       "material_signature": "ed754eca3cc1ec69df2005221eb0c0d00685b6aec525f8e0c2fc742903281b84",
       "sent_at": "2026-08-05T06:50:39+09:00",
       "source": "HBN뉴스"
+    },
+    "https://inews24.com/view/1998242": {
+      "cluster_key": "title:엔비디아로봇용ai컴퓨터젯슨오린나노2공개추론성능2배",
+      "delivery_id": "teams_ai_push:f99c084febdf",
+      "first_sent_at": "2026-08-26T14:09:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "35abc8d3010efdf924d56fa239b3d0b931b3556bb21516544ffad4cfbd5906de",
+      "sent_at": "2026-08-26T14:09:19+09:00",
+      "source": "아이뉴스24"
     },
     "https://it.chosun.com/news/articleView.html?idxno=2023092167599": {
       "cluster_key": "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화",
@@ -6230,6 +6265,16 @@
       "material_signature": "db68206a0f95f741b25caa5e364273211f62ef2390837a028210c0dbf9e2252a",
       "sent_at": "2026-07-28T08:47:17+09:00",
       "source": "etoday.co.kr"
+    },
+    "엔비디아로봇용ai컴퓨터젯슨오린나노2공개추론성능2배": {
+      "cluster_key": "title:엔비디아로봇용ai컴퓨터젯슨오린나노2공개추론성능2배",
+      "delivery_id": "teams_ai_push:f99c084febdf",
+      "first_sent_at": "2026-08-26T14:09:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "35abc8d3010efdf924d56fa239b3d0b931b3556bb21516544ffad4cfbd5906de",
+      "sent_at": "2026-08-26T14:09:19+09:00",
+      "source": "아이뉴스24"
     },
     "엘리스그룹온수냉각적용b300ai데이터센터구축": {
       "cluster_key": "title:엘리스그룹온수냉각적용b300ai데이터센터구축",
