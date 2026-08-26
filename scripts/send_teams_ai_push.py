@@ -120,6 +120,7 @@ REJECTION_COUNTER_KEYS = (
     "excluded_fund_product_noise",
     "excluded_investor_market_commentary",
     "excluded_generic_industry_ai_tailwind",
+    "excluded_uncommitted_plan_or_strategy",
     "excluded_roundup_multi_topic",
     "excluded_ai_incidental",
     "excluded_other_nonexecutive",

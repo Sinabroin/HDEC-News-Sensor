@@ -1657,6 +1657,173 @@ def is_watch_send_noise(article: Mapping[str, Any]) -> tuple[bool, str]:
     return False, ""
 
 
+
+# R4-OPS-10K — executive realtime execution-commitment floor.
+#
+# Production regression:
+# SBS/JIBS "40MW급 데이터센터 구축…'제주권 AX 대전환'에 속도"
+# was promoted to Tier-1/TOP even though its bounded factual evidence
+# described a policy concept / 추진 / 계획 rather than an EPC contract,
+# investment commitment, award, operator selection, procurement, or
+# construction start.
+#
+# This gate is deliberately narrow:
+# - it uses only publisher-owned title/subtitle/snippet evidence;
+# - it never reads generated summary/why-it-matters metadata;
+# - a planning marker alone cannot support realtime Teams delivery;
+# - independently proven execution evidence overrides the planning marker.
+_REALTIME_UNCOMMITTED_PLAN_TERMS: tuple[str, ...] = (
+    "추진",
+    "추진한다",
+    "추진할 계획",
+    "추진 계획",
+    "구상",
+    "구상안",
+    "청사진",
+    "밑그림",
+    "계획",
+    "예정",
+    "검토",
+    "검토 중",
+    "기획 용역",
+    "기획용역",
+    "사업 기획",
+)
+
+_REALTIME_EXECUTION_PROOF_TERMS: tuple[str, ...] = (
+    "투자 확정",
+    "투자한다",
+    "투자했다",
+    "투자하기로",
+    "예산 확정",
+    "국비 확정",
+    "공급계약",
+    "공급 계약",
+    "계약 체결",
+    "계약을 체결",
+    "계약 확정",
+    "본계약",
+    "수주 확정",
+    "수주 계약",
+    "수주했",
+    "낙찰",
+    "우선협상대상자",
+    "사업자 선정",
+    "시공사 선정",
+    "발주",
+    "입찰 공고",
+    "입찰공고",
+    "착공",
+    "구축 착수",
+    "건설에 착수",
+    "건설을 시작",
+    "공사를 시작",
+    "준공",
+    "가동 개시",
+    "도입 확정",
+    "전면 도입",
+    "인수 완료",
+    "인수 확정",
+    "합병 계약",
+    "규제 시행",
+    "법 시행",
+    "법안 통과",
+    "발효",
+)
+
+# R4-OPS-10K-R1C — an execution noun inside an explicitly future/planning
+# phrase is not execution proof.  Examples:
+#   "내년 착공 예정"
+#   "사업자 선정 계획"
+#   "발주를 추진"
+#   "투자를 검토"
+#   "계약을 체결할 예정"
+#
+# These patterns REMOVE only the plan-qualified action phrase before the
+# execution-proof vocabulary is evaluated.  If the same title/lead contains
+# another independent confirmed action (e.g. "예산 확정, 내년 착공 예정"),
+# that confirmed evidence remains and can still qualify.
+_REALTIME_PLAN_QUALIFIED_EXECUTION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"(?:투자|발주|착공|준공|구축\s*착수|가동\s*개시|"
+        r"사업자\s*선정|시공사\s*선정|계약\s*체결|"
+        r"도입|인수|합병)"
+        r"(?:을|를)?\s*(?:할\s*)?"
+        r"(?:계획|예정|추진|검토|준비)"
+    ),
+    re.compile(
+        r"(?:투자|발주|착공|준공|구축|도입|인수|합병)"
+        r"(?:을|를)\s*"
+        r"(?:추진|검토|계획|준비)"
+    ),
+    re.compile(
+        r"(?:사업자|시공사)(?:를|를\s*)"
+        r"선정(?:할|하기로)?\s*(?:계획|예정|추진|검토)?"
+    ),
+    re.compile(
+        r"계약(?:을|을\s*)"
+        r"체결(?:할|하기로)?\s*(?:계획|예정|추진|검토)?"
+    ),
+    re.compile(
+        r"(?:입찰\s*공고|입찰공고)"
+        r"(?:를)?\s*(?:할\s*)?(?:계획|예정|추진|검토)"
+    ),
+)
+
+
+def _strip_plan_qualified_execution_phrases(text: str) -> str:
+    cleaned = text
+    for pattern in _REALTIME_PLAN_QUALIFIED_EXECUTION_PATTERNS:
+        cleaned = pattern.sub(" ", cleaned)
+    return " ".join(cleaned.split())
+
+
+def evaluate_realtime_execution_commitment_gate(
+    article: Mapping[str, Any],
+) -> tuple[bool, str, tuple[str, ...]]:
+    """Reject plan-only realtime stories without independent execution proof.
+
+    Returns ``(excluded, reason, evidence_terms)``.
+
+    The evidence zone intentionally matches the Watch editorial authority:
+    title + genuine publisher subtitle + first factual publisher snippet.
+    Generated summaries and inferred HDEC commentary can never create or
+    remove this gate.
+    """
+    evidence = _watch_executive_evidence(article)
+
+    zone = " ".join(
+        _lower(evidence.get(key))
+        for key in ("title", "subtitle", "snippet")
+        if _clean(evidence.get(key))
+    )
+
+    if not zone:
+        return False, "", ()
+
+    plan_hits = _has(f" {zone} ", _REALTIME_UNCOMMITTED_PLAN_TERMS)
+
+    if not plan_hits:
+        return False, "", ()
+
+    execution_zone = _strip_plan_qualified_execution_phrases(zone)
+    execution_hits = _has(
+        f" {execution_zone} ",
+        _REALTIME_EXECUTION_PROOF_TERMS,
+    )
+
+    if execution_hits:
+        return False, "", tuple(
+            dict.fromkeys(plan_hits + execution_hits)
+        )
+
+    return (
+        True,
+        "uncommitted_plan_without_execution_proof",
+        tuple(dict.fromkeys(plan_hits)),
+    )
+
+
 _OPINION_SECTION_MARKERS = (
     "칼럼", "오피니언", "사설", "논설", "기고", "기고문", "전문가칼럼", "시론",
     "Opinion", "Editorial", "Column", "Commentary", "Op-Ed", "OpEd",
@@ -1852,6 +2019,35 @@ def evaluate_teams_push_policy(
             article, topic, False,
             ImportanceDecision(False, reason="insufficient_executive_relevance"),
             True, False, "insufficient_hdec_relevance",
+            stock_market=stock_gate,
+            semantic_precision=semantic_precision,
+        )
+
+    # R4-OPS-10K — a major publisher and a high score do not make a
+    # policy concept / 추진 / 계획 an executive realtime material event.
+    # The article has already passed AI-centrality and executive-relevance;
+    # now require independent evidence that execution actually crossed a
+    # commitment boundary.
+    plan_only, plan_reason, _plan_evidence = (
+        evaluate_realtime_execution_commitment_gate(article)
+    )
+    if (
+        plan_only
+        and semantic_precision.semantic_class
+        in {
+            watch_semantic_precision.AI_MATERIAL_EVENT,
+            watch_semantic_precision.AI_STRONG_OBSERVATION,
+        }
+    ):
+        return TeamsPolicyEvaluation(
+            article,
+            topic,
+            hdec_relevant,
+            ImportanceDecision(False, reason=plan_reason),
+            True,
+            False,
+            "excluded_uncommitted_plan_or_strategy",
+            public_routing=public_route,
             stock_market=stock_gate,
             semantic_precision=semantic_precision,
         )
@@ -3282,8 +3478,9 @@ def render_article_email(
     text_body = "\n".join((
         f"카테고리: {category}",
         f"제목: {prefix}{title}",
+        "핵심 사실",
         *(f"• {line}" for line in context_lines),
-        *((f"Watch: {watch_text}",) if watch_text else ()),
+        *((f"확인 포인트: {watch_text}",) if watch_text else ()),
         f"발행: {source} · {published_line}",
         "",
         f"기사 원문 보기: {article_url}",
@@ -3303,7 +3500,7 @@ def render_article_email(
     )
     bullets_html = "".join(f"<li>{escaped(line)}</li>" for line in context_lines)
     watch_html = (
-        f'<p style="margin:0 0 14px;"><strong>Watch</strong><br>{escaped(watch_text)}</p>'
+        f'<p style="margin:0 0 14px;"><strong>확인 포인트</strong><br>{escaped(watch_text)}</p>'
         if watch_text
         else ""
     )
@@ -3317,6 +3514,7 @@ def render_article_email(
         f'<strong>카테고리</strong> {escaped(category)}</p>'
         f'<h2 style="font-size:22px;line-height:1.35;margin:8px 0 12px;">'
         f'{escaped(prefix + title)}</h2>'
+        f'<p style="font-size:14px;margin:0 0 6px;"><strong>핵심 사실</strong></p>'
         f'<ul style="margin:0 0 14px;padding-left:20px;">'
         f'{bullets_html}</ul>'
         f'{watch_html}'
