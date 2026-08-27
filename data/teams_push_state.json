@@ -3466,6 +3466,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "빅테크친환경외침무색aidc증설에탄소배출비상"
     },
+    "https://it.chosun.com/news/articleView.html?idxno=2023092168945": {
+      "article_id": "ea42129efa21cf8c",
+      "cluster_key": "title:엔비디아2q매출133조데이터센터사업전년117성장",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-08-27T11:18:06+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-08-27T11:18:06+09:00",
+      "normalized_url": "https://it.chosun.com/news/articleView.html?idxno=2023092168945",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "IT조선",
+      "source_tier": "specialist",
+      "title_fingerprint": "엔비디아2q매출133조데이터센터사업전년117성장"
+    },
     "https://m.ekn.kr/view.php?key=20260817026403359": {
       "article_id": "f11cd09495130d64",
       "cluster_key": "title:구미제조dna와서울청년아이디어만났다ai로봇창업까지협력",
