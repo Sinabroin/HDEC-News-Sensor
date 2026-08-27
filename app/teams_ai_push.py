@@ -3244,6 +3244,668 @@ def _watch_context_lines(context: Mapping[str, Any]) -> tuple[list[str], str]:
     return points[:3], watch_text
 
 
+
+_TEAMS_DETAIL_TERMS = (
+    "규모",
+    "사업비",
+    "투자액",
+    "용량",
+    "mw",
+    "gw",
+    "설계",
+    "조달",
+    "시공",
+    "착공",
+    "준공",
+    "가동",
+    "부지",
+    "전력",
+    "용수",
+    "발주처",
+    "사업자",
+    "파트너",
+    "공급",
+    "지역",
+    "인허가",
+)
+
+
+def _teams_fact_tokens(value: object) -> set[str]:
+    tokens: set[str] = set()
+
+    for raw in re.findall(
+        r"[0-9A-Za-z가-힣]+",
+        str(value or "").casefold(),
+    ):
+        token = raw
+
+        if len(token) > 2:
+            token = re.sub(
+                r"(으로|에서|에게|께서|까지|부터|처럼|보다|"
+                r"은|는|이|가|을|를|와|과|의|에|도|로)$",
+                "",
+                token,
+            )
+
+        if token:
+            tokens.add(token)
+
+    return tokens
+
+
+def _teams_has_new_material_detail(
+    point: str,
+    title: str,
+) -> bool:
+    point_low = point.casefold()
+    title_low = title.casefold()
+
+    point_numbers = set(
+        re.findall(
+            r"\d[\d,.]*\s*"
+            r"(?:조|억|만|천|백)?\s*"
+            r"(?:원|달러|%|mw|gw|년|월|일|개|건|명)?",
+            point_low,
+            flags=re.IGNORECASE,
+        )
+    )
+
+    title_numbers = set(
+        re.findall(
+            r"\d[\d,.]*\s*"
+            r"(?:조|억|만|천|백)?\s*"
+            r"(?:원|달러|%|mw|gw|년|월|일|개|건|명)?",
+            title_low,
+            flags=re.IGNORECASE,
+        )
+    )
+
+    if point_numbers - title_numbers:
+        return True
+
+    return any(
+        term in point_low
+        and term not in title_low
+        for term in _TEAMS_DETAIL_TERMS
+    )
+
+
+def _teams_is_title_duplicate(
+    point: str,
+    title: str,
+) -> bool:
+    point_tokens = _teams_fact_tokens(point)
+    title_tokens = _teams_fact_tokens(title)
+
+    if not point_tokens or not title_tokens:
+        return False
+
+    overlap = len(
+        point_tokens & title_tokens
+    ) / max(
+        1,
+        min(
+            len(point_tokens),
+            len(title_tokens),
+        ),
+    )
+
+    return (
+        overlap >= 0.75
+        and not _teams_has_new_material_detail(
+            point,
+            title,
+        )
+    )
+
+
+def _teams_publisher_fact_candidates(
+    article: Mapping[str, Any],
+) -> list[str]:
+    """Return bounded publisher-owned facts for Teams explanation only.
+
+    Selection authority is intentionally absent here.  Only subtitle,
+    publisher_factual_lead, and snippet are read.  Generated/legacy summary
+    text is never used.
+    """
+    output: list[str] = []
+
+    for field in (
+        "subtitle",
+        "publisher_factual_lead",
+        "snippet",
+    ):
+        value = _article_field(
+            article,
+            field,
+        )
+
+        if not _clean(value):
+            continue
+
+        parts = re.split(
+            r"(?<=[.!?。！？])\s+|\n+",
+            value,
+        )
+
+        for raw in parts:
+            point = _compact_summary(
+                raw,
+                max_chars=180,
+            )
+
+            if not point:
+                continue
+
+            tokens = _teams_fact_tokens(point)
+
+            duplicate = False
+
+            for existing in output:
+                existing_tokens = (
+                    _teams_fact_tokens(existing)
+                )
+
+                if not tokens or not existing_tokens:
+                    continue
+
+                overlap = len(
+                    tokens & existing_tokens
+                ) / max(
+                    1,
+                    min(
+                        len(tokens),
+                        len(existing_tokens),
+                    ),
+                )
+
+                if overlap >= 0.82:
+                    duplicate = True
+                    break
+
+            if duplicate:
+                continue
+
+            output.append(point)
+
+            if len(output) >= 6:
+                return output
+
+    return output
+
+
+def _teams_execution_significance(
+    article: Mapping[str, Any],
+) -> tuple[str, str]:
+    """Explain execution maturity without changing qualification.
+
+    This function is renderer-only.  The article has already passed the
+    production policy gates before render_article_email can be called.
+
+    Confirmed-event metadata is preferred.  Publisher-owned title/subtitle/
+    lead/snippet are only a bounded fallback.  Plan-qualified action phrases
+    are removed before the fallback classification.
+    """
+    excluded, _reason, _evidence = (
+        evaluate_realtime_execution_commitment_gate(
+            article
+        )
+    )
+
+    if excluded:
+        return "", ""
+
+    confirmed_values: list[str] = []
+
+    for key in (
+        "shadow_confirmed_event_types",
+        "confirmed_event_types",
+        "event_types",
+    ):
+        raw = article.get(key)
+
+        if isinstance(
+            raw,
+            (list, tuple, set),
+        ):
+            confirmed_values.extend(
+                str(value or "")
+                for value in raw
+            )
+        elif raw:
+            confirmed_values.append(
+                str(raw)
+            )
+
+    confirmed_text = " ".join(
+        confirmed_values
+    ).casefold()
+
+    publisher_text = " ".join(
+        _article_field(
+            article,
+            field,
+        )
+        for field in (
+            "title",
+            "subtitle",
+            "publisher_factual_lead",
+            "snippet",
+        )
+        if _article_field(
+            article,
+            field,
+        )
+    ).casefold()
+
+    # Renderer-side safety belt:
+    # a future/planned milestone must not become the displayed execution
+    # stage merely because another independent event made the article
+    # eligible.
+    publisher_text = re.sub(
+        r"(?:"
+        r"계약(?:을)?\s*체결|"
+        r"사업자\s*선정|"
+        r"시공사\s*선정|"
+        r"착공|"
+        r"발주|"
+        r"투자"
+        r")"
+        r"(?:할|하기로)?\s*"
+        r"(?:계획|예정|추진|검토|준비)",
+        " ",
+        publisher_text,
+    )
+
+    def confirmed_has(
+        *tokens: str,
+    ) -> bool:
+        return any(
+            token.casefold()
+            in confirmed_text
+            for token in tokens
+        )
+
+    # 1. Contract / procurement / award
+    contract_confirmed = (
+        confirmed_has(
+            "contract",
+            "award",
+            "procurement",
+            "tender",
+            "bid",
+            "operator_selected",
+            "supplier_selected",
+        )
+        or bool(
+            re.search(
+                r"(?:"
+                r"계약(?:을)?\s*체결|"
+                r"수주(?:를)?\s*(?:확정|계약|했|함)|"
+                r"낙찰|"
+                r"우선협상대상자|"
+                r"사업자\s*선정|"
+                r"시공사\s*선정|"
+                r"입찰\s*공고|"
+                r"발주(?:를|\s)?(?:확정|공고|함)"
+                r")",
+                publisher_text,
+            )
+        )
+    )
+
+    if contract_confirmed:
+        return (
+            "계약·발주 등 사업 실행 단계",
+            (
+                "계획·검토 수준을 넘어 계약·수주·발주·선정 등 "
+                "실제 사업 집행 단계가 확인된 사안으로, "
+                "AI 관련 수요가 실행 단계로 이동했다는 점이 중요함."
+            ),
+        )
+
+    # 2. Investment / budget / designation
+    investment_confirmed = (
+        confirmed_has(
+            "investment_confirmed",
+            "budget_confirmed",
+            "funding_confirmed",
+            "designation_confirmed",
+            "project_confirmed",
+        )
+        or bool(
+            re.search(
+                r"(?:"
+                r"투자(?:를|\s)?확정|"
+                r"예산(?:을|\s)?(?:확정|배정|반영)|"
+                r"국비(?:를|\s)?확보|"
+                r"지원(?:을|\s)?확정|"
+                r"사업(?:을|\s)?확정|"
+                r"지정(?:을|\s)?확정"
+                r")",
+                publisher_text,
+            )
+        )
+    )
+
+    if investment_confirmed:
+        return (
+            "투자·예산 확정 단계",
+            (
+                "투자·예산·사업 지정 등의 확정 근거가 확인돼 "
+                "단순 구상보다 실제 집행 가능성이 높아진 사안임."
+            ),
+        )
+
+    # 3. Construction / commissioning
+    construction_confirmed = (
+        confirmed_has(
+            "construction",
+            "construction_started",
+            "groundbreaking",
+            "commissioned",
+            "operation_started",
+        )
+        or bool(
+            re.search(
+                r"(?:"
+                r"착공(?:했|함|했다)|"
+                r"구축(?:에|\s)?착수|"
+                r"건설(?:에|\s)?착수|"
+                r"공사(?:를|\s)?시작|"
+                r"준공(?:했|함|됐다)|"
+                r"가동(?:을|\s)?개시"
+                r")",
+                publisher_text,
+            )
+        )
+    )
+
+    if construction_confirmed:
+        return (
+            "건설·가동 실행 단계",
+            (
+                "착공·구축 착수·준공·가동 등 물리적 실행 단계가 "
+                "확인된 사안으로, 관련 인프라 수요가 현실화됐다는 "
+                "점이 중요함."
+            ),
+        )
+
+    # 4. Deployment
+    deployment_confirmed = (
+        confirmed_has(
+            "deployment_confirmed",
+            "adoption_confirmed",
+            "rollout_confirmed",
+        )
+        or bool(
+            re.search(
+                r"(?:"
+                r"도입(?:을|\s)?확정|"
+                r"전면\s*도입|"
+                r"상용\s*배치"
+                r")",
+                publisher_text,
+            )
+        )
+    )
+
+    if deployment_confirmed:
+        return (
+            "도입 확정 단계",
+            (
+                "시험·검토가 아니라 실제 도입 결정이 확인된 사안으로, "
+                "AI 기술이 운영 단계로 이동했다는 점이 중요함."
+            ),
+        )
+
+    # 5. Regulation / legislation
+    regulation_confirmed = (
+        confirmed_has(
+            "regulation",
+            "law",
+            "policy_effective",
+            "legislation_passed",
+        )
+        or bool(
+            re.search(
+                r"(?:"
+                r"규제\s*시행|"
+                r"법\s*시행|"
+                r"법안\s*통과|"
+                r"발효"
+                r")",
+                publisher_text,
+            )
+        )
+    )
+
+    if regulation_confirmed:
+        return (
+            "정책·규제 실행 단계",
+            (
+                "정책 논의를 넘어 시행·발효 또는 법안 통과가 확인된 "
+                "사안으로, 실제 사업 환경에 영향을 줄 수 있는 단계임."
+            ),
+        )
+
+    # 6. M&A
+    ma_confirmed = (
+        confirmed_has(
+            "acquisition",
+            "merger",
+            "m&a",
+        )
+        or bool(
+            re.search(
+                r"(?:"
+                r"인수(?:를|\s)?(?:완료|확정)|"
+                r"합병\s*계약"
+                r")",
+                publisher_text,
+            )
+        )
+    )
+
+    if ma_confirmed:
+        return (
+            "인수·합병 실행 단계",
+            (
+                "인수·합병이 확정 또는 완료 단계로 이동한 사안으로, "
+                "AI 산업 경쟁구도와 공급망 변화에 영향을 줄 수 있음."
+            ),
+        )
+
+    return "", ""
+
+def _teams_executive_sections(
+    article: Mapping[str, Any],
+    context: Mapping[str, Any],
+) -> dict[str, Any]:
+    title = _article_field(
+        article,
+        "title",
+    )
+
+    context_points = [
+        _compact_summary(
+            point,
+            max_chars=180,
+        )
+        for point in (
+            context.get("fact_points") or []
+        )[:3]
+        if _clean(point)
+    ]
+
+    # Publisher-owned detail is allowed to enrich the display after the
+    # article has already qualified.  Summary/generated text remains excluded.
+    raw_points: list[str] = []
+
+    for point in (
+        *_teams_publisher_fact_candidates(article),
+        *context_points,
+    ):
+        if not point:
+            continue
+
+        point_tokens = _teams_fact_tokens(
+            point
+        )
+
+        duplicate = False
+
+        for existing in raw_points:
+            existing_tokens = (
+                _teams_fact_tokens(existing)
+            )
+
+            if not point_tokens or not existing_tokens:
+                continue
+
+            overlap = len(
+                point_tokens
+                & existing_tokens
+            ) / max(
+                1,
+                min(
+                    len(point_tokens),
+                    len(existing_tokens),
+                ),
+            )
+
+            if overlap >= 0.82:
+                duplicate = True
+                break
+
+        if duplicate:
+            continue
+
+        raw_points.append(point)
+
+        if len(raw_points) >= 6:
+            break
+
+    fact_points: list[str] = []
+
+    for point in raw_points:
+        if _teams_is_title_duplicate(
+            point,
+            title,
+        ):
+            continue
+
+        point_tokens = _teams_fact_tokens(point)
+
+        if any(
+            len(
+                point_tokens
+                & _teams_fact_tokens(existing)
+            )
+            / max(
+                1,
+                min(
+                    len(point_tokens),
+                    len(_teams_fact_tokens(existing)),
+                ),
+            )
+            >= 0.82
+            for existing in fact_points
+        ):
+            continue
+
+        fact_points.append(point)
+
+    stage, why_text = (
+        _teams_execution_significance(article)
+    )
+
+    # When the publisher evidence adds nothing beyond the headline,
+    # do not repeat the headline as a pseudo-summary. State only the
+    # evidenced execution stage when one exists.
+    if not fact_points and stage:
+        fact_points = [
+            f"실행 상태: {stage}가 기사 근거에서 확인됨."
+        ]
+
+    # Existing production contract requires at least one bounded fact row.
+    # If the event is sendable but has no execution-stage label, retain only
+    # one publisher-evidenced point rather than inventing detail.
+    if not fact_points and raw_points:
+        fact_points = [raw_points[0]]
+
+    delta = context.get("delta_vs_baseline")
+    delta = (
+        delta
+        if isinstance(delta, Mapping)
+        else {}
+    )
+
+    delta_text = (
+        _compact_summary(
+            delta.get("text"),
+            max_chars=260,
+        )
+        if (
+            delta.get("status")
+            == editorial_executive_context.SUPPORTED
+            and delta.get("text")
+        )
+        else ""
+    )
+
+    implication = context.get(
+        "hdec_implication"
+    )
+    implication = (
+        implication
+        if isinstance(implication, Mapping)
+        else {}
+    )
+
+    implication_text = (
+        _compact_summary(
+            implication.get("text"),
+            max_chars=260,
+        )
+        if (
+            implication.get("status")
+            == editorial_executive_context.SUPPORTED
+            and implication.get("text")
+        )
+        else ""
+    )
+
+    watch = context.get("watch_point")
+    watch = (
+        watch
+        if isinstance(watch, Mapping)
+        else {}
+    )
+
+    watch_text = (
+        _compact_summary(
+            watch.get("text"),
+            max_chars=200,
+        )
+        if (
+            watch.get("status")
+            == editorial_executive_context.SUPPORTED
+            and watch.get("text")
+        )
+        else ""
+    )
+
+    return {
+        "fact_points": fact_points[:3],
+        "execution_stage": stage,
+        "why_important": why_text,
+        "delta_vs_baseline": delta_text,
+        "hdec_implication": implication_text,
+        "watch_point": watch_text,
+    }
+
+
 def build_teams_article_card(
     alert: object,
     article: object,
@@ -3503,7 +4165,15 @@ def render_article_email(
         )
     title = _article_field(article, "title") or "제목 없음"
     context = _watch_executive_context(article)
-    context_lines, watch_text = _watch_context_lines(context)
+    sections = _teams_executive_sections(
+        article,
+        context,
+    )
+    fact_lines = sections["fact_points"]
+    why_text = sections["why_important"]
+    delta_text = sections["delta_vs_baseline"]
+    implication_text = sections["hdec_implication"]
+    watch_text = sections["watch_point"]
     source = _article_field(article, "source", "display_source") or "출처 미상"
     published = _fmt_kst(
         _value(article, "published_at") or _value(article, "published_kst")
@@ -3524,8 +4194,11 @@ def render_article_email(
     text_body = "\n".join((
         f"카테고리: {category}",
         f"제목: {prefix}{title}",
-        "핵심 사실",
-        *(f"• {line}" for line in context_lines),
+        "무슨 일이 있었나 · 핵심 사실",
+        *(f"• {line}" for line in fact_lines),
+        *((f"임원 판단 포인트: {why_text}",) if why_text else ()),
+        *((f"기존 대비 변화: {delta_text}",) if delta_text else ()),
+        *((f"현대건설 관점: {implication_text}",) if implication_text else ()),
         *((f"확인 포인트: {watch_text}",) if watch_text else ()),
         f"발행: {source} · {published_line}",
         "",
@@ -3541,38 +4214,141 @@ def render_article_email(
     badge_color = "#b42318" if importance.level == IMPORTANCE_TOP else "#b54708"
     badge_background = "#fef3f2" if importance.level == IMPORTANCE_TOP else "#fffaeb"
     button_style = (
-        "display:inline-block;padding:10px 14px;border-radius:6px;text-decoration:none;"
-        "font-weight:700;margin:4px 8px 4px 0;"
+        "display:inline-block;padding:9px 14px;border-radius:6px;"
+        "text-decoration:none;font-size:13px;font-weight:700;"
+        "margin:4px 8px 4px 0;"
     )
-    bullets_html = "".join(f"<li>{escaped(line)}</li>" for line in context_lines)
+
+    def context_item_html(line: str) -> str:
+        clean_line = str(line or "").strip()
+
+        if clean_line.startswith("현대건설 관점:"):
+            detail = clean_line.split(":", 1)[1].strip()
+            return (
+                '<li>'
+                '<div style="margin:12px 0 0;padding:11px 12px;'
+                'background:#F8FAFC;border-radius:8px;">'
+                '<strong style="display:block;font-size:12px;'
+                'color:#344054;margin-bottom:3px;">현대건설 관점:</strong>'
+                f'<span style="font-size:14px;color:#344054;">'
+                f'{escaped(detail)}</span></div></li>'
+            )
+
+        return (
+            '<li>'
+            '<div style="margin:0 0 9px;padding:0;'
+            'font-size:14px;line-height:1.55;color:#344054;">'
+            f'{escaped(clean_line)}</div></li>'
+        )
+
+    context_items_html = "".join(
+        context_item_html(line)
+        for line in fact_lines
+    )
+
+    why_html = (
+        '<div style="margin:12px 0 0;padding-top:11px;'
+        'border-top:1px solid #EAECF0;">'
+        '<p style="font-size:12px;color:#667085;'
+        'margin:0 0 3px;"><strong>임원 판단 포인트</strong></p>'
+        f'<p style="font-size:14px;color:#344054;'
+        f'margin:0;">{escaped(why_text)}</p>'
+        '</div>'
+        if why_text
+        else ""
+    )
+
+    delta_html = (
+        '<div style="margin:12px 0 0;">'
+        '<p style="font-size:12px;color:#667085;'
+        'margin:0 0 3px;"><strong>기존 대비 변화</strong></p>'
+        f'<p style="font-size:14px;color:#344054;'
+        f'margin:0;">{escaped(delta_text)}</p>'
+        '</div>'
+        if delta_text
+        else ""
+    )
+
+    implication_html = (
+        '<div style="margin:12px 0 0;padding:11px 12px;'
+        'background:#F8FAFC;border-radius:8px;">'
+        '<strong style="display:block;font-size:12px;'
+        'color:#344054;margin-bottom:3px;">현대건설 관점:</strong>'
+        f'<span style="font-size:14px;color:#344054;">'
+        f'{escaped(implication_text)}</span></div>'
+        if implication_text
+        else ""
+    )
+
     watch_html = (
-        f'<p style="margin:0 0 14px;"><strong>확인 포인트</strong><br>{escaped(watch_text)}</p>'
+        '<div style="margin:12px 0 0;padding-top:11px;'
+        'border-top:1px solid #EAECF0;">'
+        '<p style="font-size:12px;color:#667085;'
+        'margin:0 0 3px;"><strong>확인 포인트</strong></p>'
+        f'<p style="font-size:14px;color:#344054;'
+        f'margin:0;">{escaped(watch_text)}</p>'
+        '</div>'
         if watch_text
         else ""
     )
+
     html_body = (
-        '<div style="font-family:Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;'
-        'max-width:640px;line-height:1.55;color:#101828;">'
-        f'<span style="display:inline-block;font-size:12px;font-weight:700;color:{badge_color};'
-        f'background:{badge_background};border-radius:12px;padding:3px 8px;">'
+        '<div style="font-family:Segoe UI,Apple SD Gothic Neo,'
+        'Malgun Gothic,Arial,sans-serif;max-width:620px;'
+        'line-height:1.5;color:#101828;">'
+
+        '<div data-role="teams-executive-card-v2" '
+        'style="background:#FFFFFF;border:1px solid #D0D5DD;'
+        'border-radius:12px;padding:16px 16px 14px;">'
+
+        '<p style="font-size:14px;font-weight:700;'
+        'color:#101828;margin:0 0 12px;">'
+        'AI 경영 T&amp;I · 실시간</p>'
+
+        f'<span style="display:inline-block;font-size:11px;'
+        f'font-weight:700;color:{badge_color};'
+        f'background:{badge_background};border-radius:10px;'
+        f'padding:2px 7px;margin:0 0 8px;">'
         f'{escaped(importance_label)}</span>'
-        f'<p style="font-size:13px;color:#667085;margin:12px 0 6px;">'
-        f'<strong>카테고리</strong> {escaped(category)}</p>'
-        f'<h2 style="font-size:22px;line-height:1.35;margin:8px 0 12px;">'
+
+        f'<p style="font-size:12px;font-weight:600;'
+        f'color:#027A48;margin:0 0 6px;">'
+        f'{escaped(category)} · {escaped(source)} · '
+        f'{escaped(published_line)}</p>'
+
+        f'<h2 style="font-size:17px;line-height:1.4;'
+        f'margin:0 0 10px;color:#101828;">'
         f'{escaped(prefix + title)}</h2>'
-        f'<p style="font-size:14px;margin:0 0 6px;"><strong>핵심 사실</strong></p>'
-        f'<ul style="margin:0 0 14px;padding-left:20px;">'
-        f'{bullets_html}</ul>'
+
+        '<p style="font-size:12px;font-weight:700;'
+        'color:#667085;margin:10px 0 6px;">'
+        '<strong>무슨 일이 있었나 · 핵심 사실</strong></p>'
+
+        '<ul style="list-style:none;margin:0;padding:0;">'
+        f'{context_items_html}'
+        '</ul>'
+
+        f'{why_html}'
+        f'{delta_html}'
+        f'{implication_html}'
         f'{watch_html}'
-        f'<p style="font-size:13px;color:#667085;margin:0 0 16px;">'
-        f'{escaped(source)} · {escaped(published_line)}</p>'
-        f'<a href="{origin_href}" style="{button_style}background:#0B2F4F;color:#fff;">'
+
+        '<div style="margin-top:14px;">'
+        f'<a href="{origin_href}" '
+        f'style="{button_style}background:#FFFFFF;'
+        f'color:#101828;border:1px solid #D0D5DD;">'
         '기사 원문 보기</a>'
-        f'<a href="{dashboard_href}" style="{button_style}background:#F0F4F7;color:#0B2F4F;'
-        'border:1px solid #CCD6DE;">전체 뉴스 대시보드 보기</a>'
-        '<p style="font-size:12px;color:#667085;margin:16px 0 0;word-break:break-all;">'
-        f'기사 원문: <a href="{origin_href}">{origin_href}</a><br>'
-        f'뉴스 대시보드: <a href="{dashboard_href}">{dashboard_href}</a></p>'
+        '</div>'
+
+        '</div>'
+
+        '<p style="font-size:12px;color:#667085;'
+        'margin:8px 4px 0;">'
+        f'<a href="{dashboard_href}" '
+        'style="color:#475467;text-decoration:none;">'
+        '전체 뉴스 대시보드 보기</a>'
+        '</p>'
+
         '</div>'
     )
     return subject, text_body, html_body

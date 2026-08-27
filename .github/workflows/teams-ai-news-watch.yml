@@ -76,6 +76,7 @@ jobs:
           python3 scripts/verify_r4_ops10k_executive_materiality_depth.py
           python3 scripts/verify_r4_ops10l_product_announcement_floor.py
           python3 scripts/verify_r4_ops10m_executive_commitment_floor.py
+          python3 scripts/verify_r4_ops10o_teams_alert_ui_v2.py
           python3 scripts/verify_stock_market_hard_exclusion.py
           python3 scripts/verify_r4_ops10h_autonomous_editorial_selection.py
           python3 scripts/verify_r4_ops7_watch_production_gate.py
