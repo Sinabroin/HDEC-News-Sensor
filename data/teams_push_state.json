@@ -110,6 +110,21 @@
       "sent_at": "2026-08-17T10:11:23+09:00",
       "source": "연합뉴스"
     },
+    "166ce091a3be88b5": {
+      "cluster_key": "title:엔비디아ai칩번돈다시ai에순환금융우려에도투자확대",
+      "delivery_id": "teams_ai_push:0f49a8e25977",
+      "first_material_discovery_at": "2026-08-28T15:48:42+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-08-28T15:48:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "857a1cea00e9f21d7731f0c1a0a6e111d6334d42193b36714242a057ba247dfc",
+      "published_at": "2026-08-28T15:28:51+09:00",
+      "sent_at": "2026-08-28T15:48:42+09:00",
+      "source": "뉴시스",
+      "title": "엔비디아, AI 칩 번 돈 다시 AI 에…'순환 금융' 우려에도 투자 확대",
+      "url": "https://newsis.com/view/NISX20260828_0003767085"
+    },
     "1752d7c961111a6e": {
       "cluster_key": "title:노트북새로사도고쳐써도비싸다ai발반도체값상승영향경제뭔",
       "delivery_id": "teams_ai_push:d68aaa1a251c",
@@ -2392,6 +2407,16 @@
       "sent_at": "2026-08-18T16:59:32+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "title:엔비디아ai칩번돈다시ai에순환금융우려에도투자확대": {
+      "cluster_key": "title:엔비디아ai칩번돈다시ai에순환금융우려에도투자확대",
+      "delivery_id": "teams_ai_push:0f49a8e25977",
+      "first_sent_at": "2026-08-28T15:48:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "857a1cea00e9f21d7731f0c1a0a6e111d6334d42193b36714242a057ba247dfc",
+      "sent_at": "2026-08-28T15:48:42+09:00",
+      "source": "뉴시스"
+    },
     "title:엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
       "delivery_id": "teams_ai_push:5454b8dba79e",
@@ -3985,8 +4010,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-27T06:49:09+09:00",
-  "last_successful_send_at": "2026-08-27T06:49:09+09:00",
+  "last_normal_send_at": "2026-08-28T15:48:42+09:00",
+  "last_successful_send_at": "2026-08-28T15:48:42+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4666,6 +4691,16 @@
       "last_material_update_at": null,
       "material_signature": "3722575fb41cc0059673c7b49fc1272721fd20a015c655b0a93f27b77637ad7e",
       "sent_at": "2026-08-26T18:13:50+09:00",
+      "source": "뉴시스"
+    },
+    "https://newsis.com/view/NISX20260828_0003767085": {
+      "cluster_key": "title:엔비디아ai칩번돈다시ai에순환금융우려에도투자확대",
+      "delivery_id": "teams_ai_push:0f49a8e25977",
+      "first_sent_at": "2026-08-28T15:48:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "857a1cea00e9f21d7731f0c1a0a6e111d6334d42193b36714242a057ba247dfc",
+      "sent_at": "2026-08-28T15:48:42+09:00",
       "source": "뉴시스"
     },
     "https://sedaily.com/article/20079249": {
@@ -6349,6 +6384,16 @@
       "material_signature": "60a26b52a05d4472f1aced5244a4f4015f4b2155e7ceaf9a075b86c2c2cd16a2",
       "sent_at": "2026-08-18T16:59:32+09:00",
       "source": "미래를 보는 창 - 전자신문"
+    },
+    "엔비디아ai칩번돈다시ai에순환금융우려에도투자확대": {
+      "cluster_key": "title:엔비디아ai칩번돈다시ai에순환금융우려에도투자확대",
+      "delivery_id": "teams_ai_push:0f49a8e25977",
+      "first_sent_at": "2026-08-28T15:48:42+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "857a1cea00e9f21d7731f0c1a0a6e111d6334d42193b36714242a057ba247dfc",
+      "sent_at": "2026-08-28T15:48:42+09:00",
+      "source": "뉴시스"
     },
     "엔비디아네이버3대주주합류sk이터닉스는폭락": {
       "cluster_key": "title:엔비디아네이버3대주주합류sk이터닉스는폭락",
