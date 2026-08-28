@@ -89,7 +89,9 @@ EXPECTED_PROTECTED_SHA256 = {
         # R4-OPS-5 additionally gates the exact-domain publisher contract,
         # explicit A/B/C tiers, opinion exclusion, real-corpus replay and
         # rolling normal-card pacing before the live collection/send path.
-        "db47711c4a68e7a9e69fa6b359e6b8e43fefd6e95357dccc35dea5d2f9cdf15a"
+        # R4-OPS-10O includes the current executive Teams alert UI and
+        # selection contract.
+        "1975fe64e7e60e4cfccc53c29dea99599f16383972acc2a99117d400e2841c87"
     ),
     ".github/workflows/telegram-notify.yml": (
         # R4-R10 repoints the operator dashboard export off the sealed News Censor
