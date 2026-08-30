@@ -1,0 +1,118 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-08-30",
+  "coverage_start": "2026-08-29T07:00:00+09:00",
+  "coverage_end": "2026-08-30T06:40:00+09:00",
+  "published_run_at": "2026-08-30T09:47:26+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 491,
+      "raw_collected_count": 491,
+      "unique_collected_count": 35,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 35,
+      "ai_central_count": 1,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-08-30T09:45:57+09:00",
+      "finalization_at": "2026-08-30T09:47:26.893552+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "[만나보니] 코스포 의장 \" AI 는 국경 없는 경쟁…한국만의 규제 걷어내야...",
+  "editor_summary": "18일 연합뉴스 와의 인터뷰에서 국내 스타트업 생태계가 마주한 현실과 규제 개혁의 필요성을 주장함. 분석: AI 데이터센터 프로젝트의 발주·전력·EPC 구조가 구체화되는지 현대건설 관점에서 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "[만나보니] 코스포 의장 \" AI 는 국경 없는 경쟁…한국만의 규제 걷어내야...",
+      "summary": "18일 연합뉴스 와의 인터뷰에서 국내 스타트업 생태계가 마주한 현실과 규제 개혁의 필요성을 주장했다.... 모듈형 데이터센터 ( AI PMDC)를 아우르는 ' AI 인프라 풀스택' 기업으로 체질 전환을 시도하고 있다. 그는 \" AI 교육...",
+      "category": "투자·산업",
+      "publisher": "연합뉴스",
+      "publisher_url": "https://www.yna.co.kr/view/AKR20260829043300017",
+      "published_at": "2026-08-30T06:15:01+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "18일 연합뉴스 와의 인터뷰에서 국내 스타트업 생태계가 마주한 현실과 규제 개혁의 필요성을 주장함.",
+          "모듈형 데이터센터 ( AI PMDC)를 아우르는 ' AI 인프라 풀스택' 기업으로 체질 전환을 시도하고 있음.",
+          "그는 \" AI 교육."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 데이터센터 프로젝트의 발주·전력·EPC 구조가 구체화되는지 현대건설 관점에서 점검할 필요가 있음.",
+          "dimensions": [
+            "data_center"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "후속 프로젝트의 실제 발주·수주, 부지별 용량 및 전력 파트너 확정 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-08-30.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "affa9f6bdf656f25a402f393599bb24ae56e9aac3f0554ca67c61d5b3f080378",
+    "publication_state": "published"
+  },
+  "revision": "e383c3a6a9649ba4",
+  "edition_id": "daily-2026-08-30-e383c3a6a9649ba4",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "e383c3a6a9649ba4c9930fb582443d2d573b230cf65023692b71190819b6a625"
+  }
+}
