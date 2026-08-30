@@ -550,6 +550,21 @@
       "sent_at": "2026-08-14T17:51:55+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "7f6d9cbf16179030": {
+      "cluster_key": "title:데이터센터반대는의공작엑스가짜계정20만개차단",
+      "delivery_id": "teams_ai_push:e4d94c8db22a",
+      "first_material_discovery_at": "2026-08-30T09:49:41+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-08-30T09:49:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "db68fc182b9a60d1922a0fddf3f5bb71ef1932844438f983e79a8298cc72a5f3",
+      "published_at": "2026-08-30T09:37:03+09:00",
+      "sent_at": "2026-08-30T09:49:41+09:00",
+      "source": "아시아경제",
+      "title": "'美 데이터센터 반대'는 中의 공작?…엑스, 가짜 계정 20만개 차단",
+      "url": "https://asiae.co.kr/article/2026083009324955023"
+    },
     "80a56d3dc192b53c": {
       "cluster_key": "title:150조미래대응기금청년ai등투자양극화해소는빠졌다",
       "delivery_id": "teams_ai_push:aef3ed5efa07",
@@ -2086,6 +2101,16 @@
       "material_signature": "dc1cc50135605ccf4d26192983227eb778f72d4f70b1c82211fda28ea2532948",
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
+    },
+    "title:데이터센터반대는의공작엑스가짜계정20만개차단": {
+      "cluster_key": "title:데이터센터반대는의공작엑스가짜계정20만개차단",
+      "delivery_id": "teams_ai_push:e4d94c8db22a",
+      "first_sent_at": "2026-08-30T09:49:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "db68fc182b9a60d1922a0fddf3f5bb71ef1932844438f983e79a8298cc72a5f3",
+      "sent_at": "2026-08-30T09:49:41+09:00",
+      "source": "아시아경제"
     },
     "title:동해안데이터센터이제는제도가길을열어야한다": {
       "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
@@ -4024,8 +4049,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-28T15:48:42+09:00",
-  "last_successful_send_at": "2026-08-28T15:48:42+09:00",
+  "last_normal_send_at": "2026-08-30T09:49:41+09:00",
+  "last_successful_send_at": "2026-08-30T09:49:41+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4135,6 +4160,16 @@
       "last_material_update_at": null,
       "material_signature": "0fbff15397c82de9486975b6ab8ec92cadf7494d91e76caf6048cadf12caaca3",
       "sent_at": "2026-08-21T11:40:34+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026083009324955023": {
+      "cluster_key": "title:데이터센터반대는의공작엑스가짜계정20만개차단",
+      "delivery_id": "teams_ai_push:e4d94c8db22a",
+      "first_sent_at": "2026-08-30T09:49:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "db68fc182b9a60d1922a0fddf3f5bb71ef1932844438f983e79a8298cc72a5f3",
+      "sent_at": "2026-08-30T09:49:41+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -6068,6 +6103,16 @@
       "material_signature": "dc1cc50135605ccf4d26192983227eb778f72d4f70b1c82211fda28ea2532948",
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
+    },
+    "데이터센터반대는의공작엑스가짜계정20만개차단": {
+      "cluster_key": "title:데이터센터반대는의공작엑스가짜계정20만개차단",
+      "delivery_id": "teams_ai_push:e4d94c8db22a",
+      "first_sent_at": "2026-08-30T09:49:41+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "db68fc182b9a60d1922a0fddf3f5bb71ef1932844438f983e79a8298cc72a5f3",
+      "sent_at": "2026-08-30T09:49:41+09:00",
+      "source": "아시아경제"
     },
     "동해안데이터센터이제는제도가길을열어야한다": {
       "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
