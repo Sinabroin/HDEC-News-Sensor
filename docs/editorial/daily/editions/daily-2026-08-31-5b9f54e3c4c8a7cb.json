@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-08-31",
+  "coverage_start": "2026-08-30T07:00:00+09:00",
+  "coverage_end": "2026-08-31T06:40:00+09:00",
+  "published_run_at": "2026-08-31T09:55:39+09:00",
+  "review_mode": "empty_edition",
+  "review_decision": "absent",
+  "edition_status": "empty",
+  "article_count": 0,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 516,
+      "raw_collected_count": 516,
+      "unique_collected_count": 34,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 34,
+      "ai_central_count": 3,
+      "executive_candidate_count": 0,
+      "selected_count": 0,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-08-31T09:52:27+09:00",
+      "finalization_at": "2026-08-31T09:55:39.401120+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "",
+  "editor_summary": "오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.",
+  "articles": [],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-08-31.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "5f3508831410ccd13f7b7c09ae6a14e4902af5957194f47e3b4f884ed1d4cff4",
+    "publication_state": "published"
+  },
+  "revision": "5b9f54e3c4c8a7cb",
+  "edition_id": "daily-2026-08-31-5b9f54e3c4c8a7cb",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "5b9f54e3c4c8a7cbb718c478dca62f4c82706d2e02de58747509d7652cd4d53c"
+  }
+}
