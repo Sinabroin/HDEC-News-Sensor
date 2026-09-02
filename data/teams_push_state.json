@@ -3152,6 +3152,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "아크릴gpu국산npu통합운영소버린ax전략공개"
     },
+    "https://epnc.co.kr/news/articleView.html?idxno=406381": {
+      "article_id": "92f367ad65ce1d7c",
+      "cluster_key": "title:퀄컴드래곤윙q2390iq2390공개소비자산업용엣지ai공략",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-09-02T09:33:18+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-09-02T09:33:18+09:00",
+      "normalized_url": "https://epnc.co.kr/news/articleView.html?idxno=406381",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "테크월드",
+      "source_tier": "specialist",
+      "title_fingerprint": "퀄컴드래곤윙q2390iq2390공개소비자산업용엣지ai공략"
+    },
     "https://etnews.com/20260806000330": {
       "article_id": "718834e62668084e",
       "cluster_key": "title:통신사ai토큰배울바크다",
