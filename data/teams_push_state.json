@@ -510,6 +510,21 @@
       "sent_at": "2026-08-05T20:35:03+09:00",
       "source": "신아일보"
     },
+    "6a6bd5c082bf8dd4": {
+      "cluster_key": "title:821조수퍼예산ai에213조투입한다",
+      "delivery_id": "teams_ai_push:fbd8eb227a4c",
+      "first_material_discovery_at": "2026-09-02T18:34:59+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-02T18:34:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5da40f3a52a6ad92cbe7696f91ca46d20b29f007472854aa365ebbfa5b4f5df4",
+      "published_at": "2026-09-02T00:30:56+09:00",
+      "sent_at": "2026-09-02T18:34:59+09:00",
+      "source": "중앙일보",
+      "title": "821조 수퍼예산… AI 에 21.3조 투입한다",
+      "url": "https://joongang.co.kr/article/25458275"
+    },
     "7090202f5dcdecd6": {
       "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
       "delivery_id": "teams_ai_push:0e7d6491d9c1",
@@ -1606,6 +1621,16 @@
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
       "source": "서울경제"
+    },
+    "title:821조수퍼예산ai에213조투입한다": {
+      "cluster_key": "title:821조수퍼예산ai에213조투입한다",
+      "delivery_id": "teams_ai_push:fbd8eb227a4c",
+      "first_sent_at": "2026-09-02T18:34:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5da40f3a52a6ad92cbe7696f91ca46d20b29f007472854aa365ebbfa5b4f5df4",
+      "sent_at": "2026-09-02T18:34:59+09:00",
+      "source": "중앙일보"
     },
     "title:aidc판키우는통신3사통신이을수익원으로키운다": {
       "cluster_key": "title:aidc판키우는통신3사통신이을수익원으로키운다",
@@ -4088,8 +4113,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-02T14:04:57+09:00",
-  "last_successful_send_at": "2026-09-02T14:04:57+09:00",
+  "last_normal_send_at": "2026-09-02T18:34:59+09:00",
+  "last_successful_send_at": "2026-09-02T18:34:59+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4540,6 +4565,16 @@
       "material_signature": "67cf7db7e8415b6da0d17f2c5c7695785d3553cd410ba87ead12fa6d749c89dd",
       "sent_at": "2026-08-11T06:03:06+09:00",
       "source": "IT조선"
+    },
+    "https://joongang.co.kr/article/25458275": {
+      "cluster_key": "title:821조수퍼예산ai에213조투입한다",
+      "delivery_id": "teams_ai_push:fbd8eb227a4c",
+      "first_sent_at": "2026-09-02T18:34:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5da40f3a52a6ad92cbe7696f91ca46d20b29f007472854aa365ebbfa5b4f5df4",
+      "sent_at": "2026-09-02T18:34:59+09:00",
+      "source": "중앙일보"
     },
     "https://khan.co.kr/article/202608080600031": {
       "cluster_key": "title:노트북새로사도고쳐써도비싸다ai발반도체값상승영향경제뭔",
@@ -5642,6 +5677,16 @@
       "material_signature": "425d42311cc9fd79a70efa38a87b0aaa11c857c579e8af74c9c3f4618b17fb51",
       "sent_at": "2026-08-15T07:22:53+09:00",
       "source": "서울경제"
+    },
+    "821조수퍼예산ai에213조투입한다": {
+      "cluster_key": "title:821조수퍼예산ai에213조투입한다",
+      "delivery_id": "teams_ai_push:fbd8eb227a4c",
+      "first_sent_at": "2026-09-02T18:34:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "5da40f3a52a6ad92cbe7696f91ca46d20b29f007472854aa365ebbfa5b4f5df4",
+      "sent_at": "2026-09-02T18:34:59+09:00",
+      "source": "중앙일보"
     },
     "aidc판키우는통신3사통신이을수익원으로키운다": {
       "cluster_key": "title:aidc판키우는통신3사통신이을수익원으로키운다",
