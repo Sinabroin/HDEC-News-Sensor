@@ -880,6 +880,21 @@
       "sent_at": "2026-08-09T11:53:41+09:00",
       "source": "IT조선"
     },
+    "cb58e29f9913df44": {
+      "cluster_key": "title:한호주경제계전략적동반자관계강화핵심광물ai방산협력확",
+      "delivery_id": "teams_ai_push:59ebd02369d9",
+      "first_material_discovery_at": "2026-09-02T14:04:57+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-02T14:04:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
+      "published_at": "2026-09-02T11:03:38+09:00",
+      "sent_at": "2026-09-02T14:04:57+09:00",
+      "source": "파이낸셜뉴스",
+      "title": "한·호주 경제계, 전략적 동반자 관계 강화… 핵심광물·AI·방산협력 확...",
+      "url": "https://fnnews.com/news/202609021028324912"
+    },
     "ce38c686ed064873": {
       "cluster_key": "title:스페이스xai코딩커서품었다600억달러빅딜",
       "delivery_id": "teams_ai_push:6250681da51d",
@@ -2832,6 +2847,16 @@
       "sent_at": "2026-07-28T07:45:33+09:00",
       "source": "더벨"
     },
+    "title:한호주경제계전략적동반자관계강화핵심광물ai방산협력확": {
+      "cluster_key": "title:한호주경제계전략적동반자관계강화핵심광물ai방산협력확",
+      "delivery_id": "teams_ai_push:59ebd02369d9",
+      "first_sent_at": "2026-09-02T14:04:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
+      "sent_at": "2026-09-02T14:04:57+09:00",
+      "source": "파이낸셜뉴스"
+    },
     "title:해남군국가ai컴퓨팅센터착공ai3대강국시동": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
       "delivery_id": "teams_ai_push:f6027793a32b",
@@ -4063,8 +4088,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-08-30T09:49:41+09:00",
-  "last_successful_send_at": "2026-08-30T09:49:41+09:00",
+  "last_normal_send_at": "2026-09-02T14:04:57+09:00",
+  "last_successful_send_at": "2026-09-02T14:04:57+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4384,6 +4409,16 @@
       "last_material_update_at": null,
       "material_signature": "efa886481e2754f377b0b99fb5ceb33da0607caa5ba8f33f531105c7af42de73",
       "sent_at": "2026-08-20T04:35:37+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202609021028324912": {
+      "cluster_key": "title:한호주경제계전략적동반자관계강화핵심광물ai방산협력확",
+      "delivery_id": "teams_ai_push:59ebd02369d9",
+      "first_sent_at": "2026-09-02T14:04:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
+      "sent_at": "2026-09-02T14:04:57+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hani.co.kr/arti/economy/economy_general/1274227.html": {
@@ -6857,6 +6892,16 @@
       "material_signature": "a12018f13487cd8a3ed2c573d993c13bf2dbdd90b72a0f6c90244a74c1ad6302",
       "sent_at": "2026-07-28T07:45:33+09:00",
       "source": "더벨"
+    },
+    "한호주경제계전략적동반자관계강화핵심광물ai방산협력확": {
+      "cluster_key": "title:한호주경제계전략적동반자관계강화핵심광물ai방산협력확",
+      "delivery_id": "teams_ai_push:59ebd02369d9",
+      "first_sent_at": "2026-09-02T14:04:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
+      "sent_at": "2026-09-02T14:04:57+09:00",
+      "source": "파이낸셜뉴스"
     },
     "해남군국가ai컴퓨팅센터착공ai3대강국시동": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
