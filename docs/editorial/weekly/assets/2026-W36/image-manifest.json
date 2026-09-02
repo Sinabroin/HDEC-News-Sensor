@@ -5,7 +5,7 @@
   "article_count": 12,
   "real_article_photo_count": 12,
   "fallback_visual_count": 0,
-  "image_materialization_failed_count": 1,
+  "image_materialization_failed_count": 2,
   "image_quality_rejected_count": 2,
   "real_photo_article_ids": [
     "article-b5daebd1486069c223f7",
@@ -24,6 +24,7 @@
   "fallback_article_ids": [],
   "failure_reasons": {
     "article-f67c21862622b1158ff9": "daily_category_fallback",
+    "article-dca15b13bfb7aae03022": "daily_category_fallback",
     "article-6f3efb8ad7feebe4c925": "daily_category_fallback",
     "article-f0bbb7a7c28b1e7051bb": "daily_category_fallback"
   },
