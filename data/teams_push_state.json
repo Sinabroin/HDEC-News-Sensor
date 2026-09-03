@@ -3594,6 +3594,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "엔비디아2q매출133조데이터센터사업전년117성장"
     },
+    "https://it.chosun.com/news/articleView.html?idxno=2023092169467": {
+      "article_id": "dbb4e264bae35ba2",
+      "cluster_key": "title:에이수스ai서버넘어데이터센터구축까지ai팩토리승부",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-09-04T07:53:31+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-09-04T07:53:31+09:00",
+      "normalized_url": "https://it.chosun.com/news/articleView.html?idxno=2023092169467",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "IT조선",
+      "source_tier": "specialist",
+      "title_fingerprint": "에이수스ai서버넘어데이터센터구축까지ai팩토리승부"
+    },
     "https://m.ekn.kr/view.php?key=20260817026403359": {
       "article_id": "f11cd09495130d64",
       "cluster_key": "title:구미제조dna와서울청년아이디어만났다ai로봇창업까지협력",
