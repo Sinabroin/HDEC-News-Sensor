@@ -1,0 +1,71 @@
+name: Runtime Shadow Python CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/runtime-shadow-python-ci.yml"
+      - "app/collector.py"
+      - "app/config.py"
+      - "app/db.py"
+      - "app/insight.py"
+      - "app/runtime_*.py"
+      - "app/scoring.py"
+      - "data/mock_articles.json"
+      - "docs/architecture/d7-ak-6f-runtime-contract.md"
+      - "scripts/run_shadow_runtime.py"
+      - "scripts/verify_runtime_core.py"
+      - "scripts/verify_shadow_orchestration.py"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/runtime-shadow-python-ci.yml"
+      - "app/collector.py"
+      - "app/config.py"
+      - "app/db.py"
+      - "app/insight.py"
+      - "app/runtime_*.py"
+      - "app/scoring.py"
+      - "data/mock_articles.json"
+      - "docs/architecture/d7-ak-6f-runtime-contract.md"
+      - "scripts/run_shadow_runtime.py"
+      - "scripts/verify_runtime_core.py"
+      - "scripts/verify_shadow_orchestration.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-shadow-python-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_MODE: "mock"
+  NEWS_MODE: "mock"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  runtime-shadow-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Compile runtime and orchestration
+        run: |
+          python3 -m py_compile \
+            app/runtime_models.py \
+            app/runtime_store.py \
+            app/runtime_sqlite.py \
+            app/runtime_policy.py \
+            app/runtime_orchestrator.py \
+            scripts/import_legacy_runtime_state.py \
+            scripts/replay_runtime_policy.py \
+            scripts/run_shadow_runtime.py \
+            scripts/verify_runtime_core.py \
+            scripts/verify_shadow_orchestration.py
+      - name: Verify C1 runtime contracts
+        run: python3 scripts/verify_runtime_core.py
+      - name: Verify C2 collector shadow orchestration
+        run: python3 scripts/verify_shadow_orchestration.py

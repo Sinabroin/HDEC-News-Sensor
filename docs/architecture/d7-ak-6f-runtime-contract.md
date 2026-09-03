@@ -221,3 +221,45 @@ idempotency, claim recovery, and no-send parallel operation have passed.
 - idempotent legacy-state import;
 - zero network clients, SMTP connections, Teams sends, Telegram sends, and production
   state writes.
+
+## D7-AK-6F-C2 — collector shadow orchestration and PR CI
+
+C2 adds a **collector shadow orchestration** path that calls the repository's actual
+`app.collector.run` entrypoint, followed by the existing scoring and insight pipeline.
+The collected article rows are adapted into canonical articles and canonical initial
+events, evaluated by the C1 policy, and written to a separate SQLite shadow outbox.
+
+The shadow channel is fixed to `shadow_teams_email`. The orchestration never claims an
+outbox row and imports no Teams, SMTP, Telegram, webhook, or HTTP delivery client.
+Consequently it cannot deliver a message. The legacy production state remains read-only,
+`TEAMS_AI_NEWS_WATCH=0` remains unchanged, and the SQLite file is not production authority.
+
+### Collector boundary
+
+```text
+app.collector.run
+    -> existing collector SQLite rows
+    -> canonical article
+    -> canonical initial event/material identity
+    -> authoritative policy decision
+    -> shadow_teams_email outbox row
+    -> runtime heartbeat
+```
+
+Mock is the default and CI mode. It uses the actual collector implementation against
+`data/mock_articles.json` under an isolated collector DB. Live public-news collection
+requires a separate explicit CLI flag and still writes only to the supplied shadow DB;
+it does not authorize or execute delivery.
+
+### PR-only Python CI
+
+`.github/workflows/runtime-shadow-python-ci.yml` is an independent PR/push validation
+workflow with `contents: read`. It has no schedule, no manual dispatch, no secrets, no
+production variable writes, and no sender step. It runs:
+
+1. Python compilation for the C1/C2 runtime files;
+2. the C1 `141/0` runtime verifier;
+3. the C2 collector shadow orchestration verifier under a hard socket block.
+
+Existing production workflows are byte-identical. C2 does not edit the Teams watch,
+scheduled refresh, editorial, Pages, or sender workflows.
