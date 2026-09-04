@@ -1,0 +1,115 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-09-04",
+  "coverage_start": "2026-09-03T07:00:00+09:00",
+  "coverage_end": "2026-09-04T06:40:00+09:00",
+  "published_run_at": "2026-09-04T09:27:54+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 513,
+      "raw_collected_count": 513,
+      "unique_collected_count": 41,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 41,
+      "ai_central_count": 2,
+      "executive_candidate_count": 2,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-09-04T09:27:19+09:00",
+      "finalization_at": "2026-09-04T09:27:54.513073+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "AI 시대 전기·물 퍼먹는 데이터센터…‘가장 빠른 해법’가진 기업에 돈...",
+  "editor_summary": "김학주 한동대 AI 융합학부 교수가 AI 데이터센터 확장의 병목으로 떠오른 전력·물 부족 현상을 분석하고 송전.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "AI 시대 전기·물 퍼먹는 데이터센터…‘가장 빠른 해법’가진 기업에 돈...",
+      "summary": "김학주 한동대 AI 융합학부 교수가 AI 데이터센터 확장의 병목으로 떠오른 전력·물 부족 현상을 분석하고 송전... 기사 전문은 매일경제 신문의 프리미엄 재테크 콘텐츠 플랫폼 매경플러스에서 확인할 수 있습니다....",
+      "category": "투자·산업",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/business/12143792",
+      "published_at": "2026-09-03T18:26:49+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "김학주 한동대 AI 융합학부 교수가 AI 데이터센터 확장의 병목으로 떠오른 전력·물 부족 현상을 분석하고 송전.",
+          "기사 전문은 매일경제 신문의 프리미엄 재테크 콘텐츠 플랫폼 매경플러스에서 확인할 수 있습니다."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "not_supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "",
+          "dimensions": []
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "후속 프로젝트의 실제 발주·수주, 부지별 용량 및 전력 파트너 확정 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-09-04.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "6225221feebb2fde9b115442365051b399f1f64e7808ea025fbbf6e3c34a8c39",
+    "publication_state": "published"
+  },
+  "revision": "313b646196cc250d",
+  "edition_id": "daily-2026-09-04-313b646196cc250d",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "313b646196cc250d329b47eb195c20c6ac89b44d5ac903c410f7d9b6ef1793b6"
+  }
+}
