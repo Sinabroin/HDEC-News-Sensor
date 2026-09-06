@@ -835,6 +835,21 @@
       "sent_at": "2026-08-06T22:25:27+09:00",
       "source": "AI 인프라 디벨로퍼…‘뉴 마이웨이’ 개척자 [CEO 라운지]- 매경ECONOMY"
     },
+    "b892605c82084ff7": {
+      "cluster_key": "title:gs건설모듈러주택처럼모듈러데이터센터개발착수lgu등과",
+      "delivery_id": "teams_ai_push:abc8689dc93b",
+      "first_material_discovery_at": "2026-09-06T13:39:38+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-06T13:39:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "39dc4802bdc9491933bd89192f3c130b96e94b01f3edbbbf85e3e9089ba23bb1",
+      "published_at": "2026-09-06T13:35:00+09:00",
+      "sent_at": "2026-09-06T13:39:38+09:00",
+      "source": "KyungHyangSinmun",
+      "title": "GS건설, ‘모듈러 주택처럼’ 모듈러 데이터센터 개발 착수···LGU+ 등과...",
+      "url": "https://khan.co.kr/article/202609061335001"
+    },
     "bb346e48ccff37ac": {
       "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
       "delivery_id": "teams_ai_push:10582e020919",
@@ -1841,6 +1856,16 @@
       "material_signature": "48f0447bd35267f15bbffff1cbb1099904b4d89e9936f2e8f4479816b6b51f86",
       "sent_at": "2026-08-20T06:04:46+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "title:gs건설모듈러주택처럼모듈러데이터센터개발착수lgu등과": {
+      "cluster_key": "title:gs건설모듈러주택처럼모듈러데이터센터개발착수lgu등과",
+      "delivery_id": "teams_ai_push:abc8689dc93b",
+      "first_sent_at": "2026-09-06T13:39:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "39dc4802bdc9491933bd89192f3c130b96e94b01f3edbbbf85e3e9089ba23bb1",
+      "sent_at": "2026-09-06T13:39:38+09:00",
+      "source": "KyungHyangSinmun"
     },
     "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
@@ -4141,8 +4166,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-02T18:34:59+09:00",
-  "last_successful_send_at": "2026-09-02T18:34:59+09:00",
+  "last_normal_send_at": "2026-09-06T13:39:38+09:00",
+  "last_successful_send_at": "2026-09-06T13:39:38+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4652,6 +4677,16 @@
       "last_material_update_at": null,
       "material_signature": "8d53be5f0798d78a69618f95894de9c32df87ccfcaeaef2a59630acf335dfa23",
       "sent_at": "2026-08-21T16:26:15+09:00",
+      "source": "KyungHyangSinmun"
+    },
+    "https://khan.co.kr/article/202609061335001": {
+      "cluster_key": "title:gs건설모듈러주택처럼모듈러데이터센터개발착수lgu등과",
+      "delivery_id": "teams_ai_push:abc8689dc93b",
+      "first_sent_at": "2026-09-06T13:39:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "39dc4802bdc9491933bd89192f3c130b96e94b01f3edbbbf85e3e9089ba23bb1",
+      "sent_at": "2026-09-06T13:39:38+09:00",
       "source": "KyungHyangSinmun"
     },
     "https://mk.co.kr/news/business/12113296": {
@@ -5925,6 +5960,16 @@
       "material_signature": "48f0447bd35267f15bbffff1cbb1099904b4d89e9936f2e8f4479816b6b51f86",
       "sent_at": "2026-08-20T06:04:46+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "gs건설모듈러주택처럼모듈러데이터센터개발착수lgu등과": {
+      "cluster_key": "title:gs건설모듈러주택처럼모듈러데이터센터개발착수lgu등과",
+      "delivery_id": "teams_ai_push:abc8689dc93b",
+      "first_sent_at": "2026-09-06T13:39:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "39dc4802bdc9491933bd89192f3c130b96e94b01f3edbbbf85e3e9089ba23bb1",
+      "sent_at": "2026-09-06T13:39:38+09:00",
+      "source": "KyungHyangSinmun"
     },
     "gs그룹5글로벌인프라성과에ai유통혁신까지전방위": {
       "cluster_key": "title:gs그룹5글로벌인프라성과에ai유통혁신까지전방위",
