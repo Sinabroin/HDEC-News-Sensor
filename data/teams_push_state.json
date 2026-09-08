@@ -285,6 +285,21 @@
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
     },
+    "3bdbff791c3fee04": {
+      "cluster_key": "title:ai데이터센터가바꾼수주지도변압기이어배전기기뜬다",
+      "delivery_id": "teams_ai_push:0e603ee85c0a",
+      "first_material_discovery_at": "2026-09-08T14:13:03+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-08T14:13:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "054f176228a2043fda52408f00da9acf6fc9287008b1e44ac9715144ca91821a",
+      "published_at": "2026-09-08T14:00:01+09:00",
+      "sent_at": "2026-09-08T14:13:03+09:00",
+      "source": "아이뉴스24",
+      "title": "AI 데이터센터 가 바꾼 수주 지도…변압기 이어 ‘배전기기’ 뜬다",
+      "url": "https://inews24.com/view/2002972"
+    },
     "3c0220b68095c251": {
       "cluster_key": "title:영업익8190억포스코웃을때현대제철어닝쇼크",
       "delivery_id": "teams_ai_push:830fe42c7d3e",
@@ -1686,6 +1701,16 @@
       "material_signature": "3daaca998c56cf2c99ee9ee1bea82bfe3a070b33629628617c7c00583df37be6",
       "sent_at": "2026-08-15T18:12:58+09:00",
       "source": "아시아경제"
+    },
+    "title:ai데이터센터가바꾼수주지도변압기이어배전기기뜬다": {
+      "cluster_key": "title:ai데이터센터가바꾼수주지도변압기이어배전기기뜬다",
+      "delivery_id": "teams_ai_push:0e603ee85c0a",
+      "first_sent_at": "2026-09-08T14:13:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "054f176228a2043fda52408f00da9acf6fc9287008b1e44ac9715144ca91821a",
+      "sent_at": "2026-09-08T14:13:03+09:00",
+      "source": "아이뉴스24"
     },
     "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증": {
       "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
@@ -4166,8 +4191,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-06T13:39:38+09:00",
-  "last_successful_send_at": "2026-09-06T13:39:38+09:00",
+  "last_normal_send_at": "2026-09-08T14:13:03+09:00",
+  "last_successful_send_at": "2026-09-08T14:13:03+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4587,6 +4612,16 @@
       "last_material_update_at": null,
       "material_signature": "35abc8d3010efdf924d56fa239b3d0b931b3556bb21516544ffad4cfbd5906de",
       "sent_at": "2026-08-26T14:09:19+09:00",
+      "source": "아이뉴스24"
+    },
+    "https://inews24.com/view/2002972": {
+      "cluster_key": "title:ai데이터센터가바꾼수주지도변압기이어배전기기뜬다",
+      "delivery_id": "teams_ai_push:0e603ee85c0a",
+      "first_sent_at": "2026-09-08T14:13:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "054f176228a2043fda52408f00da9acf6fc9287008b1e44ac9715144ca91821a",
+      "sent_at": "2026-09-08T14:13:03+09:00",
       "source": "아이뉴스24"
     },
     "https://it.chosun.com/news/articleView.html?idxno=2023092167599": {
@@ -5790,6 +5825,16 @@
       "material_signature": "3daaca998c56cf2c99ee9ee1bea82bfe3a070b33629628617c7c00583df37be6",
       "sent_at": "2026-08-15T18:12:58+09:00",
       "source": "아시아경제"
+    },
+    "ai데이터센터가바꾼수주지도변압기이어배전기기뜬다": {
+      "cluster_key": "title:ai데이터센터가바꾼수주지도변압기이어배전기기뜬다",
+      "delivery_id": "teams_ai_push:0e603ee85c0a",
+      "first_sent_at": "2026-09-08T14:13:03+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "054f176228a2043fda52408f00da9acf6fc9287008b1e44ac9715144ca91821a",
+      "sent_at": "2026-09-08T14:13:03+09:00",
+      "source": "아이뉴스24"
     },
     "ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증": {
       "cluster_key": "title:ai데이터센터매출폭풍성장sk텔레콤2분기영업익673급증",
