@@ -540,6 +540,21 @@
       "title": "821조 수퍼예산… AI 에 21.3조 투입한다",
       "url": "https://joongang.co.kr/article/25458275"
     },
+    "7039b59b8583cf1d": {
+      "cluster_key": "title:퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도",
+      "delivery_id": "teams_ai_push:9135e088372b",
+      "first_material_discovery_at": "2026-09-09T03:00:06+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-09T03:00:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "08b364b161ff8833b9245c69e551a2da5100636062d83993a47167d5d8c1beed",
+      "published_at": "2026-09-09T02:30:53+09:00",
+      "sent_at": "2026-09-09T03:00:06+09:00",
+      "source": "연합뉴스",
+      "title": "퀄컴, 아마존과 80조원 차세대 AI 칩 동맹…5.4조원 신주인수권도",
+      "url": "https://yna.co.kr/view/AKR20260909004100091"
+    },
     "7090202f5dcdecd6": {
       "cluster_key": "title:딥시크가격올려도싼ai는계속된다다음수혜는휴머노이드주",
       "delivery_id": "teams_ai_push:0e7d6491d9c1",
@@ -2842,6 +2857,16 @@
       "sent_at": "2026-08-05T12:42:15+09:00",
       "source": "초이스경제"
     },
+    "title:퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도": {
+      "cluster_key": "title:퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도",
+      "delivery_id": "teams_ai_push:9135e088372b",
+      "first_sent_at": "2026-09-09T03:00:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "08b364b161ff8833b9245c69e551a2da5100636062d83993a47167d5d8c1beed",
+      "sent_at": "2026-09-09T03:00:06+09:00",
+      "source": "연합뉴스"
+    },
     "title:탱크데이논란스벅2분기적자전환외": {
       "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
       "delivery_id": "teams_ai_push:f7205365bd29",
@@ -4191,8 +4216,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-08T14:13:03+09:00",
-  "last_successful_send_at": "2026-09-08T14:13:03+09:00",
+  "last_normal_send_at": "2026-09-09T03:00:06+09:00",
+  "last_successful_send_at": "2026-09-09T03:00:06+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5673,6 +5698,16 @@
       "material_signature": "8bedf4875b9024781c0915d20e9cd99527b1f1ddd65a3d84cff8c2ad8012c178",
       "sent_at": "2026-08-20T02:57:34+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260909004100091": {
+      "cluster_key": "title:퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도",
+      "delivery_id": "teams_ai_push:9135e088372b",
+      "first_sent_at": "2026-09-09T03:00:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "08b364b161ff8833b9245c69e551a2da5100636062d83993a47167d5d8c1beed",
+      "sent_at": "2026-09-09T03:00:06+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -6975,6 +7010,16 @@
       "material_signature": "9b662acf78fa3a9602210a048813a8d06ed26d270e01a67aab9e1cd09d0ec241",
       "sent_at": "2026-08-05T12:42:15+09:00",
       "source": "초이스경제"
+    },
+    "퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도": {
+      "cluster_key": "title:퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도",
+      "delivery_id": "teams_ai_push:9135e088372b",
+      "first_sent_at": "2026-09-09T03:00:06+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "08b364b161ff8833b9245c69e551a2da5100636062d83993a47167d5d8c1beed",
+      "sent_at": "2026-09-09T03:00:06+09:00",
+      "source": "연합뉴스"
     },
     "탱크데이논란스벅2분기적자전환외": {
       "cluster_key": "title:탱크데이논란스벅2분기적자전환외",
