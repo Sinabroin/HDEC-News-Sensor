@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-09-09",
+  "coverage_start": "2026-09-08T07:00:00+09:00",
+  "coverage_end": "2026-09-09T06:40:00+09:00",
+  "published_run_at": "2026-09-09T09:43:39+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 494,
+      "raw_collected_count": 494,
+      "unique_collected_count": 30,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 30,
+      "ai_central_count": 4,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-09-09T09:39:58+09:00",
+      "finalization_at": "2026-09-09T09:43:39.738219+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "“GPU 있어도 전기 없으면 무용지물”… 데이터센터 에서 확인한 ‘진짜 ...",
+  "editor_summary": "AI 데이터센터 투자가 GPU에서 전력과 냉각 등 주변 인프라로 확산할 수밖에 없는 이유다. 분석: AI 산업거점 조성이 부지 개발과 데이터센터·에너지 기반시설 발주로 이어질 수 있어 현대건설 관점에서 산업단지 조성 및 인프라 사업화 구조를 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "“GPU 있어도 전기 없으면 무용지물”… 데이터센터 에서 확인한 ‘진짜 ...",
+      "summary": "AI 데이터센터 투자가 GPU에서 전력과 냉각 등 주변 인프라로 확산할 수밖에 없는 이유다. 전력이 몰리면... 기사 전문은 매일경제 신문의 프리미엄 재테크 콘텐츠 플랫폼 매경플러스에서 확인할 수 있습니다.",
+      "category": "투자·산업",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/it/12147375",
+      "published_at": "2026-09-08T17:56:20+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "AI 데이터센터 투자가 GPU에서 전력과 냉각 등 주변 인프라로 확산할 수밖에 없는 이유다.",
+          "전력이 몰리면.",
+          "기사 전문은 매일경제 신문의 프리미엄 재테크 콘텐츠 플랫폼 매경플러스에서 확인할 수 있습니다."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 산업거점 조성이 부지 개발과 데이터센터·에너지 기반시설 발주로 이어질 수 있어 현대건설 관점에서 산업단지 조성 및 인프라 사업화 구조를 점검할 필요가 있음.",
+          "dimensions": [
+            "data_center",
+            "power_grid",
+            "industrial_site"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "산업용지 조성 일정과 데이터센터·에너지 기반시설의 인허가·착공·조달 공고를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-09-09.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "b37e87a19b83cb67a54d663b6fabfbca8a3ef657285443a6f2e738b9d22da43a",
+    "publication_state": "published"
+  },
+  "revision": "ce543d719a4d918d",
+  "edition_id": "daily-2026-09-09-ce543d719a4d918d",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "ce543d719a4d918d68c1d9cd16ecb5e668315385ab70892812767226d05112e7"
+  }
+}
