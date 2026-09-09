@@ -300,6 +300,21 @@
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
     },
+    "387cd79770f4e8f1": {
+      "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
+      "delivery_id": "teams_ai_push:e37448f9942e",
+      "first_material_discovery_at": "2026-09-10T00:23:28+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-10T00:23:28+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
+      "published_at": "2026-09-09T23:39:04+09:00",
+      "sent_at": "2026-09-10T00:23:28+09:00",
+      "source": "서울경제",
+      "title": "구글, 핀란드 AI 인프라에 130억 유로 투자",
+      "url": "https://sedaily.com/article/20089179"
+    },
     "3bdbff791c3fee04": {
       "cluster_key": "title:ai데이터센터가바꾼수주지도변압기이어배전기기뜬다",
       "delivery_id": "teams_ai_push:0e603ee85c0a",
@@ -2091,6 +2106,16 @@
       "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
+    },
+    "title:구글핀란드ai인프라에130억유로투자": {
+      "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
+      "delivery_id": "teams_ai_push:e37448f9942e",
+      "first_sent_at": "2026-09-10T00:23:28+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
+      "sent_at": "2026-09-10T00:23:28+09:00",
+      "source": "서울경제"
     },
     "title:군웅할거ai모델자본경쟁으로선별시동": {
       "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
@@ -4242,7 +4267,7 @@
     }
   },
   "last_normal_send_at": "2026-09-09T08:24:01+09:00",
-  "last_successful_send_at": "2026-09-09T08:24:01+09:00",
+  "last_successful_send_at": "2026-09-10T00:23:28+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5082,6 +5107,16 @@
       "last_material_update_at": null,
       "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
       "sent_at": "2026-08-27T06:49:09+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20089179": {
+      "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
+      "delivery_id": "teams_ai_push:e37448f9942e",
+      "first_sent_at": "2026-09-10T00:23:28+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
+      "sent_at": "2026-09-10T00:23:28+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -6255,6 +6290,16 @@
       "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
+    },
+    "구글핀란드ai인프라에130억유로투자": {
+      "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
+      "delivery_id": "teams_ai_push:e37448f9942e",
+      "first_sent_at": "2026-09-10T00:23:28+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
+      "sent_at": "2026-09-10T00:23:28+09:00",
+      "source": "서울경제"
     },
     "군웅할거ai모델자본경쟁으로선별시동": {
       "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
