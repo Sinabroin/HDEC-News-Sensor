@@ -520,6 +520,21 @@
       "sent_at": "2026-08-06T08:07:51+09:00",
       "source": "대한경제"
     },
+    "64ab70a8af22e2a7": {
+      "cluster_key": "title:구글핀란드디지털인프라에20조투자원전과장기계약도",
+      "delivery_id": "teams_ai_push:4b2b9e7a8cbc",
+      "first_material_discovery_at": "2026-09-10T03:48:49+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-10T03:48:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "567d92e88d66af0c276997fc20bb227fb391714c6111a9962b8374ab1de31b67",
+      "published_at": "2026-09-10T02:22:22+09:00",
+      "sent_at": "2026-09-10T03:48:49+09:00",
+      "source": "연합뉴스",
+      "title": "구글, 핀란드 디지털 인프라에 20조 투자…원전과 장기 계약도(종합)",
+      "url": "https://yna.co.kr/view/AKR20260909174551098"
+    },
     "67d8faa06b353d2f": {
       "cluster_key": "title:위성곤지사kdd기업에ai실증제주제안관광에너지서협력모",
       "delivery_id": "teams_ai_push:2b139a8adf74",
@@ -2116,6 +2131,16 @@
       "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
       "sent_at": "2026-09-10T00:23:28+09:00",
       "source": "서울경제"
+    },
+    "title:구글핀란드디지털인프라에20조투자원전과장기계약도": {
+      "cluster_key": "title:구글핀란드디지털인프라에20조투자원전과장기계약도",
+      "delivery_id": "teams_ai_push:4b2b9e7a8cbc",
+      "first_sent_at": "2026-09-10T03:48:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "567d92e88d66af0c276997fc20bb227fb391714c6111a9962b8374ab1de31b67",
+      "sent_at": "2026-09-10T03:48:49+09:00",
+      "source": "연합뉴스"
     },
     "title:군웅할거ai모델자본경쟁으로선별시동": {
       "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
@@ -4266,8 +4291,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-09T08:24:01+09:00",
-  "last_successful_send_at": "2026-09-10T00:23:28+09:00",
+  "last_normal_send_at": "2026-09-10T03:48:49+09:00",
+  "last_successful_send_at": "2026-09-10T03:48:49+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5778,6 +5803,16 @@
       "material_signature": "08b364b161ff8833b9245c69e551a2da5100636062d83993a47167d5d8c1beed",
       "sent_at": "2026-09-09T03:00:06+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260909174551098": {
+      "cluster_key": "title:구글핀란드디지털인프라에20조투자원전과장기계약도",
+      "delivery_id": "teams_ai_push:4b2b9e7a8cbc",
+      "first_sent_at": "2026-09-10T03:48:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "567d92e88d66af0c276997fc20bb227fb391714c6111a9962b8374ab1de31b67",
+      "sent_at": "2026-09-10T03:48:49+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -6300,6 +6335,16 @@
       "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
       "sent_at": "2026-09-10T00:23:28+09:00",
       "source": "서울경제"
+    },
+    "구글핀란드디지털인프라에20조투자원전과장기계약도": {
+      "cluster_key": "title:구글핀란드디지털인프라에20조투자원전과장기계약도",
+      "delivery_id": "teams_ai_push:4b2b9e7a8cbc",
+      "first_sent_at": "2026-09-10T03:48:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "567d92e88d66af0c276997fc20bb227fb391714c6111a9962b8374ab1de31b67",
+      "sent_at": "2026-09-10T03:48:49+09:00",
+      "source": "연합뉴스"
     },
     "군웅할거ai모델자본경쟁으로선별시동": {
       "cluster_key": "title:군웅할거ai모델자본경쟁으로선별시동",
