@@ -1085,6 +1085,21 @@
       "sent_at": "2026-08-14T03:13:01+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
+    "dbc5b2f3492c081a": {
+      "cluster_key": "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플",
+      "delivery_id": "teams_ai_push:e776a8d84f08",
+      "first_material_discovery_at": "2026-09-11T06:12:56+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-11T06:12:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3406e2fa6ea0826b12ffe2d7328e3a104c70308aca5f437075d757f902966ac4",
+      "published_at": "2026-09-11T06:00:00+09:00",
+      "sent_at": "2026-09-11T06:12:56+09:00",
+      "source": "서울경제",
+      "title": "항공사도 반도체 수혜…대한항공, 항공화물 장기계약 3배 늘었다 [biz-플...",
+      "url": "https://sedaily.com/article/20089521"
+    },
     "dcf282f21cb86661": {
       "cluster_key": "title:ai로봇이건설현장안전책임진다현대건설롯데건설스마트안전기술확대",
       "delivery_id": "teams_ai_push:491a7d818ca9",
@@ -3057,6 +3072,16 @@
       "sent_at": "2026-09-02T14:04:57+09:00",
       "source": "파이낸셜뉴스"
     },
+    "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플": {
+      "cluster_key": "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플",
+      "delivery_id": "teams_ai_push:e776a8d84f08",
+      "first_sent_at": "2026-09-11T06:12:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3406e2fa6ea0826b12ffe2d7328e3a104c70308aca5f437075d757f902966ac4",
+      "sent_at": "2026-09-11T06:12:56+09:00",
+      "source": "서울경제"
+    },
     "title:해남군국가ai컴퓨팅센터착공ai3대강국시동": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
       "delivery_id": "teams_ai_push:f6027793a32b",
@@ -4316,8 +4341,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-10T10:20:17+09:00",
-  "last_successful_send_at": "2026-09-10T10:20:17+09:00",
+  "last_normal_send_at": "2026-09-11T06:12:56+09:00",
+  "last_successful_send_at": "2026-09-11T06:12:56+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5177,6 +5202,16 @@
       "last_material_update_at": null,
       "material_signature": "5224b20a51367ca1a48710c26fdc8523926a636655716b27ba023c72e6bde84d",
       "sent_at": "2026-09-10T00:23:28+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20089521": {
+      "cluster_key": "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플",
+      "delivery_id": "teams_ai_push:e776a8d84f08",
+      "first_sent_at": "2026-09-11T06:12:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3406e2fa6ea0826b12ffe2d7328e3a104c70308aca5f437075d757f902966ac4",
+      "sent_at": "2026-09-11T06:12:56+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -7290,6 +7325,16 @@
       "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
       "sent_at": "2026-09-02T14:04:57+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플": {
+      "cluster_key": "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플",
+      "delivery_id": "teams_ai_push:e776a8d84f08",
+      "first_sent_at": "2026-09-11T06:12:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "3406e2fa6ea0826b12ffe2d7328e3a104c70308aca5f437075d757f902966ac4",
+      "sent_at": "2026-09-11T06:12:56+09:00",
+      "source": "서울경제"
     },
     "해남군국가ai컴퓨팅센터착공ai3대강국시동": {
       "cluster_key": "title:해남군국가ai컴퓨팅센터착공ai3대강국시동",
