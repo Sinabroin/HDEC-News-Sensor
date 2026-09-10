@@ -1230,6 +1230,21 @@
       "sent_at": "2026-08-17T21:41:35+09:00",
       "source": "SBS 뉴스"
     },
+    "fcb7f818f89157db": {
+      "cluster_key": "title:데이터센터연합회한전kdn에너지aidc생태계구축협력",
+      "delivery_id": "teams_ai_push:b968a7fc7505",
+      "first_material_discovery_at": "2026-09-10T10:20:17+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-10T10:20:17+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "783ba5e37d26ee65524d42b64467ff3ab51cf33e8e17847fc942074edb6ae583",
+      "published_at": "2026-09-10T10:17:01+09:00",
+      "sent_at": "2026-09-10T10:20:17+09:00",
+      "source": "미래를 보는 창 - 전자신문",
+      "title": "데이터센터 연합회·한전KDN, 에너지 AIDC 생태계 구축 협력",
+      "url": "https://etnews.com/20260910000094"
+    },
     "ff97edecbcdcf132": {
       "cluster_key": "title:ai인프라선점의역설빅테크장기계약투자위험으로돌아오나",
       "delivery_id": "teams_ai_push:e3644ad81602",
@@ -2281,6 +2296,16 @@
       "material_signature": "db68fc182b9a60d1922a0fddf3f5bb71ef1932844438f983e79a8298cc72a5f3",
       "sent_at": "2026-08-30T09:49:41+09:00",
       "source": "아시아경제"
+    },
+    "title:데이터센터연합회한전kdn에너지aidc생태계구축협력": {
+      "cluster_key": "title:데이터센터연합회한전kdn에너지aidc생태계구축협력",
+      "delivery_id": "teams_ai_push:b968a7fc7505",
+      "first_sent_at": "2026-09-10T10:20:17+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "783ba5e37d26ee65524d42b64467ff3ab51cf33e8e17847fc942074edb6ae583",
+      "sent_at": "2026-09-10T10:20:17+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "title:동해안데이터센터이제는제도가길을열어야한다": {
       "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
@@ -4291,8 +4316,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-10T03:48:49+09:00",
-  "last_successful_send_at": "2026-09-10T03:48:49+09:00",
+  "last_normal_send_at": "2026-09-10T10:20:17+09:00",
+  "last_successful_send_at": "2026-09-10T10:20:17+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4532,6 +4557,16 @@
       "last_material_update_at": null,
       "material_signature": "60a26b52a05d4472f1aced5244a4f4015f4b2155e7ceaf9a075b86c2c2cd16a2",
       "sent_at": "2026-08-18T16:59:32+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
+    "https://etnews.com/20260910000094": {
+      "cluster_key": "title:데이터센터연합회한전kdn에너지aidc생태계구축협력",
+      "delivery_id": "teams_ai_push:b968a7fc7505",
+      "first_sent_at": "2026-09-10T10:20:17+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "783ba5e37d26ee65524d42b64467ff3ab51cf33e8e17847fc942074edb6ae583",
+      "sent_at": "2026-09-10T10:20:17+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
     "https://fnnews.com/news/202608111621114292": {
@@ -6485,6 +6520,16 @@
       "material_signature": "db68fc182b9a60d1922a0fddf3f5bb71ef1932844438f983e79a8298cc72a5f3",
       "sent_at": "2026-08-30T09:49:41+09:00",
       "source": "아시아경제"
+    },
+    "데이터센터연합회한전kdn에너지aidc생태계구축협력": {
+      "cluster_key": "title:데이터센터연합회한전kdn에너지aidc생태계구축협력",
+      "delivery_id": "teams_ai_push:b968a7fc7505",
+      "first_sent_at": "2026-09-10T10:20:17+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "783ba5e37d26ee65524d42b64467ff3ab51cf33e8e17847fc942074edb6ae583",
+      "sent_at": "2026-09-10T10:20:17+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "동해안데이터센터이제는제도가길을열어야한다": {
       "cluster_key": "title:동해안데이터센터이제는제도가길을열어야한다",
