@@ -965,6 +965,21 @@
       "sent_at": "2026-08-05T18:14:03+09:00",
       "source": "퍼블릭뉴스통신(Public news-network for TTL)"
     },
+    "bfad8d5f12b8ff12": {
+      "cluster_key": "title:ai도입뒤운영병목넘는실행전략공개nabs20269월18일개최",
+      "delivery_id": "teams_ai_push:5deadaffb987",
+      "first_material_discovery_at": "2026-09-11T08:15:54+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-11T08:15:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "258fd80e6a1e1f72b1f48e8f286267ef5026e9e27253efda51c919646a860c13",
+      "published_at": "2026-09-11T08:12:09+09:00",
+      "sent_at": "2026-09-11T08:15:54+09:00",
+      "source": "미래를 보는 창 - 전자신문",
+      "title": "AI 도입 뒤 운영 병목 넘는 실행전략 공개…'NABS 2026' 9월 18일 개최",
+      "url": "https://etnews.com/20260911000012"
+    },
     "c3cafeea5a796d56": {
       "cluster_key": "title:ai경쟁에화석연료로돌아간아마존초대형가스발전소짓는다",
       "delivery_id": "teams_ai_push:35d0fff7ebe1",
@@ -1841,6 +1856,16 @@
       "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
       "sent_at": "2026-08-06T08:07:51+09:00",
       "source": "대한경제"
+    },
+    "title:ai도입뒤운영병목넘는실행전략공개nabs20269월18일개최": {
+      "cluster_key": "title:ai도입뒤운영병목넘는실행전략공개nabs20269월18일개최",
+      "delivery_id": "teams_ai_push:5deadaffb987",
+      "first_sent_at": "2026-09-11T08:15:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "258fd80e6a1e1f72b1f48e8f286267ef5026e9e27253efda51c919646a860c13",
+      "sent_at": "2026-09-11T08:15:54+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유": {
       "cluster_key": "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유",
@@ -4341,8 +4366,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-11T06:12:56+09:00",
-  "last_successful_send_at": "2026-09-11T06:12:56+09:00",
+  "last_normal_send_at": "2026-09-11T08:15:54+09:00",
+  "last_successful_send_at": "2026-09-11T08:15:54+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4592,6 +4617,16 @@
       "last_material_update_at": null,
       "material_signature": "783ba5e37d26ee65524d42b64467ff3ab51cf33e8e17847fc942074edb6ae583",
       "sent_at": "2026-09-10T10:20:17+09:00",
+      "source": "미래를 보는 창 - 전자신문"
+    },
+    "https://etnews.com/20260911000012": {
+      "cluster_key": "title:ai도입뒤운영병목넘는실행전략공개nabs20269월18일개최",
+      "delivery_id": "teams_ai_push:5deadaffb987",
+      "first_sent_at": "2026-09-11T08:15:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "258fd80e6a1e1f72b1f48e8f286267ef5026e9e27253efda51c919646a860c13",
+      "sent_at": "2026-09-11T08:15:54+09:00",
       "source": "미래를 보는 창 - 전자신문"
     },
     "https://fnnews.com/news/202608111621114292": {
@@ -6085,6 +6120,16 @@
       "material_signature": "082f7c04d4406d12e57e2a41190a7aa8cbf8ba449335bb74226dcfb3e2cc199a",
       "sent_at": "2026-08-06T08:07:51+09:00",
       "source": "대한경제"
+    },
+    "ai도입뒤운영병목넘는실행전략공개nabs20269월18일개최": {
+      "cluster_key": "title:ai도입뒤운영병목넘는실행전략공개nabs20269월18일개최",
+      "delivery_id": "teams_ai_push:5deadaffb987",
+      "first_sent_at": "2026-09-11T08:15:54+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "258fd80e6a1e1f72b1f48e8f286267ef5026e9e27253efda51c919646a860c13",
+      "sent_at": "2026-09-11T08:15:54+09:00",
+      "source": "미래를 보는 창 - 전자신문"
     },
     "ai돌릴수록돈된다통신사가aidc에꽂힌이유": {
       "cluster_key": "title:ai돌릴수록돈된다통신사가aidc에꽂힌이유",
