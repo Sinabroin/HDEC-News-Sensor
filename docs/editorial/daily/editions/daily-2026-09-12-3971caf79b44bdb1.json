@@ -1,0 +1,118 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-09-12",
+  "coverage_start": "2026-09-11T07:00:00+09:00",
+  "coverage_end": "2026-09-12T06:40:00+09:00",
+  "published_run_at": "2026-09-12T09:43:31+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 497,
+      "raw_collected_count": 497,
+      "unique_collected_count": 34,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 34,
+      "ai_central_count": 4,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-09-12T09:40:22+09:00",
+      "finalization_at": "2026-09-12T09:43:31.516256+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "한때는 유치 경쟁 데이터센터, 이제는 건립 반대 왜",
+  "editor_summary": "AI데이터센터(AIDC)는 반도체 ·피지컬AI와 함께 정부가 추진하는 3대 메가 프로젝트 중 하나다. 분석: AI 데이터센터 프로젝트의 발주·전력·EPC 구조가 구체화되는지 현대건설 관점에서 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "한때는 유치 경쟁 데이터센터, 이제는 건립 반대 왜",
+      "summary": "AI데이터센터(AIDC)는 반도체 ·피지컬AI와 함께 정부가 추진하는 3대 메가 프로젝트 중 하나다. 지난 6월 이재명... 등에 투자 하는 내용이다.",
+      "category": "투자·산업",
+      "publisher": "중앙일보",
+      "publisher_url": "https://www.joongang.co.kr/article/25461184",
+      "published_at": "2026-09-12T00:01:01+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "AI데이터센터(AIDC)는 반도체 ·피지컬AI와 함께 정부가 추진하는 3대 메가 프로젝트 중 하나다.",
+          "지난 6월 이재명.",
+          "등에 투자 하는 내용임."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 데이터센터 프로젝트의 발주·전력·EPC 구조가 구체화되는지 현대건설 관점에서 점검할 필요가 있음.",
+          "dimensions": [
+            "data_center"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "후속 프로젝트의 실제 발주·수주, 부지별 용량 및 전력 파트너 확정 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-09-12.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "7200c4909dc0934ad3842dcfb2e4cbcbaf3a6744cc09378d7ad77a662a639d43",
+    "publication_state": "published"
+  },
+  "revision": "3971caf79b44bdb1",
+  "edition_id": "daily-2026-09-12-3971caf79b44bdb1",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "3971caf79b44bdb1b61ffa1039d21c0ca2c3f151e6cbf5027dcab688cc35ca1b"
+  }
+}
