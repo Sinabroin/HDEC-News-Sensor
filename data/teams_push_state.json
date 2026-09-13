@@ -585,6 +585,21 @@
       "title": "821조 수퍼예산… AI 에 21.3조 투입한다",
       "url": "https://joongang.co.kr/article/25458275"
     },
+    "6f736833f27d92f0": {
+      "cluster_key": "title:한화오션60mw급부유식데이터센터처음공개",
+      "delivery_id": "teams_ai_push:1afcbd7a18c0",
+      "first_material_discovery_at": "2026-09-13T10:08:21+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-13T10:08:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "83f0d6246f73e809f778d219da93afab70c0ba37c897f7b683ca899521706e0a",
+      "published_at": "2026-09-13T10:02:11+09:00",
+      "sent_at": "2026-09-13T10:08:21+09:00",
+      "source": "아시아경제",
+      "title": "한화오션, 60㎿급 부유식 데이터센터 처음 공개",
+      "url": "https://asiae.co.kr/article/2026091310021177053"
+    },
     "7039b59b8583cf1d": {
       "cluster_key": "title:퀄컴아마존과80조원차세대ai칩동맹54조원신주인수권도",
       "delivery_id": "teams_ai_push:9135e088372b",
@@ -3097,6 +3112,16 @@
       "sent_at": "2026-09-02T14:04:57+09:00",
       "source": "파이낸셜뉴스"
     },
+    "title:한화오션60mw급부유식데이터센터처음공개": {
+      "cluster_key": "title:한화오션60mw급부유식데이터센터처음공개",
+      "delivery_id": "teams_ai_push:1afcbd7a18c0",
+      "first_sent_at": "2026-09-13T10:08:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "83f0d6246f73e809f778d219da93afab70c0ba37c897f7b683ca899521706e0a",
+      "sent_at": "2026-09-13T10:08:21+09:00",
+      "source": "아시아경제"
+    },
     "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플": {
       "cluster_key": "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플",
       "delivery_id": "teams_ai_push:e776a8d84f08",
@@ -4366,8 +4391,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-11T08:15:54+09:00",
-  "last_successful_send_at": "2026-09-11T08:15:54+09:00",
+  "last_normal_send_at": "2026-09-13T10:08:21+09:00",
+  "last_successful_send_at": "2026-09-13T10:08:21+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4497,6 +4522,16 @@
       "last_material_update_at": null,
       "material_signature": "91313efea6b9b5681c1423f8dfb84ce09ecd45c4e7dd3443ec2234fb8a15d6ad",
       "sent_at": "2026-09-09T08:24:01+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026091310021177053": {
+      "cluster_key": "title:한화오션60mw급부유식데이터센터처음공개",
+      "delivery_id": "teams_ai_push:1afcbd7a18c0",
+      "first_sent_at": "2026-09-13T10:08:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "83f0d6246f73e809f778d219da93afab70c0ba37c897f7b683ca899521706e0a",
+      "sent_at": "2026-09-13T10:08:21+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -7370,6 +7405,16 @@
       "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
       "sent_at": "2026-09-02T14:04:57+09:00",
       "source": "파이낸셜뉴스"
+    },
+    "한화오션60mw급부유식데이터센터처음공개": {
+      "cluster_key": "title:한화오션60mw급부유식데이터센터처음공개",
+      "delivery_id": "teams_ai_push:1afcbd7a18c0",
+      "first_sent_at": "2026-09-13T10:08:21+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "83f0d6246f73e809f778d219da93afab70c0ba37c897f7b683ca899521706e0a",
+      "sent_at": "2026-09-13T10:08:21+09:00",
+      "source": "아시아경제"
     },
     "항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플": {
       "cluster_key": "title:항공사도반도체수혜대한항공항공화물장기계약3배늘었다biz플",
