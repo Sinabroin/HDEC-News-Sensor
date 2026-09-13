@@ -585,6 +585,21 @@
       "title": "821조 수퍼예산… AI 에 21.3조 투입한다",
       "url": "https://joongang.co.kr/article/25458275"
     },
+    "6f57dfe745245d61": {
+      "cluster_key": "title:k원전한미경제동맹의상징",
+      "delivery_id": "teams_ai_push:f799b3559c61",
+      "first_material_discovery_at": "2026-09-14T06:03:52+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-14T06:03:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "6d13bc3d5224096c918d69b045d52d44430c13025357a9818cbc6c68ab35dc0f",
+      "published_at": "2026-09-14T05:00:00+09:00",
+      "sent_at": "2026-09-14T06:03:52+09:00",
+      "source": "서울경제",
+      "title": "[열린송현] K원전, 한미 경제동맹의 상징",
+      "url": "https://sedaily.com/article/20090220"
+    },
     "6f736833f27d92f0": {
       "cluster_key": "title:한화오션60mw급부유식데이터센터처음공개",
       "delivery_id": "teams_ai_push:1afcbd7a18c0",
@@ -2051,6 +2066,16 @@
       "material_signature": "4c11052e60af012dd252bacebd72a246eb4ca6b7268de654c4623fa5eea64ad9",
       "sent_at": "2026-08-17T18:43:29+09:00",
       "source": "문화일보"
+    },
+    "title:k원전한미경제동맹의상징": {
+      "cluster_key": "title:k원전한미경제동맹의상징",
+      "delivery_id": "teams_ai_push:f799b3559c61",
+      "first_sent_at": "2026-09-14T06:03:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "6d13bc3d5224096c918d69b045d52d44430c13025357a9818cbc6c68ab35dc0f",
+      "sent_at": "2026-09-14T06:03:52+09:00",
+      "source": "서울경제"
     },
     "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까": {
       "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
@@ -4392,7 +4417,7 @@
     }
   },
   "last_normal_send_at": "2026-09-13T10:08:21+09:00",
-  "last_successful_send_at": "2026-09-13T10:08:21+09:00",
+  "last_successful_send_at": "2026-09-14T06:03:52+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5282,6 +5307,16 @@
       "last_material_update_at": null,
       "material_signature": "3406e2fa6ea0826b12ffe2d7328e3a104c70308aca5f437075d757f902966ac4",
       "sent_at": "2026-09-11T06:12:56+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20090220": {
+      "cluster_key": "title:k원전한미경제동맹의상징",
+      "delivery_id": "teams_ai_push:f799b3559c61",
+      "first_sent_at": "2026-09-14T06:03:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "6d13bc3d5224096c918d69b045d52d44430c13025357a9818cbc6c68ab35dc0f",
+      "sent_at": "2026-09-14T06:03:52+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -6335,6 +6370,16 @@
       "material_signature": "4c11052e60af012dd252bacebd72a246eb4ca6b7268de654c4623fa5eea64ad9",
       "sent_at": "2026-08-17T18:43:29+09:00",
       "source": "문화일보"
+    },
+    "k원전한미경제동맹의상징": {
+      "cluster_key": "title:k원전한미경제동맹의상징",
+      "delivery_id": "teams_ai_push:f799b3559c61",
+      "first_sent_at": "2026-09-14T06:03:52+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "6d13bc3d5224096c918d69b045d52d44430c13025357a9818cbc6c68ab35dc0f",
+      "sent_at": "2026-09-14T06:03:52+09:00",
+      "source": "서울경제"
     },
     "lgskt에도전장낸스타트업국가대표ai4파전누가웃을까": {
       "cluster_key": "title:lgskt에도전장낸스타트업국가대표ai4파전누가웃을까",
