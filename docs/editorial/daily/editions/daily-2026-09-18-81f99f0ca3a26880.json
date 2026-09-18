@@ -1,0 +1,118 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-09-18",
+  "coverage_start": "2026-09-17T07:00:00+09:00",
+  "coverage_end": "2026-09-18T06:40:00+09:00",
+  "published_run_at": "2026-09-18T09:49:50+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 533,
+      "raw_collected_count": 533,
+      "unique_collected_count": 36,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 36,
+      "ai_central_count": 2,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-09-18T09:41:01+09:00",
+      "finalization_at": "2026-09-18T09:49:50.557607+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "“ 데이터센터 , 이젠 땅보다 전력”… AI 열풍에 서울 공실률 1%",
+  "editor_summary": "최근 매일경제 와 인터뷰에서 “인공지능( AI ) 확산으로 데이터센터 의 전력 사용량이 늘면서 전력 확보 여부가 사업의 성패를 좌우하고 있다”며 이같이 말함. 분석: AI 데이터센터 경쟁이 시공을 넘어 개발·전력·운영 구조로 확장되는 흐름으로, 현대건설 관점에서 사업 발굴과 전력 파트너·EPC 참여 구조를 함께 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "“ 데이터센터 , 이젠 땅보다 전력”… AI 열풍에 서울 공실률 1%",
+      "summary": "최근 매일경제 와 인터뷰에서 “인공지능( AI ) 확산으로 데이터센터 의 전력 사용량이 늘면서 전력 확보 여부가 사업의 성패를 좌우하고 있다”며 이같이 말했다. 전력망 연결까지 2~3년이 걸리는 사업장은 대형 고객의...",
+      "category": "투자·산업",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/realestate/12155427",
+      "published_at": "2026-09-17T15:14:51+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "최근 매일경제 와 인터뷰에서 “인공지능( AI ) 확산으로 데이터센터 의 전력 사용량이 늘면서 전력 확보 여부가 사업의 성패를 좌우하고 있다”며 이같이 말함.",
+          "전력망 연결까지 2~3년이 걸리는 사업장은 대형 고객의."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 데이터센터 경쟁이 시공을 넘어 개발·전력·운영 구조로 확장되는 흐름으로, 현대건설 관점에서 사업 발굴과 전력 파트너·EPC 참여 구조를 함께 점검할 필요가 있음.",
+          "dimensions": [
+            "data_center",
+            "power_grid"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "후속 프로젝트의 실제 발주·수주, 부지별 용량 및 전력 파트너 확정 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-09-18.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "48334a33be3d69e8e9c24ca60afa2a247214acc8a2948e4f7c5917ce10f7e0f3",
+    "publication_state": "published"
+  },
+  "revision": "81f99f0ca3a26880",
+  "edition_id": "daily-2026-09-18-81f99f0ca3a26880",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "81f99f0ca3a26880c5bea90718900bcb522f4ca8cebe573cd29c74adf3d9b041"
+  }
+}
