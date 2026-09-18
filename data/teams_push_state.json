@@ -1020,6 +1020,21 @@
       "sent_at": "2026-08-09T16:28:29+09:00",
       "source": "KyungHyangSinmun"
     },
+    "c9920ee920d30f4e": {
+      "cluster_key": "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배",
+      "delivery_id": "teams_ai_push:5d22debf4f4b",
+      "first_material_discovery_at": "2026-09-18T10:38:57+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-18T10:38:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "36dbc8aabad276d334e76a5fac2b8012f17d2a4ed9f48462403ed43f0e320ac5",
+      "published_at": "2026-09-18T10:26:41+09:00",
+      "sent_at": "2026-09-18T10:38:57+09:00",
+      "source": "아이뉴스24",
+      "title": "SK하이닉스, '연산하는 메모리'로 AI 병목 푼다…\"S램보다 용량 300배\"",
+      "url": "https://inews24.com/view/2007037"
+    },
     "caba2288402c444f": {
       "cluster_key": "title:ai에이전트시대cpu승부처는ai연산인텔amd경쟁본격화",
       "delivery_id": "teams_ai_push:947023cba38c",
@@ -2126,6 +2141,16 @@
       "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
+    },
+    "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배": {
+      "cluster_key": "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배",
+      "delivery_id": "teams_ai_push:5d22debf4f4b",
+      "first_sent_at": "2026-09-18T10:38:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "36dbc8aabad276d334e76a5fac2b8012f17d2a4ed9f48462403ed43f0e320ac5",
+      "sent_at": "2026-09-18T10:38:57+09:00",
+      "source": "아이뉴스24"
     },
     "title:smr데이터센터배팅글로벌체질": {
       "cluster_key": "title:smr데이터센터배팅글로벌체질",
@@ -4416,8 +4441,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-13T10:08:21+09:00",
-  "last_successful_send_at": "2026-09-14T06:03:52+09:00",
+  "last_normal_send_at": "2026-09-18T10:38:57+09:00",
+  "last_successful_send_at": "2026-09-18T10:38:57+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4887,6 +4912,16 @@
       "last_material_update_at": null,
       "material_signature": "054f176228a2043fda52408f00da9acf6fc9287008b1e44ac9715144ca91821a",
       "sent_at": "2026-09-08T14:13:03+09:00",
+      "source": "아이뉴스24"
+    },
+    "https://inews24.com/view/2007037": {
+      "cluster_key": "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배",
+      "delivery_id": "teams_ai_push:5d22debf4f4b",
+      "first_sent_at": "2026-09-18T10:38:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "36dbc8aabad276d334e76a5fac2b8012f17d2a4ed9f48462403ed43f0e320ac5",
+      "sent_at": "2026-09-18T10:38:57+09:00",
       "source": "아이뉴스24"
     },
     "https://it.chosun.com/news/articleView.html?idxno=2023092167599": {
@@ -6430,6 +6465,16 @@
       "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
+    },
+    "sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배": {
+      "cluster_key": "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배",
+      "delivery_id": "teams_ai_push:5d22debf4f4b",
+      "first_sent_at": "2026-09-18T10:38:57+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "36dbc8aabad276d334e76a5fac2b8012f17d2a4ed9f48462403ed43f0e320ac5",
+      "sent_at": "2026-09-18T10:38:57+09:00",
+      "source": "아이뉴스24"
     },
     "smr데이터센터배팅글로벌체질": {
       "cluster_key": "title:smr데이터센터배팅글로벌체질",
