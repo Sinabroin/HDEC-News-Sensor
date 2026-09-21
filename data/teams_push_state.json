@@ -585,6 +585,21 @@
       "title": "821조 수퍼예산… AI 에 21.3조 투입한다",
       "url": "https://joongang.co.kr/article/25458275"
     },
+    "6ac6e8f2b4f74e0c": {
+      "cluster_key": "title:현대건설포항ai데이터센터pc공법활용해공기단축",
+      "delivery_id": "teams_ai_push:c76fba3bce17",
+      "first_material_discovery_at": "2026-09-21T10:39:59+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-21T10:39:59+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5628a4e57d65a76040eaf6c9cd754ffc3f69760b543f4f01851e00370d511c08",
+      "published_at": "2026-09-21T09:58:51+09:00",
+      "sent_at": "2026-09-21T10:39:59+09:00",
+      "source": "연합뉴스",
+      "title": "현대건설 \"포항 AI 데이터센터, PC공법 활용해 공기 단축\"",
+      "url": "https://yna.co.kr/view/AKR20260921049800003"
+    },
     "6f57dfe745245d61": {
       "cluster_key": "title:k원전한미경제동맹의상징",
       "delivery_id": "teams_ai_push:f799b3559c61",
@@ -3212,6 +3227,16 @@
       "sent_at": "2026-08-18T11:46:26+09:00",
       "source": "연합뉴스"
     },
+    "title:현대건설포항ai데이터센터pc공법활용해공기단축": {
+      "cluster_key": "title:현대건설포항ai데이터센터pc공법활용해공기단축",
+      "delivery_id": "teams_ai_push:c76fba3bce17",
+      "first_sent_at": "2026-09-21T10:39:59+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5628a4e57d65a76040eaf6c9cd754ffc3f69760b543f4f01851e00370d511c08",
+      "sent_at": "2026-09-21T10:39:59+09:00",
+      "source": "연합뉴스"
+    },
     "title:현대제철ai인프라승부수철강업계새성장축될까": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -4442,7 +4467,7 @@
     }
   },
   "last_normal_send_at": "2026-09-18T10:38:57+09:00",
-  "last_successful_send_at": "2026-09-18T10:38:57+09:00",
+  "last_successful_send_at": "2026-09-21T10:39:59+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -6023,6 +6048,16 @@
       "material_signature": "567d92e88d66af0c276997fc20bb227fb391714c6111a9962b8374ab1de31b67",
       "sent_at": "2026-09-10T03:48:49+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20260921049800003": {
+      "cluster_key": "title:현대건설포항ai데이터센터pc공법활용해공기단축",
+      "delivery_id": "teams_ai_push:c76fba3bce17",
+      "first_sent_at": "2026-09-21T10:39:59+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5628a4e57d65a76040eaf6c9cd754ffc3f69760b543f4f01851e00370d511c08",
+      "sent_at": "2026-09-21T10:39:59+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -7544,6 +7579,16 @@
       "last_material_update_at": null,
       "material_signature": "345cca066240d0a65acacabae5f8f44089380ff318d2318a6470c89befa7321b",
       "sent_at": "2026-08-18T11:46:26+09:00",
+      "source": "연합뉴스"
+    },
+    "현대건설포항ai데이터센터pc공법활용해공기단축": {
+      "cluster_key": "title:현대건설포항ai데이터센터pc공법활용해공기단축",
+      "delivery_id": "teams_ai_push:c76fba3bce17",
+      "first_sent_at": "2026-09-21T10:39:59+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "5628a4e57d65a76040eaf6c9cd754ffc3f69760b543f4f01851e00370d511c08",
+      "sent_at": "2026-09-21T10:39:59+09:00",
       "source": "연합뉴스"
     },
     "현대건설홀텍엔터지와걸프만smr사업협력ai데이터센터전력수요공략": {
