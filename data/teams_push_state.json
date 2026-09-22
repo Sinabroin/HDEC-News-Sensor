@@ -420,6 +420,21 @@
       "sent_at": "2026-08-22T16:07:34+09:00",
       "source": "세계일보"
     },
+    "55464131f81edce7": {
+      "cluster_key": "title:알리바바신형ai칩젠우v900공개엔비디아에정면도전",
+      "delivery_id": "teams_ai_push:cd091ff45515",
+      "first_material_discovery_at": "2026-09-22T21:07:11+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-22T21:07:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9be752d09e851ad9e1e6f434a256deaed7cde4c5eea73783379f9a17c70c1692",
+      "published_at": "2026-09-22T20:56:24+09:00",
+      "sent_at": "2026-09-22T21:07:11+09:00",
+      "source": "서울경제",
+      "title": "알리바바, 신형 AI 칩 ‘젠우 V900’ 공개…엔비디아에 정면 도전",
+      "url": "https://sedaily.com/article/20094239"
+    },
     "57863506a87ea169": {
       "cluster_key": "title:800조호남권반도체투자광주넘어전남권으로확대되나전남광",
       "delivery_id": "teams_ai_push:a73454feddc3",
@@ -2737,6 +2752,16 @@
       "sent_at": "2026-08-24T07:59:20+09:00",
       "source": "한국일보"
     },
+    "title:알리바바신형ai칩젠우v900공개엔비디아에정면도전": {
+      "cluster_key": "title:알리바바신형ai칩젠우v900공개엔비디아에정면도전",
+      "delivery_id": "teams_ai_push:cd091ff45515",
+      "first_sent_at": "2026-09-22T21:07:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9be752d09e851ad9e1e6f434a256deaed7cde4c5eea73783379f9a17c70c1692",
+      "sent_at": "2026-09-22T21:07:11+09:00",
+      "source": "서울경제"
+    },
     "title:양다리안돼한국등동맹에ai기구가입금지최후통첩": {
       "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
       "delivery_id": "teams_ai_push:ece8b1665f2f",
@@ -4494,8 +4519,8 @@
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
     }
   },
-  "last_normal_send_at": "2026-09-18T10:38:57+09:00",
-  "last_successful_send_at": "2026-09-21T10:39:59+09:00",
+  "last_normal_send_at": "2026-09-22T21:07:11+09:00",
+  "last_successful_send_at": "2026-09-22T21:07:11+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5405,6 +5430,16 @@
       "last_material_update_at": null,
       "material_signature": "6d13bc3d5224096c918d69b045d52d44430c13025357a9818cbc6c68ab35dc0f",
       "sent_at": "2026-09-14T06:03:52+09:00",
+      "source": "서울경제"
+    },
+    "https://sedaily.com/article/20094239": {
+      "cluster_key": "title:알리바바신형ai칩젠우v900공개엔비디아에정면도전",
+      "delivery_id": "teams_ai_push:cd091ff45515",
+      "first_sent_at": "2026-09-22T21:07:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9be752d09e851ad9e1e6f434a256deaed7cde4c5eea73783379f9a17c70c1692",
+      "sent_at": "2026-09-22T21:07:11+09:00",
       "source": "서울경제"
     },
     "https://segye.com/newsView/20260813519804": {
@@ -7118,6 +7153,16 @@
       "material_signature": "6a7edfa456e3f4c79b75f52ef263c0b538082326d6241a7de458514ef27a8847",
       "sent_at": "2026-08-24T07:59:20+09:00",
       "source": "한국일보"
+    },
+    "알리바바신형ai칩젠우v900공개엔비디아에정면도전": {
+      "cluster_key": "title:알리바바신형ai칩젠우v900공개엔비디아에정면도전",
+      "delivery_id": "teams_ai_push:cd091ff45515",
+      "first_sent_at": "2026-09-22T21:07:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "9be752d09e851ad9e1e6f434a256deaed7cde4c5eea73783379f9a17c70c1692",
+      "sent_at": "2026-09-22T21:07:11+09:00",
+      "source": "서울경제"
     },
     "양다리안돼한국등동맹에ai기구가입금지최후통첩": {
       "cluster_key": "title:양다리안돼한국등동맹에ai기구가입금지최후통첩",
