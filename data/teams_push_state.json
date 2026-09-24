@@ -745,6 +745,21 @@
       "sent_at": "2026-08-21T16:26:15+09:00",
       "source": "KyungHyangSinmun"
     },
+    "83088c6bf3af1b3a": {
+      "cluster_key": "ai_event:69f18fa948ea665570084233",
+      "delivery_id": "teams_ai_push:1e3ddc139e5d",
+      "first_material_discovery_at": "2026-09-24T15:00:26+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-24T15:00:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4d75befbaf5d4aec598a728dc58a6b1e1a62dbb32103389fbf6f9ad0215a9f72",
+      "published_at": "2026-09-22T06:00:00+09:00",
+      "sent_at": "2026-09-24T15:00:26+09:00",
+      "source": "세계일보",
+      "title": "현대건설, 국내 첫 AI 전용 데이터센터 착공",
+      "url": "https://segye.com/newsView/20260921516266"
+    },
     "8318ec15e0c03e51": {
       "cluster_key": "title:트럼프중국의ai암호화폐장악안돼시진핑과논의할것",
       "delivery_id": "teams_ai_push:d64cd9196c53",
@@ -1731,6 +1746,16 @@
       "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
       "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
+    },
+    "ai_event:69f18fa948ea665570084233": {
+      "cluster_key": "ai_event:69f18fa948ea665570084233",
+      "delivery_id": "teams_ai_push:1e3ddc139e5d",
+      "first_sent_at": "2026-09-24T15:00:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4d75befbaf5d4aec598a728dc58a6b1e1a62dbb32103389fbf6f9ad0215a9f72",
+      "sent_at": "2026-09-24T15:00:26+09:00",
+      "source": "세계일보"
     },
     "title:100조원미래대응기금출범단기소진끊고ai인재지방투자": {
       "cluster_key": "title:100조원미래대응기금출범단기소진끊고ai인재지방투자",
@@ -4520,7 +4545,7 @@
     }
   },
   "last_normal_send_at": "2026-09-22T21:07:11+09:00",
-  "last_successful_send_at": "2026-09-22T21:07:11+09:00",
+  "last_successful_send_at": "2026-09-24T15:00:26+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5470,6 +5495,16 @@
       "last_material_update_at": null,
       "material_signature": "9ba62ffae1c708d3671e16fd6d2ef98888661489b21409253dc523671a713a96",
       "sent_at": "2026-08-22T16:07:34+09:00",
+      "source": "세계일보"
+    },
+    "https://segye.com/newsView/20260921516266": {
+      "cluster_key": "ai_event:69f18fa948ea665570084233",
+      "delivery_id": "teams_ai_push:1e3ddc139e5d",
+      "first_sent_at": "2026-09-24T15:00:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4d75befbaf5d4aec598a728dc58a6b1e1a62dbb32103389fbf6f9ad0215a9f72",
+      "sent_at": "2026-09-24T15:00:26+09:00",
       "source": "세계일보"
     },
     "https://slownews.kr/163961": {
@@ -7643,6 +7678,16 @@
       "material_signature": "b94830ff4e5dbae32e4f6646a57b02028b37171509c35108b925fcf1034cc620",
       "sent_at": "2026-07-24T18:43:58+09:00",
       "source": "아시아투데이"
+    },
+    "현대건설국내첫ai전용데이터센터착공": {
+      "cluster_key": "ai_event:69f18fa948ea665570084233",
+      "delivery_id": "teams_ai_push:1e3ddc139e5d",
+      "first_sent_at": "2026-09-24T15:00:26+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "4d75befbaf5d4aec598a728dc58a6b1e1a62dbb32103389fbf6f9ad0215a9f72",
+      "sent_at": "2026-09-24T15:00:26+09:00",
+      "source": "세계일보"
     },
     "현대건설테라파워원전최대8기설계조달시공우선권": {
       "cluster_key": "title:현대건설테라파워원전최대8기설계조달시공우선권",
