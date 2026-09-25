@@ -4129,7 +4129,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-09-22T15:45:58+09:00",
       "holdback_reason": "specialist_automatic_fallback_removed",
-      "last_seen_at": "2026-09-25T10:38:21+09:00",
+      "last_seen_at": "2026-09-25T15:39:35+09:00",
       "normalized_url": "https://news.einfomax.co.kr/news/articleView.html?idxno=4435857",
       "replaced_by_major_media": "",
       "representative_publisher": "",
@@ -4542,6 +4542,20 @@
       "source": "대전MBC",
       "source_tier": "trusted_other",
       "title_fingerprint": "충남대네이버클라우드충남대병원중부권ai거점센터추진"
+    },
+    "https://zdnet.co.kr/view?no=20260924111254": {
+      "article_id": "07ad0945f5b998cd",
+      "cluster_key": "title:lg전자ai데이터센터냉각솔루션영토확장",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-09-25T15:39:35+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-09-25T15:39:35+09:00",
+      "normalized_url": "https://zdnet.co.kr/view?no=20260924111254",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "ZD넷 코리아",
+      "source_tier": "specialist",
+      "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
   "last_normal_send_at": "2026-09-22T21:07:11+09:00",
