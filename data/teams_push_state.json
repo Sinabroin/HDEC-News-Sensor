@@ -3997,6 +3997,20 @@
       "source_tier": "specialist",
       "title_fingerprint": "에이수스ai서버넘어데이터센터구축까지ai팩토리승부"
     },
+    "https://kjmbc.co.kr/NewsArticle/1538495": {
+      "article_id": "cbc35b46787c2e49",
+      "cluster_key": "title:삼성착공앰코걸림돌해소반도체ai중심지광주청신호",
+      "fallback_eligible": false,
+      "first_seen_at": "2026-09-26T21:30:38+09:00",
+      "holdback_reason": "holdback_active",
+      "last_seen_at": "2026-09-26T21:30:38+09:00",
+      "normalized_url": "https://kjmbc.co.kr/NewsArticle/1538495",
+      "replaced_by_major_media": "",
+      "representative_publisher": "",
+      "source": "광주MBC",
+      "source_tier": "trusted_other",
+      "title_fingerprint": "삼성착공앰코걸림돌해소반도체ai중심지광주청신호"
+    },
     "https://m.ekn.kr/view.php?key=20260817026403359": {
       "article_id": "f11cd09495130d64",
       "cluster_key": "title:구미제조dna와서울청년아이디어만났다ai로봇창업까지협력",
@@ -4129,7 +4143,7 @@
       "fallback_eligible": false,
       "first_seen_at": "2026-09-22T15:45:58+09:00",
       "holdback_reason": "specialist_automatic_fallback_removed",
-      "last_seen_at": "2026-09-26T16:38:33+09:00",
+      "last_seen_at": "2026-09-26T21:30:38+09:00",
       "normalized_url": "https://news.einfomax.co.kr/news/articleView.html?idxno=4435857",
       "replaced_by_major_media": "",
       "representative_publisher": "",
