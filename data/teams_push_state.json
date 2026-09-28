@@ -1310,6 +1310,21 @@
       "sent_at": "2026-08-14T08:56:29+09:00",
       "source": "서울경제"
     },
+    "f7a39a3dec913221": {
+      "cluster_key": "title:현대엔지니어링군산ai데이터센터수주",
+      "delivery_id": "teams_ai_push:483ce0d46f2a",
+      "first_material_discovery_at": "2026-09-29T06:14:29+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-09-29T06:14:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b2201adeaac9d9d19f1a36f69b7f4d050b909e563d75efc15aa045c2e3abbfeb",
+      "published_at": "2026-09-29T06:00:00+09:00",
+      "sent_at": "2026-09-29T06:14:29+09:00",
+      "source": "세계일보",
+      "title": "현대엔지니어링, 군산 AI 데이터센터 수주",
+      "url": "https://segye.com/newsView/20260928514619"
+    },
     "f8ce671e4a3806c6": {
       "cluster_key": "title:무디스한국성장률35로깜짝상향반도체호황계속",
       "delivery_id": "teams_ai_push:11ea3ce09418",
@@ -3287,6 +3302,16 @@
       "sent_at": "2026-09-21T10:39:59+09:00",
       "source": "연합뉴스"
     },
+    "title:현대엔지니어링군산ai데이터센터수주": {
+      "cluster_key": "title:현대엔지니어링군산ai데이터센터수주",
+      "delivery_id": "teams_ai_push:483ce0d46f2a",
+      "first_sent_at": "2026-09-29T06:14:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b2201adeaac9d9d19f1a36f69b7f4d050b909e563d75efc15aa045c2e3abbfeb",
+      "sent_at": "2026-09-29T06:14:29+09:00",
+      "source": "세계일보"
+    },
     "title:현대제철ai인프라승부수철강업계새성장축될까": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
       "delivery_id": "teams_ai_push:112fa5944011",
@@ -4573,7 +4598,7 @@
     }
   },
   "last_normal_send_at": "2026-09-22T21:07:11+09:00",
-  "last_successful_send_at": "2026-09-24T15:00:26+09:00",
+  "last_successful_send_at": "2026-09-29T06:14:29+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5533,6 +5558,16 @@
       "last_material_update_at": null,
       "material_signature": "4d75befbaf5d4aec598a728dc58a6b1e1a62dbb32103389fbf6f9ad0215a9f72",
       "sent_at": "2026-09-24T15:00:26+09:00",
+      "source": "세계일보"
+    },
+    "https://segye.com/newsView/20260928514619": {
+      "cluster_key": "title:현대엔지니어링군산ai데이터센터수주",
+      "delivery_id": "teams_ai_push:483ce0d46f2a",
+      "first_sent_at": "2026-09-29T06:14:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b2201adeaac9d9d19f1a36f69b7f4d050b909e563d75efc15aa045c2e3abbfeb",
+      "sent_at": "2026-09-29T06:14:29+09:00",
       "source": "세계일보"
     },
     "https://slownews.kr/163961": {
@@ -7746,6 +7781,16 @@
       "material_signature": "37d2a609c6632c5c49813585c701bd4b41c249c67f10d5fb1f5382b220ddf1d2",
       "sent_at": "2026-08-05T09:15:49+09:00",
       "source": "theguru.co.kr"
+    },
+    "현대엔지니어링군산ai데이터센터수주": {
+      "cluster_key": "title:현대엔지니어링군산ai데이터센터수주",
+      "delivery_id": "teams_ai_push:483ce0d46f2a",
+      "first_sent_at": "2026-09-29T06:14:29+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "b2201adeaac9d9d19f1a36f69b7f4d050b909e563d75efc15aa045c2e3abbfeb",
+      "sent_at": "2026-09-29T06:14:29+09:00",
+      "source": "세계일보"
     },
     "현대제철ai인프라승부수철강업계새성장축될까": {
       "cluster_key": "title:현대제철ai인프라승부수철강업계새성장축될까",
