@@ -1,0 +1,115 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-09-28",
+  "coverage_start": "2026-09-27T07:00:00+09:00",
+  "coverage_end": "2026-09-28T06:40:00+09:00",
+  "published_run_at": "2026-09-28T10:14:23+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 538,
+      "raw_collected_count": 538,
+      "unique_collected_count": 39,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 39,
+      "ai_central_count": 4,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-09-28T10:12:54+09:00",
+      "finalization_at": "2026-09-28T10:14:23.347109+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "이용배 현대로템 대표 “AI·테크·수소 3축으로 글로벌 수주 영토 넓힐 것”",
+  "editor_summary": "이용배 현대로템 대표 “AI· 테크.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "이용배 현대로템 대표 “AI·테크·수소 3축으로 글로벌 수주 영토 넓힐 것”",
+      "summary": "이용배 현대로템 대표 “AI· 테크. 수소 3축으로 글로벌 수주 영토 넓힐 것” 서울경제.",
+      "category": "기술정보",
+      "publisher": "서울경제",
+      "publisher_url": "https://www.sedaily.com/article/20095253",
+      "published_at": "2026-09-27T17:50:47+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "이용배 현대로템 대표 “AI· 테크.",
+          "수소 3축으로 글로벌 수주 영토 넓힐 것” 서울경제."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "not_supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "",
+          "dimensions": []
+        },
+        "watch_point": {
+          "status": "not_supported",
+          "text": ""
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-09-28.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "2e2ce6bb0d2647cc06de5849c2e0ddf58a69bbdd648a3ef1a1a0bdf9a79b5bd6",
+    "publication_state": "published"
+  },
+  "revision": "647a94c55888f6bf",
+  "edition_id": "daily-2026-09-28-647a94c55888f6bf",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "647a94c55888f6bfadc894af5ffd26a08dda92e62f16e63b417d8ecf5219e1e9"
+  }
+}
