@@ -1,0 +1,117 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-10-03",
+  "coverage_start": "2026-10-02T07:00:00+09:00",
+  "coverage_end": "2026-10-03T06:40:00+09:00",
+  "published_run_at": "2026-10-03T10:29:37+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 536,
+      "raw_collected_count": 536,
+      "unique_collected_count": 42,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 42,
+      "ai_central_count": 4,
+      "executive_candidate_count": 2,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-10-03T10:17:52+09:00",
+      "finalization_at": "2026-10-03T10:29:37.575382+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "게이머 인증서 로봇 학습 데이터로…KGeN “한국 투자 확대”",
+  "editor_summary": "피지컬 AI 학습 데이터의 전략 거점으로 삼고 국내 기업 인수까지 검토하고 나섰다. 분석: 건설 자동화·피지컬 AI의 현장 적용 범위와 생산성 검증이 현대건설의 기술 경쟁력에 미칠 영향을 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "게이머 인증서 로봇 학습 데이터로…KGeN “한국 투자 확대”",
+      "summary": "피지컬 AI 학습 데이터의 전략 거점으로 삼고 국내 기업 인수까지 검토하고 나섰다. 마니쉬 아가왈 KGeN 공동창업자 겸 최고경영자(CEO)는 지난 28일 방한해 매일경제 와 만나 “이제 한국에 투자 하고 운영팀을 고용하고...",
+      "category": "기술정보",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/stock/12166806",
+      "published_at": "2026-10-02T09:07:31+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "피지컬 AI 학습 데이터의 전략 거점으로 삼고 국내 기업 인수까지 검토하고 나섰다.",
+          "마니쉬 아가왈 KGeN 공동창업자 겸 최고경영자(CEO)는 지난 28일 방한해 매일경제 와 만나 “이제 한국에 투자 하고 운영팀을 고용하고."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "건설 자동화·피지컬 AI의 현장 적용 범위와 생산성 검증이 현대건설의 기술 경쟁력에 미칠 영향을 점검할 필요가 있음.",
+          "dimensions": [
+            "automation_physical_ai"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "현장 실증 범위와 생산성·안전 지표, 상용 배치 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-10-03.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "9670cec2bdf773e52e5e18832ad39b32bf0012db3006b145f2e1d278143d3032",
+    "publication_state": "published"
+  },
+  "revision": "9ef4629fd32448e8",
+  "edition_id": "daily-2026-10-03-9ef4629fd32448e8",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "9ef4629fd32448e8668947f2c7edb1442cefb0e154429f07674f17fc40a1fd16"
+  }
+}
