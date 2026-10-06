@@ -1,0 +1,115 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-10-06",
+  "coverage_start": "2026-10-05T07:00:00+09:00",
+  "coverage_end": "2026-10-06T06:40:00+09:00",
+  "published_run_at": "2026-10-06T11:32:24+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 532,
+      "raw_collected_count": 532,
+      "unique_collected_count": 40,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 40,
+      "ai_central_count": 2,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-10-06T11:24:10+09:00",
+      "finalization_at": "2026-10-06T11:32:24.209048+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "전기 없어 AI 놀릴 판…빅테크, 177조 ‘자가발전’ 판 벌렸다 [GMC]",
+  "editor_summary": "최근 AI 데이터센터 의 전력난이 심해지면서 빅테크들이 아예 데이터센터 부지 안에 발전설비를 짓기.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "전기 없어 AI 놀릴 판…빅테크, 177조 ‘자가발전’ 판 벌렸다 [GMC]",
+      "summary": "최근 AI 데이터센터 의 전력난이 심해지면서 빅테크들이 아예 데이터센터 부지 안에 발전설비를 짓기... ☞글로벌머니클럽(GMC)= 중앙일보 가 블룸버그와 함께 만드는 미국 주식 정보 플랫폼입니다. 글로벌머니클럽...",
+      "category": "투자·산업",
+      "publisher": "중앙일보",
+      "publisher_url": "https://www.joongang.co.kr/article/25467169",
+      "published_at": "2026-10-05T11:21:04+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "최근 AI 데이터센터 의 전력난이 심해지면서 빅테크들이 아예 데이터센터 부지 안에 발전설비를 짓기.",
+          "☞글로벌머니클럽(GMC)= 중앙일보 가 블룸버그와 함께 만드는 미국 주식 정보 플랫폼입니다."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "not_supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "",
+          "dimensions": []
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "산업용지 조성 일정과 데이터센터·에너지 기반시설의 인허가·착공·조달 공고를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-10-06.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "ea19325f67138c77b598ca8b40a1945747c2b080118fec60e7adfbbdf35d732a",
+    "publication_state": "published"
+  },
+  "revision": "9e40d749b383c89f",
+  "edition_id": "daily-2026-10-06-9e40d749b383c89f",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "9e40d749b383c89ff98e89568773f8801058e82e554b0b00d7ecd7877da2e2a9"
+  }
+}
