@@ -5,7 +5,7 @@
   "article_count": 12,
   "real_article_photo_count": 12,
   "fallback_visual_count": 0,
-  "image_materialization_failed_count": 1,
+  "image_materialization_failed_count": 0,
   "image_quality_rejected_count": 1,
   "real_photo_article_ids": [
     "article-38d30fa551164cac1d6f",
@@ -17,14 +17,13 @@
     "article-1fb0600131a77fd4ad26",
     "article-5b56867d4e967906f7e2",
     "article-a9891b8e6e57a6d99bac",
+    "article-6c4f01531f433196056d",
     "article-315e9e7836e785cfa35e",
-    "article-003f9328bd2d511424c7",
-    "article-676beb8c2ab8891a4892"
+    "article-003f9328bd2d511424c7"
   ],
   "fallback_article_ids": [],
   "failure_reasons": {
-    "article-3fb69937f7f3deeb54b4": "daily_category_fallback",
-    "article-6c4f01531f433196056d": "daily_category_fallback"
+    "article-3fb69937f7f3deeb54b4": "daily_category_fallback"
   },
   "publication_image_assets": [
     {
@@ -100,6 +99,14 @@
       "image_source_kind": "body_image"
     },
     {
+      "article_id": "article-6c4f01531f433196056d",
+      "relative_path": "editorial/weekly/assets/2026-W41/57659154f850484b5cefb44a.jpg",
+      "sha256": "57659154f850484b5cefb44ae8b8ff1e47fd1ba3b13992489ccdcf7529c55d33",
+      "byte_size": 185314,
+      "content_type": "image/jpeg",
+      "image_source_kind": "og_image"
+    },
+    {
       "article_id": "article-315e9e7836e785cfa35e",
       "relative_path": "editorial/weekly/assets/2026-W41/daa1e51a8a42b424fd816b90.png",
       "sha256": "daa1e51a8a42b424fd816b906fc4d21fff33c612d71443eee6cd0def91e210ce",
@@ -114,14 +121,6 @@
       "byte_size": 273821,
       "content_type": "image/jpeg",
       "image_source_kind": "og_image"
-    },
-    {
-      "article_id": "article-676beb8c2ab8891a4892",
-      "relative_path": "editorial/weekly/assets/2026-W41/5bb1c83e1a7adc2571ababdd.jpg",
-      "sha256": "5bb1c83e1a7adc2571ababdd1e8be095dd2dd5ad1e69d004b4c6eb57f2005d21",
-      "byte_size": 112972,
-      "content_type": "image/jpeg",
-      "image_source_kind": "body_image"
     }
   ]
 }
