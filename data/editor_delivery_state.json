@@ -1022,6 +1022,30 @@
       "smtp_code": 250
     }
   ],
-  "delivery_claims": {},
+  "delivery_claims": {
+    "2026-10-09": {
+      "review_snapshot_id": "review-2026-10-09-c35cef817bdd764a",
+      "edition_key": "2026-10-09",
+      "editor_public_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/review/snapshots/review-2026-10-09-c35cef817bdd764a/index.html",
+      "manifest_sha256": "165f6a82e97bc3f81257e228d6b8fa4b18e401ff2b315278df01b7d5c0c0cbfb",
+      "generated": true,
+      "published": true,
+      "public_verified": true,
+      "claimed": true,
+      "sent": false,
+      "duplicate_skipped": false,
+      "failed": false,
+      "claim_owner": "github-run:37873875540:attempt:1",
+      "claimed_at": "2026-10-09T11:22:18+09:00",
+      "delivery_status": "claimed",
+      "transport_armed": false,
+      "transport_armed_at": null,
+      "ambiguous_detected_at": null,
+      "rejected_at": null,
+      "smtp_status": "not_attempted",
+      "smtp_code": null,
+      "reconciliation_required": false
+    }
+  },
   "reconciliation_history": []
 }
