@@ -475,6 +475,21 @@
       "sent_at": "2026-08-12T06:17:21+09:00",
       "source": "KyungHyangSinmun"
     },
+    "5bdf37aeb1258458": {
+      "cluster_key": "title:대표얼굴빼닮은휴머노이드공개갤럭시코퍼레이션실패해도다시",
+      "delivery_id": "teams_ai_push:b7a6eeb0f41d",
+      "first_material_discovery_at": "2026-10-14T16:17:11+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-14T16:17:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "408991a9ae1850b0bcd90621a6667a233f106ee4f3b59567b4c471b838974a9a",
+      "published_at": "2026-10-14T13:40:22+09:00",
+      "sent_at": "2026-10-14T16:17:11+09:00",
+      "source": "매일경제",
+      "title": "대표 얼굴 빼닮은 휴머노이드 공개…갤럭시코퍼레이션, “실패해도 다시...",
+      "url": "https://mk.co.kr/news/culture/12175499"
+    },
     "5ffa9f633bcae8ad": {
       "cluster_key": "title:ai인프라주목엔비디아전력업체랜시움에4조투자",
       "delivery_id": "teams_ai_push:797208ad3705",
@@ -2476,6 +2491,16 @@
       "material_signature": "dc1cc50135605ccf4d26192983227eb778f72d4f70b1c82211fda28ea2532948",
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
+    },
+    "title:대표얼굴빼닮은휴머노이드공개갤럭시코퍼레이션실패해도다시": {
+      "cluster_key": "title:대표얼굴빼닮은휴머노이드공개갤럭시코퍼레이션실패해도다시",
+      "delivery_id": "teams_ai_push:b7a6eeb0f41d",
+      "first_sent_at": "2026-10-14T16:17:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "408991a9ae1850b0bcd90621a6667a233f106ee4f3b59567b4c471b838974a9a",
+      "sent_at": "2026-10-14T16:17:11+09:00",
+      "source": "매일경제"
     },
     "title:데이터센터반대는의공작엑스가짜계정20만개차단": {
       "cluster_key": "title:데이터센터반대는의공작엑스가짜계정20만개차단",
@@ -4636,8 +4661,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-03T07:59:31+09:00",
-  "last_successful_send_at": "2026-10-03T07:59:31+09:00",
+  "last_normal_send_at": "2026-10-14T16:17:11+09:00",
+  "last_successful_send_at": "2026-10-14T16:17:11+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5257,6 +5282,16 @@
       "last_material_update_at": null,
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
+      "source": "매일경제"
+    },
+    "https://mk.co.kr/news/culture/12175499": {
+      "cluster_key": "title:대표얼굴빼닮은휴머노이드공개갤럭시코퍼레이션실패해도다시",
+      "delivery_id": "teams_ai_push:b7a6eeb0f41d",
+      "first_sent_at": "2026-10-14T16:17:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "408991a9ae1850b0bcd90621a6667a233f106ee4f3b59567b4c471b838974a9a",
+      "sent_at": "2026-10-14T16:17:11+09:00",
       "source": "매일경제"
     },
     "https://munhwa.com/article/11609935": {
@@ -6960,6 +6995,16 @@
       "material_signature": "dc1cc50135605ccf4d26192983227eb778f72d4f70b1c82211fda28ea2532948",
       "sent_at": "2026-07-29T12:34:37+09:00",
       "source": "biz.sbs.co.kr"
+    },
+    "대표얼굴빼닮은휴머노이드공개갤럭시코퍼레이션실패해도다시": {
+      "cluster_key": "title:대표얼굴빼닮은휴머노이드공개갤럭시코퍼레이션실패해도다시",
+      "delivery_id": "teams_ai_push:b7a6eeb0f41d",
+      "first_sent_at": "2026-10-14T16:17:11+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "408991a9ae1850b0bcd90621a6667a233f106ee4f3b59567b4c471b838974a9a",
+      "sent_at": "2026-10-14T16:17:11+09:00",
+      "source": "매일경제"
     },
     "데이터센터반대는의공작엑스가짜계정20만개차단": {
       "cluster_key": "title:데이터센터반대는의공작엑스가짜계정20만개차단",
