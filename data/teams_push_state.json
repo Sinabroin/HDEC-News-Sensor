@@ -155,6 +155,21 @@
       "sent_at": "2026-08-03T20:02:23+09:00",
       "source": "뉴스투데이"
     },
+    "1ed35d5f2987aeca": {
+      "cluster_key": "title:구글차세대저전력ai칩공개웨어러블기기정조준",
+      "delivery_id": "teams_ai_push:42f2293eb031",
+      "first_material_discovery_at": "2026-10-15T13:31:30+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-15T13:31:30+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c8c4cd1de2ca15941c12d38ab08f935ac22194abfde860614eab902b2d53153a",
+      "published_at": "2026-10-15T10:49:27+09:00",
+      "sent_at": "2026-10-15T13:31:30+09:00",
+      "source": "SBS 뉴스",
+      "title": "구글, 차세대 저 전력 AI칩 공개…웨어러블 기기 정조준",
+      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008798850"
+    },
     "20b231647e65eac4": {
       "cluster_key": "title:주택부진씻어낼12조판돈gs건설동해ai데이터센터잭팟노린다",
       "delivery_id": "teams_ai_push:4698e856f96a",
@@ -2341,6 +2356,16 @@
       "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
+    },
+    "title:구글차세대저전력ai칩공개웨어러블기기정조준": {
+      "cluster_key": "title:구글차세대저전력ai칩공개웨어러블기기정조준",
+      "delivery_id": "teams_ai_push:42f2293eb031",
+      "first_sent_at": "2026-10-15T13:31:30+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c8c4cd1de2ca15941c12d38ab08f935ac22194abfde860614eab902b2d53153a",
+      "sent_at": "2026-10-15T13:31:30+09:00",
+      "source": "SBS 뉴스"
     },
     "title:구글핀란드ai인프라에130억유로투자": {
       "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
@@ -4661,8 +4686,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-14T16:17:11+09:00",
-  "last_successful_send_at": "2026-10-14T16:17:11+09:00",
+  "last_normal_send_at": "2026-10-15T13:31:30+09:00",
+  "last_successful_send_at": "2026-10-15T13:31:30+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5372,6 +5397,16 @@
       "last_material_update_at": null,
       "material_signature": "a95834d7d35ce7fae4ea75993b6717f2a048649206a0ad71c92c3651f46793d6",
       "sent_at": "2026-08-26T12:43:17+09:00",
+      "source": "SBS 뉴스"
+    },
+    "https://news.sbs.co.kr/news/endPage.do?news_id=N1008798850": {
+      "cluster_key": "title:구글차세대저전력ai칩공개웨어러블기기정조준",
+      "delivery_id": "teams_ai_push:42f2293eb031",
+      "first_sent_at": "2026-10-15T13:31:30+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c8c4cd1de2ca15941c12d38ab08f935ac22194abfde860614eab902b2d53153a",
+      "sent_at": "2026-10-15T13:31:30+09:00",
       "source": "SBS 뉴스"
     },
     "https://news1.kr/industry/sb-founded/6259527": {
@@ -6845,6 +6880,16 @@
       "material_signature": "cfb7306b5adf3eabc60d96e972749d79ae915d934046b1ac0bb650bf38c9ad5d",
       "sent_at": "2026-08-05T02:03:09+09:00",
       "source": "엠투데이"
+    },
+    "구글차세대저전력ai칩공개웨어러블기기정조준": {
+      "cluster_key": "title:구글차세대저전력ai칩공개웨어러블기기정조준",
+      "delivery_id": "teams_ai_push:42f2293eb031",
+      "first_sent_at": "2026-10-15T13:31:30+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "c8c4cd1de2ca15941c12d38ab08f935ac22194abfde860614eab902b2d53153a",
+      "sent_at": "2026-10-15T13:31:30+09:00",
+      "source": "SBS 뉴스"
     },
     "구글핀란드ai인프라에130억유로투자": {
       "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
