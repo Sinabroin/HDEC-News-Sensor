@@ -1,0 +1,116 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-10-17",
+  "coverage_start": "2026-10-16T07:00:00+09:00",
+  "coverage_end": "2026-10-17T06:40:00+09:00",
+  "published_run_at": "2026-10-17T09:49:11+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 532,
+      "raw_collected_count": 532,
+      "unique_collected_count": 46,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 46,
+      "ai_central_count": 2,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-10-17T09:44:15+09:00",
+      "finalization_at": "2026-10-17T09:49:11.984159+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "3분기 168억달러 벌어도 AI 불안 해소에 역부족 … 앤트로픽 실적에서 읽...",
+  "editor_summary": "향후 실적을 가를 변수는 AI 시장 전체의 성장뿐 아니라 고객 유지, 가격 경쟁, 연산 효율임.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "3분기 168억달러 벌어도 AI 불안 해소에 역부족 … 앤트로픽 실적에서 읽...",
+      "summary": "향후 실적을 가를 변수는 AI 시장 전체의 성장뿐 아니라 고객 유지, 가격 경쟁, 연산 효율이다. 기사 전문은 매일경제 신문의 프리미엄 재테크 콘텐츠 플랫폼 매경플러스에서 확인할 수 있습니다. 네이버에서...",
+      "category": "투자·산업",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/it/12178131",
+      "published_at": "2026-10-16T18:10:37+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "향후 실적을 가를 변수는 AI 시장 전체의 성장뿐 아니라 고객 유지, 가격 경쟁, 연산 효율임.",
+          "기사 전문은 매일경제 신문의 프리미엄 재테크 콘텐츠 플랫폼 매경플러스에서 확인할 수 있습니다.",
+          "네이버에서."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "not_supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "",
+          "dimensions": []
+        },
+        "watch_point": {
+          "status": "not_supported",
+          "text": ""
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-10-17.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "fbf8ae6cb6f0bc889e05706fa530f2d5336a50fcaf1a06a3747c301e85ca7c1c",
+    "publication_state": "published"
+  },
+  "revision": "1193818b078c8eb2",
+  "edition_id": "daily-2026-10-17-1193818b078c8eb2",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "1193818b078c8eb25700f53a2ef3b89e2a1366fd8b81d83b248094467f4cc53b"
+  }
+}
