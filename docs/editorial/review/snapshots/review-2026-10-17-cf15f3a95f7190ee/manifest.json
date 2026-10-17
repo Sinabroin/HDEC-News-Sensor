@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "product": "editor_review_snapshot",
+  "edition_key": "2026-10-17",
+  "candidate_bundle_sha256": "d590c9866d612dd1da443538c98b647da554161639154523b9cc2e8a5ea0d50b",
+  "console_html_sha256": "5e3cd690a7d504f504f54281747cd731ecad1e2f9ed733e7e58ffbf109d01b4d",
+  "assets": [
+    {
+      "relative_path": "assets/images/68cffd712806bb571a8d12d8.jpg",
+      "sha256": "68cffd712806bb571a8d12d84136edcaf95423afb6e1c45908195e6c4cd8a5ac",
+      "byte_size": 170577
+    }
+  ],
+  "generated": true,
+  "published": false,
+  "public_verified": false,
+  "claimed": false,
+  "sent": false,
+  "duplicate_skipped": false,
+  "failed": false,
+  "radar_audit_sha256": "7b4078c0f6b74ce94cdbe29bfb066f9b07b4577211a99b08c46eb3ff803e2df8",
+  "review_snapshot_id": "review-2026-10-17-cf15f3a95f7190ee",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "cf15f3a95f7190eef2be39475c0af90b94e2fb0bfb34ee1430979a172489bc95"
+  }
+}
