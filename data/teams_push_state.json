@@ -1345,6 +1345,21 @@
       "sent_at": "2026-08-18T04:49:11+09:00",
       "source": "파이낸셜뉴스"
     },
+    "f47750c12edacf58": {
+      "cluster_key": "title:3데이터센터가바꾸는전력의길왜dc배전",
+      "delivery_id": "teams_ai_push:a41ac7ede8f3",
+      "first_material_discovery_at": "2026-10-21T04:23:56+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-21T04:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6165d24ae61ef9d771df5e6137e3969ad2d0272ec933b543b6dd302b70cfc128",
+      "published_at": "2026-10-20T11:00:00+09:00",
+      "sent_at": "2026-10-21T04:23:56+09:00",
+      "source": "아시아경제",
+      "title": "[AI전력난, 직류로 해결]③ 데이터센터 가 바꾸는 전력의 길…왜 'DC 배전...",
+      "url": "https://asiae.co.kr/article/2026101316231650824"
+    },
     "f50b3c9dd4fcd62c": {
       "cluster_key": "title:ai인프라특화속도신성장모터장착하는전통제조사들biz플",
       "delivery_id": "teams_ai_push:5a1967eedbf8",
@@ -1866,6 +1881,16 @@
       "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
       "sent_at": "2026-08-27T06:49:09+09:00",
       "source": "서울경제"
+    },
+    "title:3데이터센터가바꾸는전력의길왜dc배전": {
+      "cluster_key": "title:3데이터센터가바꾸는전력의길왜dc배전",
+      "delivery_id": "teams_ai_push:a41ac7ede8f3",
+      "first_sent_at": "2026-10-21T04:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6165d24ae61ef9d771df5e6137e3969ad2d0272ec933b543b6dd302b70cfc128",
+      "sent_at": "2026-10-21T04:23:56+09:00",
+      "source": "아시아경제"
     },
     "title:40mw급데이터센터구축제주권ax대전환에속도": {
       "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
@@ -4700,8 +4725,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-15T13:31:30+09:00",
-  "last_successful_send_at": "2026-10-15T13:31:30+09:00",
+  "last_normal_send_at": "2026-10-21T04:23:56+09:00",
+  "last_successful_send_at": "2026-10-21T04:23:56+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4851,6 +4876,16 @@
       "last_material_update_at": null,
       "material_signature": "f55d9488c85a9e1cf8fc9186e1c9e15fa9f45c72a7de62b4222e67c4ec74ca2f",
       "sent_at": "2026-10-03T07:59:31+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026101316231650824": {
+      "cluster_key": "title:3데이터센터가바꾸는전력의길왜dc배전",
+      "delivery_id": "teams_ai_push:a41ac7ede8f3",
+      "first_sent_at": "2026-10-21T04:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6165d24ae61ef9d771df5e6137e3969ad2d0272ec933b543b6dd302b70cfc128",
+      "sent_at": "2026-10-21T04:23:56+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -6404,6 +6439,16 @@
       "material_signature": "49d0608fb4ac563e9132ae7c6dfa213d54142ba20e760f1d14ff6c59f03163aa",
       "sent_at": "2026-08-27T06:49:09+09:00",
       "source": "서울경제"
+    },
+    "3데이터센터가바꾸는전력의길왜dc배전": {
+      "cluster_key": "title:3데이터센터가바꾸는전력의길왜dc배전",
+      "delivery_id": "teams_ai_push:a41ac7ede8f3",
+      "first_sent_at": "2026-10-21T04:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "6165d24ae61ef9d771df5e6137e3969ad2d0272ec933b543b6dd302b70cfc128",
+      "sent_at": "2026-10-21T04:23:56+09:00",
+      "source": "아시아경제"
     },
     "40mw급데이터센터구축제주권ax대전환에속도": {
       "cluster_key": "title:40mw급데이터센터구축제주권ax대전환에속도",
