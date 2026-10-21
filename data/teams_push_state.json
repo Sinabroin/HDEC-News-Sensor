@@ -1295,6 +1295,21 @@
       "sent_at": "2026-08-13T19:33:41+09:00",
       "source": "서울경제"
     },
+    "e5b85c419be5866d": {
+      "cluster_key": "title:ai칩공급병목뚫는다삼성전기엔비디아와전용팹구축",
+      "delivery_id": "teams_ai_push:beb76a47018e",
+      "first_material_discovery_at": "2026-10-22T04:43:59+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-22T04:43:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2238db5d83a950a0887a00a2ec2666ed94bbc4132b7c0a4ed9b1f46c0c537bd6",
+      "published_at": "2026-10-21T20:30:39+09:00",
+      "sent_at": "2026-10-22T04:43:59+09:00",
+      "source": "아시아경제",
+      "title": "\"AI 칩 공급 병목 뚫는다\"…삼성전기, 엔비디아와 전용 팹 구축",
+      "url": "https://asiae.co.kr/article/2026102120303817209"
+    },
     "e5c71fb79845ea81": {
       "cluster_key": "title:gpu보다메모리삼성skai칩병목해법제시한다",
       "delivery_id": "teams_ai_push:b984d2e34840",
@@ -2141,6 +2156,16 @@
       "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
       "sent_at": "2026-08-14T08:56:29+09:00",
       "source": "서울경제"
+    },
+    "title:ai칩공급병목뚫는다삼성전기엔비디아와전용팹구축": {
+      "cluster_key": "title:ai칩공급병목뚫는다삼성전기엔비디아와전용팹구축",
+      "delivery_id": "teams_ai_push:beb76a47018e",
+      "first_sent_at": "2026-10-22T04:43:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2238db5d83a950a0887a00a2ec2666ed94bbc4132b7c0a4ed9b1f46c0c537bd6",
+      "sent_at": "2026-10-22T04:43:59+09:00",
+      "source": "아시아경제"
     },
     "title:ai투자칩넘어전력건설장비로마이크론78soxl20": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
@@ -4725,8 +4750,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-21T04:23:56+09:00",
-  "last_successful_send_at": "2026-10-21T04:23:56+09:00",
+  "last_normal_send_at": "2026-10-22T04:43:59+09:00",
+  "last_successful_send_at": "2026-10-22T04:43:59+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -4886,6 +4911,16 @@
       "last_material_update_at": null,
       "material_signature": "6165d24ae61ef9d771df5e6137e3969ad2d0272ec933b543b6dd302b70cfc128",
       "sent_at": "2026-10-21T04:23:56+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026102120303817209": {
+      "cluster_key": "title:ai칩공급병목뚫는다삼성전기엔비디아와전용팹구축",
+      "delivery_id": "teams_ai_push:beb76a47018e",
+      "first_sent_at": "2026-10-22T04:43:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2238db5d83a950a0887a00a2ec2666ed94bbc4132b7c0a4ed9b1f46c0c537bd6",
+      "sent_at": "2026-10-22T04:43:59+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -6699,6 +6734,16 @@
       "material_signature": "b7763096241ab77c50c08a25c35fd3603bca9b6779698859978778c555d9a3bc",
       "sent_at": "2026-08-14T08:56:29+09:00",
       "source": "서울경제"
+    },
+    "ai칩공급병목뚫는다삼성전기엔비디아와전용팹구축": {
+      "cluster_key": "title:ai칩공급병목뚫는다삼성전기엔비디아와전용팹구축",
+      "delivery_id": "teams_ai_push:beb76a47018e",
+      "first_sent_at": "2026-10-22T04:43:59+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "2238db5d83a950a0887a00a2ec2666ed94bbc4132b7c0a4ed9b1f46c0c537bd6",
+      "sent_at": "2026-10-22T04:43:59+09:00",
+      "source": "아시아경제"
     },
     "ai투자칩넘어전력건설장비로마이크론78soxl20": {
       "cluster_key": "title:ai투자칩넘어전력건설장비로마이크론78soxl20",
