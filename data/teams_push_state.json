@@ -135,6 +135,21 @@
       "sent_at": "2026-08-08T06:12:18+09:00",
       "source": "KyungHyangSinmun"
     },
+    "191f85375fff4f40": {
+      "cluster_key": "title:계약서잠재된리스크ai가찾아내죠",
+      "delivery_id": "teams_ai_push:5d630c00ca07",
+      "first_material_discovery_at": "2026-10-22T15:12:34+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-22T15:12:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d408de9f7316e6e637b3ed2961743dae1a25bf40658e23fbd3885e99938c03cc",
+      "published_at": "2026-10-22T14:23:35+09:00",
+      "sent_at": "2026-10-22T15:12:34+09:00",
+      "source": "매일경제",
+      "title": "“계약서 잠재된 리스크, AI 가 찾아내죠”",
+      "url": "https://mk.co.kr/news/business/12182773"
+    },
     "19791e01f11943ac": {
       "cluster_key": "title:100조원미래대응기금출범단기소진끊고ai인재지방투자",
       "delivery_id": "teams_ai_push:6aaa2c03c9ce",
@@ -2356,6 +2371,16 @@
       "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
       "sent_at": "2026-08-06T00:40:01+09:00",
       "source": "경북일보"
+    },
+    "title:계약서잠재된리스크ai가찾아내죠": {
+      "cluster_key": "title:계약서잠재된리스크ai가찾아내죠",
+      "delivery_id": "teams_ai_push:5d630c00ca07",
+      "first_sent_at": "2026-10-22T15:12:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d408de9f7316e6e637b3ed2961743dae1a25bf40658e23fbd3885e99938c03cc",
+      "sent_at": "2026-10-22T15:12:34+09:00",
+      "source": "매일경제"
     },
     "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자": {
       "cluster_key": "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자",
@@ -4750,8 +4775,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-22T04:43:59+09:00",
-  "last_successful_send_at": "2026-10-22T04:43:59+09:00",
+  "last_normal_send_at": "2026-10-22T15:12:34+09:00",
+  "last_successful_send_at": "2026-10-22T15:12:34+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5391,6 +5416,16 @@
       "last_material_update_at": null,
       "material_signature": "2735bad20a20f4714f475a2285ac842dd9951d8a0799009424e3981a44e4dcf0",
       "sent_at": "2026-08-13T18:12:43+09:00",
+      "source": "매일경제"
+    },
+    "https://mk.co.kr/news/business/12182773": {
+      "cluster_key": "title:계약서잠재된리스크ai가찾아내죠",
+      "delivery_id": "teams_ai_push:5d630c00ca07",
+      "first_sent_at": "2026-10-22T15:12:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d408de9f7316e6e637b3ed2961743dae1a25bf40658e23fbd3885e99938c03cc",
+      "sent_at": "2026-10-22T15:12:34+09:00",
       "source": "매일경제"
     },
     "https://mk.co.kr/news/culture/12175499": {
@@ -6934,6 +6969,16 @@
       "material_signature": "a13c15976f212c92c0b3feafb7b85dc50fd3b157be064ddf479fbaeea053d231",
       "sent_at": "2026-08-06T00:40:01+09:00",
       "source": "경북일보"
+    },
+    "계약서잠재된리스크ai가찾아내죠": {
+      "cluster_key": "title:계약서잠재된리스크ai가찾아내죠",
+      "delivery_id": "teams_ai_push:5d630c00ca07",
+      "first_sent_at": "2026-10-22T15:12:34+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "d408de9f7316e6e637b3ed2961743dae1a25bf40658e23fbd3885e99938c03cc",
+      "sent_at": "2026-10-22T15:12:34+09:00",
+      "source": "매일경제"
     },
     "광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자": {
       "cluster_key": "title:광주이어일본곳곳에서한국메모리팹을탐낸다반도체투자",
