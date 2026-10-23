@@ -1455,6 +1455,21 @@
       "sent_at": "2026-08-17T21:41:35+09:00",
       "source": "SBS 뉴스"
     },
+    "fc5e4db8edce8ce0": {
+      "cluster_key": "title:삼성전기테슬라와11조ai기판동맹",
+      "delivery_id": "teams_ai_push:79e4e1c37bec",
+      "first_material_discovery_at": "2026-10-23T10:59:15+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-23T10:59:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "bb0cd93f37d62512a2e608c84c5f6565523e09aac4abe95ae0d66643f422cebc",
+      "published_at": "2026-10-22T17:45:07+09:00",
+      "sent_at": "2026-10-23T10:59:15+09:00",
+      "source": "매일경제",
+      "title": "[단독] 삼성전기, 테슬라와 1.1조 ' AI 기판' 동맹",
+      "url": "https://mk.co.kr/news/business/12183237"
+    },
     "fcb7f818f89157db": {
       "cluster_key": "title:데이터센터연합회한전kdn에너지aidc생태계구축협력",
       "delivery_id": "teams_ai_push:b968a7fc7505",
@@ -2881,6 +2896,16 @@
       "material_signature": "91313efea6b9b5681c1423f8dfb84ce09ecd45c4e7dd3443ec2234fb8a15d6ad",
       "sent_at": "2026-09-09T08:24:01+09:00",
       "source": "아시아경제"
+    },
+    "title:삼성전기테슬라와11조ai기판동맹": {
+      "cluster_key": "title:삼성전기테슬라와11조ai기판동맹",
+      "delivery_id": "teams_ai_push:79e4e1c37bec",
+      "first_sent_at": "2026-10-23T10:59:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "bb0cd93f37d62512a2e608c84c5f6565523e09aac4abe95ae0d66643f422cebc",
+      "sent_at": "2026-10-23T10:59:15+09:00",
+      "source": "매일경제"
     },
     "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑": {
       "cluster_key": "title:스터닝밸류크린앤사이언스ai데이터센터필터특수3년만의연간흑",
@@ -4789,8 +4814,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-22T15:12:34+09:00",
-  "last_successful_send_at": "2026-10-22T15:12:34+09:00",
+  "last_normal_send_at": "2026-10-23T10:59:15+09:00",
+  "last_successful_send_at": "2026-10-23T10:59:15+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5440,6 +5465,16 @@
       "last_material_update_at": null,
       "material_signature": "d408de9f7316e6e637b3ed2961743dae1a25bf40658e23fbd3885e99938c03cc",
       "sent_at": "2026-10-22T15:12:34+09:00",
+      "source": "매일경제"
+    },
+    "https://mk.co.kr/news/business/12183237": {
+      "cluster_key": "title:삼성전기테슬라와11조ai기판동맹",
+      "delivery_id": "teams_ai_push:79e4e1c37bec",
+      "first_sent_at": "2026-10-23T10:59:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "bb0cd93f37d62512a2e608c84c5f6565523e09aac4abe95ae0d66643f422cebc",
+      "sent_at": "2026-10-23T10:59:15+09:00",
       "source": "매일경제"
     },
     "https://mk.co.kr/news/culture/12175499": {
@@ -7493,6 +7528,16 @@
       "material_signature": "91313efea6b9b5681c1423f8dfb84ce09ecd45c4e7dd3443ec2234fb8a15d6ad",
       "sent_at": "2026-09-09T08:24:01+09:00",
       "source": "아시아경제"
+    },
+    "삼성전기테슬라와11조ai기판동맹": {
+      "cluster_key": "title:삼성전기테슬라와11조ai기판동맹",
+      "delivery_id": "teams_ai_push:79e4e1c37bec",
+      "first_sent_at": "2026-10-23T10:59:15+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "bb0cd93f37d62512a2e608c84c5f6565523e09aac4abe95ae0d66643f422cebc",
+      "sent_at": "2026-10-23T10:59:15+09:00",
+      "source": "매일경제"
     },
     "삼성전자아산반도체공장내달착공3대메가사업중처음": {
       "cluster_key": "ai_event:0b5aa91048dfee258d5b3358",
