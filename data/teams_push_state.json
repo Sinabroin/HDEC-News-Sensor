@@ -80,6 +80,21 @@
       "sent_at": "2026-08-14T19:00:42+09:00",
       "source": "뉴시스"
     },
+    "0f706c0f8384a844": {
+      "cluster_key": "title:에이루트앤에스알시흡수합병반도체노광장비사업직접챙긴다",
+      "delivery_id": "teams_ai_push:f0e912519c3b",
+      "first_material_discovery_at": "2026-10-27T08:51:19+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-27T08:51:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a1b782e0109f01293f85e42cf0eabcbd82d7d9d3bca0132e3af7184417fe9a17",
+      "published_at": "2026-10-27T08:35:17+09:00",
+      "sent_at": "2026-10-27T08:51:19+09:00",
+      "source": "아시아경제",
+      "title": "에이루트, 앤에스알시 흡수합병…반도체 노광장비 사업 직접 챙긴다",
+      "url": "https://asiae.co.kr/article/2026102708351764887"
+    },
     "10339e80685fa8af": {
       "cluster_key": "title:미국ai데이터센터건설전력이어물부족이새복병",
       "delivery_id": "teams_ai_push:d5adcfcc4fb0",
@@ -3002,6 +3017,16 @@
       "sent_at": "2026-08-16T17:05:35+09:00",
       "source": "한국일보"
     },
+    "title:에이루트앤에스알시흡수합병반도체노광장비사업직접챙긴다": {
+      "cluster_key": "title:에이루트앤에스알시흡수합병반도체노광장비사업직접챙긴다",
+      "delivery_id": "teams_ai_push:f0e912519c3b",
+      "first_sent_at": "2026-10-27T08:51:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a1b782e0109f01293f85e42cf0eabcbd82d7d9d3bca0132e3af7184417fe9a17",
+      "sent_at": "2026-10-27T08:51:19+09:00",
+      "source": "아시아경제"
+    },
     "title:에이치와이티씨아마존출신임원영입ai데이터센터로봇사업확장": {
       "cluster_key": "title:에이치와이티씨아마존출신임원영입ai데이터센터로봇사업확장",
       "delivery_id": "teams_ai_push:da5132929846",
@@ -4839,8 +4864,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-26T06:45:15+09:00",
-  "last_successful_send_at": "2026-10-26T06:45:15+09:00",
+  "last_normal_send_at": "2026-10-27T08:51:19+09:00",
+  "last_successful_send_at": "2026-10-27T08:51:19+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5010,6 +5035,16 @@
       "last_material_update_at": null,
       "material_signature": "2238db5d83a950a0887a00a2ec2666ed94bbc4132b7c0a4ed9b1f46c0c537bd6",
       "sent_at": "2026-10-22T04:43:59+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026102708351764887": {
+      "cluster_key": "title:에이루트앤에스알시흡수합병반도체노광장비사업직접챙긴다",
+      "delivery_id": "teams_ai_push:f0e912519c3b",
+      "first_sent_at": "2026-10-27T08:51:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a1b782e0109f01293f85e42cf0eabcbd82d7d9d3bca0132e3af7184417fe9a17",
+      "sent_at": "2026-10-27T08:51:19+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -7663,6 +7698,16 @@
       "material_signature": "e00fc92eebd62a2e0c6727e37c1d3d7d6a6a341ec048c5d70fea0735d44bd72b",
       "sent_at": "2026-08-16T17:05:35+09:00",
       "source": "한국일보"
+    },
+    "에이루트앤에스알시흡수합병반도체노광장비사업직접챙긴다": {
+      "cluster_key": "title:에이루트앤에스알시흡수합병반도체노광장비사업직접챙긴다",
+      "delivery_id": "teams_ai_push:f0e912519c3b",
+      "first_sent_at": "2026-10-27T08:51:19+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "a1b782e0109f01293f85e42cf0eabcbd82d7d9d3bca0132e3af7184417fe9a17",
+      "sent_at": "2026-10-27T08:51:19+09:00",
+      "source": "아시아경제"
     },
     "에이치와이티씨아마존출신임원영입ai데이터센터로봇사업확장": {
       "cluster_key": "title:에이치와이티씨아마존출신임원영입ai데이터센터로봇사업확장",
