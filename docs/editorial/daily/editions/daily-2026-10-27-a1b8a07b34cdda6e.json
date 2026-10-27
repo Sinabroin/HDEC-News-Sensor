@@ -1,0 +1,116 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-10-27",
+  "coverage_start": "2026-10-26T07:00:00+09:00",
+  "coverage_end": "2026-10-27T06:40:00+09:00",
+  "published_run_at": "2026-10-27T10:38:33+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 533,
+      "raw_collected_count": 533,
+      "unique_collected_count": 42,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 42,
+      "ai_central_count": 1,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-10-27T10:33:58+09:00",
+      "finalization_at": "2026-10-27T10:38:34.084620+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "\" AI 데이터센터 전력수요 생각보다 많지 않아\"",
+  "editor_summary": "인공지능( AI ) 데이터센터 (AIDC)에 필요한 전력 수요 전망치 축소 방침을 시사함.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "\" AI 데이터센터 전력수요 생각보다 많지 않아\"",
+      "summary": "인공지능( AI ) 데이터센터 (AIDC)에 필요한 전력 수요 전망치 축소 방침을 시사했다. AIDC 사업의 불확실성이... 이날 이종배 국민의힘 의원은 매일경제 보도를 인용해 \"기후부에서 메가프로젝트 AIDC의 전력 수요를 기존...",
+      "category": "투자·산업",
+      "publisher": "매일경제",
+      "publisher_url": "https://www.mk.co.kr/news/business/12186102",
+      "published_at": "2026-10-26T17:37:15+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "인공지능( AI ) 데이터센터 (AIDC)에 필요한 전력 수요 전망치 축소 방침을 시사함.",
+          "AIDC 사업의 불확실성이.",
+          "이날 이종배 국민의힘 의원은 매일경제 보도를 인용해 \"기후부에서 메가프로젝트 AIDC의 전력 수요를 기존."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "not_supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "",
+          "dimensions": []
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "후속 프로젝트의 실제 발주·수주, 부지별 용량 및 전력 파트너 확정 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-10-27.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "96d55300e7c3e3f5a03cde4e782de0ab10056ad27daea40f25d573b780fac3f0",
+    "publication_state": "published"
+  },
+  "revision": "a1b8a07b34cdda6e",
+  "edition_id": "daily-2026-10-27-a1b8a07b34cdda6e",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "a1b8a07b34cdda6ed3ca997c4aafba5ab56d2aafa90627deb147bc6838486409"
+  }
+}
