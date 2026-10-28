@@ -865,6 +865,21 @@
       "sent_at": "2026-08-06T05:38:47+09:00",
       "source": "토큰포스트"
     },
+    "861d01adcde9f997": {
+      "cluster_key": "title:sk하이닉스80이익률에절반이상장기계약ai고점론에맞불",
+      "delivery_id": "teams_ai_push:c31f14327538",
+      "first_material_discovery_at": "2026-10-28T13:01:20+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-28T13:01:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "84edc9395e10666d694ac4f4d76d00566943fd8c19d50e7706c253446af2c567",
+      "published_at": "2026-10-28T11:19:16+09:00",
+      "sent_at": "2026-10-28T13:01:20+09:00",
+      "source": "연합뉴스",
+      "title": "SK하이닉스, 80% 이익률에 절반 이상 장기계약… AI 고점론에 맞불(종합)",
+      "url": "https://yna.co.kr/view/AKR20261027191851003"
+    },
     "87b15f2b48bf20fa": {
       "cluster_key": "title:반도체24조태양광14조머스크의거침없는쩐의전쟁김기혁의",
       "delivery_id": "teams_ai_push:8cada06ac9df",
@@ -2366,6 +2381,16 @@
       "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
+    },
+    "title:sk하이닉스80이익률에절반이상장기계약ai고점론에맞불": {
+      "cluster_key": "title:sk하이닉스80이익률에절반이상장기계약ai고점론에맞불",
+      "delivery_id": "teams_ai_push:c31f14327538",
+      "first_sent_at": "2026-10-28T13:01:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "84edc9395e10666d694ac4f4d76d00566943fd8c19d50e7706c253446af2c567",
+      "sent_at": "2026-10-28T13:01:20+09:00",
+      "source": "연합뉴스"
     },
     "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배": {
       "cluster_key": "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배",
@@ -4864,8 +4889,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-27T08:51:19+09:00",
-  "last_successful_send_at": "2026-10-27T08:51:19+09:00",
+  "last_normal_send_at": "2026-10-28T13:01:20+09:00",
+  "last_successful_send_at": "2026-10-28T13:01:20+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -6576,6 +6601,16 @@
       "material_signature": "f2de9c0dee4cb6b046276759ce4e572b815dc36557a508c2e870b7dfd318e9ff",
       "sent_at": "2026-10-26T06:45:15+09:00",
       "source": "연합뉴스"
+    },
+    "https://yna.co.kr/view/AKR20261027191851003": {
+      "cluster_key": "title:sk하이닉스80이익률에절반이상장기계약ai고점론에맞불",
+      "delivery_id": "teams_ai_push:c31f14327538",
+      "first_sent_at": "2026-10-28T13:01:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "84edc9395e10666d694ac4f4d76d00566943fd8c19d50e7706c253446af2c567",
+      "sent_at": "2026-10-28T13:01:20+09:00",
+      "source": "연합뉴스"
     }
   },
   "title_fingerprints": {
@@ -7038,6 +7073,16 @@
       "material_signature": "d5988f64e81c204cc8642fe452a05b0c30667eeed65234000ee7d29bc9348c99",
       "sent_at": "2026-07-29T15:17:41+09:00",
       "source": "newsinside.kr"
+    },
+    "sk하이닉스80이익률에절반이상장기계약ai고점론에맞불": {
+      "cluster_key": "title:sk하이닉스80이익률에절반이상장기계약ai고점론에맞불",
+      "delivery_id": "teams_ai_push:c31f14327538",
+      "first_sent_at": "2026-10-28T13:01:20+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "84edc9395e10666d694ac4f4d76d00566943fd8c19d50e7706c253446af2c567",
+      "sent_at": "2026-10-28T13:01:20+09:00",
+      "source": "연합뉴스"
     },
     "sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배": {
       "cluster_key": "title:sk하이닉스연산하는메모리로ai병목푼다s램보다용량300배",
