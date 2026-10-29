@@ -345,6 +345,21 @@
       "sent_at": "2026-08-04T21:23:33+09:00",
       "source": "우먼타임스"
     },
+    "36891d81b1f54681": {
+      "cluster_key": "title:구글985억달러추가우발약정공시ai투자부담우려확대",
+      "delivery_id": "teams_ai_push:096fd72b2fbd",
+      "first_material_discovery_at": "2026-10-30T04:50:38+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-30T04:50:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd91c83d5a5e52baa4e9f7f6831b7b0a032fb39b80315cf47dfde1ecae3c42d5",
+      "published_at": "2026-10-30T04:36:17+09:00",
+      "sent_at": "2026-10-30T04:50:38+09:00",
+      "source": "아시아경제",
+      "title": "구글, 985억달러 추가 우발약정 공시… AI 투자 부담 우려 확대",
+      "url": "https://asiae.co.kr/article/2026103004361702016"
+    },
     "387cd79770f4e8f1": {
       "cluster_key": "title:구글핀란드ai인프라에130억유로투자",
       "delivery_id": "teams_ai_push:e37448f9942e",
@@ -2471,6 +2486,16 @@
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
       "source": "매일경제"
+    },
+    "title:구글985억달러추가우발약정공시ai투자부담우려확대": {
+      "cluster_key": "title:구글985억달러추가우발약정공시ai투자부담우려확대",
+      "delivery_id": "teams_ai_push:096fd72b2fbd",
+      "first_sent_at": "2026-10-30T04:50:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd91c83d5a5e52baa4e9f7f6831b7b0a032fb39b80315cf47dfde1ecae3c42d5",
+      "sent_at": "2026-10-30T04:50:38+09:00",
+      "source": "아시아경제"
     },
     "title:구글마벨과ai칩동맹최대122억달러지분매입옵션": {
       "cluster_key": "title:구글마벨과ai칩동맹최대122억달러지분매입옵션",
@@ -4889,8 +4914,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-28T13:01:20+09:00",
-  "last_successful_send_at": "2026-10-28T13:01:20+09:00",
+  "last_normal_send_at": "2026-10-30T04:50:38+09:00",
+  "last_successful_send_at": "2026-10-30T04:50:38+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5070,6 +5095,16 @@
       "last_material_update_at": null,
       "material_signature": "a1b782e0109f01293f85e42cf0eabcbd82d7d9d3bca0132e3af7184417fe9a17",
       "sent_at": "2026-10-27T08:51:19+09:00",
+      "source": "아시아경제"
+    },
+    "https://asiae.co.kr/article/2026103004361702016": {
+      "cluster_key": "title:구글985억달러추가우발약정공시ai투자부담우려확대",
+      "delivery_id": "teams_ai_push:096fd72b2fbd",
+      "first_sent_at": "2026-10-30T04:50:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd91c83d5a5e52baa4e9f7f6831b7b0a032fb39b80315cf47dfde1ecae3c42d5",
+      "sent_at": "2026-10-30T04:50:38+09:00",
       "source": "아시아경제"
     },
     "https://biz.heraldcorp.com/article/10823717": {
@@ -7163,6 +7198,16 @@
       "material_signature": "d5ccf9c0a1dd7d6c283c112935fcc209bed43b82be15b8e4911cc4b7c506a10d",
       "sent_at": "2026-08-06T18:23:26+09:00",
       "source": "매일경제"
+    },
+    "구글985억달러추가우발약정공시ai투자부담우려확대": {
+      "cluster_key": "title:구글985억달러추가우발약정공시ai투자부담우려확대",
+      "delivery_id": "teams_ai_push:096fd72b2fbd",
+      "first_sent_at": "2026-10-30T04:50:38+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "fd91c83d5a5e52baa4e9f7f6831b7b0a032fb39b80315cf47dfde1ecae3c42d5",
+      "sent_at": "2026-10-30T04:50:38+09:00",
+      "source": "아시아경제"
     },
     "구글마벨과ai칩동맹최대122억달러지분매입옵션": {
       "cluster_key": "title:구글마벨과ai칩동맹최대122억달러지분매입옵션",
