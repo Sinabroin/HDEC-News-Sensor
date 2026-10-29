@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 경영 T&amp;I Daily Brief · 2026-10-29</title>
+<style>:root{--navy:#002c5f;--navy2:#004b93;--ink:#101218;--muted:#667085;--line:#e4e7ec;--paper:#fff;--canvas:#f4f6f8;--invest:#a26b12;--corp:#0d9488;--tech:#4f46e5}
+*{box-sizing:border-box}
+html{background:var(--canvas)}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",Segoe UI,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+.brief-page{max-width:680px;margin:0 auto;padding:64px 20px 56px}
+.masthead{text-align:center}
+.brandmark{display:inline-block;padding:9px 25px;border-radius:999px;background:var(--navy);color:#fff;font-size:20px;font-weight:800;letter-spacing:.03em}
+.masthead h1{margin:15px 0 8px;font-size:44px;line-height:1.08;letter-spacing:-.045em}
+.desc{margin:0;color:#3a4150;font-size:13.5px;font-weight:600}
+.issue{display:inline-block;margin-top:20px;color:var(--ink);font-size:14px;font-weight:800}
+.section{margin-top:36px}
+.section-label{display:inline-block;margin:0 0 16px;padding:5px 17px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-size:14px;font-weight:800}
+.hero{position:relative;min-height:250px;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,var(--navy),var(--navy2));color:#fff;padding:34px 30px 30px}
+.hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74))}
+.hero h2,.hero-foot,.hero-rule{position:relative;z-index:2}
+.hero h2{margin:0;font-size:30px;line-height:1.32;letter-spacing:-.035em}
+.hero-rule{width:52%;height:1px;margin:22px 0 12px;background:rgba(255,255,255,.38)}
+.hero-foot{font-size:13px;font-weight:700;color:rgba(255,255,255,.88)}
+.ednote{margin-top:-14px;padding:30px 30px 24px;border:1px solid rgba(16,18,24,.1);border-top:0;border-radius:0 0 22px 22px;background:#fff}
+.ednote h3{margin:0 0 8px;color:var(--navy);font-size:13px;letter-spacing:.035em}
+.ednote p{margin:0;color:#303846;font-size:15px}
+.cards{display:grid;gap:12px}
+.card{display:grid;grid-template-columns:128px 1fr;overflow:hidden;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}
+.thumb{min-height:136px;background:var(--navy)}
+.card-body{padding:17px 18px 15px}
+.chip{display:inline-flex;align-items:center;gap:6px;color:var(--cat);font-size:11px;font-weight:800}
+.chip .d{width:6px;height:6px;border-radius:50%;background:var(--cat)}
+.card h3{margin:7px 0 7px;font-size:17px;line-height:1.42;letter-spacing:-.025em}
+.sum{margin:0;color:#4b5563;font-size:13px;line-height:1.62}
+.executive-context{margin-top:10px;color:#303846;font-size:13px;line-height:1.58}.fact-points{margin:0;padding-left:19px}.fact-points li{margin:0 0 5px}.context-delta,.context-analysis,.context-watch{margin-top:11px;padding-top:9px;border-top:1px solid #eef0f4}.executive-context strong{display:block;margin-bottom:2px;color:var(--navy);font-size:11.5px}.executive-context p{margin:0;color:#4b5563}.context-analysis{border-left:3px solid var(--navy);padding-left:10px}.context-watch strong{color:#8a5a0a}
+.src{margin-top:13px;padding-top:9px;border-top:1px solid #eef0f4;color:#8b94a3;font-size:11px;font-weight:600}
+.src a{color:inherit;text-decoration:none}
+.src .dt{display:block;margin-top:2px;color:#98a2b3;font-weight:500}
+.taxonomy{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}
+.tax-row{display:flex;gap:10px;align-items:baseline;margin-bottom:8px;font-size:13px}
+.tax-row:last-child{margin-bottom:0}
+.tax-name{width:90px;flex:none;color:var(--ink);font-weight:800}
+.tax-desc{color:#777f8d}
+.tax-invest{color:var(--invest)}.tax-corp{color:var(--corp)}.tax-tech{color:var(--tech)}
+footer{margin-top:36px;padding-top:22px;border-top:1px solid rgba(16,18,24,.1);text-align:center}
+footer .pub{margin:0 0 8px;font-size:13px;font-weight:800}
+footer .note{margin:0 auto;max-width:580px;color:#777f8d;font-size:11px}
+footer .meta{margin-top:13px;color:#98a2b3;font-size:10px;letter-spacing:.06em}
+.empty{padding:20px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--muted)}
+.radar-panel{padding:16px 18px;border:1px solid rgba(16,18,24,.1);border-radius:16px;background:#fff}.radar-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.radar-item{padding:9px 7px;border-radius:10px;background:#f5f7fa;text-align:center}.radar-item b{display:block;color:var(--navy);font-size:18px}.radar-item span{display:block;color:#777f8d;font-size:10px}.radar-note{margin:10px 0 0;color:#667085;font-size:11px;line-height:1.55}.radar-bridge{margin:11px 0 0;padding:10px 0 0;border-top:1px solid #eef0f4}.radar-bridge-title{margin:0 0 6px;color:var(--navy);font-size:11px;font-weight:800}.radar-near-miss{margin:5px 0;color:#4b5563;font-size:11px;line-height:1.5}.radar-near-miss a{color:inherit;text-decoration:none;border-bottom:1px solid #d7dce3}.radar-reason{color:#8b94a3}.radar-section{opacity:.94}
+@media(max-width:560px){.brief-page{padding:38px 14px 44px}.masthead h1{font-size:37px}.brandmark{font-size:18px}.hero{min-height:220px;padding:27px 21px 24px}.hero h2{font-size:24px}.ednote{padding:25px 21px 20px}.card{grid-template-columns:96px 1fr}.thumb{min-height:112px}.card-body{padding:14px}.card h3{font-size:15px}.radar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tax-row{display:block}.tax-name{display:block;width:auto;margin-bottom:2px}}
+@media print{@page{margin:14mm}html,body{background:#fff}.brief-page{max-width:none;padding:0}.hero,.ednote,.card,.taxonomy,footer{break-inside:avoid;page-break-inside:avoid}.card{box-shadow:none}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<main class="brief-page" data-brief-contract="AI_TNI_EXECUTIVE_V1" data-edition-type="daily" data-edition-key="2026-10-29" style="max-width:680px;margin:0 auto;padding:64px 20px 56px">
+  <header class="masthead">
+    <div class="brandmark" style="display:inline-block;background:#002c5f;color:#fff;padding:9px 25px;border-radius:999px;font-weight:800">AI 경영 T&amp;I</div>
+    <h1>Daily Brief</h1>
+    <p class="desc">AI디자인랩이 매일 전하는 경영진용 Trend &amp; Insight</p>
+    <div class="issue">2026-10-29</div>
+  </header>
+  <section class="section" aria-labelledby="headline-label">
+    <h2 class="section-label" id="headline-label">오늘의 헤드라인</h2>
+    <section class="hero empty-edition" data-role="headline" data-edition-status="empty" style="position:relative;overflow:hidden;border-radius:22px;background:linear-gradient(125deg,#002C5F 0%,#004B93 58%,#0E63B8 100%);color:#fff;padding:34px 30px 30px;"><div class="hero-overlay" style="position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(5,24,55,.84),rgba(2,57,68,.74));"></div><h2 style="position:relative;z-index:2;margin:0;line-height:1.4;color:#fff;">오늘 기준을 충족한 임원용 AI 핵심 뉴스가 없습니다.</h2><div class="hero-rule" style="position:relative;z-index:2"></div><div class="hero-foot" style="position:relative;z-index:2"><span>품질 기준 유지 · 인위적 채움 없음</span></div></section><div class="ednote"><h3 class="ed-k">Editor's Summary</h3><p>기준을 낮추거나 기사를 채워 넣지 않았습니다. 오늘은 경영진 보고 기준을 충족한 기사가 없음.</p></div>
+  </section>
+  <section class="section" aria-labelledby="briefing-label">
+    <h2 class="section-label" id="briefing-label">오늘의 브리핑</h2>
+    <div class="cards"><p class="empty">오늘의 브리핑에 포함할 기사가 없습니다.</p></div>
+  </section>
+  <footer data-role="publication-footer"><p class="pub">워크이노베이션센터 | AI디자인랩</p><p class="note">공신력 있는 외부 보도의 제목·게시시각·제공 요약을 바탕으로 편집했으며 세부 내용은 게시자 원문 기준입니다.</p><div class="meta">AI 경영 T&amp;I · DAILY BRIEF · 2026-10-29 · 2026-10-28 07:00:00 ~ 2026-10-29 06:40:00 KST</div></footer>
+</main>
+</body>
+</html>
