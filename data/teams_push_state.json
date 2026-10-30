@@ -1255,6 +1255,21 @@
       "sent_at": "2026-08-03T22:49:52+09:00",
       "source": "베타뉴스"
     },
+    "d03f2f03b31563ec": {
+      "cluster_key": "title:현대차그룹새만금프로젝트본궤도ai데이터센터내년착공",
+      "delivery_id": "teams_ai_push:ac601367a99f",
+      "first_material_discovery_at": "2026-10-31T06:05:11+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-31T06:05:11+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0b3557978f4353b165d4d1d023512de56c9dd564895b2c743b9ff5b14f20f6b9",
+      "published_at": "2026-10-31T00:57:41+09:00",
+      "sent_at": "2026-10-31T06:05:11+09:00",
+      "source": "중앙일보",
+      "title": "현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공",
+      "url": "https://joongang.co.kr/article/25474564"
+    },
     "d44b382a55cca69a": {
       "cluster_key": "title:창원시1조894억규모ai데이터센터투자유치2028년준공",
       "delivery_id": "teams_ai_push:b6dcb7c633b0",
@@ -3617,6 +3632,16 @@
       "sent_at": "2026-07-29T09:11:12+09:00",
       "source": "헤럴드경제"
     },
+    "title:현대차그룹새만금프로젝트본궤도ai데이터센터내년착공": {
+      "cluster_key": "title:현대차그룹새만금프로젝트본궤도ai데이터센터내년착공",
+      "delivery_id": "teams_ai_push:ac601367a99f",
+      "first_sent_at": "2026-10-31T06:05:11+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0b3557978f4353b165d4d1d023512de56c9dd564895b2c743b9ff5b14f20f6b9",
+      "sent_at": "2026-10-31T06:05:11+09:00",
+      "source": "중앙일보"
+    },
     "title:호남반도체산단전력망구축본격화기후부실무협의체출범": {
       "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
       "delivery_id": "teams_ai_push:99cd09574b34",
@@ -4915,7 +4940,7 @@
     }
   },
   "last_normal_send_at": "2026-10-30T04:50:38+09:00",
-  "last_successful_send_at": "2026-10-30T04:50:38+09:00",
+  "last_successful_send_at": "2026-10-31T06:05:11+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5485,6 +5510,16 @@
       "last_material_update_at": null,
       "material_signature": "5da40f3a52a6ad92cbe7696f91ca46d20b29f007472854aa365ebbfa5b4f5df4",
       "sent_at": "2026-09-02T18:34:59+09:00",
+      "source": "중앙일보"
+    },
+    "https://joongang.co.kr/article/25474564": {
+      "cluster_key": "title:현대차그룹새만금프로젝트본궤도ai데이터센터내년착공",
+      "delivery_id": "teams_ai_push:ac601367a99f",
+      "first_sent_at": "2026-10-31T06:05:11+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0b3557978f4353b165d4d1d023512de56c9dd564895b2c743b9ff5b14f20f6b9",
+      "sent_at": "2026-10-31T06:05:11+09:00",
       "source": "중앙일보"
     },
     "https://khan.co.kr/article/202608080600031": {
@@ -8358,6 +8393,16 @@
       "material_signature": "e9f9d03f9400cbb2ef5136d5bed067452c5ff7b712be062e30c87903cb3df772",
       "sent_at": "2026-07-29T09:11:12+09:00",
       "source": "헤럴드경제"
+    },
+    "현대차그룹새만금프로젝트본궤도ai데이터센터내년착공": {
+      "cluster_key": "title:현대차그룹새만금프로젝트본궤도ai데이터센터내년착공",
+      "delivery_id": "teams_ai_push:ac601367a99f",
+      "first_sent_at": "2026-10-31T06:05:11+09:00",
+      "importance": "top",
+      "last_material_update_at": null,
+      "material_signature": "0b3557978f4353b165d4d1d023512de56c9dd564895b2c743b9ff5b14f20f6b9",
+      "sent_at": "2026-10-31T06:05:11+09:00",
+      "source": "중앙일보"
     },
     "호남반도체산단전력망구축본격화기후부실무협의체출범": {
       "cluster_key": "title:호남반도체산단전력망구축본격화기후부실무협의체출범",
