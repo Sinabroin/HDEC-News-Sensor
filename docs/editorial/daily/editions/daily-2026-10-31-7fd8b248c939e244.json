@@ -1,0 +1,117 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-10-31",
+  "coverage_start": "2026-10-30T07:00:00+09:00",
+  "coverage_end": "2026-10-31T06:40:00+09:00",
+  "published_run_at": "2026-10-31T10:53:32+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 534,
+      "raw_collected_count": 534,
+      "unique_collected_count": 45,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 45,
+      "ai_central_count": 4,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-10-31T10:48:21+09:00",
+      "finalization_at": "2026-10-31T10:53:32.218615+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공",
+  "editor_summary": "현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공. 분석: AI 산업거점 조성이 부지 개발과 데이터센터·에너지 기반시설 발주로 이어질 수 있어 현대건설 관점에서 산업단지 조성 및 인프라 사업화 구조를 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공",
+      "summary": "현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공. 현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공 중앙일보",
+      "category": "투자·산업",
+      "publisher": "중앙일보",
+      "publisher_url": "https://www.joongang.co.kr/article/25474564",
+      "published_at": "2026-10-31T00:57:41+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "현대차그룹 ‘새만금 프로젝트’ 본궤도…AI 데이터센터 내년 착공."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 산업거점 조성이 부지 개발과 데이터센터·에너지 기반시설 발주로 이어질 수 있어 현대건설 관점에서 산업단지 조성 및 인프라 사업화 구조를 점검할 필요가 있음.",
+          "dimensions": [
+            "data_center",
+            "industrial_site"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "산업용지 조성 일정과 데이터센터·에너지 기반시설의 인허가·착공·조달 공고를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-10-31.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "3d3ae51cf56a6a9fe2e42a6fc6e45591f72718ac5330171dfed61cdd0b9abe78",
+    "publication_state": "published"
+  },
+  "revision": "7fd8b248c939e244",
+  "edition_id": "daily-2026-10-31-7fd8b248c939e244",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "7fd8b248c939e2447b6fe59460b31c67eca6ae0ffe25ed4ff362ba8666745e2c"
+  }
+}
