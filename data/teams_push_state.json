@@ -1490,6 +1490,21 @@
       "title": "현대엔지니어링, 군산 AI 데이터센터 수주",
       "url": "https://segye.com/newsView/20260928514619"
     },
+    "f8074d830e845005": {
+      "cluster_key": "title:ai협력넘어다음10년까지논의삼성사장단50명샘올트먼만났",
+      "delivery_id": "teams_ai_push:f5f31e63aaef",
+      "first_material_discovery_at": "2026-10-31T15:23:56+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-10-31T15:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "541cea7cf5b6110a1a5a109bfdf0005021f18402dad676a246db7ac5ff6a0433",
+      "published_at": "2026-10-31T15:22:04+09:00",
+      "sent_at": "2026-10-31T15:23:56+09:00",
+      "source": "파이낸셜뉴스",
+      "title": "' AI 협력 넘어 다음 10년까지 논의'..삼성 사장단 50명, 샘 올트먼 만났...",
+      "url": "https://fnnews.com/news/202610311513475847"
+    },
     "f8ce671e4a3806c6": {
       "cluster_key": "title:무디스한국성장률35로깜짝상향반도체호황계속",
       "delivery_id": "teams_ai_push:11ea3ce09418",
@@ -2291,6 +2306,16 @@
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
       "source": "한겨레"
+    },
+    "title:ai협력넘어다음10년까지논의삼성사장단50명샘올트먼만났": {
+      "cluster_key": "title:ai협력넘어다음10년까지논의삼성사장단50명샘올트먼만났",
+      "delivery_id": "teams_ai_push:f5f31e63aaef",
+      "first_sent_at": "2026-10-31T15:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "541cea7cf5b6110a1a5a109bfdf0005021f18402dad676a246db7ac5ff6a0433",
+      "sent_at": "2026-10-31T15:23:56+09:00",
+      "source": "파이낸셜뉴스"
     },
     "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관": {
       "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
@@ -4939,8 +4964,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-30T04:50:38+09:00",
-  "last_successful_send_at": "2026-10-31T06:05:11+09:00",
+  "last_normal_send_at": "2026-10-31T15:23:56+09:00",
+  "last_successful_send_at": "2026-10-31T15:23:56+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5360,6 +5385,16 @@
       "last_material_update_at": null,
       "material_signature": "f60801dbe61bea1f4e304de9e69afde2b8b08d70da353ba96f13d317b075cbc6",
       "sent_at": "2026-09-02T14:04:57+09:00",
+      "source": "파이낸셜뉴스"
+    },
+    "https://fnnews.com/news/202610311513475847": {
+      "cluster_key": "title:ai협력넘어다음10년까지논의삼성사장단50명샘올트먼만났",
+      "delivery_id": "teams_ai_push:f5f31e63aaef",
+      "first_sent_at": "2026-10-31T15:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "541cea7cf5b6110a1a5a109bfdf0005021f18402dad676a246db7ac5ff6a0433",
+      "sent_at": "2026-10-31T15:23:56+09:00",
       "source": "파이낸셜뉴스"
     },
     "https://hani.co.kr/arti/economy/economy_general/1274227.html": {
@@ -7023,6 +7058,16 @@
       "material_signature": "a6581956da9edfb47f162af18b26506fed521cef391728599b8383de84b1abe5",
       "sent_at": "2026-08-17T07:22:42+09:00",
       "source": "한겨레"
+    },
+    "ai협력넘어다음10년까지논의삼성사장단50명샘올트먼만났": {
+      "cluster_key": "title:ai협력넘어다음10년까지논의삼성사장단50명샘올트먼만났",
+      "delivery_id": "teams_ai_push:f5f31e63aaef",
+      "first_sent_at": "2026-10-31T15:23:56+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "541cea7cf5b6110a1a5a109bfdf0005021f18402dad676a246db7ac5ff6a0433",
+      "sent_at": "2026-10-31T15:23:56+09:00",
+      "source": "파이낸셜뉴스"
     },
     "edcf1호ai프로젝트나왔다아프리카에17억달러차관": {
       "cluster_key": "title:edcf1호ai프로젝트나왔다아프리카에17억달러차관",
