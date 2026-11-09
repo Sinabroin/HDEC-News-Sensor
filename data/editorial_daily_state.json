@@ -1061,5 +1061,17 @@
   ],
   "last_successful_edition": "2026-11-08",
   "last_successful_send_at": "2026-11-08T10:56:24+09:00",
-  "delivery_claims": {}
+  "delivery_claims": {
+    "2026-11-09": {
+      "edition_key": "2026-11-09",
+      "coverage_start": "2026-11-08T07:00:00+09:00",
+      "coverage_end": "2026-11-09T06:40:00+09:00",
+      "html_sha256": "a991003323c534d80d1c24d791b149bf19f12d7bdb2b2d341fbe673a4e09069a",
+      "public_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-11-09.html",
+      "delivery_kind": "nonempty_digest",
+      "article_count": 1,
+      "claim_owner": "github-run:42548907601:attempt:1",
+      "claimed_at": "2026-11-09T11:07:14+09:00"
+    }
+  }
 }
