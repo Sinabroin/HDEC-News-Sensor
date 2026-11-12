@@ -1130,6 +1130,21 @@
       "sent_at": "2026-08-23T13:01:35+09:00",
       "source": "서울경제"
     },
+    "bbb6e28a53c9ef9f": {
+      "cluster_key": "title:로챗ai법률상담공개비공개전",
+      "delivery_id": "teams_ai_push:42657684f435",
+      "first_material_discovery_at": "2026-11-12T20:57:49+09:00",
+      "first_seen_at": "",
+      "first_sent_at": "2026-11-12T20:57:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f445eca352445534ce21aa7b3e62283e6e1a9d9ee4712a261b5602996a9eb52f",
+      "published_at": "2026-11-12T16:35:00+09:00",
+      "sent_at": "2026-11-12T20:57:49+09:00",
+      "source": "중앙일보",
+      "title": "[2026 하반기 혁신특허 기술대상] 로챗, ‘ AI 법률 상담 공개·비공개 전...",
+      "url": "https://joongang.co.kr/article/25478075"
+    },
     "bc472dfd8ae89dd9": {
       "cluster_key": "title:hd현대현대건설테라파워와손잡고미국smr시장진출확대",
       "delivery_id": "teams_ai_push:9a63f7d7c037",
@@ -2821,6 +2836,16 @@
       "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
+    "title:로챗ai법률상담공개비공개전": {
+      "cluster_key": "title:로챗ai법률상담공개비공개전",
+      "delivery_id": "teams_ai_push:42657684f435",
+      "first_sent_at": "2026-11-12T20:57:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f445eca352445534ce21aa7b3e62283e6e1a9d9ee4712a261b5602996a9eb52f",
+      "sent_at": "2026-11-12T20:57:49+09:00",
+      "source": "중앙일보"
     },
     "title:머스크방한설키운공급망동맹반도체넘어우주ai로": {
       "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
@@ -5017,8 +5042,8 @@
       "title_fingerprint": "lg전자ai데이터센터냉각솔루션영토확장"
     }
   },
-  "last_normal_send_at": "2026-10-31T15:23:56+09:00",
-  "last_successful_send_at": "2026-11-03T02:17:20+09:00",
+  "last_normal_send_at": "2026-11-12T20:57:49+09:00",
+  "last_successful_send_at": "2026-11-12T20:57:49+09:00",
   "normalized_urls": {
     "http://www.biztribune.co.kr/news/articleView.html?idxno=356637": {
       "cluster_key": "title:두산에너빌리티라이양원전56호기핵심소재공급계약체결",
@@ -5608,6 +5633,16 @@
       "last_material_update_at": null,
       "material_signature": "0b3557978f4353b165d4d1d023512de56c9dd564895b2c743b9ff5b14f20f6b9",
       "sent_at": "2026-10-31T06:05:11+09:00",
+      "source": "중앙일보"
+    },
+    "https://joongang.co.kr/article/25478075": {
+      "cluster_key": "title:로챗ai법률상담공개비공개전",
+      "delivery_id": "teams_ai_push:42657684f435",
+      "first_sent_at": "2026-11-12T20:57:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f445eca352445534ce21aa7b3e62283e6e1a9d9ee4712a261b5602996a9eb52f",
+      "sent_at": "2026-11-12T20:57:49+09:00",
       "source": "중앙일보"
     },
     "https://khan.co.kr/article/202608080600031": {
@@ -7621,6 +7656,16 @@
       "material_signature": "308b0c567336895e7eebf6e46a45132203782794c7a5a2a6978761cea5201fcd",
       "sent_at": "2026-08-03T16:42:28+09:00",
       "source": "르몽드디플로마티크(LeMonde Diplomatique)"
+    },
+    "로챗ai법률상담공개비공개전": {
+      "cluster_key": "title:로챗ai법률상담공개비공개전",
+      "delivery_id": "teams_ai_push:42657684f435",
+      "first_sent_at": "2026-11-12T20:57:49+09:00",
+      "importance": "important",
+      "last_material_update_at": null,
+      "material_signature": "f445eca352445534ce21aa7b3e62283e6e1a9d9ee4712a261b5602996a9eb52f",
+      "sent_at": "2026-11-12T20:57:49+09:00",
+      "source": "중앙일보"
     },
     "머스크방한설키운공급망동맹반도체넘어우주ai로": {
       "cluster_key": "title:머스크방한설키운공급망동맹반도체넘어우주ai로",
