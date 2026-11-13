@@ -1,0 +1,118 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-11-13",
+  "coverage_start": "2026-11-12T07:00:00+09:00",
+  "coverage_end": "2026-11-13T06:40:00+09:00",
+  "published_run_at": "2026-11-13T11:58:48+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 530,
+      "raw_collected_count": 530,
+      "unique_collected_count": 40,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 40,
+      "ai_central_count": 3,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-11-13T11:52:15+09:00",
+      "finalization_at": "2026-11-13T11:58:48.363947+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "[이슈대담] 중국 반입된 '10조 원' 엔비디아 AI 칩의 행방은?…'젠슨 황 ...",
+  "editor_summary": "인터뷰를 인용보도할 때는 프로그램명 ' SBS '을 정확히 밝혀주시기 바랍니다. 분석: AI 데이터센터 프로젝트의 발주·전력·EPC 구조가 구체화되는지 현대건설 관점에서 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "[이슈대담] 중국 반입된 '10조 원' 엔비디아 AI 칩의 행방은?…'젠슨 황 ...",
+      "summary": "인터뷰를 인용보도할 때는 프로그램명 ' SBS '을 정확히 밝혀주시기 바랍니다. 저작권은 SBS 에... 원' AI 칩 일부 해외 데이터센터 짓는데 포함된 듯\" \"트럼프, 알래스카서 젠슨 황 사건 이미 알았을 것\" \"미국...",
+      "category": "기술정보",
+      "publisher": "SBS 뉴스",
+      "publisher_url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1008843290",
+      "published_at": "2026-11-12T16:08:31+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "인터뷰를 인용보도할 때는 프로그램명 ' SBS '을 정확히 밝혀주시기 바랍니다.",
+          "저작권은 SBS 에.",
+          "원' AI 칩 일부 해외 데이터센터 짓는데 포함된 듯\" \"트럼프, 알래스카서 젠슨 황 사건 이미 알았을 것\" \"미국."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 데이터센터 프로젝트의 발주·전력·EPC 구조가 구체화되는지 현대건설 관점에서 점검할 필요가 있음.",
+          "dimensions": [
+            "data_center"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "후속 프로젝트의 실제 발주·수주, 부지별 용량 및 전력 파트너 확정 여부를 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-11-13.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "820a7896b23e89a554029b22026a67fd4007b3a4a5613413396e9291b16dd707",
+    "publication_state": "published"
+  },
+  "revision": "37b8ebd413fdc9e1",
+  "edition_id": "daily-2026-11-13-37b8ebd413fdc9e1",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "37b8ebd413fdc9e174fec218e3c3d9d8860753585520d7091bfc42cd27ad4196"
+  }
+}

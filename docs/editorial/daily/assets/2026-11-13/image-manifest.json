@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "edition_type": "daily",
+  "edition_key": "2026-11-13",
+  "article_count": 1,
+  "real_article_photo_count": 1,
+  "fallback_visual_count": 0,
+  "image_materialization_failed_count": 0,
+  "image_quality_rejected_count": 0,
+  "real_photo_article_ids": [
+    "article-af53c03b32c9c7490da4"
+  ],
+  "fallback_article_ids": [],
+  "failure_reasons": {},
+  "publication_image_assets": [
+    {
+      "article_id": "article-af53c03b32c9c7490da4",
+      "relative_path": "editorial/daily/assets/2026-11-13/7af3574391a70da3ee26b637.jpg",
+      "sha256": "7af3574391a70da3ee26b63776dd5f5a981a7ee75a3765301498b97827adb22e",
+      "byte_size": 185559,
+      "content_type": "image/jpeg",
+      "image_source_kind": "og_image"
+    }
+  ]
+}
