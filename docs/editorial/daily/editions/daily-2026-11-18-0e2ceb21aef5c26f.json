@@ -1,0 +1,117 @@
+{
+  "version": 2,
+  "product": "daily",
+  "edition_key": "2026-11-18",
+  "coverage_start": "2026-11-17T07:00:00+09:00",
+  "coverage_end": "2026-11-18T06:40:00+09:00",
+  "published_run_at": "2026-11-18T12:54:50+09:00",
+  "review_mode": "ai_fallback",
+  "review_decision": "absent",
+  "edition_status": "nonempty",
+  "article_count": 1,
+  "radar_audit": {
+    "version": 1,
+    "funnel": {
+      "collection_count": 538,
+      "raw_collected_count": 538,
+      "unique_collected_count": 36,
+      "unique_count_proven": true,
+      "unique_count_authority": "canonical_article_identity",
+      "normalized_row_count": 36,
+      "ai_central_count": 1,
+      "executive_candidate_count": 1,
+      "selected_count": 1,
+      "watch_bridge_count": 0,
+      "late_watch_count": 0
+    },
+    "morning_bridge_rows": [],
+    "late_watch_count": 0,
+    "bridge_window": {
+      "snapshot_at": "2026-11-18T12:47:25+09:00",
+      "finalization_at": "2026-11-18T12:54:50.312323+09:00",
+      "watch_delivery_ids": []
+    }
+  },
+  "headline_title": "“송전망·교통 인프라 건설, 부처 간 칸막이 허물어야”",
+  "editor_summary": "인공지능( AI )·반도체 등 첨단산업에 필요한 전력·용수·교통 인프라를 제때 공급하는 일이 중요해졌지만, 부처 간 칸막이로 사업 지연과 중복 투자 가 발생하면서 통합 계획의 필요성은 커지고 있음. 분석: AI 인프라 확대에 따른 전력망·발전 설비 수요가 EPC 기회와 사업 제약에 미칠 영향을 현대건설 관점에서 점검할 필요가 있음.",
+  "articles": [
+    {
+      "position": 1,
+      "headline": true,
+      "title": "“송전망·교통 인프라 건설, 부처 간 칸막이 허물어야”",
+      "summary": "인공지능( AI )·반도체 등 첨단산업에 필요한 전력·용수·교통 인프라를 제때 공급하는 일이 중요해졌지만, 부처 간 칸막이로 사업 지연과 중복 투자 가 발생하면서 통합 계획의 필요성은 커지고 있다. 〈 중앙일보 8월 13일자...",
+      "category": "투자·산업",
+      "publisher": "중앙일보",
+      "publisher_url": "https://www.joongang.co.kr/article/25479582",
+      "published_at": "2026-11-18T00:02:00+09:00",
+      "executive_context": {
+        "version": 1,
+        "fact_points": [
+          "인공지능( AI )·반도체 등 첨단산업에 필요한 전력·용수·교통 인프라를 제때 공급하는 일이 중요해졌지만, 부처 간 칸막이로 사업 지연과 중복 투자 가 발생하면서 통합 계획의 필요성은 커지고 있음.",
+          "〈 중앙일보 8월 13일자."
+        ],
+        "baseline_match": {
+          "status": "none",
+          "entity_id": "",
+          "canonical_name": ""
+        },
+        "baseline_context": {
+          "status": "not_supported",
+          "text": "",
+          "reporting_period": "",
+          "as_of": ""
+        },
+        "delta_vs_baseline": {
+          "status": "not_supported",
+          "text": "",
+          "dimension": "",
+          "movement_direction": "neutral_unknown"
+        },
+        "hdec_implication": {
+          "status": "supported",
+          "label": "현대건설 관점 · 분석",
+          "text": "AI 인프라 확대에 따른 전력망·발전 설비 수요가 EPC 기회와 사업 제약에 미칠 영향을 현대건설 관점에서 점검할 필요가 있음.",
+          "dimensions": [
+            "power_grid"
+          ]
+        },
+        "watch_point": {
+          "status": "supported",
+          "text": "전력 공급계약, 계통연계 승인 및 관련 설비 발주가 구체화되는지 확인할 필요가 있음."
+        },
+        "provenance": {
+          "article_fields": [
+            "title",
+            "validated_import_summary"
+          ],
+          "baseline_id": "",
+          "baseline_version": "",
+          "baseline_fact_ids": [],
+          "delta_baseline_fact_ids": [],
+          "delta_article_fields": [],
+          "source_document_date": ""
+        },
+        "confidence": {
+          "status": "bounded",
+          "baseline_status": "verified",
+          "article_already_qualified": true,
+          "selection_authority": false,
+          "editor_modified": false
+        }
+      }
+    }
+  ],
+  "publication": {
+    "dated_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/2026-11-18.html",
+    "latest_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/daily/latest.html",
+    "html_sha256": "a251d2498c246eec1a6d7809462a0e85d91bea495bd613fc90962958a5cdd000",
+    "publication_state": "published"
+  },
+  "revision": "0e2ceb21aef5c26f",
+  "edition_id": "daily-2026-11-18-0e2ceb21aef5c26f",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "sorted-compact-json-utf8",
+    "digest": "0e2ceb21aef5c26f233cac453698ee43cb804e2bc56e24c0afe6b0d71a2521d9"
+  }
+}
