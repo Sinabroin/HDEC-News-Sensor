@@ -1840,6 +1840,26 @@
       "sent_at": "2026-11-18T12:49:45+09:00",
       "smtp_status": "accepted",
       "smtp_code": 250
+    },
+    {
+      "review_snapshot_id": "review-2026-11-19-478aa08c7ae96932",
+      "edition_key": "2026-11-19",
+      "editor_public_url": "https://guides.playground-aidesignlab.co.kr/HDEC-News-Sensor/editorial/review/snapshots/review-2026-11-19-478aa08c7ae96932/index.html",
+      "manifest_sha256": "c28c858471895a45ae676e76ca5dafdf5d8d3697e2482c19d34e5b56ee572bd4",
+      "generated": true,
+      "published": true,
+      "public_verified": true,
+      "claimed": true,
+      "sent": true,
+      "duplicate_skipped": false,
+      "failed": false,
+      "delivery_status": "sent",
+      "delivery_evidence_kind": "smtp_250",
+      "claim_owner": "github-run:44453085808:attempt:1",
+      "claimed_at": "2026-11-19T12:46:06+09:00",
+      "sent_at": "2026-11-19T12:46:11+09:00",
+      "smtp_status": "accepted",
+      "smtp_code": 250
     }
   ],
   "delivery_claims": {},
